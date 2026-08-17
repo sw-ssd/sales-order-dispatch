@@ -1,0 +1,2797 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>特耀訂出貨系統 1.0 — 互動式 PRD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FBFAF7; --panel:#FFFFFF; --ink:#1A1A1B; --muted:#6B6B66; --line:#E4E2DA;
+    --blue:#1CA3DE; --purple:#A833C2; --green:#5BB12F; --amber:#FBB13C; --red:#F4145B;
+    --sans:'DM Sans',system-ui,sans-serif; --serif:'DM Serif Display',Georgia,serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:var(--sans);background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.6;}
+  /* sticky nav */
+  nav{position:sticky;top:0;z-index:50;background:rgba(251,250,247,.94);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);display:flex;gap:2px;overflow-x:auto;padding:8px 12px;}
+  nav button{border:0;background:transparent;font-family:var(--sans);font-size:14px;font-weight:600;color:var(--muted);
+    padding:9px 14px;border-radius:8px;cursor:pointer;white-space:nowrap;transition:all .15s;}
+  nav button:hover{color:var(--ink);background:#EFEDE6;}
+  nav button.on{background:var(--ink);color:#fff;}
+  main{max-width:1120px;margin:0 auto;padding:38px 24px 90px;}
+  .panel{display:none;}
+  .panel.on{display:block;}
+  /* hero */
+  .kicker{font-size:13px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--blue);margin-bottom:10px;}
+  h1{font-family:var(--serif);font-size:52px;line-height:1.04;font-weight:400;margin-bottom:14px;}
+  .lede{font-size:19px;color:var(--muted);max-width:760px;margin-bottom:30px;}
+  h2{font-family:var(--serif);font-size:34px;font-weight:400;margin:46px 0 6px;letter-spacing:.01em;}
+  h3{font-size:17px;font-weight:700;margin:26px 0 8px;}
+  p{font-size:16px;color:#33332F;margin:10px 0;}
+  .sub{font-size:14px;color:var(--muted);font-weight:500;margin-bottom:18px;}
+  ul,ol{margin:10px 0 10px 22px;font-size:16px;color:#33332F;}
+  li{margin:6px 0;}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:18px 0;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;}
+  .card .n{font-family:var(--serif);font-size:38px;color:var(--blue);line-height:1;}
+  .card .l{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:8px 0 4px;}
+  .card .d{font-size:14px;color:#33332F;}
+  .quote{border-left:4px solid var(--amber);background:var(--panel);padding:14px 18px;margin:14px 0;border-radius:0 10px 10px 0;}
+  .quote .q{font-size:16px;font-style:italic;color:var(--ink);}
+  .quote .a{font-size:13px;color:var(--muted);margin-top:6px;}
+  .callout{background:var(--ink);color:#fff;border-radius:14px;padding:22px 26px;margin:22px 0;}
+  .callout .t{font-family:var(--serif);font-size:24px;margin-bottom:6px;}
+  .callout p{color:#E8E6DF;font-size:15px;}
+  .callout .tag{display:inline-block;background:var(--red);font-size:11px;font-weight:700;letter-spacing:.1em;
+    text-transform:uppercase;padding:3px 10px;border-radius:4px;margin-bottom:10px;}
+  /* boards */
+  .bwrap{width:100%;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:#fff;margin:16px 0;position:relative;}
+  .bwrap iframe{display:block;border:0;transform-origin:top left;}
+  .bcap{font-size:13px;color:var(--muted);margin:-6px 2px 18px;font-weight:500;}
+  /* tables */
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14.5px;background:var(--panel);border-radius:10px;overflow:hidden;}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;}
+  th{font-weight:700;font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:#F4F2EC;}
+  tr:last-child td{border-bottom:0;}
+  /* tags */
+  .now{display:inline-block;background:var(--red);color:#fff;font-size:11px;font-weight:700;padding:2px 9px;border-radius:4px;letter-spacing:.04em;}
+  .later{display:inline-block;background:var(--amber);color:#3a2e00;font-size:11px;font-weight:700;padding:2px 9px;border-radius:4px;letter-spacing:.04em;}
+  /* architecture diagram */
+  .arch{display:flex;flex-direction:column;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;margin:16px 0;}
+  .arch .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+  .anode{background:#fff;border:2px solid var(--ink);border-radius:9px;padding:10px 16px;text-align:center;min-width:150px;}
+  .anode .t{font-weight:700;font-size:15px;}
+  .anode .s{font-size:12px;color:var(--muted);}
+  .anode.dark{background:var(--ink);color:#fff;}
+  .anode.dark .s{color:#C9C7C0;}
+  .anode.blue{border-color:var(--blue);}
+  .anode.green{border-color:var(--green);}
+  .arrow-line{text-align:center;font-size:18px;color:var(--blue);font-weight:700;}
+  /* code */
+  pre{background:#16161a;color:#E8E6DF;border-radius:12px;padding:18px 20px;overflow:auto;font-size:13.5px;line-height:1.55;margin:14px 0;}
+  code{font-family:ui-monospace,'SF Mono',Menlo,monospace;}
+  .copywrap{display:flex;justify-content:flex-end;margin-top:-6px;}
+  .btn{background:var(--blue);color:#fff;border:0;font-family:var(--sans);font-size:14px;font-weight:700;padding:9px 18px;border-radius:8px;cursor:pointer;}
+  .btn:hover{filter:brightness(.94);}
+  .btn.ghost{background:transparent;color:var(--blue);border:1.5px solid var(--blue);}
+  /* footer */
+  .prd-footer{margin-top:70px;padding-top:18px;border-top:1px solid var(--line);text-align:center;font-size:14px;color:var(--muted);}
+  .prd-footer a{color:var(--blue);text-decoration:none;font-weight:600;}
+  .prd-footer b{color:var(--blue);}
+  @media (max-width:720px){ h1{font-size:38px;} .lede{font-size:17px;} }
+</style>
+</head>
+<body>
+
+<nav id="tabs">
+  <button class="on" data-t="start">開始</button>
+  <button data-t="evidence">證據</button>
+  <button data-t="experience">體驗</button>
+  <button data-t="build">建置計畫</button>
+  <button data-t="code">AI 守則</button>
+  <button data-t="growth">分發與成長</button>
+  <button data-t="launch">上線前</button>
+  <button data-t="handoff">交給你的 AI</button>
+  <button data-t="continue">續航</button>
+</nav>
+
+<main>
+
+<!-- ══════════ TAB 1: START ══════════ -->
+<section class="panel on" id="p-start">
+  <div class="kicker">特耀訂出貨系統 · 1.0</div>
+  <h1>多公司訂出貨系統：下單、派車、列印，一條路走完</h1>
+  <p class="lede">把「下單 → 派車 → 列印 → 出貨」整條營運流程收進一套自己掌握的系統：主檔全部自建、部門資料彼此隔離、四種單據一鍵列印。取代外部系統依賴，Big Bang 全面切換。</p>
+
+  <div class="cards">
+    <div class="card"><div class="n">7<span style="font-size:22px">/10</span></div><div class="l">複雜度</div><div class="d">待辦清單是 2、Instagram 是 9。三端（Go/SolidJS/Flutter）+ 基礎設施重建，真實但可行。</div></div>
+    <div class="card"><div class="n">14–20</div><div class="l">V1 時程（週）</div><div class="d">AI 協作下九個 Phase；每個 Phase 結束都有檢查點停下來確認。</div></div>
+    <div class="card"><div class="n">≈$200</div><div class="l">月成本（美金）</div><div class="d">自建 k8s VM 為主，開源元件免費；架構以事件驅動避開輪詢燒錢陷阱。</div></div>
+  </div>
+
+  <h2>三行目標</h2>
+  <div class="quote"><div class="q">「要達成：取代外部系統依賴，主檔全部自建，集團各公司自己管自己。」</div></div>
+  <div class="quote"><div class="q">「現在怎麼做：靠 NetSuite 主檔 + 現行三倉系統 + 人工單據作業拼湊。」</div></div>
+  <div class="quote"><div class="q">「為什麼糟：主檔不能自建、部門資料無法隔離、揀貨/加工單靠人工；集團每加一家公司就要重來一次。」</div></div>
+  <p><b>成功指標：</b>「業務用 App 完成一筆訂單、中台完成派車與四種單據列印、全程不碰外部系統」能在 10 分鐘內走完。</p>
+
+  <h2>給誰用</h2>
+  <table>
+    <tr><th>角色</th><th>說明</th><th>使用端</th></tr>
+    <tr><td>super 集團管理</td><td>跨公司調閱、建立公司、系統級字典</td><td>Web</td></tr>
+    <tr><td>company_admin 公司管理</td><td>自己公司跨部門、審核 guest、公司識別</td><td>Web</td></tr>
+    <tr><td>dept_admin 部門管理</td><td>部門帳號與主檔、取消派車、作廢</td><td>Web + App</td></tr>
+    <tr><td>staff 業務（兼會計檢視）</td><td>下單、建客戶、重印單據</td><td>App 為主</td></tr>
+    <tr><td>customer 客戶店家</td><td>用自己的專屬商品清單下單、查歷史</td><td>App</td></tr>
+    <tr><td>guest 待審核 / developer 逃生門</td><td>首登待審 / 跨租戶除錯（prod 關閉）</td><td>—</td></tr>
+  </table>
+
+  <h2>怎麼用這份文件</h2>
+  <p>這是一份互動式 PRD：<b>證據</b>分頁證明為什麼值得做，<b>體驗</b>分頁畫出核心旅程，<b>建置計畫</b>分頁是功能、資料與時程，<b>交給你的 AI</b> 分頁有整份可複製的建置說明書。文件完全自包含，可以帶著走。</p>
+
+  <h2>你現在知道的詞彙</h2>
+  <table>
+    <tr><th>詞彙</th><th>白話</th></tr>
+    <tr><td>租戶</td><td>系統裡各自獨立的一家公司，資料互不相見</td></tr>
+    <tr><td>資料範圍（data_scope）</td><td>角色能看多遠：全部 / 自己公司 / 自己部門 / 只有自己</td></tr>
+    <tr><td>RLS</td><td>資料庫層最後一道鎖：程式漏寫條件也越不了界</td></tr>
+    <tr><td>Casbin / CASL</td><td>後端 / 前端的權限規則引擎</td></tr>
+    <tr><td>Connect-RPC（proto）</td><td>一份 API 描述檔自動產生 Go / TS / Dart 三端程式碼</td></tr>
+    <tr><td>OAuth2 / JWT / session</td><td>用 Google 登入；App 用短期通行證 + 可續期，Web 用 cookie</td></tr>
+    <tr><td>樂觀鎖</td><td>送出前比對版本，衝突就重載，不互相覆蓋</td></tr>
+    <tr><td>軟刪除</td><td>不真刪，只標 deleted_at，歷史單據還查得到名字</td></tr>
+    <tr><td>狀態機</td><td>訂單只能照規定走：待處理 ⇄ 處理中 → 已完成；取消/作廢是終點</td></tr>
+    <tr><td>PITR</td><td>資料庫可還原到過去任一分鐘（RPO 1h）</td></tr>
+    <tr><td>Gotenberg</td><td>把 HTML 變成 PDF 的服務，四種單據靠它</td></tr>
+    <tr><td>Kanban 看板</td><td>車次是欄、訂單是卡片的拖放排程板</td></tr>
+    <tr><td>Big Bang 上線</td><td>測試完一次全面切換、舊系統直接廢止</td></tr>
+  </table>
+  <div class="prd-footer">This PRD was created by the <a href="https://github.com/TexasBedouin/vibe-check" target="_blank" rel="noopener noreferrer"><b>vibe-check</b> skill</a>, by Amer Arab</div>
+</section>
+
+<!-- ══════════ TAB 2: EVIDENCE ══════════ -->
+<section class="panel" id="p-evidence">
+  <div class="kicker">證據 · 為什麼值得建</div>
+  <h1>需求來自業主與業務的真話</h1>
+  <p class="lede">1.0 的範圍不是憑空猜的：來源是陳老闆與業務端直接傳來的需求訊息，逐條對應到功能。以下是機會評分與現況對照——方向性評估，不是統計調查，但每一條「seen」都有真實需求來源。</p>
+
+  <h2>最痛的 #1</h2>
+  <div class="callout"><span class="tag">機會分數 16 · 最該先做</span>
+    <div class="t">取代外部主檔依賴，全部自建管理</div>
+    <p>痛 9/10、現況解決程度 2/10。主檔掌握在外部系統手裡，是整條營運鏈的根；根不自己掌握，後面全部受限。</p>
+  </div>
+
+  <h2>機會地圖</h2>
+  <div class="bwrap" data-b="opportunity" data-bh="1080"><iframe title="Opportunity Map" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;/&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;/&gt;
+&lt;title&gt;The Opportunity Map&lt;/title&gt;
+&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;&gt;&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin&gt;
+&lt;link href=&quot;https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=DM+Serif+Display&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+&lt;style&gt;
+/* ─────────────────────────────────────────────────────────
+   vibe-check diagram engine, shared design layer
+   Built on the ClearList design system tokens.
+   FigJam structure (sticky notes, tape, dots, dotted canvas)
+   + Minimalist Editorial typography (DM Sans / DM Serif Display).
+   One file, many diagram templates.
+   ───────────────────────────────────────────────────────── */
+
+:root{
+  /* canvas */
+  --canvas:#F9F6F0;          /* warm FigJam canvas */
+  --canvas-app:#F9F9F8;      /* editorial / blueprint canvas */
+  --dot:#ddd6c6;
+  --grid-line:rgba(44,100,227,.10);
+
+  /* ink */
+  --charcoal:#1A1A1B;
+  --ink-2:#4b5563;
+  --ink-muted:#6B7280;
+  --border:#E5E5E5;
+
+  /* brand */
+  --blue:#2C64E3;
+  --blue-hover:#2354C2;
+  --purple:#8B5CF6;
+  --purple-light:#F5F3FF;
+  --pink:#ec4899;
+
+  /* moving-sale / figjam */
+  --kraft:#C4A882;
+  --kraft-dark:#A98C63;
+  --tape-blue:#4A90D9;
+  --y:#FFF6A8;   /* softened post-it yellow for sans legibility */
+  --g:#A6E4A0;
+  --b:#A8DBEE;
+  --o:#FFCB7D;
+  --p:#FFA8CC;
+  --lav:#CDBEEA; /* AI = purple family */
+
+  /* status dots */
+  --dot-red:#E03C31;
+  --dot-green:#2E8B57;
+  --dot-amber:#F6C90E;
+
+  /* fonts */
+  --sans:&quot;DM Sans&quot;,ui-sans-serif,system-ui,sans-serif;
+  --serif:&quot;DM Serif Display&quot;,Georgia,serif;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:1920px;height:1080px;overflow:hidden;}
+body{font-family:var(--sans);color:var(--charcoal);-webkit-font-smoothing:antialiased;}
+
+/* canvases */
+.canvas-dots{
+  background-color:var(--canvas);
+  background-image:radial-gradient(var(--dot) 2px,transparent 2px);
+  background-size:30px 30px;background-position:-6px -6px;
+}
+.canvas-blueprint{
+  background-color:var(--canvas-app);
+  background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),
+                   linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+
+.stage{width:1920px;height:1080px;padding:40px 52px 34px;position:relative;display:flex;flex-direction:column;}
+
+/* ── header ───────────────────────────────── */
+.head{display:flex;align-items:flex-start;justify-content:space-between;flex:0 0 auto;}
+.head .crumb{font-weight:700;font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:var(--blue);margin-bottom:6px;}
+.head .title{font-family:var(--serif);font-size:46px;line-height:1.02;color:var(--charcoal);}
+.head .sub{font-size:19px;color:var(--ink-muted);margin-top:10px;max-width:760px;}
+.madeby{text-align:right;font-size:15px;color:var(--ink-muted);line-height:1.3;text-decoration:none;}
+.madeby:hover b{text-decoration:underline;}
+.madeby b{font-weight:700;color:var(--blue);letter-spacing:.02em;}
+.madeby .url{color:var(--blue);font-weight:600;}
+
+/* ── sticky note ──────────────────────────── */
+.note{
+  background:var(--y);
+  padding:13px 15px 14px;
+  box-shadow:3px 4px 12px rgba(0,0,0,.13);
+  position:relative;line-height:1.24;font-size:19px;font-weight:500;
+  border-radius:1px;
+}
+.note .k{display:block;font-weight:700;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(0,0,0,.40);margin-bottom:5px;}
+.note.sm{font-size:17px;padding:10px 13px;box-shadow:2px 3px 9px rgba(0,0,0,.11);}
+.note.lg{font-size:21px;}
+.note.y{background:var(--y);} .note.g{background:var(--g);} .note.b{background:var(--b);}
+.note.o{background:var(--o);} .note.p{background:var(--p);} .note.ai{background:var(--lav);}
+/* gentle hand-placed tilt + a tape nub */
+.tilt-l{transform:rotate(-1.3deg);} .tilt-r{transform:rotate(1.1deg);} .tilt-0{transform:rotate(-.4deg);}
+.note.pin:before{content:&quot;&quot;;position:absolute;top:-7px;left:50%;width:34px;height:12px;
+  background:rgba(74,144,217,.78);transform:translateX(-50%) rotate(-4deg);box-shadow:1px 1px 3px rgba(0,0,0,.18);}
+
+/* ── tape strip / lane label ──────────────── */
+.tape{display:inline-block;background:var(--tape-blue);color:#fff;font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;padding:9px 16px;box-shadow:2px 3px 9px rgba(0,0,0,.16);position:relative;}
+.tape:before,.tape:after{content:&quot;&quot;;position:absolute;top:0;bottom:0;width:14px;
+  background:repeating-linear-gradient(135deg,rgba(255,255,255,.28) 0 4px,transparent 4px 8px);}
+.tape:before{left:-7px;transform:skewX(-12deg);} .tape:after{right:-7px;transform:skewX(-12deg);}
+.tape.green{background:var(--dot-green);} .tape.kraftt{background:#b9b09c;} .tape.charcoal{background:var(--charcoal);}
+
+/* ── editorial / blueprint box ────────────── */
+.ebox{background:#fff;border:2px solid var(--charcoal);padding:14px 16px;min-width:160px;position:relative;}
+.ebox .t{font-weight:700;font-size:19px;line-height:1.15;}
+.ebox .s{font-size:15px;color:var(--ink-muted);margin-top:4px;line-height:1.25;}
+.ebox.ai{background:var(--purple-light);border-color:var(--purple);}
+.ebox.ai .tag{position:absolute;top:-11px;left:14px;background:var(--purple);color:#fff;font-size:11px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;padding:2px 8px;}
+.ebox.accent{border-color:var(--blue);}
+
+/* ── garage-sale dot sticker ──────────────── */
+.dot{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;
+  font-weight:700;text-align:center;line-height:1;box-shadow:2px 2px 6px rgba(0,0,0,.22);}
+.dot.red{background:var(--dot-red);} .dot.green{background:var(--dot-green);}
+.dot.amber{background:var(--dot-amber);color:#3a2e00;} .dot.blue{background:var(--tape-blue);}
+
+/* small legend chip */
+.chip{display:inline-flex;align-items:center;gap:8px;font-size:15px;color:var(--ink-2);font-weight:500;}
+.chip .sw{width:16px;height:16px;border-radius:50%;}
+
+&lt;/style&gt;
+&lt;style&gt;
+  /* Layout: header on top, then a body with the plot on the left and the side panels on the right.
+     The plot is a 2x2 CSS grid of quadrants. Each quadrant holds a tidy flex-wrap of notes.
+     Because every note lives INSIDE its quadrant box and the notes flow with flex-wrap,
+     they can never overlap. Position is the bucket, never raw coordinates. */
+  .body-wrap{flex:1;display:flex;gap:26px;margin-top:18px;min-height:0;}
+  .plot-area{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .plot-row{flex:1;display:flex;min-height:0;}
+
+  .y-axis{writing-mode:vertical-rl;transform:rotate(180deg);text-align:center;font-weight:700;
+    letter-spacing:.04em;color:var(--charcoal);font-size:17px;padding:0 10px 30px 0;
+    display:flex;align-items:center;justify-content:center;}
+  .y-ends{display:flex;flex-direction:column;justify-content:space-between;font-size:13px;color:var(--ink-muted);
+    font-weight:600;text-transform:uppercase;letter-spacing:.08em;padding:4px 8px 30px 0;}
+
+  /* the plot is the 2x2 grid; thick axis lines drawn as the grid&#x27;s left + bottom borders */
+  .plot{flex:1;display:grid;grid-template-columns:56% 44%;grid-template-rows:52% 48%;
+    border-left:3px solid var(--charcoal);border-bottom:3px solid var(--charcoal);min-height:0;}
+
+  /* one quadrant cell: tinted by tone, holds a wrapping row of notes */
+  .quad{position:relative;padding:34px 16px 16px;min-height:0;overflow:auto;
+    display:flex;flex-wrap:wrap;align-content:flex-start;gap:18px 16px;}
+  .quad.win{background:rgba(46,139,87,.12);}
+  .quad.stakes{background:rgba(246,201,14,.14);}
+  .quad.low{background:rgba(0,0,0,.035);}
+  /* faint dividing lines between quadrants so the four boxes read as a grid */
+  .quad.gap{border-right:1.5px dashed rgba(26,26,27,.18);border-bottom:1.5px dashed rgba(26,26,27,.18);}
+  .quad.stakesq{border-bottom:1.5px dashed rgba(26,26,27,.18);}
+  .quad.niche{border-right:1.5px dashed rgba(26,26,27,.18);}
+
+  .q-lbl{position:absolute;top:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;font-size:14px;}
+  .q-lbl.win{left:16px;color:var(--dot-green);}
+  .q-lbl.stakes{right:16px;left:16px;text-align:right;color:#a8830a;}
+  .q-lbl.low{left:16px;color:var(--ink-muted);}
+
+  /* a need note. width is fixed so wrapping is tidy; the score badge sits on the corner. */
+  .onote{position:relative;width:228px;flex:0 0 auto;}
+  .seen{border:2px solid var(--charcoal);}
+  .hunch{border:2px dashed #8a8170;}
+  .guess{border:2px dotted #aaa294;}
+  .score{position:absolute;top:-13px;right:-13px;width:42px;height:42px;border-radius:50%;
+    background:var(--charcoal);color:#fff;font-weight:700;font-size:15px;
+    display:flex;align-items:center;justify-content:center;box-shadow:2px 2px 6px rgba(0,0,0,.25);}
+  .score.top{background:var(--dot-red);width:50px;height:50px;}
+
+  .quad-empty{font-size:14px;color:var(--ink-muted);font-style:italic;opacity:.8;align-self:flex-start;}
+
+  .x-axis{text-align:center;font-weight:700;letter-spacing:.04em;font-size:17px;margin-top:8px;padding-left:60px;}
+  .x-ends{display:flex;justify-content:space-between;font-size:13px;color:var(--ink-muted);font-weight:600;
+    text-transform:uppercase;letter-spacing:.08em;margin-top:4px;padding-left:60px;}
+
+  .side{width:330px;flex:0 0 auto;display:flex;flex-direction:column;gap:16px;}
+  .panel{background:#fff;border:2px solid var(--charcoal);padding:18px 20px;}
+  .panel h4{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-muted);margin-bottom:12px;}
+  .winner{background:var(--dot-green);color:#fff;border:none;}
+  .winner h4{color:rgba(255,255,255,.8);}
+  .winner .big{font-family:var(--serif);font-size:26px;line-height:1.1;margin:6px 0 8px;}
+  .winner .meta{font-size:15px;opacity:.92;}
+  .formula{font-size:15px;color:var(--ink-2);line-height:1.5;}
+  .formula code{background:#f1efe9;padding:2px 6px;font-weight:600;color:var(--charcoal);}
+  .ev-row{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--ink-2);margin-bottom:9px;}
+  .ev-chip{width:46px;height:24px;flex:0 0 auto;}
+  .ev-chip.seen{border:2px solid var(--charcoal);background:#fff;}
+  .ev-chip.hunch{border:2px dashed #8a8170;background:#fff;}
+  .ev-chip.guess{border:2px dotted #aaa294;background:#fff;}
+
+  .madeby2{position:absolute;right:52px;bottom:14px;font-size:13px;color:var(--ink-muted);text-decoration:none;}
+  .madeby2:hover b{text-decoration:underline;}
+  .madeby2 b{color:var(--blue);font-weight:700;}
+  .err{padding:60px;font-size:20px;color:#DC2626;}
+&lt;/style&gt;
+&lt;script&gt;
+window.__D__={&quot;header&quot;: {&quot;crumb&quot;: &quot;Discovery · 需求機會評分&quot;, &quot;title&quot;: &quot;機會地圖：痛在哪、誰解決了&quot;, &quot;sub&quot;: &quot;每個需求依「有多痛」與「現有工具解決得如何」定位。左上角（很痛、又沒人做好）就是 1.0 要贏的地方；分數 = 痛 + 缺口（差距不低於零）。&quot;}, &quot;axes&quot;: {&quot;y&quot;: {&quot;label&quot;: &quot;有多痛&quot;, &quot;high&quot;: &quot;非常痛&quot;, &quot;low&quot;: &quot;有點痛&quot;}, &quot;x&quot;: {&quot;label&quot;: &quot;現有工具解決得如何&quot;, &quot;low&quot;: &quot;很差&quot;, &quot;high&quot;: &quot;很好&quot;}}, &quot;quadrants&quot;: {&quot;gap&quot;: {&quot;title&quot;: &quot;◆ 缺口，在這裡建&quot;, &quot;tone&quot;: &quot;win&quot;}, &quot;stakes&quot;: {&quot;title&quot;: &quot;基本盤，追上就好&quot;, &quot;tone&quot;: &quot;stakes&quot;}, &quot;niche&quot;: {&quot;title&quot;: &quot;利基，以後再說&quot;, &quot;tone&quot;: &quot;low&quot;}, &quot;low&quot;: {&quot;title&quot;: &quot;低優先，放著&quot;, &quot;tone&quot;: &quot;low&quot;}}, &quot;needs&quot;: [{&quot;id&quot;: &quot;master&quot;, &quot;label&quot;: &quot;取代外部主檔依賴，全部自建管理&quot;, &quot;kicker&quot;: &quot;the differentiator&quot;, &quot;pain&quot;: 9, &quot;served&quot;: 2, &quot;score&quot;: 16, &quot;evidence&quot;: &quot;seen&quot;}, {&quot;id&quot;: &quot;print&quot;, &quot;label&quot;: &quot;四種單據依車次/倉別/分切規格列印&quot;, &quot;pain&quot;: 9, &quot;served&quot;: 3, &quot;score&quot;: 15, &quot;evidence&quot;: &quot;seen&quot;}, {&quot;id&quot;: &quot;tenancy&quot;, &quot;label&quot;: &quot;多公司/部門權限隔離，各部門只看自己&quot;, &quot;pain&quot;: 8, &quot;served&quot;: 3, &quot;score&quot;: 13, &quot;evidence&quot;: &quot;seen&quot;}, {&quot;id&quot;: &quot;custprod&quot;, &quot;label&quot;: &quot;客戶專屬商品清單（手動改名/刪品項）&quot;, &quot;pain&quot;: 8, &quot;served&quot;: 4, &quot;score&quot;: 12, &quot;evidence&quot;: &quot;seen&quot;}, {&quot;id&quot;: &quot;dispatch&quot;, &quot;label&quot;: &quot;派車看板即時排程（拖放+批次確認）&quot;, &quot;pain&quot;: 7, &quot;served&quot;: 4, &quot;score&quot;: 10, &quot;evidence&quot;: &quot;seen&quot;}, {&quot;id&quot;: &quot;wh&quot;, &quot;label&quot;: &quot;揀貨單依倉別分列（1F/2F 倉）&quot;, &quot;pain&quot;: 7, &quot;served&quot;: 4, &quot;score&quot;: 10, &quot;evidence&quot;: &quot;seen&quot;}, {&quot;id&quot;: &quot;manual&quot;, &quot;label&quot;: &quot;手打商品名稱 + 清單選擇並存&quot;, &quot;pain&quot;: 6, &quot;served&quot;: 5, &quot;score&quot;: 7, &quot;evidence&quot;: &quot;seen&quot;}, {&quot;id&quot;: &quot;note&quot;, &quot;label&quot;: &quot;手寫特殊切法備註&quot;, &quot;pain&quot;: 6, &quot;served&quot;: 6, &quot;score&quot;: 6, &quot;evidence&quot;: &quot;seen&quot;}, {&quot;id&quot;: &quot;notify&quot;, &quot;label&quot;: &quot;訂單/派車通知（Email + FCM）&quot;, &quot;pain&quot;: 5, &quot;served&quot;: 5, &quot;score&quot;: 5, &quot;evidence&quot;: &quot;hunch&quot;}, {&quot;id&quot;: &quot;self&quot;, &quot;label&quot;: &quot;客戶自助下單（QR 登入）&quot;, &quot;pain&quot;: 5, &quot;served&quot;: 6, &quot;score&quot;: 5, &quot;evidence&quot;: &quot;hunch&quot;}], &quot;winner&quot;: {&quot;label&quot;: &quot;取代外部主檔依賴，全部自建管理&quot;, &quot;meta&quot;: &quot;Opportunity 16 · 非常痛（9）、現況很差（2）。&quot;}, &quot;formula&quot;: &quot;Opportunity = Pain + max(0, Pain − Served)&quot;, &quot;evidenceLegend&quot;: [{&quot;type&quot;: &quot;seen&quot;, &quot;label&quot;: &quot;有真實需求來源（客戶需求.txt / 業主會議）&quot;}, {&quot;type&quot;: &quot;hunch&quot;, &quot;label&quot;: &quot;推測（合理但未經證實）&quot;}]};
+window.fetch=function(input){var u=String(input);if(u.indexOf(&quot;.json&quot;)!==-1){return Promise.resolve(new Response(JSON.stringify(window.__D__),{status:200,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;}}));}return Promise.reject(new Error(&quot;blocked&quot;));};
+&lt;/script&gt;
+&lt;/head&gt;
+&lt;body class=&quot;canvas-dots&quot;&gt;
+&lt;div class=&quot;stage&quot;&gt;
+  &lt;div class=&quot;head&quot;&gt;
+    &lt;div&gt;
+      &lt;div class=&quot;crumb&quot; id=&quot;crumb&quot;&gt;&lt;/div&gt;
+      &lt;div class=&quot;title&quot; id=&quot;title&quot;&gt;&lt;/div&gt;
+      &lt;div class=&quot;sub&quot; id=&quot;sub&quot;&gt;&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;body-wrap&quot;&gt;
+    &lt;div class=&quot;plot-area&quot;&gt;
+      &lt;div class=&quot;plot-row&quot;&gt;
+        &lt;div class=&quot;y-axis&quot; id=&quot;yLabel&quot;&gt;&lt;/div&gt;
+        &lt;div class=&quot;y-ends&quot;&gt;&lt;span id=&quot;yHigh&quot;&gt;&lt;/span&gt;&lt;span id=&quot;yLow&quot;&gt;&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;plot&quot; id=&quot;plot&quot;&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;x-axis&quot; id=&quot;xLabel&quot;&gt;&lt;/div&gt;
+      &lt;div class=&quot;x-ends&quot;&gt;&lt;span id=&quot;xLow&quot;&gt;&lt;/span&gt;&lt;span id=&quot;xHigh&quot;&gt;&lt;/span&gt;&lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;side&quot; id=&quot;side&quot;&gt;&lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;a class=&quot;madeby2&quot; href=&quot;https://github.com/TexasBedouin/vibe-check&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot;&gt;Created using &lt;b&gt;Vibe-Check&lt;/b&gt; skill&lt;/a&gt;
+&lt;/div&gt;
+
+&lt;script&gt;
+// ─── Opportunity Map engine ───
+// Each need is bucketed into one of four quadrants by deterministic thresholds, then laid out
+// in a tidy flex-wrap inside that quadrant. Position is categorical, so overlap is impossible.
+// Tilt, the &quot;top&quot; badge, evidence border style, and tints are all renderer-computed from enums.
+
+const TILTS = [&#x27;tilt-l&#x27;,&#x27;tilt-r&#x27;,&#x27;tilt-0&#x27;];
+const PAIN_HIGH = 6;     // pain &gt;= 6 counts as &quot;hurts a lot&quot;
+const SERVED_WELL = 6;   // served &gt;= 6 counts as &quot;handled well today&quot;
+
+// quadrant key -&gt; note color family (from engine.css .note.&lt;x&gt;) used as the sticky tint
+const QUAD_TINT = { gap:&#x27;g&#x27;, stakes:&#x27;y&#x27;, niche:&#x27;b&#x27;, low:&#x27;o&#x27; };
+// quadrant key -&gt; the grid-cell class that paints the background tone (win/stakes/low)
+const TONE_CLASS = { win:&#x27;win&#x27;, stakes:&#x27;stakes&#x27;, low:&#x27;low&#x27; };
+
+const esc = s =&gt; String(s).replace(/&amp;/g,&#x27;&amp;amp;&#x27;).replace(/&lt;/g,&#x27;&amp;lt;&#x27;).replace(/&gt;/g,&#x27;&amp;gt;&#x27;);
+
+// deterministic bucketing, never uses raw x/y coordinates
+function bucketOf(need){
+  const painHigh = Number(need.pain) &gt;= PAIN_HIGH;
+  const servedWell = Number(need.served) &gt;= SERVED_WELL;
+  if(painHigh &amp;&amp; !servedWell) return &#x27;gap&#x27;;
+  if(painHigh &amp;&amp; servedWell) return &#x27;stakes&#x27;;
+  if(!painHigh &amp;&amp; !servedWell) return &#x27;niche&#x27;;
+  return &#x27;low&#x27;;
+}
+
+function noteHtml(need, isTop, tilt){
+  const tint = QUAD_TINT[need.__quad] || &#x27;y&#x27;;
+  const ev = need.evidence === &#x27;seen&#x27; ? &#x27;seen&#x27; : need.evidence === &#x27;hunch&#x27; ? &#x27;hunch&#x27; : &#x27;guess&#x27;;
+  const evLabel = ev===&#x27;seen&#x27; ? &#x27;Seen it&#x27; : ev===&#x27;hunch&#x27; ? &#x27;Hunch&#x27; : &#x27;Guess&#x27;;
+  const kicker = need.kicker ? evLabel + &#x27; · &#x27; + esc(need.kicker) : evLabel;
+  return &#x27;&lt;div class=&quot;onote note sm &#x27;+tint+&#x27; &#x27;+ev+&#x27; &#x27;+tilt+&#x27;&quot;&gt;&#x27;+
+    &#x27;&lt;span class=&quot;k&quot;&gt;&#x27;+kicker+&#x27;&lt;/span&gt;&#x27;+esc(need.label)+
+    &#x27;&lt;div class=&quot;score&#x27;+(isTop?&#x27; top&#x27;:&#x27;&#x27;)+&#x27;&quot;&gt;&#x27;+esc(need.score)+&#x27;&lt;/div&gt;&#x27;+
+    &#x27;&lt;/div&gt;&#x27;;
+}
+
+function quadHtml(qKey, qMeta, needs){
+  // needs already filtered to this quadrant; sort by score desc, top gets .score.top
+  const sorted = needs.slice().sort((a,b)=&gt; Number(b.score)-Number(a.score));
+  const toneCls = TONE_CLASS[qMeta &amp;&amp; qMeta.tone] || &#x27;low&#x27;;
+  // a structural class per quadrant cell so we can draw the inner divider lines
+  const cellClass = qKey===&#x27;gap&#x27; ? &#x27;gap&#x27; : qKey===&#x27;stakes&#x27; ? &#x27;stakesq&#x27; : qKey===&#x27;niche&#x27; ? &#x27;niche&#x27; : &#x27;lowq&#x27;;
+  let inner = &#x27;&#x27;;
+  if(sorted.length === 0){
+    inner = &#x27;&lt;div class=&quot;quad-empty&quot;&gt;No needs landed here.&lt;/div&gt;&#x27;;
+  } else {
+    sorted.forEach((need, i) =&gt; {
+      need.__quad = qKey;
+      inner += noteHtml(need, i===0 &amp;&amp; (qMeta &amp;&amp; qMeta.tone)===&#x27;win&#x27;, TILTS[i % TILTS.length]);
+    });
+  }
+  const lblCls = toneCls; // win | stakes | low for label color
+  const title = (qMeta &amp;&amp; qMeta.title) || &#x27;&#x27;;
+  return &#x27;&lt;div class=&quot;quad &#x27;+toneCls+&#x27; &#x27;+cellClass+&#x27;&quot;&gt;&#x27;+
+    &#x27;&lt;div class=&quot;q-lbl &#x27;+lblCls+&#x27;&quot;&gt;&#x27;+esc(title)+&#x27;&lt;/div&gt;&#x27;+
+    inner+
+    &#x27;&lt;/div&gt;&#x27;;
+}
+
+function render(d){
+  const h = d.header || {};
+  document.getElementById(&#x27;crumb&#x27;).textContent = h.crumb || &#x27;&#x27;;
+  document.getElementById(&#x27;title&#x27;).textContent = h.title || &#x27;&#x27;;
+  document.getElementById(&#x27;sub&#x27;).textContent = h.sub || &#x27;&#x27;;
+
+  const ax = d.axes || {};
+  const ay = ax.y || {}, axx = ax.x || {};
+  document.getElementById(&#x27;yLabel&#x27;).textContent = ay.label || &#x27;&#x27;;
+  document.getElementById(&#x27;yHigh&#x27;).innerHTML = esc(ay.high || &#x27;&#x27;).replace(/ /g,&#x27;&amp;nbsp;&#x27;);
+  document.getElementById(&#x27;yLow&#x27;).innerHTML = esc(ay.low || &#x27;&#x27;).replace(/ /g,&#x27;&amp;nbsp;&#x27;);
+  document.getElementById(&#x27;xLabel&#x27;).textContent = (axx.label || &#x27;&#x27;) + &#x27; →&#x27;;
+  document.getElementById(&#x27;xLow&#x27;).textContent = axx.low || &#x27;&#x27;;
+  document.getElementById(&#x27;xHigh&#x27;).textContent = axx.high || &#x27;&#x27;;
+
+  // bucket every need
+  const needs = (d.needs || []).map(n =&gt; Object.assign({}, n));
+  const buckets = { gap:[], stakes:[], niche:[], low:[] };
+  needs.forEach(n =&gt; { buckets[bucketOf(n)].push(n); });
+
+  // grid order: top-left = gap, top-right = stakes, bottom-left = niche, bottom-right = low
+  const q = d.quadrants || {};
+  const plot = document.getElementById(&#x27;plot&#x27;);
+  plot.innerHTML =
+    quadHtml(&#x27;gap&#x27;,    q.gap,    buckets.gap) +
+    quadHtml(&#x27;stakes&#x27;, q.stakes, buckets.stakes) +
+    quadHtml(&#x27;niche&#x27;,  q.niche,  buckets.niche) +
+    quadHtml(&#x27;low&#x27;,    q.low,    buckets.low);
+
+  // side panels
+  let side = &#x27;&#x27;;
+  if(d.winner){
+    side += &#x27;&lt;div class=&quot;panel winner&quot;&gt;&lt;h4&gt;★ #1 to build&lt;/h4&gt;&#x27;+
+      &#x27;&lt;div class=&quot;big&quot;&gt;&#x27;+esc(d.winner.label||&#x27;&#x27;)+&#x27;&lt;/div&gt;&#x27;+
+      &#x27;&lt;div class=&quot;meta&quot;&gt;&#x27;+esc(d.winner.meta||&#x27;&#x27;)+&#x27;&lt;/div&gt;&lt;/div&gt;&#x27;;
+  }
+  if(d.formula){
+    side += &#x27;&lt;div class=&quot;panel&quot;&gt;&lt;h4&gt;The score&lt;/h4&gt;&#x27;+
+      &#x27;&lt;div class=&quot;formula&quot;&gt;&lt;code&gt;&#x27;+esc(d.formula)+&#x27;&lt;/code&gt;&lt;br&gt;&lt;br&gt;&#x27;+
+      &#x27;High pain + badly served = high score. Already handled well = low, no matter the pain.&lt;/div&gt;&lt;/div&gt;&#x27;;
+  }
+  if(Array.isArray(d.evidenceLegend) &amp;&amp; d.evidenceLegend.length){
+    side += &#x27;&lt;div class=&quot;panel&quot;&gt;&lt;h4&gt;Evidence&lt;/h4&gt;&#x27;+
+      d.evidenceLegend.map(e =&gt; {
+        const t = e.type === &#x27;seen&#x27; ? &#x27;seen&#x27; : e.type === &#x27;hunch&#x27; ? &#x27;hunch&#x27; : &#x27;guess&#x27;;
+        return &#x27;&lt;div class=&quot;ev-row&quot;&gt;&lt;span class=&quot;ev-chip &#x27;+t+&#x27;&quot;&gt;&lt;/span&gt; &#x27;+esc(e.label||&#x27;&#x27;)+&#x27;&lt;/div&gt;&#x27;;
+      }).join(&#x27;&#x27;) + &#x27;&lt;/div&gt;&#x27;;
+  }
+  document.getElementById(&#x27;side&#x27;).innerHTML = side;
+
+  document.body.setAttribute(&#x27;data-rendered&#x27;,&#x27;1&#x27;);
+}
+
+async function main(){
+  const param = new URLSearchParams(location.search).get(&#x27;data&#x27;) || &#x27;opportunity-example&#x27;;
+  try{
+    const d = await fetch(&#x27;./data-&#x27;+param+&#x27;.json&#x27;,{cache:&#x27;no-store&#x27;}).then(r=&gt;{ if(!r.ok) throw new Error(r.status); return r.json(); });
+    render(d);
+  }catch(err){
+    document.querySelector(&#x27;.body-wrap&#x27;).innerHTML =
+      &#x27;&lt;div class=&quot;err&quot;&gt;Could not load data-&#x27;+esc(param)+&#x27;.json: &#x27;+esc(err.message)+&#x27;&lt;/div&gt;&#x27;;
+    document.body.setAttribute(&#x27;data-rendered&#x27;,&#x27;1&#x27;);
+  }
+}
+main();
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe></div>
+  <div class="bcap">每個需求依「多痛」與「現有工具解決得如何」定位；左上角缺口區就是 1.0 要贏的地方。</div>
+
+  <h2>現況對照</h2>
+  <div class="bwrap" data-b="matrix" data-bh="1080"><iframe title="Competitor Matrix" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;/&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;/&gt;
+&lt;title&gt;Competitor Matrix&lt;/title&gt;
+&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;&gt;&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin&gt;
+&lt;link href=&quot;https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=DM+Serif+Display&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+&lt;style&gt;
+/* ─────────────────────────────────────────────────────────
+   vibe-check diagram engine, shared design layer
+   Built on the ClearList design system tokens.
+   FigJam structure (sticky notes, tape, dots, dotted canvas)
+   + Minimalist Editorial typography (DM Sans / DM Serif Display).
+   One file, many diagram templates.
+   ───────────────────────────────────────────────────────── */
+
+:root{
+  /* canvas */
+  --canvas:#F9F6F0;          /* warm FigJam canvas */
+  --canvas-app:#F9F9F8;      /* editorial / blueprint canvas */
+  --dot:#ddd6c6;
+  --grid-line:rgba(44,100,227,.10);
+
+  /* ink */
+  --charcoal:#1A1A1B;
+  --ink-2:#4b5563;
+  --ink-muted:#6B7280;
+  --border:#E5E5E5;
+
+  /* brand */
+  --blue:#2C64E3;
+  --blue-hover:#2354C2;
+  --purple:#8B5CF6;
+  --purple-light:#F5F3FF;
+  --pink:#ec4899;
+
+  /* moving-sale / figjam */
+  --kraft:#C4A882;
+  --kraft-dark:#A98C63;
+  --tape-blue:#4A90D9;
+  --y:#FFF6A8;   /* softened post-it yellow for sans legibility */
+  --g:#A6E4A0;
+  --b:#A8DBEE;
+  --o:#FFCB7D;
+  --p:#FFA8CC;
+  --lav:#CDBEEA; /* AI = purple family */
+
+  /* status dots */
+  --dot-red:#E03C31;
+  --dot-green:#2E8B57;
+  --dot-amber:#F6C90E;
+
+  /* fonts */
+  --sans:&quot;DM Sans&quot;,ui-sans-serif,system-ui,sans-serif;
+  --serif:&quot;DM Serif Display&quot;,Georgia,serif;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:1920px;height:1080px;overflow:hidden;}
+body{font-family:var(--sans);color:var(--charcoal);-webkit-font-smoothing:antialiased;}
+
+/* canvases */
+.canvas-dots{
+  background-color:var(--canvas);
+  background-image:radial-gradient(var(--dot) 2px,transparent 2px);
+  background-size:30px 30px;background-position:-6px -6px;
+}
+.canvas-blueprint{
+  background-color:var(--canvas-app);
+  background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),
+                   linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+
+.stage{width:1920px;height:1080px;padding:40px 52px 34px;position:relative;display:flex;flex-direction:column;}
+
+/* ── header ───────────────────────────────── */
+.head{display:flex;align-items:flex-start;justify-content:space-between;flex:0 0 auto;}
+.head .crumb{font-weight:700;font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:var(--blue);margin-bottom:6px;}
+.head .title{font-family:var(--serif);font-size:46px;line-height:1.02;color:var(--charcoal);}
+.head .sub{font-size:19px;color:var(--ink-muted);margin-top:10px;max-width:760px;}
+.madeby{text-align:right;font-size:15px;color:var(--ink-muted);line-height:1.3;text-decoration:none;}
+.madeby:hover b{text-decoration:underline;}
+.madeby b{font-weight:700;color:var(--blue);letter-spacing:.02em;}
+.madeby .url{color:var(--blue);font-weight:600;}
+
+/* ── sticky note ──────────────────────────── */
+.note{
+  background:var(--y);
+  padding:13px 15px 14px;
+  box-shadow:3px 4px 12px rgba(0,0,0,.13);
+  position:relative;line-height:1.24;font-size:19px;font-weight:500;
+  border-radius:1px;
+}
+.note .k{display:block;font-weight:700;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(0,0,0,.40);margin-bottom:5px;}
+.note.sm{font-size:17px;padding:10px 13px;box-shadow:2px 3px 9px rgba(0,0,0,.11);}
+.note.lg{font-size:21px;}
+.note.y{background:var(--y);} .note.g{background:var(--g);} .note.b{background:var(--b);}
+.note.o{background:var(--o);} .note.p{background:var(--p);} .note.ai{background:var(--lav);}
+/* gentle hand-placed tilt + a tape nub */
+.tilt-l{transform:rotate(-1.3deg);} .tilt-r{transform:rotate(1.1deg);} .tilt-0{transform:rotate(-.4deg);}
+.note.pin:before{content:&quot;&quot;;position:absolute;top:-7px;left:50%;width:34px;height:12px;
+  background:rgba(74,144,217,.78);transform:translateX(-50%) rotate(-4deg);box-shadow:1px 1px 3px rgba(0,0,0,.18);}
+
+/* ── tape strip / lane label ──────────────── */
+.tape{display:inline-block;background:var(--tape-blue);color:#fff;font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;padding:9px 16px;box-shadow:2px 3px 9px rgba(0,0,0,.16);position:relative;}
+.tape:before,.tape:after{content:&quot;&quot;;position:absolute;top:0;bottom:0;width:14px;
+  background:repeating-linear-gradient(135deg,rgba(255,255,255,.28) 0 4px,transparent 4px 8px);}
+.tape:before{left:-7px;transform:skewX(-12deg);} .tape:after{right:-7px;transform:skewX(-12deg);}
+.tape.green{background:var(--dot-green);} .tape.kraftt{background:#b9b09c;} .tape.charcoal{background:var(--charcoal);}
+
+/* ── editorial / blueprint box ────────────── */
+.ebox{background:#fff;border:2px solid var(--charcoal);padding:14px 16px;min-width:160px;position:relative;}
+.ebox .t{font-weight:700;font-size:19px;line-height:1.15;}
+.ebox .s{font-size:15px;color:var(--ink-muted);margin-top:4px;line-height:1.25;}
+.ebox.ai{background:var(--purple-light);border-color:var(--purple);}
+.ebox.ai .tag{position:absolute;top:-11px;left:14px;background:var(--purple);color:#fff;font-size:11px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;padding:2px 8px;}
+.ebox.accent{border-color:var(--blue);}
+
+/* ── garage-sale dot sticker ──────────────── */
+.dot{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;
+  font-weight:700;text-align:center;line-height:1;box-shadow:2px 2px 6px rgba(0,0,0,.22);}
+.dot.red{background:var(--dot-red);} .dot.green{background:var(--dot-green);}
+.dot.amber{background:var(--dot-amber);color:#3a2e00;} .dot.blue{background:var(--tape-blue);}
+
+/* small legend chip */
+.chip{display:inline-flex;align-items:center;gap:8px;font-size:15px;color:var(--ink-2);font-weight:500;}
+.chip .sw{width:16px;height:16px;border-radius:50%;}
+
+&lt;/style&gt;
+&lt;style&gt;
+  .grid{flex:1;margin-top:20px;display:grid;
+    /* columns + rows are set by the renderer from the data */
+    gap:10px;min-height:0;}
+  .ch{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+    background:var(--charcoal);color:#fff;padding:8px;}
+  .ch .n{font-weight:700;font-size:19px;line-height:1.1;}
+  .ch .d{font-size:13px;opacity:.7;margin-top:3px;}
+  .corner-cell{display:flex;align-items:flex-end;padding:6px 4px;}
+  .corner-cell span{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-muted);font-weight:700;}
+  .rh{display:flex;flex-direction:column;justify-content:center;padding:14px 16px;background:#fff;border:2px solid var(--charcoal);position:relative;}
+  .rh .need{font-weight:700;font-size:20px;line-height:1.15;}
+  .rh .tag{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-top:7px;}
+  .rh.gap{border-left:10px solid var(--dot-green);}
+  .rh.gap .tag{color:var(--dot-green);}
+  .rh.stakes{border-left:10px solid var(--dot-amber);}
+  .rh.stakes .tag{color:#a8830a;}
+  .cell{display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.55);border:1px solid var(--border);}
+  .row-gap .cell{background:rgba(46,139,87,.08);}
+  .row-stakes .cell{background:rgba(246,201,14,.10);}
+  .mark{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:24px;box-shadow:2px 2px 6px rgba(0,0,0,.18);}
+  .well{background:var(--dot-green);color:#fff;}
+  .poor{background:var(--dot-amber);color:#3a2e00;}
+  .none{background:#fff;border:2px dashed #cfc8ba;color:#bdb6a6;box-shadow:none;font-size:22px;}
+  .legend{display:flex;gap:30px;align-items:center;margin-top:18px;}
+  .legend .chip{font-size:16px;font-weight:600;}
+  .legend .sw{width:26px;height:26px;}
+  .callout{margin-left:auto;font-size:18px;font-weight:600;color:var(--dot-green);}
+  .err{padding:60px;font-size:20px;color:#DC2626;}
+&lt;/style&gt;
+&lt;script&gt;
+window.__D__={&quot;header&quot;: {&quot;crumb&quot;: &quot;Discovery · 現況對照&quot;, &quot;title&quot;: &quot;每個人哪裡弱&quot;, &quot;sub&quot;: &quot;每一列都是 1.0 要解決的需求；「大家都做不好」的列就是我們的缺口，「大家都做得好」的列是基本盤。對照對象 = 業務今天實際在用的方案。&quot;}, &quot;cornerLabel&quot;: &quot;需求 ↓ / 現況方案 →&quot;, &quot;competitors&quot;: [{&quot;name&quot;: &quot;現行三倉系統&quot;, &quot;sub&quot;: &quot;sales-order 三倉&quot;}, {&quot;name&quot;: &quot;外部主檔&quot;, &quot;sub&quot;: &quot;NetSuite&quot;}, {&quot;name&quot;: &quot;手工/紙本&quot;, &quot;sub&quot;: &quot;抄寫拼湊&quot;}], &quot;needs&quot;: [{&quot;label&quot;: &quot;主檔自建管理（取代外部依賴）&quot;, &quot;type&quot;: &quot;gap&quot;, &quot;tag&quot;: &quot;◆ 你的缺口&quot;, &quot;marks&quot;: [&quot;poor&quot;, &quot;well&quot;, &quot;none&quot;]}, {&quot;label&quot;: &quot;四種單據列印（揀貨/加工/對點/總表）&quot;, &quot;type&quot;: &quot;gap&quot;, &quot;tag&quot;: &quot;◆ 你的缺口&quot;, &quot;marks&quot;: [&quot;poor&quot;, &quot;na&quot;, &quot;poor&quot;]}, {&quot;label&quot;: &quot;多公司/部門權限隔離&quot;, &quot;type&quot;: &quot;gap&quot;, &quot;tag&quot;: &quot;◆ 你的缺口&quot;, &quot;marks&quot;: [&quot;poor&quot;, &quot;none&quot;, &quot;na&quot;]}, {&quot;label&quot;: &quot;客戶專屬商品清單（改名/刪品項）&quot;, &quot;type&quot;: &quot;gap&quot;, &quot;tag&quot;: &quot;◆ 你的缺口&quot;, &quot;marks&quot;: [&quot;poor&quot;, &quot;none&quot;, &quot;none&quot;]}, {&quot;label&quot;: &quot;揀貨/加工單依倉別與分切規格&quot;, &quot;type&quot;: &quot;gap&quot;, &quot;tag&quot;: &quot;◆ 你的缺口&quot;, &quot;marks&quot;: [&quot;none&quot;, &quot;none&quot;, &quot;poor&quot;]}, {&quot;label&quot;: &quot;派車看板即時排程&quot;, &quot;type&quot;: &quot;stakes&quot;, &quot;tag&quot;: &quot;基本盤&quot;, &quot;marks&quot;: [&quot;well&quot;, &quot;none&quot;, &quot;none&quot;]}, {&quot;label&quot;: &quot;訂單建立與歷史查詢&quot;, &quot;type&quot;: &quot;stakes&quot;, &quot;tag&quot;: &quot;基本盤&quot;, &quot;marks&quot;: [&quot;well&quot;, &quot;well&quot;, &quot;poor&quot;]}, {&quot;label&quot;: &quot;客戶自助下單（QR 登入）&quot;, &quot;type&quot;: &quot;stakes&quot;, &quot;tag&quot;: &quot;基本盤&quot;, &quot;marks&quot;: [&quot;well&quot;, &quot;none&quot;, &quot;na&quot;]}], &quot;legend&quot;: [{&quot;mark&quot;: &quot;well&quot;, &quot;label&quot;: &quot;做得好&quot;}, {&quot;mark&quot;: &quot;poor&quot;, &quot;label&quot;: &quot;做得差&quot;}, {&quot;mark&quot;: &quot;none&quot;, &quot;label&quot;: &quot;沒做&quot;}, {&quot;mark&quot;: &quot;na&quot;, &quot;label&quot;: &quot;不適用&quot;}], &quot;callout&quot;: &quot;主檔自建、單據列印與部門隔離是最大缺口；訂單與客戶下單現行已有基礎（基本盤，必須追上）。&quot;};
+window.fetch=function(input){var u=String(input);if(u.indexOf(&quot;.json&quot;)!==-1){return Promise.resolve(new Response(JSON.stringify(window.__D__),{status:200,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;}}));}return Promise.reject(new Error(&quot;blocked&quot;));};
+&lt;/script&gt;
+&lt;/head&gt;
+&lt;body class=&quot;canvas-dots&quot;&gt;
+&lt;div class=&quot;stage&quot;&gt;
+  &lt;div class=&quot;head&quot;&gt;
+    &lt;div&gt;
+      &lt;div class=&quot;crumb&quot; id=&quot;crumb&quot;&gt;&lt;/div&gt;
+      &lt;div class=&quot;title&quot; id=&quot;title&quot;&gt;&lt;/div&gt;
+      &lt;div class=&quot;sub&quot; id=&quot;sub&quot;&gt;&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;a class=&quot;madeby&quot; href=&quot;https://github.com/TexasBedouin/vibe-check&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot;&gt;Created using &lt;b&gt;Vibe-Check&lt;/b&gt; skill&lt;/a&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;grid&quot; id=&quot;grid&quot;&gt;&lt;/div&gt;
+
+  &lt;div class=&quot;legend&quot; id=&quot;legend&quot;&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;script&gt;
+// ─── Competitor Matrix engine. One mark per cell, pure index placement. ───
+// Mark glyphs are renderer-mapped from the enum, never stored in data.
+const MARK = {
+  well: { cls:&#x27;well&#x27;, glyph:&#x27;✓&#x27; },
+  poor: { cls:&#x27;poor&#x27;, glyph:&#x27;~&#x27; },
+  none: { cls:&#x27;none&#x27;, glyph:&#x27;✕&#x27; },
+  na:   { cls:&#x27;none&#x27;, glyph:&#x27;–&#x27; },
+};
+// Need type → row-header modifier + the row tint class on its cells.
+const ROW = {
+  gap:    { rh:&#x27;gap&#x27;,    row:&#x27;row-gap&#x27; },
+  stakes: { rh:&#x27;stakes&#x27;, row:&#x27;row-stakes&#x27; },
+  plain:  { rh:&#x27;&#x27;,       row:&#x27;&#x27; },
+};
+const LEGEND_SW = { well:&#x27;var(--dot-green)&#x27;, poor:&#x27;var(--dot-amber)&#x27;, none:&#x27;#fff;border:2px dashed #cfc8ba&#x27; };
+
+const esc = s =&gt; String(s).replace(/&amp;/g,&#x27;&amp;amp;&#x27;).replace(/&lt;/g,&#x27;&amp;lt;&#x27;).replace(/&gt;/g,&#x27;&amp;gt;&#x27;);
+
+function render(m){
+  const competitors = m.competitors || [];
+  const needs = m.needs || [];
+  const cols = competitors.length;
+
+  const h = m.header || {};
+  document.getElementById(&#x27;crumb&#x27;).textContent = h.crumb || &#x27;&#x27;;
+  document.getElementById(&#x27;title&#x27;).textContent = h.title || &#x27;&#x27;;
+  document.getElementById(&#x27;sub&#x27;).textContent = h.sub || &#x27;&#x27;;
+
+  const grid = document.getElementById(&#x27;grid&#x27;);
+  grid.style.gridTemplateColumns = &#x27;420px repeat(&#x27; + cols + &#x27;,1fr)&#x27;;
+  grid.style.gridTemplateRows = &#x27;96px repeat(&#x27; + needs.length + &#x27;,1fr)&#x27;;
+
+  let html = &#x27;&#x27;;
+  // header row: corner caption + one column header per competitor
+  html += &#x27;&lt;div class=&quot;corner-cell&quot;&gt;&lt;span&gt;&#x27; + esc(m.cornerLabel || &#x27;&#x27;) + &#x27;&lt;/span&gt;&lt;/div&gt;&#x27;;
+  competitors.forEach(c =&gt; {
+    html += &#x27;&lt;div class=&quot;ch&quot;&gt;&lt;span class=&quot;n&quot;&gt;&#x27; + esc(c.name) + &#x27;&lt;/span&gt;&#x27; +
+      (c.sub ? &#x27;&lt;span class=&quot;d&quot;&gt;&#x27; + esc(c.sub) + &#x27;&lt;/span&gt;&#x27; : &#x27;&#x27;) + &#x27;&lt;/div&gt;&#x27;;
+  });
+
+  // one row per need
+  needs.forEach(need =&gt; {
+    const row = ROW[need.type] || ROW.plain;
+    html += &#x27;&lt;div class=&quot;rh&#x27; + (row.rh ? &#x27; &#x27; + row.rh : &#x27;&#x27;) + &#x27;&quot;&gt;&#x27; +
+      &#x27;&lt;span class=&quot;need&quot;&gt;&#x27; + esc(need.label) + &#x27;&lt;/span&gt;&#x27; +
+      (need.tag ? &#x27;&lt;span class=&quot;tag&quot;&gt;&#x27; + esc(need.tag) + &#x27;&lt;/span&gt;&#x27; : &#x27;&#x27;) + &#x27;&lt;/div&gt;&#x27;;
+    const marks = need.marks || [];
+    for (let i = 0; i &lt; cols; i++){
+      const mk = MARK[marks[i]] || MARK.na;
+      html += &#x27;&lt;div class=&quot;cell&#x27; + (row.row ? &#x27; &#x27; + row.row : &#x27;&#x27;) + &#x27;&quot;&gt;&#x27; +
+        &#x27;&lt;div class=&quot;mark &#x27; + mk.cls + &#x27;&quot;&gt;&#x27; + mk.glyph + &#x27;&lt;/div&gt;&lt;/div&gt;&#x27;;
+    }
+  });
+  grid.innerHTML = html;
+
+  // legend + callout
+  const legend = m.legend || [];
+  let leg = legend.map(l =&gt;
+    &#x27;&lt;span class=&quot;chip&quot;&gt;&lt;span class=&quot;sw&quot; style=&quot;background:&#x27; + (LEGEND_SW[l.mark] || &#x27;#fff&#x27;) + &#x27;&quot;&gt;&lt;/span&gt; &#x27; +
+    esc(l.label) + &#x27;&lt;/span&gt;&#x27;
+  ).join(&#x27;&#x27;);
+  if (m.callout) leg += &#x27;&lt;span class=&quot;callout&quot;&gt;&#x27; + esc(m.callout) + &#x27;&lt;/span&gt;&#x27;;
+  document.getElementById(&#x27;legend&#x27;).innerHTML = leg;
+
+  document.body.setAttribute(&#x27;data-rendered&#x27;,&#x27;1&#x27;);
+}
+
+async function main(){
+  const param = new URLSearchParams(location.search).get(&#x27;data&#x27;) || &#x27;matrix-example&#x27;;
+  try{
+    const m = await fetch(&#x27;./data-&#x27;+param+&#x27;.json&#x27;,{cache:&#x27;no-store&#x27;}).then(r=&gt;{ if(!r.ok) throw new Error(r.status); return r.json(); });
+    render(m);
+  }catch(err){
+    document.querySelector(&#x27;.stage&#x27;).innerHTML = &#x27;&lt;div class=&quot;err&quot;&gt;Could not load data-&#x27;+esc(param)+&#x27;.json: &#x27;+esc(err.message)+&#x27;&lt;/div&gt;&#x27;;
+    document.body.setAttribute(&#x27;data-rendered&#x27;,&#x27;1&#x27;);
+  }
+}
+main();
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe></div>
+  <div class="bcap">對照對象是業務今天實際在用的方案：現行三倉系統、NetSuite 外部主檔、手工/紙本。大家都做不好的列 = 我們的缺口。</div>
+
+  <h2>業務原話</h2>
+  <div class="quote"><div class="q">「產品分庫，揀貨單會顯示庫別」「產品名稱手打+清單選擇都留，業務自己決定輸入方式」「APP端業務可以直接刪除品項」「手寫備註欄（特殊切法）」</div><div class="a">— 業務直接傳來的需求訊息</div></div>
+  <div class="quote"><div class="q">「各部門資料庫分隔檢視，僅總管理員可調閱全部資料」「商品總表由各部門自行建立，有幾個部門就要有幾個總表」「客戶要有其專屬商品清單……可以手動刪除不要的品項」</div><div class="a">— 陳老闆整理後的需求</div></div>
+  <div class="quote"><div class="q">「商品在資料庫要有一個總表，但拉到客戶訂單上時要可讓業務手動修改商品名且綁定該客戶……A 商品會在總表上叫做 A，但同時會在不同客戶叫做 BCDEF」</div><div class="a">— 別名機制的原始需求</div></div>
+  <div class="prd-footer">This PRD was created by the <a href="https://github.com/TexasBedouin/vibe-check" target="_blank" rel="noopener noreferrer"><b>vibe-check</b> skill</a>, by Amer Arab</div>
+</section>
+
+<!-- ══════════ TAB 3: EXPERIENCE ══════════ -->
+<section class="panel" id="p-experience">
+  <div class="kicker">體驗 · 核心旅程怎麼設計</div>
+  <h1>先分岔，再融合</h1>
+  <p class="lede">同一個「下單到出貨」，我們先畫了六種方向感，再從裡面挑零件融合成定案——比任何單張都簡單。</p>
+
+  <h2>六種方向感（Crazy 8）</h2>
+  <div class="bwrap" data-b="crazy8" data-bh="1080"><iframe title="Crazy 8" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;zh-Hant&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;/&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;/&gt;
+&lt;title&gt;特耀訂出貨系統：Crazy 8（Web）&lt;/title&gt;
+&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;&gt;&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin&gt;
+&lt;link href=&quot;https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=DM+Serif+Display&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+&lt;style&gt;
+/* ─────────────────────────────────────────────────────────
+   vibe-check diagram engine, shared design layer
+   Built on the ClearList design system tokens.
+   FigJam structure (sticky notes, tape, dots, dotted canvas)
+   + Minimalist Editorial typography (DM Sans / DM Serif Display).
+   One file, many diagram templates.
+   ───────────────────────────────────────────────────────── */
+
+:root{
+  /* canvas */
+  --canvas:#F9F6F0;          /* warm FigJam canvas */
+  --canvas-app:#F9F9F8;      /* editorial / blueprint canvas */
+  --dot:#ddd6c6;
+  --grid-line:rgba(44,100,227,.10);
+
+  /* ink */
+  --charcoal:#1A1A1B;
+  --ink-2:#4b5563;
+  --ink-muted:#6B7280;
+  --border:#E5E5E5;
+
+  /* brand */
+  --blue:#2C64E3;
+  --blue-hover:#2354C2;
+  --purple:#8B5CF6;
+  --purple-light:#F5F3FF;
+  --pink:#ec4899;
+
+  /* moving-sale / figjam */
+  --kraft:#C4A882;
+  --kraft-dark:#A98C63;
+  --tape-blue:#4A90D9;
+  --y:#FFF6A8;   /* softened post-it yellow for sans legibility */
+  --g:#A6E4A0;
+  --b:#A8DBEE;
+  --o:#FFCB7D;
+  --p:#FFA8CC;
+  --lav:#CDBEEA; /* AI = purple family */
+
+  /* status dots */
+  --dot-red:#E03C31;
+  --dot-green:#2E8B57;
+  --dot-amber:#F6C90E;
+
+  /* fonts */
+  --sans:&quot;DM Sans&quot;,ui-sans-serif,system-ui,sans-serif;
+  --serif:&quot;DM Serif Display&quot;,Georgia,serif;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:1920px;height:1080px;overflow:hidden;}
+body{font-family:var(--sans);color:var(--charcoal);-webkit-font-smoothing:antialiased;}
+
+/* canvases */
+.canvas-dots{
+  background-color:var(--canvas);
+  background-image:radial-gradient(var(--dot) 2px,transparent 2px);
+  background-size:30px 30px;background-position:-6px -6px;
+}
+.canvas-blueprint{
+  background-color:var(--canvas-app);
+  background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),
+                   linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+
+.stage{width:1920px;height:1080px;padding:40px 52px 34px;position:relative;display:flex;flex-direction:column;}
+
+/* ── header ───────────────────────────────── */
+.head{display:flex;align-items:flex-start;justify-content:space-between;flex:0 0 auto;}
+.head .crumb{font-weight:700;font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:var(--blue);margin-bottom:6px;}
+.head .title{font-family:var(--serif);font-size:46px;line-height:1.02;color:var(--charcoal);}
+.head .sub{font-size:19px;color:var(--ink-muted);margin-top:10px;max-width:760px;}
+.madeby{text-align:right;font-size:15px;color:var(--ink-muted);line-height:1.3;text-decoration:none;}
+.madeby:hover b{text-decoration:underline;}
+.madeby b{font-weight:700;color:var(--blue);letter-spacing:.02em;}
+.madeby .url{color:var(--blue);font-weight:600;}
+
+/* ── sticky note ──────────────────────────── */
+.note{
+  background:var(--y);
+  padding:13px 15px 14px;
+  box-shadow:3px 4px 12px rgba(0,0,0,.13);
+  position:relative;line-height:1.24;font-size:19px;font-weight:500;
+  border-radius:1px;
+}
+.note .k{display:block;font-weight:700;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(0,0,0,.40);margin-bottom:5px;}
+.note.sm{font-size:17px;padding:10px 13px;box-shadow:2px 3px 9px rgba(0,0,0,.11);}
+.note.lg{font-size:21px;}
+.note.y{background:var(--y);} .note.g{background:var(--g);} .note.b{background:var(--b);}
+.note.o{background:var(--o);} .note.p{background:var(--p);} .note.ai{background:var(--lav);}
+/* gentle hand-placed tilt + a tape nub */
+.tilt-l{transform:rotate(-1.3deg);} .tilt-r{transform:rotate(1.1deg);} .tilt-0{transform:rotate(-.4deg);}
+.note.pin:before{content:&quot;&quot;;position:absolute;top:-7px;left:50%;width:34px;height:12px;
+  background:rgba(74,144,217,.78);transform:translateX(-50%) rotate(-4deg);box-shadow:1px 1px 3px rgba(0,0,0,.18);}
+
+/* ── tape strip / lane label ──────────────── */
+.tape{display:inline-block;background:var(--tape-blue);color:#fff;font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;padding:9px 16px;box-shadow:2px 3px 9px rgba(0,0,0,.16);position:relative;}
+.tape:before,.tape:after{content:&quot;&quot;;position:absolute;top:0;bottom:0;width:14px;
+  background:repeating-linear-gradient(135deg,rgba(255,255,255,.28) 0 4px,transparent 4px 8px);}
+.tape:before{left:-7px;transform:skewX(-12deg);} .tape:after{right:-7px;transform:skewX(-12deg);}
+.tape.green{background:var(--dot-green);} .tape.kraftt{background:#b9b09c;} .tape.charcoal{background:var(--charcoal);}
+
+/* ── editorial / blueprint box ────────────── */
+.ebox{background:#fff;border:2px solid var(--charcoal);padding:14px 16px;min-width:160px;position:relative;}
+.ebox .t{font-weight:700;font-size:19px;line-height:1.15;}
+.ebox .s{font-size:15px;color:var(--ink-muted);margin-top:4px;line-height:1.25;}
+.ebox.ai{background:var(--purple-light);border-color:var(--purple);}
+.ebox.ai .tag{position:absolute;top:-11px;left:14px;background:var(--purple);color:#fff;font-size:11px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;padding:2px 8px;}
+.ebox.accent{border-color:var(--blue);}
+
+/* ── garage-sale dot sticker ──────────────── */
+.dot{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;
+  font-weight:700;text-align:center;line-height:1;box-shadow:2px 2px 6px rgba(0,0,0,.22);}
+.dot.red{background:var(--dot-red);} .dot.green{background:var(--dot-green);}
+.dot.amber{background:var(--dot-amber);color:#3a2e00;} .dot.blue{background:var(--tape-blue);}
+
+/* small legend chip */
+.chip{display:inline-flex;align-items:center;gap:8px;font-size:15px;color:var(--ink-2);font-weight:500;}
+.chip .sw{width:16px;height:16px;border-radius:50%;}
+
+&lt;/style&gt;
+&lt;style&gt;
+  :root{ --win-bar:#ECECEA; --ph:#dededa; --ph-tx:#9a9a93; --win-border:#1A1A1B; }
+  .stage{padding:32px 48px 22px;}
+  .head .crumb{color:var(--blue);}
+  .madeby2{position:absolute;right:48px;top:38px;font-size:14px;color:var(--ink-muted);text-decoration:none;}
+  .madeby2:hover b{text-decoration:underline;} .madeby2 b{color:var(--blue);font-weight:700;}
+
+  .board{flex:1;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:18px 22px;margin-top:14px;min-height:0;}
+  .card{display:flex;flex-direction:column;gap:8px;min-height:0;}
+  .dir{align-self:flex-start;background:var(--charcoal);color:#fff;font-weight:700;font-size:13px;letter-spacing:.03em;
+    padding:5px 12px;transform:rotate(-.6deg);box-shadow:2px 2px 6px rgba(0,0,0,.16);}
+  .bestfor{font-size:13px;color:var(--ink-2);font-weight:500;line-height:1.25;}
+  .bestfor b{color:var(--charcoal);}
+
+  .win{flex:1;background:#fff;border:2px solid var(--win-border);display:flex;flex-direction:column;overflow:hidden;min-height:0;}
+  .winbar{height:28px;flex:0 0 auto;background:var(--win-bar);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 10px;}
+  .dots{display:flex;gap:6px;} .dots i{width:10px;height:10px;border-radius:50%;background:#c9c9c5;}
+  .url{flex:1;height:17px;background:#fff;border:1px solid var(--border);font-size:10px;color:var(--ink-muted);
+    display:flex;align-items:center;padding:0 8px;overflow:hidden;white-space:nowrap;}
+  .wc{flex:1;min-height:0;overflow:hidden;position:relative;display:flex;flex-direction:column;}
+  .ctop{padding:7px 10px;font-size:11px;font-weight:700;color:var(--charcoal);border-bottom:1px solid var(--border);flex:0 0 auto;}
+
+  /* 1 訂單中心 */
+  .orow{display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--border);font-size:11px;}
+  .oqty{width:32px;height:19px;border:1px solid #c9c9c5;display:flex;align-items:center;justify-content:center;font-size:10px;color:#9a9a93;flex:0 0 auto;}
+  .otag{font-size:9px;background:var(--blue);color:#fff;padding:1px 6px;border-radius:2px;flex:0 0 auto;}
+  .oinput{flex:1;height:19px;border:1px solid #c9c9c5;font-size:10px;padding:0 6px;color:#9a9a93;}
+  .osend{background:var(--dot-green);color:#fff;font-size:11px;font-weight:700;text-align:center;padding:8px;margin-top:auto;}
+
+  /* 2 派車看板 */
+  .kan{display:flex;gap:6px;padding:8px;flex:1;}
+  .kcol{flex:1;background:#f3f1ea;border:1px dashed #c9c4b4;padding:5px;}
+  .kcol .kt{font-size:10px;font-weight:700;color:#6f5a37;margin-bottom:5px;}
+  .kcard{background:#fff;border:1px solid #d8d4c8;font-size:9.5px;padding:4px 5px;margin-bottom:4px;border-radius:2px;color:var(--charcoal);}
+  .kcard .kq{color:var(--blue);font-weight:700;}
+  .confirm{background:var(--dot-green);color:#fff;font-size:11px;font-weight:700;text-align:center;padding:7px;flex:0 0 auto;}
+
+  /* 3 QR 自助下單 */
+  .qrwrap{display:flex;flex:1;align-items:center;justify-content:center;gap:14px;padding:10px;}
+  .qrbox{width:76px;height:76px;background:#fff;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--ph-tx);flex:0 0 auto;}
+  .qrside{flex:1;}
+  .qrrow{display:flex;justify-content:space-between;font-size:11px;padding:6px 0;border-bottom:1px dashed var(--border);}
+  .qrrow b{color:var(--blue);}
+  .qrnote{font-size:10px;color:var(--ink-2);margin-top:6px;}
+
+  /* 4 今日出貨工作台 */
+  .today{flex:1;padding:8px;display:flex;flex-direction:column;gap:6px;}
+  .trow{display:flex;align-items:center;gap:8px;background:#f8f7f3;border:1px solid var(--border);padding:6px 8px;font-size:10.5px;}
+  .trow .tn{font-weight:700;color:var(--charcoal);width:74px;flex:0 0 auto;}
+  .trow .tp{color:var(--ink-2);flex:1;}
+  .tbtn{background:var(--blue);color:#fff;font-size:9px;font-weight:700;padding:3px 7px;flex:0 0 auto;}
+  .tbtn.gr{background:var(--dot-green);}
+
+  /* 5 中台儀表板 */
+  .stat{display:flex;gap:8px;padding:10px;}
+  .statcard{flex:1;background:#fff;border:1px solid var(--border);text-align:center;padding:9px 4px;}
+  .statcard .n{font-size:19px;font-weight:700;color:var(--blue);}
+  .statcard .l{font-size:9.5px;color:var(--ink-2);}
+  .dashlist{padding:0 10px;flex:1;}
+  .dli{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;color:var(--charcoal);}
+  .dli .a{width:26px;height:26px;background:var(--ph);flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--ph-tx);}
+
+  /* 6 AI 輔助（1.1） */
+  .wave{display:flex;gap:3px;align-items:center;height:26px;padding:0 12px;border-bottom:1px solid var(--border);}
+  .wave i{width:3px;background:var(--blue);display:block;}
+  .vrow{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--border);font-size:11px;color:var(--charcoal);}
+  .vtag{background:#F2EA52;color:#4a4400;font-size:9px;padding:1px 5px;border-radius:2px;flex:0 0 auto;}
+  .vnote{font-size:10px;color:var(--ink-2);padding:6px 10px;}
+
+  .pickline{text-align:center;font-size:15px;color:var(--ink-2);margin-top:12px;font-weight:500;}
+  .pickline b{color:var(--charcoal);}
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body class=&quot;canvas-dots&quot;&gt;
+&lt;div class=&quot;stage&quot;&gt;
+  &lt;div class=&quot;head&quot;&gt;
+    &lt;div&gt;
+      &lt;div class=&quot;crumb&quot;&gt;Phase 2 · Crazy 8 · 核心體驗&lt;/div&gt;
+      &lt;div class=&quot;title&quot;&gt;六種「下單到出貨」的方向感&lt;/div&gt;
+      &lt;div class=&quot;sub&quot;&gt;同一件事的六種做法：訂單中心、看板優先、QR 自助、今日工作台、儀表板、AI 輔助。先分岔，再融合——挑各方向裡喜歡的零件，湊出一個比任何單張都簡單的定案。&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;a class=&quot;madeby2&quot; href=&quot;https://github.com/TexasBedouin/vibe-check&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot;&gt;Created using &lt;b&gt;Vibe-Check&lt;/b&gt; skill&lt;/a&gt;
+
+  &lt;div class=&quot;board&quot;&gt;
+    &lt;!-- 1 訂單中心 --&gt;
+    &lt;div class=&quot;card&quot;&gt;
+      &lt;div class=&quot;dir&quot;&gt;1 · 訂單中心（App）&lt;/div&gt;
+      &lt;div class=&quot;win&quot;&gt;
+        &lt;div class=&quot;winbar&quot;&gt;&lt;span class=&quot;dots&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;/span&gt;&lt;span class=&quot;url&quot;&gt;app.hexagonty.com/order&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;wc&quot;&gt;
+          &lt;div class=&quot;ctop&quot;&gt;好味食材行 · 專屬清單&lt;/div&gt;
+          &lt;div class=&quot;orow&quot;&gt;&lt;span class=&quot;oqty&quot;&gt;3&lt;/span&gt;牛五花(條) &lt;span class=&quot;otag&quot;&gt;切0.5&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;orow&quot;&gt;&lt;span class=&quot;oqty&quot;&gt;1&lt;/span&gt;去骨雞腿(包) &lt;span class=&quot;otag&quot;&gt;切塊&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;orow&quot;&gt;&lt;span class=&quot;oqty&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;oinput&quot;&gt;手打品名…&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;orow&quot;&gt;&lt;span class=&quot;oqty&quot;&gt;—&lt;/span&gt;特殊切法備註：&lt;/div&gt;
+          &lt;div class=&quot;osend&quot;&gt;送出訂單（自動取號）&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;bestfor&quot;&gt;&lt;b&gt;最適合：&lt;/b&gt;業務每天做最多的動作——30 秒一單。&lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;!-- 2 派車看板優先 --&gt;
+    &lt;div class=&quot;card&quot;&gt;
+      &lt;div class=&quot;dir&quot;&gt;2 · 派車看板優先（中台）&lt;/div&gt;
+      &lt;div class=&quot;win&quot;&gt;
+        &lt;div class=&quot;winbar&quot;&gt;&lt;span class=&quot;dots&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;/span&gt;&lt;span class=&quot;url&quot;&gt;admin.hexagonty.com/dispatch&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;wc&quot;&gt;
+          &lt;div class=&quot;ctop&quot;&gt;7/20 出貨 · 即時更新中&lt;/div&gt;
+          &lt;div class=&quot;kan&quot;&gt;
+            &lt;div class=&quot;kcol&quot;&gt;&lt;div class=&quot;kt&quot;&gt;1車&lt;/div&gt;&lt;div class=&quot;kcard&quot;&gt;好味食材行 &lt;span class=&quot;kq&quot;&gt;#3&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;kcard&quot;&gt;阿宏肉鋪 &lt;span class=&quot;kq&quot;&gt;#1&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+            &lt;div class=&quot;kcol&quot;&gt;&lt;div class=&quot;kt&quot;&gt;2車&lt;/div&gt;&lt;div class=&quot;kcard&quot;&gt;早安早餐 &lt;span class=&quot;kq&quot;&gt;#2&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+            &lt;div class=&quot;kcol&quot;&gt;&lt;div class=&quot;kt&quot;&gt;未指派&lt;/div&gt;&lt;div class=&quot;kcard&quot;&gt;美美咖啡 &lt;span class=&quot;kq&quot;&gt;#4&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;kcard&quot;&gt;老王食堂 &lt;span class=&quot;kq&quot;&gt;#5&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;confirm&quot;&gt;批次確認 2車（5 筆）&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;bestfor&quot;&gt;&lt;b&gt;最適合：&lt;/b&gt;排車的人一眼看全貌，拖過去就好。&lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;!-- 3 QR 自助下單 --&gt;
+    &lt;div class=&quot;card&quot;&gt;
+      &lt;div class=&quot;dir&quot;&gt;3 · QR 即登自助下單（客戶）&lt;/div&gt;
+      &lt;div class=&quot;win&quot;&gt;
+        &lt;div class=&quot;winbar&quot;&gt;&lt;span class=&quot;dots&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;/span&gt;&lt;span class=&quot;url&quot;&gt;app.hexagonty.com/qr&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;wc&quot;&gt;
+          &lt;div class=&quot;qrwrap&quot;&gt;
+            &lt;div class=&quot;qrbox&quot;&gt;QR Code&lt;/div&gt;
+            &lt;div class=&quot;qrside&quot;&gt;
+              &lt;div class=&quot;qrrow&quot;&gt;早安早餐 &lt;b&gt;已登入&lt;/b&gt;&lt;/div&gt;
+              &lt;div class=&quot;qrrow&quot;&gt;今日訂單 &lt;b&gt;2&lt;/b&gt;&lt;/div&gt;
+              &lt;div class=&quot;qrrow&quot;&gt;本月歷史 &lt;b&gt;14&lt;/b&gt;&lt;/div&gt;
+              &lt;div class=&quot;qrnote&quot;&gt;掃店家 QR → 只看到自己的清單與訂單，不用記帳密。&lt;/div&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;bestfor&quot;&gt;&lt;b&gt;最適合：&lt;/b&gt;店家自己下單，不佔業務時間。&lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;!-- 4 今日出貨工作台 --&gt;
+    &lt;div class=&quot;card&quot;&gt;
+      &lt;div class=&quot;dir&quot;&gt;4 · 今日出貨工作台（倉庫/司機）&lt;/div&gt;
+      &lt;div class=&quot;win&quot;&gt;
+        &lt;div class=&quot;winbar&quot;&gt;&lt;span class=&quot;dots&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;/span&gt;&lt;span class=&quot;url&quot;&gt;admin.hexagonty.com/today&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;wc&quot;&gt;
+          &lt;div class=&quot;ctop&quot;&gt;7/20 · 依車次 + 倉別&lt;/div&gt;
+          &lt;div class=&quot;today&quot;&gt;
+            &lt;div class=&quot;trow&quot;&gt;&lt;span class=&quot;tn&quot;&gt;1車 · 1F倉&lt;/span&gt;&lt;span class=&quot;tp&quot;&gt;12 品項&lt;/span&gt;&lt;span class=&quot;tbtn&quot;&gt;揀貨單&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;trow&quot;&gt;&lt;span class=&quot;tn&quot;&gt;1車 · 2F倉&lt;/span&gt;&lt;span class=&quot;tp&quot;&gt;8 品項&lt;/span&gt;&lt;span class=&quot;tbtn gr&quot;&gt;揀貨單&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;trow&quot;&gt;&lt;span class=&quot;tn&quot;&gt;加工單&lt;/span&gt;&lt;span class=&quot;tp&quot;&gt;切 6 項（加工室/配送分區）&lt;/span&gt;&lt;span class=&quot;tbtn&quot;&gt;列印&lt;/span&gt;&lt;/div&gt;
+            &lt;div class=&quot;trow&quot;&gt;&lt;span class=&quot;tn&quot;&gt;2車&lt;/span&gt;&lt;span class=&quot;tp&quot;&gt;5 店家&lt;/span&gt;&lt;span class=&quot;tbtn&quot;&gt;對點單&lt;/span&gt;&lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;bestfor&quot;&gt;&lt;b&gt;最適合：&lt;/b&gt;現場揀貨、加工、列印，不再拼紙本。&lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;!-- 5 中台儀表板 --&gt;
+    &lt;div class=&quot;card&quot;&gt;
+      &lt;div class=&quot;dir&quot;&gt;5 · 中台儀表板&lt;/div&gt;
+      &lt;div class=&quot;win&quot;&gt;
+        &lt;div class=&quot;winbar&quot;&gt;&lt;span class=&quot;dots&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;/span&gt;&lt;span class=&quot;url&quot;&gt;admin.hexagonty.com/&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;wc&quot;&gt;
+          &lt;div class=&quot;ctop&quot;&gt;早安，特耀食品 · 今天&lt;/div&gt;
+          &lt;div class=&quot;stat&quot;&gt;
+            &lt;div class=&quot;statcard&quot;&gt;&lt;div class=&quot;n&quot;&gt;23&lt;/div&gt;&lt;div class=&quot;l&quot;&gt;待出貨&lt;/div&gt;&lt;/div&gt;
+            &lt;div class=&quot;statcard&quot;&gt;&lt;div class=&quot;n&quot;&gt;6&lt;/div&gt;&lt;div class=&quot;l&quot;&gt;待處理訂單&lt;/div&gt;&lt;/div&gt;
+            &lt;div class=&quot;statcard&quot;&gt;&lt;div class=&quot;n&quot;&gt;4&lt;/div&gt;&lt;div class=&quot;l&quot;&gt;待確認車次&lt;/div&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;dashlist&quot;&gt;
+            &lt;div class=&quot;dli&quot;&gt;&lt;span class=&quot;a&quot;&gt;單&lt;/span&gt;新訂單通知：好味食材行 #123&lt;/div&gt;
+            &lt;div class=&quot;dli&quot;&gt;&lt;span class=&quot;a&quot;&gt;派&lt;/span&gt;派車看板&lt;/div&gt;
+            &lt;div class=&quot;dli&quot;&gt;&lt;span class=&quot;a&quot;&gt;客&lt;/span&gt;新增客戶&lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;bestfor&quot;&gt;&lt;b&gt;最適合：&lt;/b&gt;管理層每天開機第一眼看到今天。&lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;!-- 6 AI 輔助（1.1） --&gt;
+    &lt;div class=&quot;card&quot;&gt;
+      &lt;div class=&quot;dir&quot;&gt;6 · AI 輔助下單（1.1）&lt;/div&gt;
+      &lt;div class=&quot;win&quot;&gt;
+        &lt;div class=&quot;winbar&quot;&gt;&lt;span class=&quot;dots&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;/span&gt;&lt;span class=&quot;url&quot;&gt;app.hexagonty.com/voice&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;wc&quot;&gt;
+          &lt;div class=&quot;wave&quot;&gt;&lt;i style=&quot;height:8px&quot;&gt;&lt;/i&gt;&lt;i style=&quot;height:16px&quot;&gt;&lt;/i&gt;&lt;i style=&quot;height:22px&quot;&gt;&lt;/i&gt;&lt;i style=&quot;height:12px&quot;&gt;&lt;/i&gt;&lt;i style=&quot;height:20px&quot;&gt;&lt;/i&gt;&lt;i style=&quot;height:10px&quot;&gt;&lt;/i&gt;&lt;i style=&quot;height:18px&quot;&gt;&lt;/i&gt;&lt;/div&gt;
+          &lt;div class=&quot;vrow&quot;&gt;&lt;span class=&quot;vtag&quot;&gt;語音&lt;/span&gt;「牛五花三條，一條切 0.5」&lt;/div&gt;
+          &lt;div class=&quot;vrow&quot;&gt;&lt;span class=&quot;vtag&quot;&gt;AI&lt;/span&gt;牛五花 x3（條）· 切 0.5 &lt;b&gt;待確認&lt;/b&gt;&lt;/div&gt;
+          &lt;div class=&quot;vrow&quot;&gt;&lt;span class=&quot;vtag&quot;&gt;AI&lt;/span&gt;拍照建客戶（名片預填）&lt;/div&gt;
+          &lt;div class=&quot;vnote&quot;&gt;AI 只預填、一律人工確認；失敗直接退回手動，不擋流程。&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;bestfor&quot;&gt;&lt;b&gt;最適合：&lt;/b&gt;現場兩手都忙時，用講的、用拍的。&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;pickline&quot;&gt;同一招：從任何一張挑你喜歡的零件，我們融合成一個定案。&lt;b&gt;1 的下單 + 2 的看板 + 3 的 QR&lt;/b&gt; 就是現行計畫的方向。&lt;/div&gt;
+&lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe></div>
+  <div class="bcap">訂單中心、看板優先、QR 自助、今日工作台、儀表板、AI 輔助——六張都是真實的核心時刻，不是空殼。</div>
+
+  <h2>融合後的定案</h2>
+  <div class="bwrap" data-b="crazy8-combine" data-bh="1080"><iframe title="Crazy 8 Combine" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;zh-Hant&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;/&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;/&gt;
+&lt;title&gt;特耀訂出貨系統：收斂定案&lt;/title&gt;
+&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;&gt;&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin&gt;
+&lt;link href=&quot;https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=DM+Serif+Display&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+&lt;style&gt;
+/* ─────────────────────────────────────────────────────────
+   vibe-check diagram engine, shared design layer
+   Built on the ClearList design system tokens.
+   FigJam structure (sticky notes, tape, dots, dotted canvas)
+   + Minimalist Editorial typography (DM Sans / DM Serif Display).
+   One file, many diagram templates.
+   ───────────────────────────────────────────────────────── */
+
+:root{
+  /* canvas */
+  --canvas:#F9F6F0;          /* warm FigJam canvas */
+  --canvas-app:#F9F9F8;      /* editorial / blueprint canvas */
+  --dot:#ddd6c6;
+  --grid-line:rgba(44,100,227,.10);
+
+  /* ink */
+  --charcoal:#1A1A1B;
+  --ink-2:#4b5563;
+  --ink-muted:#6B7280;
+  --border:#E5E5E5;
+
+  /* brand */
+  --blue:#2C64E3;
+  --blue-hover:#2354C2;
+  --purple:#8B5CF6;
+  --purple-light:#F5F3FF;
+  --pink:#ec4899;
+
+  /* moving-sale / figjam */
+  --kraft:#C4A882;
+  --kraft-dark:#A98C63;
+  --tape-blue:#4A90D9;
+  --y:#FFF6A8;   /* softened post-it yellow for sans legibility */
+  --g:#A6E4A0;
+  --b:#A8DBEE;
+  --o:#FFCB7D;
+  --p:#FFA8CC;
+  --lav:#CDBEEA; /* AI = purple family */
+
+  /* status dots */
+  --dot-red:#E03C31;
+  --dot-green:#2E8B57;
+  --dot-amber:#F6C90E;
+
+  /* fonts */
+  --sans:&quot;DM Sans&quot;,ui-sans-serif,system-ui,sans-serif;
+  --serif:&quot;DM Serif Display&quot;,Georgia,serif;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:1920px;height:1080px;overflow:hidden;}
+body{font-family:var(--sans);color:var(--charcoal);-webkit-font-smoothing:antialiased;}
+
+/* canvases */
+.canvas-dots{
+  background-color:var(--canvas);
+  background-image:radial-gradient(var(--dot) 2px,transparent 2px);
+  background-size:30px 30px;background-position:-6px -6px;
+}
+.canvas-blueprint{
+  background-color:var(--canvas-app);
+  background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),
+                   linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+
+.stage{width:1920px;height:1080px;padding:40px 52px 34px;position:relative;display:flex;flex-direction:column;}
+
+/* ── header ───────────────────────────────── */
+.head{display:flex;align-items:flex-start;justify-content:space-between;flex:0 0 auto;}
+.head .crumb{font-weight:700;font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:var(--blue);margin-bottom:6px;}
+.head .title{font-family:var(--serif);font-size:46px;line-height:1.02;color:var(--charcoal);}
+.head .sub{font-size:19px;color:var(--ink-muted);margin-top:10px;max-width:760px;}
+.madeby{text-align:right;font-size:15px;color:var(--ink-muted);line-height:1.3;text-decoration:none;}
+.madeby:hover b{text-decoration:underline;}
+.madeby b{font-weight:700;color:var(--blue);letter-spacing:.02em;}
+.madeby .url{color:var(--blue);font-weight:600;}
+
+/* ── sticky note ──────────────────────────── */
+.note{
+  background:var(--y);
+  padding:13px 15px 14px;
+  box-shadow:3px 4px 12px rgba(0,0,0,.13);
+  position:relative;line-height:1.24;font-size:19px;font-weight:500;
+  border-radius:1px;
+}
+.note .k{display:block;font-weight:700;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(0,0,0,.40);margin-bottom:5px;}
+.note.sm{font-size:17px;padding:10px 13px;box-shadow:2px 3px 9px rgba(0,0,0,.11);}
+.note.lg{font-size:21px;}
+.note.y{background:var(--y);} .note.g{background:var(--g);} .note.b{background:var(--b);}
+.note.o{background:var(--o);} .note.p{background:var(--p);} .note.ai{background:var(--lav);}
+/* gentle hand-placed tilt + a tape nub */
+.tilt-l{transform:rotate(-1.3deg);} .tilt-r{transform:rotate(1.1deg);} .tilt-0{transform:rotate(-.4deg);}
+.note.pin:before{content:&quot;&quot;;position:absolute;top:-7px;left:50%;width:34px;height:12px;
+  background:rgba(74,144,217,.78);transform:translateX(-50%) rotate(-4deg);box-shadow:1px 1px 3px rgba(0,0,0,.18);}
+
+/* ── tape strip / lane label ──────────────── */
+.tape{display:inline-block;background:var(--tape-blue);color:#fff;font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;padding:9px 16px;box-shadow:2px 3px 9px rgba(0,0,0,.16);position:relative;}
+.tape:before,.tape:after{content:&quot;&quot;;position:absolute;top:0;bottom:0;width:14px;
+  background:repeating-linear-gradient(135deg,rgba(255,255,255,.28) 0 4px,transparent 4px 8px);}
+.tape:before{left:-7px;transform:skewX(-12deg);} .tape:after{right:-7px;transform:skewX(-12deg);}
+.tape.green{background:var(--dot-green);} .tape.kraftt{background:#b9b09c;} .tape.charcoal{background:var(--charcoal);}
+
+/* ── editorial / blueprint box ────────────── */
+.ebox{background:#fff;border:2px solid var(--charcoal);padding:14px 16px;min-width:160px;position:relative;}
+.ebox .t{font-weight:700;font-size:19px;line-height:1.15;}
+.ebox .s{font-size:15px;color:var(--ink-muted);margin-top:4px;line-height:1.25;}
+.ebox.ai{background:var(--purple-light);border-color:var(--purple);}
+.ebox.ai .tag{position:absolute;top:-11px;left:14px;background:var(--purple);color:#fff;font-size:11px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;padding:2px 8px;}
+.ebox.accent{border-color:var(--blue);}
+
+/* ── garage-sale dot sticker ──────────────── */
+.dot{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;
+  font-weight:700;text-align:center;line-height:1;box-shadow:2px 2px 6px rgba(0,0,0,.22);}
+.dot.red{background:var(--dot-red);} .dot.green{background:var(--dot-green);}
+.dot.amber{background:var(--dot-amber);color:#3a2e00;} .dot.blue{background:var(--tape-blue);}
+
+/* small legend chip */
+.chip{display:inline-flex;align-items:center;gap:8px;font-size:15px;color:var(--ink-2);font-weight:500;}
+.chip .sw{width:16px;height:16px;border-radius:50%;}
+
+&lt;/style&gt;
+&lt;style&gt;
+  :root{ --win-bar:#ECECEA; --ph:#dededa; --ph-tx:#9a9a93; --win-border:#1A1A1B; }
+  .stage{padding:32px 48px 22px;}
+  .head .crumb{color:var(--blue);}
+  .madeby2{position:absolute;right:48px;top:38px;font-size:14px;color:var(--ink-muted);text-decoration:none;}
+  .madeby2:hover b{text-decoration:underline;} .madeby2 b{color:var(--blue);font-weight:700;}
+
+  .flow{flex:1;display:flex;align-items:stretch;gap:16px;margin-top:16px;min-height:0;}
+  .unit{flex:1;display:flex;flex-direction:column;gap:9px;min-width:0;}
+  .src{background:var(--dot-amber);color:#3a2e00;font-size:11px;font-weight:700;padding:2px 8px;border-radius:2px;align-self:flex-start;}
+  .step-cap{font-size:14px;color:var(--ink-2);font-weight:500;line-height:1.3;}
+  .step-cap b{color:var(--charcoal);}
+  .arrow{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;flex:0 0 auto;}
+  .arrow .a{font-size:30px;font-weight:700;color:var(--blue);}
+  .arrow .l{font-size:12px;color:var(--ink-muted);font-weight:600;letter-spacing:.06em;}
+
+  .win{flex:1;background:#fff;border:2px solid var(--win-border);display:flex;flex-direction:column;overflow:hidden;min-height:0;}
+  .winbar{height:28px;flex:0 0 auto;background:var(--win-bar);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 10px;}
+  .dots{display:flex;gap:6px;} .dots i{width:10px;height:10px;border-radius:50%;background:#c9c9c5;}
+  .url{flex:1;height:17px;background:#fff;border:1px solid var(--border);font-size:10px;color:var(--ink-muted);
+    display:flex;align-items:center;padding:0 8px;overflow:hidden;white-space:nowrap;}
+  .wc{flex:1;min-height:0;overflow:hidden;position:relative;display:flex;flex-direction:column;}
+  .ctop{padding:7px 10px;font-size:11px;font-weight:700;color:var(--charcoal);border-bottom:1px solid var(--border);flex:0 0 auto;}
+
+  .orow{display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--border);font-size:11px;}
+  .oqty{width:32px;height:19px;border:1px solid #c9c9c5;display:flex;align-items:center;justify-content:center;font-size:10px;color:#9a9a93;flex:0 0 auto;}
+  .otag{font-size:9px;background:var(--blue);color:#fff;padding:1px 6px;border-radius:2px;flex:0 0 auto;}
+  .oinput{flex:1;height:19px;border:1px solid #c9c9c5;font-size:10px;padding:0 6px;color:#9a9a93;}
+  .osend{background:var(--dot-green);color:#fff;font-size:11px;font-weight:700;text-align:center;padding:8px;margin-top:auto;}
+
+  .kan{display:flex;gap:6px;padding:8px;flex:1;}
+  .kcol{flex:1;background:#f3f1ea;border:1px dashed #c9c4b4;padding:5px;}
+  .kcol .kt{font-size:10px;font-weight:700;color:#6f5a37;margin-bottom:5px;}
+  .kcard{background:#fff;border:1px solid #d8d4c8;font-size:9.5px;padding:4px 5px;margin-bottom:4px;border-radius:2px;color:var(--charcoal);}
+  .kcard .kq{color:var(--blue);font-weight:700;}
+  .confirm{background:var(--dot-green);color:#fff;font-size:11px;font-weight:700;text-align:center;padding:7px;flex:0 0 auto;}
+
+  .qrwrap{display:flex;flex:1;align-items:center;justify-content:center;gap:14px;padding:10px;}
+  .qrbox{width:76px;height:76px;background:#fff;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--ph-tx);flex:0 0 auto;}
+  .qrside{flex:1;}
+  .qrrow{display:flex;justify-content:space-between;font-size:11px;padding:6px 0;border-bottom:1px dashed var(--border);}
+  .qrrow b{color:var(--blue);}
+  .qrnote{font-size:10px;color:var(--ink-2);margin-top:6px;}
+
+  .why{text-align:center;font-size:15px;color:var(--ink-2);margin-top:12px;font-weight:500;}
+  .why b{color:var(--charcoal);}
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body class=&quot;canvas-dots&quot;&gt;
+&lt;div class=&quot;stage&quot;&gt;
+  &lt;div class=&quot;head&quot;&gt;
+    &lt;div&gt;
+      &lt;div class=&quot;crumb&quot;&gt;Phase 2 · 收斂定案&lt;/div&gt;
+      &lt;div class=&quot;title&quot;&gt;定案：App 下單 → 中台看板 → 客戶 QR&lt;/div&gt;
+      &lt;div class=&quot;sub&quot;&gt;從六張裡挑出來融合的方向。保留各張最快的地方，丟掉會拖慢核心的，所以比任何單張都簡單。&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;a class=&quot;madeby2&quot; href=&quot;https://github.com/TexasBedouin/vibe-check&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot;&gt;Created using &lt;b&gt;Vibe-Check&lt;/b&gt; skill&lt;/a&gt;
+
+  &lt;div class=&quot;flow&quot;&gt;
+    &lt;div class=&quot;unit&quot;&gt;
+      &lt;span class=&quot;src&quot;&gt;保留自 1 · 訂單中心&lt;/span&gt;
+      &lt;div class=&quot;win&quot;&gt;
+        &lt;div class=&quot;winbar&quot;&gt;&lt;span class=&quot;dots&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;/span&gt;&lt;span class=&quot;url&quot;&gt;app.hexagonty.com/order&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;wc&quot;&gt;
+          &lt;div class=&quot;ctop&quot;&gt;好味食材行 · 專屬清單&lt;/div&gt;
+          &lt;div class=&quot;orow&quot;&gt;&lt;span class=&quot;oqty&quot;&gt;3&lt;/span&gt;牛五花(條) &lt;span class=&quot;otag&quot;&gt;切0.5&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;orow&quot;&gt;&lt;span class=&quot;oqty&quot;&gt;1&lt;/span&gt;去骨雞腿(包) &lt;span class=&quot;otag&quot;&gt;切塊&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;orow&quot;&gt;&lt;span class=&quot;oqty&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;oinput&quot;&gt;手打品名…&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;osend&quot;&gt;送出訂單&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;step-cap&quot;&gt;&lt;b&gt;業務下單&lt;/b&gt;：選客戶 → 專屬清單 → 30 秒一單。手打品名 + 特殊切法都在這。&lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;arrow&quot;&gt;&lt;div class=&quot;a&quot;&gt;&amp;rarr;&lt;/div&gt;&lt;div class=&quot;l&quot;&gt;然後&lt;/div&gt;&lt;/div&gt;
+
+    &lt;div class=&quot;unit&quot;&gt;
+      &lt;span class=&quot;src&quot;&gt;保留自 2 · 派車看板&lt;/span&gt;
+      &lt;div class=&quot;win&quot;&gt;
+        &lt;div class=&quot;winbar&quot;&gt;&lt;span class=&quot;dots&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;/span&gt;&lt;span class=&quot;url&quot;&gt;admin.hexagonty.com/dispatch&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;wc&quot;&gt;
+          &lt;div class=&quot;ctop&quot;&gt;7/20 出貨 · 即時更新中&lt;/div&gt;
+          &lt;div class=&quot;kan&quot;&gt;
+            &lt;div class=&quot;kcol&quot;&gt;&lt;div class=&quot;kt&quot;&gt;1車&lt;/div&gt;&lt;div class=&quot;kcard&quot;&gt;好味食材行 &lt;span class=&quot;kq&quot;&gt;#3&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+            &lt;div class=&quot;kcol&quot;&gt;&lt;div class=&quot;kt&quot;&gt;2車&lt;/div&gt;&lt;div class=&quot;kcard&quot;&gt;早安早餐 &lt;span class=&quot;kq&quot;&gt;#2&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+            &lt;div class=&quot;kcol&quot;&gt;&lt;div class=&quot;kt&quot;&gt;未指派&lt;/div&gt;&lt;div class=&quot;kcard&quot;&gt;老王食堂 &lt;span class=&quot;kq&quot;&gt;#5&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;confirm&quot;&gt;批次確認 1車（4 筆）→ 列印四種單據&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;step-cap&quot;&gt;&lt;b&gt;中台排車&lt;/b&gt;：拖放 + 批次確認 + 四種單據，同一頁走完。&lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;arrow&quot;&gt;&lt;div class=&quot;a&quot;&gt;&amp;rarr;&lt;/div&gt;&lt;div class=&quot;l&quot;&gt;還有&lt;/div&gt;&lt;/div&gt;
+
+    &lt;div class=&quot;unit&quot;&gt;
+      &lt;span class=&quot;src&quot;&gt;保留自 3 · QR 自助&lt;/span&gt;
+      &lt;div class=&quot;win&quot;&gt;
+        &lt;div class=&quot;winbar&quot;&gt;&lt;span class=&quot;dots&quot;&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;i&gt;&lt;/i&gt;&lt;/span&gt;&lt;span class=&quot;url&quot;&gt;app.hexagonty.com/qr&lt;/span&gt;&lt;/div&gt;
+        &lt;div class=&quot;wc&quot;&gt;
+          &lt;div class=&quot;qrwrap&quot;&gt;
+            &lt;div class=&quot;qrbox&quot;&gt;QR Code&lt;/div&gt;
+            &lt;div class=&quot;qrside&quot;&gt;
+              &lt;div class=&quot;qrrow&quot;&gt;早安早餐 &lt;b&gt;已登入&lt;/b&gt;&lt;/div&gt;
+              &lt;div class=&quot;qrrow&quot;&gt;今日訂單 &lt;b&gt;2&lt;/b&gt;&lt;/div&gt;
+              &lt;div class=&quot;qrrow&quot;&gt;本月歷史 &lt;b&gt;14&lt;/b&gt;&lt;/div&gt;
+              &lt;div class=&quot;qrnote&quot;&gt;店家掃 QR → 只看到自己，不用記帳密。&lt;/div&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;step-cap&quot;&gt;&lt;b&gt;客戶自助&lt;/b&gt;：QR 登入 + 自己的商品與訂單，客戶端不設額外權限。&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;why&quot;&gt;&lt;b&gt;丟掉：&lt;/b&gt;儀表板當首屏（併入中台側欄）、AI 語音/拍照當主路徑（改為 1.1 預填輔助）、今日工作台（併入單據列印頁）。可以要，但永遠不必先要。&lt;/div&gt;
+&lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe></div>
+  <div class="bcap">保留 1 的下單、2 的看板、3 的 QR；儀表板併入側欄、AI 輔助移到 1.1、今日工作台併入列印頁。</div>
+
+  <h2>最重要的一件事</h2>
+  <div class="callout"><span class="tag">aha 時刻</span>
+    <div class="t">送出訂單的那一刻，整條鏈就動了</div>
+    <p>業務按下「送出」，訂單自動取號、寫入狀態軌跡、通知客戶帳號——下一秒就出現在中台派車看板，拖進車次、批次確認、四種單據一鍵列印。從下單到出貨，10 分鐘一條路走完。這就是「它值得了」的瞬間，登入後 30 秒內就能到達。</p>
+  </div>
+
+  <h2>體驗藍圖</h2>
+  <div class="bwrap" data-b="blueprint" data-bh="1500"><iframe title="Experience Blueprint" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;/&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;/&gt;
+&lt;title&gt;Experience Blueprint Engine&lt;/title&gt;
+&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;&gt;&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin&gt;
+&lt;link href=&quot;https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=DM+Serif+Display&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+&lt;style&gt;
+/* ─────────────────────────────────────────────────────────
+   vibe-check diagram engine, shared design layer
+   Built on the ClearList design system tokens.
+   FigJam structure (sticky notes, tape, dots, dotted canvas)
+   + Minimalist Editorial typography (DM Sans / DM Serif Display).
+   One file, many diagram templates.
+   ───────────────────────────────────────────────────────── */
+
+:root{
+  /* canvas */
+  --canvas:#F9F6F0;          /* warm FigJam canvas */
+  --canvas-app:#F9F9F8;      /* editorial / blueprint canvas */
+  --dot:#ddd6c6;
+  --grid-line:rgba(44,100,227,.10);
+
+  /* ink */
+  --charcoal:#1A1A1B;
+  --ink-2:#4b5563;
+  --ink-muted:#6B7280;
+  --border:#E5E5E5;
+
+  /* brand */
+  --blue:#2C64E3;
+  --blue-hover:#2354C2;
+  --purple:#8B5CF6;
+  --purple-light:#F5F3FF;
+  --pink:#ec4899;
+
+  /* moving-sale / figjam */
+  --kraft:#C4A882;
+  --kraft-dark:#A98C63;
+  --tape-blue:#4A90D9;
+  --y:#FFF6A8;   /* softened post-it yellow for sans legibility */
+  --g:#A6E4A0;
+  --b:#A8DBEE;
+  --o:#FFCB7D;
+  --p:#FFA8CC;
+  --lav:#CDBEEA; /* AI = purple family */
+
+  /* status dots */
+  --dot-red:#E03C31;
+  --dot-green:#2E8B57;
+  --dot-amber:#F6C90E;
+
+  /* fonts */
+  --sans:&quot;DM Sans&quot;,ui-sans-serif,system-ui,sans-serif;
+  --serif:&quot;DM Serif Display&quot;,Georgia,serif;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:1920px;height:1080px;overflow:hidden;}
+body{font-family:var(--sans);color:var(--charcoal);-webkit-font-smoothing:antialiased;}
+
+/* canvases */
+.canvas-dots{
+  background-color:var(--canvas);
+  background-image:radial-gradient(var(--dot) 2px,transparent 2px);
+  background-size:30px 30px;background-position:-6px -6px;
+}
+.canvas-blueprint{
+  background-color:var(--canvas-app);
+  background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),
+                   linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+
+.stage{width:1920px;height:1080px;padding:40px 52px 34px;position:relative;display:flex;flex-direction:column;}
+
+/* ── header ───────────────────────────────── */
+.head{display:flex;align-items:flex-start;justify-content:space-between;flex:0 0 auto;}
+.head .crumb{font-weight:700;font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:var(--blue);margin-bottom:6px;}
+.head .title{font-family:var(--serif);font-size:46px;line-height:1.02;color:var(--charcoal);}
+.head .sub{font-size:19px;color:var(--ink-muted);margin-top:10px;max-width:760px;}
+.madeby{text-align:right;font-size:15px;color:var(--ink-muted);line-height:1.3;text-decoration:none;}
+.madeby:hover b{text-decoration:underline;}
+.madeby b{font-weight:700;color:var(--blue);letter-spacing:.02em;}
+.madeby .url{color:var(--blue);font-weight:600;}
+
+/* ── sticky note ──────────────────────────── */
+.note{
+  background:var(--y);
+  padding:13px 15px 14px;
+  box-shadow:3px 4px 12px rgba(0,0,0,.13);
+  position:relative;line-height:1.24;font-size:19px;font-weight:500;
+  border-radius:1px;
+}
+.note .k{display:block;font-weight:700;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(0,0,0,.40);margin-bottom:5px;}
+.note.sm{font-size:17px;padding:10px 13px;box-shadow:2px 3px 9px rgba(0,0,0,.11);}
+.note.lg{font-size:21px;}
+.note.y{background:var(--y);} .note.g{background:var(--g);} .note.b{background:var(--b);}
+.note.o{background:var(--o);} .note.p{background:var(--p);} .note.ai{background:var(--lav);}
+/* gentle hand-placed tilt + a tape nub */
+.tilt-l{transform:rotate(-1.3deg);} .tilt-r{transform:rotate(1.1deg);} .tilt-0{transform:rotate(-.4deg);}
+.note.pin:before{content:&quot;&quot;;position:absolute;top:-7px;left:50%;width:34px;height:12px;
+  background:rgba(74,144,217,.78);transform:translateX(-50%) rotate(-4deg);box-shadow:1px 1px 3px rgba(0,0,0,.18);}
+
+/* ── tape strip / lane label ──────────────── */
+.tape{display:inline-block;background:var(--tape-blue);color:#fff;font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;padding:9px 16px;box-shadow:2px 3px 9px rgba(0,0,0,.16);position:relative;}
+.tape:before,.tape:after{content:&quot;&quot;;position:absolute;top:0;bottom:0;width:14px;
+  background:repeating-linear-gradient(135deg,rgba(255,255,255,.28) 0 4px,transparent 4px 8px);}
+.tape:before{left:-7px;transform:skewX(-12deg);} .tape:after{right:-7px;transform:skewX(-12deg);}
+.tape.green{background:var(--dot-green);} .tape.kraftt{background:#b9b09c;} .tape.charcoal{background:var(--charcoal);}
+
+/* ── editorial / blueprint box ────────────── */
+.ebox{background:#fff;border:2px solid var(--charcoal);padding:14px 16px;min-width:160px;position:relative;}
+.ebox .t{font-weight:700;font-size:19px;line-height:1.15;}
+.ebox .s{font-size:15px;color:var(--ink-muted);margin-top:4px;line-height:1.25;}
+.ebox.ai{background:var(--purple-light);border-color:var(--purple);}
+.ebox.ai .tag{position:absolute;top:-11px;left:14px;background:var(--purple);color:#fff;font-size:11px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;padding:2px 8px;}
+.ebox.accent{border-color:var(--blue);}
+
+/* ── garage-sale dot sticker ──────────────── */
+.dot{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;
+  font-weight:700;text-align:center;line-height:1;box-shadow:2px 2px 6px rgba(0,0,0,.22);}
+.dot.red{background:var(--dot-red);} .dot.green{background:var(--dot-green);}
+.dot.amber{background:var(--dot-amber);color:#3a2e00;} .dot.blue{background:var(--tape-blue);}
+
+/* small legend chip */
+.chip{display:inline-flex;align-items:center;gap:8px;font-size:15px;color:var(--ink-2);font-weight:500;}
+.chip .sw{width:16px;height:16px;border-radius:50%;}
+
+&lt;/style&gt;
+&lt;style&gt;
+  :root{
+    --t-phase:#F2EA52; --t-step:#FFFFFF; --t-hidden:#16161a; --t-touch:#1CA3DE;
+    --t-roles:#5BB12F; --t-process:#C2C2C2; --t-tech:#8A8A8A; --t-policy:#FBB13C;
+    --t-critical:#F4145B; --t-opp:#F2EA52; --t-metric:#C9A6F2;
+    --t-pitfall:#F4145B; --t-rationale:#C9A6F2; --t-question:#A833C2; --t-notes:#A6E7FB;
+  }
+  html,body{height:auto!important;min-height:1320px!important;overflow:visible!important;background:#fff;}
+  .stage{height:auto;min-height:1320px;padding:38px 44px;flex-direction:row;gap:26px;}
+  .legend{width:312px;flex:0 0 auto;background:#F4F4F2;border:1px solid var(--border);padding:20px 18px;align-self:flex-start;}
+  .legend h3{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--charcoal);font-weight:700;margin-bottom:6px;}
+  .legend .lh-sub{font-size:12.5px;color:var(--ink-muted);margin-bottom:14px;line-height:1.3;}
+  .lrow{display:flex;align-items:flex-start;gap:11px;margin-bottom:10px;}
+  .sw{width:34px;height:22px;flex:0 0 auto;border-radius:2px;margin-top:1px;}
+  .sw.bord{border:1.5px solid var(--charcoal);}
+  .lrow .lab{font-size:13.5px;color:var(--charcoal);font-weight:700;line-height:1.15;}
+  .lrow .des{font-size:12px;color:var(--ink-muted);line-height:1.2;display:block;margin-top:1px;font-weight:500;}
+  .legend .pti{margin-top:13px;padding-top:12px;border-top:1px solid var(--border);}
+  .legend .pti .t{font-size:12px;font-weight:700;color:var(--charcoal);margin-bottom:6px;}
+  .pti-bar{background:var(--t-phase);color:#4a4400;font-size:11px;font-weight:600;padding:6px 9px;border-radius:2px;line-height:1.2;}
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .crumb2{font-weight:700;font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--blue);margin-bottom:7px;}
+  .offering{font-size:14px;color:var(--ink-muted);font-weight:600;margin-bottom:4px;}
+  .offering b{color:var(--charcoal);}
+  .scn-title{font-family:var(--serif);font-size:38px;line-height:1.05;color:var(--charcoal);}
+  .explainer{margin-top:14px;background:#EEF4FF;border-left:4px solid var(--blue);padding:14px 18px;}
+  .explainer .eh{font-weight:700;font-size:14px;color:var(--charcoal);margin-bottom:5px;}
+  .explainer p{font-size:14px;color:var(--ink-2);line-height:1.45;max-width:1180px;}
+  .explainer .read{margin-top:8px;font-size:13px;color:var(--blue);font-weight:600;}
+  .bp{display:grid;column-gap:7px;margin-top:18px;}
+  .ph-l{display:flex;align-items:center;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-muted);}
+  .phase{background:var(--t-phase);color:#4a4400;font-weight:700;font-size:13px;padding:7px 12px;border-radius:2px;display:flex;align-items:center;margin-bottom:8px;}
+  .phase .ph-sub{font-weight:500;opacity:.7;margin-left:7px;font-size:11.5px;}
+  .lane-l{display:flex;flex-direction:column;justify-content:center;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-2);padding:7px 7px 7px 0;}
+  .lane-l .lhint{display:block;font-size:10.5px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--ink-muted);margin-top:2px;line-height:1.15;}
+  .cell{padding:6px 4px;display:flex;flex-direction:column;gap:5px;min-height:72px;border-top:1px solid #efece6;}
+  .lane-l.bnd,.cell.bnd{background:rgba(26,26,27,.04);}
+  .stepcell{min-height:94px;border-top:none;}
+  .c{padding:7px 9px;border-radius:2px;font-size:12.5px;line-height:1.2;font-weight:500;box-shadow:1px 2px 4px rgba(0,0,0,.10);}
+  .c.step{background:var(--t-step);border:1.5px solid var(--charcoal);box-shadow:none;}
+  .c.step .snum{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--charcoal);color:#fff;font-size:11px;font-weight:700;margin-right:5px;}
+  .c.step .sname{font-weight:700;font-size:13.5px;}
+  .c.step .sdef{display:block;margin-top:4px;color:var(--ink-2);font-size:11.5px;line-height:1.18;}
+  .c.step.hidden{background:var(--t-hidden);border-color:var(--t-hidden);}
+  .c.step.hidden .sname{color:#fff;} .c.step.hidden .sdef{color:#c7c7c7;}
+  .c.step.hidden .snum{background:#fff;color:#16161a;}
+  .c.step.hidden .htag{display:block;font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#9a9a9a;margin-bottom:3px;}
+  .c.touch{background:var(--t-touch);color:#fff;} .c.roles{background:var(--t-roles);color:#fff;}
+  .c.process{background:var(--t-process);color:#2a2a2a;} .c.tech{background:var(--t-tech);color:#fff;}
+  .c.policy{background:var(--t-policy);color:#3a2a05;} .c.critical{background:var(--t-critical);color:#fff;}
+  .c.opp{background:var(--t-opp);color:#4a4400;} .c.metric{background:var(--t-metric);color:#3a2057;}
+  .c.pitfall{background:var(--t-pitfall);color:#fff;} .c.rationale{background:var(--t-rationale);color:#3a2057;}
+  .c.question{background:var(--t-question);color:#fff;} .c.notes{background:var(--t-notes);color:#0c3a4a;}
+  .madeby2{position:absolute;right:44px;bottom:14px;font-size:13px;color:var(--ink-muted);text-decoration:none;}
+  .madeby2:hover b{text-decoration:underline;}
+  .madeby2 b{color:var(--blue);font-weight:700;}
+  .err{padding:60px;font-size:20px;color:#DC2626;}
+&lt;/style&gt;
+&lt;script&gt;
+window.__D__={&quot;state&quot;: &quot;future&quot;, &quot;offering&quot;: &quot;特耀訂出貨系統 1.0&quot;, &quot;scenario&quot;: &quot;業務從 App 下單 → 中台派車 → 四種單據出貨&quot;, &quot;explainer&quot;: {&quot;title&quot;: &quot;從下單到出貨，一條路走完&quot;, &quot;body&quot;: &quot;這張藍圖畫的是系統最核心的一段旅程：業務下單開始，到單據印出、貨出得了門為止。每一列是一個層次——使用者看到什麼、背後誰在運作、用了什麼技術、訂了什麼規則、哪裡會出錯、為什麼這樣設計。&quot;, &quot;read&quot;: &quot;由上往下讀。某一格空白就是該層在此步驟沒有內容，這本身也是資訊。&quot;}, &quot;phases&quot;: [{&quot;name&quot;: &quot;下單&quot;, &quot;from&quot;: 1, &quot;to&quot;: 5}, {&quot;name&quot;: &quot;派車&quot;, &quot;from&quot;: 6, &quot;to&quot;: 7}, {&quot;name&quot;: &quot;出貨&quot;, &quot;from&quot;: 8, &quot;to&quot;: 8}], &quot;steps&quot;: [{&quot;n&quot;: 1, &quot;name&quot;: &quot;登入&quot;, &quot;def&quot;: &quot;業務/客戶用 OAuth2 或 QR Code 登入&quot;, &quot;hidden&quot;: false}, {&quot;n&quot;: 2, &quot;name&quot;: &quot;選客戶&quot;, &quot;def&quot;: &quot;業務選客戶，帶出該客戶專屬商品清單&quot;, &quot;hidden&quot;: false}, {&quot;n&quot;: 3, &quot;name&quot;: &quot;挑品項&quot;, &quot;def&quot;: &quot;調整數量/單位/分切規格，或手打品名&quot;, &quot;hidden&quot;: false}, {&quot;n&quot;: 4, &quot;name&quot;: &quot;填細節&quot;, &quot;def&quot;: &quot;特殊切法備註、預計出貨日&quot;, &quot;hidden&quot;: false}, {&quot;n&quot;: 5, &quot;name&quot;: &quot;送出訂單&quot;, &quot;def&quot;: &quot;取號 + 金額計算 + 狀態機 + 通知&quot;, &quot;hidden&quot;: false}, {&quot;n&quot;: 6, &quot;name&quot;: &quot;派車排程&quot;, &quot;def&quot;: &quot;中台看板拖放指派車次與順序&quot;, &quot;hidden&quot;: false}, {&quot;n&quot;: 7, &quot;name&quot;: &quot;確認出車&quot;, &quot;def&quot;: &quot;批次確認，狀態轉處理中&quot;, &quot;hidden&quot;: false}, {&quot;n&quot;: 8, &quot;name&quot;: &quot;列印單據&quot;, &quot;def&quot;: &quot;四種單據以 Gotenberg 產生 PDF&quot;, &quot;hidden&quot;: false}], &quot;layers&quot;: {&quot;touchpoint&quot;: {&quot;1&quot;: [&quot;登入頁 / 身分選擇（我是店家、我是業務）&quot;], &quot;2&quot;: [&quot;客戶搜尋列表&quot;, &quot;客戶專屬商品清單畫面&quot;], &quot;3&quot;: [&quot;商品明細編輯（數量/單位/分切規格）&quot;], &quot;4&quot;: [&quot;特殊切法備註欄&quot;, &quot;預計出貨日選擇&quot;], &quot;5&quot;: [&quot;訂單確認送出按鈕&quot;], &quot;6&quot;: [&quot;派車看板（Kanban）&quot;], &quot;7&quot;: [&quot;批次確認對話框&quot;], &quot;8&quot;: [&quot;單據預覽 / 列印頁&quot;]}, &quot;roles&quot;: {&quot;1&quot;: [&quot;業務、客戶、管理員&quot;], &quot;2&quot;: [&quot;業務&quot;], &quot;3&quot;: [&quot;業務&quot;], &quot;4&quot;: [&quot;業務&quot;], &quot;5&quot;: [&quot;業務（送出）&quot;, &quot;後端自動（取號/金額）&quot;], &quot;6&quot;: [&quot;dept_admin / staff&quot;], &quot;7&quot;: [&quot;dept_admin / staff&quot;], &quot;8&quot;: [&quot;staff（重印需原因）&quot;]}, &quot;process&quot;: {&quot;5&quot;: [&quot;樂觀鎖取號（order_counters）&quot;, &quot;寫 sales_order_events&quot;, &quot;通知路由：業務下單→推客戶子帳號&quot;, &quot;偏好送貨日順延檢查&quot;], &quot;6&quot;: [&quot;拖放樂觀鎖 version 比對&quot;, &quot;事件經 Valkey pub/sub 廣播&quot;], &quot;7&quot;: [&quot;逐筆記 dispatched_at/by&quot;, &quot;狀態轉 processing&quot;], &quot;8&quot;: [&quot;HTML 模板 → Gotenberg PDF&quot;, &quot;關聯 file_assets 留存&quot;]}, &quot;technology&quot;: {&quot;1&quot;: [&quot;Google Workspace OIDC&quot;, &quot;Connect-RPC&quot;, &quot;Valkey session&quot;], &quot;2&quot;: [&quot;PostgreSQL RLS（部門隔離）&quot;], &quot;3&quot;: [&quot;單位換算服務&quot;], &quot;5&quot;: [&quot;order_counters 取號&quot;, &quot;不儲存金額（需求備忘）&quot;], &quot;6&quot;: [&quot;Connect server streaming（WatchBoard）&quot;, &quot;Valkey pub/sub 跨 replica&quot;], &quot;7&quot;: [&quot;批次交易&quot;], &quot;8&quot;: [&quot;Gotenberg&quot;, &quot;Noto Sans CJK TC&quot;]}, &quot;policy&quot;: {&quot;1&quot;: [&quot;密碼政策：臨時 24h / 8 字元 / 5 次鎖&quot;, &quot;guest 由 super/company_admin 審核&quot;], &quot;2&quot;: [&quot;data_scope 部門隔離（不依角色名稱）&quot;], &quot;5&quot;: [&quot;1.0 不儲存任何金額欄位&quot;], &quot;7&quot;: [&quot;取消派車需原因（dept_admin 以上）&quot;], &quot;8&quot;: [&quot;正式列印限 processing&quot;, &quot;重印需原因&quot;, &quot;總表不印金額、對點單不印價格&quot;]}, &quot;pitfall&quot;: {&quot;1&quot;: [&quot;OAuth 異常、帳號未審核、公司停用連鎖&quot;], &quot;3&quot;: [&quot;手打品名與總表不同步 → 別名綁定客戶&quot;], &quot;5&quot;: [&quot;取號衝突（樂觀鎖重試）&quot;, &quot;通知失敗（標 failed 不重試）&quot;], &quot;6&quot;: [&quot;拖放衝突&quot;, &quot;串流斷線（重連 + 降級輪詢）&quot;], &quot;7&quot;: [&quot;批次內訂單狀態已變 → 明確回報&quot;], &quot;8&quot;: [&quot;列印失敗、字體授權未解&quot;]}, &quot;rationale&quot;: {&quot;1&quot;: [&quot;D5：Web 用 cookie 防 XSS；App 用 JWT + refresh 旋轉，token_version 可撤銷&quot;], &quot;3&quot;: [&quot;需求原文：A 商品在總表叫 A，不同客戶叫 BCDEF → 別名機制&quot;], &quot;5&quot;: [&quot;D7 編號規則（前綴+自增）&quot;, &quot;D12 全系統不儲存金額（業主需求）&quot;, &quot;D13 狀態機含回退與終態&quot;], &quot;6&quot;: [&quot;D3 RLS 是資料庫最後防線&quot;, &quot;D14 Connect 串流取代 WS：複用既有棧&quot;], &quot;8&quot;: [&quot;D15 金額是機敏資訊，不印在現場單據；PDF 留存可查核&quot;]}, &quot;question&quot;: {&quot;3&quot;: [&quot;複合索引細節（各 Phase schema 時處理）&quot;], &quot;5&quot;: [&quot;電子發票是否納 1.1（與業主確認）&quot;], &quot;8&quot;: [&quot;Noto Sans CJK TC 生產字體授權&quot;]}, &quot;note&quot;: {&quot;1&quot;: [&quot;「這段是業務們直接傳來的需求訊息」— 陳老闆&quot;], &quot;3&quot;: [&quot;「各部門有自己的總表，甲部門叫 A、乙部門叫 B」&quot;], &quot;5&quot;: [&quot;「各部門資料庫分隔檢視，僅總管理員可調閱全部」&quot;]}}};
+window.fetch=function(input){var u=String(input);if(u.indexOf(&quot;.json&quot;)!==-1){return Promise.resolve(new Response(JSON.stringify(window.__D__),{status:200,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;}}));}return Promise.reject(new Error(&quot;blocked&quot;));};
+&lt;/script&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class=&quot;stage&quot;&gt;
+  &lt;aside class=&quot;legend&quot; id=&quot;legend&quot;&gt;&lt;/aside&gt;
+  &lt;div class=&quot;main&quot;&gt;
+    &lt;div class=&quot;crumb2&quot; id=&quot;crumb&quot;&gt;&lt;/div&gt;
+    &lt;div class=&quot;offering&quot; id=&quot;offering&quot;&gt;&lt;/div&gt;
+    &lt;div class=&quot;scn-title&quot; id=&quot;scn&quot;&gt;&lt;/div&gt;
+    &lt;div id=&quot;explainer&quot;&gt;&lt;/div&gt;
+    &lt;div class=&quot;bp&quot; id=&quot;bp&quot;&gt;&lt;/div&gt;
+  &lt;/div&gt;
+  &lt;a class=&quot;madeby2&quot; href=&quot;https://github.com/TexasBedouin/vibe-check&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot;&gt;Created using &lt;b&gt;Vibe-Check&lt;/b&gt; skill&lt;/a&gt;
+&lt;/div&gt;
+
+&lt;script&gt;
+// ─── Engine config: the layer taxonomy (per the Practical Experience Blueprinting guide) ───
+const COMMON = [
+  {id:&#x27;touchpoint&#x27;,label:&#x27;Touchpoint&#x27;,hint:&#x27;what they touch&#x27;,desc:&#x27;what they actually tap, read, or use&#x27;,cls:&#x27;touch&#x27;},
+  {id:&#x27;roles&#x27;,label:&#x27;Roles&#x27;,hint:&quot;who&#x27;s involved&quot;,desc:&quot;who&#x27;s involved at this step&quot;,cls:&#x27;roles&#x27;},
+  {id:&#x27;process&#x27;,label:&#x27;Process&#x27;,hint:&#x27;work behind the step&#x27;,desc:&#x27;behind-the-scenes work that makes it happen&#x27;,cls:&#x27;process&#x27;},
+  {id:&#x27;technology&#x27;,label:&#x27;Technology&#x27;,hint:&#x27;tools doing the work&#x27;,desc:&#x27;the tools and systems doing the work&#x27;,cls:&#x27;tech&#x27;},
+  {id:&#x27;policy&#x27;,label:&#x27;Policy&#x27;,hint:&#x27;rules you set&#x27;,desc:&quot;a rule you&#x27;re choosing to set&quot;,cls:&#x27;policy&#x27;},
+];
+const CURRENT = [
+  {id:&#x27;critical&#x27;,label:&#x27;Critical Moments&#x27;,hint:&#x27;what can go wrong&#x27;,desc:&#x27;where the experience breaks today&#x27;,cls:&#x27;critical&#x27;},
+  {id:&#x27;opportunity&#x27;,label:&#x27;Opportunities&#x27;,hint:&#x27;ideas to improve&#x27;,desc:&#x27;ideas or ah-ha fixes for this step&#x27;,cls:&#x27;opp&#x27;},
+  {id:&#x27;metric&#x27;,label:&#x27;Metrics&#x27;,hint:&#x27;data for this step&#x27;,desc:&#x27;data or analytics about this step&#x27;,cls:&#x27;metric&#x27;},
+];
+const FUTURE = [
+  {id:&#x27;pitfall&#x27;,label:&#x27;Potential Pitfalls&#x27;,hint:&#x27;what could break&#x27;,desc:&#x27;what could go wrong here&#x27;,cls:&#x27;pitfall&#x27;},
+  {id:&#x27;rationale&#x27;,label:&#x27;Rationale&#x27;,hint:&#x27;why this way&#x27;,desc:&#x27;why you designed it this way&#x27;,cls:&#x27;rationale&#x27;},
+];
+const TAIL = [
+  {id:&#x27;question&#x27;,label:&#x27;Questions&#x27;,hint:&#x27;still to figure out&#x27;,desc:&#x27;what you still need to figure out&#x27;,cls:&#x27;question&#x27;},
+  {id:&#x27;note&#x27;,label:&#x27;Notes&#x27;,hint:&#x27;worth remembering&#x27;,desc:&#x27;anything else worth remembering&#x27;,cls:&#x27;notes&#x27;},
+];
+const SWATCH = {phase:&#x27;var(--t-phase)&#x27;,step:&#x27;var(--t-step)&#x27;,hidden:&#x27;var(--t-hidden)&#x27;,touch:&#x27;var(--t-touch)&#x27;,
+  roles:&#x27;var(--t-roles)&#x27;,process:&#x27;var(--t-process)&#x27;,tech:&#x27;var(--t-tech)&#x27;,policy:&#x27;var(--t-policy)&#x27;,
+  critical:&#x27;var(--t-critical)&#x27;,opp:&#x27;var(--t-opp)&#x27;,metric:&#x27;var(--t-metric)&#x27;,pitfall:&#x27;var(--t-pitfall)&#x27;,
+  rationale:&#x27;var(--t-rationale)&#x27;,question:&#x27;var(--t-question)&#x27;,notes:&#x27;var(--t-notes)&#x27;};
+
+const esc = s =&gt; String(s).replace(/&amp;/g,&#x27;&amp;amp;&#x27;).replace(/&lt;/g,&#x27;&amp;lt;&#x27;).replace(/&gt;/g,&#x27;&amp;gt;&#x27;);
+
+function layersFor(state){ return [...COMMON, ...(state===&#x27;current&#x27;?CURRENT:FUTURE), ...TAIL]; }
+
+function render(bp){
+  const state = bp.state===&#x27;current&#x27; ? &#x27;current&#x27; : &#x27;future&#x27;;
+  const layers = layersFor(state);
+  const steps = bp.steps || [];
+  const n = steps.length;
+
+  document.getElementById(&#x27;crumb&#x27;).textContent = &#x27;Experience Blueprint · &#x27; + (state===&#x27;current&#x27;?&#x27;Current State&#x27;:&#x27;Future State&#x27;);
+  document.getElementById(&#x27;offering&#x27;).innerHTML = &#x27;Offering: &lt;b&gt;&#x27;+esc(bp.offering||&#x27;&#x27;)+&#x27;&lt;/b&gt;&#x27;;
+  document.getElementById(&#x27;scn&#x27;).textContent = &#x27;Scenario: &#x27; + (bp.scenario||&#x27;&#x27;);
+
+  // explainer
+  if(bp.explainer){
+    const e = bp.explainer;
+    document.getElementById(&#x27;explainer&#x27;).innerHTML =
+      &#x27;&lt;div class=&quot;explainer&quot;&gt;&lt;div class=&quot;eh&quot;&gt;&#x27;+esc(e.title||&#x27;&#x27;)+&#x27;&lt;/div&gt;&lt;p&gt;&#x27;+esc(e.body||&#x27;&#x27;)+&#x27;&lt;/p&gt;&#x27;+
+      (e.read?&#x27;&lt;div class=&quot;read&quot;&gt;&#x27;+esc(e.read)+&#x27;&lt;/div&gt;&#x27;:&#x27;&#x27;)+&#x27;&lt;/div&gt;&#x27;;
+  }
+
+  // legend
+  const head = [
+    {cls:&#x27;phase&#x27;,label:&#x27;Phase&#x27;,desc:&#x27;a chapter of the journey&#x27;},
+    {cls:&#x27;step&#x27;,label:&#x27;Step · visible&#x27;,desc:&#x27;something the user sees or does&#x27;,bord:true},
+    {cls:&#x27;hidden&#x27;,label:&#x27;Step · hidden&#x27;,desc:&#x27;happens behind the scenes; they never see it&#x27;},
+  ];
+  const legendItems = [...head, ...layers.map(L=&gt;({cls:L.cls,label:L.label,desc:L.desc}))];
+  document.getElementById(&#x27;legend&#x27;).innerHTML =
+    &#x27;&lt;h3&gt;Legend&lt;/h3&gt;&lt;div class=&quot;lh-sub&quot;&gt;Every card is one of these. The color tells you what kind it is.&lt;/div&gt;&#x27; +
+    legendItems.map(it =&gt;
+      &#x27;&lt;div class=&quot;lrow&quot;&gt;&lt;span class=&quot;sw&#x27;+(it.bord?&#x27; bord&#x27;:&#x27;&#x27;)+&#x27;&quot; style=&quot;background:&#x27;+SWATCH[it.cls]+&#x27;&quot;&gt;&lt;/span&gt;&#x27;+
+      &#x27;&lt;span&gt;&lt;span class=&quot;lab&quot;&gt;&#x27;+esc(it.label)+&#x27;&lt;/span&gt;&lt;span class=&quot;des&quot;&gt;&#x27;+esc(it.desc)+&#x27;&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;&#x27;
+    ).join(&#x27;&#x27;) +
+    &#x27;&lt;div class=&quot;pti&quot;&gt;&lt;div class=&quot;t&quot;&gt;Phase timeline indicator&lt;/div&gt;&lt;div class=&quot;pti-bar&quot;&gt;The yellow bars on top group the steps into chapters.&lt;/div&gt;&lt;/div&gt;&#x27;;
+
+  // grid
+  const bpEl = document.getElementById(&#x27;bp&#x27;);
+  bpEl.style.gridTemplateColumns = &#x27;160px repeat(&#x27;+n+&#x27;,1fr)&#x27;;
+
+  let html = &#x27;&#x27;;
+  // phases row
+  html += &#x27;&lt;div class=&quot;ph-l&quot;&gt;Phases&lt;/div&gt;&#x27;;
+  (bp.phases||[]).forEach(p=&gt;{
+    const from = Number(p.from), to = Number(p.to);
+    const sub = to&gt;from ? (from+&#x27;–&#x27;+to) : (&#x27;&#x27;+from);
+    html += &#x27;&lt;div style=&quot;grid-column:&#x27;+(from+1)+&#x27; / &#x27;+(to+2)+&#x27;&quot;&gt;&lt;div class=&quot;phase&quot;&gt;&#x27;+esc(p.name)+&#x27;&lt;span class=&quot;ph-sub&quot;&gt;&#x27;+esc(sub)+&#x27;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&#x27;;
+  });
+  // steps row
+  html += &#x27;&lt;div class=&quot;lane-l&quot;&gt;Steps&lt;span class=&quot;lhint&quot;&gt;the journey, broken up&lt;/span&gt;&lt;/div&gt;&#x27;;
+  steps.forEach(s=&gt;{
+    html += &#x27;&lt;div class=&quot;cell stepcell&quot;&gt;&lt;div class=&quot;c step&#x27;+(s.hidden?&#x27; hidden&#x27;:&#x27;&#x27;)+&#x27;&quot;&gt;&#x27;+
+      (s.hidden?&#x27;&lt;span class=&quot;htag&quot;&gt;Backstage step&lt;/span&gt;&#x27;:&#x27;&#x27;)+
+      &#x27;&lt;span class=&quot;snum&quot;&gt;&#x27;+esc(s.n)+&#x27;&lt;/span&gt;&lt;span class=&quot;sname&quot;&gt;&#x27;+esc(s.name)+&#x27;&lt;/span&gt;&#x27;+
+      &#x27;&lt;span class=&quot;sdef&quot;&gt;&#x27;+esc(s.def||&#x27;&#x27;)+&#x27;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&#x27;;
+  });
+  // layer rows
+  layers.forEach((L,idx)=&gt;{
+    const band = idx%2===1;
+    html += &#x27;&lt;div class=&quot;lane-l&#x27;+(band?&#x27; bnd&#x27;:&#x27;&#x27;)+&#x27;&quot;&gt;&#x27;+esc(L.label)+&#x27;&lt;span class=&quot;lhint&quot;&gt;&#x27;+esc(L.hint)+&#x27;&lt;/span&gt;&lt;/div&gt;&#x27;;
+    const data = (bp.layers&amp;&amp;bp.layers[L.id]) || {};
+    steps.forEach(s=&gt;{
+      let v = data[s.n] != null ? data[s.n] : data[String(s.n)];
+      let cards = &#x27;&#x27;;
+      if(v){ (Array.isArray(v)?v:[v]).forEach(t=&gt;{ cards += &#x27;&lt;div class=&quot;c &#x27;+L.cls+&#x27;&quot;&gt;&#x27;+esc(t)+&#x27;&lt;/div&gt;&#x27;; }); }
+      html += &#x27;&lt;div class=&quot;cell&#x27;+(band?&#x27; bnd&#x27;:&#x27;&#x27;)+&#x27;&quot;&gt;&#x27;+cards+&#x27;&lt;/div&gt;&#x27;;
+    });
+  });
+  bpEl.innerHTML = html;
+  document.body.setAttribute(&#x27;data-rendered&#x27;,&#x27;1&#x27;);
+}
+
+async function main(){
+  const param = new URLSearchParams(location.search).get(&#x27;data&#x27;) || &#x27;clearlist&#x27;;
+  try{
+    const bp = await fetch(&#x27;./data-&#x27;+param+&#x27;.json&#x27;,{cache:&#x27;no-store&#x27;}).then(r=&gt;{ if(!r.ok) throw new Error(r.status); return r.json(); });
+    render(bp);
+  }catch(err){
+    document.querySelector(&#x27;.main&#x27;).innerHTML = &#x27;&lt;div class=&quot;err&quot;&gt;Could not load data-&#x27;+esc(param)+&#x27;.json: &#x27;+esc(err.message)+&#x27;&lt;/div&gt;&#x27;;
+    document.body.setAttribute(&#x27;data-rendered&#x27;,&#x27;1&#x27;);
+  }
+}
+main();
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe></div>
+  <div class="bcap">從登入到列印的八個步驟 × 九個層次。綠色是技術、琥珀色是規則、紅色是會出錯的地方、紫色是為什麼。</div>
+  <div class="prd-footer">This PRD was created by the <a href="https://github.com/TexasBedouin/vibe-check" target="_blank" rel="noopener noreferrer"><b>vibe-check</b> skill</a>, by Amer Arab</div>
+</section>
+
+<!-- ══════════ TAB 4: BUILD ══════════ -->
+<section class="panel" id="p-build">
+  <div class="kicker">建置計畫 · 做什麼、怎麼做</div>
+  <h1>V1 是一套能營運的系統，不是示範品</h1>
+  <p class="lede">V1 = 執行計畫 76 個 Task（九個 Phase）；V2 以後的放進「以後」欄，不擋上線。</p>
+
+  <h2>功能：V1 現在建</h2>
+  <ul>
+    <li><b>主檔自建</b>：公司/部門/使用者、客戶（+地址簿/聯絡人）、商品（+單位換算/分切規格/倉別）、倉庫/車次/分類、字典檔、客戶專屬商品清單、檔案資產</li>
+    <li><b>認證授權</b>：OAuth2（Google Workspace）、客戶帳號一主多子（主帳號僅管理、業務子帳號專供所屬業務、店家自助管理）、QR 登入（僅店家子帳號）、Casbin + RLS + CASL 三重防護、角色權限設置、developer 逃生門</li>
+    <li><b>訂單</b>：下單（含手打品名綁定客戶）、編號取號、狀態機（含取消派車回退、作廢終態）；<b>全系統不儲存金額欄位</b></li>
+    <li><b>退貨</b>：客戶 App 發起（歷史訂單/專屬清單選品、照片）→ 業務審核 → 客戶端退貨證明（出示司機）</li>
+    <li><b>派車</b>：Kanban 看板、拖放樂觀鎖、車次批次確認、Connect 串流即時推播（輪詢降級）</li>
+    <li><b>列印</b>：四種單據（單車總表/對點單/揀貨單/加工單）、Gotenberg PDF、預覽/重印記錄</li>
+    <li><b>通知</b>：FCM + 站內兩通道（無 Email）、促銷推播（分類標籤選客戶群，與公告分離）、業務下單推客戶子帳號（主帳號不接收業務通知）</li>
+    <li><b>其他</b>：公告 CMS、偏好送貨日（非勾選日自動順延）、稽核日誌（同事務寫入、保留 3 個月可設定）、App 底部導覽/離線快取/新增客戶、k8s 部署、備份/監控/DR 演練、Big Bang 上線</li>
+  </ul>
+  <h3>V2+ 以後建</h3>
+  <ul>
+    <li>電子發票開立（僅留 invoice_type_id）、App 強制更新、通知重試佇列、病毒掃描、多語 UI、Cmd+K、自建 IdP、audit 時間分區</li>
+    <li><b>1.1 獨立迭代</b>：拍照建客戶（LLM vision）、業務語音下單（STT + LLM）、MCP/ACP/A2A 整合——不影響 1.0 範圍</li>
+  </ul>
+
+  <h2>故事地圖</h2>
+  <div class="bwrap" data-b="storymap" data-bh="1080"><iframe title="Story Map" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;/&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;/&gt;
+&lt;title&gt;Story Map Engine&lt;/title&gt;
+&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.googleapis.com&quot;&gt;&lt;link rel=&quot;preconnect&quot; href=&quot;https://fonts.gstatic.com&quot; crossorigin&gt;
+&lt;link href=&quot;https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=DM+Serif+Display&amp;display=swap&quot; rel=&quot;stylesheet&quot;&gt;
+&lt;style&gt;
+/* ─────────────────────────────────────────────────────────
+   vibe-check diagram engine, shared design layer
+   Built on the ClearList design system tokens.
+   FigJam structure (sticky notes, tape, dots, dotted canvas)
+   + Minimalist Editorial typography (DM Sans / DM Serif Display).
+   One file, many diagram templates.
+   ───────────────────────────────────────────────────────── */
+
+:root{
+  /* canvas */
+  --canvas:#F9F6F0;          /* warm FigJam canvas */
+  --canvas-app:#F9F9F8;      /* editorial / blueprint canvas */
+  --dot:#ddd6c6;
+  --grid-line:rgba(44,100,227,.10);
+
+  /* ink */
+  --charcoal:#1A1A1B;
+  --ink-2:#4b5563;
+  --ink-muted:#6B7280;
+  --border:#E5E5E5;
+
+  /* brand */
+  --blue:#2C64E3;
+  --blue-hover:#2354C2;
+  --purple:#8B5CF6;
+  --purple-light:#F5F3FF;
+  --pink:#ec4899;
+
+  /* moving-sale / figjam */
+  --kraft:#C4A882;
+  --kraft-dark:#A98C63;
+  --tape-blue:#4A90D9;
+  --y:#FFF6A8;   /* softened post-it yellow for sans legibility */
+  --g:#A6E4A0;
+  --b:#A8DBEE;
+  --o:#FFCB7D;
+  --p:#FFA8CC;
+  --lav:#CDBEEA; /* AI = purple family */
+
+  /* status dots */
+  --dot-red:#E03C31;
+  --dot-green:#2E8B57;
+  --dot-amber:#F6C90E;
+
+  /* fonts */
+  --sans:&quot;DM Sans&quot;,ui-sans-serif,system-ui,sans-serif;
+  --serif:&quot;DM Serif Display&quot;,Georgia,serif;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:1920px;height:1080px;overflow:hidden;}
+body{font-family:var(--sans);color:var(--charcoal);-webkit-font-smoothing:antialiased;}
+
+/* canvases */
+.canvas-dots{
+  background-color:var(--canvas);
+  background-image:radial-gradient(var(--dot) 2px,transparent 2px);
+  background-size:30px 30px;background-position:-6px -6px;
+}
+.canvas-blueprint{
+  background-color:var(--canvas-app);
+  background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),
+                   linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+
+.stage{width:1920px;height:1080px;padding:40px 52px 34px;position:relative;display:flex;flex-direction:column;}
+
+/* ── header ───────────────────────────────── */
+.head{display:flex;align-items:flex-start;justify-content:space-between;flex:0 0 auto;}
+.head .crumb{font-weight:700;font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:var(--blue);margin-bottom:6px;}
+.head .title{font-family:var(--serif);font-size:46px;line-height:1.02;color:var(--charcoal);}
+.head .sub{font-size:19px;color:var(--ink-muted);margin-top:10px;max-width:760px;}
+.madeby{text-align:right;font-size:15px;color:var(--ink-muted);line-height:1.3;text-decoration:none;}
+.madeby:hover b{text-decoration:underline;}
+.madeby b{font-weight:700;color:var(--blue);letter-spacing:.02em;}
+.madeby .url{color:var(--blue);font-weight:600;}
+
+/* ── sticky note ──────────────────────────── */
+.note{
+  background:var(--y);
+  padding:13px 15px 14px;
+  box-shadow:3px 4px 12px rgba(0,0,0,.13);
+  position:relative;line-height:1.24;font-size:19px;font-weight:500;
+  border-radius:1px;
+}
+.note .k{display:block;font-weight:700;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(0,0,0,.40);margin-bottom:5px;}
+.note.sm{font-size:17px;padding:10px 13px;box-shadow:2px 3px 9px rgba(0,0,0,.11);}
+.note.lg{font-size:21px;}
+.note.y{background:var(--y);} .note.g{background:var(--g);} .note.b{background:var(--b);}
+.note.o{background:var(--o);} .note.p{background:var(--p);} .note.ai{background:var(--lav);}
+/* gentle hand-placed tilt + a tape nub */
+.tilt-l{transform:rotate(-1.3deg);} .tilt-r{transform:rotate(1.1deg);} .tilt-0{transform:rotate(-.4deg);}
+.note.pin:before{content:&quot;&quot;;position:absolute;top:-7px;left:50%;width:34px;height:12px;
+  background:rgba(74,144,217,.78);transform:translateX(-50%) rotate(-4deg);box-shadow:1px 1px 3px rgba(0,0,0,.18);}
+
+/* ── tape strip / lane label ──────────────── */
+.tape{display:inline-block;background:var(--tape-blue);color:#fff;font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;padding:9px 16px;box-shadow:2px 3px 9px rgba(0,0,0,.16);position:relative;}
+.tape:before,.tape:after{content:&quot;&quot;;position:absolute;top:0;bottom:0;width:14px;
+  background:repeating-linear-gradient(135deg,rgba(255,255,255,.28) 0 4px,transparent 4px 8px);}
+.tape:before{left:-7px;transform:skewX(-12deg);} .tape:after{right:-7px;transform:skewX(-12deg);}
+.tape.green{background:var(--dot-green);} .tape.kraftt{background:#b9b09c;} .tape.charcoal{background:var(--charcoal);}
+
+/* ── editorial / blueprint box ────────────── */
+.ebox{background:#fff;border:2px solid var(--charcoal);padding:14px 16px;min-width:160px;position:relative;}
+.ebox .t{font-weight:700;font-size:19px;line-height:1.15;}
+.ebox .s{font-size:15px;color:var(--ink-muted);margin-top:4px;line-height:1.25;}
+.ebox.ai{background:var(--purple-light);border-color:var(--purple);}
+.ebox.ai .tag{position:absolute;top:-11px;left:14px;background:var(--purple);color:#fff;font-size:11px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;padding:2px 8px;}
+.ebox.accent{border-color:var(--blue);}
+
+/* ── garage-sale dot sticker ──────────────── */
+.dot{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;
+  font-weight:700;text-align:center;line-height:1;box-shadow:2px 2px 6px rgba(0,0,0,.22);}
+.dot.red{background:var(--dot-red);} .dot.green{background:var(--dot-green);}
+.dot.amber{background:var(--dot-amber);color:#3a2e00;} .dot.blue{background:var(--tape-blue);}
+
+/* small legend chip */
+.chip{display:inline-flex;align-items:center;gap:8px;font-size:15px;color:var(--ink-2);font-weight:500;}
+.chip .sw{width:16px;height:16px;border-radius:50%;}
+
+&lt;/style&gt;
+&lt;style&gt;
+  .map{flex:1;margin-top:16px;display:grid;column-gap:13px;row-gap:14px;min-height:0;}
+  .corner{display:flex;align-items:flex-end;padding-bottom:8px;}
+  .corner span{font-size:14px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-muted);}
+  .activity{background:linear-gradient(180deg,#cdb287,var(--kraft));border:2px solid var(--kraft-dark);
+    box-shadow:2px 3px 0 var(--kraft-dark);padding:11px 13px;display:flex;flex-direction:column;gap:2px;justify-content:center;min-height:78px;}
+  .activity .step{font-size:12px;font-weight:700;letter-spacing:.1em;color:#6f5a37;}
+  .activity .name{font-size:20px;font-weight:700;line-height:1.08;color:#2b2417;}
+  .lane{display:flex;flex-direction:column;gap:9px;padding-top:4px;}
+  .lane .sub{font-size:15px;color:var(--ink-2);font-weight:500;padding-left:2px;line-height:1.25;}
+  .lane .skel{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--dot-green);}
+  .lane .skel .gd{width:14px;height:14px;border-radius:50%;background:var(--dot-green);flex:0 0 auto;}
+  .cell{display:flex;flex-direction:column;gap:10px;}
+  /* walking-skeleton band: tint the whole V1 lane, no floating text */
+  .v1band{background:rgba(46,139,87,.10);border-top:2px dashed var(--dot-green);border-bottom:2px dashed var(--dot-green);}
+  .aha{display:inline-block;margin-top:8px;background:var(--dot-red);color:#fff;font-size:12px;font-weight:700;
+    letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;}
+  .err{padding:60px;font-size:20px;color:#DC2626;}
+&lt;/style&gt;
+&lt;script&gt;
+window.__D__={&quot;header&quot;: {&quot;crumb&quot;: &quot;Phase 2 · 使用者故事地圖&quot;, &quot;title&quot;: &quot;從登入到出貨，故事地圖&quot;, &quot;sub&quot;: &quot;從左讀到右，從上往下出貨。綠色帶（V1）本身就是一套能營運的系統。★ 是 aha 時刻。&quot;}, &quot;activities&quot;: [{&quot;step&quot;: 1, &quot;name&quot;: &quot;登入&quot;}, {&quot;step&quot;: 2, &quot;name&quot;: &quot;選客戶&quot;}, {&quot;step&quot;: 3, &quot;name&quot;: &quot;挑品項&quot;}, {&quot;step&quot;: 4, &quot;name&quot;: &quot;填細節&quot;}, {&quot;step&quot;: 5, &quot;name&quot;: &quot;送出訂單&quot;}, {&quot;step&quot;: 6, &quot;name&quot;: &quot;派車排程&quot;}, {&quot;step&quot;: 7, &quot;name&quot;: &quot;確認出車&quot;}, {&quot;step&quot;: 8, &quot;name&quot;: &quot;列印單據&quot;}], &quot;releases&quot;: [{&quot;id&quot;: &quot;v1&quot;, &quot;label&quot;: &quot;V1 · 全套上線&quot;, &quot;tape&quot;: &quot;green&quot;, &quot;subnote&quot;: &quot;start to finish&quot;, &quot;skeleton&quot;: &quot;ship just this row&quot;, &quot;band&quot;: true}, {&quot;id&quot;: &quot;v2&quot;, &quot;label&quot;: &quot;V2 · 讓它更好用&quot;, &quot;tape&quot;: &quot;blue&quot;, &quot;subnote&quot;: &quot;once V1 works&quot;}, {&quot;id&quot;: &quot;later&quot;, &quot;label&quot;: &quot;以後 · 有一天&quot;, &quot;tape&quot;: &quot;kraft&quot;}], &quot;cells&quot;: {&quot;v1&quot;: {&quot;1&quot;: [{&quot;kicker&quot;: &quot;Do&quot;, &quot;text&quot;: &quot;OAuth2 / QR Code 登入&quot;, &quot;color&quot;: &quot;g&quot;, &quot;pin&quot;: true}, {&quot;kicker&quot;: &quot;Do&quot;, &quot;text&quot;: &quot;身分選擇 + 安全儲存&quot;, &quot;color&quot;: &quot;b&quot;, &quot;size&quot;: &quot;sm&quot;}, {&quot;kicker&quot;: &quot;Rule&quot;, &quot;text&quot;: &quot;guest 待審核、公司停用連鎖&quot;, &quot;color&quot;: &quot;y&quot;, &quot;size&quot;: &quot;sm&quot;}, {&quot;kicker&quot;: &quot;Do&quot;, &quot;text&quot;: &quot;首頁公告 + 促銷推播（分類標籤）&quot;, &quot;color&quot;: &quot;o&quot;, &quot;size&quot;: &quot;sm&quot;}], &quot;2&quot;: [{&quot;kicker&quot;: &quot;Do&quot;, &quot;text&quot;: &quot;客戶查詢與部門篩選&quot;, &quot;color&quot;: &quot;b&quot;}, {&quot;kicker&quot;: &quot;Do&quot;, &quot;text&quot;: &quot;帶出客戶專屬商品清單&quot;, &quot;color&quot;: &quot;g&quot;, &quot;pin&quot;: true}], &quot;3&quot;: [{&quot;kicker&quot;: &quot;Do&quot;, &quot;text&quot;: &quot;數量/單位換算&quot;, &quot;color&quot;: &quot;g&quot;}, {&quot;kicker&quot;: &quot;Do&quot;, &quot;text&quot;: &quot;手打品名綁定客戶別名&quot;, &quot;color&quot;: &quot;o&quot;}, {&quot;kicker&quot;: &quot;Do&quot;, &quot;text&quot;: &quot;刪品項：qty=0 不顯示&quot;, &quot;color&quot;: &quot;y&quot;, &quot;size&quot;: &quot;sm&quot;}], &quot;4&quot;: [{&quot;kicker&quot;: &quot;Do&quot;, &quot;text&quot;: &quot;特殊切法備註&quot;, &quot;color&quot;: &quot;y&quot;}, {&quot;kicker&quot;: &quot;Do&quot;, &quot;text&quot;: &quot;分切規格、預計出貨日&quot;, &quot;color&quot;: &quot;b&quot;, &quot;size&quot;: &quot;sm&quot;}, {&quot;kicker&quot;: &quot;Rule&quot;, &quot;text&quot;: &quot;偏好送貨日自動順延&quot;, &quot;color&quot;: &quot;y&quot;, &quot;size&quot;: &quot;sm&quot;}], &quot;5&quot;: [{&quot;kicker&quot;: &quot;Win&quot;, &quot;text&quot;: &quot;樂觀鎖取號 + 狀態機（不存金額）&quot;, &quot;color&quot;: &quot;g&quot;}, {&quot;kicker&quot;: &quot;★&quot;, &quot;text&quot;: &quot;送出即完成，直通派車看板&quot;, &quot;color&quot;: &quot;g&quot;, &quot;aha&quot;: true}, {&quot;kicker&quot;: &quot;Do&quot;, &quot;text&quot;: &quot;推播客戶子帳號（FCM/站內）&quot;, &quot;color&quot;: &quot;b&quot;, &quot;size&quot;: &quot;sm&quot;}, {&quot;kicker&quot;: &quot;Do&quot;, &quot;text&quot;: &quot;退貨申請（客戶發起/業務審核）&quot;, &quot;color&quot;: &quot;o&quot;, &quot;size&quot;: &quot;sm&quot;}], &quot;6&quot;: [{&quot;kicker&quot;: &quot;Do&quot;, &quot;text&quot;: &quot;Kanban 拖放 + 日期篩選&quot;, &quot;color&quot;: &quot;g&quot;, &quot;pin&quot;: true}, {&quot;kicker&quot;: &quot;Do&quot;, &quot;text&quot;: &quot;Connect 串流即時推播（輪詢降級）&quot;, &quot;color&quot;: &quot;b&quot;}, {&quot;kicker&quot;: &quot;Rule&quot;, &quot;text&quot;: &quot;樂觀鎖衝突重載&quot;, &quot;color&quot;: &quot;y&quot;, &quot;size&quot;: &quot;sm&quot;}], &quot;7&quot;: [{&quot;kicker&quot;: &quot;Do&quot;, &quot;text&quot;: &quot;車次批次確認（逐筆記錄）&quot;, &quot;color&quot;: &quot;g&quot;}, {&quot;kicker&quot;: &quot;Rule&quot;, &quot;text&quot;: &quot;取消派車需原因、保留看板位置&quot;, &quot;color&quot;: &quot;y&quot;, &quot;size&quot;: &quot;sm&quot;}], &quot;8&quot;: [{&quot;kicker&quot;: &quot;Do&quot;, &quot;text&quot;: &quot;四種單據（總表/對點/揀貨/加工）&quot;, &quot;color&quot;: &quot;g&quot;, &quot;pin&quot;: true}, {&quot;kicker&quot;: &quot;Do&quot;, &quot;text&quot;: &quot;Gotenberg PDF 全留存&quot;, &quot;color&quot;: &quot;b&quot;}, {&quot;kicker&quot;: &quot;Rule&quot;, &quot;text&quot;: &quot;重印需原因、金額不印現場單&quot;, &quot;color&quot;: &quot;y&quot;, &quot;size&quot;: &quot;sm&quot;}]}, &quot;v2&quot;: {&quot;2&quot;: [{&quot;kicker&quot;: &quot;AI 1.1&quot;, &quot;text&quot;: &quot;客戶語音下單（STT + LLM）&quot;, &quot;color&quot;: &quot;ai&quot;}], &quot;3&quot;: [{&quot;kicker&quot;: &quot;AI 1.1&quot;, &quot;text&quot;: &quot;拍照建客戶 AI 預填&quot;, &quot;color&quot;: &quot;ai&quot;}], &quot;5&quot;: [{&quot;kicker&quot;: &quot;Later&quot;, &quot;text&quot;: &quot;發票號碼回填&quot;, &quot;color&quot;: &quot;y&quot;, &quot;size&quot;: &quot;sm&quot;}], &quot;6&quot;: [{&quot;kicker&quot;: &quot;Later&quot;, &quot;text&quot;: &quot;電子發票開立（與業主確認）&quot;, &quot;color&quot;: &quot;y&quot;, &quot;size&quot;: &quot;sm&quot;}], &quot;1&quot;: [{&quot;kicker&quot;: &quot;Later&quot;, &quot;text&quot;: &quot;App 強制更新&quot;, &quot;color&quot;: &quot;b&quot;, &quot;size&quot;: &quot;sm&quot;}]}, &quot;later&quot;: {&quot;1&quot;: [{&quot;kicker&quot;: &quot;AI&quot;, &quot;text&quot;: &quot;MCP/ACP/A2A 整合&quot;, &quot;color&quot;: &quot;ai&quot;, &quot;size&quot;: &quot;sm&quot;}], &quot;5&quot;: [{&quot;kicker&quot;: &quot;Idea&quot;, &quot;text&quot;: &quot;通知失敗重試佇列&quot;, &quot;color&quot;: &quot;b&quot;, &quot;size&quot;: &quot;sm&quot;}], &quot;6&quot;: [{&quot;kicker&quot;: &quot;Idea&quot;, &quot;text&quot;: &quot;多語 UI&quot;, &quot;color&quot;: &quot;y&quot;, &quot;size&quot;: &quot;sm&quot;}], &quot;7&quot;: [{&quot;kicker&quot;: &quot;Idea&quot;, &quot;text&quot;: &quot;庫存管理&quot;, &quot;color&quot;: &quot;y&quot;, &quot;size&quot;: &quot;sm&quot;}]}}};
+window.fetch=function(input){var u=String(input);if(u.indexOf(&quot;.json&quot;)!==-1){return Promise.resolve(new Response(JSON.stringify(window.__D__),{status:200,headers:{&quot;Content-Type&quot;:&quot;application/json&quot;}}));}return Promise.reject(new Error(&quot;blocked&quot;));};
+&lt;/script&gt;
+&lt;/head&gt;
+&lt;body class=&quot;canvas-dots&quot;&gt;
+&lt;div class=&quot;stage&quot;&gt;
+  &lt;div class=&quot;head&quot;&gt;
+    &lt;div&gt;
+      &lt;div class=&quot;crumb&quot; id=&quot;crumb&quot;&gt;&lt;/div&gt;
+      &lt;div class=&quot;title&quot; id=&quot;title&quot;&gt;&lt;/div&gt;
+      &lt;div class=&quot;sub&quot; id=&quot;sub&quot;&gt;&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;a class=&quot;madeby&quot; href=&quot;https://github.com/TexasBedouin/vibe-check&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot;&gt;Created using &lt;b&gt;Vibe-Check&lt;/b&gt; skill&lt;/a&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;map&quot; id=&quot;map&quot;&gt;&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;script&gt;
+const esc = s =&gt; String(s).replace(/&amp;/g,&#x27;&amp;amp;&#x27;).replace(/&lt;/g,&#x27;&amp;lt;&#x27;).replace(/&gt;/g,&#x27;&amp;gt;&#x27;);
+
+// renderer-computed decoration, never stored in data
+const TILTS = [&#x27;tilt-l&#x27;,&#x27;tilt-r&#x27;,&#x27;tilt-0&#x27;];
+const NOTE_COLORS = {y:&#x27;y&#x27;,g:&#x27;g&#x27;,b:&#x27;b&#x27;,o:&#x27;o&#x27;,p:&#x27;p&#x27;,ai:&#x27;ai&#x27;};
+
+// tape ∈ green | blue | kraft  → class on the .tape element
+function tapeClass(tape){
+  if(tape === &#x27;green&#x27;) return &#x27;tape green&#x27;;
+  if(tape === &#x27;kraft&#x27;) return &#x27;tape kraftt&#x27;;
+  return &#x27;tape&#x27;; // blue is the default tape-blue look
+}
+
+function noteHtml(note, idx){
+  const color = NOTE_COLORS[note.color] || &#x27;y&#x27;;
+  const cls = [&#x27;note&#x27;, color];
+  if(note.size === &#x27;sm&#x27;) cls.push(&#x27;sm&#x27;);
+  if(note.pin) cls.push(&#x27;pin&#x27;);
+  cls.push(TILTS[idx % TILTS.length]); // auto-cycle tilt by index
+  const kicker = note.kicker ? &#x27;&lt;span class=&quot;k&quot;&gt;&#x27;+esc(note.kicker)+&#x27;&lt;/span&gt;&#x27; : &#x27;&#x27;;
+  const aha = note.aha ? &#x27;&lt;span class=&quot;aha&quot;&gt;★ the aha moment&lt;/span&gt;&#x27; : &#x27;&#x27;;
+  return &#x27;&lt;div class=&quot;&#x27;+cls.join(&#x27; &#x27;)+&#x27;&quot;&gt;&#x27;+kicker+esc(note.text||&#x27;&#x27;)+aha+&#x27;&lt;/div&gt;&#x27;;
+}
+
+function render(sm){
+  const activities = sm.activities || [];
+  const releases = sm.releases || [];
+  const cells = sm.cells || {};
+
+  document.getElementById(&#x27;crumb&#x27;).textContent = (sm.header &amp;&amp; sm.header.crumb) || &#x27;&#x27;;
+  document.getElementById(&#x27;title&#x27;).textContent = (sm.header &amp;&amp; sm.header.title) || &#x27;&#x27;;
+  document.getElementById(&#x27;sub&#x27;).textContent = (sm.header &amp;&amp; sm.header.sub) || &#x27;&#x27;;
+
+  const map = document.getElementById(&#x27;map&#x27;);
+  // columns: a fixed lane-label column, then one flexible column per activity
+  map.style.gridTemplateColumns = &#x27;172px repeat(&#x27;+activities.length+&#x27;,1fr)&#x27;;
+
+  let html = &#x27;&#x27;;
+
+  // ── backbone row: corner + one activity per column ──
+  html += &#x27;&lt;div class=&quot;corner&quot;&gt;&lt;span&gt;the journey ↓&lt;/span&gt;&lt;/div&gt;&#x27;;
+  activities.forEach(a =&gt; {
+    html += &#x27;&lt;div class=&quot;activity&quot;&gt;&lt;span class=&quot;step&quot;&gt;STEP &#x27;+esc(a.step)+&#x27;&lt;/span&gt;&#x27;+
+            &#x27;&lt;span class=&quot;name&quot;&gt;&#x27;+esc(a.name)+&#x27;&lt;/span&gt;&lt;/div&gt;&#x27;;
+  });
+
+  // ── one row per release lane ──
+  releases.forEach(rel =&gt; {
+    const band = rel.band ? &#x27; v1band&#x27; : &#x27;&#x27;;
+
+    // lane label cell
+    html += &#x27;&lt;div class=&quot;lane&quot;&gt;&#x27;;
+    html += &#x27;&lt;span class=&quot;&#x27;+tapeClass(rel.tape)+&#x27;&quot;&gt;&#x27;+esc(rel.label)+&#x27;&lt;/span&gt;&#x27;;
+    if(rel.subnote) html += &#x27;&lt;span class=&quot;sub&quot;&gt;&#x27;+esc(rel.subnote)+&#x27;&lt;/span&gt;&#x27;;
+    if(rel.skeleton) html += &#x27;&lt;span class=&quot;skel&quot;&gt;&lt;span class=&quot;gd&quot;&gt;&lt;/span&gt;&#x27;+esc(rel.skeleton)+&#x27;&lt;/span&gt;&#x27;;
+    html += &#x27;&lt;/div&gt;&#x27;;
+
+    // one cell per activity column
+    const laneCells = cells[rel.id] || {};
+    activities.forEach(a =&gt; {
+      let notes = laneCells[a.step];
+      if(notes == null) notes = laneCells[String(a.step)];
+      let inner = &#x27;&#x27;;
+      if(notes){
+        (Array.isArray(notes) ? notes : [notes]).forEach((note, i) =&gt; {
+          inner += noteHtml(note, i);
+        });
+      }
+      html += &#x27;&lt;div class=&quot;cell&#x27;+band+&#x27;&quot;&gt;&#x27;+inner+&#x27;&lt;/div&gt;&#x27;;
+    });
+  });
+
+  map.innerHTML = html;
+  document.body.setAttribute(&#x27;data-rendered&#x27;,&#x27;1&#x27;);
+}
+
+async function main(){
+  const param = new URLSearchParams(location.search).get(&#x27;data&#x27;) || &#x27;storymap-example&#x27;;
+  try{
+    const sm = await fetch(&#x27;./data-&#x27;+param+&#x27;.json&#x27;,{cache:&#x27;no-store&#x27;}).then(r=&gt;{ if(!r.ok) throw new Error(r.status); return r.json(); });
+    render(sm);
+  }catch(err){
+    document.getElementById(&#x27;map&#x27;).innerHTML = &#x27;&lt;div class=&quot;err&quot;&gt;Could not load data-&#x27;+esc(param)+&#x27;.json: &#x27;+esc(err.message)+&#x27;&lt;/div&gt;&#x27;;
+    document.body.setAttribute(&#x27;data-rendered&#x27;,&#x27;1&#x27;);
+  }
+}
+main();
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe></div>
+  <div class="bcap">八個旅程步驟 × 三個版本欄位。綠色帶（V1）從登入一路到列印，本身就是一套能營運的系統；★ 是 aha 時刻。</div>
+
+  <h2>系統架構</h2>
+  <div class="arch">
+    <div class="row">
+      <div class="anode blue"><div class="t">業務員 App</div><div class="s">Flutter</div></div>
+      <div class="anode blue"><div class="t">客戶店家 App</div><div class="s">Flutter</div></div>
+      <div class="anode blue"><div class="t">中台 Web</div><div class="s">SolidJS</div></div>
+    </div>
+    <div class="arrow-line">↓ Connect-RPC（一份 proto 產生三端型別）↓</div>
+    <div class="row">
+      <div class="anode dark"><div class="t">你的 App（後端）</div><div class="s">Go · Casbin · 稽核同事務寫入</div></div>
+    </div>
+    <div class="arrow-line">↓ ↓ ↓</div>
+    <div class="row">
+      <div class="anode green"><div class="t">資料庫</div><div class="s">PostgreSQL · RLS 資料隔離</div></div>
+      <div class="anode green"><div class="t">快取與廣播</div><div class="s">Valkey · session + pub/sub</div></div>
+      <div class="anode green"><div class="t">單據 PDF</div><div class="s">Gotenberg</div></div>
+      <div class="anode green"><div class="t">通知</div><div class="s">FCM + 站內</div></div>
+    </div>
+    <div class="arrow-line">↓ 備份 GCS（PITR）· Prometheus 監控 · k8s + Traefik ↓</div>
+  </div>
+
+  <h2>資料模型（白話）</h2>
+  <p>租戶（公司/部門）→ 人員（使用者/角色/權限；客戶可綁定<b>多個登入帳號</b>）→ 主檔（客戶+地址+聯絡人+<b>偏好送貨日</b>+促銷標籤、商品+單位+分切+倉別、倉庫/車次/分類、字典、<b>客戶專屬商品清單</b>）→ 訂單（明細/事件/取號計數器，<b>不含金額</b>）→ <b>退貨申請</b>（客戶發起/業務審核）→ 派車列印（車次指派/列印記錄）→ 營運（通知/公告/稽核/檔案）。統一規則：<b>軟刪除</b>（deleted_at + 部分唯一索引）、<b>稽核與業務同交易寫入</b>。</p>
+
+  <h2>技術棧與成本</h2>
+  <table>
+    <tr><th>元件</th><th>做什麼</th><th>月成本</th></tr>
+    <tr><td>k8s 節點（3 VM）</td><td>自建基礎設施（PostgreSQL/Valkey/後端/前端）</td><td>US$150–300</td></tr>
+    <tr><td>GCS 備份</td><td>日備 30 天 + 月備 12 個月（PITR + restic）</td><td>US$10–30</td></tr>
+    <tr><td>Artifact Registry + 流量</td><td>容器映像與出口</td><td>US$10–30</td></tr>
+    <tr><td>網域 + DNS</td><td>—</td><td>≈US$10</td></tr>
+    <tr><td>Go / SolidJS / Flutter / Connect-RPC / Gotenberg / Valkey / Prometheus</td><td>開發與開源元件</td><td>$0</td></tr>
+    <tr><td>FCM / Google Workspace OIDC</td><td>推播 / 登入</td><td>免費或既有</td></tr>
+  </table>
+  <p class="sub">架構成本警告：派車看板若每 30 秒輪詢全量查詢，100 人可能月燒數百美元；本計畫用「事件觸發重查 + 降級輪詢」，有變更才查，成本接近免費。查詢一律分頁（上限 100）+ 複合索引。</p>
+  <div class="prd-footer">This PRD was created by the <a href="https://github.com/TexasBedouin/vibe-check" target="_blank" rel="noopener noreferrer"><b>vibe-check</b> skill</a>, by Amer Arab</div>
+</section>
+
+<!-- ══════════ TAB 5: CODE GUIDELINES ══════════ -->
+<section class="panel" id="p-code">
+  <div class="kicker">AI 守則 · 讓 AI 永遠用同一種方式寫碼</div>
+  <h1>House Rules</h1>
+  <p class="lede">貼進專案導覽檔（各子專案 AGENTS.md）的守則。AI 照著寫，程式碼才不會越改越亂、AI 才能一直改得動。</p>
+<pre id="houserules"># 特耀訂出貨系統 — House Rules
+
+你是工程師，我是產品經理。每次修改都要遵守：
+
+## 怎麼工作
+- 先想再做：非瑣碎的程式碼，先說你要做什麼，有不清楚的先問，不要猜。
+- 保持簡單：做解決問題的最簡單版本，不要「以防萬一」的額外程式碼。
+- 只改被要求的：不要順手重寫或「改進」無關的程式碼；發現問題告訴我，但不要動手。
+- 朝向明確終點：以可檢查的「完成」為目標，並逐項展示如何驗證。
+
+## 怎麼寫程式碼
+- 不重複：每段邏輯只有一個家。
+- 命名一致：是「客戶」就永遠叫「客戶」，識別字/檔名維持英文原文。
+- 處理失敗路徑：每個失敗都有友善訊息與退路。
+- 留下軌跡：重要操作要記錄（發生什麼、成功或失敗、錯誤內容）。
+- 分層分明：畫面、邏輯、資料儲存分開。
+- 功能自含：每個功能在自己的資料夾。
+
+## 完成的定義（每次變更都要全部通過）
+- 能跑，且沒弄壞原本會跑的。
+- 建置、linter、formatter 全綠。
+- 測試在舊程式碼上失敗、在新程式碼上通過（先失敗再修）。
+- 只動了任務需要的部分。
+- 符合專案的命名與慣例。
+
+「能跑」是地板，不是天花板。</pre>
+
+  <h2>協作習慣</h2>
+  <ul>
+    <li>專案導覽檔保持精簡（<100 行），細節拆到各子專案自己的檔案</li>
+    <li>早點設定 debug logging（bug 出現之前）：寫進 docs/DEBUG-LOGGING.md，全專案照著記</li>
+    <li>關掉沒在用的 AI 外掛與整合</li>
+    <li>每個提示都是一份迷你規格：不是「加登入」，而是「加 Google 與 email 登入、檢查時顯示 spinner、失敗顯示友善錯誤與重試、已登入直接進儀表板」</li>
+    <li>套用修復前先問：「這個變更對使用者看到什麼的影響？會變慢嗎？使用者在最糟的一天看到什麼？」</li>
+  </ul>
+
+  <h2>分層原則（讓程式碼保持可導覽）</h2>
+  <ul>
+    <li><b>功能自含（微波爐原則）</b>：每個功能一個資料夾，AI 改它不用戳到別的地方</li>
+    <li><b>一件事一個家</b>：同一段邏輯只有一個地方放</li>
+    <li><b>小心中間人</b>：不要為了抽象而多包一層</li>
+    <li><b>一致命名</b>：同一個東西永遠叫同一個名字</li>
+  </ul>
+  <div class="prd-footer">This PRD was created by the <a href="https://github.com/TexasBedouin/vibe-check" target="_blank" rel="noopener noreferrer"><b>vibe-check</b> skill</a>, by Amer Arab</div>
+</section>
+
+<!-- ══════════ TAB 6: DISTRIBUTION & GROWTH ══════════ -->
+<section class="panel" id="p-growth">
+  <div class="kicker">分發與成長 · 誰會知道它存在</div>
+  <h1>內部系統：成長引擎是集團導入，不是病毒行銷</h1>
+  <p class="lede">誠實版：沒有自然成長迴圈（沒有公開內容、沒有邀請即用、沒有「Made with」訊號），也不能硬塞一個假的。成長引擎 = 集團公司逐家導入 + 店家透過 QR 進入系統。</p>
+
+  <h2>前 10 位使用者</h2>
+  <div class="cards">
+    <div class="card"><div class="l">誰</div><div class="d">第一家導入公司的業務員與客戶店家（集團內部，可指名）</div></div>
+    <div class="card"><div class="l">在哪</div><div class="d">集團各公司內部；業務就是需求提供者，店家透過 QR Code 進入</div></div>
+    <div class="card"><div class="l">第一個動作</div><div class="d">主檔建檔（客戶/商品/車次/分切/專屬清單）+ 員工 OAuth 帳號預建 + 客戶 QR 發放</div></div>
+  </div>
+
+  <h2>冷啟動計畫</h2>
+  <p>這系統只在有人用時才有價值，所以 Big Bang 前必須先建好主檔。最低流動門檻 = <b>上線檢查清單上的主檔建檔全部完成</b>；未達標前不開放。種子做法：管理員預建員工帳號（避免首登待審核卡關）、建檔介面提早交付（Phase 3/6）、QR 先行發放。</p>
+
+  <h2>成長迴圈</h2>
+  <div class="callout"><span class="tag">誠實版</span>
+    <div class="t">沒有迴圈，但有引擎</div>
+    <p>內部系統不會自己長使用者。每週在集團內推進一家公司、一個部門上線，就是成長引擎；店家掃 QR 進系統，是使用者數量的推進器。量測數字：每個月新啟用的公司/部門數 + QR 登入店家數。</p>
+  </div>
+  <div class="prd-footer">This PRD was created by the <a href="https://github.com/TexasBedouin/vibe-check" target="_blank" rel="noopener noreferrer"><b>vibe-check</b> skill</a>, by Amer Arab</div>
+</section>
+
+<!-- ══════════ TAB 7: BEFORE LAUNCH ══════════ -->
+<section class="panel" id="p-launch">
+  <div class="kicker">上線前 · 不會自己出現的事</div>
+  <h1>現在處理 vs 上線前處理</h1>
+  <table>
+    <tr><th>事項</th><th>說明</th><th>時機</th></tr>
+    <tr><td>密碼與認證安全</td><td>Argon2id 雜湊、臨時密碼 24h、5 次鎖 30 分、token_version 撤銷</td><td><span class="now">現在</span></td></tr>
+    <tr><td>資料隔離</td><td>Casbin + RLS（data_scope）+ CASL 三重防護；跨部門隔離整合測試</td><td><span class="now">現在</span></td></tr>
+    <tr><td>開發者逃生門</td><td>DEVELOPER_ACCOUNT_ENABLED=false；production 誤開拒絕啟動</td><td><span class="now">現在</span></td></tr>
+    <tr><td>稽核與軌跡</td><td>關鍵操作與業務同交易寫入 audit_logs</td><td><span class="now">現在</span></td></tr>
+    <tr><td>可近用性（無障礙）</td><td>鍵盤操作、對比度、讀屏支援——後補遠比內建貴</td><td><span class="now">現在</span></td></tr>
+    <tr><td>隱私政策 / 服務條款</td><td>有帳號就要；收款更要 + 退款政策（EU 客戶需 14 天猶豫期）</td><td><span class="later">上線前</span></td></tr>
+    <tr><td>首次 PITR 還原演練</td><td>驗證 RTO 4h / RPO 1h，留存紀錄</td><td><span class="later">上線前</span></td></tr>
+    <tr><td>監控告警</td><td>Prometheus/Grafana/Alertmanager + /metrics，壞了先知道</td><td><span class="later">上線前</span></td></tr>
+    <tr><td>字體授權</td><td>Noto Sans CJK TC 於 Gotenberg 容器的安裝與授權</td><td><span class="later">上線前必答</span></td></tr>
+    <tr><td>Big Bang 檢查</td><td>壓力測試、不匯舊資料、主檔建檔完成確認、回滾策略（PITR）</td><td><span class="later">上線前</span></td></tr>
+  </table>
+
+  <h2>三個上線前稽核（交給 AI）</h2>
+  <p class="sub">給任何人看到之前，先讓 AI 跑這三個稽核：</p>
+  <pre>1) 安全稽核："Audit my codebase for security vulnerabilities. Check authentication,
+   authorization, input validation, rate limiting, secrets management, file upload security,
+   CORS/CSRF protections, and timing attacks. Give me a severity rating for each issue found."
+2) 可擴展性稽核："Audit my codebase for scalability issues. Check for N+1 queries, unbounded
+   database reads, missing pagination, polling vs real-time listeners, caching gaps, cold start
+   performance, and concurrent user handling. Estimate the monthly cost impact of each issue."
+3) 上線就緒稽核："Audit my codebase for production readiness. Check for error monitoring, test
+   coverage on payment and authentication paths, accessibility basics, and deployment
+   configuration. Tell me what will fail silently in production."</pre>
+  <div class="prd-footer">This PRD was created by the <a href="https://github.com/TexasBedouin/vibe-check" target="_blank" rel="noopener noreferrer"><b>vibe-check</b> skill</a>, by Amer Arab</div>
+</section>
+
+<!-- ══════════ TAB 8: HAND TO YOUR AI ══════════ -->
+<section class="panel" id="p-handoff">
+  <div class="kicker">交給你的 AI · 完整建置說明書</div>
+  <h1>整份計畫，一鍵複製</h1>
+  <p class="lede">以下是完整建置計畫（vibe-check 22 節結構）。複製後貼給你的 AI 建置工具，或存成專案文件。</p>
+  <div class="copywrap"><button class="btn" id="copyPlan">複製整份計畫</button></div>
+  <pre id="planpre"># 多公司訂出貨系統 1.0 — 建置計畫（vibe-check 重整版）
+
+&gt; 本計畫以 vibe-check 結構重整既有規劃（來源：客戶版規格書 v1.0.34、執行計畫 v2.9.0、決策記錄 D1–D28、需求規格 12 份、客戶需求.txt、需求備忘_2026-08-03）。是交給 AI 建置工具的完整說明書，也是後續每個建置階段的檢查基準。
+&gt; 日期：2026-08-03　複雜度：**7 / 10**（待辦清單 2、Instagram 9；這是三端 + 基礎設施的 B2B 系統重建）
+
+---
+
+## 1. 問題（The Problem）
+
+業主與業務的原話（`docs/客戶需求.txt`）：
+
+&gt; 「產品分庫，揀貨單會顯示庫別」「產品名稱手打+清單選擇都留」「APP端業務可以直接刪除品項」「手寫備註欄（特殊切法）」
+&gt; 「各部門資料庫分隔檢視 僅總管理員可調閱全部資料」「商品總表由各部門自行建立」「客戶要有其專屬商品清單…可以手動刪除不要的品項」
+&gt; 「拉(到)客戶訂單上時要可讓業務手動修改商品名且綁定該客戶…A商品會在總表上叫做A但同時會在不同客戶叫做BCDEF」
+
+現狀的病根：**主檔（客戶、商品、業務、報價）掌握在外部系統手裡，系統無法自建管理**；集團多公司、多部門之間沒有權限隔離；倉儲（庫別）、派車與單據列印流程靠人工拼湊。業務要下單、要印揀貨單，得在幾個系統與紙本之間來回。
+
+## 2. 願景（The Vision）
+
+一套讓集團各公司自己管自己、總管理員看得到全部的系統：
+
+- **業務**：App 選客戶 → 客戶專屬商品清單直接帶出 → 改數量、改單位、手打品名、寫特殊切法 → 30 秒完成下單。
+- **中台**：派車看板拖放排車、一次確認一車次、四種單據（單車總表/對點單/揀貨單/加工單）一鍵列印。
+- **客戶**：QR Code 掃一下登入，只能看到自己的商品與訂單。
+- **總管理員**：跨公司調閱全部；部門管理員只看自己部門；誰做了什麼都有稽核。
+
+## 3. 目標（The Goal）
+
+- **要達成的事**：取代外部系統依賴，把「下單 → 派車 → 列印 → 出貨」整條營運流程收進一套自建系統，主檔全部自己掌握。
+- **現在怎麼做**：靠外部系統（NetSuite）提供主檔 + 現行三倉系統（`sales-order-backend/frontend/app`）+ 人工單據作業。
+- **為什麼糟**：主檔不能自建、部門資料無法隔離、揀貨/加工單靠人工拼湊；集團擴張時每加一家公司就要重來一次。
+- **怎麼算成功**：「業務用 App 完成一筆訂單、中台完成派車與四種單據列印、全程不碰外部系統」能在 10 分鐘內走完。
+
+## 4. 使用者（Who It's For）
+
+| 角色 | 說明 | 使用端 |
+|---|---|---|
+| `super` 集團管理 | 跨公司調閱、建立公司、維護系統級字典 | Web |
+| `company_admin` 公司管理 | 自己公司跨部門、審核 guest、維護公司識別 | Web |
+| `dept_admin` 部門管理 | 自己部門的帳號與主檔、取消派車、作廢 | Web + App |
+| `staff` 業務（兼會計檢視） | 下單、建客戶、重印單據 | App 為主 + Web |
+| `customer` 客戶店家 | 用自己的專屬商品清單下單、查歷史 | App |
+| `guest` 待審核 | 首次 OAuth 登入後等待審核 | Web/App |
+| `developer` 開發逃生門 | 跨租戶除錯（環境開關控制，prod 關閉） | — |
+
+預期規模：首波 1–2 家公司上線（Big Bang），數十名業務、數百間店家；之後隨集團公司逐家導入。
+
+## 5. 使用者流程（User Flows）
+
+### 5.1 快樂流程（Happy Flow）
+
+```mermaid
+flowchart LR
+  A[業務登入&lt;br/&gt;OAuth2 / QR Code] --&gt; B[選客戶]
+  B --&gt; C[帶出客戶專屬商品清單]
+  C --&gt; D[調整數量/單位/分切規格&lt;br/&gt;或手打商品名稱]
+  D --&gt; E[填特殊切法備註&lt;br/&gt;預計出貨日]
+  E --&gt; F[送出訂單&lt;br/&gt;取號 + 寫入事件 + 順延送貨日]
+  F --&gt; G[通知下單業務]
+  G --&gt; H[中台派車看板&lt;br/&gt;拖放指派車次與順序]
+  H --&gt; I[批次確認出車&lt;br/&gt;狀態轉處理中]
+  I --&gt; J[列印四種單據&lt;br/&gt;Gotenberg PDF]
+  J --&gt; K[出貨]
+```
+
+### 5.2 艱困日流程（Rough Day Flow）
+
+```mermaid
+flowchart LR
+  A[業務登入] --&gt; B{登入失敗?}
+  B -- OAuth 異常 --&gt; B1[重試或稍後再試&lt;br/&gt;管理員可先預建帳號]
+  B -- 帳號待審核 --&gt; B2[顯示待審核狀態]
+  B -- 公司被停用 --&gt; B3[阻擋登入]
+  B -- 成功 --&gt; C[下單]
+  C --&gt; D{取號衝突}
+  D --&gt; D1[樂觀鎖重試&lt;br/&gt;自動取號]
+  C --&gt; E{通知失敗}
+  E --&gt; E1[標記 failed + 原因&lt;br/&gt;人工追蹤（不重試）]
+  C --&gt; F[中台派車]
+  F --&gt; G{拖放衝突}
+  G --&gt; G1[版本不符拒絕&lt;br/&gt;重載最新看板]
+  F --&gt; H{串流斷線}
+  H --&gt; H1[自動重連 + 全量重查&lt;br/&gt;連續失敗降級 30 秒輪詢]
+  F --&gt; I{批次內有訂單狀態已變}
+  I --&gt; I1[明確回報成功/失敗&lt;br/&gt;不重複寫入]
+  F --&gt; J{列印失敗}
+  J --&gt; J1[重印需填原因&lt;br/&gt;PDF 全留存可查核]
+```
+
+### 5.3 邊緣案例（Edge Cases）
+
+```mermaid
+flowchart LR
+  A[客戶三個月後回來] --&gt; A1[訂單歷史與專屬清單仍在&lt;br/&gt;軟刪除主檔仍可顯示名稱]
+  B[業務有 500 個商品] --&gt; B1[分頁上限 100&lt;br/&gt;複合索引支撐查詢]
+  C[兩台裝置同時拖同一張卡] --&gt; C1[樂觀鎖 version 比對&lt;br/&gt;後寫者被拒並重載]
+  D[公司被停用] --&gt; D1[全體 session/token 立即失效]
+  E[員工離職] --&gt; E1[帳號僅停用不刪除&lt;br/&gt;稽核軌跡保留]
+  F[兩端資料不一致] --&gt; F1[伺服器為唯一事實來源&lt;br/&gt;事件僅觸發重查，不做快取補丁]
+```
+
+## 6. 功能（Features）
+
+### V1（現在就建 = 執行計畫 76 個 Task）
+
+**主檔自建**：公司/部門/使用者、客戶（含地址簿/聯絡人）、商品（含單位換算/分切規格/倉別）、倉庫/車次/商品分類、字典檔、客戶專屬商品清單、檔案資產。
+**認證授權**：OAuth2（Google Workspace）員工登入、客戶帳號**一主多子**（1 主帳號僅供管理、不登入業務；建立客戶自動附帶業務子帳號、**專供所屬業務使用**（憑證交付業務、店家灰化不可管理且無密碼）；店家需下單以主帳號自建子帳號；主帳號不可自停、停用連鎖子帳號，後台逃生門可轉交主帳號密碼、主責業務變更可移交業務子帳號）+ QR Code 登入（僅列店家子帳號）、Casbin + RLS + CASL 三重防護、角色權限設置、developer 逃生門。
+**訂單**：下單流程（含手打品名綁定客戶）、編號取號、狀態機（含取消派車回退、作廢終態）；**全系統不儲存任何金額欄位**（業主需求）。
+**退貨**：客戶 App 發起（歷史訂單或專屬商品清單選品、照片/備註）→ 業務審核 → 客戶端退貨證明（出示司機）；不建配送頁面。
+**派車**：Kanban 看板、拖放樂觀鎖、車次批次確認、Connect-RPC 串流即時推播（輪詢降級）。
+**列印**：四種單據（單車總表/對點單/揀貨單/加工單）、Gotenberg PDF、預覽/重印記錄。
+**通知**：FCM + 站內兩通道（無 Email）；業務下單推客戶子帳號（主帳號不接收業務通知）、後台新增專屬商品推主責業務；促銷推播（分類標籤選客戶群）與公告分離。
+**其他**：公告 CMS、客戶偏好送貨日（非勾選日自動順延）、稽核日誌（同事務寫入、保留 3 個月可設定）、App 底部導覽/離線快取/新增客戶、k8s 部署、備份/監控/DR 演練、Big Bang 上線。
+
+### V2+（以後再建）
+
+電子發票開立（僅留 `invoice_type_id` 欄位）、App 強制更新、通知失敗重試佇列、上傳病毒掃描、多語 UI、Cmd+K 全域搜尋、自建 IdP、audit_logs 時間分區、複合索引補強。
+**1.1 獨立迭代**：拍照建客戶（LLM vision）、業務語音下單（雲端 STT + LLM）、MCP/ACP/A2A 協定整合。
+
+## 7. 系統架構（System Architecture）
+
+```mermaid
+flowchart TB
+    subgraph 使用者
+      U1[業務員 App]
+      U2[客戶店家 App]
+      U3[中台 Web]
+      U4[集團/公司管理員]
+    end
+    subgraph 你的系統
+      A[你的 App&lt;br/&gt;backend / frontend / app]
+      B[資料庫&lt;br/&gt;PostgreSQL&lt;br/&gt;RLS 資料隔離]
+      C[快取與推播&lt;br/&gt;Valkey&lt;br/&gt;session + pub/sub]
+      D[單據產生&lt;br/&gt;Gotenberg]
+      E[通知&lt;br/&gt;SMTP + FCM]
+      F[登入&lt;br/&gt;Google Workspace OIDC]
+    end
+    subgraph 基礎設施
+      G[k8s + Traefik&lt;br/&gt;備份 GCS + 監控]
+    end
+    U1 --&gt; A; U2 --&gt; A; U3 --&gt; A; U4 --&gt; A
+    A --&gt; B; A --&gt; C; A --&gt; D; A --&gt; E; A --&gt; F
+    B --&gt; G; C --&gt; G
+```
+
+資料流：業務送出訂單 → 你的 App 存進資料庫（同交易寫入稽核）→ 通知引擎發 Email/FCM → 派車事件經 Valkey 推播到看板 → 確認出車後 Gotenberg 產生四種 PDF → 出貨完成。
+
+## 8. 技術棧（Tech Stack）
+
+| 工具 | 做什麼 | 為什麼用它 | 成本 |
+|---|---|---|---|
+| Go 1.25 | 後端 API | 現行棧沿用、效能好 | 免費 |
+| SolidJS 1.9 + TS + Vite 6 | 中台 SPA | 現行棧沿用 | 免費 |
+| Flutter 3.35.2 | App（Android/iOS） | 跨平台一套碼 | 免費 |
+| Connect-RPC（proto v1） | 三端 API 契約 | 一份 proto 產生 Go/TS/Dart 型別，消除漂移 | 免費 |
+| PostgreSQL 17 | 主資料庫 | RLS 資料隔離、部分唯一索引 | 自建 VM 成本 |
+| Valkey（Redis 相容） | session + pub/sub | 串流廣播與 session store | 自建 VM 成本 |
+| Gotenberg | HTML → PDF 單據 | 中文渲染品質穩定 | 開源免費 |
+| k8s + Traefik | 部署與流量轉發 | 自持有資料、業主決策 | VM 成本 |
+| Prometheus + Grafana | 監控告警 | 已定案 | 開源免費 |
+| Google Workspace OIDC | 員工登入 | 集團既有 | 既有授權 |
+| FCM | App 推播 | 免付費 | 免費 |
+| GCS | 備份（PITR + restic） | 異地備份 | 儲存費 |
+
+## 9. 資料模型（Data Model）
+
+用白話講，系統會存這些東西：
+
+- **租戶**：公司（含識別/前綴/公開資訊）、部門（隸屬唯一公司）。
+- **人員**：使用者（員工/客戶帳號、角色、`token_version` 撤銷版本）、角色與權限（`roles`、`role_permissions`）、Casbin policy。
+- **主檔**：客戶（+地址簿、聯絡人、偏好送貨日星期一到六、促銷分類標籤）、商品（+單位換算、分切規格、倉別、促銷標籤）、倉庫、車次、商品分類、字典檔（`metadicts` 系統級+部門級）、**客戶專屬商品清單**（`customer_products`：客戶+商品+別名+qty=0 保留不顯示+促銷標籤）。
+- **訂單**：銷售訂單（狀態、來源碼、取號計數器；**不含任何金額欄位**）、訂單明細（品名/數量/單位/切法/備註）、訂單事件（`sales_order_events` 狀態軌跡）、**退貨申請**（`return_requests`：客戶發起/業務審核/退貨證明）。
+- **派車列印**：車次指派（`route_id` + `delivery_sequence`）、列印記錄（`print_logs`/`print_previews`）。
+- **營運**：通知範本/通知/裝置、公告（banner/最新消息/文章）、稽核日誌（`audit_logs`）、檔案資產（`file_assets`）。
+- 統一規則：業務實體軟刪除（`deleted_at` + 部分唯一索引）；稽核與業務操作同一交易寫入。
+
+## 10. House Rules for Your AI（AI 工作守則）
+
+放進專案導覽檔（各子專案 `AGENTS.md`）的守則（改編自 vibe-check 模板）：
+
+```markdown
+# 多公司訂出貨系統 — House Rules
+
+你是工程師，我是產品經理。每次修改都要遵守：
+
+## 怎麼工作
+- 先想再做：非瑣碎的程式碼，先說你要做什麼，有不清楚的先問，不要猜。
+- 保持簡單：做解決問題的最簡單版本，不要「以防萬一」的額外程式碼。
+- 只改被要求的：不要順手重寫或「改進」無關的程式碼；發現問題告訴我，但不要動手。
+- 朝向明確終點：以可檢查的「完成」為目標，並逐項展示如何驗證。
+
+## 怎麼寫程式碼
+- 不重複：每段邏輯只有一個家。
+- 命名一致：是「客戶」就永遠叫「客戶」，識別字/檔名維持英文原文。
+- 處理失敗路徑：每個失敗都有友善訊息與退路。
+- 留下軌跡：重要操作要記錄（發生什麼、成功或失敗、錯誤內容）。
+- 分層分明：畫面、邏輯、資料儲存分開。
+- 功能自含：每個功能在自己的資料夾。
+
+## 完成的定義（每次變更都要全部通過）
+- 能跑，且沒弄壞原本會跑的。
+- 建置、linter、formatter 全綠。
+- 測試在舊程式碼上失敗、在新程式碼上通過（先失敗再修）。
+- 只動了任務需要的部分。
+- 符合專案的命名與慣例。
+
+「能跑」是地板，不是天花板。
+```
+
+## 11. 整合（Integrations）
+
+| 整合 | 方式 | 備註 |
+|---|---|---|
+| Google Workspace | OIDC（官方 SDK） | 員工登入；自建 IdP 延後 |
+| Firebase Cloud Messaging | 官方 SDK | App 推播；失效 token 即刪 |
+| Gotenberg | 官方 API（自架） | HTML→PDF |
+| Google Cloud Storage | 官方 SDK | 備份（PG PITR / Valkey / restic） |
+| 1.1：STT / LLM（拍照、語音） | 供應商選型 POC 後定案 | 不擋 1.0 |
+
+原則：一律用官方 SDK，不用第三方 wrapper；出問題時第一個問題永遠是「我對到的是真東西，還是中間商？」。
+
+## 12. 成本估算（Cost Breakdown）
+
+| 項目 | 免費層/自帶 | 開始花錢的點 | 月估（粗估） |
+|---|---|---|---|
+| k8s 節點（自建，3 節點 VM） | — | 開機即付 | US$150–300 |
+| GCS 備份（日備 30 天 + 月備 12 個月） | — | 容量計費 | US$10–30 |
+| Artifact Registry + 流量 | 部分免費 | 儲存/出口 | US$10–30 |
+| 網域 + DNS | — | — | US$10 |
+| FCM / GitHub Actions / Prometheus / Gotenberg / Valkey / PostgreSQL | 免費/開源 | — | $0 |
+| Google Workspace / SMTP | 既有 | — | 既有 |
+
+**架構成本警告**：怎麼用服務比服務單價重要。派車看板若每 30 秒輪詢全量查詢，100 個使用者一個月可能多燒數百美元；本計畫用「事件觸發重查 + 降級輪詢」，事件驅動、查詢只在有變更時發生，成本接近免費。資料庫查詢一律分頁（上限 100）並配複合索引，避免全表掃描。
+
+## 13. 時程（Timeline）
+
+| Phase | 內容 | 估時（AI 協作） |
+|---|---|---|
+| 0 | 基礎建設（monorepo/infra/骨架/CI） | 1 週 |
+| 1 | 認證授權（OAuth2/RLS/Casbin/developer） | 2–3 週 |
+| 2 | 多租戶主檔（公司/部門/使用者/權限/稽核） | 2–3 週 |
+| 3 | 業務主檔（客戶/商品/車次/倉/專屬清單/QR） | 2 週 |
+| 4 | 訂單與通知 | 2–3 週 |
+| 5 | 派車與四種單據列印 | 2–3 週 |
+| 6 | App 功能（含 App 新增客戶） | 2–3 週 |
+| 7 | 公告與 UI 強化 | 1–2 週 |
+| 8 | 部署、備份監控、DR 演練、Big Bang | 2–3 週 |
+
+合計 **14–20 週**（V1 全部）；每個 Phase 結束都有檢查點停下來確認，不會迷路。
+
+## 14. 分發（Distribution）
+
+- **前 10 位使用者**：第一家導入公司的業務員與客戶店家（集團內部，可指名）。
+- **他們在哪裡**：集團各公司內部；業務就是需求提供者（陳老闆的業務群），店家透過 QR Code 進入。
+- **第一個動作**：上線前主檔建檔（客戶/商品/車次/分切/專屬清單）+ 員工 OAuth 帳號預建（避免首登待審核卡關）+ 客戶 QR Code 發放。**建檔要提前，不要等上線才開始**——建檔介面在 Phase 3/6 就先交付。
+
+## 15. 成長迴圈（Growth Loop）
+
+誠實版：這是集團內部系統，**沒有自然成長迴圈**（沒有使用者產生的公開內容、沒有邀請即用、沒有可見的「Made with」訊號；不能也不該硬塞）。所以成長引擎 = 集團公司逐家導入 + 店家透過 QR 進入系統。**每週在集團內部推進一家公司/一個部門上線，就是你的成長引擎**。
+
+**冷啟動（cold start）**：系統只在有人用時才有價值 → 上線前必須先建好主檔（客戶、商品、車次、分切規格、專屬商品清單、員工帳號）。最低流動門檻 = **上線檢查清單上的主檔建檔全部完成**；未達標前不開放。種子做法：管理員預建員工帳號、建檔介面提早交付、QR 先行發放。
+
+## 16. 上線前必辦事項（Before Launch）
+
+| 事項 | 何時處理 |
+|---|---|
+| 安全：Argon2id 密碼、session/JWT 撤銷、RLS、TLS 1.2+、rate limit、CSRF | 現在（各 Phase 內建） |
+| `DEVELOPER_ACCOUNT_ENABLED=false` + fail-fast 防誤開 | 現在（上線檢查清單必含） |
+| 隱私政策 / 服務條款 / 退款政策（如收款） | 上線前 |
+| 首次 PITR 還原演練（驗證 RTO 4h / RPO 1h）並留存紀錄 | 上線前（Phase 8） |
+| 監控告警（Prometheus/Grafana/Alertmanager + `/metrics`） | 上線前 |
+| 可近用性（無障礙）基礎 | 現在（各頁面實作時） |
+| 字體授權（Noto Sans CJK TC 於 Gotenberg 容器） | 上線前必答 |
+
+## 17. 上線前稽核（Pre-Launch Audits）
+
+交給 AI 跑這三個稽核，任何人看到之前先跑：
+
+- **安全稽核**：「Audit my codebase for security vulnerabilities. Check authentication, authorization, input validation, rate limiting, secrets management, file upload security, CORS/CSRF protections, and timing attacks. Give me a severity rating for each issue found.」
+- **可擴展性稽核**：「Audit my codebase for scalability issues. Check for N+1 queries, unbounded database reads, missing pagination, polling vs real-time listeners, caching gaps, cold start performance, and concurrent user handling. Estimate the monthly cost impact of each issue.」
+- **上線就緒稽核**：「Audit my codebase for production readiness. Check for error monitoring, test coverage on payment and authentication paths, accessibility basics, and deployment configuration. Tell me what will fail silently in production.」
+
+## 18. 與你的 AI 工具協作（Working With Your AI Tool）
+
+- 專案導覽檔（`AGENTS.md`）保持精簡；細節拆到各子專案自己的檔案。
+- 早點設定日誌（debug logging），在 bug 出現之前：請 AI「Define a simple, consistent debug-logging plan for this app. Say what to log, the levels, and short category names for each feature. Write it to docs/DEBUG-LOGGING.md and follow it everywhere.」
+- 關掉沒在用的 AI 外掛與整合，它們會吃掉工作記憶。
+- 每個提示都是一份迷你規格：不是「加登入」，而是「加 Google 與 email 登入。檢查時顯示 spinner。失敗顯示友善錯誤與重試按鈕。已登入的直接進儀表板。」
+- 套用修復前先問 AI：「這個變更對使用者看到什麼的影響？會不會變慢？使用者在最糟的一天看到什麼？」
+- 四個鐵律（來自 MANAGING-YOUR-AI）：不猜（不明確就問）、不過度建置（只做要求的）、不改動未觸及的程式、每筆變更通過「完成定義」；「能跑」是地板，不是天花板。
+
+## 19. 建置階段與檢查點（Build Phases with Checkpoints）
+
+每個 Phase 結束都停下來，向使用者說明：我們在哪、剛建好什麼、為什麼這樣建、下一步是什麼、有沒有問題——等使用者回應才繼續。
+
+```
+═══════════════════════════════════════════════════════════
+🔖 CHECKPOINT: [Phase 名稱]
+═══════════════════════════════════════════════════════════
+
+📍 WHERE WE ARE
+「我們剛完成 [Phase]。現在系統可以：……」
+
+🔧 WHAT WE JUST BUILT
+- [1–3 條白話說明建了什麼]
+- 例：「我們架好了資料庫。這裡存所有使用者的資料——可以想像成一個 App 自動讀寫的、超大的整理好的試算表。」
+- 例：「我們加了 Google 登入。點『用 Google 登入』時，App 請 Google 確認身分，Google 回傳姓名與 email，你的 App 從頭到尾看不到他們的 Google 密碼。」
+
+💡 WHY WE BUILT IT THIS WAY
+- 例：「記得你說過業務在現場很趕嗎？所以用 Google 登入而不是 email+密碼，一鍵登入。」
+
+📋 WHAT'S NEXT
+「接下來建 [下一 Phase]。這是 [對你的 App 的意義]。」
+
+❓ QUESTIONS?
+「到目前為止都還合理嗎？想先看看哪個部分實際跑起來？有什麼卡住你的？」
+
+等使用者回應再繼續。
+═══════════════════════════════════════════════════════════
+```
+
+各 Phase 的檢查點重點：
+
+- **Phase 0 基礎建設**：monorepo 骨架、docker-compose（PostgreSQL/Valkey/Gotenberg）、三端骨架、proto 型別同步、CI。→ 驗收：三端可啟動、CI 通過。
+- **Phase 1 認證授權**：OAuth2 員工登入、客戶密碼/QR 登入、Casbin + RLS（含 `data_scope` 隔離測試）、session/JWT + `token_version`、developer 逃生門。→ 驗收：三種登入完整、隔離正確、強制登出有效。
+- **Phase 2 多租戶主檔**：公司/部門/使用者 CRUD、角色權限與 API 權限設置、metadicts、稽核日誌。→ 驗收：權限可調且即時生效、稽核完整。
+- **Phase 3 業務主檔**：客戶（含取號/帳號/臨時密碼）、商品/單位/分切/倉別/車次、客戶專屬商品清單、檔案資產、QR 產生。→ 驗收：QR 可被 App 掃描登入。
+- **Phase 4 訂單與通知**：訂單 API（取號/狀態機，不存金額）、下單流程（手打品名/別名、偏好送貨日順延）、退貨申請與審核、通知系統（FCM/站內）。→ 驗收：Web/App 皆可下單、狀態正確、客戶收到通知、退貨審核流程完整。
+- **Phase 5 派車與列印**：看板拖放（樂觀鎖）、批次確認、Connect 串流（降級輪詢）、四種單據 + Gotenberg、列印記錄。→ 驗收：串流推播與降級正確、四單據 PDF 正確。
+- **Phase 6 App**：底部導覽、快速下單、訂單歷史、離線快取、FCM、App 新增客戶（交付帳密＋管理網址鏈結）、店家帳號管理（主帳號自助，僅管理不業務登入）。→ 驗收：業務/客戶皆可下單、新增客戶可交付帳密與管理連結、店家以主帳號管理子帳號且主帳號無法使用業務功能。
+- **Phase 7 公告與 UI**：公告 CMS、促銷推播（分類標籤選群）、側邊欄/主題、Dashboard。→ 驗收：公告管理正常、依分類選群推播正確、依公司/角色呈現。
+- **Phase 8 部署維運**：k8s manifests、CD、備份（PITR）、監控告警、安全強化、DR 演練、Big Bang 上線。→ 驗收：生產部署成功、DR 演練通過、上線完成。
+
+## 20. 開放問題（Open Questions）
+
+| 問題 | 影響 | 狀態 |
+|---|---|---|
+| Noto Sans CJK TC 生產字體授權與安裝方式 | 單據列印 | 上線前必答（低優先） |
+| `audit_logs` 時間分區啟動時機 | 維運 | 單月百萬列或查詢變慢時評估 |
+| 複合索引細節 | 效能 | 各 Phase schema 建立時依建議文件 §3 處理 |
+| 1.1 AI 供應商選型 POC（名片 20 張、語音 20 句） | 1.1 | 1.1 啟動前完成，不擋 1.0 |
+| 退貨品項來源 UX（歷史訂單 vs 專屬商品清單） | 退貨 | 1.0 兩者並存，試用回饋後收斂 |
+| 專屬商品新增推播是否需業務檢核 | 通知 | 待定 |
+
+## 21. 最風險假設（The Riskiest Assumption）
+
+**單一信念**：Big Bang 上線前，主檔人工建檔（客戶/商品/車次/分切/專屬清單/員工帳號）能如期完成——否則上線即停擺（沒有並行期可緩衝）。
+
+**最便宜的驗證方式**（建任何程式之前先做）：
+- 拿一家公司**真實資料**進行建檔演練：一組人員、3 天內完成該公司全部主檔建檔。
+- 同時用 QR Code 讓 5 家店家試登並下一筆測試單。
+
+**通過/失敗訊號**：3 天內建檔完成且 5 家店家 QR 試登成功 → 假設存活，開始正式建置；失敗 → 檢討是介面問題還是資料品質問題，調整建檔流程後重試。
+
+## 22. 你現在知道的詞彙（Words You Now Know）
+
+| 詞彙 | 白話 |
+|---|---|
+| 租戶（Tenant） | 系統裡各自獨立的一家公司；租戶之間資料互不相見 |
+| 資料範圍（data_scope） | 一個角色能看到多遠：全部公司 / 自己公司 / 自己部門 / 只有自己 |
+| RLS（列級安全） | 資料庫層的最後一道鎖：就算程式漏寫條件，資料庫也不讓你越界 |
+| Casbin | 後端負責「誰能對哪個功能做什麼動作」的規則引擎 |
+| CASL | 前端版的規則引擎，決定畫面顯示什麼按鈕 |
+| Connect-RPC / proto | 一份描述 API 的檔案，自動產生 Go / TypeScript / Dart 三種語言的程式碼，三端永遠一致 |
+| OAuth2 / OIDC | 「用 Google 帳號登入」背後的標準 |
+| JWT / session | App 用「短期通行證」（JWT，1 小時）+ 可續期的 refresh；Web 用瀏覽器 cookie |
+| 樂觀鎖 | 先做再說，送出前比對版本；衝突就重載最新資料 |
+| 軟刪除 | 不真的刪掉，只標記 `deleted_at`，歷史單據還能查到名字 |
+| 部分唯一索引 | 「沒刪掉的資料才必須唯一」，所以刪掉後可以重建同名資料 |
+| 狀態機 | 訂單只能照規定走：待處理 ⇄ 處理中 → 已完成；取消、作廢是終點 |
+| StatefulSet | k8s 裡給資料庫用的「有狀態」服務，資料不會隨便消失 |
+| PITR（時間點還原） | 資料庫可以還原到過去任何一分鐘，出大事也能救回 |
+| Gotenberg | 把 HTML 變成 PDF 的小服務，單據列印用 |
+| Kanban 看板 | 車次是欄、訂單是卡片的拖放排程板 |
+| Big Bang 上線 | 測試完一次全面切換、舊系統直接廢止，沒有並行期 |
+| Monorepo | 後端/前端/App/基礎設施全部放同一個倉庫管理 |
+| CI/CD | 自動建置、測試、部署的管線 |
+| FCM | Google 的免費推播服務，通知送到手機 |
+| 軟刪除復原 | 誤刪可以救回來；硬刪除（super 限定）會留稽核 |
+
+---
+
+*本計畫由 vibe-check skill 結構重整；內容以客戶版規格書 v1.0.34 與執行計畫 v2.9.0 為準。*
+</pre>
+  <div class="prd-footer">This PRD was created by the <a href="https://github.com/TexasBedouin/vibe-check" target="_blank" rel="noopener noreferrer"><b>vibe-check</b> skill</a>, by Amer Arab</div>
+</section>
+
+<!-- ══════════ TAB 9: CONTINUE ══════════ -->
+<section class="panel" id="p-continue">
+  <div class="kicker">續航 · 這份文件不會過期</div>
+  <h1>帶著走，隨時接續</h1>
+  <p>這份 PRD 是單一自包含檔案：所有看板都是內嵌的實時圖表，不需要伺服器、不需要網路（字型除外）。整個 session 的快照存在檔內，可以在任何機器打開。</p>
+  <h2>要接續 session 時</h2>
+  <ol>
+    <li>開一個新的 vibe-check 對話</li>
+    <li>把這份檔案附上去，說「<b>continue from this PRD</b>」</li>
+    <li>AI 會讀取內嵌的 re-hydration snapshot，還原完整脈絡——不會有 session 遺失</li>
+  </ol>
+  <h2>快照裡有什麼</h2>
+  <ul>
+    <li>三行目標、產品定位、角色清單</li>
+    <li>需求機會評分（10 項需求 × 痛/被滿足/分數/證據等級）</li>
+    <li>定案方向（訂單中心 + 看板 + QR）、aha 時刻</li>
+    <li>V1 / V2 功能、技術棧、資料模型、九個建置 Phase</li>
+    <li>AI 守則、分發與冷啟動、上線前清單</li>
+  </ul>
+  <div class="prd-footer">This PRD was created by the <a href="https://github.com/TexasBedouin/vibe-check" target="_blank" rel="noopener noreferrer"><b>vibe-check</b> skill</a>, by Amer Arab</div>
+</section>
+
+</main>
+
+<script type="application/json" id="vibe-check-session">
+{
+  "product": "多公司訂出貨系統 1.0",
+  "threeLines": {
+    "goal": "取代外部系統依賴，主檔全部自建，集團各公司自己管自己",
+    "workaround": "靠 NetSuite 主檔 + 現行三倉系統 + 人工單據作業拼湊",
+    "whySucks": "主檔不能自建、部門資料無法隔離、揀貨/加工單靠人工；集團每加一家公司就要重來一次"
+  },
+  "roles": [
+    "super",
+    "company_admin",
+    "dept_admin",
+    "staff（兼會計）",
+    "customer（一主多子）",
+    "guest",
+    "developer"
+  ],
+  "discovery": {
+    "source": "docs/客戶需求.txt（陳老闆與業務端需求）+ 需求備忘",
+    "needs": [
+      {
+        "label": "取代外部主檔依賴，全部自建管理",
+        "pain": 9,
+        "served": 2,
+        "score": 16,
+        "evidence": "seen"
+      },
+      {
+        "label": "四種單據依車次/倉別/分切規格列印",
+        "pain": 9,
+        "served": 3,
+        "score": 15,
+        "evidence": "seen"
+      },
+      {
+        "label": "多公司/部門權限隔離",
+        "pain": 8,
+        "served": 3,
+        "score": 13,
+        "evidence": "seen"
+      },
+      {
+        "label": "客戶專屬商品清單（改名/刪品項）",
+        "pain": 8,
+        "served": 4,
+        "score": 12,
+        "evidence": "seen"
+      },
+      {
+        "label": "派車看板即時排程",
+        "pain": 7,
+        "served": 4,
+        "score": 10,
+        "evidence": "seen"
+      },
+      {
+        "label": "揀貨單依倉別分列",
+        "pain": 7,
+        "served": 4,
+        "score": 10,
+        "evidence": "seen"
+      },
+      {
+        "label": "手打商品名稱+清單並存",
+        "pain": 6,
+        "served": 5,
+        "score": 7,
+        "evidence": "seen"
+      },
+      {
+        "label": "手寫特殊切法備註",
+        "pain": 6,
+        "served": 6,
+        "score": 6,
+        "evidence": "seen"
+      },
+      {
+        "label": "訂單/派車通知（FCM+站內）",
+        "pain": 5,
+        "served": 5,
+        "score": 5,
+        "evidence": "hunch"
+      },
+      {
+        "label": "客戶自助下單（QR 登入）",
+        "pain": 5,
+        "served": 6,
+        "score": 5,
+        "evidence": "hunch"
+      }
+    ],
+    "winner": {
+      "label": "取代外部主檔依賴，全部自建管理",
+      "score": 16
+    }
+  },
+  "chosenDirection": {
+    "name": "訂單中心（App 下單）+ 派車看板（中台）+ QR 自助（客戶）",
+    "aha": "送出訂單即直通派車看板：取號、狀態、通知一步到位"
+  },
+  "v1": [
+    "主檔自建（客戶/商品/倉別/車次/分切/專屬清單/字典）",
+    "OAuth2+QR 登入（一主多子：主帳號僅管理、業務子帳號專供所屬業務（店家灰化不可管理）、店家自建子帳號下單、主帳號自助管理子帳號）、Casbin+RLS+CASL 三重防護",
+    "訂單（取號/狀態機/手打品名，不存金額）",
+    "退貨（客戶發起/業務審核/退貨證明）",
+    "派車看板（拖放/批次確認/Connect 串流）",
+    "四種單據列印（Gotenberg）",
+    "通知（FCM/站內、促銷標籤選群，僅推子帳號）",
+    "偏好送貨日自動順延、公告 CMS、稽核日誌（3 個月可設定）、App 新增客戶（交付帳密＋管理網址鏈結）、k8s+DR+Big Bang"
+  ],
+  "v2": [
+    "App 強制更新、通知重試佇列、病毒掃描、多語 UI、Cmd+K、自建 IdP",
+    "1.1：拍照建客戶（LLM vision）、語音下單（STT+LLM）、MCP/ACP/A2A"
+  ],
+  "techStack": [
+    "Go 1.25",
+    "SolidJS 1.9 + TS + Vite 6",
+    "Flutter 3.35.2",
+    "Connect-RPC（proto v1）",
+    "PostgreSQL + RLS",
+    "Valkey（session + pub/sub）",
+    "Gotenberg",
+    "k8s + Traefik",
+    "Prometheus/Grafana",
+    "Google Workspace OIDC",
+    "FCM",
+    "GCS 備份"
+  ],
+  "dataModel": "租戶（公司/部門）→ 人員（使用者/角色/權限；客戶帳號一主多子）→ 主檔（客戶+地址+聯絡人+偏好送貨日+促銷標籤、商品+單位+分切+倉別、倉庫/車次/分類、字典、客戶專屬商品清單）→ 訂單（明細/事件/計數器，不含金額）→ 退貨申請 → 派車列印 → 營運（通知/公告/稽核/檔案）；軟刪除 + 稽核同交易",
+  "buildOrder": [
+    "Phase 0 基礎建設（1 週）",
+    "Phase 1 認證授權（2–3 週）",
+    "Phase 2 多租戶主檔（2–3 週）",
+    "Phase 3 業務主檔（2 週）",
+    "Phase 4 訂單/退貨/通知（2–3 週）",
+    "Phase 5 派車與列印（2–3 週）",
+    "Phase 6 App（2–3 週）",
+    "Phase 7 公告/促銷/UI（1–2 週）",
+    "Phase 8 部署維運與 Big Bang（2–3 週）"
+  ],
+  "codingGuidelines": "House Rules（見分頁 5）：先想再做、保持簡單、只改被要求、失敗路徑、留軌跡、分層、功能自含；完成定義五條",
+  "distribution": {
+    "first10": "第一家導入公司的業務與客戶店家",
+    "channel": "集團內部 + QR Code",
+    "firstMove": "主檔建檔 + 員工 OAuth 預建 + 客戶 QR 發放（提早於 Phase 3/6 交付建檔介面）"
+  },
+  "growthLoop": "無自然迴圈；成長引擎 = 集團公司逐家導入 + 店家 QR 進入；量測：新啟用公司/部門數、QR 登入店家數",
+  "beforeLaunch": [
+    "安全（Argon2id/token_version/RLS/TLS/rate limit）",
+    "DEVELOPER_ACCOUNT_ENABLED=false",
+    "隱私政策/服務條款",
+    "首次 PITR 還原演練（RTO 4h/RPO 1h）",
+    "監控告警",
+    "無障礙基礎",
+    "Noto Sans CJK TC 字體授權",
+    "Big Bang 檢查清單"
+  ]
+}
+</script>
+
+<script>
+  // tabs
+  const tabs=document.querySelectorAll('#tabs button');
+  tabs.forEach(b=>b.addEventListener('click',()=>{
+    tabs.forEach(x=>x.classList.toggle('on',x===b));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='p-'+b.dataset.t));
+    window.scrollTo({top:0});
+  }));
+  // board scaling: iframe 1920 wide, scale to wrap width; 依實際內容高度微調
+  function fitBoards(){
+    document.querySelectorAll('.bwrap').forEach(w=>{
+      const tw=w.clientWidth;
+      const ifr=w.querySelector('iframe');
+      let bh=parseFloat(w.dataset.bh||1080);
+      try{const sh=ifr.contentDocument&&ifr.contentDocument.body?ifr.contentDocument.body.scrollHeight:0;if(sh>bh)bh=sh;}catch(e){}
+      const s=tw/1920;
+      ifr.style.width='1920px';
+      ifr.style.height=bh+'px';
+      ifr.style.transform='scale('+s+')';
+      w.style.height=(bh*s)+'px';
+    });
+  }
+  window.addEventListener('resize',fitBoards);
+  window.addEventListener('load',fitBoards);
+  document.querySelectorAll('.bwrap iframe').forEach(f=>f.addEventListener('load',fitBoards));
+  // copy plan
+  document.getElementById('copyPlan').addEventListener('click',()=>{
+    const txt=document.getElementById('planpre').innerText;
+    navigator.clipboard.writeText(txt).then(()=>{
+      const b=document.getElementById('copyPlan');b.textContent='已複製 ✓';
+      setTimeout(()=>b.textContent='複製整份計畫',1600);
+    });
+  });
+  fitBoards();
+</script>
+</body>
+</html>

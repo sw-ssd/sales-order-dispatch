@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>多公司訂出貨系統 1.0 — 客戶報告</title>
+<style>
+  :root{
+    --primary:#1E4D8C; --accent:#3A7BD5; --accent-soft:#E8F1FB;
+    --orange:#F59E0B; --green:#10B981; --red:#EF4444;
+    --ink:#1F2937; --gray:#6B7280; --line:#D8E2EE; --soft:#F5F8FC;
+  }
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  @page{ size:A4; margin:0; }
+  html,body{ font-family:"PingFang TC","Hiragino Sans GB","STHeiti","Microsoft JhengHei",sans-serif; color:var(--ink); }
+  .page{ width:210mm; height:297mm; page-break-after:always; overflow:hidden; position:relative; background:#fff; padding:15mm 15mm 12mm; display:flex; flex-direction:column; }
+  .page:last-child{ page-break-after:auto; }
+
+  /* 共用頁首頁尾 */
+  .page-head{ display:flex; align-items:baseline; gap:4mm; border-bottom:2.5px solid var(--primary); padding-bottom:3mm; margin-bottom:6mm; }
+  .sec-no{ background:var(--primary); color:#fff; font-weight:700; font-size:13pt; border-radius:6px; padding:1mm 3mm; }
+  .page-head h2{ font-size:20pt; color:var(--primary); font-weight:700; }
+  .page-head .sub{ margin-left:auto; font-size:9.5pt; color:var(--gray); }
+  .page-foot{ position:absolute; bottom:7mm; left:15mm; right:15mm; display:flex; justify-content:space-between; font-size:8.5pt; color:#9AA5B1; border-top:1px solid var(--line); padding-top:2mm; }
+
+  h3{ font-size:13.5pt; color:var(--primary); margin:4mm 0 2.5mm; }
+  p.lead{ font-size:11pt; color:var(--gray); line-height:1.75; margin-bottom:4mm; }
+
+  /* 卡片 */
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:4mm; }
+  .grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:4mm; }
+  .card{ background:var(--soft); border:1px solid var(--line); border-radius:10px; padding:4mm 4.5mm; }
+  .card h4{ font-size:11.5pt; color:var(--primary); margin-bottom:1.8mm; display:flex; align-items:center; gap:2mm; }
+  .card p, .card li{ font-size:9.8pt; line-height:1.65; color:#374151; }
+  .card ul{ padding-left:4.5mm; }
+  .icon-dot{ width:7mm; height:7mm; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; color:#fff; font-size:10pt; flex:none; }
+
+  .tag{ display:inline-block; background:var(--accent-soft); color:var(--primary); border-radius:20px; padding:0.8mm 3mm; font-size:9pt; font-weight:600; margin:0 1.5mm 1.5mm 0; }
+  .note-box{ background:#FFF8E8; border:1px solid #F3D9A0; border-radius:10px; padding:3.5mm 4.5mm; font-size:9.8pt; line-height:1.7; color:#7A5A12; margin-top:auto; }
+  .blue-box{ background:var(--accent-soft); border:1px solid #BBD3F0; border-radius:10px; padding:3.5mm 4.5mm; font-size:9.8pt; line-height:1.7; color:#23467E; margin-top:4mm; }
+
+  table.simple{ width:100%; border-collapse:collapse; font-size:10pt; }
+  table.simple th{ background:var(--primary); color:#fff; padding:2.2mm 3mm; text-align:left; font-weight:600; }
+  table.simple td{ border-bottom:1px solid var(--line); padding:2.2mm 3mm; line-height:1.55; }
+  table.simple tr:nth-child(even) td{ background:var(--soft); }
+
+  .figure{ background:#fff; border:1px solid var(--line); border-radius:10px; padding:4mm; }
+  .figure .cap{ text-align:center; font-size:9pt; color:var(--gray); margin-top:2mm; }
+
+  /* 封面 */
+  .cover{ padding:0; background:linear-gradient(150deg,#12355F 0%,#1E4D8C 45%,#3A7BD5 100%); color:#fff; }
+  .cover .deco1{ position:absolute; width:120mm; height:120mm; border-radius:50%; background:rgba(255,255,255,.06); top:-40mm; right:-35mm; }
+  .cover .deco2{ position:absolute; width:80mm; height:80mm; border-radius:50%; background:rgba(255,255,255,.05); bottom:-25mm; left:-25mm; }
+  .cover .deco3{ position:absolute; width:34mm; height:34mm; border-radius:50%; border:6mm solid rgba(255,255,255,.07); bottom:45mm; right:22mm; }
+  .cover-inner{ position:relative; z-index:2; padding:30mm 20mm; display:flex; flex-direction:column; height:100%; }
+  .cover .brand{ font-size:13pt; letter-spacing:3px; opacity:.85; margin-bottom:auto; }
+  .cover h1{ font-size:37pt; font-weight:700; line-height:1.3; margin-bottom:6mm; }
+  .cover .slogan{ font-size:14.5pt; opacity:.92; line-height:1.8; margin-bottom:12mm; }
+  .cover .chips span{ display:inline-block; border:1.5px solid rgba(255,255,255,.55); border-radius:24px; padding:2mm 6mm; font-size:10.5pt; margin-right:4mm; }
+  .cover .meta{ margin-top:auto; font-size:10.5pt; opacity:.8; line-height:2; }
+
+  /* 封底 */
+  .back{ padding:0; background:linear-gradient(150deg,#12355F,#3A7BD5); color:#fff; display:flex; align-items:center; justify-content:center; }
+  .back .inner{ text-align:center; }
+  .back h1{ font-size:34pt; margin-bottom:6mm; }
+  .back p{ font-size:12.5pt; opacity:.9; line-height:2; }
+
+  /* 目錄 */
+  .toc{ display:grid; grid-template-columns:1fr 1fr; gap:3mm 8mm; margin-top:4mm; }
+  .toc .item{ display:flex; align-items:baseline; gap:3mm; padding:2.8mm 0; border-bottom:1px dashed var(--line); font-size:11pt; }
+  .toc .no{ color:var(--accent); font-weight:700; width:8mm; flex:none; }
+  .toc .pg{ margin-left:auto; color:var(--gray); }
+
+  /* 痛點→解方 */
+  .pain-solve{ display:grid; grid-template-columns:1fr 10mm 1fr; gap:0 2mm; align-items:stretch; }
+  .pain-solve .arrow{ display:flex; align-items:center; justify-content:center; color:var(--accent); font-size:18pt; font-weight:700; }
+  .pain{ background:#FDF1F1; border:1px solid #F3CACA; border-radius:10px; padding:3.5mm 4mm; margin-bottom:3.5mm; }
+  .pain h4{ color:#B4372F; font-size:10.5pt; margin-bottom:1mm; }
+  .pain p{ font-size:9.5pt; color:#6b3a36; line-height:1.55; }
+  .solve{ background:#EBF7F1; border:1px solid #B9E6CF; border-radius:10px; padding:3.5mm 4mm; margin-bottom:3.5mm; }
+  .solve h4{ color:#0B7A55; font-size:10.5pt; margin-bottom:1mm; }
+  .solve p{ font-size:9.5pt; color:#28584a; line-height:1.55; }
+
+  .stat-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:4mm; margin:4mm 0; }
+  .stat{ text-align:center; background:var(--soft); border-radius:10px; padding:4mm 2mm; border:1px solid var(--line); }
+  .stat .num{ font-size:19pt; font-weight:700; color:var(--accent); }
+  .stat .lbl{ font-size:9pt; color:var(--gray); margin-top:1mm; line-height:1.4; }
+
+  .flow-steps{ display:flex; align-items:stretch; gap:2mm; margin:3mm 0; }
+  .flow-steps .st{ flex:1; background:var(--soft); border:1px solid var(--line); border-radius:10px; padding:3mm; text-align:center; font-size:9.5pt; line-height:1.5; }
+  .flow-steps .st b{ display:block; color:var(--primary); font-size:10.5pt; margin-bottom:1mm; }
+  .flow-steps .arr{ display:flex; align-items:center; color:var(--accent); font-weight:700; }
+</style>
+</head>
+<body>
+
+<!-- ============ P1 封面 ============ -->
+<div class="page cover">
+  <div class="deco1"></div><div class="deco2"></div><div class="deco3"></div>
+  <svg style="position:absolute;right:16mm;bottom:26mm;z-index:1" width="290" height="168" viewBox="0 0 290 168">
+    <rect x="0" y="0" width="86" height="168" rx="10" fill="rgba(255,255,255,.10)"/>
+    <rect x="98" y="0" width="86" height="168" rx="10" fill="rgba(255,255,255,.15)"/>
+    <rect x="196" y="0" width="86" height="168" rx="10" fill="rgba(255,255,255,.20)"/>
+    <rect x="10" y="14" width="66" height="24" rx="6" fill="rgba(255,255,255,.35)"/>
+    <rect x="10" y="46" width="66" height="24" rx="6" fill="rgba(255,255,255,.25)"/>
+    <rect x="108" y="14" width="66" height="24" rx="6" fill="rgba(255,255,255,.55)"/>
+    <rect x="108" y="46" width="66" height="24" rx="6" fill="rgba(255,255,255,.42)"/>
+    <rect x="108" y="78" width="66" height="24" rx="6" fill="rgba(255,255,255,.32)"/>
+    <rect x="206" y="14" width="66" height="24" rx="6" fill="rgba(255,255,255,.75)"/>
+    <rect x="206" y="46" width="66" height="24" rx="6" fill="rgba(255,255,255,.6)"/>
+    <rect x="98" y="128" width="184" height="24" rx="12" fill="rgba(16,185,129,.9)"/>
+    <text x="190" y="144" font-size="12" fill="#fff" text-anchor="middle" font-weight="600">✓ 確認派車</text>
+  </svg>
+  <div class="cover-inner">
+    <div class="brand">訂出貨系統 · 產品設計報告</div>
+    <h1>多公司訂出貨系統 1.0</h1>
+    <div class="slogan">業務、店家都能隨時下單；<br>派車、揀貨、單據一次到位的訂出貨管理平台</div>
+    <div class="chips">
+      <span>多部門管理</span><span>手機快速下單</span><span>派車看板</span><span>單據列印</span>
+    </div>
+    <div class="meta">
+      文件版本：客戶報告 v2.14（對應設計規格 v1.0.34 ＋ D29 App 技術棧定案 ＋ 待定討論項目清單）<br>
+      日期：2026 年 8 月 4 日
+    </div>
+  </div>
+</div>
+
+<!-- ============ P2 目錄 ============ -->
+<div class="page">
+  <div class="page-head"><span class="sec-no">目錄</span><h2>報告內容</h2><span class="sub">多公司訂出貨系統 1.0</span></div>
+  <div class="toc">
+    <div class="item"><span class="no">01</span>為什麼需要新系統<span class="pg">3</span></div>
+    <div class="item"><span class="no">02</span>系統全貌<span class="pg">4</span></div>
+    <div class="item"><span class="no">03</span>多公司、多部門與角色<span class="pg">5</span></div>
+    <div class="item"><span class="no">04</span>登入與帳號安全<span class="pg">6</span></div>
+    <div class="item"><span class="no">05</span>功能：客戶與商品管理<span class="pg">7</span></div>
+    <div class="item"><span class="no">06</span>功能：銷售訂單<span class="pg">8</span></div>
+    <div class="item"><span class="no">07</span>功能：派車看板<span class="pg">9</span></div>
+    <div class="item"><span class="no">08</span>功能：單據列印<span class="pg">10</span></div>
+    <div class="item"><span class="no">09</span>手機 App<span class="pg">11</span></div>
+    <div class="item"><span class="no">10</span>通知與稽核<span class="pg">12</span></div>
+    <div class="item"><span class="no">11</span>系統架構<span class="pg">13</span></div>
+    <div class="item"><span class="no">12</span>穩定運作與技術<span class="pg">14</span></div>
+    <div class="item"><span class="no">13</span>導入時程與下一步<span class="pg">15</span></div>
+  </div>
+  <div style="margin-top:10mm">
+    <h3>報告重點摘要</h3>
+    <p class="lead">本系統以「多公司、多部門」為核心，整合客戶與商品主檔、銷售訂單、派車規劃與四種出貨單據，讓業務與店家用手機就能完成下單，辦公室用網頁中台完成派車與列印，全部資料集中管理、權限分明。</p>
+    <div class="stat-row">
+      <div class="stat"><div class="num">2</div><div class="lbl">使用入口<br>手機 App＋網頁中台</div></div>
+      <div class="stat"><div class="num">6</div><div class="lbl">角色權限<br>分層管理</div></div>
+      <div class="stat"><div class="num">4</div><div class="lbl">出貨單據<br>一鍵列印</div></div>
+      <div class="stat"><div class="num">9</div><div class="lbl">導入階段<br>循序交付</div></div>
+    </div>
+  </div>
+  <div class="page-foot"><span>多公司訂出貨系統 1.0 — 客戶報告</span><span>第 2 頁</span></div>
+</div>
+
+<!-- ============ P3 為什麼需要新系統 ============ -->
+<div class="page">
+  <div class="page-head"><span class="sec-no">01</span><h2>為什麼需要新系統</h2><span class="sub">現況痛點 → 新系統解方</span></div>
+  <p class="lead">現行作業依賴外部系統維護主檔，主檔異動緩慢、權限難以細分；新系統把主導權拿回來，並針對訂出貨現場流程重新設計。</p>
+  <div class="pain-solve">
+    <div>
+      <div class="pain"><h4>主檔受制於外部系統</h4><p>客戶、商品、業務資料都要等外部系統同步，臨時新增或修改不即時。</p></div>
+      <div class="pain"><h4>多部門資料混在一起</h4><p>各部門有自己的商品與客戶，卻無法清楚隔離，權限只能全開或全關。</p></div>
+      <div class="pain"><h4>派車與單據靠人工</h4><p>排車、揀貨、列印分散在不同表格與紙本，容易漏單、錯單。</p></div>
+      <div class="pain"><h4>店家下單不方便</h4><p>店家只能透過業務代為下單，無法自己查看專屬商品與訂單進度。</p></div>
+    </div>
+    <div class="arrow">➜</div>
+    <div>
+      <div class="solve"><h4>主檔全面自建</h4><p>客戶、商品、業務、字典檔都在本系統直接維護，即時生效。</p></div>
+      <div class="solve"><h4>公司 → 部門兩層管理</h4><p>每個部門有自己的商品總表與客戶總表，資料隔離、權限分明。</p></div>
+      <div class="solve"><h4>派車看板＋一鍵列印</h4><p>拖放排車、即時同步，四種出貨單據（總表、對點、揀貨、加工）直接列印。</p></div>
+      <div class="solve"><h4>店家專屬 App</h4><p>店家掃 QR Code 即可登入，從自己的專屬商品清單快速下單、查進度。</p></div>
+    </div>
+  </div>
+  <div class="note-box">設計原則：沿用大家熟悉的操作習慣，但把「開單 → 派車 → 揀貨 → 加工 → 出貨」整條流程串起來，減少重複抄寫與口頭溝通。</div>
+  <div class="page-foot"><span>多公司訂出貨系統 1.0 — 客戶報告</span><span>第 3 頁</span></div>
+</div>
+
+<!-- ============ P4 系統全貌 ============ -->
+<div class="page">
+  <div class="page-head"><span class="sec-no">02</span><h2>系統全貌</h2><span class="sub">兩個使用入口，一個服務核心</span></div>
+  <p class="lead">手機 App 給業務與店家使用，網頁中台給辦公室與管理人員使用；所有資料集中在同一套系統服務與資料庫，保持一致。</p>
+  <div class="figure">
+    <svg viewBox="0 0 700 430" width="100%" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#3A7BD5"/></marker>
+      </defs>
+      <!-- 使用者層 -->
+      <rect x="10" y="10" width="680" height="82" rx="12" fill="#F5F8FC" stroke="#D8E2EE"/>
+      <text x="24" y="32" font-size="13" fill="#6B7280" font-weight="700">使用者</text>
+      <rect x="24" y="42" width="150" height="38" rx="8" fill="#fff" stroke="#3A7BD5" stroke-width="1.5"/>
+      <text x="99" y="66" font-size="13" fill="#1E4D8C" text-anchor="middle" font-weight="600">店家（客戶）</text>
+      <rect x="190" y="42" width="150" height="38" rx="8" fill="#fff" stroke="#3A7BD5" stroke-width="1.5"/>
+      <text x="265" y="66" font-size="13" fill="#1E4D8C" text-anchor="middle" font-weight="600">業務（外勤）</text>
+      <rect x="356" y="42" width="150" height="38" rx="8" fill="#fff" stroke="#3A7BD5" stroke-width="1.5"/>
+      <text x="431" y="66" font-size="13" fill="#1E4D8C" text-anchor="middle" font-weight="600">辦公室人員</text>
+      <rect x="522" y="42" width="150" height="38" rx="8" fill="#fff" stroke="#3A7BD5" stroke-width="1.5"/>
+      <text x="597" y="66" font-size="13" fill="#1E4D8C" text-anchor="middle" font-weight="600">管理人員</text>
+      <!-- 應用層 -->
+      <rect x="10" y="122" width="680" height="82" rx="12" fill="#E8F1FB" stroke="#BBD3F0"/>
+      <text x="24" y="144" font-size="13" fill="#6B7280" font-weight="700">使用入口</text>
+      <rect x="24" y="154" width="315" height="38" rx="8" fill="#1E4D8C"/>
+      <text x="181" y="178" font-size="13.5" fill="#fff" text-anchor="middle" font-weight="600">手機 App（iOS / Android）</text>
+      <rect x="356" y="154" width="316" height="38" rx="8" fill="#3A7BD5"/>
+      <text x="514" y="178" font-size="13.5" fill="#fff" text-anchor="middle" font-weight="600">網頁中台（瀏覽器）</text>
+      <!-- 服務層 -->
+      <rect x="10" y="234" width="680" height="96" rx="12" fill="#F5F8FC" stroke="#D8E2EE"/>
+      <text x="24" y="256" font-size="13" fill="#6B7280" font-weight="700">系統服務（集中部署於雲端）</text>
+      <rect x="24" y="266" width="152" height="50" rx="8" fill="#fff" stroke="#3A7BD5" stroke-width="1.5"/>
+      <text x="100" y="287" font-size="12" fill="#1E4D8C" text-anchor="middle" font-weight="600">訂單與派車</text>
+      <text x="100" y="304" font-size="10" fill="#6B7280" text-anchor="middle">下單 · 狀態 · 排車</text>
+      <rect x="190" y="266" width="152" height="50" rx="8" fill="#fff" stroke="#3A7BD5" stroke-width="1.5"/>
+      <text x="266" y="287" font-size="12" fill="#1E4D8C" text-anchor="middle" font-weight="600">帳號與權限</text>
+      <text x="266" y="304" font-size="10" fill="#6B7280" text-anchor="middle">登入 · 角色 · 隔離</text>
+      <rect x="356" y="266" width="152" height="50" rx="8" fill="#fff" stroke="#3A7BD5" stroke-width="1.5"/>
+      <text x="432" y="287" font-size="12" fill="#1E4D8C" text-anchor="middle" font-weight="600">通知中心</text>
+      <text x="432" y="304" font-size="10" fill="#6B7280" text-anchor="middle">推播 · 站內</text>
+      <rect x="522" y="266" width="150" height="50" rx="8" fill="#fff" stroke="#3A7BD5" stroke-width="1.5"/>
+      <text x="597" y="287" font-size="12" fill="#1E4D8C" text-anchor="middle" font-weight="600">單據列印</text>
+      <text x="597" y="304" font-size="10" fill="#6B7280" text-anchor="middle">四種單據 PDF</text>
+      <!-- 資料層 -->
+      <rect x="10" y="360" width="680" height="60" rx="12" fill="#12355F"/>
+      <text x="24" y="382" font-size="13" fill="#9DB8DC" font-weight="700">資料</text>
+      <text x="350" y="400" font-size="13" fill="#fff" text-anchor="middle">資料庫（訂單、主檔、權限、稽核）　｜　檔案儲存（Logo、單據 PDF）　｜　每日自動備份</text>
+      <!-- 連線 -->
+      <line x1="181" y1="92" x2="181" y2="150" stroke="#3A7BD5" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="514" y1="92" x2="514" y2="150" stroke="#3A7BD5" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="181" y1="204" x2="181" y2="262" stroke="#3A7BD5" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="514" y1="204" x2="514" y2="262" stroke="#3A7BD5" stroke-width="2" marker-end="url(#arr)"/>
+      <line x1="350" y1="330" x2="350" y2="356" stroke="#3A7BD5" stroke-width="2" marker-end="url(#arr)"/>
+    </svg>
+    <div class="cap">圖 1：系統全貌 — 兩個入口共用同一套服務與資料</div>
+  </div>
+  <div class="grid3" style="margin-top:4mm">
+    <div class="card"><h4><span class="icon-dot" style="background:var(--accent)">1</span>統一資料</h4><p>手機與網頁看到的是同一份資料，下單、派車、列印即時連動，不用互相確認。</p></div>
+    <div class="card"><h4><span class="icon-dot" style="background:var(--accent)">2</span>公司品牌呈現</h4><p>每間公司可有自己的 Logo、代表色與對外資訊，App 與單據自動帶出。</p></div>
+    <div class="card"><h4><span class="icon-dot" style="background:var(--accent)">3</span>操作全程留痕</h4><p>登入、下單、改資料、列印等關鍵動作都自動記錄，事後可查。</p></div>
+  </div>
+  <div class="page-foot"><span>多公司訂出貨系統 1.0 — 客戶報告</span><span>第 4 頁</span></div>
+</div>
+
+<!-- ============ P5 組織與角色 ============ -->
+<div class="page">
+  <div class="page-head"><span class="sec-no">03</span><h2>多公司、多部門與角色</h2><span class="sub">資料各歸各管，上級看得見全局</span></div>
+  <p class="lead">系統以「公司 → 部門」兩層組織管理。每個部門有自己的商品總表、客戶總表、倉別與車次；權限依角色決定看得見、動得到的範圍。</p>
+  <div class="figure">
+    <svg viewBox="0 0 700 250" width="100%" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="arr2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#3A7BD5"/></marker></defs>
+      <rect x="250" y="10" width="200" height="42" rx="9" fill="#12355F"/>
+      <text x="350" y="36" font-size="14" fill="#fff" text-anchor="middle" font-weight="600">集團（系統管理員）</text>
+      <line x1="200" y1="52" x2="200" y2="74" stroke="#3A7BD5" stroke-width="2" marker-end="url(#arr2)"/>
+      <line x1="500" y1="52" x2="500" y2="74" stroke="#3A7BD5" stroke-width="2" marker-end="url(#arr2)"/>
+      <rect x="80" y="78" width="240" height="44" rx="9" fill="#1E4D8C"/>
+      <text x="200" y="105" font-size="14" fill="#fff" text-anchor="middle" font-weight="600">甲公司</text>
+      <rect x="380" y="78" width="240" height="44" rx="9" fill="#1E4D8C"/>
+      <text x="500" y="105" font-size="14" fill="#fff" text-anchor="middle" font-weight="600">乙公司</text>
+      <line x1="140" y1="122" x2="140" y2="144" stroke="#3A7BD5" stroke-width="2" marker-end="url(#arr2)"/>
+      <line x1="260" y1="122" x2="260" y2="144" stroke="#3A7BD5" stroke-width="2" marker-end="url(#arr2)"/>
+      <line x1="440" y1="122" x2="440" y2="144" stroke="#3A7BD5" stroke-width="2" marker-end="url(#arr2)"/>
+      <line x1="560" y1="122" x2="560" y2="144" stroke="#3A7BD5" stroke-width="2" marker-end="url(#arr2)"/>
+      <rect x="60" y="148" width="160" height="86" rx="9" fill="#E8F1FB" stroke="#3A7BD5" stroke-width="1.5"/>
+      <text x="140" y="172" font-size="13" fill="#1E4D8C" text-anchor="middle" font-weight="700">北部門</text>
+      <text x="140" y="192" font-size="10.5" fill="#374151" text-anchor="middle">自己的商品總表</text>
+      <text x="140" y="208" font-size="10.5" fill="#374151" text-anchor="middle">自己的客戶總表</text>
+      <text x="140" y="224" font-size="10.5" fill="#374151" text-anchor="middle">自己的倉別與車次</text>
+      <rect x="240" y="148" width="160" height="86" rx="9" fill="#E8F1FB" stroke="#3A7BD5" stroke-width="1.5"/>
+      <text x="320" y="172" font-size="13" fill="#1E4D8C" text-anchor="middle" font-weight="700">中部門</text>
+      <text x="320" y="192" font-size="10.5" fill="#374151" text-anchor="middle">自己的商品總表</text>
+      <text x="320" y="208" font-size="10.5" fill="#374151" text-anchor="middle">自己的客戶總表</text>
+      <text x="320" y="224" font-size="10.5" fill="#374151" text-anchor="middle">自己的倉別與車次</text>
+      <rect x="420" y="148" width="160" height="86" rx="9" fill="#E8F1FB" stroke="#3A7BD5" stroke-width="1.5"/>
+      <text x="500" y="172" font-size="13" fill="#1E4D8C" text-anchor="middle" font-weight="700">乙公司部門</text>
+      <text x="500" y="192" font-size="10.5" fill="#374151" text-anchor="middle">各自獨立</text>
+      <text x="500" y="208" font-size="10.5" fill="#374151" text-anchor="middle">互不可見</text>
+      <text x="500" y="224" font-size="10.5" fill="#374151" text-anchor="middle">各自管理</text>
+    </svg>
+    <div class="cap">圖 2：組織架構 — 部門資料各自獨立，公司管理員可看全公司，系統管理員可看全集團</div>
+  </div>
+  <h3>六種角色，各司其職</h3>
+  <table class="simple">
+    <tr><th style="width:26%">角色</th><th>能做的事情</th></tr>
+    <tr><td><b>系統管理員</b></td><td>建立公司與部門、管理所有使用者、查看全部資料。</td></tr>
+    <tr><td><b>公司管理員</b></td><td>管理自己公司的人員與資料，可跨部門查看。</td></tr>
+    <tr><td><b>部門管理員</b></td><td>管理自己部門的客戶、商品、訂單、派車與部門內業務帳號。</td></tr>
+    <tr><td><b>業務</b></td><td>操作自己部門的客戶、商品與訂單；不能管理帳號。</td></tr>
+    <tr><td><b>客戶（店家）</b></td><td>查看自己的訂單，從自己的專屬商品清單下單。</td></tr>
+    <tr><td><b>訪客</b></td><td>新註冊待審核的帳號，審核通過前無法操作。</td></tr>
+  </table>
+  <div class="blue-box">角色與權限由系統預先配好（預設值），管理人員可在網頁中台的「角色權限設置」與「API 權限設置」頁面依實際需要調整。</div>
+  <div class="page-foot"><span>多公司訂出貨系統 1.0 — 客戶報告</span><span>第 5 頁</span></div>
+</div>
+
+<!-- ============ P6 登入與帳號安全 ============ -->
+<div class="page">
+  <div class="page-head"><span class="sec-no">04</span><h2>登入與帳號安全</h2><span class="sub">員工用 Google，店家掃碼或用密碼</span></div>
+  <p class="lead">不同身分使用最適合的登入方式：公司內部人員走 Google 帳號，店家使用專屬帳號密碼，也能掃 QR Code 一鍵登入。</p>
+  <div class="figure">
+    <svg viewBox="0 0 700 300" width="100%" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="arr3" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#3A7BD5"/></marker></defs>
+      <!-- 員工 lane -->
+      <rect x="10" y="10" width="680" height="130" rx="12" fill="#F5F8FC" stroke="#D8E2EE"/>
+      <text x="26" y="36" font-size="13.5" fill="#1E4D8C" font-weight="700">員工 / 管理人員</text>
+      <rect x="26" y="50" width="140" height="40" rx="8" fill="#fff" stroke="#3A7BD5" stroke-width="1.5"/>
+      <text x="96" y="74" font-size="12" fill="#1E4D8C" text-anchor="middle">Google 帳號登入</text>
+      <line x1="166" y1="70" x2="196" y2="70" stroke="#3A7BD5" stroke-width="2" marker-end="url(#arr3)"/>
+      <rect x="200" y="50" width="150" height="40" rx="8" fill="#fff" stroke="#3A7BD5" stroke-width="1.5"/>
+      <text x="275" y="74" font-size="12" fill="#1E4D8C" text-anchor="middle">新帳號填公司＋姓名</text>
+      <line x1="350" y1="70" x2="380" y2="70" stroke="#3A7BD5" stroke-width="2" marker-end="url(#arr3)"/>
+      <rect x="384" y="50" width="130" height="40" rx="8" fill="#fff" stroke="#3A7BD5" stroke-width="1.5"/>
+      <text x="449" y="74" font-size="12" fill="#1E4D8C" text-anchor="middle">管理員審核</text>
+      <line x1="514" y1="70" x2="544" y2="70" stroke="#3A7BD5" stroke-width="2" marker-end="url(#arr3)"/>
+      <rect x="548" y="50" width="126" height="40" rx="8" fill="#1E4D8C"/>
+      <text x="611" y="74" font-size="12" fill="#fff" text-anchor="middle">開始使用</text>
+      <text x="26" y="118" font-size="10.5" fill="#6B7280">首次登入的新帳號會先選擇所屬公司並填寫姓名，由公司管理員審核指派部門與角色後才能操作資料。</text>
+      <!-- 店家 lane -->
+      <rect x="10" y="160" width="680" height="130" rx="12" fill="#E8F1FB" stroke="#BBD3F0"/>
+      <text x="26" y="186" font-size="13.5" fill="#1E4D8C" font-weight="700">客戶（店家）</text>
+      <rect x="26" y="200" width="160" height="40" rx="8" fill="#fff" stroke="#3A7BD5" stroke-width="1.5"/>
+      <text x="106" y="224" font-size="12" fill="#1E4D8C" text-anchor="middle">店家帳號＋密碼登入</text>
+      <text x="206" y="224" font-size="13" fill="#6B7280">或</text>
+      <rect x="246" y="200" width="170" height="40" rx="8" fill="#fff" stroke="#3A7BD5" stroke-width="1.5"/>
+      <text x="331" y="224" font-size="12" fill="#1E4D8C" text-anchor="middle">掃 QR Code 直接登入</text>
+      <line x1="416" y1="220" x2="446" y2="220" stroke="#3A7BD5" stroke-width="2" marker-end="url(#arr3)"/>
+      <rect x="450" y="200" width="224" height="40" rx="8" fill="#1E4D8C"/>
+      <text x="562" y="224" font-size="12" fill="#fff" text-anchor="middle">進入 App 開始下單</text>
+      <text x="26" y="268" font-size="10.5" fill="#6B7280">業務拜訪時出示 QR Code，店家掃描即完成登入；首次密碼登入會要求立即更換新密碼。</text>
+    </svg>
+    <div class="cap">圖 3：兩種身分的登入流程</div>
+  </div>
+  <h3>帳號安全規則</h3>
+  <div class="grid2">
+    <div class="card"><h4>密碼政策</h4><ul><li>密碼至少 8 個字元</li><li>臨時密碼效期 1 天，首次登入強制更換</li><li>密碼連續錯 5 次鎖定 30 分鐘</li></ul></div>
+    <div class="card"><h4>帳號管理</h4><ul><li>帳號僅可停用、不可刪除，紀錄完整保留</li><li>管理員可強制指定帳號登出</li><li>客戶忘記密碼由部門管理員重置</li><li>店家登入帳號由系統自動產生：公司自訂前綴＋流水號（如 TY000123），好記不會錯</li><li>每個店家 1 個主帳號＋多個子帳號（建立客戶時自動附帶 1 個業務子帳號，專供該店的負責業務使用），密碼各自獨立，有人離職不用全店重設</li><li>店家以主帳號自行管理：新增子帳號、停用、重置密碼，範圍限自己店裡；要下單請用子帳號（主帳號僅供管理、不登入 App 下單）</li><li>自動附帶的業務子帳號顯示為「系統預設（業務使用）」灰化、店家不可管理；主帳號店家不可自行停用，後台管理員仍可救援（含轉交主帳號或業務子帳號給新負責人）</li></ul></div>
+  </div>
+  <div class="page-foot"><span>多公司訂出貨系統 1.0 — 客戶報告</span><span>第 6 頁</span></div>
+</div>
+
+<!-- ============ P7 客戶與商品管理 ============ -->
+<div class="page">
+  <div class="page-head"><span class="sec-no">05</span><h2>功能：客戶與商品管理</h2><span class="sub">每個部門都有自己的總表</span></div>
+  <p class="lead">客戶總表、商品總表由各部門自行建立維護；商品從總表拉到客戶訂單上時，還能為每個客戶另記專屬叫法與慣用設定。</p>
+  <div class="grid2">
+    <div class="card"><h4><span class="icon-dot" style="background:var(--accent)">客</span>客戶總表</h4><ul><li>客戶名稱、統編、電話、付款與結帳方式、發票類型</li><li>多筆送貨 / 帳單地址與聯絡人，可設預設值</li><li>每個客戶有專屬 QR Code，供店家掃碼登入</li><li>業務在外可用 App 直接新增客戶，系統自動配發店家主帳號（管理用）與業務子帳號（負責業務用）＋管理網址鏈結，當場交付</li><li>偏好送貨日：可勾選星期一到六，非勾選日下單自動順延到有送貨的日子</li></ul></div>
+    <div class="card"><h4><span class="icon-dot" style="background:var(--accent)">品</span>商品總表</h4><ul><li>部門內唯一商品編號、品名、圖片與分類</li><li>銷售單位、最大數量、促銷分類標籤</li><li>產品分庫與揀貨倉別，供揀貨單分倉列印</li></ul></div>
+    <div class="card"><h4><span class="icon-dot" style="background:var(--orange)">換</span>單位換算</h4><ul><li>每個商品可設基本單位與多組換算率</li><li>例：1 條 = 0.6 kg，下單選單位自動換算數量與小計</li><li>換算後的基本單位數量供揀貨、加工彙總</li></ul></div>
+    <div class="card"><h4><span class="icon-dot" style="background:var(--orange)">切</span>分切規格</h4><ul><li>部門自訂分切規格（如切塊、切片、絞肉）</li><li>每種規格可歸類「加工室揀」或「配送揀」</li><li>下單時選擇規格，加工單自動分區</li></ul></div>
+  </div>
+  <h3>客戶專屬商品清單（取代報價單）</h3>
+  <div class="figure" style="background:var(--soft)">
+    <svg viewBox="0 0 700 150" width="100%" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="arr4" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#3A7BD5"/></marker></defs>
+      <rect x="10" y="20" width="190" height="110" rx="10" fill="#fff" stroke="#3A7BD5" stroke-width="1.5"/>
+      <text x="105" y="48" font-size="13" fill="#1E4D8C" text-anchor="middle" font-weight="700">商品總表</text>
+      <text x="105" y="72" font-size="11" fill="#374151" text-anchor="middle">A 商品（五花肉）</text>
+      <text x="105" y="92" font-size="11" fill="#374151" text-anchor="middle">B 商品（里肌肉）</text>
+      <text x="105" y="112" font-size="11" fill="#374151" text-anchor="middle">C 商品（梅花肉）</text>
+      <line x1="200" y1="75" x2="238" y2="75" stroke="#3A7BD5" stroke-width="2" marker-end="url(#arr4)"/>
+      <rect x="242" y="10" width="216" height="130" rx="10" fill="#1E4D8C"/>
+      <text x="350" y="34" font-size="13" fill="#fff" text-anchor="middle" font-weight="700">甲店的專屬清單</text>
+      <text x="350" y="58" font-size="11" fill="#DCE8F8" text-anchor="middle">「五花肉片」（= A 商品）</text>
+      <text x="350" y="78" font-size="11" fill="#DCE8F8" text-anchor="middle">預設 5 斤 · 切薄片</text>
+      <text x="350" y="98" font-size="11" fill="#DCE8F8" text-anchor="middle">「腰內肉」（= B 商品）</text>
+      <text x="350" y="118" font-size="11" fill="#DCE8F8" text-anchor="middle">預設 2 條 · 系統不存金額</text>
+      <line x1="458" y1="75" x2="496" y2="75" stroke="#3A7BD5" stroke-width="2" marker-end="url(#arr4)"/>
+      <rect x="500" y="30" width="190" height="90" rx="10" fill="#fff" stroke="#F59E0B" stroke-width="1.5"/>
+      <text x="595" y="58" font-size="13" fill="#B46808" text-anchor="middle" font-weight="700">打開甲店就自動帶出</text>
+      <text x="595" y="82" font-size="10.5" fill="#374151" text-anchor="middle">下單只需確認數量</text>
+      <text x="595" y="102" font-size="10.5" fill="#374151" text-anchor="middle">數量 0 的品項單據不顯示</text>
+    </svg>
+    <div class="cap">圖 4：同一商品在不同客戶可各有專屬名稱、數量與切法備註</div>
+  </div>
+  <div class="note-box">業務下單時也可以手打品名，系統會詢問是否存成該客戶的專屬別名，下次自動帶出。</div>
+  <div class="page-foot"><span>多公司訂出貨系統 1.0 — 客戶報告</span><span>第 7 頁</span></div>
+</div>
+
+<!-- ============ P8 銷售訂單 ============ -->
+<div class="page">
+  <div class="page-head"><span class="sec-no">06</span><h2>功能：銷售訂單</h2><span class="sub">下單到出貨，一氣呵成</span></div>
+  <h3>下單流程</h3>
+  <div class="flow-steps">
+    <div class="st"><b>1 選客戶</b>業務選客戶；店家自動帶入自己</div>
+    <div class="arr">➜</div>
+    <div class="st"><b>2 挑商品</b>帶出專屬清單，也可選總表或手打</div>
+    <div class="arr">➜</div>
+    <div class="st"><b>3 填內容</b>數量、單位、規格、切法備註</div>
+    <div class="arr">➜</div>
+    <div class="st"><b>4 選出貨日</b>非客戶送貨日自動順延</div>
+    <div class="arr">➜</div>
+    <div class="st"><b>5 送出</b>自動通知店家帳號（推播＋站內）</div>
+  </div>
+  <h3>訂單狀態</h3>
+  <div class="figure">
+    <svg viewBox="0 0 700 210" width="100%" xmlns="http://www.w3.org/2000/svg">
+      <defs><marker id="arr5" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#3A7BD5"/></marker></defs>
+      <rect x="20" y="30" width="140" height="52" rx="10" fill="#E8F1FB" stroke="#3A7BD5" stroke-width="1.5"/>
+      <text x="90" y="53" font-size="13.5" fill="#1E4D8C" text-anchor="middle" font-weight="700">待處理</text>
+      <text x="90" y="71" font-size="10" fill="#6B7280" text-anchor="middle">可編輯、可取消</text>
+      <rect x="280" y="30" width="140" height="52" rx="10" fill="#FFF3D9" stroke="#F59E0B" stroke-width="1.5"/>
+      <text x="350" y="53" font-size="13.5" fill="#B46808" text-anchor="middle" font-weight="700">處理中</text>
+      <text x="350" y="71" font-size="10" fill="#8A6A20" text-anchor="middle">已派車，不可編輯</text>
+      <rect x="540" y="30" width="140" height="52" rx="10" fill="#E4F6EE" stroke="#10B981" stroke-width="1.5"/>
+      <text x="610" y="53" font-size="13.5" fill="#0B7A55" text-anchor="middle" font-weight="700">已完成</text>
+      <text x="610" y="71" font-size="10" fill="#3E7A66" text-anchor="middle">確認出貨</text>
+      <line x1="160" y1="48" x2="276" y2="48" stroke="#3A7BD5" stroke-width="2.5" marker-end="url(#arr5)"/>
+      <text x="218" y="40" font-size="10.5" fill="#3A7BD5" text-anchor="middle" font-weight="600">派車確認</text>
+      <line x1="276" y1="66" x2="164" y2="66" stroke="#F59E0B" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arr5)"/>
+      <text x="218" y="84" font-size="10.5" fill="#B46808" text-anchor="middle" font-weight="600">取消派車（記錄原因）</text>
+      <line x1="420" y1="56" x2="536" y2="56" stroke="#3A7BD5" stroke-width="2.5" marker-end="url(#arr5)"/>
+      <text x="478" y="48" font-size="10.5" fill="#3A7BD5" text-anchor="middle" font-weight="600">出貨完成</text>
+      <rect x="20" y="140" width="140" height="44" rx="10" fill="#FDF1F1" stroke="#EF4444" stroke-width="1.2"/>
+      <text x="90" y="167" font-size="12.5" fill="#B4372F" text-anchor="middle" font-weight="700">已取消</text>
+      <line x1="90" y1="82" x2="90" y2="136" stroke="#EF4444" stroke-width="2" marker-end="url(#arr5)"/>
+      <text x="98" y="112" font-size="10" fill="#B4372F">僅待處理可取消</text>
+      <rect x="540" y="140" width="140" height="44" rx="10" fill="#FDF1F1" stroke="#EF4444" stroke-width="1.2"/>
+      <text x="610" y="167" font-size="12.5" fill="#B4372F" text-anchor="middle" font-weight="700">已作廢</text>
+      <line x1="610" y1="82" x2="610" y2="136" stroke="#EF4444" stroke-width="2" marker-end="url(#arr5)"/>
+      <text x="618" y="112" font-size="10" fill="#B4372F">內容錯誤的更正出口</text>
+    </svg>
+    <div class="cap">圖 5：訂單狀態流程 — 派錯車可退回，內容錯誤可作廢（皆記錄原因與操作人）</div>
+  </div>
+  <div class="grid2" style="margin-top:4mm">
+    <div class="card"><h4>訂單編號與金額</h4><ul><li>訂單編號自動產生（來源代碼＋流水號，如 W000123）</li><li>全系統不儲存金額：訂單、商品都不含單價與稅額</li><li>出貨單據也不印金額，現場對點只看品項與數量</li></ul></div>
+    <div class="card"><h4>異動記錄</h4><ul><li>建立、修改、派車、取消、作廢全部記錄</li><li>訂單詳情可查看完整異動歷程與原因</li><li>取消派車與作廢需部門管理員以上</li></ul></div>
+  </div>
+  <div class="note-box">退貨：店家可從歷史訂單或專屬商品清單發起退貨、附照片說明，業務確認後店家 App 顯示「退貨通過」證明，可出示給配送司機；公司端由業務自行安排取貨，不做配送專屬畫面。</div>
+  <div class="page-foot"><span>多公司訂出貨系統 1.0 — 客戶報告</span><span>第 8 頁</span></div>
+</div>
+
+<!-- ============ P9 派車看板 ============ -->
+<div class="page">
+  <div class="page-head"><span class="sec-no">07</span><h2>功能：派車看板</h2><span class="sub">拖一放，就排好今天的車</span></div>
+  <p class="lead">網頁中台專屬的看板畫面：車次是欄、訂單是卡片，用拖放就能調整每台車送哪些店、先送誰；多人同時操作時畫面即時同步。</p>
+  <div class="figure">
+    <svg viewBox="0 0 700 330" width="100%" xmlns="http://www.w3.org/2000/svg">
+      <!-- kanban header -->
+      <rect x="10" y="10" width="218" height="36" rx="8" fill="#6B7280"/>
+      <text x="119" y="33" font-size="13" fill="#fff" text-anchor="middle" font-weight="700">未派車（3）</text>
+      <rect x="241" y="10" width="218" height="36" rx="8" fill="#1E4D8C"/>
+      <text x="350" y="33" font-size="13" fill="#fff" text-anchor="middle" font-weight="700">1 號車（2）</text>
+      <rect x="472" y="10" width="218" height="36" rx="8" fill="#3A7BD5"/>
+      <text x="581" y="33" font-size="13" fill="#fff" text-anchor="middle" font-weight="700">2 號車（2）</text>
+      <!-- column bodies -->
+      <rect x="10" y="46" width="218" height="274" rx="8" fill="#F5F8FC" stroke="#D8E2EE"/>
+      <rect x="241" y="46" width="218" height="274" rx="8" fill="#E8F1FB" stroke="#BBD3F0"/>
+      <rect x="472" y="46" width="218" height="274" rx="8" fill="#E8F1FB" stroke="#BBD3F0"/>
+      <!-- cards -->
+      <rect x="22" y="60" width="194" height="56" rx="8" fill="#fff" stroke="#D8E2EE"/>
+      <text x="34" y="82" font-size="12" fill="#1F2937" font-weight="600">永和．王家小吃</text>
+      <text x="34" y="102" font-size="10" fill="#6B7280">W000127 · 5 項 · 7/18 出貨</text>
+      <rect x="22" y="126" width="194" height="56" rx="8" fill="#fff" stroke="#D8E2EE"/>
+      <text x="34" y="148" font-size="12" fill="#1F2937" font-weight="600">板橋．阿婆麵攤</text>
+      <text x="34" y="168" font-size="10" fill="#6B7280">W000129 · 3 項 · 7/18 出貨</text>
+      <rect x="22" y="192" width="194" height="56" rx="8" fill="#fff" stroke="#F59E0B" stroke-width="2" stroke-dasharray="5 4"/>
+      <text x="34" y="214" font-size="12" fill="#B46808" font-weight="600">三重．阿宗爌肉飯</text>
+      <text x="34" y="234" font-size="10" fill="#B46808">拖放中…</text>
+      <!-- route 1 cards -->
+      <rect x="253" y="60" width="194" height="56" rx="8" fill="#fff" stroke="#3A7BD5"/>
+      <text x="265" y="82" font-size="12" fill="#1F2937" font-weight="600">① 士林．夜市牛排</text>
+      <text x="265" y="102" font-size="10" fill="#6B7280">A000131 · 8 項</text>
+      <rect x="253" y="126" width="194" height="56" rx="8" fill="#fff" stroke="#3A7BD5"/>
+      <text x="265" y="148" font-size="12" fill="#1F2937" font-weight="600">② 天母．溫州大餛飩</text>
+      <text x="265" y="168" font-size="10" fill="#6B7280">A000132 · 4 項</text>
+      <rect x="253" y="192" width="194" height="34" rx="8" fill="#D2E4F8"/>
+      <text x="350" y="213" font-size="11" fill="#1E4D8C" text-anchor="middle">＋ 拖到此處加入 1 號車</text>
+      <!-- route 2 cards -->
+      <rect x="484" y="60" width="194" height="56" rx="8" fill="#fff" stroke="#3A7BD5"/>
+      <text x="496" y="82" font-size="12" fill="#1F2937" font-weight="600">① 新莊．老張切仔麵</text>
+      <text x="496" y="102" font-size="10" fill="#6B7280">A000130 · 6 項</text>
+      <rect x="484" y="126" width="194" height="56" rx="8" fill="#fff" stroke="#3A7BD5"/>
+      <text x="496" y="148" font-size="12" fill="#1F2937" font-weight="600">② 泰山．金滿堂自助餐</text>
+      <text x="496" y="168" font-size="10" fill="#6B7280">A000133 · 9 項</text>
+      <rect x="484" y="192" width="194" height="34" rx="8" fill="#D2E4F8"/>
+      <text x="581" y="213" font-size="11" fill="#1E4D8C" text-anchor="middle">＋ 拖到此處加入 2 號車</text>
+      <!-- footer action -->
+      <rect x="241" y="268" width="449" height="40" rx="8" fill="#10B981"/>
+      <text x="465" y="293" font-size="13" fill="#fff" text-anchor="middle" font-weight="700">✓ 確認派車（依車次一次確認當日全部訂單）</text>
+    </svg>
+    <div class="cap">圖 6：派車看板示意 — 依出貨日檢視，拖放調整車次與配送順序，按車次一次確認</div>
+  </div>
+  <div class="grid3" style="margin-top:4mm">
+    <div class="card"><h4>日期篩選</h4><p>依「預計出貨日」檢視當日要配送的所有訂單，不再翻表找單。</p></div>
+    <div class="card"><h4>即時同步</h4><p>多人同時排車時，彼此畫面自動即時更新；同時拖同一張卡會提示並帶出最新畫面，不會互相覆蓋；網路不穩時也會自動恢復連線。</p></div>
+    <div class="card"><h4>派錯可退回</h4><p>派車確認後若要調整，部門管理員可取消派車退回重排（記錄原因）。</p></div>
+  </div>
+  <div class="page-foot"><span>多公司訂出貨系統 1.0 — 客戶報告</span><span>第 9 頁</span></div>
+</div>
+
+<!-- ============ P10 單據列印 ============ -->
+<div class="page">
+  <div class="page-head"><span class="sec-no">08</span><h2>功能：單據列印</h2><span class="sub">派車規劃頁一鍵產生，A4 直接印</span></div>
+  <p class="lead">四種出貨單據都在派車規劃頁觸發：任何時候可預覽，派車確認後才能正式列印；重印需填寫原因，每次列印自動留存 PDF 供日後查核。</p>
+  <div class="figure">
+    <svg viewBox="0 0 700 300" width="100%" xmlns="http://www.w3.org/2000/svg">
+      <!-- doc 1 -->
+      <rect x="15" y="15" width="155" height="220" rx="6" fill="#fff" stroke="#D8E2EE" stroke-width="1.5"/>
+      <rect x="15" y="15" width="155" height="30" rx="6" fill="#1E4D8C"/>
+      <text x="92" y="35" font-size="12" fill="#fff" text-anchor="middle" font-weight="700">單車總表</text>
+      <rect x="27" y="56" width="131" height="8" rx="2" fill="#E8F1FB"/>
+      <rect x="27" y="70" width="131" height="8" rx="2" fill="#E8F1FB"/>
+      <rect x="27" y="84" width="131" height="8" rx="2" fill="#E8F1FB"/>
+      <rect x="27" y="104" width="90" height="8" rx="2" fill="#F1F4F9"/>
+      <rect x="27" y="118" width="110" height="8" rx="2" fill="#F1F4F9"/>
+      <rect x="27" y="132" width="96" height="8" rx="2" fill="#F1F4F9"/>
+      <rect x="27" y="152" width="131" height="8" rx="2" fill="#E8F1FB"/>
+      <rect x="27" y="166" width="131" height="8" rx="2" fill="#E8F1FB"/>
+      <text x="92" y="258" font-size="10.5" fill="#374151" text-anchor="middle">依車次彙整全部店家</text>
+      <text x="92" y="276" font-size="10.5" fill="#374151" text-anchor="middle">含各店明細摘要（無金額）</text>
+      <!-- doc 2 -->
+      <rect x="190" y="15" width="155" height="220" rx="6" fill="#fff" stroke="#D8E2EE" stroke-width="1.5"/>
+      <rect x="190" y="15" width="155" height="30" rx="6" fill="#3A7BD5"/>
+      <text x="267" y="35" font-size="12" fill="#fff" text-anchor="middle" font-weight="700">對點單</text>
+      <rect x="202" y="56" width="131" height="10" rx="2" fill="#E8F1FB"/>
+      <rect x="202" y="76" width="131" height="8" rx="2" fill="#F1F4F9"/>
+      <rect x="202" y="90" width="131" height="8" rx="2" fill="#F1F4F9"/>
+      <rect x="202" y="104" width="131" height="8" rx="2" fill="#F1F4F9"/>
+      <rect x="202" y="118" width="131" height="8" rx="2" fill="#F1F4F9"/>
+      <rect x="202" y="132" width="131" height="8" rx="2" fill="#F1F4F9"/>
+      <rect x="202" y="146" width="131" height="8" rx="2" fill="#F1F4F9"/>
+      <rect x="202" y="160" width="131" height="8" rx="2" fill="#F1F4F9"/>
+      <text x="267" y="258" font-size="10.5" fill="#374151" text-anchor="middle">每個店家一張 A4</text>
+      <text x="267" y="276" font-size="10.5" fill="#374151" text-anchor="middle">品名、數量、單位（無金額）</text>
+      <!-- doc 3 -->
+      <rect x="365" y="15" width="155" height="220" rx="6" fill="#fff" stroke="#D8E2EE" stroke-width="1.5"/>
+      <rect x="365" y="15" width="155" height="30" rx="6" fill="#10B981"/>
+      <text x="442" y="35" font-size="12" fill="#fff" text-anchor="middle" font-weight="700">揀貨單</text>
+      <rect x="377" y="56" width="70" height="8" rx="2" fill="#D9EFE6"/>
+      <rect x="377" y="70" width="131" height="8" rx="2" fill="#F1F4F9"/>
+      <rect x="377" y="84" width="131" height="8" rx="2" fill="#F1F4F9"/>
+      <rect x="377" y="98" width="70" height="8" rx="2" fill="#D9EFE6"/>
+      <rect x="377" y="112" width="131" height="8" rx="2" fill="#F1F4F9"/>
+      <rect x="377" y="126" width="131" height="8" rx="2" fill="#F1F4F9"/>
+      <rect x="377" y="140" width="131" height="8" rx="2" fill="#F1F4F9"/>
+      <text x="442" y="258" font-size="10.5" fill="#374151" text-anchor="middle">依車次 → 倉別 → 分類</text>
+      <text x="442" y="276" font-size="10.5" fill="#374151" text-anchor="middle">分倉印製，揀貨不走冤枉路</text>
+      <!-- doc 4 -->
+      <rect x="540" y="15" width="155" height="220" rx="6" fill="#fff" stroke="#D8E2EE" stroke-width="1.5"/>
+      <rect x="540" y="15" width="155" height="30" rx="6" fill="#F59E0B"/>
+      <text x="617" y="35" font-size="12" fill="#fff" text-anchor="middle" font-weight="700">加工單</text>
+      <rect x="552" y="56" width="131" height="10" rx="2" fill="#FDEBC8"/>
+      <text x="558" y="64" font-size="8.5" fill="#8A6A20">加工室揀</text>
+      <rect x="552" y="72" width="131" height="8" rx="2" fill="#F1F4F9"/>
+      <rect x="552" y="86" width="131" height="8" rx="2" fill="#F1F4F9"/>
+      <rect x="552" y="106" width="131" height="10" rx="2" fill="#D9E8FD"/>
+      <text x="558" y="114" font-size="8.5" fill="#23467E">配送揀</text>
+      <rect x="552" y="122" width="131" height="8" rx="2" fill="#F1F4F9"/>
+      <rect x="552" y="136" width="131" height="8" rx="2" fill="#F1F4F9"/>
+      <rect x="552" y="156" width="131" height="20" rx="2" fill="#fff" stroke="#D8E2EE"/>
+      <text x="617" y="169" font-size="8.5" fill="#9AA5B1" text-anchor="middle">加工後數量：＿＿</text>
+      <text x="617" y="258" font-size="10.5" fill="#374151" text-anchor="middle">要切的東西一張單</text>
+      <text x="617" y="276" font-size="10.5" fill="#374151" text-anchor="middle">加工後數量現場手寫回填</text>
+    </svg>
+    <div class="cap">圖 7：四種出貨單據 — 空表不印，全部 A4 格式、繁體中文字型</div>
+  </div>
+  <div class="flow-steps" style="margin-top:4mm">
+    <div class="st"><b>預覽</b>任何狀態都可預覽 PDF，不影響正式紀錄</div>
+    <div class="arr">➜</div>
+    <div class="st"><b>正式列印</b>派車確認（處理中）後才可列印</div>
+    <div class="arr">➜</div>
+    <div class="st"><b>重印</b>需填寫原因，時間與操作人自動記錄</div>
+  </div>
+  <div class="page-foot"><span>多公司訂出貨系統 1.0 — 客戶報告</span><span>第 10 頁</span></div>
+</div>
+
+<!-- ============ P11 App ============ -->
+<div class="page">
+  <div class="page-head"><span class="sec-no">09</span><h2>手機 App</h2><span class="sub">業務跑外面、店家在店裡，都能下單</span></div>
+  <div style="display:flex; gap:6mm">
+    <div class="figure" style="flex:0 0 62mm">
+      <svg viewBox="0 0 220 440" width="100%" xmlns="http://www.w3.org/2000/svg">
+        <rect x="5" y="5" width="210" height="430" rx="26" fill="#12355F"/>
+        <rect x="13" y="13" width="194" height="414" rx="20" fill="#fff"/>
+        <rect x="13" y="13" width="194" height="64" rx="20" fill="#1E4D8C"/>
+        <rect x="13" y="55" width="194" height="22" fill="#1E4D8C"/>
+        <text x="26" y="46" font-size="13" fill="#fff" font-weight="700">早安，陳老闆</text>
+        <text x="26" y="68" font-size="9" fill="#BBD3F0">正興食品 北部門</text>
+        <rect x="24" y="88" width="172" height="64" rx="10" fill="#E8F1FB"/>
+        <text x="36" y="112" font-size="10.5" fill="#1E4D8C" font-weight="600">📢 最新消息</text>
+        <text x="36" y="130" font-size="9" fill="#6B7280">7/20 起新增分切規格「薄切」</text>
+        <text x="36" y="144" font-size="9" fill="#6B7280">中秋檔期出貨日異動公告</text>
+        <rect x="24" y="162" width="172" height="46" rx="10" fill="#FFF3D9" stroke="#F59E0B"/>
+        <text x="110" y="186" font-size="10" fill="#B46808" text-anchor="middle" font-weight="700">🎉 促銷消息</text>
+        <text x="110" y="200" font-size="9" fill="#8A6A20" text-anchor="middle">五花肉促銷活動開跑</text>
+        <text x="28" y="228" font-size="10.5" fill="#374151" font-weight="700">我的專屬商品</text>
+        <rect x="24" y="236" width="172" height="34" rx="8" fill="#F5F8FC" stroke="#D8E2EE"/>
+        <text x="34" y="257" font-size="9.5" fill="#374151">五花肉片</text>
+        <text x="186" y="257" font-size="9.5" fill="#6B7280" text-anchor="end">5 斤</text>
+        <rect x="24" y="276" width="172" height="34" rx="8" fill="#F5F8FC" stroke="#D8E2EE"/>
+        <text x="34" y="297" font-size="9.5" fill="#374151">腰內肉</text>
+        <text x="186" y="297" font-size="9.5" fill="#6B7280" text-anchor="end">2 條</text>
+        <rect x="24" y="316" width="172" height="34" rx="8" fill="#F5F8FC" stroke="#D8E2EE"/>
+        <text x="34" y="337" font-size="9.5" fill="#374151">梅花肉塊</text>
+        <text x="186" y="337" font-size="9.5" fill="#6B7280" text-anchor="end">0（不出貨）</text>
+        <text x="28" y="376" font-size="10.5" fill="#374151" font-weight="700">最近訂單</text>
+        <rect x="24" y="384" width="172" height="30" rx="8" fill="#FFF3D9"/>
+        <text x="34" y="403" font-size="9" fill="#8A6A20">A000133 · 處理中 · 7/18 出貨</text>
+        <rect x="13" y="416" width="194" height="11" fill="#F5F8FC"/>
+        <rect x="24" y="416" width="40" height="11" rx="3" fill="#1E4D8C"/>
+        <text x="44" y="424" font-size="7" fill="#fff" text-anchor="middle">首頁</text>
+        <rect x="70" y="416" width="40" height="11" rx="3" fill="#D8E2EE"/>
+        <text x="90" y="424" font-size="7" fill="#374151" text-anchor="middle">商品</text>
+        <rect x="116" y="416" width="40" height="11" rx="3" fill="#D8E2EE"/>
+        <text x="136" y="424" font-size="7" fill="#374151" text-anchor="middle">訂單歷史</text>
+        <rect x="162" y="416" width="40" height="11" rx="3" fill="#D8E2EE"/>
+        <text x="182" y="424" font-size="7" fill="#374151" text-anchor="middle">功能</text>
+      </svg>
+      <div class="cap">圖 8：App 首頁示意 — 公告與促銷消息為首；快速下單在底部導覽「商品」頁（依所屬公司顯示 Logo 與代表色）</div>
+    </div>
+    <div style="flex:1">
+      <h3 style="margin-top:0">為兩種使用者設計</h3>
+      <div class="card" style="margin-bottom:3mm"><h4>業務（外勤）</h4><ul><li>登入後固定所屬部門，直接開工</li><li>選客戶 → 帶出專屬清單 → 下單，30 秒完成</li><li>可手打品名、刪除品項、維護客戶專屬清單</li><li>可直接新增客戶，當場交付店家主帳號、業務子帳號帳密與管理網址連結</li></ul></div>
+      <div class="card" style="margin-bottom:3mm"><h4>店家（客戶）</h4><ul><li>只能從自己的專屬商品清單下單，不會點錯</li><li>查看自己的訂單歷史與出貨狀態</li><li>掃 QR Code 即可登入，免記帳號</li><li>可發起退貨申請（選歷史訂單或專屬商品品項、附照片），業務確認後顯示退貨證明</li></ul></div>
+      <div class="card"><h4>離線與快取</h4><ul><li>客戶、商品、訂單歷史自動快取，網路不穩也能看</li><li>下拉即可重新整理（下單仍需連網）</li></ul></div>
+      <div class="blue-box">底部導覽：首頁 / 商品（快速下單）/ 訂單歷史 / 功能。功能頁含客戶查詢、QR Code、關於我們、設定與登出。</div>
+    </div>
+  </div>
+  <div class="page-foot"><span>多公司訂出貨系統 1.0 — 客戶報告</span><span>第 11 頁</span></div>
+</div>
+
+<!-- ============ P12 通知與稽核 ============ -->
+<div class="page">
+  <div class="page-head"><span class="sec-no">10</span><h2>通知與稽核</h2><span class="sub">重要事件不漏接，操作全程有記錄</span></div>
+  <h3>兩種通知管道</h3>
+  <div class="grid2">
+    <div class="card" style="text-align:center"><div style="font-size:22pt">🔔</div><h4 style="justify-content:center">App 推播</h4><p>業務下單即時通知店家子帳號（主帳號不接收業務通知）；後台新增客戶專屬商品時通知主責業務；退貨審核結果通知店家。</p></div>
+    <div class="card" style="text-align:center"><div style="font-size:22pt">📋</div><h4 style="justify-content:center">通知中心</h4><p>App 與網頁中台集中顯示系統通知，已讀未讀一目瞭然。</p></div>
+  </div>
+  <div class="note-box">促銷通知：商品可貼上「分類標籤」，店家資料套用想收的類別；後台選定類別就能推播給那些店家。所有店家都可在首頁看到公告消息——推播與公告是兩件事。</div>
+  <h3>稽核日誌 — 誰在什麼時間做了什麼，都有紀錄</h3>
+  <table class="simple">
+    <tr><th style="width:30%">記錄內容</th><th>說明</th></tr>
+    <tr><td>操作類型</td><td>登入、下單、修改主檔、刪除、列印、強制登出、角色變更、取消派車、作廢、退貨審核。</td></tr>
+    <tr><td>操作人與時間</td><td>每筆記錄包含操作者、精確時間、來源 IP 與裝置。</td></tr>
+    <tr><td>異動前後摘要</td><td>改了什麼欄位、從什麼值改成什麼值，一目了然。</td></tr>
+    <tr><td>不可刪除</td><td>稽核日誌預設保留 3 個月，管理頁可設定 1 / 3 / 6 / 12 個月或永久；任何人（含管理員）都無法刪除。</td></tr>
+  </table>
+  <h3>資料安全</h3>
+  <div class="grid2">
+    <div class="card"><h4>資料隔離</h4><p>每筆資料都標記所屬公司與部門，系統在資料庫層強制隔離；跨部門調閱僅限有權限的管理者，且會留下稽核紀錄。</p></div>
+    <div class="card"><h4>傳輸與儲存加密</h4><p>所有連線全程加密；密碼以業界標準雜湊儲存，任何人（含系統管理者）都看不到明文密碼。</p></div>
+  </div>
+  <div class="note-box">管理人員可隨時在「管理人員名單」強制指定帳號登出；帳號停用後立即無法使用。</div>
+  <div class="page-foot"><span>多公司訂出貨系統 1.0 — 客戶報告</span><span>第 12 頁</span></div>
+</div>
+
+<!-- ============ P13 系統架構 ============ -->
+<div class="page">
+  <div class="page-head"><span class="sec-no">11</span><h2>系統架構</h2><span class="sub">資料在哪裡、怎麼運作，一次看懂</span></div>
+  <p class="lead">系統集中部署在雲端平台：手機與網頁經由加密連線使用，所有資料存放在同一座資料庫；登入驗證、手機推播與備份，交由成熟的雲端服務處理，穩定且好維護。</p>
+  <div class="figure">
+    <svg viewBox="0 0 700 420" width="100%" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrA" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#3A7BD5"/></marker>
+        <marker id="arrG" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#10B981"/></marker>
+      </defs>
+      <!-- 使用入口 -->
+      <rect x="10" y="10" width="680" height="76" rx="12" fill="#F5F8FC" stroke="#D8E2EE"/>
+      <text x="24" y="33" font-size="13" fill="#6B7280" font-weight="700">使用入口</text>
+      <rect x="60" y="42" width="260" height="34" rx="8" fill="#1E4D8C"/>
+      <text x="190" y="64" font-size="12.5" fill="#fff" text-anchor="middle" font-weight="600">手機 App（業務・店家）</text>
+      <rect x="380" y="42" width="260" height="34" rx="8" fill="#3A7BD5"/>
+      <text x="510" y="64" font-size="12.5" fill="#fff" text-anchor="middle" font-weight="600">網頁中台（辦公室・管理人員）</text>
+      <line x1="190" y1="86" x2="190" y2="106" stroke="#3A7BD5" stroke-width="2" marker-end="url(#arrA)"/>
+      <line x1="510" y1="86" x2="510" y2="106" stroke="#3A7BD5" stroke-width="2" marker-end="url(#arrA)"/>
+      <text x="350" y="101" font-size="10" fill="#6B7280" text-anchor="middle">全程加密連線（HTTPS）</text>
+      <!-- 雲端平台 -->
+      <rect x="10" y="110" width="560" height="192" rx="14" fill="#E8F1FB" stroke="#BBD3F0" stroke-width="1.5"/>
+      <text x="26" y="134" font-size="13.5" fill="#1E4D8C" font-weight="700">雲端服務平台（集中部署）</text>
+      <rect x="26" y="146" width="260" height="60" rx="9" fill="#fff" stroke="#3A7BD5" stroke-width="1.5"/>
+      <text x="156" y="171" font-size="12" fill="#1E4D8C" text-anchor="middle" font-weight="600">系統服務核心</text>
+      <text x="156" y="191" font-size="10" fill="#6B7280" text-anchor="middle">下單 · 派車 · 權限 · 通知</text>
+      <rect x="296" y="146" width="258" height="60" rx="9" fill="#fff" stroke="#3A7BD5" stroke-width="1.5"/>
+      <text x="425" y="171" font-size="12" fill="#1E4D8C" text-anchor="middle" font-weight="600">單據列印服務</text>
+      <text x="425" y="191" font-size="10" fill="#6B7280" text-anchor="middle">四種出貨單據 PDF</text>
+      <rect x="26" y="222" width="260" height="62" rx="9" fill="#12355F"/>
+      <text x="156" y="247" font-size="12" fill="#fff" text-anchor="middle" font-weight="600">資料庫</text>
+      <text x="156" y="267" font-size="10" fill="#9DB8DC" text-anchor="middle">訂單、主檔、權限、稽核</text>
+      <rect x="296" y="222" width="258" height="62" rx="9" fill="#12355F"/>
+      <text x="425" y="247" font-size="12" fill="#fff" text-anchor="middle" font-weight="600">檔案儲存</text>
+      <text x="425" y="267" font-size="10" fill="#9DB8DC" text-anchor="middle">Logo、單據 PDF</text>
+      <!-- 監控 -->
+      <rect x="584" y="110" width="106" height="192" rx="12" fill="#FFF3D9" stroke="#F59E0B" stroke-width="1.5"/>
+      <text x="637" y="176" font-size="12" fill="#B46808" text-anchor="middle" font-weight="700">全天候</text>
+      <text x="637" y="196" font-size="12" fill="#B46808" text-anchor="middle" font-weight="700">監控告警</text>
+      <text x="637" y="218" font-size="9.5" fill="#8A6A20" text-anchor="middle">異常時自動</text>
+      <text x="637" y="233" font-size="9.5" fill="#8A6A20" text-anchor="middle">通知值班人員</text>
+      <!-- 外部服務 -->
+      <line x1="99" y1="302" x2="99" y2="354" stroke="#3A7BD5" stroke-width="2" marker-end="url(#arrA)"/>
+      <line x1="265" y1="302" x2="265" y2="354" stroke="#3A7BD5" stroke-width="2" marker-end="url(#arrA)"/>
+      <line x1="431" y1="302" x2="431" y2="354" stroke="#3A7BD5" stroke-width="2" marker-end="url(#arrA)"/>
+      <line x1="597" y1="302" x2="597" y2="354" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrG)"/>
+      <text x="350" y="322" font-size="10" fill="#6B7280" text-anchor="middle">登入驗證 · 站內通知 · 手機推播 ｜ 資料庫每日自動備份到異地儲存</text>
+      <rect x="10" y="330" width="680" height="80" rx="12" fill="#F5F8FC" stroke="#D8E2EE"/>
+      <text x="24" y="350" font-size="13" fill="#6B7280" font-weight="700">支援服務</text>
+      <rect x="24" y="358" width="150" height="38" rx="8" fill="#fff" stroke="#D8E2EE" stroke-width="1.5"/>
+      <text x="99" y="382" font-size="11.5" fill="#1F2937" text-anchor="middle">Google 帳號登入</text>
+      <rect x="190" y="358" width="150" height="38" rx="8" fill="#fff" stroke="#D8E2EE" stroke-width="1.5"/>
+      <text x="265" y="382" font-size="11.5" fill="#1F2937" text-anchor="middle">站內通知中心</text>
+      <rect x="356" y="358" width="150" height="38" rx="8" fill="#fff" stroke="#D8E2EE" stroke-width="1.5"/>
+      <text x="431" y="382" font-size="11.5" fill="#1F2937" text-anchor="middle">手機推播服務</text>
+      <rect x="522" y="358" width="150" height="38" rx="8" fill="#fff" stroke="#10B981" stroke-width="1.5"/>
+      <text x="597" y="382" font-size="11.5" fill="#0B7A55" text-anchor="middle">異地備份儲存</text>
+    </svg>
+    <div class="cap">圖 10：系統架構 — 兩個入口經加密連線到雲端平台；登入、通知與備份由外部服務支援</div>
+  </div>
+  <div class="grid3" style="margin-top:4mm">
+    <div class="card"><h4>集中管理</h4><p>一套服務承載全部功能，功能更新一次到位，各入口同步生效。</p></div>
+    <div class="card"><h4>資料只有一份</h4><p>手機與網頁共用同一座資料庫，下單、派車、列印即時連動。</p></div>
+    <div class="card"><h4>每日異地備份</h4><p>資料庫每日完整備份並異地保存，設備故障時可快速還原。</p></div>
+  </div>
+  <div class="page-foot"><span>多公司訂出貨系統 1.0 — 客戶報告</span><span>第 13 頁</span></div>
+</div>
+
+<!-- ============ P14 穩定運作與技術 ============ -->
+<div class="page">
+  <div class="page-head"><span class="sec-no">12</span><h2>穩定運作與技術</h2><span class="sub">為長期維運而設計</span></div>
+  <p class="lead">系統以全新程式碼從頭開發，部署於雲端容器平台，具備自動備份、即時監控與災難復原機制。</p>
+  <div class="grid2">
+    <div class="card"><h4>每日自動備份</h4><ul><li>資料庫每日完整備份，並持續記錄異動</li><li>可還原到任意時間點（最壞情況僅損失 1 小時內資料）</li><li>備份存放於 Google 雲端儲存，異地保存</li></ul></div>
+    <div class="card"><h4>災難復原</h4><ul><li>目標 4 小時內恢復核心服務</li><li>每半年實際演練一次復原流程</li><li>上線前完成首次還原演練才放行</li></ul></div>
+    <div class="card"><h4>即時監控與告警</h4><ul><li>伺服器狀態、回應速度、錯誤率全天候監控</li><li>異常時自動通知值班人員（Email、通訊群組）</li><li>系統日誌集中保留 30 天</li></ul></div>
+    <div class="card"><h4>安全防護</h4><ul><li>所有連線全程加密</li><li>登入與敏感操作有頻率限制，防止暴力嘗試</li><li>定期掃描程式套件安全性</li></ul></div>
+  </div>
+  <h3>技術選型（給資訊人員參考）</h3>
+  <table class="simple">
+    <tr><th style="width:26%">層面</th><th>做法</th></tr>
+    <tr><td>服務核心</td><td>單一整合式服務，功能集中；手機、網頁與服務端共用同一份 Protobuf 契約，前後端即時連動（Go ＋ Connect-RPC）。</td></tr>
+    <tr><td>網頁中台</td><td>反應快速的現代網頁技術，權限規則由後端統一下發（SolidJS）。</td></tr>
+    <tr><td>手機 App</td><td>一套程式同時支援 iOS 與 Android；客戶、商品、訂單歷史支援離線瀏覽（下單仍需連網）。App 內資料快取由 fquery 統一管理，Sembast 本地鏡像支撐離線讀取（Flutter，Dart ≥ 3.10）。</td></tr>
+    <tr><td>單據列印</td><td>網頁模板自動轉 A4 PDF，內建繁體中文字型（Gotenberg）。</td></tr>
+    <tr><td>雲端維運</td><td>容器化部署、自動化更新、全天候監控（Kubernetes、Prometheus）。</td></tr>
+  </table>
+  <div class="page-foot"><span>多公司訂出貨系統 1.0 — 客戶報告</span><span>第 14 頁</span></div>
+</div>
+
+<!-- ============ P14 時程 ============ -->
+<div class="page">
+  <div class="page-head"><span class="sec-no">13</span><h2>導入時程與下一步</h2><span class="sub">九個階段，循序交付</span></div>
+  <div class="figure">
+    <svg viewBox="0 0 700 240" width="100%" xmlns="http://www.w3.org/2000/svg">
+      <line x1="40" y1="60" x2="660" y2="60" stroke="#D8E2EE" stroke-width="4"/>
+      <g font-size="10" text-anchor="middle">
+        <circle cx="58" cy="60" r="15" fill="#1E4D8C"/><text x="58" y="64" fill="#fff" font-weight="700">0</text>
+        <text x="58" y="92" fill="#1F2937" font-weight="600">基礎建設</text><text x="58" y="106" fill="#6B7280">環境與骨架</text>
+        <circle cx="134" cy="60" r="15" fill="#1E4D8C"/><text x="134" y="64" fill="#fff" font-weight="700">1</text>
+        <text x="134" y="92" fill="#1F2937" font-weight="600">認證授權</text><text x="134" y="106" fill="#6B7280">登入與權限</text>
+        <circle cx="210" cy="60" r="15" fill="#3A7BD5"/><text x="210" y="64" fill="#fff" font-weight="700">2</text>
+        <text x="210" y="92" fill="#1F2937" font-weight="600">多租戶主檔</text><text x="210" y="106" fill="#6B7280">公司部門人員</text>
+        <circle cx="286" cy="60" r="15" fill="#3A7BD5"/><text x="286" y="64" fill="#fff" font-weight="700">3</text>
+        <text x="286" y="92" fill="#1F2937" font-weight="600">業務主檔</text><text x="286" y="106" fill="#6B7280">客戶商品倉車</text>
+        <circle cx="362" cy="60" r="15" fill="#3A7BD5"/><text x="362" y="64" fill="#fff" font-weight="700">4</text>
+        <text x="362" y="92" fill="#1F2937" font-weight="600">訂單通知</text><text x="362" y="106" fill="#6B7280">下單與推播</text>
+        <circle cx="438" cy="60" r="15" fill="#F59E0B"/><text x="438" y="64" fill="#fff" font-weight="700">5</text>
+        <text x="438" y="92" fill="#1F2937" font-weight="600">派車列印</text><text x="438" y="106" fill="#6B7280">看板與單據</text>
+        <circle cx="514" cy="60" r="15" fill="#F59E0B"/><text x="514" y="64" fill="#fff" font-weight="700">6</text>
+        <text x="514" y="92" fill="#1F2937" font-weight="600">手機 App</text><text x="514" y="106" fill="#6B7280">快速下單</text>
+        <circle cx="590" cy="60" r="15" fill="#10B981"/><text x="590" y="64" fill="#fff" font-weight="700">7</text>
+        <text x="590" y="92" fill="#1F2937" font-weight="600">公告介面</text><text x="590" y="106" fill="#6B7280">中台體驗</text>
+        <circle cx="648" cy="60" r="15" fill="#10B981"/><text x="648" y="64" fill="#fff" font-weight="700">8</text>
+        <text x="648" y="92" fill="#1F2937" font-weight="600">上線維運</text><text x="648" y="106" fill="#6B7280">部署與切換</text>
+      </g>
+      <rect x="40" y="140" width="620" height="80" rx="10" fill="#F5F8FC" stroke="#D8E2EE"/>
+      <text x="60" y="168" font-size="12" fill="#1E4D8C" font-weight="700">切換方式：一次到位，不試點、不並行</text>
+      <text x="60" y="190" font-size="10.5" fill="#374151">新系統完成開發與測試後直接全面上線、舊系統退役；不試點、不並行、不匯入舊資料，主檔於新系統重新建檔。</text>
+      <text x="60" y="208" font-size="10.5" fill="#374151">上線前檢查：還原演練通過、監控告警就緒、開發者帳號關閉、員工帳號預先建立。</text>
+    </svg>
+    <div class="cap">圖 9：導入九階段與切換策略</div>
+  </div>
+  <h3>下一步</h3>
+  <div class="grid2">
+    <div class="card"><h4>確認範圍</h4><p>確認本報告功能範圍與優先順序：退貨申請已納入第一版；暫不做的項目（簽核、即時庫存、報價單）列後續評估；「拍照辨識新增客戶」與「業務語音下單」兩項 AI 功能已定案列入 1.1 規劃。</p></div>
+    <div class="card"><h4>開始實作</h4><p>依階段 0 → 8 推進，每階段完成即驗收；上線前由管理員預先建立員工帳號，避免審核瓶頸。</p></div>
+  </div>
+  <div class="note-box"><b>待定討論項目（尚未定案，歡迎討論）：</b>① 退貨品項來源——「歷史訂單勾選」vs「專屬商品清單選擇」（第一版兩者並存，依試用回饋收斂）② 後台新增客戶專屬商品推播主責業務時，是否需先經業務檢核 ③ 促銷推播的分類標籤機制（初步構想）。</div>
+  <div class="blue-box">測試品質承諾：程式碼測試覆蓋率門檻 70%，登入、權限、派車、退貨等關鍵流程皆有自動化測試把關。</div>
+  <div class="page-foot"><span>多公司訂出貨系統 1.0 — 客戶報告</span><span>第 15 頁</span></div>
+</div>
+
+<!-- ============ P16 封底 ============ -->
+<div class="page back">
+  <div class="inner">
+    <h1>感謝聆聽</h1>
+    <p>多公司訂出貨系統 1.0<br>業務、店家都能隨時下單的訂出貨管理平台</p>
+  </div>
+</div>
+
+</body>
+</html>

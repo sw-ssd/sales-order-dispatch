@@ -1,0 +1,43 @@
+{
+  "device_id": "bedfc746-cdd0-4bb5-96d4-e797f30ebdb1",
+  "device_label": "MacIntel",
+  "saved_at": 1784313076,
+  "active_index": 1,
+  "tabs": [
+    {
+      "file_path": null,
+      "file_name": "Untitled.md",
+      "cursor_line": null,
+      "cursor_col": null,
+      "rel_path": null
+    },
+    {
+      "file_path": "/Volumes/UTM2/Developer/sales-order-netsuit/docs/superpowers/plans/2026-07-17-sales-order-1-0-tasks.md",
+      "file_name": "2026-07-17-sales-order-1-0-tasks.md",
+      "cursor_line": null,
+      "cursor_col": null,
+      "rel_path": null
+    },
+    {
+      "file_path": "/Volumes/UTM2/Developer/sales-order-netsuit/docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md",
+      "file_name": "2026-07-16-sales-order-1.0-design.md",
+      "cursor_line": null,
+      "cursor_col": null,
+      "rel_path": "2026-07-16-sales-order-1.0-design.md"
+    },
+    {
+      "file_path": "/Volumes/UTM2/Developer/sales-order-netsuit/docs/superpowers/specs/2026-07-17-sales-order-1.0-suggestions.md",
+      "file_name": "2026-07-17-sales-order-1.0-suggestions.md",
+      "cursor_line": null,
+      "cursor_col": null,
+      "rel_path": "2026-07-17-sales-order-1.0-suggestions.md"
+    },
+    {
+      "file_path": "/Volumes/UTM2/Developer/sales-order-netsuit/docs/superpowers/specs/2026-07-18-app-ai-assist-1.1-design.md",
+      "file_name": "2026-07-18-app-ai-assist-1.1-design.md",
+      "cursor_line": null,
+      "cursor_col": null,
+      "rel_path": "2026-07-18-app-ai-assist-1.1-design.md"
+    }
+  ]
+}
