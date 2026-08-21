@@ -51,7 +51,7 @@
 - Test: `backend/ent/schema/schema_test.go`
 
 **Interfaces:**
-- Produces: `ent.Company` / `ent.Department` / `ent.User` 產生碼;`testutil.NewEntClient(t) *ent.Client`(後續所有 DB 測試使用);users 欄位 `token_version`(int, default 0)、`role`(enum: super/company_admin/dept_admin/staff/guest/customer/developer)、`data_scope`(enum: all/company/department/self)、`is_customer` / `customer_id` / `account_name` / `is_primary` / `password_hash` / `temp_password_expires_at` / `must_change_password` / `failed_login_attempts` / `locked_at`。
+- Produces: `ent.Company` / `ent.Department` / `ent.User` 產生碼;`testutil.NewEntClient(t) *ent.Client`(後續所有 DB 測試使用);users 欄位 `token_version`(int, default 0)、`role`(enum: super/company_admin/dept_admin/staff/guest/customer/developer)、`data_scope`(enum: all/company/department/self)、`is_customer` / `customer_id` / `account_name` / `is_primary` / `password_hash` / `temp_password_expires_at` / `must_change_password` / `failed_login_attempts` / `locked_at` / `locale`(可空,通知語系,07 計畫消費)。
 
 - [ ] **Step 1: 建立測試輔助 testutil**
 
@@ -319,6 +319,9 @@ func (User) Fields() []ent.Field {
 		field.Bool("must_change_password").Default(false),
 		field.Int("failed_login_attempts").Default(0),
 		field.Time("locked_at").Optional().Nillable(),
+
+		// 通知語系(07-notifications 計畫範本選取;無則退回預設語系 zh-TW)
+		field.String("locale").Optional().Nillable(),
 
 		field.Time("created_at").Default(time.Now).Immutable(),
 		field.Time("updated_at").Default(time.Now).UpdateDefault(time.Now),
@@ -623,7 +626,7 @@ git commit -m "feat(backend): Casbin RBAC model、PG adapter、預設 policy see
 
 **Interfaces:**
 - Consumes: Task 1 的三張表。
-- Produces: `rls.Identity{UserID, CompanyID uuid.UUID; DepartmentID, CustomerID *uuid.UUID; DataScope string}`;`rls.NewContext(ctx, id Identity) context.Context`;`rls.FromContext(ctx) (Identity, bool)`;`rls.WrapDriver(d dialect.Driver) dialect.Driver`(Ent client 注入用,每筆交易自動 `SET LOCAL`)。後續所有 domain 的 Ent client 一律經 `rls.WrapDriver` 建立。
+- Produces: `rls.Identity{UserID, CompanyID uuid.UUID; DepartmentID, CustomerID *uuid.UUID; DataScope string; Role string; IsPrimary bool}`;`rls.NewContext(ctx, id Identity) context.Context`;`rls.FromContext(ctx) (Identity, bool)`;`rls.WrapDriver(d dialect.Driver) dialect.Driver`(Ent client 注入用,每筆交易自動 `SET LOCAL`)。後續所有 domain 的 Ent client 一律經 `rls.WrapDriver` 建立。
 
 - [ ] **Step 1: 寫失敗測試(隔離、fail-closed、繞過)**
 
@@ -799,6 +802,8 @@ type Identity struct {
 	DepartmentID *uuid.UUID // 客戶帳號可為 nil
 	CustomerID   *uuid.UUID
 	DataScope    string // all | company | department | self
+	Role         string // developer | company_admin | dept_admin | staff | customer(取自 session.Claims)
+	IsPrimary    bool   // 客戶主帳號標記(取自 session.Claims)
 }
 
 type ctxKey struct{}
@@ -3016,7 +3021,7 @@ git commit -m "feat(backend): refresh token 旋轉、重放偵測、token_versio
 
 **Interfaces:**
 - Consumes: Task 9 `session.Manager` / `VerifyAccessToken`;Task 10 `CheckTokenVersion`;Task 2 enforcer;Task 3 `rls.NewContext`。
-- Produces: `middleware.Authenticate(db, sessionMgr, enf) func(http.Handler) http.Handler`(Chi/Connect 通用);ctx 產出 `rls.Identity`(供所有 domain handler);`middleware.ApiTokenAuthenticate(cfg) func(http.Handler) http.Handler`;config `ApiTokens`(map 名稱→雜湊);公開路由白名單 `middleware.PublicPaths`(prefix 列表:`/api/v1/auth/oauth`、`/api/v1/companies/public`、QR 兌換路徑)。
+- Produces: `middleware.Authenticate(db, sessionMgr, enf) func(http.Handler) http.Handler`(Chi/Connect 通用);ctx 產出 `rls.Identity`(供所有 domain handler;`Role` / `IsPrimary` 自 `session.Claims` 帶入,`DataScope` 自 users 列);`middleware.ApiTokenAuthenticate(cfg) func(http.Handler) http.Handler`;config `ApiTokens`(map 名稱→雜湊);公開路由白名單 `middleware.PublicPaths`(prefix 列表:`/api/v1/auth/oauth`、`/api/v1/companies/public`、QR 兌換路徑)。
 
 - [ ] **Step 1: config 擴充**
 
@@ -3831,6 +3836,20 @@ type Recorder interface {
 type NoopRecorder struct{}
 
 func (NoopRecorder) Record(context.Context, Entry) error { return nil }
+
+// FakeRecorder 為跨 domain 測試共用 fake:記錄所有 Entry 供斷言(稽核同事務驗證用)。
+type FakeRecorder struct {
+	Entries []Entry
+	Err     error // 非 nil 時 Record 回錯(注入稽核失敗情境,驗證業務回滾 D18)
+}
+
+func (f *FakeRecorder) Record(_ context.Context, e Entry) error {
+	if f.Err != nil {
+		return f.Err
+	}
+	f.Entries = append(f.Entries, e)
+	return nil
+}
 ```
 
 - [ ] **Step 2: 寫失敗測試**
