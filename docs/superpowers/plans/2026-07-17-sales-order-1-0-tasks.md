@@ -114,21 +114,23 @@
 
 **Files:**
 - Create: `backend/go.mod`
-- Create: `backend/cmd/server/main.go`
-- Create: `backend/config/config.go`
-- Create: `backend/internal/server/server.go`
-- Create: `backend/Taskfile.yml`
+- Create: `backend/cmd/server/main.go`（極薄入口）
+- Create: `backend/cmd/migrate/main.go`、`backend/cmd/seed/main.go`
+- Create: `backend/config/{config,api,auth,cache,database,storage,observability}.go`（envconfig 逐檔 struct）
+- Create: `backend/internal/server/{server,domains}.go`
+- Create: `backend/third_party/{database/ent.go,cache/valkey.go}`
+- Create: `backend/.air.toml`、`backend/Taskfile.yml`（含 dev/check/vuln/migrate/seed）
 
 **Interfaces:**
-- `config.Load()` 載入環境變數。
-- `server.New(cfg)` 回傳 Chi router。
+- `config.New()` 聚合逐檔 envconfig struct（D31）。
+- `server.New(cfg)` 回傳 Chi router；`Server.Init()` 集中啟動檢查；`InitDomains()` 集中組裝。
 
 **Steps:**
 - [ ] Step 1: `go mod init github.com/salesorder/sales-order-1.0/backend`。
-- [ ] Step 2: 安裝 chi、cors、viper、pgx、ent、casbin、jwt、connect-go、oauth2/oidc 等依賴。
-- [ ] Step 3: 實作 `config.Config` 與 `Load()`。
-- [ ] Step 4: 實作基礎 Chi server（middleware、CORS、健康檢查路由）。
-- [ ] Step 5: 建立 `backend/Taskfile.yml`（dev、run、test、migrate、proto:gen）。
+- [ ] Step 2: 安裝 chi、cors、envconfig、pgx、ent、casbin、jwt、connect-go、oauth2/oidc 等依賴。
+- [ ] Step 3: 實作 `config` 逐檔 struct 與 `New()` 聚合。
+- [ ] Step 4: 實作基礎 Chi server（middleware、CORS、健康檢查路由）與 `Server.Init()`/`InitDomains()` 骨架。
+- [ ] Step 5: 建立 `backend/Taskfile.yml`（dev、run、test、check、vuln、migrate、seed、proto:gen）與 `.air.toml`。
 
 **Acceptance Criteria:**
 - [ ] `cd backend && go run ./cmd/server` 可啟動並監聽 3080。
@@ -522,10 +524,10 @@
 
 **Files:**
 - Create: `backend/internal/middleware/developer.go`
-- Modify: `backend/config/config.go`
+- Modify: `backend/config/api.go`
 
 **Steps:**
-- [ ] Step 1: config 新增 `DEVELOPER_ACCOUNT_ENABLED`（development 預設 true、production 預設 false）。
+- [ ] Step 1: `config/api.go` 新增 `DEVELOPER_ACCOUNT_ENABLED`（development 預設 true、production 預設 false）。
 - [ ] Step 2: 啟動防護：`ENV=production` 且開關為 true 時拒絕啟動（fail fast）。
 - [ ] Step 3: seed `developer` 角色（`is_system=true`、`data_scope=all`）；開發環境 seed 預設開發者帳號（僅 `ENV=development`）。
 - [ ] Step 4: middleware：developer 角色且開關啟用時，跳過 Casbin 檢查，RLS 注入 `data_scope=all`；開關關閉時 developer 帳號無法登入。
