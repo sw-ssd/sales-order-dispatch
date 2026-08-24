@@ -40,10 +40,15 @@
 ├── backend/
 │   ├── go.mod
 │   ├── Taskfile.yml
-│   ├── cmd/server/main.go
-│   ├── config/config.go
+│   ├── .air.toml
+│   ├── cmd/
+│   │   ├── server/main.go
+│   │   ├── migrate/main.go
+│   │   └── seed/main.go
+│   ├── config/
+│   │   └── config.go（+ api/auth/cache/database/storage/observability.go，D31）
 │   ├── internal/
-│   │   ├── server/server.go
+│   │   ├── server/{server.go,domains.go}
 │   │   ├── middleware/
 │   │   ├── auth/
 │   │   ├── ent/
@@ -53,6 +58,9 @@
 │   │   ├── repositories/
 │   │   ├── services/
 │   │   └── handlers/
+│   ├── third_party/
+│   │   ├── database/ent.go
+│   │   └── cache/valkey.go
 │   └── database/migrations/
 ├── frontend/
 │   ├── package.json
@@ -167,20 +175,22 @@
 
 **Files:**
 - Create: `backend/go.mod`
-- Create: `backend/cmd/server/main.go`
-- Create: `backend/config/config.go`
-- Create: `backend/internal/server/server.go`
-- Create: `backend/Taskfile.yml`
+- Create: `backend/cmd/server/main.go`（極薄入口）
+- Create: `backend/cmd/migrate/main.go`、`backend/cmd/seed/main.go`
+- Create: `backend/config/{config,api,auth,cache,database,storage,observability}.go`（envconfig 逐檔 struct，D31）
+- Create: `backend/internal/server/{server,domains}.go`
+- Create: `backend/third_party/{database/ent.go,cache/valkey.go}`
+- Create: `backend/.air.toml`、`backend/Taskfile.yml`（含 dev/check/vuln/migrate/seed）
 
 **Interfaces:**
 - Consumes: none
-- Produces: `config.Config` struct, `server.New(cfg)` Chi router
+- Produces: `config.New()` 聚合 struct, `server.New(cfg)` Chi router + `Server.Init()`/`InitDomains()`
 
 - [ ] **Step 1: 初始化 Go module**
   - `go mod init github.com/salesorder/sales-order-1.0/backend`
 - [ ] **Step 2: 安裝依賴**
-  - `go get github.com/go-chi/chi/v5 github.com/spf13/viper github.com/rs/cors`
-- [ ] **Step 3: 實作 `config.Config` 與 `Load()`**
+  - `go get github.com/go-chi/chi/v5 github.com/kelseyhightower/envconfig github.com/rs/cors`
+- [ ] **Step 3: 實作 `config` 逐檔 struct 與 `New()` 聚合**
   - Fields: `Port`, `DatabaseURL`, `ValkeyAddr`, `GoogleClientID`, `GoogleClientSecret`, `GotenbergURL`.
 - [ ] **Step 4: 實作基礎 Chi server**
   - CORS, request ID logger, `/api/v1/version` returning version JSON.
@@ -281,7 +291,7 @@
 - [ ] **Step 1: 設定觸發條件**
   - `push`/`pull_request` to `main`.
 - [ ] **Step 2: 設定 Go job**
-  - Lint (`golangci-lint`), test (`go test ./...`), build (`go build ./cmd/server`).
+  - Lint (`golangci-lint`), test (`go test ./...`), build (`go build ./cmd/server`), vuln (`govulncheck ./...`, D31-2).
 - [ ] **Step 3: 設定 frontend job**
   - `pnpm install`, type check, lint, build.
 - [ ] **Step 4: 設定 Flutter job**
