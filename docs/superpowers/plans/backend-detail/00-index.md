@@ -44,6 +44,56 @@
 5. **測試約定**:每個子功能「驗收」欄對應可執行測試行為;取號併發、狀態機轉移、RLS 隔離、退貨審核、送貨日順延、鎖定解除六類需整合測試(D21);三端覆蓋率 70% CI 強制。各文件結尾附「整合測試重點」。
 6. **依賴標註**:子功能間先後依賴於「目標」欄標註 `相依: X.Y.Z`;全域依賴見下節。
 
+## 3.7 架構慣例(D31,2026-08-24 起生效)
+
+### 目錄結構
+
+```
+backend/
+├── cmd/
+│   ├── server/main.go      # 極薄入口:config.New() → server.New(cfg) → s.Init() → s.Run()
+│   ├── migrate/main.go     # goose up/down/create CLI
+│   └── seed/main.go        # 冪等 seeder 入口(roles/預設 policies/developer 帳號)
+├── config/                 # 逐檔 struct + constructor(envconfig),config.go 僅聚合
+│   ├── config.go  api.go  auth.go  cache.go  database.go  storage.go  observability.go
+├── internal/
+│   ├── server/server.go    # Server struct 註冊全部依賴 + Init()
+│   ├── server/domains.go   # InitDomains():逐 domain 組裝 repo→usecase→handler
+│   └── (domain/ middleware/ authz/ session/ database/ audit/ 既有路徑不變)
+├── third_party/
+│   ├── database/ent.go     # Ent client + pgx pool 初始化
+│   └── cache/valkey.go     # Valkey client 初始化
+├── proto/  ent/  database/migrations/  .air.toml  Taskfile.yml
+```
+
+### DI 與啟動
+
+- `Server` struct 持有全部共享依賴(Config、*ent.Client、Valkey、Casbin enforcer、casl FieldRegistry、scs manager、chi router)。
+- 所有 fail-fast 啟動檢查集中於 `Server.Init()`:DB/Valkey 連線、Casbin enforcer 與預設 policy、`JWT_SECRET` 存在、production+developer 開關拒啟(1.11.1)、CASL fixture 自驗(D30-3)。
+- `InitDomains()` 每 domain 一行組裝鏈;Connect handler 掛 chi router;新增 domain 只動此一檔。
+
+### config 規則
+
+- 套件改用 `github.com/kelseyhightower/envconfig`;struct tag 一律 `envconfig:"KEY"`;聚合入口 `config.New()`。
+- key 歸檔映射:OAuth/JWT/ApiToken → `auth.go`;Valkey/session → `cache.go`;ENV/位址/功能開關(developer、CASL、board heartbeat、ingress timeout、Gotenberg URL) → `api.go`;DB → `database.go`;STORAGE_ROOT → `storage.go`;log/metrics → `observability.go`。新群組無對應檔 → 新建 `config/<name>.go` 並於 `config.go` 聚合。
+- `.env.example` 同步維護;`.env` 不入版控。
+
+### third_party 規則
+
+- 外部套件僅做「初始化/連線建立」者放 `third_party/`;行為邏輯(RLS hook、session 管理)留在 `internal/`。`third_party/database/ent.go` 建立 client 時掛 `internal/database/rls.go` 的 driver hook。
+
+### 工具鏈
+
+- Taskfile:`dev`(air)、`check`(fmt+vet+lint+test)、`vuln`(govulncheck)、`migrate`/`migrate:create`/`seed`;CI Go job 含 govulncheck。
+
+### 術語映射(既有計畫文件適用)
+
+| 既有計畫表述 | 實際落點 |
+|---|---|
+| 「main.go 組裝點 / 掛載 / 組裝處」 | `InitDomains()`(`internal/server/domains.go`) |
+| 「main.go 啟動檢查 / 啟動防護 / 啟動序列」 | `Server.Init()`(`internal/server/server.go`) |
+| 「config/config.go 加欄位 X」 | 依 key 歸檔映射的分檔 |
+
 ## 4. 全域依賴順序
 
 ```mermaid
