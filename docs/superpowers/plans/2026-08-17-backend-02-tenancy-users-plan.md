@@ -41,7 +41,7 @@
 | `backend/internal/database/txsql.go` | ent.Tx 內 raw SQL 輔助(casbin_rule 用) | Task 3 |
 | `backend/proto/v1/user.proto`、`backend/internal/domain/users/{usecase,repository,handler}.go` | 使用者 CRUD、角色指派、停用、ForceLogout 範圍銜接 | Task 3 |
 | `backend/internal/domain/companies/branding.go` / `public.go` | Logo 上傳、Branding/PublicInfo、公開發現端點 | Task 4 |
-| `backend/config/config.go` | `StorageRoot` | Task 4(更新) |
+| `backend/config/storage.go` | `StorageRoot` | Task 4(更新) |
 | `backend/ent/schema/{role,rolepermission}.go` | roles / role_permissions schema | Task 5 |
 | `backend/database/migrations/00005_roles_seed.sql` | 七內建角色 + 預設權限冪等 seed | Task 5 |
 | `backend/proto/v1/admin.proto` | RoleService(Task 5)、PolicyService(Task 7) | Task 5、7 |
@@ -2127,8 +2127,8 @@ git commit -m "feat(backend): UserService CRUD、角色指派(g 規則同事務)
 - Create: `backend/internal/domain/companies/branding.go`
 - Create: `backend/internal/domain/companies/public.go`
 - Update: `backend/proto/v1/company.proto`(增量 UpdateBranding / UpdatePublicInfo)
-- Update: `backend/config/config.go`(`StorageRoot`)
-- Update: `backend/cmd/server/main.go`(路由註冊)
+- Update: `backend/config/storage.go`(`StorageRoot`)
+- Update: `backend/internal/server/domains.go`(`InitDomains()` 路由註冊)
 - Test: `backend/internal/domain/companies/branding_test.go`、`backend/internal/domain/companies/public_test.go`
 
 **Interfaces:**
@@ -2358,10 +2358,10 @@ Expected: FAIL — `NewBrandingHandler` / `NewPublicHandler` 未定義。
 
 - [ ] **Step 3: 實作 branding.go / public.go / config / proto 增量**
 
-`backend/config/config.go` 加:
+`backend/config/storage.go` 加:
 
 ```go
-StorageRoot string `mapstructure:"STORAGE_ROOT"` // 本地檔案儲存根目錄(D17);預設 "./data/files"
+StorageRoot string `envconfig:"STORAGE_ROOT"` // 本地檔案儲存根目錄(D17);預設 "./data/files"
 ```
 
 `backend/internal/domain/companies/branding.go`:
@@ -2705,7 +2705,7 @@ Expected: PASS — 上傳成敗、magic bytes 阻擋、孤兒檔清理、權限�
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/internal/domain/companies backend/proto/v1/company.proto backend/config/config.go backend/cmd/server/main.go
+git add backend/internal/domain/companies backend/proto/v1/company.proto backend/config/storage.go backend/internal/server
 git commit -m "feat(backend): Logo 上傳、Branding/PublicInfo、公開發現端點(2.4)"
 ```
 
@@ -3947,7 +3947,7 @@ git commit -m "feat(backend): 功能權限矩陣、GetAbility 表驅動、RLS da
 **Files:**
 - Create: `backend/database/migrations/00007_casbin_policies_seed.sql`
 - Update: `backend/internal/authz/seed.go`(程式內 seeder 改驗證-only)
-- Update: `backend/cmd/server/main.go`(seeder 呼叫點 + interceptor 註冊)
+- Update: `backend/cmd/seed/main.go`(seeder 呼叫點)、`backend/internal/server/domains.go`(interceptor 註冊)
 - Create: `backend/internal/middleware/authz_interceptor.go`
 - Create: `backend/internal/domain/policies/usecase.go`
 - Create: `backend/internal/domain/policies/repository.go`
@@ -4874,7 +4874,7 @@ message ListGroupingResponse {
 }
 ```
 
-`main.go` 組裝增量:
+`InitDomains()` 組裝增量:
 
 ```go
 	// seeder 改名(clean cutover):原 authz.SeedDefaultPolicies(ctx, enf) 改為
@@ -4897,7 +4897,7 @@ Run: `cd backend && go test ./...`
 Expected: PASS — 全倉含 01 計畫既有測試。
 
 ```bash
-git add backend/database/migrations/00007_casbin_policies_seed.sql backend/internal/authz backend/internal/middleware/authz_interceptor.go backend/internal/domain/policies backend/proto/v1/admin.proto backend/cmd/server/main.go
+git add backend/database/migrations/00007_casbin_policies_seed.sql backend/internal/authz backend/internal/middleware/authz_interceptor.go backend/internal/domain/policies backend/proto/v1/admin.proto backend/internal/server
 git commit -m "feat(backend): PolicyService CRUD 即時生效、domain 範圍、防鎖死、ListGrouping、授權攔截器(2.10)"
 ```
 
