@@ -44,7 +44,7 @@
 | `backend/internal/domain/salesorders/watch_board_test.go` | 串流 handler 測試(in-process Connect client) | Task 4 |
 | `backend/internal/testutil/valkey.go` | testcontainers Valkey 測試輔助 | Task 5 |
 | `backend/internal/domain/salesorders/watch_board_valkey_test.go` | 跨 replica / rollback / heartbeat 測試 | Task 5 |
-| `backend/config/config.go` | heartbeat 與 ingress timeout 組態 | Task 5 |
+| `backend/config/api.go` | heartbeat 與 ingress timeout 組態 | Task 5 |
 
 ---
 
@@ -1649,7 +1649,7 @@ git commit -m "feat(backend): CancelDispatch 重印警告與派車通知觸發�
 
 **Interfaces:**
 - Consumes: Task 1 `BoardEvent` / `BoardEventKind` / `BoardPublisher`;`rls.Identity`(01-plan)。
-- Produces: proto `DispatchService.WatchBoard`(server streaming)與 `BoardEvent` 訊息、`BoardEventKind` enum;`salesorders.BoardHub`(`NewBoardHub() *BoardHub`、`Subscribe(deptID uuid.UUID) (<-chan BoardEvent, func())`、`Publish(ctx, ev BoardEvent)` 實作 `BoardPublisher`、`LocalSubscriberCount(deptID uuid.UUID) int` 測試用);`DispatchHandler.WatchBoard`;`NewDispatchHandler(uc *DispatchUsecase, hub *BoardHub)`(簽名自本 Task 起含 hub,Task 1-3 測試不需 handler,僅 main.go 組裝點需更新)。
+- Produces: proto `DispatchService.WatchBoard`(server streaming)與 `BoardEvent` 訊息、`BoardEventKind` enum;`salesorders.BoardHub`(`NewBoardHub() *BoardHub`、`Subscribe(deptID uuid.UUID) (<-chan BoardEvent, func())`、`Publish(ctx, ev BoardEvent)` 實作 `BoardPublisher`、`LocalSubscriberCount(deptID uuid.UUID) int` 測試用);`DispatchHandler.WatchBoard`;`NewDispatchHandler(uc *DispatchUsecase, hub *BoardHub)`(簽名自本 Task 起含 hub,Task 1-3 測試不需 handler,僅 `InitDomains()` 組裝點需更新)。
 
 - [ ] **Step 1: proto 加 WatchBoard 與 BoardEvent 並產碼**
 
@@ -2024,7 +2024,7 @@ func boardKindToProto(k BoardEventKind) protov1.BoardEventKind {
 }
 ```
 
-`main.go` 組裝點更新:`NewDispatchHandler(uc, hub)`;`uc` 以 `NewDispatchUsecase(db, hub, notifier)` 建立(hub 同時是 BoardPublisher)。
+`InitDomains()` 組裝點更新:`NewDispatchHandler(uc, hub)`;`uc` 以 `NewDispatchUsecase(db, hub, notifier)` 建立(hub 同時是 BoardPublisher)。
 
 - [ ] **Step 5: 跑測試確認通過 + Commit**
 
@@ -2032,7 +2032,7 @@ Run: `cd backend && go test -race ./internal/domain/salesorders/ -v`
 Expected: PASS — 事件送達且欄位齊全、部門隔離、未認證/無部門拒絕、斷線清理;Task 1-3 測試不迴歸。
 
 ```bash
-git add backend/proto/v1/dispatch.proto backend/gen backend/internal/domain/salesorders backend/cmd/server
+git add backend/proto/v1/dispatch.proto backend/gen backend/internal/domain/salesorders backend/internal/server
 git commit -m "feat(backend): WatchBoard 串流 handler 與程序內 BoardHub(5.2.1)"
 ```
 
@@ -2044,13 +2044,13 @@ git commit -m "feat(backend): WatchBoard 串流 handler 與程序內 BoardHub(5.
 - Create: `backend/internal/testutil/valkey.go`
 - Update: `backend/internal/domain/salesorders/watch_board.go`
 - Update: `backend/internal/domain/salesorders/dispatch_handler.go`
-- Update: `backend/config/config.go`
-- Update: `backend/cmd/server/main.go`
+- Update: `backend/config/api.go`
+- Update: `backend/internal/server/domains.go`
 - Test: `backend/internal/domain/salesorders/watch_board_valkey_test.go`
 
 **Interfaces:**
 - Consumes: Task 4 `BoardHub` / WatchBoard;`redis/go-redis/v9`(01-plan Task 4 已引入);`testutil.NewEntClient`。
-- Produces: `testutil.NewValkeyClient(t *testing.T) *redis.Client`;`BoardHub` 改建構 `NewBoardHub(rdb *redis.Client, logger *log.Logger) *BoardHub`(Task 4 測試同步更新建構引數)、`ActiveRelayCount() int`(測試用);channel 命名 `board:<department_id>`;config `BoardHeartbeatSeconds`(預設 25)/ `IngressIdleTimeoutSeconds`(預設 30);`DispatchHandler` 加 `heartbeat time.Duration` 欄位,`NewDispatchHandler(uc, hub, heartbeat)`(main.go 組裝點同步);metrics `board_events_published_total` / `board_events_relayed_total` / `board_connections`。
+- Produces: `testutil.NewValkeyClient(t *testing.T) *redis.Client`;`BoardHub` 改建構 `NewBoardHub(rdb *redis.Client, logger *log.Logger) *BoardHub`(Task 4 測試同步更新建構引數)、`ActiveRelayCount() int`(測試用);channel 命名 `board:<department_id>`;config `BoardHeartbeatSeconds`(預設 25)/ `IngressIdleTimeoutSeconds`(預設 30);`DispatchHandler` 加 `heartbeat time.Duration` 欄位,`NewDispatchHandler(uc, hub, heartbeat)`(`InitDomains()` 組裝點同步);metrics `board_events_published_total` / `board_events_relayed_total` / `board_connections`。
 
 - [ ] **Step 1: testutil.NewValkeyClient**
 
@@ -2622,11 +2622,11 @@ func NewDispatchHandler(uc *DispatchUsecase, hub *BoardHub, heartbeat time.Durat
 	}
 ```
 
-`backend/config/config.go` 加欄位與預設:
+`backend/config/api.go` 加欄位與預設:
 
 ```go
-BoardHeartbeatSeconds     int `mapstructure:"BOARD_HEARTBEAT_SECONDS"`      // 預設 25(細部 5.2.3)
-IngressIdleTimeoutSeconds int `mapstructure:"INGRESS_IDLE_TIMEOUT_SECONDS"` // 預設 30,僅供啟動檢查
+BoardHeartbeatSeconds     int `envconfig:"BOARD_HEARTBEAT_SECONDS"`      // 預設 25(細部 5.2.3)
+IngressIdleTimeoutSeconds int `envconfig:"INGRESS_IDLE_TIMEOUT_SECONDS"` // 預設 30,僅供啟動檢查
 ```
 
 `Load()` 內補預設與防誤配警告(細部 5.2.3 錯誤處理):
@@ -2644,7 +2644,7 @@ IngressIdleTimeoutSeconds int `mapstructure:"INGRESS_IDLE_TIMEOUT_SECONDS"` // �
 	}
 ```
 
-`main.go` 組裝點更新:
+`InitDomains()` 組裝點更新:
 
 ```go
 	boardHub := salesorders.NewBoardHub(rdb, log.Default())
@@ -2660,7 +2660,7 @@ Run: `cd backend && go test -race ./internal/domain/salesorders/ ./internal/test
 Expected: PASS — 跨 replica 送達、部門隔離、rollback/空批次無事件、Valkey 故障 mutation 照常、閒置串流收 heartbeat 且 heartbeat 不進 Valkey/事件表、退訂停 relay;Task 1-4 全部測試不迴歸。
 
 ```bash
-git add backend/internal/testutil/valkey.go backend/internal/domain/salesorders backend/config/config.go backend/cmd/server
+git add backend/internal/testutil/valkey.go backend/internal/domain/salesorders backend/config/api.go backend/internal/server
 git commit -m "feat(backend): Valkey pub/sub 跨 replica 轉發與串流 heartbeat(5.2.2-5.2.3)"
 ```
 
@@ -2670,7 +2670,7 @@ git commit -m "feat(backend): Valkey pub/sub 跨 replica 轉發與串流 heartbe
 
 - **Spec 覆蓋**:細部文件 7 子功能 → Task 對應:5.1.1→T1(樂觀鎖、重排、拖回未指派、跨部門車次、併發);5.1.2→T2(批次候選、逐筆交易、共用 dispatched_at、部分失敗、空批次);5.1.3→T3(角色門檻、原因必填、清派車欄位退 pending、保留看板位置、重印警告兩段、事件+稽核同事務);5.1.4→T3(提交後逐筆觸發、DispatchNotifier 介面注入、fire-and-record);5.2.1→T4(串流 handler、部門訂閱、既有 auth、無 ticket、斷線清理);5.2.2→T5(提交後發佈、部門 channel、跨 replica、rollback 無事件、Valkey 故障降級、metrics);5.2.3→T5(25s heartbeat 可組態、不進 Valkey/事件表、ingress 誤配警告、前端降級僅註記)。細部「整合測試重點」六條全數落於 T1(樂觀鎖併發)、T2(批次部分失敗)、T3(取消事務)、T4/T5(串流生命週期)、T5(跨 replica、rollback 不發事件)。無缺漏。
 - **已知佔位(皆標 TODO + 接手方)**:`noopDispatchNotifier`(→ 07-plan Task 6 `triggers.NewDispatchNotifier` 提供實作);Casbin `dispatch` 資源預設 policy(→ 01-plan Task 2 seeder);看板查詢 RPC(降級輪詢用,→ 05-plan `SalesOrderService.List`);前端重連/輪詢降級(→ 原計畫 Task 5.6,後端不實作);`audit_logs` 斷言依賴 03-plan 的 `AuditLog` 實體、`print_logs` 依賴 09-plan 5.5.1。這些皆為跨 domain 依賴,非本計畫範圍缺口。
-- **類型一致**:`BoardEvent` / `BoardEventKind` / `BoardPublisher` / `DispatchNotifier` / `DispatchNotification`(T1 定義,T3/T4/T5 引用,名稱逐字一致);`NewDispatchUsecase(db, pub, notifier)` 三參數自 T1 固定;`NewBoardHub` 於 T4→T5 簽名變更一次(T5 Step 2 明列 T4 測試同步更新);`NewDispatchHandler` 於 T4/T5 各擴充一次(main.go 組裝點同步);`CanTransition` / `Transition` 簽名逐字引用 05 細部文件 4.1.3;`rls.Identity` / `rls.FromContext` / `rls.NewContext` 引用 01-plan。
+- **類型一致**:`BoardEvent` / `BoardEventKind` / `BoardPublisher` / `DispatchNotifier` / `DispatchNotification`(T1 定義,T3/T4/T5 引用,名稱逐字一致);`NewDispatchUsecase(db, pub, notifier)` 三參數自 T1 固定;`NewBoardHub` 於 T4→T5 簽名變更一次(T5 Step 2 明列 T4 測試同步更新);`NewDispatchHandler` 於 T4/T5 各擴充一次(`InitDomains()` 組裝點同步);`CanTransition` / `Transition` 簽名逐字引用 05 細部文件 4.1.3;`rls.Identity` / `rls.FromContext` / `rls.NewContext` 引用 01-plan。
 
 ## Execution Handoff
 
