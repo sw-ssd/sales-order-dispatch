@@ -1447,7 +1447,7 @@ git commit -m "feat(backend): role_permissions 擴充 CASL 三欄與條件唯一
 
 **Files:**
 - Create: `backend/internal/authz/access.go`
-- Modify: `backend/config/config.go`（`CASLEnforcementEnabled bool`，env `CASL_ENFORCEMENT_ENABLED`，三環境預設 true）
+- Modify: `backend/config/api.go`（`CASLEnforcementEnabled bool`，env `CASL_ENFORCEMENT_ENABLED`，三環境預設 true）
 - Modify: `backend/internal/middleware/auth.go`（01 計畫產物；身分注入後呼叫 `authz.WithCASLEnabled(ctx, cfg.CASLEnforcementEnabled)`）
 - Test: `backend/internal/authz/access_test.go`
 
@@ -1652,7 +1652,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/internal/authz/ backend/config/config.go backend/internal/middleware/auth.go
+git add backend/internal/authz/ backend/config/api.go backend/internal/middleware/auth.go
 git commit -m "feat(backend): authz facade(AccessibleFilter/Can) + CASL_ENFORCEMENT_ENABLED 開關"
 ```
 
