@@ -215,6 +215,14 @@
 - **已考慮 alternative**：僅後台管理（dept_admin）— 行政負擔與等待成本仍在，離職場景未閉環；店家可停用任何帳號（無防呆）— 拒絕，可能把自己鎖死，必須有逃生門；任一帳號皆可管理其他帳號 — 拒絕，權限擴散，管理軌跡不清。
 - 修訂來源：2026-08-03 討論（客戶版規格書 v1.0.30）。
 
+### D31：後端結構慣例對齊 go8（集中 DI / cmd 拆分 / config 逐檔 / third_party）
+
+- **選擇**：採納 go8 四項結構慣例——`internal/server`（Server struct + `Init()` + `InitDomains()` 集中 DI）、cmd 拆分（`cmd/server` 極薄入口 + `cmd/migrate` goose CLI + `cmd/seed` 冪等 seeder）、config 逐檔 struct（`kelseyhightower/envconfig`，tag 一律 `envconfig:"KEY"`，`config.New()` 聚合；取代原規劃的 viper/mapstructure 單檔 `config.Load()`）、`third_party/` 集中外部套件初始化（Ent/pgx、Valkey）。
+- **D31-2 工具鏈**：air hot reload（`.air.toml`）；Taskfile 增 `dev`/`check`（fmt+vet+lint+test）/`vuln`（govulncheck）/`migrate`/`seed`；CI Go job 加 govulncheck。
+- **不採納**：e2e 臨時容器 harness（D21 整合測試 + Phase 8 驗收已覆蓋）；OTel traces/logs（D19 已定 metrics-only）；protovalidate/validator（proto 強型別 + usecase 驗證承擔）；sqlx（與 Ent 重疊）；go8 REST/DB-session 風格（衝突 D4/D5）；`cmd/route`（API 面由 proto 定義）；go8 介面子套件分層（對既有計畫 churn 過大）。
+- **理由**：集中 DI 讓啟動依賴與 fail-fast 檢查一目瞭然；cmd 拆分讓 migrate/seed 不依賴 server 啟動；config 逐檔有 code completion 且新增 key 有明確歸檔流程。
+- 修訂來源：2026-08-24 設計文件 `docs/superpowers/specs/2026-08-24-backend-go8-structure-design.md`；參考 https://github.com/sowiner/go8。（插入位置依編號排序；D29/D30 條目由其各自計畫執行時補入本節。）
+
 ## Risks / Trade-offs
 
 - [Risk] RLS 與 Ent 整合複雜（connection hook 注入 session variables，每個查詢路徑都要正確設定） → Mitigation: 統一 connection hook + 整合測試驗證各 `data_scope` 等級（執行計畫 Task 1.3 驗收即含跨角色隔離測試）。
