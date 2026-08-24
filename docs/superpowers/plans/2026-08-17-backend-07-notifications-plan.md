@@ -3387,7 +3387,7 @@ git commit -m "feat(backend): 下單推子帳號、專屬商品推主責業務�
 
 **Interfaces:**
 - Consumes: Task 2 `notifications.Render` / `notifications.Repo.CreateOne`;Task 4 `notification.Dispatch` / `notification.Sender`;08-dispatch 計畫 T1 定義的 `salesorders.DispatchNotifier` / `salesorders.DispatchNotification`(本 Task 實作該介面;依賴方向:triggers → salesorders 型別,無循環)。
-- Produces: `triggers.NewDispatchNotifier(db *ent.Client, sender Sender, rec audit.Recorder) salesorders.DispatchNotifier` — main.go 組裝點以此替換 08 計畫的 `noopDispatchNotifier`(08 計畫 T1 TODO 解除)。
+- Produces: `triggers.NewDispatchNotifier(db *ent.Client, sender Sender, rec audit.Recorder) salesorders.DispatchNotifier` — `InitDomains()` 組裝點以此替換 08 計畫的 `noopDispatchNotifier`(08 計畫 T1 TODO 解除)。
 - 範本:`dispatch`(fcm / in_app 兩通道;變數 `order_no` / `route_name` / `expected_delivery_date`);範本由管理者經範本 CRUD 建立,缺失降級為無範本記錄(同 T5 行為)。
 
 - [ ] **Step 1: 寫失敗測試**

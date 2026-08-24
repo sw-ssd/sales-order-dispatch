@@ -1174,7 +1174,7 @@ git commit -m "feat(backend): audit_logs schema 與 RLS(2.6.1)"
 
 **Files:**
 - Create: `backend/internal/audit/pg_recorder.go`
-- Update: `backend/cmd/server/main.go`(組裝處以 DB recorder 取代 NoopRecorder)
+- Update: `backend/internal/server/domains.go`(組裝處以 DB recorder 取代 NoopRecorder)
 - Test: `backend/internal/audit/pg_recorder_test.go`
 
 **Interfaces:**
@@ -1357,7 +1357,7 @@ func (PGRecorder) Record(ctx context.Context, e Entry) error {
 }
 ```
 
-`main.go` 組裝處:`auditRecorder := audit.NewPGRecorder()` 取代 `audit.NoopRecorder{}`,注入各 domain usecase;並加 request-meta middleware:`r.Use(func(next http.Handler) ... ContextWithRequestMeta(r.Context(), r.RemoteAddr, r.UserAgent()))`。
+`InitDomains()` 組裝處:`auditRecorder := audit.NewPGRecorder()` 取代 `audit.NoopRecorder{}`,注入各 domain usecase;並加 request-meta middleware:`r.Use(func(next http.Handler) ... ContextWithRequestMeta(r.Context(), r.RemoteAddr, r.UserAgent()))`。
 
 注意:Task 2 測試的 `fakeRecorder` 走 `withTx(ctx, tx)`;統一更名為 `audit.ContextWithTx` — 實作時把 metadicts usecase 的 `withTx` 呼叫改為 `audit.ContextWithTx`(`metadicts/usecase.go` 三處),`snapshotOf` 回傳的 JSON 字串與 `Entry.After` 型別已相容。
 
@@ -1367,7 +1367,7 @@ Run: `cd backend && go test ./internal/audit/ ./internal/domain/metadicts/ -v`
 Expected: PASS — 無 tx 拒絕、tx 內寫入成功、回滾無孤兒(雙向)。
 
 ```bash
-git add backend/internal/audit backend/cmd/server/main.go backend/internal/domain/metadicts/usecase.go
+git add backend/internal/audit backend/internal/server backend/internal/domain/metadicts/usecase.go
 git commit -m "feat(backend): audit.Recorder DB 實作,tx-only 簽名落地 D18(2.6.2)"
 ```
 

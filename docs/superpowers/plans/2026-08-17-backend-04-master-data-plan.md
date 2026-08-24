@@ -1664,7 +1664,7 @@ git commit -m "feat(backend): 檔案資產上傳白名單、本地儲存、租�
 
 **Interfaces:**
 - Produces: `qrcode.IssueToken(companyID uuid.UUID, customerCode string, ttl time.Duration) (string, error)` / `qrcode.VerifyToken(tok string) (companyID uuid.UUID, customerCode string, err error)`(HMAC-SHA256 簽章,payload = `company_id|customer_code|exp`,base64url);REST 公開端點 `GET /api/v1/qr/redeem?token=`(無認證,回 `{company_identifier, customer_code, customer_name}`,僅供 App 掃碼後帶出身分再選帳號);中台端 `GET /api/v1/customers/:id/qrcode`(需認證,回 PNG 圖,內容為深層連結 `salesorder://redeem?token=…`)。
-- config 加 `QR_TOKEN_SECRET`(空且非 development → fail-fast)。
+- `config/auth.go` 加 `QR_TOKEN_SECRET`(空且非 development → fail-fast)。
 
 - [ ] **Step 1: 寫失敗測試(簽章、過期、竄改、跨公司定位)**
 
@@ -1800,7 +1800,7 @@ Run: `cd backend && go get github.com/skip2/go-qrcode && go test ./internal/doma
 Expected: PASS。
 
 ```bash
-git add backend/internal/domain/qrcode backend/internal/server backend/config/config.go
+git add backend/internal/domain/qrcode backend/internal/server backend/config/auth.go
 git commit -m "feat(backend): QR 簽章 token 與公開兌換端點(3.8)"
 ```
 
