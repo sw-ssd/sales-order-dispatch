@@ -21,6 +21,7 @@
 - RLS:session variables `app.current_company_id` / `app.current_department_id` / `app.current_data_scope` / `app.current_customer_id`;未注入 fail-closed(0 列)。
 - 測試:DB 相依測試走 testcontainers Postgres 16;`go test ./...` 必須全綠;覆蓋率目標 70%(CI 於 Phase 0 管線強制)。
 - 每個 Task 結尾 commit;commit message 格式 `feat(backend): …` / `test(backend): …`。
+- 架構慣例(D31,2026-08-24):config 為逐檔 envconfig struct(`config.New()` 聚合,非 viper/`Load()`);domain 組裝點 = `InitDomains()`(`internal/server/domains.go`);fail-fast 啟動檢查集中 `Server.Init()`(`internal/server/server.go`);cmd 拆分 server/migrate/seed。詳 `backend-detail/00-index.md` §3.7。
 
 ## File Structure
 
@@ -919,7 +920,7 @@ git commit -m "feat(backend): RLS policies 與 session 變數注入 hook(1.3)"
 - Create: `backend/internal/domain/auth/oauth.go`
 - Create: `backend/internal/domain/auth/handler.go`
 - Create: `backend/internal/domain/auth/valkey.go`
-- Update: `backend/config/config.go`
+- Update: `backend/config/auth.go`、`backend/config/cache.go`
 - Test: `backend/internal/domain/auth/oauth_test.go`
 
 **Interfaces:**
@@ -928,19 +929,24 @@ git commit -m "feat(backend): RLS policies 與 session 變數注入 hook(1.3)"
 
 - [ ] **Step 1: config 擴充**
 
-`backend/config/config.go` 新增欄位(併入既有 `Config` struct 與 `Load()`):
+`backend/config/auth.go` 新增欄位:
 
 ```go
 // OAuth
-OAuthGoogleClientID     string   `mapstructure:"OAUTH_GOOGLE_CLIENT_ID"`
-OAuthGoogleClientSecret string   `mapstructure:"OAUTH_GOOGLE_CLIENT_SECRET"`
-OAuthGoogleRedirectURL  string   `mapstructure:"OAUTH_GOOGLE_REDIRECT_URL"`
-OAuthAllowedDomains     []string `mapstructure:"OAUTH_ALLOWED_DOMAINS"`  // Google Workspace hd 白名單
-OAuthAllowedRedirects   []string `mapstructure:"OAUTH_ALLOWED_REDIRECTS"` // 前端回跳白名單
-ValkeyAddr              string   `mapstructure:"VALKEY_ADDR"`             // 例:127.0.0.1:6379
+OAuthGoogleClientID     string   `envconfig:"OAUTH_GOOGLE_CLIENT_ID"`
+OAuthGoogleClientSecret string   `envconfig:"OAUTH_GOOGLE_CLIENT_SECRET"`
+OAuthGoogleRedirectURL  string   `envconfig:"OAUTH_GOOGLE_REDIRECT_URL"`
+OAuthAllowedDomains     []string `envconfig:"OAUTH_ALLOWED_DOMAINS"`  // Google Workspace hd 白名單
+OAuthAllowedRedirects   []string `envconfig:"OAUTH_ALLOWED_REDIRECTS"` // 前端回跳白名單
 ```
 
-`Load()` 結尾加啟動檢查:`ENV != "development"` 且 OAuth 三欄位任一為空 → 回傳錯誤(fail-fast,細部 1.4.1)。
+`backend/config/cache.go` 新增欄位:
+
+```go
+ValkeyAddr string `envconfig:"VALKEY_ADDR"` // 例:127.0.0.1:6379
+```
+
+`config.New()` 結尾加啟動檢查:`ENV != "development"` 且 OAuth 三欄位任一為空 → 回傳錯誤(fail-fast,細部 1.4.1)。
 
 - [ ] **Step 2: 寫失敗測試(state 生命週期與 redirect 白名單)**
 
@@ -1283,7 +1289,7 @@ Expected: PASS。
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/internal/domain/auth backend/config/config.go backend/go.mod backend/go.sum
+git add backend/internal/domain/auth backend/config/auth.go backend/config/cache.go backend/go.mod backend/go.sum
 git commit -m "feat(backend): OAuth2 導向與 callback(state 一次性、redirect 白名單)(1.4.1-1.4.2)"
 ```
 
@@ -2408,19 +2414,24 @@ git commit -m "feat(backend): 登入鎖定(5 次/30 分)與密碼重置(1.5.3-1.
 
 **Interfaces:**
 - Consumes: config `ValkeyAddr`、新增 `JWTSecret` / `AccessTokenTTL`。
-- Produces: `session.Manager`(scs 封裝)`Load` / `Put` / `Destroy` / `IssueWeb(w, r, u)`(實作 Task 4 的 `auth.TokenIssuer`);`session.Claims{UserID uuid.UUID; Role, CompanyID string; DepartmentID, CustomerID *uuid.UUID; IsPrimary, MustChange bool; TokenVersion int}`;`session.IssueAccessToken(c Claims) (string, error)`;`session.VerifyAccessToken(tok string) (*Claims, error)`;Task 4 `OAuthHandler.issuer` 於此 Task 接上(`main.go` 組裝時注入)。
+- Produces: `session.Manager`(scs 封裝)`Load` / `Put` / `Destroy` / `IssueWeb(w, r, u)`(實作 Task 4 的 `auth.TokenIssuer`);`session.Claims{UserID uuid.UUID; Role, CompanyID string; DepartmentID, CustomerID *uuid.UUID; IsPrimary, MustChange bool; TokenVersion int}`;`session.IssueAccessToken(c Claims) (string, error)`;`session.VerifyAccessToken(tok string) (*Claims, error)`;Task 4 `OAuthHandler.issuer` 於此 Task 接上(`InitDomains()` 組裝時注入)。
 
 - [ ] **Step 1: config 擴充**
 
-`backend/config/config.go` 加:
+`backend/config/auth.go` 加:
 
 ```go
-JWTSecret      string        `mapstructure:"JWT_SECRET"`
-AccessTokenTTL time.Duration `mapstructure:"ACCESS_TOKEN_TTL"` // 預設 1h
-SessionTTL     time.Duration `mapstructure:"SESSION_TTL"`      // 預設 30 天(對齊 refresh)
+JWTSecret      string        `envconfig:"JWT_SECRET"`
+AccessTokenTTL time.Duration `envconfig:"ACCESS_TOKEN_TTL"` // 預設 1h
 ```
 
-`Load()`:`JWTSecret` 為空且 `ENV != "development"` → 錯誤(fail-fast);TTL 未設給預設值。
+`backend/config/cache.go` 加:
+
+```go
+SessionTTL time.Duration `envconfig:"SESSION_TTL"` // 預設 30 天(對齊 refresh)
+```
+
+`config.New()`:`JWTSecret` 為空且 `ENV != "development"` → 錯誤(fail-fast);TTL 未設給預設值。
 
 - [ ] **Step 2: 寫失敗測試**
 
@@ -2627,7 +2638,7 @@ Run: `cd backend && go get github.com/golang-jwt/jwt/v5 github.com/alexedwards/s
 Expected: PASS — round-trip、竄改拒絕、過期拒絕。
 
 ```bash
-git add backend/internal/session backend/config/config.go
+git add backend/internal/session backend/config/auth.go backend/config/cache.go
 git commit -m "feat(backend): scs+Valkey session 與 HS256 access JWT(1.6.1-1.6.2)"
 ```
 
@@ -3016,7 +3027,7 @@ git commit -m "feat(backend): refresh token 旋轉、重放偵測、token_versio
 
 **Files:**
 - Update: `backend/internal/middleware/auth.go`
-- Update: `backend/config/config.go`
+- Update: `backend/config/auth.go`
 - Test: `backend/internal/middleware/auth_middleware_test.go`
 
 **Interfaces:**
@@ -3025,11 +3036,11 @@ git commit -m "feat(backend): refresh token 旋轉、重放偵測、token_versio
 
 - [ ] **Step 1: config 擴充**
 
-`backend/config/config.go` 加:
+`backend/config/auth.go` 加:
 
 ```go
 // ApiTokens:名稱 → SHA-256(token)。僅 server-to-server;值以雜湊存放(細部 1.6.6)。
-ApiTokens map[string]string `mapstructure:"API_TOKENS"`
+ApiTokens map[string]string `envconfig:"API_TOKENS"`
 ```
 
 - [ ] **Step 2: 寫失敗測試**
@@ -3314,7 +3325,7 @@ Run: `cd backend && go test ./internal/middleware/ -v`
 Expected: PASS — JWT 通過、無憑證 401、tv 過期 401、公司停用 401、API token 成敗。
 
 ```bash
-git add backend/internal/middleware backend/config/config.go
+git add backend/internal/middleware backend/config/auth.go
 git commit -m "feat(backend): Authenticate 與 X-Api-Token middleware(1.6.5-1.6.6)"
 ```
 
@@ -3784,28 +3795,28 @@ git commit -m "feat(backend): ability API 內建預設規則產生 CASL JSON(1.8
 **Files:**
 - Create: `backend/internal/middleware/developer.go`
 - Create: `backend/internal/audit/recorder.go`
-- Update: `backend/config/config.go`
-- Update: `backend/cmd/server/main.go`
+- Update: `backend/config/api.go`
+- Update: `backend/internal/server/server.go`
 - Update: `backend/internal/authz/seed.go`
 - Test: `backend/internal/middleware/developer_test.go`
 
 **Interfaces:**
 - Consumes: Task 11 `Authenticate`;Task 2 seeder。
 - Produces: config `DeveloperAccountEnabled bool`、`Env string`;`middleware.DeveloperBypass(enabled bool) func(http.Handler) http.Handler`(在 `Authenticate` 之後);`audit.Recorder` 介面(`Record(ctx, entry Entry) error`,`Entry{ActorID, ActorName, Action, ResourceType, ResourceID, Before, After string}`)+ `audit.NoopRecorder{}`(Phase 2 Task 2.6 以 DB 實作替換);`authz.SeedDeveloperRole(ctx, db)`(developer 角色語義由 `users.role` enum 承載;開發帳號僅 development seed)。
-- 啟動防護:`main.go` 中 `cfg.Env == "production" && cfg.DeveloperAccountEnabled` → `log.Fatal`(fail-fast)。
+- 啟動防護:`Server.Init()` 中 `cfg.Env == "production" && cfg.DeveloperAccountEnabled` → `log.Fatal`(fail-fast)。
 
 - [ ] **Step 1: config 與 audit 介面**
 
-`config.go` 加:
+`backend/config/api.go` 加:
 
 ```go
-Env                     string `mapstructure:"ENV"` // development | test | production
-DeveloperAccountEnabled bool   `mapstructure:"DEVELOPER_ACCOUNT_ENABLED"`
-DeveloperEmail          string `mapstructure:"DEVELOPER_EMAIL"`    // 開發者帳號 email(development seed 用)
-DeveloperPassword       string `mapstructure:"DEVELOPER_PASSWORD"` // 無預設值;未設定則略過 seed
+Env                     string `envconfig:"ENV"` // development | test | production
+DeveloperAccountEnabled bool   `envconfig:"DEVELOPER_ACCOUNT_ENABLED"`
+DeveloperEmail          string `envconfig:"DEVELOPER_EMAIL"`    // 開發者帳號 email(development seed 用)
+DeveloperPassword       string `envconfig:"DEVELOPER_PASSWORD"` // 無預設值;未設定則略過 seed
 ```
 
-`Load()`:預設 `Env=development`;`DeveloperAccountEnabled` 預設值依 env:`development/test → true`、`production → false`(viper 未顯式設定時)。
+`config.New()`:預設 `Env=development`;`DeveloperAccountEnabled` 預設值依 env:`development/test → true`、`production → false`(env 未顯式設定時)。
 
 `backend/internal/audit/recorder.go`:
 
@@ -3966,7 +3977,7 @@ func DeveloperBypass(enabled bool) func(http.Handler) http.Handler {
 }
 ```
 
-`backend/cmd/server/main.go` 啟動序列插入(在 `config.Load()` 之後):
+`backend/internal/server/server.go` 的 `Server.Init()` 插入:
 
 ```go
 	// 啟動防護(細部 1.11.1):production 誤開 developer 帳號 → fail-fast
@@ -4029,7 +4040,7 @@ cd backend && ENV=production DEVELOPER_ACCOUNT_ENABLED=true go run ./cmd/server
 Expected: 程序立即退出,log 顯示 `DEVELOPER_ACCOUNT_ENABLED=true is forbidden in production`。
 
 ```bash
-git add backend/internal/middleware/developer.go backend/internal/audit backend/config backend/cmd/server backend/internal/seed
+git add backend/internal/middleware/developer.go backend/internal/audit backend/config backend/internal/server backend/internal/seed
 git commit -m "feat(backend): developer 逃生門、啟動防護、audit Recorder 介面(1.11)"
 ```
 
