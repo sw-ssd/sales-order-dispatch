@@ -168,7 +168,7 @@
 - **目標**: 員工從 Web/App 發起 Google Workspace 登入,後端產生授權導向 URL。
 - **檔案**:
   - Create `backend/internal/domain/auth/oauth.go`
-  - Update `backend/config/config.go`(OAuth client id/secret/redirect/hd 限制)
+  - Update `backend/config/auth.go`(OAuth client id/secret/redirect/hd 限制)
 - **介面**: `GET /api/v1/auth/oauth/:provider`(provider = `google`)→ 302 導向 Google 授權頁;query 帶 `state`(CSRF,一次性,存 Valkey,TTL 10 分鐘)與 `redirect`(登入完成回跳前端路徑,白名單校驗)。
 - **實作邏輯**:
   1. 組裝 authorization URL(scope `openid email profile`,hosted domain 限定公司 Workspace 網域,多網域以設定清單允許)。
@@ -295,7 +295,7 @@
 - **目標**: Web 端以 httpOnly cookie session 為登入態,session 資料存 Valkey 供多 replica 共享。
 - **檔案**:
   - Create `backend/internal/session/manager.go`
-  - Update `backend/config/config.go`(Valkey 連線、session TTL)
+  - Update `backend/config/cache.go`(Valkey 連線、session TTL)
 - **介面**: `session.Manager`(scs 封裝):`Load(ctx)` / `Put(ctx, key, val)` / `Destroy(ctx)`;cookie 屬性 httpOnly、Secure、SameSite=Lax。
 - **實作邏輯**:
   1. scs 以 Valkey 為 store;session 內容:user_id、role、company_id、department_id、is_customer、is_primary。
@@ -370,7 +370,7 @@
 - **目標**: 提供機器對機器呼叫的靜態 token 驗證,僅限 server-to-server,不開放一般客戶端。
 - **檔案**:
   - Update `backend/internal/middleware/auth.go`
-  - Update `backend/config/config.go`(token 清單與對應身分/範圍)
+  - Update `backend/config/auth.go`(token 清單與對應身分/範圍)
 - **介面**: `middleware.ApiTokenAuthenticate()` 驗證 header `X-Api-Token`;通過後注入預先設定的機器身分(固定 role/company/data_scope)。
 - **實作邏輯**:
   1. token 自 config 載入(值僅存雜湊比對);每組 token 綁定預設身分與允許的 RPC 白名單。
@@ -428,8 +428,8 @@
 
 - **目標**: `DEVELOPER_ACCOUNT_ENABLED` 僅開發/測試可用;production 誤開時後端拒絕啟動。
 - **檔案**:
-  - Update `backend/config/config.go`
-  - Update `backend/cmd/server/main.go`(啟動檢查)
+  - Update `backend/config/api.go`
+  - Update `backend/internal/server/server.go`(`Server.Init()` 啟動檢查)
 - **介面**: config 欄位 `DeveloperAccountEnabled bool`(development 預設 true、test 預設 true、production 預設 false)。
 - **實作邏輯**:
   1. 啟動時檢查:`ENV = production` 且開關為 true → 印出明確錯誤並 fail-fast(原 Task 1.11 驗收)。
