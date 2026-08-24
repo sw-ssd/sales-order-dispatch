@@ -53,7 +53,7 @@
 | `backend/internal/domain/prints/service.go` | handler 共用建構、權限與參數轉換 | Task 3 |
 | `backend/internal/domain/prints/print.go` | Print RPC handler(首印 + 重印分支) | Task 4 |
 | `backend/internal/domain/prints/list_logs.go` | ListLogs RPC handler | Task 4 |
-| `backend/cmd/server/main.go` | 掛載 PrintService | Task 4 |
+| `backend/internal/server/domains.go` | 掛載 PrintService(`InitDomains()`) | Task 4 |
 
 ---
 
@@ -3313,7 +3313,7 @@ git commit -m "feat(backend): print_logs/print_previews schema、RLS、Preview A
 - Create: `backend/internal/domain/prints/print.go`
 - Create: `backend/internal/domain/prints/list_logs.go`
 - Update: `backend/proto/v1/print.proto`(Print / ListLogs 增量)
-- Update: `backend/cmd/server/main.go`(掛載 PrintService)
+- Update: `backend/internal/server/domains.go`(掛載 PrintService)
 - Test: `backend/internal/domain/prints/print_test.go`
 - Test: `backend/internal/domain/prints/list_logs_test.go`
 
@@ -4119,7 +4119,7 @@ func docTypeToProto(s string) printv1.DocumentType {
 
 (簽名中的 `ListLogsRequestAlias` 為排版殘留,實作時為 `*connect.Request[printv1.ListLogsRequest]` — 以此為準。)
 
-`backend/cmd/server/main.go` 掛載(於既有 Connect mux 註冊區追加;Gotenberg base URL / 儲存根目錄自 config):
+`InitDomains()`(`backend/internal/server/domains.go`)掛載(於 Connect mux 註冊區追加;Gotenberg base URL / 儲存根目錄自 config):
 
 ```go
 	// 列印服務(09-printing 計畫 Task 4)
@@ -4130,10 +4130,10 @@ func docTypeToProto(s string) printv1.DocumentType {
 	mux.Handle(printv1connect.NewPrintServiceHandler(printsHandler))
 ```
 
-`config.go` 增量:
+`backend/config/api.go` 增量:
 
 ```go
-GotenbergURL string `mapstructure:"GOTENBERG_URL"` // 例:http://gotenberg:3000;必填,未設定啟動失敗
+GotenbergURL string `envconfig:"GOTENBERG_URL"` // 例:http://gotenberg:3000;必填,未設定啟動失敗
 ```
 
 - [ ] **Step 8: 跑全測試確認通過 + Commit**
@@ -4142,7 +4142,7 @@ Run: `cd backend && go test ./... `
 Expected: PASS — 全綠(含 Task 1–4 全部測試,且 01–08 各計畫既有測試不迴歸)。
 
 ```bash
-git add backend/internal/domain/prints backend/proto/v1/print.proto backend/internal/gen backend/cmd/server backend/config
+git add backend/internal/domain/prints backend/proto/v1/print.proto backend/internal/gen backend/internal/server backend/config
 git commit -m "feat(backend): Print API 狀態整批守門、重印必填原因與軌跡留存、ListLogs(5.5.3-5.5.4)"
 ```
 
