@@ -1,6 +1,6 @@
 import { Checkbox } from "@ark-ui/solid/checkbox";
 import { create } from "@bufbuild/protobuf";
-import { Show } from "solid-js";
+import { For, Show } from "solid-js";
 import {
   PermissionSchema,
   type Permission,
@@ -106,59 +106,65 @@ export function PermissionMatrix(props: PermissionMatrixProps) {
             <th class="sticky left-0 z-10 bg-gray-50 px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
               資源
             </th>
-            {ACTIONS.map((action) => (
-              <th class="px-3 py-3 text-center text-xs font-medium uppercase tracking-wide text-gray-500">
-                {ACTION_LABELS[action] ?? action}
-              </th>
-            ))}
+            <For each={ACTIONS}>
+              {(action) => (
+                <th class="px-3 py-3 text-center text-xs font-medium uppercase tracking-wide text-gray-500">
+                  {ACTION_LABELS[action] ?? action}
+                </th>
+              )}
+            </For>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-200">
-          {RESOURCES.map((resource) => (
-            <tr class="hover:bg-gray-50">
-              <td class="sticky left-0 z-10 bg-white px-4 py-3 text-sm font-medium text-gray-900">
-                {RESOURCE_LABELS[resource] ?? resource}
-              </td>
-              {ACTIONS.map((action) => {
-                const checked = rulesFor(resource, action).length > 0;
-                return (
-                  <td class="px-3 py-3 text-center">
-                    <Checkbox.Root
-                      checked={checked}
-                      onCheckedChange={(e) =>
-                        toggle(resource, action, e.checked === true)
-                      }
-                      aria-label={`${RESOURCE_LABELS[resource] ?? resource} ${ACTION_LABELS[action] ?? action}`}
-                    >
-                      <Checkbox.Control
-                        class={cn(
-                          "inline-flex h-4 w-4 items-center justify-center rounded border",
-                          checked
-                            ? "border-blue-600 bg-blue-600"
-                            : "border-gray-300 bg-white",
-                        )}
-                      >
-                        <Checkbox.Indicator class="text-white">
-                          <svg
-                            viewBox="0 0 12 12"
-                            class="h-3 w-3"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
+          <For each={RESOURCES}>
+            {(resource) => (
+              <tr class="hover:bg-gray-50">
+                <td class="sticky left-0 z-10 bg-white px-4 py-3 text-sm font-medium text-gray-900">
+                  {RESOURCE_LABELS[resource] ?? resource}
+                </td>
+                <For each={ACTIONS}>
+                  {(action) => {
+                    const checked = rulesFor(resource, action).length > 0;
+                    return (
+                      <td class="px-3 py-3 text-center">
+                        <Checkbox.Root
+                          checked={checked}
+                          onCheckedChange={(e) =>
+                            toggle(resource, action, e.checked === true)
+                          }
+                          aria-label={`${RESOURCE_LABELS[resource] ?? resource} ${ACTION_LABELS[action] ?? action}`}
+                        >
+                          <Checkbox.Control
+                            class={cn(
+                              "inline-flex h-4 w-4 items-center justify-center rounded border",
+                              checked
+                                ? "border-blue-600 bg-blue-600"
+                                : "border-gray-300 bg-white",
+                            )}
                           >
-                            <path d="M2 6l3 3 5-6" />
-                          </svg>
-                        </Checkbox.Indicator>
-                      </Checkbox.Control>
-                      <Checkbox.HiddenInput />
-                    </Checkbox.Root>
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
+                            <Checkbox.Indicator class="text-white">
+                              <svg
+                                viewBox="0 0 12 12"
+                                class="h-3 w-3"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                              >
+                                <path d="M2 6l3 3 5-6" />
+                              </svg>
+                            </Checkbox.Indicator>
+                          </Checkbox.Control>
+                          <Checkbox.HiddenInput />
+                        </Checkbox.Root>
+                      </td>
+                    );
+                  }}
+                </For>
+              </tr>
+            )}
+          </For>
         </tbody>
       </table>
       <Show when={props.isSystem}>

@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@solidjs/testing-library";
-import { createSignal } from "solid-js";
+import { createSignal, type JSX } from "solid-js";
 import { subject } from "@casl/ability";
 import { AbilityProvider } from "./context";
 import { createAppAbility } from "./service";
 import { Can } from "./Can";
 
-function renderWithAbility(rules: any[], ui: () => any) {
+function renderWithAbility(
+  rules: Parameters<typeof createAppAbility>[0],
+  ui: () => JSX.Element,
+) {
   const [ability] = createSignal(createAppAbility(rules));
   return render(() => <AbilityProvider ability={ability}>{ui()}</AbilityProvider>);
 }

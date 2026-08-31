@@ -7,7 +7,7 @@ describe("createAppAbility", () => {
     const ability = createAppAbility([
       { action: "read", subject: "sales_order", conditions: { status: "pending" } },
       { action: "cancel", subject: "sales_order", inverted: true },
-    ] as any);
+    ]);
     expect(ability.can("read", "sales_order")).toBe(true);
     expect(ability.can("cancel", "sales_order")).toBe(false);
     expect(ability.can("read", "customer")).toBe(false);
@@ -15,7 +15,7 @@ describe("createAppAbility", () => {
   it("conditions 參與 instance 判斷", () => {
     const ability = createAppAbility([
       { action: "cancel", subject: "sales_order", conditions: { status: "pending" } },
-    ] as any);
+    ]);
     expect(ability.can("cancel", subject("sales_order", { status: "pending" }))).toBe(true);
     expect(ability.can("cancel", subject("sales_order", { status: "processing" }))).toBe(false);
   });

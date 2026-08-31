@@ -74,13 +74,14 @@ export default function DepartmentsPage() {
 
   const loadCompanies = async (reset: boolean) => {
     const target = reset ? 1 : companyPage();
+    const keyword = companyKeyword() || undefined;
     setCompaniesLoading(true);
     setError(null);
     try {
       const res = await companyClient.listCompanies({
         page: target,
         pageSize: COMPANY_PAGE_SIZE,
-        keyword: companyKeyword() || undefined,
+        keyword,
       });
       setCompanies((prev) => {
         if (reset) return res.companies;
