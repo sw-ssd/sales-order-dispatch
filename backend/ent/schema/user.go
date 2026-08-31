@@ -20,7 +20,7 @@ func (User) Fields() []ent.Field {
 		field.String("name").
 			NotEmpty(),
 		field.Enum("status").
-			Values("active", "inactive", "suspended").
+			Values("active", "inactive", "pending").
 			Default("active"),
 		field.String("role").
 			NotEmpty(),

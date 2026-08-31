@@ -50,7 +50,7 @@ var (
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "email", Type: field.TypeString, Unique: true},
 		{Name: "name", Type: field.TypeString},
-		{Name: "status", Type: field.TypeEnum, Enums: []string{"active", "inactive", "suspended"}, Default: "active"},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"active", "inactive", "pending"}, Default: "active"},
 		{Name: "role", Type: field.TypeString},
 		{Name: "phone", Type: field.TypeString, Nullable: true},
 		{Name: "employee_no", Type: field.TypeString, Nullable: true},
