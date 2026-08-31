@@ -4,11 +4,11 @@
 
 **Goal:** 實作 metadicts 字典檔(系統預設 + 部門擴充兩層)與 audit_logs 稽核日誌(schema、usecase 層統一同事務寫入機制、查詢 API)。
 
-**Architecture:** 依細部文件 `backend-detail/03-metadicts-audit.md` 實作原計畫 Task 2.5 / 2.6。字典檔單表 `metadicts` 以 `department_id IS NULL` 表達系統預設(D11);稽核以 `audit.Recorder` 介面(01-auth Task 14 已定義)的 DB 實作落地,recorder 僅接受交易內 Ent client,從簽名杜絕脫鉤寫入(D18)。
+**Architecture:** 依細部文件 `detail/03-metadicts-audit.md` 實作原計畫 Task 2.5 / 2.6。字典檔單表 `metadicts` 以 `department_id IS NULL` 表達系統預設(D11);稽核以 `audit.Recorder` 介面(01-auth Task 14 已定義)的 DB 實作落地,recorder 僅接受交易內 Ent client,從簽名杜絕脫鉤寫入(D18)。
 
 **Tech Stack:** Go 1.25、Ent、Chi、Connect-RPC、pgx/v5、testcontainers-go(沿用 01-auth 計畫 Task 1 的 `testutil.NewEntClient`)。
 
-**Spec 來源:** 細部文件 `docs/superpowers/plans/backend-detail/03-metadicts-audit.md`;共通規則見 `00-index.md` §3。
+**Spec 來源:** 細部文件 `docs/superpowers/plans/backend/detail/03-metadicts-audit.md`;共通規則見 `00-index.md` §3。
 
 ## Global Constraints
 
@@ -1662,4 +1662,4 @@ Which approach?
 
 ---
 
-*計畫版本:v1.0.0(2026-08-17);對應細部文件 `backend-detail/03-metadicts-audit.md`、原計畫 v2.9.0、規格書 v1.0.34。*
+*計畫版本:v1.0.0(2026-08-17);對應細部文件 `detail/03-metadicts-audit.md`、原計畫 v2.9.0、規格書 v1.0.34。*

@@ -4,11 +4,11 @@
 
 **Goal:** 實作 backend 派車域全部後端功能 — AssignRoute 看板拖放(樂觀鎖 + 順位重排)、車次批次 Confirm(逐筆交易、部分失敗語義)、CancelDispatch(dept_admin + 原因 + 重印警告)、派車通知觸發(介面注入)、WatchBoard server streaming、Valkey pub/sub 跨 replica 轉發與 25 秒 heartbeat。
 
-**Architecture:** 依 `docs/superpowers/plans/backend-detail/08-dispatch.md`(下稱「細部文件」,子功能編號 5.x.y)實作。`DispatchService` 四個 RPC 落於 `backend/internal/domain/salesorders`(與 05-plan 同套件,共用訂單狀態機);三個 mutation 的 DB 交易**提交成功後**才發佈 `BoardEvent`(D14);事件經 Valkey 以部門分 channel 廣播,各 replica 僅訂閱本機有連線的部門;heartbeat 純連線維持,不寫事件、不進 Valkey。認證走 01-plan 既有 auth interceptor,不實作一次性 ticket(D14)。
+**Architecture:** 依 `docs/superpowers/plans/backend/detail/08-dispatch.md`(下稱「細部文件」,子功能編號 5.x.y)實作。`DispatchService` 四個 RPC 落於 `backend/internal/domain/salesorders`(與 05-plan 同套件,共用訂單狀態機);三個 mutation 的 DB 交易**提交成功後**才發佈 `BoardEvent`(D14);事件經 Valkey 以部門分 channel 廣播,各 replica 僅訂閱本機有連線的部門;heartbeat 純連線維持,不寫事件、不進 Valkey。認證走 01-plan 既有 auth interceptor,不實作一次性 ticket(D14)。
 
 **Tech Stack:** Go 1.25、Ent(entgo.io)、Chi v5、Connect-RPC、pgx/v5、redis/go-redis/v9(Valkey)、prometheus/client_golang(看板指標,D19)、testcontainers-go(整合測試)。
 
-**Spec 來源:** 細部文件 `docs/superpowers/plans/backend-detail/08-dispatch.md`;共通規則見 `docs/superpowers/plans/backend-detail/00-index.md` §3。
+**Spec 來源:** 細部文件 `docs/superpowers/plans/backend/detail/08-dispatch.md`;共通規則見 `docs/superpowers/plans/backend/detail/00-index.md` §3。
 
 ## Global Constraints
 
@@ -2684,4 +2684,4 @@ Which approach?
 
 ---
 
-*計畫版本:v1.0.0(2026-08-17);對應細部文件 `backend-detail/08-dispatch.md`、原計畫 v2.9.0、規格書 v1.0.34。*
+*計畫版本:v1.0.0(2026-08-17);對應細部文件 `detail/08-dispatch.md`、原計畫 v2.9.0、規格書 v1.0.34。*

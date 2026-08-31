@@ -4,11 +4,11 @@
 
 **Goal:** 實作 backend 退貨申請與審核(原計畫 Task 4.7 的後端部分)— `return_requests` / `return_request_items` schema 與 RLS、客戶子帳號雙來源(歷史訂單品項 / 專屬商品)發起退貨與自查列表、業務審核(approved / rejected、樂觀鎖、不修改原訂單 D25)、退貨證明資料輸出、審核結果推播與同事務稽核。
 
-**Architecture:** 依 `docs/superpowers/plans/backend-detail/06-returns.md`(下稱「細部文件」,子功能編號 4.7.x)實作。Connect-RPC `ReturnService`(Create / List / Get / Review / GetCertificate);資料範圍沿用 01-auth 計畫的 RLS session 注入(客戶帳號 `data_scope = self`,以 `customer_id` 收口);寫入路徑一律單一 DB 交易 + `audit.Recorder` 同事務稽核(D18);審核結果推播採 07 計畫契約:通知記錄(fcm/in_app pending)於審核**同一交易**內建立(D18),提交後 `notification.Dispatch` 發送,失敗僅標 `failed` 不回滾審核(D16);僅通知發起帳號(D23)。系統僅記錄申請與審核狀態,無配送取貨 API(D25)。
+**Architecture:** 依 `docs/superpowers/plans/backend/detail/06-returns.md`(下稱「細部文件」,子功能編號 4.7.x)實作。Connect-RPC `ReturnService`(Create / List / Get / Review / GetCertificate);資料範圍沿用 01-auth 計畫的 RLS session 注入(客戶帳號 `data_scope = self`,以 `customer_id` 收口);寫入路徑一律單一 DB 交易 + `audit.Recorder` 同事務稽核(D18);審核結果推播採 07 計畫契約:通知記錄(fcm/in_app pending)於審核**同一交易**內建立(D18),提交後 `notification.Dispatch` 發送,失敗僅標 `failed` 不回滾審核(D16);僅通知發起帳號(D23)。系統僅記錄申請與審核狀態,無配送取貨 API(D25)。
 
 **Tech Stack:** Go 1.25、Ent(entgo.io)、Chi v5、Connect-RPC、pgx/v5、testcontainers-go(整合測試);測試共用 `testutil.NewEntClient`(01-auth 計畫 Task 1 提供)。
 
-**Spec 來源:** 細部文件 `docs/superpowers/plans/backend-detail/06-returns.md`;共通規則見 `docs/superpowers/plans/backend-detail/00-index.md` §3。
+**Spec 來源:** 細部文件 `docs/superpowers/plans/backend/detail/06-returns.md`;共通規則見 `docs/superpowers/plans/backend/detail/00-index.md` §3。
 
 ## Global Constraints
 
@@ -1318,4 +1318,4 @@ Which approach?
 
 ---
 
-*計畫版本:v1.0.0(2026-08-17);對應細部文件 `backend-detail/06-returns.md`、原計畫 v2.9.0、規格書 v1.0.34。*
+*計畫版本:v1.0.0(2026-08-17);對應細部文件 `detail/06-returns.md`、原計畫 v2.9.0、規格書 v1.0.34。*

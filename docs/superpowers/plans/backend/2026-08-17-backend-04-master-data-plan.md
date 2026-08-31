@@ -4,11 +4,11 @@
 
 **Goal:** 實作業務主檔全部後端功能 — 客戶(取號、建檔連動帳號、偏好送貨日)、地址簿/聯絡人、商品(單位換算、分切規格)、倉別/車次/分切規格/分類 CRUD、客戶專屬商品、檔案資產、QR 登入兌換。
 
-**Architecture:** 依細部文件 `backend-detail/04-master-data.md` 實作原計畫 Task 3.1–3.6、3.8(僅後端)。取號皆同事務(D7);建檔連動帳號重用 01-auth 的 `issueTempPassword`(D22);`mapCustomerCode` 佔位於本計畫 Task 3 替換為真實 `customers` 查表。檔案資產為跨 domain 共用(02 Logo、06 退貨照片、09 PDF)。
+**Architecture:** 依細部文件 `detail/04-master-data.md` 實作原計畫 Task 3.1–3.6、3.8(僅後端)。取號皆同事務(D7);建檔連動帳號重用 01-auth 的 `issueTempPassword`(D22);`mapCustomerCode` 佔位於本計畫 Task 3 替換為真實 `customers` 查表。檔案資產為跨 domain 共用(02 Logo、06 退貨照片、09 PDF)。
 
 **Tech Stack:** Go 1.25、Ent、Chi、Connect-RPC、pgx/v5、testcontainers-go(沿用 01-auth `testutil.NewEntClient`)、`skip2/go-qrcode`(QR 圖產生)。
 
-**Spec 來源:** 細部文件 `docs/superpowers/plans/backend-detail/04-master-data.md`;共通規則見 `00-index.md` §3。
+**Spec 來源:** 細部文件 `docs/superpowers/plans/backend/detail/04-master-data.md`;共通規則見 `00-index.md` §3。
 
 ## Global Constraints
 
@@ -1825,4 +1825,4 @@ Which approach?
 
 ---
 
-*計畫版本:v1.0.0(2026-08-17);對應細部文件 `backend-detail/04-master-data.md`、原計畫 v2.9.0、規格書 v1.0.34。*
+*計畫版本:v1.0.0(2026-08-17);對應細部文件 `detail/04-master-data.md`、原計畫 v2.9.0、規格書 v1.0.34。*

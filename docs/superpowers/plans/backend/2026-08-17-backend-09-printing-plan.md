@@ -4,11 +4,11 @@
 
 **Goal:** 實作 backend 單據列印全域 — 四種 A4 單據 view model 與 html/template 模板(單車總表 / 對點單 / 揀貨單 / 加工單,全文無金額)、Gotenberg HTML→PDF client(有限重試)、資料組合與 PDF 產線(空表不產生、Noto Sans CJK TC、失敗補償刪除)、print_logs / print_previews schema、Preview / Print / ListLogs 三個 Connect-RPC(正式列印整批檢查 `status = processing`、重印必填原因且 `is_reprint = true`、PDF 經 file_assets 下載 URL 交付)。
 
-**Architecture:** 依 `docs/superpowers/plans/backend-detail/09-printing.md`(下稱「細部文件」,子功能編號 5.x.y)實作。渲染管線分三層:`internal/print`(view model + 模板 + Gotenberg client + 資料組合 + PDF 產線,純內部套件)→ `internal/domain/prints`(Connect-RPC handler,交易邊界與稽核)→ `fileassets` 埠(FileStore 介面,實作由 04-master-data 計畫 Task 8 提供)。Gotenberg 以 `Converter` 介面抽象,測試以 fake / httptest 取代。
+**Architecture:** 依 `docs/superpowers/plans/backend/detail/09-printing.md`(下稱「細部文件」,子功能編號 5.x.y)實作。渲染管線分三層:`internal/print`(view model + 模板 + Gotenberg client + 資料組合 + PDF 產線,純內部套件)→ `internal/domain/prints`(Connect-RPC handler,交易邊界與稽核)→ `fileassets` 埠(FileStore 介面,實作由 04-master-data 計畫 Task 8 提供)。Gotenberg 以 `Converter` 介面抽象,測試以 fake / httptest 取代。
 
 **Tech Stack:** Go 1.25、Ent(entgo.io)、Chi v5、Connect-RPC、pgx/v5、shopspring/decimal、html/template(embed)、testcontainers-go(整合測試);Gotenberg 8(外部服務,Chromium 轉換路由,測試不啟真實容器)。
 
-**Spec 來源:** 細部文件 `docs/superpowers/plans/backend-detail/09-printing.md`;共通規則見 `docs/superpowers/plans/backend-detail/00-index.md` §3。
+**Spec 來源:** 細部文件 `docs/superpowers/plans/backend/detail/09-printing.md`;共通規則見 `docs/superpowers/plans/backend/detail/00-index.md` §3。
 
 ## Global Constraints
 
@@ -4167,4 +4167,4 @@ Which approach?
 
 ---
 
-*計畫版本:v1.0.0(2026-08-17);對應細部文件 `backend-detail/09-printing.md` v1.0.0、原計畫 v2.9.0、規格書 v1.0.34。*
+*計畫版本:v1.0.0(2026-08-17);對應細部文件 `detail/09-printing.md` v1.0.0、原計畫 v2.9.0、規格書 v1.0.34。*

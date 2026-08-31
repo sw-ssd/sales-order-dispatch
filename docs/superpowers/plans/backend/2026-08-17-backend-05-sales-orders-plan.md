@@ -4,11 +4,11 @@
 
 **Goal:** 實作銷售訂單後端 — 訂單三表 schema、樂觀鎖取號、狀態機、CRUD 與異動軌跡、下單組裝邏輯(單位換算、手打別名、客戶專屬清單守衛、來源記錄、偏好送貨日順延)。
 
-**Architecture:** 依細部文件 `backend-detail/05-sales-orders.md` 實作原計畫 Task 4.1 / 4.2。狀態機集中於單一模組,所有轉移走 `Transition()`(條件更新 + 事件 + 必要時稽核,同一交易);取號與建單同交易(D7);不存任何金額欄位(D12)。
+**Architecture:** 依細部文件 `detail/05-sales-orders.md` 實作原計畫 Task 4.1 / 4.2。狀態機集中於單一模組,所有轉移走 `Transition()`(條件更新 + 事件 + 必要時稽核,同一交易);取號與建單同交易(D7);不存任何金額欄位(D12)。
 
 **Tech Stack:** Go 1.25、Ent、Connect-RPC、`shopspring/decimal`(數量/換算,對齊 04 計畫契約)、testcontainers-go。
 
-**Spec 來源:** 細部文件 `docs/superpowers/plans/backend-detail/05-sales-orders.md`;共通規則見 `00-index.md` §3。
+**Spec 來源:** 細部文件 `docs/superpowers/plans/backend/detail/05-sales-orders.md`;共通規則見 `00-index.md` §3。
 
 ## Global Constraints
 
@@ -1546,4 +1546,4 @@ Which approach?
 
 ---
 
-*計畫版本:v1.0.0(2026-08-17);對應細部文件 `backend-detail/05-sales-orders.md`、原計畫 v2.9.0、規格書 v1.0.34。*
+*計畫版本:v1.0.0(2026-08-17);對應細部文件 `detail/05-sales-orders.md`、原計畫 v2.9.0、規格書 v1.0.34。*

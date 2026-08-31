@@ -4,11 +4,11 @@
 
 **Goal:** 實作 backend Phase 1 全部認證授權機制 — Ent 基礎 schema、Casbin RBAC(domain = company)、PostgreSQL RLS、Google OAuth2 員工登入、客戶一主多子帳密登入、Session/JWT 雙軌、強制登出、ability API、developer 逃生門。
 
-**Architecture:** 依 `docs/superpowers/plans/backend-detail/01-auth.md`(下稱「細部文件」,子功能編號 1.x.y)實作。Chi router + Connect-RPC;授權三層 = Casbin(功能)/ RLS(資料範圍)/ CASL JSON(UI);認證雙軌 = Web httpOnly cookie session(scs + Valkey)與 App Bearer JWT + refresh 旋轉;撤銷統一走 `users.token_version` 比對。
+**Architecture:** 依 `docs/superpowers/plans/backend/detail/01-auth.md`(下稱「細部文件」,子功能編號 1.x.y)實作。Chi router + Connect-RPC;授權三層 = Casbin(功能)/ RLS(資料範圍)/ CASL JSON(UI);認證雙軌 = Web httpOnly cookie session(scs + Valkey)與 App Bearer JWT + refresh 旋轉;撤銷統一走 `users.token_version` 比對。
 
 **Tech Stack:** Go 1.25、Ent(entgo.io)、Chi v5、Connect-RPC、casbin/v2 + gorm-adapter(postgres)、pgx/v5、golang-jwt/v5、scs/v2 + redisstore(Valkey)、x/crypto/argon2、x/oauth2 + coreos/go-oidc/v3、testcontainers-go(整合測試)。
 
-**Spec 來源:** 細部文件 `docs/superpowers/plans/backend-detail/01-auth.md`;共通規則見 `docs/superpowers/plans/backend-detail/00-index.md` §3。
+**Spec 來源:** 細部文件 `docs/superpowers/plans/backend/detail/01-auth.md`;共通規則見 `docs/superpowers/plans/backend/detail/00-index.md` §3。
 
 ## Global Constraints
 
@@ -21,7 +21,7 @@
 - RLS:session variables `app.current_company_id` / `app.current_department_id` / `app.current_data_scope` / `app.current_customer_id`;未注入 fail-closed(0 列)。
 - 測試:DB 相依測試走 testcontainers Postgres 16;`go test ./...` 必須全綠;覆蓋率目標 70%(CI 於 Phase 0 管線強制)。
 - 每個 Task 結尾 commit;commit message 格式 `feat(backend): …` / `test(backend): …`。
-- 架構慣例(D31,2026-08-24):config 為逐檔 envconfig struct(`config.New()` 聚合,非 viper/`Load()`);domain 組裝點 = `InitDomains()`(`internal/server/domains.go`);fail-fast 啟動檢查集中 `Server.Init()`(`internal/server/server.go`);cmd 拆分 server/migrate/seed。詳 `backend-detail/00-index.md` §3.7。
+- 架構慣例(D31,2026-08-24):config 為逐檔 envconfig struct(`config.New()` 聚合,非 viper/`Load()`);domain 組裝點 = `InitDomains()`(`internal/server/domains.go`);fail-fast 啟動檢查集中 `Server.Init()`(`internal/server/server.go`);cmd 拆分 server/migrate/seed。詳 `detail/00-index.md` §3.7。
 
 ## File Structure
 
@@ -4064,4 +4064,4 @@ Which approach?
 
 ---
 
-*計畫版本:v1.0.0(2026-08-17);對應細部文件 `backend-detail/01-auth.md` v1.0.0、原計畫 v2.9.0、規格書 v1.0.34。*
+*計畫版本:v1.0.0(2026-08-17);對應細部文件 `detail/01-auth.md` v1.0.0、原計畫 v2.9.0、規格書 v1.0.34。*

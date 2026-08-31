@@ -187,8 +187,8 @@ type FieldRegistry struct { /* ... */ }
 | 本文件 | 新增 |
 | `2026-07-19-sales-order-1.0-decisions.md` | 新增 D30/D30-2/D30-3/D30-4；D3 補註修訂（比照 D14 模式加註修訂來源） |
 | `1.0-requirements/authorization/spec.md` | 「CASL 前端能力」requirement 擴充後端執行層 scenario（list 過濾、實例檢查、env 開關、同源） |
-| `backend-detail/01-auth.md` | 1.8.1：規則格式含 conditions/inverted/sort_order；詞彙表補 manage/all 保留字 |
-| `backend-detail/02-tenancy-users.md` | 2.9.1 schema 加三欄與新唯一鍵；2.9.3 移除「僅驅動前端」註記、加 conditions 驗證與防鎖死延伸；2.9.4 規則輸出含 conditions |
+| `plans/backend/detail/01-auth.md` | 1.8.1：規則格式含 conditions/inverted/sort_order；詞彙表補 manage/all 保留字 |
+| `plans/backend/detail/02-tenancy-users.md` | 2.9.1 schema 加三欄與新唯一鍵；2.9.3 移除「僅驅動前端」註記、加 conditions 驗證與防鎖死延伸；2.9.4 規則輸出含 conditions |
 | `2026-08-05-subproject-implementation-plan.md` | Task 4 依賴修正（移除 `@casl/solid`） |
 | `2026-08-05-subproject-decomposition-design.md` | WEB-INF-05 展開四檔結構 |
 | 客戶版規格書 `2026-07-16-sales-order-1.0-design.md` | §3.4 修訂、升版 v1.0.35 並補修訂記錄 |

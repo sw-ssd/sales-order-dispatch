@@ -40,8 +40,8 @@
 | 檔案 | 動作 | Task |
 |---|---|---|
 | `docs/superpowers/specs/2026-07-19-sales-order-1.0-decisions.md` | 追加 D31/D31-2 | 1 |
-| `docs/superpowers/plans/backend-detail/00-index.md` | 新增 §3.7 架構慣例 | 2 |
-| `docs/superpowers/plans/backend-detail/01-auth.md` | 五處 config/main.go 錨點 | 3 |
+| `docs/superpowers/plans/backend/detail/00-index.md` | 新增 §3.7 架構慣例 | 2 |
+| `docs/superpowers/plans/backend/detail/01-auth.md` | 五處 config/main.go 錨點 | 3 |
 | `docs/superpowers/plans/2026-07-17-sales-order-1-0-tasks.md` | Phase 0 骨架 + Task 1.11 config 路徑 | 4 |
 | `docs/superpowers/plans/2026-08-05-sales-order-1.0-subproject-implementation-plan.md` | 目錄樹 + Phase 0 files + CI govulncheck | 5 |
 | `docs/superpowers/plans/2026-08-17-backend-01-auth-plan.md` | R1–R5 批次 | 6 |
@@ -50,7 +50,7 @@
 | `docs/superpowers/plans/2026-08-24-casl-integration-plan.md` | Task 8 config 路徑 | 8 |
 | 全庫 | 殘留 grep 驗證 | 9 |
 
-註：`backend-detail/02–09` 經 grep 確認**無** config/cmd 路徑提及，不需修訂（設計 §6 該列落地為「驗證後無需修改」）。
+註：`backend/detail/02–09` 經 grep 確認**無** config/cmd 路徑提及，不需修訂（設計 §6 該列落地為「驗證後無需修改」）。
 
 ---
 
@@ -83,7 +83,7 @@ git commit -m "docs: D31 後端結構慣例對齊 go8"
 ### Task 2: 00-index 新增「架構慣例」章節
 
 **Files:**
-- Modify: `docs/superpowers/plans/backend-detail/00-index.md`
+- Modify: `docs/superpowers/plans/backend/detail/00-index.md`
 
 **Interfaces:**
 - Produces: 架構慣例為全部 backend 計畫的權威；R4 術語映射表讓既有 8 份 TDD 計畫的「main.go 組裝點」表述不需逐處改寫即可對應新結構。
@@ -146,22 +146,22 @@ backend/
 
 - [ ] **Step 2: 驗證**
 
-Run: `grep -n "3.7 架構慣例" docs/superpowers/plans/backend-detail/00-index.md`
+Run: `grep -n "3.7 架構慣例" docs/superpowers/plans/backend/detail/00-index.md`
 Expected: 1 hit
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add docs/superpowers/plans/backend-detail/00-index.md
+git add docs/superpowers/plans/backend/detail/00-index.md
 git commit -m "docs: 00-index 新增架構慣例章節(D31)"
 ```
 
 ---
 
-### Task 3: backend-detail/01-auth.md 錨點修訂
+### Task 3: backend/detail/01-auth.md 錨點修訂
 
 **Files:**
-- Modify: `docs/superpowers/plans/backend-detail/01-auth.md`
+- Modify: `docs/superpowers/plans/backend/detail/01-auth.md`
 
 - [ ] **Step 1: 五處修訂**
 
@@ -175,13 +175,13 @@ git commit -m "docs: 00-index 新增架構慣例章節(D31)"
 
 - [ ] **Step 2: 驗證**
 
-Run: `grep -n "config/config.go\|cmd/server/main.go" docs/superpowers/plans/backend-detail/01-auth.md`
+Run: `grep -n "config/config.go\|cmd/server/main.go" docs/superpowers/plans/backend/detail/01-auth.md`
 Expected: 0 hits
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add docs/superpowers/plans/backend-detail/01-auth.md
+git add docs/superpowers/plans/backend/detail/01-auth.md
 git commit -m "docs: 01-auth 細部 config 分檔與啟動檢查落點(D31)"
 ```
 

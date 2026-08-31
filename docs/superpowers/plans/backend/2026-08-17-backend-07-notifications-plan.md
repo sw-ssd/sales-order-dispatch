@@ -4,11 +4,11 @@
 
 **Goal:** 實作 backend Phase 4 通知系統全部機制 — `notification_templates` / `notifications` / `user_devices` schema、範本渲染與語系退回、通知中心查詢與已讀 API、裝置註冊/註銷與失效 token 清理、promo_tags 資料層、FCM / 站內雙通道發送、下單與專屬商品觸發路由、失敗標記不重試。
 
-**Architecture:** 依 `docs/superpowers/plans/backend-detail/07-notifications.md`(下稱「細部文件」,子功能編號 4.3.x / 4.4.x)實作。Chi router + Connect-RPC;通知建檔(`pending`)與觸發方業務**同一 DB 交易**(D18),FCM 外部呼叫於交易提交後執行,失敗僅標 `failed`、**不重試**(D16);通道僅 `fcm` / `in_app`;FCM 以 `notification.Sender` 介面抽象,測試注入 `FakeSender`。
+**Architecture:** 依 `docs/superpowers/plans/backend/detail/07-notifications.md`(下稱「細部文件」,子功能編號 4.3.x / 4.4.x)實作。Chi router + Connect-RPC;通知建檔(`pending`)與觸發方業務**同一 DB 交易**(D18),FCM 外部呼叫於交易提交後執行,失敗僅標 `failed`、**不重試**(D16);通道僅 `fcm` / `in_app`;FCM 以 `notification.Sender` 介面抽象,測試注入 `FakeSender`。
 
 **Tech Stack:** Go 1.25、Ent(entgo.io)、Chi v5、Connect-RPC、pgx/v5、firebase.google.com/go/v4(FCM Admin SDK)、prometheus/client_golang(失敗指標)、testcontainers-go(整合測試)。
 
-**Spec 來源:** 細部文件 `docs/superpowers/plans/backend-detail/07-notifications.md`;共通規則見 `docs/superpowers/plans/backend-detail/00-index.md` §3。
+**Spec 來源:** 細部文件 `docs/superpowers/plans/backend/detail/07-notifications.md`;共通規則見 `docs/superpowers/plans/backend/detail/00-index.md` §3。
 
 ## Global Constraints
 
@@ -1434,7 +1434,7 @@ git commit -m "feat(backend): 範本渲染語系退回鏈與通知中心 List/Ma
   - Connect-RPC `DeviceService`:`Register(RegisterDeviceRequest{platform, fcm_token, device_name}) returns (RegisterDeviceResponse{device_id})`;`Unregister(UnregisterDeviceRequest{fcm_token}) returns (UnregisterDeviceResponse{})`。
   - `notifications.PurgeInvalidTokens(ctx context.Context, db *ent.Client, tokens []string, rec audit.Recorder) error` — Task 4 FCM 發送迴路呼叫。
   - Ent 實體 `ent.PromoTag`(謂詞套件 `ent/promotag`):`company_id`、`department_id`、`code`、`name`、`is_active`(default true)、`created_at`/`updated_at`/`deleted_at`;部分唯一索引 `(company_id, department_id, code) WHERE deleted_at IS NULL`。
-  - 欄位規格(4.3.5,**實際落地於 04-master-data-plan 的 schema 檔**):`products.promo_tag_ids` / `customer_products.promo_tag_ids` / `customers.promo_tag_ids` 皆為 `field.JSON("promo_tag_ids", []uuid.UUID{}).Optional()`(預設空陣列、無外鍵;有效性檢核責任在寫入方 Phase 7 Task 7.4;`promo_tags` 軟刪除時**不反向清理**宿主欄位)。本計畫僅交付 `promo_tags` 表本身;三處宿主欄位由 04-master-data-plan 對應 Task 加入(相依: `backend-detail/04-master-data.md` 商品/專屬商品/客戶 schema 子功能),Phase 7 Task 7.4 直接複用 `backend/internal/domain/promotions/` 目錄續建 CRUD 與選群推播(**跨界:CRUD RPC、客戶訂閱 API、依分類選群推播皆屬 Phase 7 Task 7.4,本計畫不出現對應 RPC**)。
+  - 欄位規格(4.3.5,**實際落地於 04-master-data-plan 的 schema 檔**):`products.promo_tag_ids` / `customer_products.promo_tag_ids` / `customers.promo_tag_ids` 皆為 `field.JSON("promo_tag_ids", []uuid.UUID{}).Optional()`(預設空陣列、無外鍵;有效性檢核責任在寫入方 Phase 7 Task 7.4;`promo_tags` 軟刪除時**不反向清理**宿主欄位)。本計畫僅交付 `promo_tags` 表本身;三處宿主欄位由 04-master-data-plan 對應 Task 加入(相依: `detail/04-master-data.md` 商品/專屬商品/客戶 schema 子功能),Phase 7 Task 7.4 直接複用 `backend/internal/domain/promotions/` 目錄續建 CRUD 與選群推播(**跨界:CRUD RPC、客戶訂閱 API、依分類選群推播皆屬 Phase 7 Task 7.4,本計畫不出現對應 RPC**)。
 
 - [ ] **Step 1: 寫失敗測試(裝置生命週期與 purge)**
 
@@ -1963,7 +1963,7 @@ func (PromoTag) Indexes() []ent.Index {
 ```go
 // 加至 backend/ent/schema/product.go、customerproduct.go、customer.go(04-master-data-plan 檔案)的 Fields():
 field.JSON("promo_tag_ids", []uuid.UUID{}).Optional(),
-// TODO(相依: backend-detail/04-master-data.md 商品/專屬商品/客戶 schema 子功能;
+// TODO(相依: detail/04-master-data.md 商品/專屬商品/客戶 schema 子功能;
 //  有效性檢核在寫入方 Phase 7 Task 7.4,JSON 陣列無法外鍵)
 ```
 
@@ -2779,7 +2779,7 @@ git commit -m "feat(backend): FCM Sender 抽象、Dispatch 雙通道發送、站
   - `triggers.OnOrderCreated(ctx context.Context, tx *ent.Tx, order OrderInfo, actor ActorInfo) ([]uuid.UUID, error)` — 業務下單為該客戶全部子帳號(排除主帳號)建 fcm/in_app 各一筆 pending;客戶自行下單回傳 `nil, nil`。
   - `triggers.CustomerProductInfo{ID uuid.UUID; CompanyID uuid.UUID; DepartmentID uuid.UUID; CustomerID uuid.UUID; CustomerName string; ProductName string; DefaultSalesRepID *uuid.UUID}`
   - `triggers.OnCustomerProductCreated(ctx context.Context, tx *ent.Tx, cp CustomerProductInfo, reviewEnabled bool) ([]uuid.UUID, error)` — 推主責業務,NULL/停用退回部門 dept_admin;`reviewEnabled` 對應設定旗標 `NOTIFY_CUSTOMER_PRODUCT_REVIEW`(預設關閉;開啟改用範本 `customer_product_review`,待定決議後僅翻旗標與調範本,不改程式結構)。
-  - 呼叫點(相依: `backend-detail/05-sales-orders.md` 下單流程、`backend-detail/04-master-data.md` 專屬商品建立流程):觸發方於**業務交易內**呼叫 `OnXxx` 取得通知 ID,**提交後**呼叫 `notification.Dispatch(ctx, db, sender, rec, ids)`;注入程式碼由 05/04 計畫執行時落地(本計畫 Task 5 提供函式與下方整合範例,標 TODO)。
+  - 呼叫點(相依: `detail/05-sales-orders.md` 下單流程、`detail/04-master-data.md` 專屬商品建立流程):觸發方於**業務交易內**呼叫 `OnXxx` 取得通知 ID,**提交後**呼叫 `notification.Dispatch(ctx, db, sender, rec, ids)`;注入程式碼由 05/04 計畫執行時落地(本計畫 Task 5 提供函式與下方整合範例,標 TODO)。
 
 - [ ] **Step 1: 寫失敗測試(下單路由)**
 
@@ -3578,4 +3578,4 @@ Which approach?
 
 ---
 
-*計畫版本:v1.0.0(2026-08-17);對應細部文件 backend-detail/07-notifications.md v1.0.0、原計畫 v2.9.0、規格書 v1.0.34。*
+*計畫版本:v1.0.0(2026-08-17);對應細部文件 detail/07-notifications.md v1.0.0、原計畫 v2.9.0、規格書 v1.0.34。*

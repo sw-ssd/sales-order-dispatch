@@ -4,11 +4,11 @@
 
 **Goal:** 實作 backend Phase 2 的多租戶主檔與授權管理 — CompanyService / DepartmentService / UserService CRUD 與三級管理範圍、公司停用連鎖阻斷、Logo 上傳與公開發現端點、roles + role_permissions 表與內建角色 seed、GetAbility 改表驅動、RLS data_scope 改由角色等級注入、Casbin policy 管理 API(即時生效、domain 範圍、防鎖死、g 規則檢視)。
 
-**Architecture:** 依 `docs/superpowers/plans/backend-detail/02-tenancy-users.md`(下稱「細部文件」,子功能編號 2.x.y)實作。沿用 01-auth 計畫(下稱「01 計畫」)建立的地基:Ent schema、`rls.Identity` / `rls.WrapDriver`、`middleware.Authenticate`(已含公司 status 檢查掛點)、`session.Manager`、`authz.NewEnforcer`、`audit.Recorder`(Noop 佔位)。授權三層分工不變:Casbin 管功能(domain = company_id 字串)、RLS 管資料範圍(data_scope 等級,不依角色名稱)、CASL 管 UI。本計畫把「功能權限來源」從程式內建表搬到 `role_permissions` / `casbin_rule` 兩張表,讓 Web 調整即時生效。
+**Architecture:** 依 `docs/superpowers/plans/backend/detail/02-tenancy-users.md`(下稱「細部文件」,子功能編號 2.x.y)實作。沿用 01-auth 計畫(下稱「01 計畫」)建立的地基:Ent schema、`rls.Identity` / `rls.WrapDriver`、`middleware.Authenticate`(已含公司 status 檢查掛點)、`session.Manager`、`authz.NewEnforcer`、`audit.Recorder`(Noop 佔位)。授權三層分工不變:Casbin 管功能(domain = company_id 字串)、RLS 管資料範圍(data_scope 等級,不依角色名稱)、CASL 管 UI。本計畫把「功能權限來源」從程式內建表搬到 `role_permissions` / `casbin_rule` 兩張表,讓 Web 調整即時生效。
 
 **Tech Stack:** Go 1.25、Ent(entgo.io)、Chi v5、Connect-RPC、casbin/v2 + gorm-adapter(postgres)、pgx/v5、go-redis(Valkey,pub/sub 廣播)、testcontainers-go(整合測試);測試共用 `testutil.NewEntClient` / `testutil.NewEntClientWithRLS` / `testutil.DSN`(01 計畫 Task 1–3 提供)。
 
-**Spec 來源:** 細部文件 `docs/superpowers/plans/backend-detail/02-tenancy-users.md`;共通規則見 `docs/superpowers/plans/backend-detail/00-index.md` §3。
+**Spec 來源:** 細部文件 `docs/superpowers/plans/backend/detail/02-tenancy-users.md`;共通規則見 `docs/superpowers/plans/backend/detail/00-index.md` §3。
 
 ## Global Constraints
 
@@ -4926,4 +4926,4 @@ Which approach?
 
 ---
 
-*計畫版本:v1.0.0(2026-08-17);對應細部文件 `backend-detail/02-tenancy-users.md` v1.0.0、原計畫 v2.9.0、規格書 v1.0.34。*
+*計畫版本:v1.0.0(2026-08-17);對應細部文件 `detail/02-tenancy-users.md` v1.0.0、原計畫 v2.9.0、規格書 v1.0.34。*

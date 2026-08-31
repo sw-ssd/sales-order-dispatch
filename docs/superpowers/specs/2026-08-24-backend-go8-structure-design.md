@@ -87,9 +87,9 @@ backend/
 |---|---|
 | 本文件 | 新增 |
 | `2026-07-19-sales-order-1.0-decisions.md` | 新增 D31/D31-2 |
-| `backend-detail/00-index.md` | 新增「架構慣例」一節（目錄樹、DI、config、third_party、工具鏈） |
-| `backend-detail/01-auth.md` | config 路徑分檔；1.11.1 啟動檢查歸 `server.Init()` |
-| `backend-detail/02–09` | config 提及處批次同步（grep 驅動） |
+| `plans/backend/detail/00-index.md` | 新增「架構慣例」一節（目錄樹、DI、config、third_party、工具鏈） |
+| `plans/backend/detail/01-auth.md` | config 路徑分檔；1.11.1 啟動檢查歸 `server.Init()` |
+| `plans/backend/detail/02–09` | config 提及處批次同步（grep 驅動） |
 | 8 份 `2026-08-17-backend-0X-*-plan.md` | Global Constraints/File Structure/config 與 cmd 路徑批次修訂 |
 | `2026-08-24-casl-integration-plan.md` | Task 8 `config/config.go` → `config/api.go` |
 | `2026-08-05-…-subproject-implementation-plan.md` | Phase 0 backend 骨架 Task 補新目錄與 Taskfile tasks；CI Go job 補 govulncheck |

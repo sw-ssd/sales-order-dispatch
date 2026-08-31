@@ -49,8 +49,8 @@
 **Files:**
 - Modify: `docs/superpowers/specs/2026-07-19-sales-order-1.0-decisions.md`（新增 D30 區塊；D3 加修訂補註）
 - Modify: `docs/superpowers/specs/1.0-requirements/authorization/spec.md`（「CASL 前端能力」requirement 擴充）
-- Modify: `docs/superpowers/plans/backend-detail/01-auth.md`（1.8.1 規則格式）
-- Modify: `docs/superpowers/plans/backend-detail/02-tenancy-users.md`（2.9.1/2.9.3/2.9.4）
+- Modify: `docs/superpowers/plans/backend/detail/01-auth.md`（1.8.1 規則格式）
+- Modify: `docs/superpowers/plans/backend/detail/02-tenancy-users.md`（2.9.1/2.9.3/2.9.4）
 - Modify: `docs/superpowers/plans/2026-08-05-sales-order-1.0-subproject-implementation-plan.md`（Task 4 依賴修正）
 - Modify: `docs/superpowers/specs/2026-08-05-sales-order-1.0-subproject-decomposition-design.md`（WEB-INF-05 展開）
 - Modify: `docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（§3.4 修訂、升版 v1.0.35）
@@ -110,7 +110,7 @@
 - **THEN** 下一次 `GetAbility`（前端）與下一次 list/實例檢查（後端）皆反映新條件，不需重啟
 ```
 
-- [ ] **Step 3: backend-detail/01-auth.md 修訂 1.8.1**
+- [ ] **Step 3: backend/detail/01-auth.md 修訂 1.8.1**
 
 1.8.1「實作邏輯」第 1 點整點取代為：
 
@@ -124,7 +124,7 @@
 - **介面**: Connect-RPC `AbilityService.GetAbility() → { rules: [{action, subject, conditions?, inverted?}] }`（CASL.js 可消費的 JSON；保留字 `manage`/`all`）。
 ```
 
-- [ ] **Step 4: backend-detail/02-tenancy-users.md 修訂 2.9.x**
+- [ ] **Step 4: backend/detail/02-tenancy-users.md 修訂 2.9.x**
 
 - 2.9.1 `role_permissions` 欄位列改為：`` `role_permissions`:id、`role_id`、`resource`、`action`、`conditions`(JSONB 可空)、`inverted`(bool 預設 false)、`sort_order`(int 預設 0)；唯一索引 `(role_id, resource, action, COALESCE(md5(conditions::text), ''))`（同 resource×action 允許多條件不同規則）。 ``
 - 2.9.3 實作邏輯第 3 點整點取代為：
