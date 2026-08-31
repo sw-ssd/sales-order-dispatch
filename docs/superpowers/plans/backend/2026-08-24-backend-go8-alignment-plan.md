@@ -59,7 +59,7 @@
 **Files:**
 - Modify: `docs/superpowers/specs/2026-07-19-sales-order-1.0-decisions.md`（檔尾追加）
 
-- [ ] **Step 1: 追加 D31 區塊**
+- [x] **Step 1: 追加 D31 區塊**
 
 ```markdown
 ### D31：後端結構慣例對齊 go8（集中 DI / cmd 拆分 / config 逐檔 / third_party）
@@ -71,7 +71,7 @@
 - **修訂來源**：2026-08-24 設計文件 `docs/superpowers/specs/2026-08-24-backend-go8-structure-design.md`；參考 https://github.com/sowiner/go8。
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add docs/superpowers/specs/2026-07-19-sales-order-1.0-decisions.md
@@ -88,7 +88,7 @@ git commit -m "docs: D31 後端結構慣例對齊 go8"
 **Interfaces:**
 - Produces: 架構慣例為全部 backend 計畫的權威；R4 術語映射表讓既有 8 份 TDD 計畫的「main.go 組裝點」表述不需逐處改寫即可對應新結構。
 
-- [ ] **Step 1: 於 §3 共通規則後插入 §3.7（或檔案慣用的下一編號）**
+- [x] **Step 1: 於 §3 共通規則後插入 §3.7（或檔案慣用的下一編號）**
 
 ```markdown
 ## 3.7 架構慣例(D31,2026-08-24 起生效)
@@ -144,12 +144,12 @@ backend/
 
 （實際插入時移除 `\``` 的跳脫；章節編號依 00-index 現行結構接續。）
 
-- [ ] **Step 2: 驗證**
+- [x] **Step 2: 驗證**
 
 Run: `grep -n "3.7 架構慣例" docs/superpowers/plans/backend/detail/00-index.md`
 Expected: 1 hit
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add docs/superpowers/plans/backend/detail/00-index.md
@@ -163,7 +163,7 @@ git commit -m "docs: 00-index 新增架構慣例章節(D31)"
 **Files:**
 - Modify: `docs/superpowers/plans/backend/detail/01-auth.md`
 
-- [ ] **Step 1: 五處修訂**
+- [x] **Step 1: 五處修訂**
 
 1. 子功能 1.4.1 檔案列 `Update backend/config/config.go(OAuth client id/secret/redirect/hd 限制)` → `Update backend/config/auth.go(OAuth client id/secret/redirect/hd 限制)`。
 2. 子功能 1.6.1 檔案列 `Update backend/config/config.go(Valkey 連線、session TTL)` → `Update backend/config/cache.go(Valkey 連線、session TTL)`。
@@ -173,12 +173,12 @@ git commit -m "docs: 00-index 新增架構慣例章節(D31)"
    - `Update backend/cmd/server/main.go(啟動檢查)` → `Update backend/internal/server/server.go(Server.Init() 啟動檢查)`
 5. 1.11.1 實作邏輯第 1 點「啟動時檢查:`ENV = production`…」維持行為描述不變（落點已由檔案列改明）。
 
-- [ ] **Step 2: 驗證**
+- [x] **Step 2: 驗證**
 
 Run: `grep -n "config/config.go\|cmd/server/main.go" docs/superpowers/plans/backend/detail/01-auth.md`
 Expected: 0 hits
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add docs/superpowers/plans/backend/detail/01-auth.md
@@ -192,7 +192,7 @@ git commit -m "docs: 01-auth 細部 config 分檔與啟動檢查落點(D31)"
 **Files:**
 - Modify: `docs/superpowers/plans/reference/2026-07-17-sales-order-1-0-tasks.md`
 
-- [ ] **Step 1: Phase 0 backend 骨架 Files 列修訂**
+- [x] **Step 1: Phase 0 backend 骨架 Files 列修訂**
 
 Task 0.x（Go 骨架）Files 列由：
 
@@ -216,16 +216,16 @@ Task 0.x（Go 骨架）Files 列由：
 - Create: `backend/.air.toml`、`backend/Taskfile.yml`(含 dev/check/vuln/migrate/seed)
 ```
 
-- [ ] **Step 2: Task 1.11 config 路徑**
+- [x] **Step 2: Task 1.11 config 路徑**
 
 `Modify: backend/config/config.go` → `Modify: backend/config/api.go`；Step 1 文字「config 新增 `DEVELOPER_ACCOUNT_ENABLED`…」中 config 改指 `config/api.go`。
 
-- [ ] **Step 3: 驗證**
+- [x] **Step 3: 驗證**
 
 Run: `grep -n "config/config.go" docs/superpowers/plans/reference/2026-07-17-sales-order-1-0-tasks.md`
 Expected: 0 hits
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add docs/superpowers/plans/reference/2026-07-17-sales-order-1-0-tasks.md
@@ -239,7 +239,7 @@ git commit -m "docs: 原計畫 Phase 0 骨架與 1.11 對齊 D31 結構"
 **Files:**
 - Modify: `docs/superpowers/plans/2026-08-05-sales-order-1.0-subproject-implementation-plan.md`
 
-- [ ] **Step 1: 目錄樹修訂（backend 區塊）**
+- [x] **Step 1: 目錄樹修訂（backend 區塊）**
 
 樹中：
 
@@ -264,20 +264,20 @@ git commit -m "docs: 原計畫 Phase 0 骨架與 1.11 對齊 D31 結構"
 │   ├── third_party/{database/ent.go,cache/valkey.go}
 ```
 
-- [ ] **Step 2: Phase 0 backend 骨架 Task 的 Files 列同步**
+- [x] **Step 2: Phase 0 backend 骨架 Task 的 Files 列同步**
 
 同 Task 4 Step 1 的新 Files 列內容（七行 Create）取代該計畫對應四行。
 
-- [ ] **Step 3: CI Go job 補 govulncheck**
+- [x] **Step 3: CI Go job 補 govulncheck**
 
 CI Task Step 2「Lint (`golangci-lint`), test (`go test ./...`), build (`go build ./cmd/server`)」→「Lint (`golangci-lint`), vuln (`govulncheck ./...`), test (`go test ./...`), build (`go build ./cmd/server`)」。
 
-- [ ] **Step 4: 驗證**
+- [x] **Step 4: 驗證**
 
 Run: `grep -n "config/config.go" docs/superpowers/plans/2026-08-05-sales-order-1.0-subproject-implementation-plan.md`
 Expected: 0 hits；且 `grep -c "govulncheck" <同檔>` ≥ 1
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add docs/superpowers/plans/2026-08-05-sales-order-1.0-subproject-implementation-plan.md
@@ -291,7 +291,7 @@ git commit -m "docs: 子專案計畫目錄樹/Phase 0/CI 對齊 D31"
 **Files:**
 - Modify: `docs/superpowers/plans/backend/2026-08-17-backend-01-auth-plan.md`
 
-- [ ] **Step 1: 套用 R1（config 分檔）**
+- [x] **Step 1: 套用 R1（config 分檔）**
 
 逐處修訂（錨點行號為撰寫時參考，以內容比對為準）：
 
@@ -303,15 +303,15 @@ git commit -m "docs: 子專案計畫目錄樹/Phase 0/CI 對齊 D31"
 | Task developer（~L3787/4032） | `config/config.go` | `backend/config/api.go` |
 | Global Constraints / File Structure 表 | `config/config.go` | `config/`（逐檔） |
 
-- [ ] **Step 2: 套用 R2（tag）**
+- [x] **Step 2: 套用 R2（tag）**
 
 全部 struct tag `mapstructure:"…"` → `envconfig:"…"`（含 `JWTSecret`/`ApiTokens` 片段）；片段中 config 套件 import 註明 `github.com/kelseyhightower/envconfig`。
 
-- [ ] **Step 3: 套用 R3（Load→New）**
+- [x] **Step 3: 套用 R3（Load→New）**
 
 `config.Load()` → `config.New()`（含 Task 14 main.go 啟動序列片段「在 `config.Load()` 之後」→「在 `config.New()` 之後」）。
 
-- [ ] **Step 4: 套用 R4（組裝/啟動術語）**
+- [x] **Step 4: 套用 R4（組裝/啟動術語）**
 
 - 「`main.go` 組裝時注入」「`main.go` 組裝點」→「`InitDomains()` 組裝點」。
 - Task 14 啟動序列片段標題「`backend/cmd/server/main.go` 啟動序列插入（在 `config.New()` 之後）」→「`backend/internal/server/server.go` `Init()` 插入（依賴初始化之後）」；片段內容（developer 防護邏輯）不變。
@@ -319,12 +319,12 @@ git commit -m "docs: 子專案計畫目錄樹/Phase 0/CI 對齊 D31"
 - L4016 備註「main.go 於 `cfg.Env == "development"` 時呼叫」→「`cmd/seed/main.go`（或 development 啟動時 `Server.Init()`）呼叫」。
 - 手動驗證指令 `go run ./cmd/server` 不變（行為驗證仍經 server 入口）。
 
-- [ ] **Step 5: 驗證**
+- [x] **Step 5: 驗證**
 
 Run: `grep -n "config/config.go\|mapstructure\|config\.Load()\|main\.go 組裝\|main\.go 啟動" docs/superpowers/plans/backend/2026-08-17-backend-01-auth-plan.md`
 Expected: 0 hits
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add docs/superpowers/plans/backend/2026-08-17-backend-01-auth-plan.md
@@ -345,42 +345,42 @@ git commit -m "docs: 01-auth TDD 計畫套用 D31 轉換規則(R1-R4)"
 - Modify: `docs/superpowers/plans/backend/2026-08-17-backend-08-dispatch-plan.md`
 - Modify: `docs/superpowers/plans/backend/2026-08-17-backend-09-printing-plan.md`
 
-- [ ] **Step 1: 02-tenancy-users**
+- [x] **Step 1: 02-tenancy-users**
 
 - File Structure 表「`backend/config/config.go` | `StorageRoot`」→「`backend/config/storage.go` | `StorageRoot`」。
 - Task 2.4（~L2130/2361/2708）：`config/config.go(StorageRoot)` → `config/storage.go`；StorageRoot 片段 tag 若為 `mapstructure` → `envconfig`。
 - Task 2.10（~L3950/4326/4877/4900）：「`main.go` 呼叫點/組裝增量/seeder 呼叫點」→「`InitDomains()` 組裝點」；Files 列 `backend/cmd/server/main.go` → `backend/internal/server/domains.go`。
 - 計畫尾「類型一致」段提及「main.go 同步」處 → 「`InitDomains()` 同步」。
 
-- [ ] **Step 2: 03-metadicts-audit**
+- [x] **Step 2: 03-metadicts-audit**
 
 Task 2（~L1177/1360/1370）：Files 列與片段「`main.go` 組裝處」→「`InitDomains()` 組裝點（`internal/server/domains.go`）」；Files 列路徑同步。
 
-- [ ] **Step 3: 04-master-data**
+- [x] **Step 3: 04-master-data**
 
 ~L1803 commit 片段 `git add … backend/config/config.go` → 對應分檔（QR 簽章密鑰 → `config/auth.go`）。
 
-- [ ] **Step 4: 07-notifications**
+- [x] **Step 4: 07-notifications**
 
 ~L3390「main.go 組裝點」→「`InitDomains()` 組裝點」。
 
-- [ ] **Step 5: 08-dispatch**
+- [x] **Step 5: 08-dispatch**
 
 - File Structure 表（~L47）「`backend/config/config.go` | heartbeat…」→「`backend/config/api.go`」。
 - Task 5（~L2048/2625/2647/2663）：`config/config.go` → `config/api.go`；`BoardHeartbeatSeconds` 片段 tag `mapstructure` → `envconfig`；「`main.go` 組裝點更新」→「`InitDomains()` 組裝點更新」。
 - ~L487/2027 註解「main.go 組裝時呼叫」→「`InitDomains()` 組裝時呼叫」。
 - 計畫尾「類型一致」段「main.go 組裝點同步」→「`InitDomains()` 組裝點同步」。
 
-- [ ] **Step 6: 09-printing**
+- [x] **Step 6: 09-printing**
 
 - File Structure 表（~L56）與 Task 4（~L3316/3994/4122/4145）：`backend/cmd/server/main.go`（掛載 PrintService）→「`InitDomains()`（`internal/server/domains.go`）掛載」；「Gotenberg base URL / 儲存根目錄自 config」→「自 `config/api.go` / `config/storage.go`」。
 
-- [ ] **Step 7: 驗證（六檔）**
+- [x] **Step 7: 驗證（六檔）**
 
 Run: `grep -n "config/config.go\|mapstructure\|main\.go 組裝\|main\.go 掛載\|main\.go 呼叫" docs/superpowers/plans/backend/2026-08-17-backend-0{2,3,4,7,8,9}-*.md`
 Expected: 0 hits
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add docs/superpowers/plans/backend/2026-08-17-backend-0{2,3,4,7,8,9}-*.md
@@ -394,18 +394,18 @@ git commit -m "docs: 02-09 TDD 計畫套用 D31 轉換規則(R1-R4)"
 **Files:**
 - Modify: `docs/superpowers/plans/cross-cutting/2026-08-24-casl-integration-plan.md`
 
-- [ ] **Step 1: 三處修訂**
+- [x] **Step 1: 三處修訂**
 
 1. Task 8 Files 列「Modify: `backend/config/config.go`（`CASLEnforcementEnabled bool`…）」→「Modify: `backend/config/api.go`（`CASLEnforcementEnabled bool`，env `CASL_ENFORCEMENT_ENABLED`，三環境預設 true）」。
 2. Task 8 Step 3 配套修改第 2 點「`config.go` 加欄位與預設」→「`config/api.go` 加欄位與預設（tag `envconfig:"CASL_ENFORCEMENT_ENABLED"`）」。
 3. Task 8 Step 5 commit 片段 `git add … backend/config/config.go …` → `git add … backend/config/api.go …`。
 
-- [ ] **Step 2: 驗證**
+- [x] **Step 2: 驗證**
 
 Run: `grep -n "config/config.go" docs/superpowers/plans/cross-cutting/2026-08-24-casl-integration-plan.md`
 Expected: 0 hits
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add docs/superpowers/plans/cross-cutting/2026-08-24-casl-integration-plan.md
@@ -418,7 +418,7 @@ git commit -m "docs: CASL 計畫 config 路徑對齊 D31(config/api.go)"
 
 **Files:** 無修改；純驗證。
 
-- [ ] **Step 1: 舊路徑殘留歸零**
+- [x] **Step 1: 舊路徑殘留歸零**
 
 Run:
 
@@ -430,17 +430,17 @@ grep -rn "config\.Load()" docs/superpowers/plans/
 
 Expected: 三條皆 0 hits（00-index 術語映射表若提及舊術語作為「既有表述」欄，屬白名單，不在排除範圍）。
 
-- [ ] **Step 2: 組裝術語殘留檢查**
+- [x] **Step 2: 組裝術語殘留檢查**
 
 Run: `grep -rn "main\.go 組裝\|main\.go 掛載\|main\.go 啟動\|main\.go 呼叫" docs/superpowers/plans/`
 Expected: 僅 00-index 術語映射表（白名單）；其餘 0 hits。
 
-- [ ] **Step 3: 交叉一致檢查**
+- [x] **Step 3: 交叉一致檢查**
 
 Run: `grep -rln "InitDomains\|envconfig\|third_party" docs/superpowers/plans/`
 Expected: 命中清單至少含 00-index.md、原計畫、subproject-implementation-plan、01/02/03/04/08/09 TDD 計畫、CASL 計畫；逐檔確認新術語與 00-index §3.7 用字一致。
 
-- [ ] **Step 4: 無 commit（無變更）**；若任一步驟有殘留 → 回到對應 Task 補修後重跑本 Task。
+- [x] **Step 4: 無 commit（無變更）**；若任一步驟有殘留 → 回到對應 Task 補修後重跑本 Task。
 
 ---
 
