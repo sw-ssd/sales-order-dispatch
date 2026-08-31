@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package salesorder.v1;
+option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1";
+
+import "salesorder/v1/common.proto";
+import "google/protobuf/struct.proto";
+
+// 角色權限管理(v1;T18):角色清單與角色功能權限(role_permissions)編輯。
+// 對齊設計書 §8.2「角色權限設置」:super / company_admin(限自己公司)可用。
+
+// Role:角色定義(內建 7 角色 + 自訂角色;對齊 roles 表)。
+message Role {
+  string id = 1;          // 角色 ID(ent 自增 ID 字串化)
+  string code = 2;        // 角色代碼(super / company_admin / dept_admin / staff / customer / guest / developer / 自訂)
+  string name = 3;        // 顯示名稱
+  string data_scope = 4;  // all | company | department | self
+  bool is_system = 5;     // 內建角色(僅 super/developer 可修改其權限)
+  bool is_active = 6;
+}
+
+// Permission:單一功能權限(resource × action;CASL ability 規則來源,對齊 role_permissions 表)。
+message Permission {
+  string resource = 1;    // 資源(sales_order / customer / product / user / company / department / role / print / dispatch / accounting)
+  string action = 2;      // create | read | update | delete | manage | print | dispatch | *
+  google.protobuf.Struct conditions = 3; // CASL 條件(無條件為 null)
+  bool inverted = 4;      // cannot 規則
+  int32 sort_order = 5;   // 規則排序(升冪;同 resource×action 多規則依此)
+}
+
+// ListRolesRequest:分頁列出角色。
+message ListRolesRequest {
+  int32 page = 1;      // 1-based 頁碼
+  int32 page_size = 2; // 每頁筆數
+}
+
+// ListRolesResponse:角色清單。
+message ListRolesResponse {
+  repeated Role roles = 1;
+  Pagination pagination = 2;
+}
+
+// GetRolePermissionsRequest:取單一角色的功能權限。
+message GetRolePermissionsRequest {
+  string role_id = 1;
+}
+
+// GetRolePermissionsResponse:角色功能權限(依 sort_order 升冪)。
+message GetRolePermissionsResponse {
+  repeated Permission permissions = 1;
+}
+
+// UpdateRolePermissionsRequest:全量取代角色的功能權限(交易內 delete + insert)。
+message UpdateRolePermissionsRequest {
+  string role_id = 1;
+  repeated Permission permissions = 2;
+}
+
+// UpdateRolePermissionsResponse:更新後的完整功能權限(依 sort_order 升冪)。
+message UpdateRolePermissionsResponse {
+  repeated Permission permissions = 1;
+}
+
+// RoleService:角色權限管理。
+service RoleService {
+  // ListRoles:分頁列出角色。
+  rpc ListRoles(ListRolesRequest) returns (ListRolesResponse);
+  // GetRolePermissions:取得角色功能權限。
+  rpc GetRolePermissions(GetRolePermissionsRequest) returns (GetRolePermissionsResponse);
+  // UpdateRolePermissions:全量更新角色功能權限(取代式)。
+  rpc UpdateRolePermissions(UpdateRolePermissionsRequest) returns (UpdateRolePermissionsResponse);
+}

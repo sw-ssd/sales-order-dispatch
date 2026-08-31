@@ -170,6 +170,9 @@ func (s *Server) mountAuth() {
 	_, authHandler := salesorderv1connect.NewAuthServiceHandler(h)
 	s.router.Mount("/api/v1", http.StripPrefix("/api/v1", sessions.LoadAndSave(s.authzMiddleware(entClient, sessions, authHandler))))
 
+	// RoleService 掛載(T18):與 AuthService 共用 ent client / session / authz 中介層。
+	s.mountRoles(entClient, sessions)
+
 	// OIDC 公開端點：需 Google client id 與 discovery 可用
 	clientID := s.cfg.Auth.GoogleClientID
 	if clientID == "" {
@@ -189,6 +192,15 @@ func (s *Server) mountAuth() {
 		r.Get("/api/v1/auth/google", h.GoogleLogin)
 		r.Get("/api/v1/auth/google/callback", h.GoogleCallback)
 	})
+}
+
+// mountRoles 掛載 RoleService(T18):角色權限管理 API。
+// 與 AuthService 共用同一 ent client 與 session;authzMiddleware 將 session 身分
+// 注入 ctx,RoleService 依此做 Casbin(role 資源)與公司範圍檢查。
+func (s *Server) mountRoles(entClient *ent.Client, sessions *scs.SessionManager) {
+	mux := http.NewServeMux()
+	handlers.RegisterRoleHandler(mux, entClient)
+	s.router.Mount("/api/v1", http.StripPrefix("/api/v1", sessions.LoadAndSave(s.authzMiddleware(entClient, sessions, mux))))
 }
 
 // openEntClient 開啟 PostgreSQL ent client（pgx driver）。
