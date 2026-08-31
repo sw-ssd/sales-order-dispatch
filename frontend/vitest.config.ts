@@ -13,5 +13,7 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
+    // @solidjs/testing-library 依全域 afterEach 自動 cleanup,避免測試間 DOM 殘留。
+    globals: true,
   },
 });
