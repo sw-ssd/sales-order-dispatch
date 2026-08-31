@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions: read-all
+
+jobs:
+  go:
+    name: Go(backend)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27"
+          cache-dependency-path: backend/go.sum
+      - name: Lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          working-directory: backend
+      - name: Test
+        run: go test ./...
+      - name: Build
+        run: go build ./cmd/server
+      - name: Vulnerability scan(D31-2)
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+  frontend:
+    name: Frontend(SolidJS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -C frontend typecheck
+      - run: pnpm -C frontend lint
+      - run: pnpm -C frontend build
+
+  flutter:
+    name: App(Flutter)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      # app/.fvmrc 釘 stable;CI 直接以 stable channel 對齊(免裝 fvm)
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
