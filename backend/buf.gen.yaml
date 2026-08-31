@@ -7,11 +7,12 @@ plugins:
   - remote: buf.build/connectrpc/go
     out: internal/proto
     opt: paths=source_relative
-  # TS 訊息 + Connect-ES 用戶端
+  # TS 訊息(protobuf-es v2 *_pb,connect v2 runtime 自 *_pb GenService 匯入)
   - remote: buf.build/bufbuild/es
     out: ../frontend/src/lib/proto
-  - remote: buf.build/connectrpc/es
-    out: ../frontend/src/lib/proto
+  # 註:connectrpc/es 已移除——最新 v1.6.1 生成 connect v1 風格 *_connect 檔,與
+  # @connectrpc/connect v2 不相容且前端零引用(一律自 *_pb GenService 匯入);
+  # 待 BSR 釋出 v2 插件後再加回並重生成。
   # Dart 訊息:本地 protoc-gen-dart(dart pub global activate protoc_plugin),
   # 對齊 connectrpc 1.0.0 之 protobuf <5 約束(BSR 最新版產出 protobuf 6 專用碼)。
   # 註:buf 對 local plugin 不生成 import 檔(include_imports 無效);WKT 的 Dart 碼
