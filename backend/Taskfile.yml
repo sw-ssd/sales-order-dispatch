@@ -46,3 +46,8 @@ tasks:
     env:
       PATH: "{{.HOME}}/.pub-cache/bin:{{env \"PATH\" | default \"\"}}"
     cmd: buf generate
+    # 附註:buf 對 local plugin 不生成 import 檔(include_imports 僅對 remote 生效),
+    # google.protobuf.Struct 等 WKT 的 Dart 碼需以 protoc 另行生成:
+    #   WKT=$(ls -d ~/.cache/buf/v3/modules/*/buf.build/protocolbuffers/wellknowntypes/*/files)
+    #   protoc --dart_out=../app/lib/gen -I proto -I "$WKT" \
+    #     proto/salesorder/v1/company.proto google/protobuf/struct.proto

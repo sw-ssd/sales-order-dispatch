@@ -14,6 +14,8 @@ plugins:
     out: ../frontend/src/lib/proto
   # Dart 訊息:本地 protoc-gen-dart(dart pub global activate protoc_plugin),
   # 對齊 connectrpc 1.0.0 之 protobuf <5 約束(BSR 最新版產出 protobuf 6 專用碼)。
+  # 註:buf 對 local plugin 不生成 import 檔(include_imports 無效);WKT 的 Dart 碼
+  # (google/protobuf/struct.*.dart)以 protoc 另行生成,步驟見 backend/Taskfile.yml proto:gen。
   - local: protoc-gen-dart
     out: ../app/lib/gen
   # Dart Connect 用戶端
