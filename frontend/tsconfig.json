@@ -6,7 +6,6 @@
     "strict": true,
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
-    "baseUrl": ".",
     "paths": {
       "~/*": ["src/*"]
     },
@@ -14,7 +13,9 @@
     "noEmit": true,
     "skipLibCheck": true,
     "isolatedModules": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
   },
   "include": ["src"]
 }

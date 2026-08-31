@@ -103,6 +103,8 @@ void main() {
     );
     final generated = generatePkceCodeVerifier();
     expect(generated.length, 64);
-    expect(RegExp(r'^[A-Za-z0-9\-._~]+$').hasMatch(generated), isTrue);
+    const allowedChars =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+    expect(generated.split('').every(allowedChars.contains), isTrue);
   });
 }
