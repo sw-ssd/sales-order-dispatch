@@ -98,9 +98,11 @@ func (s *Server) mountAuth() {
 		Sessions: sessions,
 	})
 
-	// AuthService Connect-RPC（Web session cookie 亦經 scs 中介層讀寫）
-	authPath, authHandler := salesorderv1connect.NewAuthServiceHandler(h)
-	s.router.Mount("/api/v1"+authPath, sessions.LoadAndSave(authHandler))
+	// AuthService Connect-RPC（Web session cookie 亦經 scs 中介層讀寫）。
+	// connect 產生的 handler 依 r.URL.Path 全路徑分派,故以 http.StripPrefix 剝除
+	// /api/v1 前綴後掛載(與 services.RegisterCompanyServices 的掛載慣例一致)。
+	_, authHandler := salesorderv1connect.NewAuthServiceHandler(h)
+	s.router.Mount("/api/v1", http.StripPrefix("/api/v1", sessions.LoadAndSave(authHandler)))
 
 	// OIDC 公開端點：需 Google client id 與 discovery 可用
 	clientID := s.cfg.Auth.GoogleClientID
