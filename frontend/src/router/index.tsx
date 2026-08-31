@@ -1,3 +1,5 @@
+import CompaniesPage from "~/features/users/pages/CompaniesPage";
+import DepartmentsPage from "~/features/users/pages/DepartmentsPage";
 import { Route, Router } from "@solidjs/router";
 import App from "~/App";
 import LoginPage from "~/features/auth/pages/LoginPage";
@@ -16,6 +18,8 @@ export default function AppRouter() {
     <Router root={App}>
       <Route path="/" component={HomePage} />
       <Route path="/login" component={LoginPage} />
+      <Route path="/users/companies" component={CompaniesPage} />
+      <Route path="/users/departments" component={DepartmentsPage} />
     </Router>
   );
 }
