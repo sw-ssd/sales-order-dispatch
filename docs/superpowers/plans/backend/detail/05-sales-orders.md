@@ -2,7 +2,7 @@
 
 ---
 **文件標題**:銷售訂單 — 訂單 API 與下單流程
-**對應原計畫 Task**:4.1(訂單 API)、4.2(下單流程與單位換算)— `docs/superpowers/plans/2026-07-17-sales-order-1-0-tasks.md`
+**對應原計畫 Task**:4.1(訂單 API)、4.2(下單流程與單位換算)— `docs/superpowers/plans/reference/2026-07-17-sales-order-1-0-tasks.md`
 **對應規格書 v1.0.34 章節**:`docs/superpowers/specs/1.0-requirements/sales-orders/spec.md`(訂單狀態機、取消派車、訂單作廢與更正、訂單異動事件與稽核記錄、訂單編號與併發取號、不儲存任何金額欄位、下單流程、訂單明細與單位換算、客戶專屬商品清單);另參照 `master-data`(customers.preferred_delivery_days、customer_products)與 `notifications`(訂單建立通知)。
 **相關決策**:D3(租戶三層)、D7(訂單編號取號)、D10(軟刪除)、D11(訂單來源字典)、D12(不存金額)、D13(狀態機與事件)、D14(派車欄位與 version)、D18(稽核同事務)、D21(整合測試)、D26(偏好送貨日順延)。
 **相依文件**:`00-index.md`(共通規則)、`01-auth.md`(認證與 data_scope)、`03-metadicts-audit.md`(訂單來源字典、audit_logs)、`04-master-data.md`(3.1 客戶、3.3 商品與單位換算、3.5 客戶專屬商品)。**下游**:`06-returns.md`(退貨不更動訂單狀態)、`08-dispatch.md`(派車確認 → processing、取消派車回退、看板 version)、`09-printing.md`(processing 方可正式列印)。

@@ -17,8 +17,8 @@
 | `docs/superpowers/specs/1.0-requirements/`（12 份） | 需求層規格（Requirement + Scenario）；各領域可驗證行為基準 | ✅ 已定稿（2026-08-03 遷入） |
 | `docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（v1.0.34，52KB） | 客戶版完整規格（18 章）；**細節欄位與流程的唯一權威** | ✅ 已定稿 |
 | `docs/需求備忘_2026-08-03.txt` | 2026-08-03 新增需求（不存金額 / 無 Email / 客戶多帳號 / 促銷推播 / 退貨 / 偏好送貨日 / 稽核保留） | ✅ 已對應至規格書 v1.0.34 |
-| `docs/superpowers/plans/2026-07-17-sales-order-1-0-tasks.md`（v2.9.0，51KB） | 執行計畫；每個 Task 的 Goal / Files / Steps / Acceptance Criteria 以此為準 | ✅ 已收斂為單一計畫 |
-| `docs/superpowers/plans/2026-08-03-sales-order-1.0-vibecheck-plan.md` | vibe-check 重整建置計畫（22 節：問題/目標/流程圖/功能/架構/成本/時程/檢查點/風險假設） | ✅ 已產生 |
+| `docs/superpowers/plans/reference/2026-07-17-sales-order-1-0-tasks.md`（v2.9.0，51KB） | 執行計畫；每個 Task 的 Goal / Files / Steps / Acceptance Criteria 以此為準 | ✅ 已收斂為單一計畫 |
+| `docs/superpowers/plans/archive/2026-08-03-sales-order-1.0-vibecheck-plan.md` | vibe-check 重整建置計畫（22 節：問題/目標/流程圖/功能/架構/成本/時程/檢查點/風險假設） | ✅ 已產生 |
 | `docs/superpowers/reports/2026-08-03-sales-order-1.0-prd.html` | 互動式 PRD（9 分頁 + 6 張內嵌看板 + 續航快照），單一自包含檔案 | ✅ 已產生 |
 | `docs/superpowers/specs/2026-07-18-app-ai-assist-1.1-design.md`（v0.2.0） | 1.1 AI 輔助備忘（拍照建客戶、語音下單），**獨立迭代不影響 1.0** | ✅ 方向定案 |
 | `docs/superpowers/specs/2026-07-17-sales-order-1.0-suggestions.md` | 1.0 範圍外建議備忘（強制更新、電子發票、索引、audit 分區） | ✅ 已產生 |
@@ -144,7 +144,7 @@
 
 1. **需求變更** → 客戶版規格書 `docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（升版並補修訂記錄）+ 對應需求規格 `docs/superpowers/specs/1.0-requirements/<capability>/spec.md`（屬既有能力時）。
 2. **決策變更** → 決策記錄 `docs/superpowers/specs/2026-07-19-sales-order-1.0-decisions.md`（新增 D# 條目並加註修訂來源，比照 D14 模式）。
-3. **任務變更** → 執行計畫 `docs/superpowers/plans/2026-07-17-sales-order-1-0-tasks.md`（更新勾選進度；增刪 Task 時維持連續編號）。
+3. **任務變更** → 執行計畫 `docs/superpowers/plans/reference/2026-07-17-sales-order-1-0-tasks.md`（更新勾選進度；增刪 Task 時維持連續編號）。
 4. **歷史文件不直接改**：`docs/superpowers/reports/` 為時點報告；客戶版規格書每次修改升版。
 5. **1.1 事項**（AI 輔助）以 `2026-07-18-app-ai-assist-1.1-design.md` 為準，勿混入 1.0 範圍。
 

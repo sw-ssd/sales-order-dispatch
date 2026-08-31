@@ -1,7 +1,7 @@
 # 03 — 字典檔(metadicts)與稽核日誌(audit_logs)細部實作計畫
 
 > - **文件標題**:Backend 細部分解 03 — 字典檔與稽核日誌
-> - **對應原計畫 Task**:`docs/superpowers/plans/2026-07-17-sales-order-1-0-tasks.md` 的 **Task 2.5**(metadicts 字典檔 API)、**Task 2.6**(audit_logs 稽核日誌 API)
+> - **對應原計畫 Task**:`docs/superpowers/plans/reference/2026-07-17-sales-order-1-0-tasks.md` 的 **Task 2.5**(metadicts 字典檔 API)、**Task 2.6**(audit_logs 稽核日誌 API)
 > - **對應規格書 v1.0.34 章節**:§5.1 核心實體清單、§5.2 實體欄位(`metadicts` / `audit_logs`)、§5.3 字典檔策略、§5.4 軟刪除慣例、§10.2 稽核日誌、§14.1 資料保留、§14.4 稽核與監控
 > - **對應決策記錄**:D10(軟刪除 + 部分唯一索引)、D11(字典檔單表 + `department_id IS NULL` 語意)、D18(稽核同事務同步寫入)、D21(整合測試類別)、D27(稽核保留期限)
 > - **相依文件**:`01-auth.md`(登入稽核來源、Session/JWT 身分注入、RLS middleware)、`02-tenancy-users.md`(公司/部門實體、角色與 data_scope;`2.9` 角色異動為稽核來源之一)

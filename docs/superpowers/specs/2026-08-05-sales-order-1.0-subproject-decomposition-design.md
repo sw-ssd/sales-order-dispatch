@@ -6,7 +6,7 @@
 > - `docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（v1.0.34）
 > - `docs/superpowers/specs/2026-07-19-sales-order-1.0-decisions.md`（D1–D28）
 > - `docs/superpowers/specs/2026-08-04-app-flutter-stack-design.md`（D29）
-> - `docs/superpowers/plans/2026-07-17-sales-order-1-0-tasks.md`（v2.9.0）
+> - `docs/superpowers/plans/reference/2026-07-17-sales-order-1-0-tasks.md`（v2.9.0）
 >
 > 本文件為 brainstorming 流程產出；實作前須經使用者審閱本文件並依 writing-plans 產生執行計畫。
 

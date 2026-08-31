@@ -3568,7 +3568,7 @@ git commit -m "feat(backend): 派車通知 adapter,實作 08 計畫 DispatchNoti
 
 ## Execution Handoff
 
-Plan complete and saved to `docs/superpowers/plans/2026-08-17-backend-07-notifications-plan.md`. Two execution options:
+Plan complete and saved to `docs/superpowers/plans/backend/2026-08-17-backend-07-notifications-plan.md`. Two execution options:
 
 **1. Subagent-Driven (recommended)** — 每個 Task 派新 subagent 執行,Task 間 review,迭代快。
 

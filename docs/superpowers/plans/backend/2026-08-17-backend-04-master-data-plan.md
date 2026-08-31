@@ -1815,7 +1815,7 @@ git commit -m "feat(backend): QR 簽章 token 與公開兌換端點(3.8)"
 
 ## Execution Handoff
 
-Plan complete and saved to `docs/superpowers/plans/2026-08-17-backend-04-master-data-plan.md`. Two execution options:
+Plan complete and saved to `docs/superpowers/plans/backend/2026-08-17-backend-04-master-data-plan.md`. Two execution options:
 
 **1. Subagent-Driven (recommended)** — 每個 Task 派新 subagent 執行,Task 間 review,迭代快。
 

@@ -1,7 +1,7 @@
 # 多公司訂出貨系統 1.0 — 決策記錄（D1–D28）
 
 > 來源：原 `openspec/changes/sales-order-1-0/design.md`（OpenSpec 工作流已於 2026-08-03 停用，本檔為遷移後的**決策層 single source of truth**）。
-> 細節權威：`docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（v1.0.34，18 章完整設計規格，為細節欄位與流程的唯一權威參考）；執行計畫：`docs/superpowers/plans/2026-07-17-sales-order-1-0-tasks.md`（v2.9.0）。
+> 細節權威：`docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（v1.0.34，18 章完整設計規格，為細節欄位與流程的唯一權威參考）；執行計畫：`docs/superpowers/plans/reference/2026-07-17-sales-order-1-0-tasks.md`（v2.9.0）。
 > 本檔為決策層；資料模型逐欄位定義、頁面清單、單據排版等細節以客戶版規格書為準，本檔不重複抄錄。
 
 ## Context

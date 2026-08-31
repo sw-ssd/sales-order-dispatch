@@ -4157,7 +4157,7 @@ git commit -m "feat(backend): Print API 狀態整批守門、重印必填原因�
 
 ## Execution Handoff
 
-Plan complete and saved to `docs/superpowers/plans/2026-08-17-backend-09-printing-plan.md`. Two execution options:
+Plan complete and saved to `docs/superpowers/plans/backend/2026-08-17-backend-09-printing-plan.md`. Two execution options:
 
 **1. Subagent-Driven (recommended)** — 每個 Task 派新 subagent 執行,Task 間 review,迭代快。
 

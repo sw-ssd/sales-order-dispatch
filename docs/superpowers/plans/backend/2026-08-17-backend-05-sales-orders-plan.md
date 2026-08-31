@@ -1536,7 +1536,7 @@ git commit -m "feat(backend): 下單組裝(換算/別名/清單守衛/送貨日�
 
 ## Execution Handoff
 
-Plan complete and saved to `docs/superpowers/plans/2026-08-17-backend-05-sales-orders-plan.md`. Two execution options:
+Plan complete and saved to `docs/superpowers/plans/backend/2026-08-17-backend-05-sales-orders-plan.md`. Two execution options:
 
 **1. Subagent-Driven (recommended)** — 每個 Task 派新 subagent 執行,Task 間 review,迭代快。
 

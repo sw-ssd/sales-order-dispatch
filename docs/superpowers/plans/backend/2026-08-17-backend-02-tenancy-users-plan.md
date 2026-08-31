@@ -4916,7 +4916,7 @@ git commit -m "feat(backend): PolicyService CRUD 即時生效、domain 範圍、
 
 ## Execution Handoff
 
-Plan complete and saved to `docs/superpowers/plans/2026-08-17-backend-02-tenancy-users-plan.md`. Two execution options:
+Plan complete and saved to `docs/superpowers/plans/backend/2026-08-17-backend-02-tenancy-users-plan.md`. Two execution options:
 
 **1. Subagent-Driven (recommended)** — 每個 Task 派新 subagent 執行,Task 間 review,迭代快。
 

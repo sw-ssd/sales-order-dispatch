@@ -42,12 +42,12 @@
 | `docs/superpowers/specs/2026-07-19-sales-order-1.0-decisions.md` | 追加 D31/D31-2 | 1 |
 | `docs/superpowers/plans/backend/detail/00-index.md` | 新增 §3.7 架構慣例 | 2 |
 | `docs/superpowers/plans/backend/detail/01-auth.md` | 五處 config/main.go 錨點 | 3 |
-| `docs/superpowers/plans/2026-07-17-sales-order-1-0-tasks.md` | Phase 0 骨架 + Task 1.11 config 路徑 | 4 |
+| `docs/superpowers/plans/reference/2026-07-17-sales-order-1-0-tasks.md` | Phase 0 骨架 + Task 1.11 config 路徑 | 4 |
 | `docs/superpowers/plans/2026-08-05-sales-order-1.0-subproject-implementation-plan.md` | 目錄樹 + Phase 0 files + CI govulncheck | 5 |
-| `docs/superpowers/plans/2026-08-17-backend-01-auth-plan.md` | R1–R5 批次 | 6 |
-| `docs/superpowers/plans/2026-08-17-backend-0{2,3,4,7,8,9}-*-plan.md` | R1–R5 批次 | 7 |
-| `docs/superpowers/plans/2026-08-17-backend-0{5,6}-*-plan.md` | grep 驗證無 config/cmd 錨點，不修訂 | 9（驗證覆蓋） |
-| `docs/superpowers/plans/2026-08-24-casl-integration-plan.md` | Task 8 config 路徑 | 8 |
+| `docs/superpowers/plans/backend/2026-08-17-backend-01-auth-plan.md` | R1–R5 批次 | 6 |
+| `docs/superpowers/plans/backend/2026-08-17-backend-0{2,3,4,7,8,9}-*-plan.md` | R1–R5 批次 | 7 |
+| `docs/superpowers/plans/backend/2026-08-17-backend-0{5,6}-*-plan.md` | grep 驗證無 config/cmd 錨點，不修訂 | 9（驗證覆蓋） |
+| `docs/superpowers/plans/cross-cutting/2026-08-24-casl-integration-plan.md` | Task 8 config 路徑 | 8 |
 | 全庫 | 殘留 grep 驗證 | 9 |
 
 註：`backend/detail/02–09` 經 grep 確認**無** config/cmd 路徑提及，不需修訂（設計 §6 該列落地為「驗證後無需修改」）。
@@ -190,7 +190,7 @@ git commit -m "docs: 01-auth 細部 config 分檔與啟動檢查落點(D31)"
 ### Task 4: 原計畫（2026-07-17）Phase 0 骨架與 Task 1.11
 
 **Files:**
-- Modify: `docs/superpowers/plans/2026-07-17-sales-order-1-0-tasks.md`
+- Modify: `docs/superpowers/plans/reference/2026-07-17-sales-order-1-0-tasks.md`
 
 - [ ] **Step 1: Phase 0 backend 骨架 Files 列修訂**
 
@@ -222,13 +222,13 @@ Task 0.x（Go 骨架）Files 列由：
 
 - [ ] **Step 3: 驗證**
 
-Run: `grep -n "config/config.go" docs/superpowers/plans/2026-07-17-sales-order-1-0-tasks.md`
+Run: `grep -n "config/config.go" docs/superpowers/plans/reference/2026-07-17-sales-order-1-0-tasks.md`
 Expected: 0 hits
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add docs/superpowers/plans/2026-07-17-sales-order-1-0-tasks.md
+git add docs/superpowers/plans/reference/2026-07-17-sales-order-1-0-tasks.md
 git commit -m "docs: 原計畫 Phase 0 骨架與 1.11 對齊 D31 結構"
 ```
 
@@ -289,7 +289,7 @@ git commit -m "docs: 子專案計畫目錄樹/Phase 0/CI 對齊 D31"
 ### Task 6: 01-auth TDD 計畫批次修訂
 
 **Files:**
-- Modify: `docs/superpowers/plans/2026-08-17-backend-01-auth-plan.md`
+- Modify: `docs/superpowers/plans/backend/2026-08-17-backend-01-auth-plan.md`
 
 - [ ] **Step 1: 套用 R1（config 分檔）**
 
@@ -321,13 +321,13 @@ git commit -m "docs: 子專案計畫目錄樹/Phase 0/CI 對齊 D31"
 
 - [ ] **Step 5: 驗證**
 
-Run: `grep -n "config/config.go\|mapstructure\|config\.Load()\|main\.go 組裝\|main\.go 啟動" docs/superpowers/plans/2026-08-17-backend-01-auth-plan.md`
+Run: `grep -n "config/config.go\|mapstructure\|config\.Load()\|main\.go 組裝\|main\.go 啟動" docs/superpowers/plans/backend/2026-08-17-backend-01-auth-plan.md`
 Expected: 0 hits
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add docs/superpowers/plans/2026-08-17-backend-01-auth-plan.md
+git add docs/superpowers/plans/backend/2026-08-17-backend-01-auth-plan.md
 git commit -m "docs: 01-auth TDD 計畫套用 D31 轉換規則(R1-R4)"
 ```
 
@@ -338,12 +338,12 @@ git commit -m "docs: 01-auth TDD 計畫套用 D31 轉換規則(R1-R4)"
 （05-sales-orders、06-returns 兩份經錨點調查確認無 config/cmd 路徑提及，不修訂；由 Task 9 全庫驗證覆蓋。）
 
 **Files:**
-- Modify: `docs/superpowers/plans/2026-08-17-backend-02-tenancy-users-plan.md`
-- Modify: `docs/superpowers/plans/2026-08-17-backend-03-metadicts-audit-plan.md`
-- Modify: `docs/superpowers/plans/2026-08-17-backend-04-master-data-plan.md`
-- Modify: `docs/superpowers/plans/2026-08-17-backend-07-notifications-plan.md`
-- Modify: `docs/superpowers/plans/2026-08-17-backend-08-dispatch-plan.md`
-- Modify: `docs/superpowers/plans/2026-08-17-backend-09-printing-plan.md`
+- Modify: `docs/superpowers/plans/backend/2026-08-17-backend-02-tenancy-users-plan.md`
+- Modify: `docs/superpowers/plans/backend/2026-08-17-backend-03-metadicts-audit-plan.md`
+- Modify: `docs/superpowers/plans/backend/2026-08-17-backend-04-master-data-plan.md`
+- Modify: `docs/superpowers/plans/backend/2026-08-17-backend-07-notifications-plan.md`
+- Modify: `docs/superpowers/plans/backend/2026-08-17-backend-08-dispatch-plan.md`
+- Modify: `docs/superpowers/plans/backend/2026-08-17-backend-09-printing-plan.md`
 
 - [ ] **Step 1: 02-tenancy-users**
 
@@ -377,13 +377,13 @@ Task 2（~L1177/1360/1370）：Files 列與片段「`main.go` 組裝處」→「
 
 - [ ] **Step 7: 驗證（六檔）**
 
-Run: `grep -n "config/config.go\|mapstructure\|main\.go 組裝\|main\.go 掛載\|main\.go 呼叫" docs/superpowers/plans/2026-08-17-backend-0{2,3,4,7,8,9}-*.md`
+Run: `grep -n "config/config.go\|mapstructure\|main\.go 組裝\|main\.go 掛載\|main\.go 呼叫" docs/superpowers/plans/backend/2026-08-17-backend-0{2,3,4,7,8,9}-*.md`
 Expected: 0 hits
 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add docs/superpowers/plans/2026-08-17-backend-0{2,3,4,7,8,9}-*.md
+git add docs/superpowers/plans/backend/2026-08-17-backend-0{2,3,4,7,8,9}-*.md
 git commit -m "docs: 02-09 TDD 計畫套用 D31 轉換規則(R1-R4)"
 ```
 
@@ -392,7 +392,7 @@ git commit -m "docs: 02-09 TDD 計畫套用 D31 轉換規則(R1-R4)"
 ### Task 8: CASL 計畫 Task 8 config 路徑
 
 **Files:**
-- Modify: `docs/superpowers/plans/2026-08-24-casl-integration-plan.md`
+- Modify: `docs/superpowers/plans/cross-cutting/2026-08-24-casl-integration-plan.md`
 
 - [ ] **Step 1: 三處修訂**
 
@@ -402,13 +402,13 @@ git commit -m "docs: 02-09 TDD 計畫套用 D31 轉換規則(R1-R4)"
 
 - [ ] **Step 2: 驗證**
 
-Run: `grep -n "config/config.go" docs/superpowers/plans/2026-08-24-casl-integration-plan.md`
+Run: `grep -n "config/config.go" docs/superpowers/plans/cross-cutting/2026-08-24-casl-integration-plan.md`
 Expected: 0 hits
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add docs/superpowers/plans/2026-08-24-casl-integration-plan.md
+git add docs/superpowers/plans/cross-cutting/2026-08-24-casl-integration-plan.md
 git commit -m "docs: CASL 計畫 config 路徑對齊 D31(config/api.go)"
 ```
 

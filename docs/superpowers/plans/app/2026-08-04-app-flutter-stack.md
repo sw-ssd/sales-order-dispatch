@@ -8,7 +8,7 @@
 
 **Tech Stack:** Flutter stable（Dart ≥3.10）、solidart 2.8.6、disco 2.0.0、auto_route 11.1.0（+generator）、fquery 3.1.0、sembast、flutter_secure_storage、flutter_web_auth、connectrpc（connect-dart）、http、path_provider、build_runner。
 
-**來源文件：** `docs/superpowers/specs/2026-08-04-app-flutter-stack-design.md`（D29 設計，本計畫逐一對應其 §5–§11）。本計畫為 D29 追加計畫，Task 10 將內容合併回主計畫 `docs/superpowers/plans/2026-07-17-sales-order-1-0-tasks.md`（升 v2.10.0），主計畫 Task 0.6（App 骨架）以本計畫 Task 1–9 取代。
+**來源文件：** `docs/superpowers/specs/2026-08-04-app-flutter-stack-design.md`（D29 設計，本計畫逐一對應其 §5–§11）。本計畫為 D29 追加計畫，Task 10 將內容合併回主計畫 `docs/superpowers/plans/reference/2026-07-17-sales-order-1-0-tasks.md`（升 v2.10.0），主計畫 Task 0.6（App 骨架）以本計畫 Task 1–9 取代。
 
 ## Global Constraints
 
@@ -1528,7 +1528,7 @@ git add app/lib/core/cache/query_keys.dart app/lib/core/cache/cache_bootstrap.da
 **Files:**
 - Modify: `docs/superpowers/specs/2026-07-19-sales-order-1.0-decisions.md`（新增 D29 條目，內容取自設計文件 §2）
 - Modify: `docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（升版 v1.0.35：§2.1 App 技術列、§9.6 離線快取實作輪廓、§16 後續步驟、§18 修訂記錄）
-- Modify: `docs/superpowers/plans/2026-07-17-sales-order-1-0-tasks.md`（升版 v2.10.0：Task 0.6 以本計畫 Task 1–9 取代；Task 1.10 / 4.6 / 6.4 之 App 棧引用更新；加註本計畫為來源）
+- Modify: `docs/superpowers/plans/reference/2026-07-17-sales-order-1-0-tasks.md`（升版 v2.10.0：Task 0.6 以本計畫 Task 1–9 取代；Task 1.10 / 4.6 / 6.4 之 App 棧引用更新；加註本計畫為來源）
 
 **Interfaces:**
 - 產出：決策記錄 D29（含 D29-2 持久化唯讀快取、D29-3 Flutter 升版）；規格書 v1.0.35 修訂記錄；主計畫 v2.10.0 版本行。

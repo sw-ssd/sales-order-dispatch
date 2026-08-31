@@ -1,7 +1,7 @@
 # Backend Phase 1–5 細部實作計畫 — 總覽
 
 > 版本:v1.0.0(2026-08-17)
-> 依據:執行計畫 `docs/superpowers/plans/2026-07-17-sales-order-1-0-tasks.md`(v2.9.0)、規格書 v1.0.34、決策記錄 D1–D28。
+> 依據:執行計畫 `docs/superpowers/plans/reference/2026-07-17-sales-order-1-0-tasks.md`(v2.9.0)、規格書 v1.0.34、決策記錄 D1–D28。
 > 定位:本目錄為原計畫 **backend 部分(Task 導向)的細部分解**,將每個 Task 拆成可獨立驗收的子功能,並補上實作邏輯與錯誤處理。**不取代、不修改原計畫**;原計畫仍為進度勾選基準,本目錄為實作時的邏輯依據。
 > 範圍:Phase 1–5 的 backend 工作。Phase 0(基礎建設)、Phase 6(App)、Phase 7(公告/UI)、Phase 8(部署)不在本目錄;混合 Task(含前端/App)僅拆後端部分並於文中註明。
 

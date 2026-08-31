@@ -1,6 +1,6 @@
 ---
 title: 後端細部計畫 09 — 單據列印(四種模板 / Gotenberg PDF / 列印與預覽 API)
-source_tasks: Task 5.3 四種單據模板、Task 5.4 Gotenberg PDF 產生服務、Task 5.5 列印與預覽 API(docs/superpowers/plans/2026-07-17-sales-order-1-0-tasks.md v2.9.0)
+source_tasks: Task 5.3 四種單據模板、Task 5.4 Gotenberg PDF 產生服務、Task 5.5 列印與預覽 API(docs/superpowers/plans/reference/2026-07-17-sales-order-1-0-tasks.md v2.9.0)
 spec_sections: 規格書 v1.0.34 第 7 章「派車與單據列印」(§7.2 單據列印與列印流程);§5.1 / §5.2(print_logs、print_previews、file_assets 欄位);§6.4(base_qty 基本單位彙總);§14.1(print_logs 保留 2 年、print_previews 保留 90 天)
 depends_on:
   - 04-master-data.md(Task 3.6 檔案資產 API:file_assets 落檔與下載 URL)

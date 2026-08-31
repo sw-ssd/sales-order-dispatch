@@ -10,7 +10,7 @@
 | 文件類型 | 檔案路徑 | 版本 / 日期 | 狀態 |
 |---|---|---|---|
 | 設計規格 | `docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md` | v1.0.26 | ✅ 已定稿 |
-| 實作計畫 | `docs/superpowers/plans/2026-07-17-sales-order-1-0-tasks.md` | v2.8.0 | ✅ 已收斂為單一計畫 |
+| 實作計畫 | `docs/superpowers/plans/reference/2026-07-17-sales-order-1-0-tasks.md` | v2.8.0 | ✅ 已收斂為單一計畫 |
 | 建議備忘 | `docs/superpowers/specs/2026-07-17-sales-order-1.0-suggestions.md` | v1.0.0 | ✅ 已產生（1.0 範圍外建議） |
 | 客戶報告 PDF | `docs/superpowers/reports/多公司訂出貨系統_1.0_客戶報告.pdf`（來源：`customer_report.html`） | v2.1.0 | ✅ 已重新產生（對齊 spec v1.0.26，15 頁附圖） |
 | 1.1 AI 輔助功能設計備忘 | `docs/superpowers/specs/2026-07-18-app-ai-assist-1.1-design.md` | v0.2.0 | ✅ 已定案方向（拍照建客戶、業務語音下單，1.1 獨立迭代） |
