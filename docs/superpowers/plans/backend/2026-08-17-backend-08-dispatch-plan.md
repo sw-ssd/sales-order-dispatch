@@ -484,10 +484,10 @@ func NewDispatchUsecase(db *ent.Client, pub BoardPublisher, notifier DispatchNot
 	return &DispatchUsecase{db: db, pub: pub, notifier: notifier}
 }
 
-// SetEnforcer 接上 Casbin(01-plan Task 2);main.go 組裝時呼叫,測試多為 nil。
+// SetEnforcer 接上 Casbin(01-plan Task 2);`InitDomains()` 組裝時呼叫,測試多為 nil。
 func (u *DispatchUsecase) SetEnforcer(enf *casbin.Enforcer) { u.enf = enf }
 
-// noopBoardPublisher 為未接 BoardHub 時的佔位(main.go 組裝前)。
+// noopBoardPublisher 為未接 BoardHub 時的佔位(`InitDomains()` 組裝前)。
 type noopBoardPublisher struct{}
 
 func (noopBoardPublisher) Publish(context.Context, BoardEvent) {}

@@ -4759,7 +4759,7 @@ func (u *Usecase) ListGrouping(ctx context.Context, actor rls.Identity, q Groupi
 }
 ```
 
-(`existsRule` 與 `u.db.QueryContext` 包裝放 `repository.go`:*ent.Client 無 QueryContext — repository 以 `entsql.OpenDB` 前的 `*sql.DB` 或 `client.DB()` 暴露的底層連線執行;實作時於 `policies.NewUsecase` 額外注入 `*sql.DB`(main.go 組裝時與 Ent 共用同一 pool),usecase struct 加 `sqlDB *sql.DB` 欄位,`QueryContext` 呼叫改 `u.sqlDB.QueryContext`。以此為準。)
+(`existsRule` 與 `u.db.QueryContext` 包裝放 `repository.go`:*ent.Client 無 QueryContext — repository 以 `entsql.OpenDB` 前的 `*sql.DB` 或 `client.DB()` 暴露的底層連線執行;實作時於 `policies.NewUsecase` 額外注入 `*sql.DB`(`InitDomains()` 組裝時與 Ent 共用同一 pool),usecase struct 加 `sqlDB *sql.DB` 欄位,`QueryContext` 呼叫改 `u.sqlDB.QueryContext`。以此為準。)
 
 `backend/internal/domain/policies/reload.go`:
 

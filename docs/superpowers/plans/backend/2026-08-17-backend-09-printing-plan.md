@@ -3991,7 +3991,7 @@ func TestListLogsUnauthenticated(t *testing.T) {
 
 (檔尾 `_ =` 殘句僅為固定 import 佔位,實作時刪除未使用的 import — 以此為準。)
 
-- [ ] **Step 7: 實作 ListLogs 與 main.go 掛載**
+- [ ] **Step 7: 實作 ListLogs 與 `InitDomains()` 掛載**
 
 `backend/internal/domain/prints/list_logs.go`:
 
@@ -4151,7 +4151,7 @@ git commit -m "feat(backend): Print API 狀態整批守門、重印必填原因�
 ## Self-Review 記錄
 
 - **Spec 覆蓋**:細部文件 11 子功能 → Task 對應:5.3.1→T1(Step 4/5 模板與 VM,驗收點:依車次分組一車一份=VM 單車次語意+測試排序斷言;delivery_sequence 排序=TestRenderDispatchSummary/TestBuildDispatchSummary;無金額=reflect 測試+渲染關鍵字掃描;special_cut_note 顯示=兩測試皆斷言);5.3.2→T1(每店一頁 page-break、簽收欄空白、聯絡人/分切規格顯示,渲染與組合測試);5.3.3→T1 模板 + T2 組合(車次→倉別→分類→品名排序、base_qty 跨店彙總 6+4=10、需加工提示、核對欄空白);5.3.4→T1 模板 + T2 組合(僅需加工明細、兩區塊順序、原始數量與規格、加工後數量欄不存在於 VM 且模板渲染空白);5.4.1→T2 Step 1–4(multipart/A4 參數/逾時/5xx 有限重試/4xx 不重試/記憶體傳遞);5.4.2→T2 Step 5–8(四類型成形、選擇器組合矩陣、空表標記、not_found/invalid_argument、狀態過濾不在此層);5.4.3→T2 Step 9–10(空表 failed_precondition 不觸發轉換不落檔、字型於模板 CSS、10 MB 上限、交易外落檔+補償刪除、每次新 file_asset)+ T3/T4 handler 的同事務寫入;5.5.1→T3 Step 1–4(兩表 schema、記錄類無軟刪除、RLS policy、比對鍵與查詢索引、file_asset FK);5.5.2→T3 Step 5–9(不限狀態預覽、print_logs 隔離、空表拒絕、不寫稽核、下載 URL);5.5.3→T4 Step 1–8(status=processing 整批守門含單號、FOR UPDATE 交易內再確認、首印三處記錄同事務、PDF 經下載 URL、ListLogs 分頁上限 100);5.5.4→T4 Step 4–5(原因必填含純空白、staff 可印/customer+guest 拒絕、is_reprint=true 新 PDF 新記錄舊的保留、退回 pending 拒絕)。無缺漏。
-- **已知佔位(皆標 TODO + 接手 Task)**:`print.FileStore` 的真實 adapter(→ 04-master-data 計畫 Task 8,契約已與該計畫對齊:WriteLocal / CreateAsset(tx) / DeleteLocal,owner_type=`print_pdf`);`AuditFactory` 的 DB 版構造 `audit.NewTxRecorder`(→ 03-metadicts-audit 計畫);main.go 掛載處的 `fileassets.NewPrintStore`(→ 04 計畫 Task 8)。這些是跨 domain 依賴,非本計畫範圍;本計畫測試全部以 fake / txFileStore 自給自足。
+- **已知佔位(皆標 TODO + 接手 Task)**:`print.FileStore` 的真實 adapter(→ 04-master-data 計畫 Task 8,契約已與該計畫對齊:WriteLocal / CreateAsset(tx) / DeleteLocal,owner_type=`print_pdf`);`AuditFactory` 的 DB 版構造 `audit.NewTxRecorder`(→ 03-metadicts-audit 計畫);`InitDomains()` 掛載處的 `fileassets.NewPrintStore`(→ 04 計畫 Task 8)。這些是跨 domain 依賴,非本計畫範圍;本計畫測試全部以 fake / txFileStore 自給自足。
 - **假定契約(執行時對齊,各標唯一調整點)**:`sales_order_items.qty/base_qty` 的 Go 型別假定 `shopspring/decimal`(→ 05-sales-orders 計畫;調整點 = service.go 的 decimal 轉換);`ent.CustomerAddress.Address` / `ent.CustomerContact` 欄位名假定(→ 04 計畫;調整點 = `customersByOrder` 的 formatAddress);`audit.Recorder` 若無 `RecorderFunc` 適配器,測試 capture 改用小型 struct 實作(→ 01/03 計畫);migration 檔序號以執行當下最大序號 +1 為準。
 - **類型一致**:`print.DocumentType` / 四種 VM / `print.Selector` / `print.FileStore` / `print.StoredFile` / `print.PreparedPDF` / `prints.AuditFactory` 於 Task 1–4 簽名一致;proto 訊息欄位(Preview/Print/ListLogs)與 handler 使用一致;`print.DownloadURL` 與 04 計畫 `/api/v1/files/{id}/download` 契約一致。
 
