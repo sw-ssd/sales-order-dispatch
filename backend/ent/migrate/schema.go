@@ -45,6 +45,53 @@ var (
 			},
 		},
 	}
+	// RolesColumns holds the columns for the "roles" table.
+	RolesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "code", Type: field.TypeString},
+		{Name: "name", Type: field.TypeString},
+		{Name: "data_scope", Type: field.TypeEnum, Enums: []string{"all", "company", "department", "self"}, Default: "company"},
+		{Name: "is_system", Type: field.TypeBool, Default: false},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+	}
+	// RolesTable holds the schema information for the "roles" table.
+	RolesTable = &schema.Table{
+		Name:       "roles",
+		Columns:    RolesColumns,
+		PrimaryKey: []*schema.Column{RolesColumns[0]},
+	}
+	// RolePermissionsColumns holds the columns for the "role_permissions" table.
+	RolePermissionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "resource", Type: field.TypeString},
+		{Name: "action", Type: field.TypeString},
+		{Name: "conditions", Type: field.TypeJSON, Nullable: true},
+		{Name: "inverted", Type: field.TypeBool, Default: false},
+		{Name: "sort_order", Type: field.TypeInt, Default: 0},
+		{Name: "role_id", Type: field.TypeInt},
+	}
+	// RolePermissionsTable holds the schema information for the "role_permissions" table.
+	RolePermissionsTable = &schema.Table{
+		Name:       "role_permissions",
+		Columns:    RolePermissionsColumns,
+		PrimaryKey: []*schema.Column{RolePermissionsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "role_permissions_roles_role",
+				Columns:    []*schema.Column{RolePermissionsColumns[6]},
+				RefColumns: []*schema.Column{RolesColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "rolepermission_role_id_resource_action_conditions",
+				Unique:  true,
+				Columns: []*schema.Column{RolePermissionsColumns[6], RolePermissionsColumns[1], RolePermissionsColumns[2], RolePermissionsColumns[3]},
+			},
+		},
+	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -84,12 +131,15 @@ var (
 	Tables = []*schema.Table{
 		CompaniesTable,
 		DepartmentsTable,
+		RolesTable,
+		RolePermissionsTable,
 		UsersTable,
 	}
 )
 
 func init() {
 	DepartmentsTable.ForeignKeys[0].RefTable = CompaniesTable
+	RolePermissionsTable.ForeignKeys[0].RefTable = RolesTable
 	UsersTable.ForeignKeys[0].RefTable = CompaniesTable
 	UsersTable.ForeignKeys[1].RefTable = DepartmentsTable
 }

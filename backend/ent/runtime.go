@@ -5,6 +5,8 @@ package ent
 import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
+	"github.com/salesorder/sales-order-1.0/backend/ent/role"
+	"github.com/salesorder/sales-order-1.0/backend/ent/rolepermission"
 	"github.com/salesorder/sales-order-1.0/backend/ent/schema"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 )
@@ -29,6 +31,42 @@ func init() {
 	departmentDescName := departmentFields[0].Descriptor()
 	// department.NameValidator is a validator for the "name" field. It is called by the builders before save.
 	department.NameValidator = departmentDescName.Validators[0].(func(string) error)
+	roleFields := schema.Role{}.Fields()
+	_ = roleFields
+	// roleDescCode is the schema descriptor for code field.
+	roleDescCode := roleFields[0].Descriptor()
+	// role.CodeValidator is a validator for the "code" field. It is called by the builders before save.
+	role.CodeValidator = roleDescCode.Validators[0].(func(string) error)
+	// roleDescName is the schema descriptor for name field.
+	roleDescName := roleFields[1].Descriptor()
+	// role.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	role.NameValidator = roleDescName.Validators[0].(func(string) error)
+	// roleDescIsSystem is the schema descriptor for is_system field.
+	roleDescIsSystem := roleFields[3].Descriptor()
+	// role.DefaultIsSystem holds the default value on creation for the is_system field.
+	role.DefaultIsSystem = roleDescIsSystem.Default.(bool)
+	// roleDescIsActive is the schema descriptor for is_active field.
+	roleDescIsActive := roleFields[4].Descriptor()
+	// role.DefaultIsActive holds the default value on creation for the is_active field.
+	role.DefaultIsActive = roleDescIsActive.Default.(bool)
+	rolepermissionFields := schema.RolePermission{}.Fields()
+	_ = rolepermissionFields
+	// rolepermissionDescResource is the schema descriptor for resource field.
+	rolepermissionDescResource := rolepermissionFields[1].Descriptor()
+	// rolepermission.ResourceValidator is a validator for the "resource" field. It is called by the builders before save.
+	rolepermission.ResourceValidator = rolepermissionDescResource.Validators[0].(func(string) error)
+	// rolepermissionDescAction is the schema descriptor for action field.
+	rolepermissionDescAction := rolepermissionFields[2].Descriptor()
+	// rolepermission.ActionValidator is a validator for the "action" field. It is called by the builders before save.
+	rolepermission.ActionValidator = rolepermissionDescAction.Validators[0].(func(string) error)
+	// rolepermissionDescInverted is the schema descriptor for inverted field.
+	rolepermissionDescInverted := rolepermissionFields[4].Descriptor()
+	// rolepermission.DefaultInverted holds the default value on creation for the inverted field.
+	rolepermission.DefaultInverted = rolepermissionDescInverted.Default.(bool)
+	// rolepermissionDescSortOrder is the schema descriptor for sort_order field.
+	rolepermissionDescSortOrder := rolepermissionFields[5].Descriptor()
+	// rolepermission.DefaultSortOrder holds the default value on creation for the sort_order field.
+	rolepermission.DefaultSortOrder = rolepermissionDescSortOrder.Default.(int)
 	userFields := schema.User{}.Fields()
 	_ = userFields
 	// userDescEmail is the schema descriptor for email field.

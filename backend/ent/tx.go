@@ -16,6 +16,10 @@ type Tx struct {
 	Company *CompanyClient
 	// Department is the client for interacting with the Department builders.
 	Department *DepartmentClient
+	// Role is the client for interacting with the Role builders.
+	Role *RoleClient
+	// RolePermission is the client for interacting with the RolePermission builders.
+	RolePermission *RolePermissionClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 
@@ -151,6 +155,8 @@ func (tx *Tx) Client() *Client {
 func (tx *Tx) init() {
 	tx.Company = NewCompanyClient(tx.config)
 	tx.Department = NewDepartmentClient(tx.config)
+	tx.Role = NewRoleClient(tx.config)
+	tx.RolePermission = NewRolePermissionClient(tx.config)
 	tx.User = NewUserClient(tx.config)
 }
 
