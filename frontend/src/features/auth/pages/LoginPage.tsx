@@ -1,6 +1,7 @@
 import { Code, ConnectError, createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 import { useNavigate } from "@solidjs/router";
+import { Tabs } from "@ark-ui/solid/tabs";
 import { createSignal, Show, type JSX } from "solid-js";
 import { AuthService } from "~/lib/proto/salesorder/v1/auth_pb";
 import GoogleLoginButton from "../components/GoogleLoginButton";
@@ -61,87 +62,82 @@ export default function LoginPage() {
         <h1 class="text-center text-2xl font-bold text-gray-900">登入</h1>
         <p class="mt-1 text-center text-sm text-gray-500">多公司訂出貨系統</p>
 
-        <div class="mt-6 flex gap-1 rounded-lg bg-gray-100 p-1" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab() === "employee"}
-            class={`flex-1 rounded-md px-4 py-2 text-sm font-medium ${
-              tab() === "employee" ? "bg-white text-gray-900 shadow" : "text-gray-500 hover:text-gray-700"
-            }`}
-            onClick={() => setTab("employee")}
-          >
-            員工
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab() === "store"}
-            class={`flex-1 rounded-md px-4 py-2 text-sm font-medium ${
-              tab() === "store" ? "bg-white text-gray-900 shadow" : "text-gray-500 hover:text-gray-700"
-            }`}
-            onClick={() => setTab("store")}
-          >
-            店家
-          </button>
-        </div>
+        <Tabs.Root
+          class="mt-6"
+          value={tab()}
+          onValueChange={({ value }) => setTab(value as LoginTab)}
+        >
+          <Tabs.List class="flex gap-1 rounded-lg bg-gray-100 p-1">
+            <Tabs.Trigger
+              value="employee"
+              class="flex-1 rounded-md px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-selected:bg-white data-selected:text-gray-900 data-selected:shadow"
+            >
+              員工
+            </Tabs.Trigger>
+            <Tabs.Trigger
+              value="store"
+              class="flex-1 rounded-md px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-selected:bg-white data-selected:text-gray-900 data-selected:shadow"
+            >
+              店家
+            </Tabs.Trigger>
+          </Tabs.List>
 
-        <Show when={error()}>
-          {(message) => (
-            <p class="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
-              {message()}
-            </p>
-          )}
-        </Show>
-
-        <Show when={tab() === "employee"}>
-          <div class="mt-6">
+          <Tabs.Content value="employee">
             <p class="mb-3 text-center text-sm text-gray-500">員工請使用公司 Google 帳號登入</p>
             <GoogleLoginButton />
-          </div>
-        </Show>
+          </Tabs.Content>
 
-        <Show when={tab() === "store"}>
-          <form class="mt-6 space-y-4" onSubmit={handleStoreSubmit}>
-            <div>
-              <label for="customer_code" class="block text-sm font-medium text-gray-700">
-                客戶編號
-              </label>
-              <input
-                id="customer_code"
-                name="customer_code"
-                type="text"
-                required
-                autocomplete="username"
-                value={customerCode()}
-                onInput={(e) => setCustomerCode(e.currentTarget.value)}
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label for="password" class="block text-sm font-medium text-gray-700">
-                密碼
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                autocomplete="current-password"
-                value={password()}
-                onInput={(e) => setPassword(e.currentTarget.value)}
-                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={submitting()}
-              class="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              {submitting() ? "登入中…" : "登入"}
-            </button>
-          </form>
-        </Show>
+          <Tabs.Content value="store">
+            <form class="space-y-4" onSubmit={handleStoreSubmit}>
+              <div>
+                <label for="customer_code" class="block text-sm font-medium text-gray-700">
+                  客戶編號
+                </label>
+                <input
+                  id="customer_code"
+                  name="customer_code"
+                  type="text"
+                  required
+                  autocomplete="username"
+                  value={customerCode()}
+                  onInput={(e) => setCustomerCode(e.currentTarget.value)}
+                  class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label for="password" class="block text-sm font-medium text-gray-700">
+                  密碼
+                </label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  autocomplete="current-password"
+                  value={password()}
+                  onInput={(e) => setPassword(e.currentTarget.value)}
+                  class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+
+              <Show when={error()}>
+                {(message) => (
+                  <p class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+                    {message()}
+                  </p>
+                )}
+              </Show>
+
+              <button
+                type="submit"
+                disabled={submitting()}
+                class="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {submitting() ? "登入中…" : "登入"}
+              </button>
+            </form>
+          </Tabs.Content>
+        </Tabs.Root>
       </div>
     </main>
   );
