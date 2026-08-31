@@ -1,5 +1,10 @@
 version: '3'
 
+includes:
+  backend:
+    taskfile: ./backend
+    dir: ./backend
+
 vars:
   PODMAN_SOCK:
     sh: podman machine inspect | jq -r '.[0].ConnectionInfo.PodmanSocket.Path'

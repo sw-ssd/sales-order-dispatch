@@ -9,6 +9,7 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/pressly/goose/v3 v3.27.3
 	github.com/redis/go-redis/v9 v9.22.0
+	google.golang.org/protobuf v1.36.11
 )
 
 require (

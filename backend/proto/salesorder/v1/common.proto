@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package salesorder.v1;
+option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1";
+
+// 跨服務共用型別(v1)。
+
+// Pagination:統一分頁請求/回應結構。
+message Pagination {
+  int32 page = 1;      // 1-based 頁碼
+  int32 page_size = 2; // 每頁筆數
+  int64 total = 3;     // 總筆數(僅回應)
+}
+
+// TimestampRange:起訖時間篩選。
+message TimestampRange {
+  int64 start_unix = 1; // 含起點
+  int64 end_unix = 2;   // 含終點
+}
+
+// Deprecated: 金額統一以「最小幣別單位整數 + 幣別」傳遞(避免 float 精度問題),
+// 此訊息僅供相容說明,新增 API 請用 amount_minor(int64)+ currency(string)。
+message Money {
+  option deprecated = true;
+  int64 amount_minor = 1; // 最小幣別單位(如:分)
+  string currency = 2;    // ISO 4217(如:TWD)
+}
+
+// PrintPaperSize:出貨單/揀貨單列印紙張尺寸。
+enum PrintPaperSize {
+  PRINT_PAPER_SIZE_UNSPECIFIED = 0;
+  PRINT_PAPER_SIZE_A4 = 1;
+  PRINT_PAPER_SIZE_A5 = 2;
+  PRINT_PAPER_SIZE_80MM = 3; // 熱感紙 80mm
+}

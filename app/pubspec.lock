@@ -314,7 +314,7 @@ packages:
     source: hosted
     version: "4.2.5"
   fixnum:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: fixnum
       sha256: b6dc7065e46c974bc7c5f143080a6764ec7a4be6da1285ececdc37be96de53be
@@ -737,7 +737,7 @@ packages:
     source: hosted
     version: "1.5.3"
   protobuf:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: protobuf
       sha256: de9c9eb2c33f8e933a42932fe1dc504800ca45ebc3d673e6ed7f39754ee4053e

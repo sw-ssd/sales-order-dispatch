@@ -20,9 +20,15 @@ importers:
 
   frontend:
     dependencies:
+      '@bufbuild/protobuf':
+        specifier: ^2.14.0
+        version: 2.14.0
       '@casl/ability':
         specifier: ^6.7.0
         version: 6.8.1
+      '@connectrpc/connect':
+        specifier: ^2.1.2
+        version: 2.1.2(@bufbuild/protobuf@2.14.0)
       '@solidjs/router':
         specifier: ^0.15.0
         version: 0.15.4(solid-js@1.9.15)
@@ -151,8 +157,16 @@ packages:
     resolution: {integrity: sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg==}
     engines: {node: '>=6.9.0'}
 
+  '@bufbuild/protobuf@2.14.0':
+    resolution: {integrity: sha512-C3UGsiCwSprE2NKIIFA3hCDlpXTMCAXRZuEVp88L1GY36Y41+rYL5fryE+nOFhp4p4JPQvdV8PQ4DWgHgeTE+w==}
+
   '@casl/ability@6.8.1':
     resolution: {integrity: sha512-VX5DD1JbSP/DdewZnNwXXaCzve+0pLe14mcUj2l93CdOFAQUT/ylAptNqxf3Wc/jlsuSanAgXza4Z1Iq23dzpQ==}
+
+  '@connectrpc/connect@2.1.2':
+    resolution: {integrity: sha512-MXkBijtcX09R10Eb6sFeIetc6w6746eio6xtfuyVOH7oQAacT1X0GzMIQFux6Qy8cq3W/T5qX5Bei8YbFtmRGA==}
+    peerDependencies:
+      '@bufbuild/protobuf': ^2.7.0
 
   '@esbuild/aix-ppc64@0.25.12':
     resolution: {integrity: sha512-Hhmwd6CInZ3dwpuGTF8fJG6yoWmsToE+vYgD4nytZVxcu1ulHpUQRAB1UJ8+N1Am3Mz4+xOByoQoSZf4D+CpkA==}
@@ -1484,9 +1498,15 @@ snapshots:
       '@babel/helper-string-parser': 7.29.7
       '@babel/helper-validator-identifier': 7.29.7
 
+  '@bufbuild/protobuf@2.14.0': {}
+
   '@casl/ability@6.8.1':
     dependencies:
       '@ucast/mongo2js': 1.4.1
+
+  '@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.14.0)':
+    dependencies:
+      '@bufbuild/protobuf': 2.14.0
 
   '@esbuild/aix-ppc64@0.25.12':
     optional: true

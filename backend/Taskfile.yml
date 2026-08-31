@@ -38,5 +38,7 @@ tasks:
     cmd: go run ./cmd/seed
 
   proto:gen:
-    desc: buf 產生 Go/TS/Dart 型別
+    desc: buf 產生 Go/TS/Dart 型別(本地 protoc-gen-dart 需於 PATH)
+    env:
+      PATH: "{{.HOME}}/.pub-cache/bin:{{env \"PATH\" | default \"\"}}"
     cmd: buf generate

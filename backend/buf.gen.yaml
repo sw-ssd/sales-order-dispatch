@@ -1,0 +1,21 @@
+version: v2
+plugins:
+  # Go 訊息 + Connect-Go 服務
+  - remote: buf.build/protocolbuffers/go
+    out: internal/proto
+    opt: paths=source_relative
+  - remote: buf.build/connectrpc/go
+    out: internal/proto
+    opt: paths=source_relative
+  # TS 訊息 + Connect-ES 用戶端
+  - remote: buf.build/bufbuild/es
+    out: ../frontend/src/lib/proto
+  - remote: buf.build/connectrpc/es
+    out: ../frontend/src/lib/proto
+  # Dart 訊息:本地 protoc-gen-dart(dart pub global activate protoc_plugin),
+  # 對齊 connectrpc 1.0.0 之 protobuf <5 約束(BSR 最新版產出 protobuf 6 專用碼)。
+  - local: protoc-gen-dart
+    out: ../app/lib/gen
+  # Dart Connect 用戶端
+  - remote: buf.build/connectrpc/dart
+    out: ../app/lib/gen
