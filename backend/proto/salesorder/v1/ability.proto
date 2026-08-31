@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package salesorder.v1;
+option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1";
+
+import "google/protobuf/struct.proto";
+
+// AbilityRule:單條 CASL 能力規則(前端 @casl/ability 直接消費)。
+message AbilityRule {
+  string action = 1;
+  string subject = 2;
+  google.protobuf.Struct conditions = 3; // 無條件時為 null
+  bool inverted = 4;
+}
+
+// GetAbilityRequest:取得目前身分的能力規則。
+message GetAbilityRequest {}
+
+// GetAbilityResponse:能力規則清單(依 sort_order 排序,佔位符已以身分展開)。
+message GetAbilityResponse {
+  repeated AbilityRule rules = 1;
+}
+
+// AbilityService:能力規則下發。
+service AbilityService {
+  // GetAbility:以 ctx 身分查詢規則表,輸出 CASL JSON 規則。
+  rpc GetAbility(GetAbilityRequest) returns (GetAbilityResponse);
+}
