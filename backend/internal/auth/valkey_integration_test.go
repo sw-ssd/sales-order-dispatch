@@ -2,14 +2,16 @@ package auth
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/redis/go-redis/v9"
-)
+	_ "github.com/mattn/go-sqlite3" // sqlite in-memory 測試驅動
 
-// testUserID 為整合測試專用使用者 ID(避免與真實資料碰撞)。
-const testUserID = 424242
+	"github.com/redis/go-redis/v9"
+	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
+	"github.com/salesorder/sales-order-1.0/backend/ent/user"
+)
 
 // openTestValkey 嘗試連線本機 Valkey;不可用時回傳 nil。
 func openTestValkey(t *testing.T) *redis.Client {
@@ -21,11 +23,7 @@ func openTestValkey(t *testing.T) *redis.Client {
 		_ = c.Close()
 		t.Skipf("Valkey 不可用,跳過整合測試: %v", err)
 	}
-	t.Cleanup(func() {
-		ctx := context.Background()
-		c.Del(ctx, tokenVersionKey(testUserID), refreshUserSetKey(testUserID))
-		_ = c.Close()
-	})
+	t.Cleanup(func() { _ = c.Close() })
 	return c
 }
 
@@ -34,9 +32,23 @@ func openTestValkey(t *testing.T) *redis.Client {
 func TestValkeyTokenIssueRefreshRotation(t *testing.T) {
 	c := openTestValkey(t)
 	ctx := context.Background()
-	tm := NewTokenManager("it-secret", NewRedisStore(c))
 
-	access, err := tm.IssueAccess(ctx, TokenSubject{UserID: testUserID, CompanyID: 1, Role: "customer"})
+	// token_version 讀寫自 DB(users.token_version);refresh token 走真實 Valkey。
+	name := strings.ReplaceAll(t.Name(), "/", "_")
+	db := enttest.Open(t, "sqlite3", "file:"+name+"?mode=memory&cache=shared&_fk=1")
+	t.Cleanup(func() { _ = db.Close() })
+	co := db.Company.Create().SetName("整合公司").SetIdentifier("IT-" + name).SaveX(ctx)
+	u := db.User.Create().
+		SetEmail("it-token-" + name + "@example.com").SetName("整合").SetStatus(user.StatusActive).
+		SetRole("customer").SetPasswordHash("x").SetCompanyID(co.ID).SaveX(ctx)
+	t.Cleanup(func() {
+		ctx := context.Background()
+		c.Del(ctx, refreshUserSetKey(u.ID))
+	})
+
+	tm := NewTokenManager("it-secret", NewRedisStore(c), db)
+
+	access, err := tm.IssueAccess(ctx, TokenSubject{UserID: u.ID, CompanyID: 1, Role: "customer"})
 	if err != nil {
 		t.Fatalf("IssueAccess: %v", err)
 	}
@@ -44,11 +56,11 @@ func TestValkeyTokenIssueRefreshRotation(t *testing.T) {
 		t.Fatalf("VerifyAccess: %v", err)
 	}
 
-	r1, err := tm.IssueRefresh(ctx, testUserID, 0)
+	r1, err := tm.IssueRefresh(ctx, u.ID, 0)
 	if err != nil {
 		t.Fatalf("IssueRefresh: %v", err)
 	}
-	r2, err := tm.RotateRefresh(ctx, r1, testUserID, 0)
+	r2, err := tm.RotateRefresh(ctx, r1, u.ID, 0)
 	if err != nil {
 		t.Fatalf("RotateRefresh: %v", err)
 	}
@@ -60,7 +72,7 @@ func TestValkeyTokenIssueRefreshRotation(t *testing.T) {
 	}
 
 	// RevokeAll:全部 refresh 撤銷 + token_version 遞增(舊 access 亦失效)
-	if err := tm.RevokeAll(ctx, testUserID); err != nil {
+	if err := tm.RevokeAll(ctx, u.ID); err != nil {
 		t.Fatalf("RevokeAll: %v", err)
 	}
 	if _, _, err := tm.VerifyRefresh(ctx, r2); err != ErrInvalidRefresh {

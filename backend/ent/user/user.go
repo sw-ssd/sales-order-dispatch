@@ -30,6 +30,8 @@ const (
 	FieldIsCustomer = "is_customer"
 	// FieldAccountName holds the string denoting the account_name field in the database.
 	FieldAccountName = "account_name"
+	// FieldTokenVersion holds the string denoting the token_version field in the database.
+	FieldTokenVersion = "token_version"
 	// FieldPasswordHash holds the string denoting the password_hash field in the database.
 	FieldPasswordHash = "password_hash"
 	// EdgeCompany holds the string denoting the company edge name in mutations.
@@ -65,6 +67,7 @@ var Columns = []string{
 	FieldEmployeeNo,
 	FieldIsCustomer,
 	FieldAccountName,
+	FieldTokenVersion,
 	FieldPasswordHash,
 }
 
@@ -99,6 +102,8 @@ var (
 	RoleValidator func(string) error
 	// DefaultIsCustomer holds the default value on creation for the "is_customer" field.
 	DefaultIsCustomer bool
+	// DefaultTokenVersion holds the default value on creation for the "token_version" field.
+	DefaultTokenVersion int
 	// PasswordHashValidator is a validator for the "password_hash" field. It is called by the builders before save.
 	PasswordHashValidator func(string) error
 )
@@ -176,6 +181,11 @@ func ByIsCustomer(opts ...sql.OrderTermOption) OrderOption {
 // ByAccountName orders the results by the account_name field.
 func ByAccountName(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAccountName, opts...).ToFunc()
+}
+
+// ByTokenVersion orders the results by the token_version field.
+func ByTokenVersion(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTokenVersion, opts...).ToFunc()
 }
 
 // ByPasswordHash orders the results by the password_hash field.

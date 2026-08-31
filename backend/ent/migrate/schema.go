@@ -103,6 +103,7 @@ var (
 		{Name: "employee_no", Type: field.TypeString, Nullable: true},
 		{Name: "is_customer", Type: field.TypeBool, Default: false},
 		{Name: "account_name", Type: field.TypeString, Nullable: true},
+		{Name: "token_version", Type: field.TypeInt, Default: 0},
 		{Name: "password_hash", Type: field.TypeString},
 		{Name: "company_users", Type: field.TypeInt},
 		{Name: "department_users", Type: field.TypeInt, Nullable: true},
@@ -115,13 +116,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "users_companies_users",
-				Columns:    []*schema.Column{UsersColumns[10]},
+				Columns:    []*schema.Column{UsersColumns[11]},
 				RefColumns: []*schema.Column{CompaniesColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "users_departments_users",
-				Columns:    []*schema.Column{UsersColumns[11]},
+				Columns:    []*schema.Column{UsersColumns[12]},
 				RefColumns: []*schema.Column{DepartmentsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},

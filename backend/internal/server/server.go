@@ -150,7 +150,7 @@ func (s *Server) mountAuth() {
 	}
 
 	kv := auth.NewRedisStore(valkeyClient)
-	tokens := auth.NewTokenManager(s.cfg.Auth.JWTSecret, kv)
+	tokens := auth.NewTokenManager(s.cfg.Auth.JWTSecret, kv, entClient)
 	lockout := auth.NewLoginLock(kv)
 	oneTime := auth.NewOneTimeStore(kv)
 	sessions := auth.WebSessionManager(auth.NewSessionStore(kv),

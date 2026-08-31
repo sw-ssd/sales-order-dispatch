@@ -62,7 +62,7 @@ func newTestEnv(t *testing.T) *testEnv {
 	t.Cleanup(func() { _ = db.Close() })
 
 	kv := auth.NewMemoryStore()
-	tokens := auth.NewTokenManager("test-secret", kv)
+	tokens := auth.NewTokenManager("test-secret", kv, db)
 	lockout := auth.NewLoginLock(kv)
 	oneTime := auth.NewOneTimeStore(kv)
 	sessions := auth.WebSessionManager(memstore.New(), 30*24*time.Hour, false, "lax")

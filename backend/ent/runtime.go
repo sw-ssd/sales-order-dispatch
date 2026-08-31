@@ -85,8 +85,12 @@ func init() {
 	userDescIsCustomer := userFields[6].Descriptor()
 	// user.DefaultIsCustomer holds the default value on creation for the is_customer field.
 	user.DefaultIsCustomer = userDescIsCustomer.Default.(bool)
+	// userDescTokenVersion is the schema descriptor for token_version field.
+	userDescTokenVersion := userFields[8].Descriptor()
+	// user.DefaultTokenVersion holds the default value on creation for the token_version field.
+	user.DefaultTokenVersion = userDescTokenVersion.Default.(int)
 	// userDescPasswordHash is the schema descriptor for password_hash field.
-	userDescPasswordHash := userFields[8].Descriptor()
+	userDescPasswordHash := userFields[9].Descriptor()
 	// user.PasswordHashValidator is a validator for the "password_hash" field. It is called by the builders before save.
 	user.PasswordHashValidator = userDescPasswordHash.Validators[0].(func(string) error)
 }

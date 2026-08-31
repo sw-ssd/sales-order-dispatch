@@ -159,6 +159,27 @@ func (_u *UserUpdate) ClearAccountName() *UserUpdate {
 	return _u
 }
 
+// SetTokenVersion sets the "token_version" field.
+func (_u *UserUpdate) SetTokenVersion(v int) *UserUpdate {
+	_u.mutation.ResetTokenVersion()
+	_u.mutation.SetTokenVersion(v)
+	return _u
+}
+
+// SetNillableTokenVersion sets the "token_version" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableTokenVersion(v *int) *UserUpdate {
+	if v != nil {
+		_u.SetTokenVersion(*v)
+	}
+	return _u
+}
+
+// AddTokenVersion adds value to the "token_version" field.
+func (_u *UserUpdate) AddTokenVersion(v int) *UserUpdate {
+	_u.mutation.AddTokenVersion(v)
+	return _u
+}
+
 // SetPasswordHash sets the "password_hash" field.
 func (_u *UserUpdate) SetPasswordHash(v string) *UserUpdate {
 	_u.mutation.SetPasswordHash(v)
@@ -324,6 +345,12 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.AccountNameCleared() {
 		_spec.ClearField(user.FieldAccountName, field.TypeString)
+	}
+	if value, ok := _u.mutation.TokenVersion(); ok {
+		_spec.SetField(user.FieldTokenVersion, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedTokenVersion(); ok {
+		_spec.AddField(user.FieldTokenVersion, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.PasswordHash(); ok {
 		_spec.SetField(user.FieldPasswordHash, field.TypeString, value)
@@ -536,6 +563,27 @@ func (_u *UserUpdateOne) ClearAccountName() *UserUpdateOne {
 	return _u
 }
 
+// SetTokenVersion sets the "token_version" field.
+func (_u *UserUpdateOne) SetTokenVersion(v int) *UserUpdateOne {
+	_u.mutation.ResetTokenVersion()
+	_u.mutation.SetTokenVersion(v)
+	return _u
+}
+
+// SetNillableTokenVersion sets the "token_version" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableTokenVersion(v *int) *UserUpdateOne {
+	if v != nil {
+		_u.SetTokenVersion(*v)
+	}
+	return _u
+}
+
+// AddTokenVersion adds value to the "token_version" field.
+func (_u *UserUpdateOne) AddTokenVersion(v int) *UserUpdateOne {
+	_u.mutation.AddTokenVersion(v)
+	return _u
+}
+
 // SetPasswordHash sets the "password_hash" field.
 func (_u *UserUpdateOne) SetPasswordHash(v string) *UserUpdateOne {
 	_u.mutation.SetPasswordHash(v)
@@ -731,6 +779,12 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	}
 	if _u.mutation.AccountNameCleared() {
 		_spec.ClearField(user.FieldAccountName, field.TypeString)
+	}
+	if value, ok := _u.mutation.TokenVersion(); ok {
+		_spec.SetField(user.FieldTokenVersion, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedTokenVersion(); ok {
+		_spec.AddField(user.FieldTokenVersion, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.PasswordHash(); ok {
 		_spec.SetField(user.FieldPasswordHash, field.TypeString, value)

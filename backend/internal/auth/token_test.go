@@ -2,15 +2,54 @@ package auth
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
+
+	_ "github.com/mattn/go-sqlite3" // sqlite in-memory 測試驅動
+
+	"github.com/salesorder/sales-order-1.0/backend/ent"
+	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
+	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 )
 
-func TestAccessTokenIssueVerify(t *testing.T) {
-	ctx := context.Background()
-	tm := NewTokenManager("test-secret", NewMemoryStore())
+// tokenTestSeq 為 newTokenTestEnv 產生唯一 DSN/identifier 的序號。
+var tokenTestSeq atomic.Int64
 
-	access, err := tm.IssueAccess(ctx, TokenSubject{UserID: 7, CompanyID: 3, DepartmentID: 5, Role: "customer"})
+// newTokenTestEnv 建立 enttest sqlite 記憶體 DB(company + user)與 TokenManager。
+// token_version 由 users.token_version 欄位驅動;refresh token 存於 MemoryStore。
+// DSN 以測試名+序號區隔,避免同 package 多測試(或同測試多次呼叫)共享同一 in-memory db。
+func newTokenTestEnv(t *testing.T) (*TokenManager, *ent.User, context.Context) {
+	t.Helper()
+	name := fmt.Sprintf("%s-%d", strings.ReplaceAll(t.Name(), "/", "_"), tokenTestSeq.Add(1))
+	dsn := "file:" + name + "?mode=memory&cache=shared&_fk=1"
+	db := enttest.Open(t, "sqlite3", dsn)
+	t.Cleanup(func() { _ = db.Close() })
+	ctx := context.Background()
+
+	co := db.Company.Create().
+		SetName("測試公司-" + name).
+		SetIdentifier("T-" + name).
+		SaveX(ctx)
+	u := db.User.Create().
+		SetEmail("tok-" + name + "@example.com").
+		SetName("測試使用者").
+		SetStatus(user.StatusActive).
+		SetRole("staff").
+		SetPasswordHash("x").
+		SetCompanyID(co.ID).
+		SaveX(ctx)
+	tm := NewTokenManager("test-secret", NewMemoryStore(), db)
+	return tm, u, ctx
+}
+
+func TestAccessTokenIssueVerify(t *testing.T) {
+	tm, u, ctx := newTokenTestEnv(t)
+
+	access, err := tm.IssueAccess(ctx, TokenSubject{UserID: u.ID, CompanyID: 3, DepartmentID: 5, Role: "customer"})
 	if err != nil {
 		t.Fatalf("IssueAccess: %v", err)
 	}
@@ -18,11 +57,15 @@ func TestAccessTokenIssueVerify(t *testing.T) {
 	if err != nil {
 		t.Fatalf("VerifyAccess: %v", err)
 	}
-	if claims.UserID != 7 || claims.CompanyID != 3 || claims.DepartmentID != 5 || claims.Role != "customer" {
+	if claims.UserID != u.ID || claims.CompanyID != 3 || claims.DepartmentID != 5 || claims.Role != "customer" {
 		t.Fatalf("claims 不符: %+v", claims)
 	}
 	if claims.TokenVersion != 0 {
-		t.Fatalf("初始 token_version 應為 0,got %d", claims.TokenVersion)
+		t.Fatalf("初始 token_version 應為 0(users.token_version 預設),got %d", claims.TokenVersion)
+	}
+	// token_version 讀自 DB 欄位
+	if tv, err := tm.CurrentTokenVersion(ctx, u.ID); err != nil || tv != 0 {
+		t.Fatalf("DB token_version 應為 0,got %d err=%v", tv, err)
 	}
 	exp := claims.ExpiresAt.Time
 	if d := time.Until(exp); d > AccessTokenTTL || d < AccessTokenTTL-time.Minute {
@@ -31,21 +74,20 @@ func TestAccessTokenIssueVerify(t *testing.T) {
 }
 
 func TestAccessTokenRevokedByBump(t *testing.T) {
-	ctx := context.Background()
-	tm := NewTokenManager("test-secret", NewMemoryStore())
+	tm, u, ctx := newTokenTestEnv(t)
 
-	access, err := tm.IssueAccess(ctx, TokenSubject{UserID: 1, Role: "staff"})
+	access, err := tm.IssueAccess(ctx, TokenSubject{UserID: u.ID, Role: "staff"})
 	if err != nil {
 		t.Fatalf("IssueAccess: %v", err)
 	}
-	if err := tm.BumpTokenVersion(ctx, 1); err != nil {
+	if err := tm.BumpTokenVersion(ctx, u.ID); err != nil {
 		t.Fatalf("BumpTokenVersion: %v", err)
 	}
 	if _, err := tm.VerifyAccess(ctx, access); err != ErrTokenRevoked {
 		t.Fatalf("bump 後舊 access 應回 ErrTokenRevoked,got %v", err)
 	}
 	// 新簽發的 access 帶新 tv,可通過
-	access2, err := tm.IssueAccess(ctx, TokenSubject{UserID: 1, Role: "staff"})
+	access2, err := tm.IssueAccess(ctx, TokenSubject{UserID: u.ID, Role: "staff"})
 	if err != nil {
 		t.Fatalf("IssueAccess: %v", err)
 	}
@@ -55,20 +97,19 @@ func TestAccessTokenRevokedByBump(t *testing.T) {
 }
 
 func TestRefreshIssueRotateRevoke(t *testing.T) {
-	ctx := context.Background()
-	tm := NewTokenManager("test-secret", NewMemoryStore())
+	tm, u, ctx := newTokenTestEnv(t)
 
-	r1, err := tm.IssueRefresh(ctx, 42, 0)
+	r1, err := tm.IssueRefresh(ctx, u.ID, 0)
 	if err != nil {
 		t.Fatalf("IssueRefresh: %v", err)
 	}
 	uid, tv, err := tm.VerifyRefresh(ctx, r1)
-	if err != nil || uid != 42 || tv != 0 {
+	if err != nil || uid != u.ID || tv != 0 {
 		t.Fatalf("VerifyRefresh: uid=%d tv=%d err=%v", uid, tv, err)
 	}
 
 	// 旋轉:舊 token 立即失效(重放偵測)
-	r2, err := tm.RotateRefresh(ctx, r1, 42, 0)
+	r2, err := tm.RotateRefresh(ctx, r1, u.ID, 0)
 	if err != nil {
 		t.Fatalf("RotateRefresh: %v", err)
 	}
@@ -76,7 +117,7 @@ func TestRefreshIssueRotateRevoke(t *testing.T) {
 		t.Fatal("旋轉後新 token 不得與舊相同")
 	}
 	if _, _, err := tm.VerifyRefresh(ctx, r1); err != ErrInvalidRefresh {
-		t.Fatalf("旋轉後舊 refresh 應失效,got %v", err)
+		t.Fatalf("旋轉後舊 refresh 重放應回 ErrInvalidRefresh,got %v", err)
 	}
 
 	// 撤銷單一 token(冪等)
@@ -92,18 +133,17 @@ func TestRefreshIssueRotateRevoke(t *testing.T) {
 }
 
 func TestRefreshRevokedByBumpAndRevokeAll(t *testing.T) {
-	ctx := context.Background()
-	tm := NewTokenManager("test-secret", NewMemoryStore())
+	tm, u, ctx := newTokenTestEnv(t)
 
-	r1, err := tm.IssueRefresh(ctx, 9, 0)
+	r1, err := tm.IssueRefresh(ctx, u.ID, 0)
 	if err != nil {
 		t.Fatalf("IssueRefresh: %v", err)
 	}
-	if _, err := tm.IssueRefresh(ctx, 9, 0); err != nil {
+	if _, err := tm.IssueRefresh(ctx, u.ID, 0); err != nil {
 		t.Fatalf("IssueRefresh: %v", err)
 	}
-	// token_version bump → 全部 refresh 失效(簽發時 tv 與現值不符)
-	if err := tm.BumpTokenVersion(ctx, 9); err != nil {
+	// token_version bump → 全部 refresh 失效(簽發時 tv 與 DB 現值不符)
+	if err := tm.BumpTokenVersion(ctx, u.ID); err != nil {
 		t.Fatalf("Bump: %v", err)
 	}
 	if _, _, err := tm.VerifyRefresh(ctx, r1); err != ErrRefreshRevoked {
@@ -111,36 +151,45 @@ func TestRefreshRevokedByBumpAndRevokeAll(t *testing.T) {
 	}
 
 	// RevokeAll:撤銷全部 refresh + tv+1
-	tm2 := NewTokenManager("test-secret", NewMemoryStore())
-	a, err := tm2.IssueRefresh(ctx, 9, 0)
+	tm2, u2, ctx2 := newTokenTestEnv(t)
+	a, err := tm2.IssueRefresh(ctx2, u2.ID, 0)
 	if err != nil {
 		t.Fatalf("IssueRefresh: %v", err)
 	}
-	b, err := tm2.IssueRefresh(ctx, 9, 0)
+	b, err := tm2.IssueRefresh(ctx2, u2.ID, 0)
 	if err != nil {
 		t.Fatalf("IssueRefresh: %v", err)
 	}
-	if err := tm2.RevokeAll(ctx, 9); err != nil {
+	if err := tm2.RevokeAll(ctx2, u2.ID); err != nil {
 		t.Fatalf("RevokeAll: %v", err)
 	}
 	for _, r := range []string{a, b} {
-		if _, _, err := tm2.VerifyRefresh(ctx, r); err != ErrInvalidRefresh {
+		if _, _, err := tm2.VerifyRefresh(ctx2, r); err != ErrInvalidRefresh {
 			t.Fatalf("RevokeAll 後 refresh 應失效,got %v", err)
 		}
 	}
-	tv, err := tm2.CurrentTokenVersion(ctx, 9)
+	// RevokeAll 使 DB 欄位遞增為 1
+	tv, err := tm2.CurrentTokenVersion(ctx2, u2.ID)
 	if err != nil || tv != 1 {
-		t.Fatalf("RevokeAll 後 tv 應為 1,got %d err=%v", tv, err)
+		t.Fatalf("RevokeAll 後 DB tv 應為 1,got %d err=%v", tv, err)
 	}
 }
 
 func TestRefreshInvalidToken(t *testing.T) {
-	ctx := context.Background()
-	tm := NewTokenManager("test-secret", NewMemoryStore())
+	tm, _, ctx := newTokenTestEnv(t)
 	if _, _, err := tm.VerifyRefresh(ctx, "garbage"); err != ErrInvalidRefresh {
 		t.Fatalf("亂碼 refresh 應 ErrInvalidRefresh,got %v", err)
 	}
 	if _, _, err := tm.VerifyRefresh(ctx, ""); err != ErrInvalidRefresh {
 		t.Fatalf("空 refresh 應 ErrInvalidRefresh,got %v", err)
+	}
+}
+
+// TestCurrentTokenVersionMissingUser 驗證 fail-closed:使用者不存在(已刪除)時
+// token_version 讀取回 ErrInvalidToken,既有 token 無法通過。
+func TestCurrentTokenVersionMissingUser(t *testing.T) {
+	tm, _, ctx := newTokenTestEnv(t)
+	if _, err := tm.CurrentTokenVersion(ctx, 999999); !errors.Is(err, ErrInvalidToken) {
+		t.Fatalf("不存在使用者應回 ErrInvalidToken,got %v", err)
 	}
 }

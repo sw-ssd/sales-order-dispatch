@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/salesorder/sales-order-1.0/backend/ent"
 )
 
 // Token 效期(D5):access 1 小時;refresh 30 天、使用時旋轉。
@@ -32,8 +33,8 @@ var (
 	ErrInvalidCredentials = errors.New("auth: 帳號或密碼錯誤")
 )
 
-// Claims 為 access token 內容;tv 對應 token_version(撤銷比對用,存放於 KVStore,
-// 待 users.token_version 欄位落地後遷移至 DB)。
+// Claims 為 access token 內容;tv 對應 token_version(撤銷比對用,存放於 DB 的
+// users.token_version 欄位)。
 type Claims struct {
 	UserID       int    `json:"sub"`
 	Role         string `json:"role"`
@@ -52,20 +53,16 @@ type TokenSubject struct {
 }
 
 // TokenManager 負責 access token 簽發/驗證、refresh token 發行/旋轉/撤銷、token_version 管理。
-// 所有狀態存於 KVStore(Valkey 正式 / MemoryStore 測試)。
+// token_version 存於 DB(users.token_version);refresh token 存於 KVStore(Valkey 正式 / MemoryStore 測試)。
 type TokenManager struct {
 	secret []byte
 	kv     KVStore
+	db     *ent.Client
 }
 
 // NewTokenManager 建立 TokenManager。
-func NewTokenManager(jwtSecret string, kv KVStore) *TokenManager {
-	return &TokenManager{secret: []byte(jwtSecret), kv: kv}
-}
-
-// tokenVersionKey 回傳使用者的 token_version 鍵。
-func tokenVersionKey(userID int) string {
-	return fmt.Sprintf("auth:tv:%d", userID)
+func NewTokenManager(jwtSecret string, kv KVStore, db *ent.Client) *TokenManager {
+	return &TokenManager{secret: []byte(jwtSecret), kv: kv, db: db}
 }
 
 // refreshKey 回傳 refresh token 雜湊的鍵。
@@ -78,26 +75,25 @@ func refreshUserSetKey(userID int) string {
 	return fmt.Sprintf("auth:refresh:user:%d", userID)
 }
 
-// CurrentTokenVersion 回傳使用者目前 token_version(無記錄視為 0)。
+// CurrentTokenVersion 回傳使用者目前 token_version(users.token_version)。
+// 使用者不存在時回傳 ErrInvalidToken(fail-closed:已刪除使用者的 token 一律失效)。
 func (m *TokenManager) CurrentTokenVersion(ctx context.Context, userID int) (int, error) {
-	v, ok, err := m.kv.Get(ctx, tokenVersionKey(userID))
+	u, err := m.db.User.Get(ctx, userID)
 	if err != nil {
+		if ent.IsNotFound(err) {
+			return 0, fmt.Errorf("%w: 使用者 %d 不存在", ErrInvalidToken, userID)
+		}
 		return 0, err
 	}
-	if !ok {
-		return 0, nil
-	}
-	n, err := strconv.Atoi(v)
-	if err != nil {
-		return 0, fmt.Errorf("auth: token_version 格式錯誤: %w", err)
-	}
-	return n, nil
+	return u.TokenVersion, nil
 }
 
-// BumpTokenVersion 遞增 token_version,使該使用者既有 access/refresh token 全數失效(D5)。
+// BumpTokenVersion 遞增 users.token_version,使該使用者既有 access/refresh token 全數失效(D5)。
 // 改密碼 / 停用 / 角色變更 / 強制登出時呼叫。
 func (m *TokenManager) BumpTokenVersion(ctx context.Context, userID int) error {
-	_, err := m.kv.Incr(ctx, tokenVersionKey(userID))
+	_, err := m.db.User.UpdateOneID(userID).
+		AddTokenVersion(1).
+		Save(ctx)
 	return err
 }
 

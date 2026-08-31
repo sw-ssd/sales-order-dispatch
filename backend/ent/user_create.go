@@ -109,6 +109,20 @@ func (_c *UserCreate) SetNillableAccountName(v *string) *UserCreate {
 	return _c
 }
 
+// SetTokenVersion sets the "token_version" field.
+func (_c *UserCreate) SetTokenVersion(v int) *UserCreate {
+	_c.mutation.SetTokenVersion(v)
+	return _c
+}
+
+// SetNillableTokenVersion sets the "token_version" field if the given value is not nil.
+func (_c *UserCreate) SetNillableTokenVersion(v *int) *UserCreate {
+	if v != nil {
+		_c.SetTokenVersion(*v)
+	}
+	return _c
+}
+
 // SetPasswordHash sets the "password_hash" field.
 func (_c *UserCreate) SetPasswordHash(v string) *UserCreate {
 	_c.mutation.SetPasswordHash(v)
@@ -188,6 +202,10 @@ func (_c *UserCreate) defaults() {
 		v := user.DefaultIsCustomer
 		_c.mutation.SetIsCustomer(v)
 	}
+	if _, ok := _c.mutation.TokenVersion(); !ok {
+		v := user.DefaultTokenVersion
+		_c.mutation.SetTokenVersion(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -226,6 +244,9 @@ func (_c *UserCreate) check() error {
 	}
 	if _, ok := _c.mutation.IsCustomer(); !ok {
 		return &ValidationError{Name: "is_customer", err: errors.New(`ent: missing required field "User.is_customer"`)}
+	}
+	if _, ok := _c.mutation.TokenVersion(); !ok {
+		return &ValidationError{Name: "token_version", err: errors.New(`ent: missing required field "User.token_version"`)}
 	}
 	if _, ok := _c.mutation.PasswordHash(); !ok {
 		return &ValidationError{Name: "password_hash", err: errors.New(`ent: missing required field "User.password_hash"`)}
@@ -295,6 +316,10 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.AccountName(); ok {
 		_spec.SetField(user.FieldAccountName, field.TypeString, value)
 		_node.AccountName = value
+	}
+	if value, ok := _c.mutation.TokenVersion(); ok {
+		_spec.SetField(user.FieldTokenVersion, field.TypeInt, value)
+		_node.TokenVersion = value
 	}
 	if value, ok := _c.mutation.PasswordHash(); ok {
 		_spec.SetField(user.FieldPasswordHash, field.TypeString, value)

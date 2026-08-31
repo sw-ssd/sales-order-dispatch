@@ -34,6 +34,8 @@ type User struct {
 	IsCustomer bool `json:"is_customer,omitempty"`
 	// AccountName holds the value of the "account_name" field.
 	AccountName string `json:"account_name,omitempty"`
+	// TokenVersion holds the value of the "token_version" field.
+	TokenVersion int `json:"token_version,omitempty"`
 	// PasswordHash holds the value of the "password_hash" field.
 	PasswordHash string `json:"-"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -84,7 +86,7 @@ func (*User) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case user.FieldIsCustomer:
 			values[i] = new(sql.NullBool)
-		case user.FieldID:
+		case user.FieldID, user.FieldTokenVersion:
 			values[i] = new(sql.NullInt64)
 		case user.FieldEmail, user.FieldName, user.FieldStatus, user.FieldRole, user.FieldPhone, user.FieldEmployeeNo, user.FieldAccountName, user.FieldPasswordHash:
 			values[i] = new(sql.NullString)
@@ -160,6 +162,12 @@ func (_m *User) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field account_name", values[i])
 			} else if value.Valid {
 				_m.AccountName = value.String
+			}
+		case user.FieldTokenVersion:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field token_version", values[i])
+			} else if value.Valid {
+				_m.TokenVersion = int(value.Int64)
 			}
 		case user.FieldPasswordHash:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -250,6 +258,9 @@ func (_m *User) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("account_name=")
 	builder.WriteString(_m.AccountName)
+	builder.WriteString(", ")
+	builder.WriteString("token_version=")
+	builder.WriteString(fmt.Sprintf("%v", _m.TokenVersion))
 	builder.WriteString(", ")
 	builder.WriteString("password_hash=<sensitive>")
 	builder.WriteByte(')')
