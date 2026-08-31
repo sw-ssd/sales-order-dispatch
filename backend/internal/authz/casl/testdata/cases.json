@@ -1,0 +1,262 @@
+{
+  "cases": [
+    {
+      "name": "無條件 + cannot 狀態排除",
+      "identity": {
+        "user_id": "u1",
+        "company_id": "c1",
+        "department_id": "d1"
+      },
+      "rules": [
+        {
+          "action": "read",
+          "subject": "sales_order"
+        },
+        {
+          "action": "read",
+          "subject": "sales_order",
+          "inverted": true,
+          "conditions": {
+            "status": "voided"
+          }
+        }
+      ],
+      "checks": [
+        {
+          "action": "read",
+          "subject": "sales_order",
+          "instance": {
+            "status": "pending"
+          },
+          "expect": true,
+          "query": {
+            "denied": false,
+            "or": 0,
+            "and": 1
+          }
+        },
+        {
+          "action": "read",
+          "subject": "sales_order",
+          "instance": {
+            "status": "voided"
+          },
+          "expect": false,
+          "query": {
+            "denied": false,
+            "or": 0,
+            "and": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "佔位符 + $in",
+      "identity": {
+        "user_id": "u1",
+        "company_id": "c1",
+        "department_id": "d1"
+      },
+      "rules": [
+        {
+          "action": "read",
+          "subject": "sales_order",
+          "conditions": {
+            "department_id": "${user.department_id}"
+          }
+        },
+        {
+          "action": "cancel",
+          "subject": "sales_order",
+          "conditions": {
+            "status": {
+              "$in": [
+                "pending"
+              ]
+            }
+          }
+        }
+      ],
+      "checks": [
+        {
+          "action": "read",
+          "subject": "sales_order",
+          "instance": {
+            "department_id": "d1"
+          },
+          "expect": true,
+          "query": {
+            "denied": false,
+            "or": 1,
+            "and": 0
+          }
+        },
+        {
+          "action": "read",
+          "subject": "sales_order",
+          "instance": {
+            "department_id": "d2"
+          },
+          "expect": false,
+          "query": {
+            "denied": false,
+            "or": 1,
+            "and": 0
+          }
+        },
+        {
+          "action": "cancel",
+          "subject": "sales_order",
+          "instance": {
+            "status": "pending"
+          },
+          "expect": true,
+          "query": {
+            "denied": false,
+            "or": 1,
+            "and": 0
+          }
+        },
+        {
+          "action": "cancel",
+          "subject": "sales_order",
+          "instance": {
+            "status": "processing"
+          },
+          "expect": false,
+          "query": {
+            "denied": false,
+            "or": 1,
+            "and": 0
+          }
+        },
+        {
+          "action": "cancel",
+          "subject": "sales_order",
+          "expect": false,
+          "note": "type-level divergence: Go fail-closed vs CASL ignore-conditions",
+          "query": {
+            "denied": false,
+            "or": 1,
+            "and": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "manage all 與無規則 deny",
+      "identity": {
+        "user_id": "u1",
+        "company_id": "c1",
+        "department_id": "d1"
+      },
+      "rules": [
+        {
+          "action": "manage",
+          "subject": "all"
+        }
+      ],
+      "checks": [
+        {
+          "action": "delete",
+          "subject": "customer",
+          "instance": {
+            "x": 1
+          },
+          "expect": true,
+          "query": {
+            "denied": false,
+            "or": 0,
+            "and": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "多允許規則 OR 聚合(query 形狀)",
+      "identity": {
+        "user_id": "u1",
+        "company_id": "c1",
+        "department_id": "d1"
+      },
+      "rules": [
+        {
+          "action": "read",
+          "subject": "sales_order",
+          "conditions": {
+            "department_id": "${user.department_id}"
+          }
+        },
+        {
+          "action": "read",
+          "subject": "sales_order",
+          "conditions": {
+            "created_by": "${user.id}"
+          }
+        },
+        {
+          "action": "read",
+          "subject": "sales_order",
+          "inverted": true,
+          "conditions": {
+            "status": "voided"
+          }
+        }
+      ],
+      "checks": [
+        {
+          "action": "read",
+          "subject": "sales_order",
+          "instance": {
+            "department_id": "d1"
+          },
+          "expect": true,
+          "query": {
+            "denied": false,
+            "or": 2,
+            "and": 1
+          }
+        },
+        {
+          "action": "read",
+          "subject": "sales_order",
+          "instance": {
+            "department_id": "d2",
+            "created_by": "u1"
+          },
+          "expect": true,
+          "query": {
+            "denied": false,
+            "or": 2,
+            "and": 1
+          }
+        },
+        {
+          "action": "read",
+          "subject": "sales_order",
+          "instance": {
+            "department_id": "d1",
+            "status": "voided"
+          },
+          "expect": false,
+          "query": {
+            "denied": false,
+            "or": 2,
+            "and": 1
+          }
+        },
+        {
+          "action": "read",
+          "subject": "customer",
+          "instance": {},
+          "expect": false,
+          "query": {
+            "denied": true,
+            "or": 0,
+            "and": 0
+          }
+        }
+      ]
+    }
+  ]
+}
