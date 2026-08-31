@@ -217,6 +217,7 @@
 
 - [ ] **Step 1: 初始化 package.json**
   - Dependencies: `solid-js`, `@solidjs/router`, `@tanstack/solid-query`, `@casl/ability`, `valibot`, `tailwindcss`, `class-variance-authority`, `clsx`, `tailwind-merge`.
+  - 註：UI 元件庫統一使用 **Ark UI**（`@ark-ui/solid`，headless，2026-08-31 決策）；互動元件（tabs/dialog/select 等）一律用 Ark primitives，樣式以 Tailwind v4 + `cn()` 提供。
 - [ ] **Step 2: 設定 Vite + TypeScript**
   - Path alias `~/*` → `src/*`.
 - [ ] **Step 3: 設定 Tailwind CSS**
