@@ -3,3 +3,5 @@ packages:
   - frontend
   - app
   - infra
+allowBuilds:
+  esbuild: true
