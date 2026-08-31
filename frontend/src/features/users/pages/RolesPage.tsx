@@ -7,12 +7,16 @@ import {
   type Role,
 } from "~/lib/proto/salesorder/v1/role_pb";
 import { cn } from "~/lib/cn";
+import { queryClient } from "~/lib/query-client";
 import { PermissionMatrix } from "../components/PermissionMatrix";
+import { ListPagination } from "../components/ListPagination";
 
 const roleClient = createClient(
   RoleService,
   createConnectTransport({ baseUrl: "/api/v1" }),
 );
+
+const PAGE_SIZE = 20;
 
 const DATA_SCOPE_LABELS: Record<string, string> = {
   all: "全部",
@@ -41,6 +45,8 @@ function errorMessage(err: unknown): string {
 /** 角色權限設置頁(/users/roles;T19):角色清單 + 權限矩陣(resource × action)。 */
 export default function RolesPage() {
   const [roles, setRoles] = createSignal<Role[]>([]);
+  const [total, setTotal] = createSignal(0);
+  const [page, setPage] = createSignal(1);
   const [selectedId, setSelectedId] = createSignal<string | null>(null);
   const [permissions, setPermissions] = createSignal<Permission[]>([]);
   const [loadingRoles, setLoadingRoles] = createSignal(true);
@@ -52,13 +58,27 @@ export default function RolesPage() {
 
   const selectedRole = () => roles().find((r) => r.id === selectedId()) ?? null;
 
+  const goToPage = (p: number) => {
+    setPage(p);
+    setSelectedId(null); // 換頁後角色清單不同,清空選取由 loadRoles 自動選第一筆
+    void loadRoles();
+  };
+
   const loadRoles = async () => {
     setLoadingRoles(true);
     setError(null);
     try {
-      const res = await roleClient.listRoles({ pageSize: 100 });
+      const res = await roleClient.listRoles({ page: page(), pageSize: PAGE_SIZE });
       const list = res.roles;
       setRoles(list);
+      const t = Number(res.pagination?.total ?? 0);
+      setTotal(t);
+      // 目前頁碼超出總頁數時退回最後一頁(與 CompaniesPage 一致)。
+      const maxPage = Math.max(1, Math.ceil(t / PAGE_SIZE));
+      if (page() > maxPage) {
+        setPage(maxPage);
+        return loadRoles();
+      }
       if (!selectedId() && list.length > 0) {
         setSelectedId(list[0].id);
         void loadPermissions(list[0].id);
@@ -107,6 +127,8 @@ export default function RolesPage() {
       });
       setDirty(false);
       setSavedAt(new Date().toLocaleTimeString());
+      // 權限異動後失效 ability 快取(queryKey ["ability"]),守衛/Can 立即以新規則生效。
+      void queryClient.invalidateQueries({ queryKey: ["ability"] });
       await loadPermissions(role.id); // 回讀(sort_order 正規化後)
     } catch (err) {
       setError(errorMessage(err));
@@ -172,6 +194,12 @@ export default function RolesPage() {
               )}
             </For>
           </ul>
+          <ListPagination
+            total={total()}
+            pageSize={PAGE_SIZE}
+            page={page()}
+            onPageChange={goToPage}
+          />
         </aside>
 
         <section class="min-w-0">
