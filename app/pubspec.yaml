@@ -39,6 +39,8 @@ dependencies:
   flutter_secure_storage: ^11.0.0
   flutter_web_auth_2: ^5.0.0
   connectrpc: ^1.0.0
+  # PKCE(S256 code challenge)雜湊,供業務 Google 登入使用。
+  crypto: ^3.0.0
   firebase_messaging: ^16.6.0
   talker: ^5.1.20
 
