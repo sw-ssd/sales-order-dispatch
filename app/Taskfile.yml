@@ -1,0 +1,21 @@
+version: '3'
+
+# iOS scheme 備註:Xcode scheme(dev/prod)需於 macOS Xcode 環境建立,
+# 目前以 -t lib/main_dev.dart / lib/main_prod.dart 區分入口。
+
+tasks:
+  run:dev:
+    desc: dev flavor 執行
+    cmd: fvm flutter run --flavor dev -t lib/main_dev.dart
+  run:prod:
+    desc: prod flavor 執行
+    cmd: fvm flutter run --flavor prod -t lib/main_prod.dart
+  analyze:
+    desc: 靜態分析
+    cmd: fvm flutter analyze
+  test:
+    desc: 全部測試
+    cmd: fvm flutter test
+  gen:
+    desc: auto_route codegen
+    cmd: fvm dart run build_runner build --delete-conflicting-outputs
