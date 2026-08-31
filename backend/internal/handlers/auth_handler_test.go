@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -182,6 +183,125 @@ func TestLoginSuccessWrongPasswordLockout(t *testing.T) {
 	// 鎖定:即使密碼正確也拒絕
 	if _, err := e.rpc.Login(e.ctx, connect.NewRequest(&v1.LoginRequest{CustomerCode: "C001", Password: "secret-123"})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
 		t.Fatalf("鎖定期間應 FailedPrecondition,got %v", err)
+	}
+}
+
+func TestCallbackUnknownHDIssuesRegistrationToken(t *testing.T) {
+	// hd 無對應公司:不建帳號,派發 registration token 並回跳註冊完成頁(1.4.3)。
+	e := newTestEnv(t)
+	e.verifier.id = &auth.OIDCIdentity{Email: "new@other.example", Name: "李四", HostedDomain: "other.example"}
+
+	state := "state-2"
+	if err := e.handler.deps.OneTime.Put(e.ctx, auth.StateKey(state), "1", time.Minute); err != nil {
+		t.Fatalf("寫入 state: %v", err)
+	}
+	rec := e.callback(t, state, "")
+	if rec.Code != http.StatusFound {
+		t.Fatalf("callback 應 302,got %d", rec.Code)
+	}
+	if loc := rec.Header().Get("Location"); !strings.HasSuffix(loc, "/register-complete") {
+		t.Fatalf("應回跳註冊完成頁,got %q", loc)
+	}
+	// 未建帳號
+	if n, err := e.db.User.Query().Where(user.EmailEQ("new@other.example")).Count(e.ctx); err != nil || n != 0 {
+		t.Fatalf("hd 未對應公司時不得建帳號,count=%d err=%v", n, err)
+	}
+	// registration token cookie 已設定
+	var regToken string
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == RegistrationTokenCookie {
+			regToken = c.Value
+		}
+	}
+	if regToken == "" {
+		t.Fatal("應設定 registration_token cookie")
+	}
+
+	// 完成註冊:選公司 + 姓名 → 建立 guest(status=pending)
+	coID := mustCreateCompany(t, e, "co-b")
+	req := connect.NewRequest(&v1.RegisterCompleteRequest{CompanyId: itoa(coID), Name: "李四"})
+	req.Header().Set("Cookie", RegistrationTokenCookie+"="+regToken)
+	if _, err := e.rpc.RegisterComplete(e.ctx, req); err != nil {
+		t.Fatalf("RegisterComplete: %v", err)
+	}
+	u, err := e.db.User.Query().Where(user.EmailEQ("new@other.example")).Only(e.ctx)
+	if err != nil {
+		t.Fatalf("註冊完成後應有帳號: %v", err)
+	}
+	if u.Role != RoleGuest || u.Status != user.StatusPending || u.Name != "李四" {
+		t.Fatalf("guest 應為 pending: role=%q status=%q name=%q", u.Role, u.Status, u.Name)
+	}
+	if co, err := u.QueryCompany().Only(e.ctx); err != nil || co.ID != coID {
+		t.Fatalf("帳號應歸屬所選公司,got %v err=%v", co, err)
+	}
+}
+
+func TestRegisterCompleteGuestToPending(t *testing.T) {
+	// T17 驗收:guest 完成註冊 → 狀態更新為 pending。
+	e := newTestEnv(t)
+	coA := mustCreateCompany(t, e, "co-a")
+	coB := mustCreateCompany(t, e, "co-b")
+
+	guest := e.db.User.Create().
+		SetEmail("guest@example.com").SetName("舊名").SetStatus(user.StatusActive).
+		SetRole(RoleGuest).SetIsCustomer(false).SetPasswordHash(auth.OIDCPasswordSentinel).
+		SetCompanyID(coA).SaveX(e.ctx)
+
+	cookie := e.seedWebSession(t, guest.ID, RoleGuest)
+	req := connect.NewRequest(&v1.RegisterCompleteRequest{CompanyId: itoa(coB), Name: "新名"})
+	req.Header().Set("Cookie", auth.SessionCookieName+"="+cookie)
+
+	if _, err := e.rpc.RegisterComplete(e.ctx, req); err != nil {
+		t.Fatalf("RegisterComplete: %v", err)
+	}
+	after := e.db.User.GetX(e.ctx, guest.ID)
+	if after.Status != user.StatusPending {
+		t.Fatalf("guest 完成註冊後狀態應為 pending,got %q", after.Status)
+	}
+	if after.Name != "新名" {
+		t.Fatalf("姓名應更新,got %q", after.Name)
+	}
+	if co, err := after.QueryCompany().Only(e.ctx); err != nil || co.ID != coB {
+		t.Fatalf("公司應更新為所選公司,got %v err=%v", co, err)
+	}
+	if after.Role != RoleGuest {
+		t.Fatalf("角色維持 guest,got %q", after.Role)
+	}
+	// 身分異動後 token_version 遞增(既有 token 失效)
+	if tv, err := e.tokens.CurrentTokenVersion(e.ctx, guest.ID); err != nil || tv != 1 {
+		t.Fatalf("token_version 應遞增為 1,got %d err=%v", tv, err)
+	}
+
+	// 非 guest 呼叫 → failed_precondition
+	staff := e.db.User.Create().
+		SetEmail("staff@example.com").SetName("王五").SetStatus(user.StatusActive).
+		SetRole("staff").SetIsCustomer(false).SetPasswordHash(auth.OIDCPasswordSentinel).
+		SetCompanyID(coA).SaveX(e.ctx)
+	cookie2 := e.seedWebSession(t, staff.ID, "staff")
+	req2 := connect.NewRequest(&v1.RegisterCompleteRequest{CompanyId: itoa(coA), Name: "王五"})
+	req2.Header().Set("Cookie", auth.SessionCookieName+"="+cookie2)
+	if _, err := e.rpc.RegisterComplete(e.ctx, req2); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Fatalf("非 guest 應 failed_precondition,got %v", err)
+	}
+}
+
+func TestRegisterCompleteRequiresAuth(t *testing.T) {
+	// 無 session / 無 token / 無 registration token → Unauthenticated
+	e := newTestEnv(t)
+	coID := mustCreateCompany(t, e, "co-a")
+	if _, err := e.rpc.RegisterComplete(e.ctx, connect.NewRequest(&v1.RegisterCompleteRequest{CompanyId: itoa(coID), Name: "某人"})); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("未登入應 Unauthenticated,got %v", err)
+	}
+	// 無效公司 → InvalidArgument
+	guest := e.db.User.Create().
+		SetEmail("g@example.com").SetName("g").SetStatus(user.StatusActive).
+		SetRole(RoleGuest).SetIsCustomer(false).SetPasswordHash(auth.OIDCPasswordSentinel).
+		SetCompanyID(coID).SaveX(e.ctx)
+	cookie := e.seedWebSession(t, guest.ID, RoleGuest)
+	req := connect.NewRequest(&v1.RegisterCompleteRequest{CompanyId: "999999", Name: "某人"})
+	req.Header().Set("Cookie", auth.SessionCookieName+"="+cookie)
+	if _, err := e.rpc.RegisterComplete(e.ctx, req); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("公司不存在應 InvalidArgument,got %v", err)
 	}
 }
 

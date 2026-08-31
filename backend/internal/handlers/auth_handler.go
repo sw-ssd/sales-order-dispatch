@@ -66,8 +66,7 @@ func (h *AuthHandler) SetOIDC(cfg *oauth2.Config, exchanger auth.OAuthExchanger,
 }
 
 // ---------------------------------------------------------------------------
-// AuthService RPC:RegisterComplete(T17) 於後續任務補上;
-// 現階段由內嵌 UnimplementedAuthServiceHandler 回 CodeUnimplemented。
+// AuthService RPC
 
 // Login 客戶密碼登入(T12):以 customer_code(= users.account_name)查客戶帳號,
 // bcrypt 驗證密碼;連續 5 次失敗鎖定 30 分鐘(失敗計數存 Valkey,不區分帳號是否存在)。
@@ -164,6 +163,45 @@ func (h *AuthHandler) Logout(ctx context.Context, req *connect.Request[v1.Logout
 		return nil, internal(err)
 	}
 	return connect.NewResponse(&v1.LogoutResponse{}), nil
+}
+
+// RegisterComplete 完成員工註冊(T17):guest 選公司、填姓名後轉 pending(待審核)。
+// 身分來源依序:registration token(首次 OIDC 未建帳號 → 建立 guest)→ Web session → Bearer JWT(更新既有 guest)。
+func (h *AuthHandler) RegisterComplete(ctx context.Context, req *connect.Request[v1.RegisterCompleteRequest]) (*connect.Response[v1.RegisterCompleteResponse], error) {
+	name := strings.TrimSpace(req.Msg.GetName())
+	if name == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("姓名不可為空"))
+	}
+	companyID, err := parseID(req.Msg.GetCompanyId())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("公司 ID 格式錯誤"))
+	}
+	co, err := h.deps.DB.Company.Get(ctx, companyID)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("公司不存在"))
+		}
+		return nil, internal(err)
+	}
+	if co.Status != company.StatusActive {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("公司未啟用"))
+	}
+
+	// 路徑 1:registration token(首次 OIDC 登入、hd 未對應公司時由 callback 派發)
+	if token := registrationTokenFromRequest(req); token != "" {
+		return h.registerWithToken(ctx, token, name, companyID)
+	}
+
+	// 路徑 2/3:既有 guest(Web session 或 App Bearer JWT)更新公司與姓名、轉 pending
+	uid := auth.SessionUserID(ctx, h.deps.Sessions)
+	if uid == 0 {
+		claims, err := h.authenticateBearer(ctx, req.Header().Get("Authorization"))
+		if err != nil {
+			return nil, err
+		}
+		uid = claims.UserID
+	}
+	return h.completeGuest(ctx, uid, name, companyID)
 }
 
 // QRLogin 於後續計畫實作(QR 兌換前段);本 wave 回 Unimplemented。
@@ -376,6 +414,78 @@ func (h *AuthHandler) issueRegistration(w http.ResponseWriter, r *http.Request, 
 	http.Redirect(w, r, target, http.StatusFound)
 }
 
+// registerWithToken 以 registration token 建立 guest(role=guest,status=pending,歸屬所選公司)。
+func (h *AuthHandler) registerWithToken(ctx context.Context, token, name string, companyID int) (*connect.Response[v1.RegisterCompleteResponse], error) {
+	email, ok, err := h.deps.OneTime.GetAndDelete(ctx, auth.RegistrationKey(token))
+	if err != nil {
+		return nil, internal(err)
+	}
+	if !ok {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("註冊憑證無效或已過期,請重新以 Google 登入"))
+	}
+	exists, err := h.deps.DB.User.Query().Where(user.EmailEQ(email)).Exist(ctx)
+	if err != nil {
+		return nil, internal(err)
+	}
+	if exists {
+		return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("該 email 已有帳號,請直接登入"))
+	}
+	if _, err := h.deps.DB.User.Create().
+		SetEmail(email).
+		SetName(name).
+		SetStatus(user.StatusPending).
+		SetRole(RoleGuest).
+		SetIsCustomer(false).
+		SetPasswordHash(auth.OIDCPasswordSentinel).
+		SetCompanyID(companyID).
+		Save(ctx); err != nil {
+		return nil, internal(err)
+	}
+	return connect.NewResponse(&v1.RegisterCompleteResponse{}), nil
+}
+
+// completeGuest 更新既有 guest:設定公司與姓名、狀態轉 pending,並使既有 token 失效。
+func (h *AuthHandler) completeGuest(ctx context.Context, uid int, name string, companyID int) (*connect.Response[v1.RegisterCompleteResponse], error) {
+	u, err := h.deps.DB.User.Get(ctx, uid)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("帳號不存在"))
+		}
+		return nil, internal(err)
+	}
+	if u.Role != RoleGuest {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("僅 guest 帳號可完成註冊"))
+	}
+	if _, err := h.deps.DB.User.UpdateOneID(uid).
+		SetName(name).
+		SetStatus(user.StatusPending).
+		SetCompanyID(companyID).
+		Save(ctx); err != nil {
+		return nil, internal(err)
+	}
+	// 身分異動(公司歸屬、狀態)後既有 access/refresh 立即失效(D5)
+	if err := h.deps.Tokens.BumpTokenVersion(ctx, uid); err != nil {
+		return nil, internal(err)
+	}
+	return connect.NewResponse(&v1.RegisterCompleteResponse{}), nil
+}
+
+// authenticateBearer 解析並驗證 App Bearer JWT。
+func (h *AuthHandler) authenticateBearer(ctx context.Context, authorization string) (*auth.Claims, error) {
+	raw := strings.TrimSpace(strings.TrimPrefix(authorization, "Bearer "))
+	if raw == "" {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	}
+	claims, err := h.deps.Tokens.VerifyAccess(ctx, raw)
+	if err != nil {
+		if errors.Is(err, auth.ErrTokenRevoked) || errors.Is(err, auth.ErrInvalidToken) {
+			return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("登入已失效,請重新登入"))
+		}
+		return nil, internal(err)
+	}
+	return claims, nil
+}
+
 // resolveCompanyByHD 依 Google Workspace 網域(hd)對應 companies.identifier 解析所屬公司。
 func (h *AuthHandler) resolveCompanyByHD(ctx context.Context, hd string) (*ent.Company, error) {
 	if hd == "" {
@@ -399,6 +509,14 @@ func (h *AuthHandler) recordFailure(ctx context.Context, customerCode string) {
 // redirectError 回跳登入頁並帶錯誤碼。
 func (h *AuthHandler) redirectError(w http.ResponseWriter, r *http.Request, code string) {
 	http.Redirect(w, r, h.deps.Cfg.Auth.FrontendURL+"/login?error="+code, http.StatusFound)
+}
+
+// registrationTokenFromRequest 自 cookie 或 X-Registration-Token header 讀取 registration token。
+func registrationTokenFromRequest(req *connect.Request[v1.RegisterCompleteRequest]) string {
+	if c, err := (&http.Request{Header: req.Header()}).Cookie(RegistrationTokenCookie); err == nil && c.Value != "" {
+		return c.Value
+	}
+	return strings.TrimSpace(req.Header().Get("X-Registration-Token"))
 }
 
 // parseID 將字串 ID 轉為 ent 自增 int ID。
