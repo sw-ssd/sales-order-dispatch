@@ -33,6 +33,10 @@ tasks:
     desc: 查看 migration 狀態
     cmd: go run ./cmd/migrate status
 
+  migrate:down:
+    desc: 回滾最近一筆 migration
+    cmd: go run ./cmd/migrate down
+
   seed:
     desc: 執行冪等 seeder
     cmd: go run ./cmd/seed
