@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { GetRolePermissionsRequest, GetRolePermissionsResponse, ListRolesRequest, ListRolesResponse, UpdateRolePermissionsRequest, UpdateRolePermissionsResponse } from "./role_pb.js";
+import { GetRolePermissionsRequest, GetRolePermissionsResponse, ListConditionFieldsRequest, ListConditionFieldsResponse, ListRolesRequest, ListRolesResponse, UpdateRolePermissionsRequest, UpdateRolePermissionsResponse } from "./role_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -45,6 +45,17 @@ export const RoleService = {
       name: "UpdateRolePermissions",
       I: UpdateRolePermissionsRequest,
       O: UpdateRolePermissionsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * ListConditionFields:取得資源的條件欄位白名單(條件建構器用)。
+     *
+     * @generated from rpc salesorder.v1.RoleService.ListConditionFields
+     */
+    listConditionFields: {
+      name: "ListConditionFields",
+      I: ListConditionFieldsRequest,
+      O: ListConditionFieldsResponse,
       kind: MethodKind.Unary,
     },
   }

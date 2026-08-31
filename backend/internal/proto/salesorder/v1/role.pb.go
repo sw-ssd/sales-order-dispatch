@@ -478,6 +478,165 @@ func (x *UpdateRolePermissionsResponse) GetPermissions() []*Permission {
 	return nil
 }
 
+// ListConditionFieldsRequest:查詢指定資源可用的條件欄位白名單(供前端條件建構器)。
+type ListConditionFieldsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Resource      string                 `protobuf:"bytes,1,opt,name=resource,proto3" json:"resource,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListConditionFieldsRequest) Reset() {
+	*x = ListConditionFieldsRequest{}
+	mi := &file_salesorder_v1_role_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListConditionFieldsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListConditionFieldsRequest) ProtoMessage() {}
+
+func (x *ListConditionFieldsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_role_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListConditionFieldsRequest.ProtoReflect.Descriptor instead.
+func (*ListConditionFieldsRequest) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_role_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ListConditionFieldsRequest) GetResource() string {
+	if x != nil {
+		return x.Resource
+	}
+	return ""
+}
+
+// ConditionField:單一條件欄位描述(欄位名、值型別、允許運算子與 enum 合法值)。
+type ConditionField struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Field         string                 `protobuf:"bytes,1,opt,name=field,proto3" json:"field,omitempty"` // 欄位名(如 status / company_id)
+	Type          string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`   // string | enum | id | number
+	Ops           []string               `protobuf:"bytes,3,rep,name=ops,proto3" json:"ops,omitempty"`     // 允許運算子("$eq" ...)
+	Enum          []string               `protobuf:"bytes,4,rep,name=enum,proto3" json:"enum,omitempty"`   // type=enum 時的合法值
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ConditionField) Reset() {
+	*x = ConditionField{}
+	mi := &file_salesorder_v1_role_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConditionField) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConditionField) ProtoMessage() {}
+
+func (x *ConditionField) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_role_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConditionField.ProtoReflect.Descriptor instead.
+func (*ConditionField) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_role_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ConditionField) GetField() string {
+	if x != nil {
+		return x.Field
+	}
+	return ""
+}
+
+func (x *ConditionField) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *ConditionField) GetOps() []string {
+	if x != nil {
+		return x.Ops
+	}
+	return nil
+}
+
+func (x *ConditionField) GetEnum() []string {
+	if x != nil {
+		return x.Enum
+	}
+	return nil
+}
+
+// ListConditionFieldsResponse:資源的條件欄位白名單(依欄位名排序;未知資源為空)。
+type ListConditionFieldsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Fields        []*ConditionField      `protobuf:"bytes,1,rep,name=fields,proto3" json:"fields,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListConditionFieldsResponse) Reset() {
+	*x = ListConditionFieldsResponse{}
+	mi := &file_salesorder_v1_role_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListConditionFieldsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListConditionFieldsResponse) ProtoMessage() {}
+
+func (x *ListConditionFieldsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_role_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListConditionFieldsResponse.ProtoReflect.Descriptor instead.
+func (*ListConditionFieldsResponse) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_role_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ListConditionFieldsResponse) GetFields() []*ConditionField {
+	if x != nil {
+		return x.Fields
+	}
+	return nil
+}
+
 var File_salesorder_v1_role_proto protoreflect.FileDescriptor
 
 const file_salesorder_v1_role_proto_rawDesc = "" +
@@ -517,11 +676,21 @@ const file_salesorder_v1_role_proto_rawDesc = "" +
 	"\arole_id\x18\x01 \x01(\tR\x06roleId\x12;\n" +
 	"\vpermissions\x18\x02 \x03(\v2\x19.salesorder.v1.PermissionR\vpermissions\"\\\n" +
 	"\x1dUpdateRolePermissionsResponse\x12;\n" +
-	"\vpermissions\x18\x01 \x03(\v2\x19.salesorder.v1.PermissionR\vpermissions2\xbc\x02\n" +
+	"\vpermissions\x18\x01 \x03(\v2\x19.salesorder.v1.PermissionR\vpermissions\"8\n" +
+	"\x1aListConditionFieldsRequest\x12\x1a\n" +
+	"\bresource\x18\x01 \x01(\tR\bresource\"`\n" +
+	"\x0eConditionField\x12\x14\n" +
+	"\x05field\x18\x01 \x01(\tR\x05field\x12\x12\n" +
+	"\x04type\x18\x02 \x01(\tR\x04type\x12\x10\n" +
+	"\x03ops\x18\x03 \x03(\tR\x03ops\x12\x12\n" +
+	"\x04enum\x18\x04 \x03(\tR\x04enum\"T\n" +
+	"\x1bListConditionFieldsResponse\x125\n" +
+	"\x06fields\x18\x01 \x03(\v2\x1d.salesorder.v1.ConditionFieldR\x06fields2\xaa\x03\n" +
 	"\vRoleService\x12N\n" +
 	"\tListRoles\x12\x1f.salesorder.v1.ListRolesRequest\x1a .salesorder.v1.ListRolesResponse\x12i\n" +
 	"\x12GetRolePermissions\x12(.salesorder.v1.GetRolePermissionsRequest\x1a).salesorder.v1.GetRolePermissionsResponse\x12r\n" +
-	"\x15UpdateRolePermissions\x12+.salesorder.v1.UpdateRolePermissionsRequest\x1a,.salesorder.v1.UpdateRolePermissionsResponseBYZWgithub.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1b\x06proto3"
+	"\x15UpdateRolePermissions\x12+.salesorder.v1.UpdateRolePermissionsRequest\x1a,.salesorder.v1.UpdateRolePermissionsResponse\x12l\n" +
+	"\x13ListConditionFields\x12).salesorder.v1.ListConditionFieldsRequest\x1a*.salesorder.v1.ListConditionFieldsResponseBYZWgithub.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1b\x06proto3"
 
 var (
 	file_salesorder_v1_role_proto_rawDescOnce sync.Once
@@ -535,7 +704,7 @@ func file_salesorder_v1_role_proto_rawDescGZIP() []byte {
 	return file_salesorder_v1_role_proto_rawDescData
 }
 
-var file_salesorder_v1_role_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_salesorder_v1_role_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_salesorder_v1_role_proto_goTypes = []any{
 	(*Role)(nil),                          // 0: salesorder.v1.Role
 	(*Permission)(nil),                    // 1: salesorder.v1.Permission
@@ -545,27 +714,33 @@ var file_salesorder_v1_role_proto_goTypes = []any{
 	(*GetRolePermissionsResponse)(nil),    // 5: salesorder.v1.GetRolePermissionsResponse
 	(*UpdateRolePermissionsRequest)(nil),  // 6: salesorder.v1.UpdateRolePermissionsRequest
 	(*UpdateRolePermissionsResponse)(nil), // 7: salesorder.v1.UpdateRolePermissionsResponse
-	(*structpb.Struct)(nil),               // 8: google.protobuf.Struct
-	(*Pagination)(nil),                    // 9: salesorder.v1.Pagination
+	(*ListConditionFieldsRequest)(nil),    // 8: salesorder.v1.ListConditionFieldsRequest
+	(*ConditionField)(nil),                // 9: salesorder.v1.ConditionField
+	(*ListConditionFieldsResponse)(nil),   // 10: salesorder.v1.ListConditionFieldsResponse
+	(*structpb.Struct)(nil),               // 11: google.protobuf.Struct
+	(*Pagination)(nil),                    // 12: salesorder.v1.Pagination
 }
 var file_salesorder_v1_role_proto_depIdxs = []int32{
-	8, // 0: salesorder.v1.Permission.conditions:type_name -> google.protobuf.Struct
-	0, // 1: salesorder.v1.ListRolesResponse.roles:type_name -> salesorder.v1.Role
-	9, // 2: salesorder.v1.ListRolesResponse.pagination:type_name -> salesorder.v1.Pagination
-	1, // 3: salesorder.v1.GetRolePermissionsResponse.permissions:type_name -> salesorder.v1.Permission
-	1, // 4: salesorder.v1.UpdateRolePermissionsRequest.permissions:type_name -> salesorder.v1.Permission
-	1, // 5: salesorder.v1.UpdateRolePermissionsResponse.permissions:type_name -> salesorder.v1.Permission
-	2, // 6: salesorder.v1.RoleService.ListRoles:input_type -> salesorder.v1.ListRolesRequest
-	4, // 7: salesorder.v1.RoleService.GetRolePermissions:input_type -> salesorder.v1.GetRolePermissionsRequest
-	6, // 8: salesorder.v1.RoleService.UpdateRolePermissions:input_type -> salesorder.v1.UpdateRolePermissionsRequest
-	3, // 9: salesorder.v1.RoleService.ListRoles:output_type -> salesorder.v1.ListRolesResponse
-	5, // 10: salesorder.v1.RoleService.GetRolePermissions:output_type -> salesorder.v1.GetRolePermissionsResponse
-	7, // 11: salesorder.v1.RoleService.UpdateRolePermissions:output_type -> salesorder.v1.UpdateRolePermissionsResponse
-	9, // [9:12] is the sub-list for method output_type
-	6, // [6:9] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	11, // 0: salesorder.v1.Permission.conditions:type_name -> google.protobuf.Struct
+	0,  // 1: salesorder.v1.ListRolesResponse.roles:type_name -> salesorder.v1.Role
+	12, // 2: salesorder.v1.ListRolesResponse.pagination:type_name -> salesorder.v1.Pagination
+	1,  // 3: salesorder.v1.GetRolePermissionsResponse.permissions:type_name -> salesorder.v1.Permission
+	1,  // 4: salesorder.v1.UpdateRolePermissionsRequest.permissions:type_name -> salesorder.v1.Permission
+	1,  // 5: salesorder.v1.UpdateRolePermissionsResponse.permissions:type_name -> salesorder.v1.Permission
+	9,  // 6: salesorder.v1.ListConditionFieldsResponse.fields:type_name -> salesorder.v1.ConditionField
+	2,  // 7: salesorder.v1.RoleService.ListRoles:input_type -> salesorder.v1.ListRolesRequest
+	4,  // 8: salesorder.v1.RoleService.GetRolePermissions:input_type -> salesorder.v1.GetRolePermissionsRequest
+	6,  // 9: salesorder.v1.RoleService.UpdateRolePermissions:input_type -> salesorder.v1.UpdateRolePermissionsRequest
+	8,  // 10: salesorder.v1.RoleService.ListConditionFields:input_type -> salesorder.v1.ListConditionFieldsRequest
+	3,  // 11: salesorder.v1.RoleService.ListRoles:output_type -> salesorder.v1.ListRolesResponse
+	5,  // 12: salesorder.v1.RoleService.GetRolePermissions:output_type -> salesorder.v1.GetRolePermissionsResponse
+	7,  // 13: salesorder.v1.RoleService.UpdateRolePermissions:output_type -> salesorder.v1.UpdateRolePermissionsResponse
+	10, // 14: salesorder.v1.RoleService.ListConditionFields:output_type -> salesorder.v1.ListConditionFieldsResponse
+	11, // [11:15] is the sub-list for method output_type
+	7,  // [7:11] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_salesorder_v1_role_proto_init() }
@@ -580,7 +755,7 @@ func file_salesorder_v1_role_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_salesorder_v1_role_proto_rawDesc), len(file_salesorder_v1_role_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

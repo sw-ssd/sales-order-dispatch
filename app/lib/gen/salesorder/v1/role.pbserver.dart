@@ -27,6 +27,8 @@ abstract class RoleServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $2.GetRolePermissionsRequest request);
   $async.Future<$2.UpdateRolePermissionsResponse> updateRolePermissions(
       $pb.ServerContext ctx, $2.UpdateRolePermissionsRequest request);
+  $async.Future<$2.ListConditionFieldsResponse> listConditionFields(
+      $pb.ServerContext ctx, $2.ListConditionFieldsRequest request);
 
   $pb.GeneratedMessage createRequest($core.String methodName) {
     switch (methodName) {
@@ -36,6 +38,8 @@ abstract class RoleServiceBase extends $pb.GeneratedService {
         return $2.GetRolePermissionsRequest();
       case 'UpdateRolePermissions':
         return $2.UpdateRolePermissionsRequest();
+      case 'ListConditionFields':
+        return $2.ListConditionFieldsRequest();
       default:
         throw $core.ArgumentError('Unknown method: $methodName');
     }
@@ -51,6 +55,9 @@ abstract class RoleServiceBase extends $pb.GeneratedService {
       case 'UpdateRolePermissions':
         return updateRolePermissions(
             ctx, request as $2.UpdateRolePermissionsRequest);
+      case 'ListConditionFields':
+        return listConditionFields(
+            ctx, request as $2.ListConditionFieldsRequest);
       default:
         throw $core.ArgumentError('Unknown method: $methodName');
     }

@@ -240,6 +240,83 @@ export declare type UpdateRolePermissionsResponse = Message<"salesorder.v1.Updat
 export declare const UpdateRolePermissionsResponseSchema: GenMessage<UpdateRolePermissionsResponse>;
 
 /**
+ * ListConditionFieldsRequest:查詢指定資源可用的條件欄位白名單(供前端條件建構器)。
+ *
+ * @generated from message salesorder.v1.ListConditionFieldsRequest
+ */
+export declare type ListConditionFieldsRequest = Message<"salesorder.v1.ListConditionFieldsRequest"> & {
+  /**
+   * @generated from field: string resource = 1;
+   */
+  resource: string;
+};
+
+/**
+ * Describes the message salesorder.v1.ListConditionFieldsRequest.
+ * Use `create(ListConditionFieldsRequestSchema)` to create a new message.
+ */
+export declare const ListConditionFieldsRequestSchema: GenMessage<ListConditionFieldsRequest>;
+
+/**
+ * ConditionField:單一條件欄位描述(欄位名、值型別、允許運算子與 enum 合法值)。
+ *
+ * @generated from message salesorder.v1.ConditionField
+ */
+export declare type ConditionField = Message<"salesorder.v1.ConditionField"> & {
+  /**
+   * 欄位名(如 status / company_id)
+   *
+   * @generated from field: string field = 1;
+   */
+  field: string;
+
+  /**
+   * string | enum | id | number
+   *
+   * @generated from field: string type = 2;
+   */
+  type: string;
+
+  /**
+   * 允許運算子("$eq" ...)
+   *
+   * @generated from field: repeated string ops = 3;
+   */
+  ops: string[];
+
+  /**
+   * type=enum 時的合法值
+   *
+   * @generated from field: repeated string enum = 4;
+   */
+  enum: string[];
+};
+
+/**
+ * Describes the message salesorder.v1.ConditionField.
+ * Use `create(ConditionFieldSchema)` to create a new message.
+ */
+export declare const ConditionFieldSchema: GenMessage<ConditionField>;
+
+/**
+ * ListConditionFieldsResponse:資源的條件欄位白名單(依欄位名排序;未知資源為空)。
+ *
+ * @generated from message salesorder.v1.ListConditionFieldsResponse
+ */
+export declare type ListConditionFieldsResponse = Message<"salesorder.v1.ListConditionFieldsResponse"> & {
+  /**
+   * @generated from field: repeated salesorder.v1.ConditionField fields = 1;
+   */
+  fields: ConditionField[];
+};
+
+/**
+ * Describes the message salesorder.v1.ListConditionFieldsResponse.
+ * Use `create(ListConditionFieldsResponseSchema)` to create a new message.
+ */
+export declare const ListConditionFieldsResponseSchema: GenMessage<ListConditionFieldsResponse>;
+
+/**
  * RoleService:角色權限管理。
  *
  * @generated from service salesorder.v1.RoleService
@@ -274,6 +351,16 @@ export declare const RoleService: GenService<{
     methodKind: "unary";
     input: typeof UpdateRolePermissionsRequestSchema;
     output: typeof UpdateRolePermissionsResponseSchema;
+  },
+  /**
+   * ListConditionFields:取得資源的條件欄位白名單(條件建構器用)。
+   *
+   * @generated from rpc salesorder.v1.RoleService.ListConditionFields
+   */
+  listConditionFields: {
+    methodKind: "unary";
+    input: typeof ListConditionFieldsRequestSchema;
+    output: typeof ListConditionFieldsResponseSchema;
   },
 }>;
 

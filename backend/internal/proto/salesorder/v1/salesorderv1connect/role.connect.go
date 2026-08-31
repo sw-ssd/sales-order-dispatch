@@ -41,6 +41,9 @@ const (
 	// RoleServiceUpdateRolePermissionsProcedure is the fully-qualified name of the RoleService's
 	// UpdateRolePermissions RPC.
 	RoleServiceUpdateRolePermissionsProcedure = "/salesorder.v1.RoleService/UpdateRolePermissions"
+	// RoleServiceListConditionFieldsProcedure is the fully-qualified name of the RoleService's
+	// ListConditionFields RPC.
+	RoleServiceListConditionFieldsProcedure = "/salesorder.v1.RoleService/ListConditionFields"
 )
 
 // RoleServiceClient is a client for the salesorder.v1.RoleService service.
@@ -51,6 +54,8 @@ type RoleServiceClient interface {
 	GetRolePermissions(context.Context, *connect.Request[v1.GetRolePermissionsRequest]) (*connect.Response[v1.GetRolePermissionsResponse], error)
 	// UpdateRolePermissions:全量更新角色功能權限(取代式)。
 	UpdateRolePermissions(context.Context, *connect.Request[v1.UpdateRolePermissionsRequest]) (*connect.Response[v1.UpdateRolePermissionsResponse], error)
+	// ListConditionFields:取得資源的條件欄位白名單(條件建構器用)。
+	ListConditionFields(context.Context, *connect.Request[v1.ListConditionFieldsRequest]) (*connect.Response[v1.ListConditionFieldsResponse], error)
 }
 
 // NewRoleServiceClient constructs a client for the salesorder.v1.RoleService service. By default,
@@ -82,6 +87,12 @@ func NewRoleServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(roleServiceMethods.ByName("UpdateRolePermissions")),
 			connect.WithClientOptions(opts...),
 		),
+		listConditionFields: connect.NewClient[v1.ListConditionFieldsRequest, v1.ListConditionFieldsResponse](
+			httpClient,
+			baseURL+RoleServiceListConditionFieldsProcedure,
+			connect.WithSchema(roleServiceMethods.ByName("ListConditionFields")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -90,6 +101,7 @@ type roleServiceClient struct {
 	listRoles             *connect.Client[v1.ListRolesRequest, v1.ListRolesResponse]
 	getRolePermissions    *connect.Client[v1.GetRolePermissionsRequest, v1.GetRolePermissionsResponse]
 	updateRolePermissions *connect.Client[v1.UpdateRolePermissionsRequest, v1.UpdateRolePermissionsResponse]
+	listConditionFields   *connect.Client[v1.ListConditionFieldsRequest, v1.ListConditionFieldsResponse]
 }
 
 // ListRoles calls salesorder.v1.RoleService.ListRoles.
@@ -107,6 +119,11 @@ func (c *roleServiceClient) UpdateRolePermissions(ctx context.Context, req *conn
 	return c.updateRolePermissions.CallUnary(ctx, req)
 }
 
+// ListConditionFields calls salesorder.v1.RoleService.ListConditionFields.
+func (c *roleServiceClient) ListConditionFields(ctx context.Context, req *connect.Request[v1.ListConditionFieldsRequest]) (*connect.Response[v1.ListConditionFieldsResponse], error) {
+	return c.listConditionFields.CallUnary(ctx, req)
+}
+
 // RoleServiceHandler is an implementation of the salesorder.v1.RoleService service.
 type RoleServiceHandler interface {
 	// ListRoles:分頁列出角色。
@@ -115,6 +132,8 @@ type RoleServiceHandler interface {
 	GetRolePermissions(context.Context, *connect.Request[v1.GetRolePermissionsRequest]) (*connect.Response[v1.GetRolePermissionsResponse], error)
 	// UpdateRolePermissions:全量更新角色功能權限(取代式)。
 	UpdateRolePermissions(context.Context, *connect.Request[v1.UpdateRolePermissionsRequest]) (*connect.Response[v1.UpdateRolePermissionsResponse], error)
+	// ListConditionFields:取得資源的條件欄位白名單(條件建構器用)。
+	ListConditionFields(context.Context, *connect.Request[v1.ListConditionFieldsRequest]) (*connect.Response[v1.ListConditionFieldsResponse], error)
 }
 
 // NewRoleServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -142,6 +161,12 @@ func NewRoleServiceHandler(svc RoleServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(roleServiceMethods.ByName("UpdateRolePermissions")),
 		connect.WithHandlerOptions(opts...),
 	)
+	roleServiceListConditionFieldsHandler := connect.NewUnaryHandler(
+		RoleServiceListConditionFieldsProcedure,
+		svc.ListConditionFields,
+		connect.WithSchema(roleServiceMethods.ByName("ListConditionFields")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/salesorder.v1.RoleService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case RoleServiceListRolesProcedure:
@@ -150,6 +175,8 @@ func NewRoleServiceHandler(svc RoleServiceHandler, opts ...connect.HandlerOption
 			roleServiceGetRolePermissionsHandler.ServeHTTP(w, r)
 		case RoleServiceUpdateRolePermissionsProcedure:
 			roleServiceUpdateRolePermissionsHandler.ServeHTTP(w, r)
+		case RoleServiceListConditionFieldsProcedure:
+			roleServiceListConditionFieldsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -169,4 +196,8 @@ func (UnimplementedRoleServiceHandler) GetRolePermissions(context.Context, *conn
 
 func (UnimplementedRoleServiceHandler) UpdateRolePermissions(context.Context, *connect.Request[v1.UpdateRolePermissionsRequest]) (*connect.Response[v1.UpdateRolePermissionsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("salesorder.v1.RoleService.UpdateRolePermissions is not implemented"))
+}
+
+func (UnimplementedRoleServiceHandler) ListConditionFields(context.Context, *connect.Request[v1.ListConditionFieldsRequest]) (*connect.Response[v1.ListConditionFieldsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("salesorder.v1.RoleService.ListConditionFields is not implemented"))
 }

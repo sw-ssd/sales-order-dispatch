@@ -34,4 +34,12 @@ abstract final class RoleService {
     salesorderv1role.UpdateRolePermissionsRequest.new,
     salesorderv1role.UpdateRolePermissionsResponse.new,
   );
+
+  /// ListConditionFields:取得資源的條件欄位白名單(條件建構器用)。
+  static const listConditionFields = connect.Spec(
+    '/$name/ListConditionFields',
+    connect.StreamType.unary,
+    salesorderv1role.ListConditionFieldsRequest.new,
+    salesorderv1role.ListConditionFieldsResponse.new,
+  );
 }

@@ -618,6 +618,203 @@ class UpdateRolePermissionsResponse extends $pb.GeneratedMessage {
   $pb.PbList<Permission> get permissions => $_getList(0);
 }
 
+/// ListConditionFieldsRequest:查詢指定資源可用的條件欄位白名單(供前端條件建構器)。
+class ListConditionFieldsRequest extends $pb.GeneratedMessage {
+  factory ListConditionFieldsRequest({
+    $core.String? resource,
+  }) {
+    final result = create();
+    if (resource != null) result.resource = resource;
+    return result;
+  }
+
+  ListConditionFieldsRequest._();
+
+  factory ListConditionFieldsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory ListConditionFieldsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListConditionFieldsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'resource')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListConditionFieldsRequest clone() =>
+      ListConditionFieldsRequest()..mergeFromMessage(this);
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListConditionFieldsRequest copyWith(
+          void Function(ListConditionFieldsRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as ListConditionFieldsRequest))
+          as ListConditionFieldsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ListConditionFieldsRequest create() => ListConditionFieldsRequest._();
+  @$core.override
+  ListConditionFieldsRequest createEmptyInstance() => create();
+  static $pb.PbList<ListConditionFieldsRequest> createRepeated() =>
+      $pb.PbList<ListConditionFieldsRequest>();
+  @$core.pragma('dart2js:noInline')
+  static ListConditionFieldsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListConditionFieldsRequest>(create);
+  static ListConditionFieldsRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get resource => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set resource($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasResource() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearResource() => $_clearField(1);
+}
+
+/// ConditionField:單一條件欄位描述(欄位名、值型別、允許運算子與 enum 合法值)。
+class ConditionField extends $pb.GeneratedMessage {
+  factory ConditionField({
+    $core.String? field_1,
+    $core.String? type,
+    $core.Iterable<$core.String>? ops,
+    $core.Iterable<$core.String>? enum_4,
+  }) {
+    final result = create();
+    if (field_1 != null) result.field_1 = field_1;
+    if (type != null) result.type = type;
+    if (ops != null) result.ops.addAll(ops);
+    if (enum_4 != null) result.enum_4.addAll(enum_4);
+    return result;
+  }
+
+  ConditionField._();
+
+  factory ConditionField.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory ConditionField.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ConditionField',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'field')
+    ..aOS(2, _omitFieldNames ? '' : 'type')
+    ..pPS(3, _omitFieldNames ? '' : 'ops')
+    ..pPS(4, _omitFieldNames ? '' : 'enum')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ConditionField clone() => ConditionField()..mergeFromMessage(this);
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ConditionField copyWith(void Function(ConditionField) updates) =>
+      super.copyWith((message) => updates(message as ConditionField))
+          as ConditionField;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ConditionField create() => ConditionField._();
+  @$core.override
+  ConditionField createEmptyInstance() => create();
+  static $pb.PbList<ConditionField> createRepeated() =>
+      $pb.PbList<ConditionField>();
+  @$core.pragma('dart2js:noInline')
+  static ConditionField getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ConditionField>(create);
+  static ConditionField? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get field_1 => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set field_1($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasField_1() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearField_1() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get type => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set type($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasType() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearType() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $pb.PbList<$core.String> get ops => $_getList(2);
+
+  @$pb.TagNumber(4)
+  $pb.PbList<$core.String> get enum_4 => $_getList(3);
+}
+
+/// ListConditionFieldsResponse:資源的條件欄位白名單(依欄位名排序;未知資源為空)。
+class ListConditionFieldsResponse extends $pb.GeneratedMessage {
+  factory ListConditionFieldsResponse({
+    $core.Iterable<ConditionField>? fields,
+  }) {
+    final result = create();
+    if (fields != null) result.fields.addAll(fields);
+    return result;
+  }
+
+  ListConditionFieldsResponse._();
+
+  factory ListConditionFieldsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory ListConditionFieldsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListConditionFieldsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: create)
+    ..pc<ConditionField>(1, _omitFieldNames ? '' : 'fields', $pb.PbFieldType.PM,
+        subBuilder: ConditionField.create)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListConditionFieldsResponse clone() =>
+      ListConditionFieldsResponse()..mergeFromMessage(this);
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListConditionFieldsResponse copyWith(
+          void Function(ListConditionFieldsResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as ListConditionFieldsResponse))
+          as ListConditionFieldsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ListConditionFieldsResponse create() =>
+      ListConditionFieldsResponse._();
+  @$core.override
+  ListConditionFieldsResponse createEmptyInstance() => create();
+  static $pb.PbList<ListConditionFieldsResponse> createRepeated() =>
+      $pb.PbList<ListConditionFieldsResponse>();
+  @$core.pragma('dart2js:noInline')
+  static ListConditionFieldsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListConditionFieldsResponse>(create);
+  static ListConditionFieldsResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<ConditionField> get fields => $_getList(0);
+}
+
 /// RoleService:角色權限管理。
 class RoleServiceApi {
   final $pb.RpcClient _client;
@@ -641,6 +838,12 @@ class RoleServiceApi {
           $pb.ClientContext? ctx, UpdateRolePermissionsRequest request) =>
       _client.invoke<UpdateRolePermissionsResponse>(ctx, 'RoleService',
           'UpdateRolePermissions', request, UpdateRolePermissionsResponse());
+
+  /// ListConditionFields:取得資源的條件欄位白名單(條件建構器用)。
+  $async.Future<ListConditionFieldsResponse> listConditionFields(
+          $pb.ClientContext? ctx, ListConditionFieldsRequest request) =>
+      _client.invoke<ListConditionFieldsResponse>(ctx, 'RoleService',
+          'ListConditionFields', request, ListConditionFieldsResponse());
 }
 
 const $core.bool _omitFieldNames =

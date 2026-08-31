@@ -24,8 +24,10 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
+	domainauth "github.com/salesorder/sales-order-1.0/backend/internal/domain/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/handlers"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/internal/services"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/cache"
 )
 
@@ -170,6 +172,10 @@ func (s *Server) mountAuth() {
 	authPath, authHandler := salesorderv1connect.NewAuthServiceHandler(h)
 	apiMux.Handle(authPath, authHandler)
 	handlers.RegisterRoleHandler(apiMux, entClient) // RoleService(T18)
+	// AbilityService(T9/D30):CASL 規則下發給前端 @casl/ability 初始化。
+	abilityPath, abilityHandler := salesorderv1connect.NewAbilityServiceHandler(domainauth.NewAbilityHandler(entClient, domainauth.Config{DeveloperAccountEnabled: s.cfg.API.DeveloperAccountEnabled}))
+	apiMux.Handle(abilityPath, abilityHandler)
+	services.RegisterCompanyServices(apiMux, entClient) // CompanyService/DepartmentService(T20)
 	s.router.Mount("/api/v1", http.StripPrefix("/api/v1", sessions.LoadAndSave(s.authzMiddleware(entClient, sessions, apiMux))))
 
 	// OIDC 公開端點：需 Google client id 與 discovery 可用

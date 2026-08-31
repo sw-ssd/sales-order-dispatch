@@ -183,6 +183,57 @@ final $typed_data.Uint8List updateRolePermissionsResponseDescriptor =
         'Ch1VcGRhdGVSb2xlUGVybWlzc2lvbnNSZXNwb25zZRI7CgtwZXJtaXNzaW9ucxgBIAMoCzIZLn'
         'NhbGVzb3JkZXIudjEuUGVybWlzc2lvblILcGVybWlzc2lvbnM=');
 
+@$core.Deprecated('Use listConditionFieldsRequestDescriptor instead')
+const ListConditionFieldsRequest$json = {
+  '1': 'ListConditionFieldsRequest',
+  '2': [
+    {'1': 'resource', '3': 1, '4': 1, '5': 9, '10': 'resource'},
+  ],
+};
+
+/// Descriptor for `ListConditionFieldsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listConditionFieldsRequestDescriptor =
+    $convert.base64Decode(
+        'ChpMaXN0Q29uZGl0aW9uRmllbGRzUmVxdWVzdBIaCghyZXNvdXJjZRgBIAEoCVIIcmVzb3VyY2'
+        'U=');
+
+@$core.Deprecated('Use conditionFieldDescriptor instead')
+const ConditionField$json = {
+  '1': 'ConditionField',
+  '2': [
+    {'1': 'field', '3': 1, '4': 1, '5': 9, '10': 'field'},
+    {'1': 'type', '3': 2, '4': 1, '5': 9, '10': 'type'},
+    {'1': 'ops', '3': 3, '4': 3, '5': 9, '10': 'ops'},
+    {'1': 'enum', '3': 4, '4': 3, '5': 9, '10': 'enum'},
+  ],
+};
+
+/// Descriptor for `ConditionField`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List conditionFieldDescriptor = $convert.base64Decode(
+    'Cg5Db25kaXRpb25GaWVsZBIUCgVmaWVsZBgBIAEoCVIFZmllbGQSEgoEdHlwZRgCIAEoCVIEdH'
+    'lwZRIQCgNvcHMYAyADKAlSA29wcxISCgRlbnVtGAQgAygJUgRlbnVt');
+
+@$core.Deprecated('Use listConditionFieldsResponseDescriptor instead')
+const ListConditionFieldsResponse$json = {
+  '1': 'ListConditionFieldsResponse',
+  '2': [
+    {
+      '1': 'fields',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.salesorder.v1.ConditionField',
+      '10': 'fields'
+    },
+  ],
+};
+
+/// Descriptor for `ListConditionFieldsResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listConditionFieldsResponseDescriptor =
+    $convert.base64Decode(
+        'ChtMaXN0Q29uZGl0aW9uRmllbGRzUmVzcG9uc2USNQoGZmllbGRzGAEgAygLMh0uc2FsZXNvcm'
+        'Rlci52MS5Db25kaXRpb25GaWVsZFIGZmllbGRz');
+
 const $core.Map<$core.String, $core.dynamic> RoleServiceBase$json = {
   '1': 'RoleService',
   '2': [
@@ -200,6 +251,11 @@ const $core.Map<$core.String, $core.dynamic> RoleServiceBase$json = {
       '1': 'UpdateRolePermissions',
       '2': '.salesorder.v1.UpdateRolePermissionsRequest',
       '3': '.salesorder.v1.UpdateRolePermissionsResponse'
+    },
+    {
+      '1': 'ListConditionFields',
+      '2': '.salesorder.v1.ListConditionFieldsRequest',
+      '3': '.salesorder.v1.ListConditionFieldsResponse'
     },
   ],
 };
@@ -222,6 +278,10 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
       UpdateRolePermissionsRequest$json,
   '.salesorder.v1.UpdateRolePermissionsResponse':
       UpdateRolePermissionsResponse$json,
+  '.salesorder.v1.ListConditionFieldsRequest': ListConditionFieldsRequest$json,
+  '.salesorder.v1.ListConditionFieldsResponse':
+      ListConditionFieldsResponse$json,
+  '.salesorder.v1.ConditionField': ConditionField$json,
 };
 
 /// Descriptor for `RoleService`. Decode as a `google.protobuf.ServiceDescriptorProto`.
@@ -231,4 +291,6 @@ final $typed_data.Uint8List roleServiceDescriptor = $convert.base64Decode(
     'aW9ucxIoLnNhbGVzb3JkZXIudjEuR2V0Um9sZVBlcm1pc3Npb25zUmVxdWVzdBopLnNhbGVzb3'
     'JkZXIudjEuR2V0Um9sZVBlcm1pc3Npb25zUmVzcG9uc2UScgoVVXBkYXRlUm9sZVBlcm1pc3Np'
     'b25zEisuc2FsZXNvcmRlci52MS5VcGRhdGVSb2xlUGVybWlzc2lvbnNSZXF1ZXN0Giwuc2FsZX'
-    'NvcmRlci52MS5VcGRhdGVSb2xlUGVybWlzc2lvbnNSZXNwb25zZQ==');
+    'NvcmRlci52MS5VcGRhdGVSb2xlUGVybWlzc2lvbnNSZXNwb25zZRJsChNMaXN0Q29uZGl0aW9u'
+    'RmllbGRzEikuc2FsZXNvcmRlci52MS5MaXN0Q29uZGl0aW9uRmllbGRzUmVxdWVzdBoqLnNhbG'
+    'Vzb3JkZXIudjEuTGlzdENvbmRpdGlvbkZpZWxkc1Jlc3BvbnNl');

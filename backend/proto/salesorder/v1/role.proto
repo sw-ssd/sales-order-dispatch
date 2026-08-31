@@ -61,6 +61,24 @@ message UpdateRolePermissionsResponse {
   repeated Permission permissions = 1;
 }
 
+// ListConditionFieldsRequest:查詢指定資源可用的條件欄位白名單(供前端條件建構器)。
+message ListConditionFieldsRequest {
+  string resource = 1;
+}
+
+// ConditionField:單一條件欄位描述(欄位名、值型別、允許運算子與 enum 合法值)。
+message ConditionField {
+  string field = 1;       // 欄位名(如 status / company_id)
+  string type = 2;        // string | enum | id | number
+  repeated string ops = 3; // 允許運算子("$eq" ...)
+  repeated string enum = 4; // type=enum 時的合法值
+}
+
+// ListConditionFieldsResponse:資源的條件欄位白名單(依欄位名排序;未知資源為空)。
+message ListConditionFieldsResponse {
+  repeated ConditionField fields = 1;
+}
+
 // RoleService:角色權限管理。
 service RoleService {
   // ListRoles:分頁列出角色。
@@ -69,4 +87,6 @@ service RoleService {
   rpc GetRolePermissions(GetRolePermissionsRequest) returns (GetRolePermissionsResponse);
   // UpdateRolePermissions:全量更新角色功能權限(取代式)。
   rpc UpdateRolePermissions(UpdateRolePermissionsRequest) returns (UpdateRolePermissionsResponse);
+  // ListConditionFields:取得資源的條件欄位白名單(條件建構器用)。
+  rpc ListConditionFields(ListConditionFieldsRequest) returns (ListConditionFieldsResponse);
 }

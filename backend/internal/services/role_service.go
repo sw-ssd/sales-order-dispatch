@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/rolepermission"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
+	"github.com/salesorder/sales-order-1.0/backend/internal/authz/casl"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 
@@ -159,6 +161,14 @@ func (s *RoleService) UpdateRolePermissions(ctx context.Context, req *connect.Re
 	if err != nil {
 		return nil, err
 	}
+	// T10:寫入前 CASL 條件驗證(未知欄位/非法運算子/非法 enum 值 → invalid_argument)
+	// 與防鎖死(操作者自身角色的權限管理規則排除操作者 → failed_precondition)。
+	if err := s.validateConditions(ctx, perms); err != nil {
+		return nil, err
+	}
+	if err := validateNoLockout(id, r.Code, perms); err != nil {
+		return nil, err
+	}
 
 	tx, err := s.db.Tx(ctx)
 	if err != nil {
@@ -192,6 +202,29 @@ func (s *RoleService) UpdateRolePermissions(ctx context.Context, req *connect.Re
 		return nil, err
 	}
 	return connect.NewResponse(&v1.UpdateRolePermissionsResponse{Permissions: out}), nil
+}
+
+// ListConditionFields 回傳資源的條件欄位白名單(供前端條件建構器;由 casl FieldRegistry 提供)。
+// 未知資源回空陣列。
+func (s *RoleService) ListConditionFields(ctx context.Context, req *connect.Request[v1.ListConditionFieldsRequest]) (*connect.Response[v1.ListConditionFieldsResponse], error) {
+	if err := requireRole(ctx, "read"); err != nil {
+		return nil, err
+	}
+	infos := authz.Registry(ctx).ConditionFields(req.Msg.GetResource())
+	fields := make([]*v1.ConditionField, 0, len(infos))
+	for _, info := range infos {
+		ops := make([]string, 0, len(info.Ops))
+		for _, op := range info.Ops {
+			ops = append(ops, string(op))
+		}
+		fields = append(fields, &v1.ConditionField{
+			Field: info.Field,
+			Type:  string(info.Type),
+			Ops:   ops,
+			Enum:  append([]string(nil), info.Enum...),
+		})
+	}
+	return connect.NewResponse(&v1.ListConditionFieldsResponse{Fields: fields}), nil
 }
 
 // loadPermissions 依 sort_order 升冪讀取角色功能權限並轉 proto。
@@ -285,7 +318,8 @@ func validatePermissions(in []*v1.Permission) ([]permission, error) {
 }
 
 // validateOwnCompany 非 super 身分(company_admin)僅可寫自己公司範圍的規則:
-// conditions 若含 company_id,值必須等於自身 company_id(不允許指向其他公司)。
+// conditions 若含 company_id,值必須等於自身 company_id 或 ${user.company_id} 佔位符
+// (不允許指向其他公司)。
 func validateOwnCompany(id authz.Identity, in []*v1.Permission) error {
 	for i, p := range in {
 		conds, err := protoConditionsToMap(p.GetConditions())
@@ -294,10 +328,64 @@ func validateOwnCompany(id authz.Identity, in []*v1.Permission) error {
 		}
 		if v, ok := conds["company_id"]; ok {
 			s, ok := v.(string)
-			if !ok || s != id.CompanyID {
+			if !ok || (s != id.CompanyID && s != companyIDPlaceholder) {
 				return connect.NewError(connect.CodePermissionDenied, fmt.Errorf("第 %d 筆權限引用其他公司資料範圍,僅可限自己公司", i+1))
 			}
 		}
 	}
 	return nil
+}
+
+// companyIDPlaceholder 為 company_id 條件的自身公司佔位符(以身分展開為實際 company_id)。
+const companyIDPlaceholder = "${user.company_id}"
+
+// errLockout 為防鎖死錯誤:異動會排除操作者自身的權限管理能力。
+var errLockout = errors.New("此異動會排除操作者自身的權限管理能力,已拒絕(防鎖死)")
+
+// validateConditions 寫入前 CASL 條件驗證(T10):每條規則的條件欄位/運算子/值型別必須
+// 通過 casl FieldRegistry 白名單;未知欄位、非法運算子、非法 enum 值 → invalid_argument。
+func (s *RoleService) validateConditions(ctx context.Context, perms []permission) error {
+	reg := authz.Registry(ctx)
+	for i, p := range perms {
+		conds, err := casl.ParseConditions(p.conditions)
+		if err != nil {
+			return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("第 %d 筆權限(resource=%q)conditions 格式無效: %w", i+1, p.resource, err))
+		}
+		if err := reg.ValidateRuleConditions(p.resource, conds); err != nil {
+			return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("第 %d 筆權限(resource=%q)條件驗證失敗: %w", i+1, p.resource, err))
+		}
+	}
+	return nil
+}
+
+// validateNoLockout 防鎖死(T10):目標角色屬操作者自身角色(actor.Roles 含 targetCode)且
+// 規則動到權限管理資源(role/policy)時,以操作者身分代入驗證更新後仍可管理該資源;
+// 條件規則排除操作者 → failed_precondition(避免操作者移除自身的權限管理能力)。
+func validateNoLockout(actor authz.Identity, targetCode string, perms []permission) error {
+	if !slices.Contains(actor.Roles, targetCode) {
+		return nil
+	}
+	for _, p := range perms {
+		if p.resource != "role" && p.resource != "policy" {
+			continue
+		}
+		if ruleExcludesActor(p, actor) {
+			return connect.NewError(connect.CodeFailedPrecondition, errLockout)
+		}
+	}
+	return nil
+}
+
+// ruleExcludesActor 判斷單條權限管理規則是否排除操作者:以身分展開佔位符後,以操作者的
+// company/department 代入評估;規則不命中操作者(含 inverted 命中) → 操作者喪失該資源
+// 能力 → 視為排除(條件解析失敗 fail-closed)。
+func ruleExcludesActor(p permission, actor authz.Identity) bool {
+	conds, err := casl.ParseConditions(p.conditions)
+	if err != nil {
+		return true // fail-closed
+	}
+	e := casl.NewEvaluator([]casl.Rule{{Action: p.action, Subject: p.resource, Conditions: conds, Inverted: p.inverted}},
+		casl.Identity{UserID: actor.UserID, CompanyID: actor.CompanyID, DepartmentID: actor.DepartmentID, CustomerID: actor.CustomerID})
+	inst := map[string]any{"company_id": actor.CompanyID, "department_id": actor.DepartmentID}
+	return !e.Can(p.action, p.resource, inst)
 }

@@ -62,4 +62,22 @@ extension type RoleServiceClient (connect.Transport _transport) {
       onTrailer: onTrailer,
     );
   }
+
+  /// ListConditionFields:取得資源的條件欄位白名單(條件建構器用)。
+  Future<salesorderv1role.ListConditionFieldsResponse> listConditionFields(
+    salesorderv1role.ListConditionFieldsRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.RoleService.listConditionFields,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
 }
