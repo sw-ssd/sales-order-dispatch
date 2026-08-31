@@ -66,6 +66,10 @@ func NewEvaluator(rules []Rule, id Identity) *Evaluator {
 }
 
 const disabledRule = "\x00disabled"
+// Rules 回傳展開後的規則快照(供 Translate 使用)。
+func (e *Evaluator) Rules() []Rule {
+	return e.rules
+}
 
 // Can 由後往前掃規則,先命中者決定;無命中 = deny。
 // instance 為 nil(type-level 檢查)時帶條件規則不命中。
