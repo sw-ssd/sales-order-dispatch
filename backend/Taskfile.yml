@@ -1,0 +1,42 @@
+version: '3'
+
+tasks:
+  dev:
+    desc: air hot reload 開發模式
+    cmd: air
+
+  run:
+    desc: 直接執行 server
+    cmd: go run ./cmd/server
+
+  test:
+    desc: 全部測試
+    cmd: go test ./...
+
+  check:
+    desc: fmt + vet + lint + test（D31-2）
+    cmds:
+      - go fmt ./...
+      - go vet ./...
+      - golangci-lint run
+      - go test ./...
+
+  vuln:
+    desc: govulncheck 弱點掃描（D31-2）
+    cmd: govulncheck ./...
+
+  migrate:up:
+    desc: 套用全部 migration
+    cmd: go run ./cmd/migrate up
+
+  migrate:status:
+    desc: 查看 migration 狀態
+    cmd: go run ./cmd/migrate status
+
+  seed:
+    desc: 執行冪等 seeder
+    cmd: go run ./cmd/seed
+
+  proto:gen:
+    desc: buf 產生 Go/TS/Dart 型別
+    cmd: buf generate
