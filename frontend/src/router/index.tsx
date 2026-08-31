@@ -4,6 +4,7 @@ import { Route, Router } from "@solidjs/router";
 import App from "~/App";
 import LoginPage from "~/features/auth/pages/LoginPage";
 import RolesPage from "~/features/users/pages/RolesPage";
+import { requireAbility } from "~/lib/ability/guards";
 
 function HomePage() {
   return (
@@ -19,9 +20,9 @@ export default function AppRouter() {
     <Router root={App}>
       <Route path="/" component={HomePage} />
       <Route path="/login" component={LoginPage} />
-      <Route path="/users/companies" component={CompaniesPage} />
-      <Route path="/users/departments" component={DepartmentsPage} />
-      <Route path="/users/roles" component={RolesPage} />
+      <Route path="/users/companies" component={CompaniesPage} load={requireAbility("read", "company")} />
+      <Route path="/users/departments" component={DepartmentsPage} load={requireAbility("read", "department")} />
+      <Route path="/users/roles" component={RolesPage} load={requireAbility("read", "role")} />
     </Router>
   );
 }
