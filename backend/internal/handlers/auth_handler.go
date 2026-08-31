@@ -21,6 +21,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
+	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 )
 
@@ -65,8 +66,47 @@ func (h *AuthHandler) SetOIDC(cfg *oauth2.Config, exchanger auth.OAuthExchanger,
 }
 
 // ---------------------------------------------------------------------------
-// AuthService RPC:Login / Refresh / Logout / RegisterComplete 依 T12/T13/T17 依序補上;
+// AuthService RPC:Refresh / Logout(T13)、RegisterComplete(T17) 於後續任務補上;
 // 現階段由內嵌 UnimplementedAuthServiceHandler 回 CodeUnimplemented。
+
+// Login 客戶密碼登入(T12):以 customer_code(= users.account_name)查客戶帳號,
+// bcrypt 驗證密碼;連續 5 次失敗鎖定 30 分鐘(失敗計數存 Valkey,不區分帳號是否存在)。
+func (h *AuthHandler) Login(ctx context.Context, req *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error) {
+	customerCode := strings.TrimSpace(req.Msg.GetCustomerCode())
+	password := req.Msg.GetPassword()
+	if customerCode == "" || password == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("客戶編號與密碼不可為空"))
+	}
+
+	locked, err := h.deps.Lockout.IsLocked(ctx, customerCode)
+	if err != nil {
+		return nil, internal(err)
+	}
+	if locked {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("帳號已鎖定,請 30 分鐘後再試"))
+	}
+
+	u, err := h.deps.DB.User.Query().Where(user.AccountNameEQ(customerCode), user.IsCustomerEQ(true)).Only(ctx)
+	if err != nil {
+		if !ent.IsNotFound(err) {
+			return nil, internal(err)
+		}
+		h.recordFailure(ctx, customerCode)
+		return nil, invalidCredentials()
+	}
+	if u.Status != user.StatusActive {
+		h.recordFailure(ctx, customerCode)
+		return nil, invalidCredentials()
+	}
+	if !auth.VerifyPassword(u.PasswordHash, password) {
+		h.recordFailure(ctx, customerCode)
+		return nil, invalidCredentials()
+	}
+	if err := h.deps.Lockout.Clear(ctx, customerCode); err != nil {
+		return nil, internal(err)
+	}
+	return h.issueTokenPair(ctx, u)
+}
 
 // QRLogin 於後續計畫實作(QR 兌換前段);本 wave 回 Unimplemented。
 // (內嵌 UnimplementedAuthServiceHandler 已覆蓋。)
@@ -173,6 +213,31 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 // ---------------------------------------------------------------------------
 // 內部輔助
 
+// issueTokenPair 為成功登入核發 access + refresh token 對。
+func (h *AuthHandler) issueTokenPair(ctx context.Context, u *ent.User) (*connect.Response[v1.LoginResponse], error) {
+	subject, err := h.subjectFromUser(ctx, u)
+	if err != nil {
+		return nil, err
+	}
+	access, err := h.deps.Tokens.IssueAccess(ctx, subject)
+	if err != nil {
+		return nil, internal(err)
+	}
+	tv, err := h.deps.Tokens.CurrentTokenVersion(ctx, u.ID)
+	if err != nil {
+		return nil, internal(err)
+	}
+	refresh, err := h.deps.Tokens.IssueRefresh(ctx, u.ID, tv)
+	if err != nil {
+		return nil, internal(err)
+	}
+	return connect.NewResponse(&v1.LoginResponse{
+		AccessToken:  access,
+		RefreshToken: refresh,
+		ExpiresIn:    int64(auth.AccessTokenTTL / time.Second),
+	}), nil
+}
+
 // subjectFromUser 由使用者組裝 token subject(company / department 自 edges 讀取)。
 func (h *AuthHandler) subjectFromUser(ctx context.Context, u *ent.User) (auth.TokenSubject, error) {
 	co, err := u.QueryCompany().Only(ctx)
@@ -268,6 +333,11 @@ func (h *AuthHandler) resolveCompanyByHD(ctx context.Context, hd string) (*ent.C
 	return co, nil
 }
 
+// recordFailure 記錄登入失敗(失敗計數故障不阻斷錯誤回應)。
+func (h *AuthHandler) recordFailure(ctx context.Context, customerCode string) {
+	_, _ = h.deps.Lockout.RecordFailure(ctx, customerCode)
+}
+
 // redirectError 回跳登入頁並帶錯誤碼。
 func (h *AuthHandler) redirectError(w http.ResponseWriter, r *http.Request, code string) {
 	http.Redirect(w, r, h.deps.Cfg.Auth.FrontendURL+"/login?error="+code, http.StatusFound)
@@ -287,6 +357,10 @@ func emailLocalPart(email string) string {
 		return email[:i]
 	}
 	return email
+}
+
+func invalidCredentials() error {
+	return connect.NewError(connect.CodeUnauthenticated, errors.New("客戶編號或密碼錯誤"))
 }
 
 func internal(err error) error {

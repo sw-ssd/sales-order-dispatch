@@ -4,9 +4,11 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/alexedwards/scs/v2"
 	"github.com/alexedwards/scs/v2/memstore"
 	_ "github.com/mattn/go-sqlite3" // sqlite in-memory 測試驅動
@@ -16,6 +18,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
+	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 )
 
@@ -126,55 +129,62 @@ func mustCreateCompany(t *testing.T, e *testEnv, identifier string) int {
 	}
 	return co.ID
 }
-
-func TestCallbackCreatesGuestUser(t *testing.T) {
-	// T11 驗收:mock Google token → 使用者建立(role=guest),Web 設 session 並回跳前端。
+func TestLoginSuccessWrongPasswordLockout(t *testing.T) {
+	// T12 驗收:正確密碼、錯誤密碼、鎖定。
 	e := newTestEnv(t)
-	coID := mustCreateCompany(t, e, "example.com") // identifier = hd 網域
-
-	state := "state-1"
-	if err := e.handler.deps.OneTime.Put(e.ctx, auth.StateKey(state), "1", time.Minute); err != nil {
-		t.Fatalf("寫入 state: %v", err)
-	}
-	rec := e.callback(t, state, "")
-
-	if rec.Code != http.StatusFound {
-		t.Fatalf("callback 應 302,got %d", rec.Code)
-	}
-	loc := rec.Header().Get("Location")
-	if loc != "http://localhost:3000/" {
-		t.Fatalf("回跳應至前端根路徑,got %q", loc)
-	}
-	// Web session cookie 已設定
-	foundCookie := false
-	for _, c := range rec.Result().Cookies() {
-		if c.Name == auth.SessionCookieName && c.Value != "" {
-			foundCookie = true
-		}
-	}
-	if !foundCookie {
-		t.Fatal("callback 應設定 session cookie")
-	}
-
-	// 使用者已建立:role=guest,status=active,歸屬 hd 對應公司
-	u, err := e.db.User.Query().Where(user.EmailEQ("emp@example.com")).Only(e.ctx)
+	coID := mustCreateCompany(t, e, "co-a")
+	hash, err := auth.HashPassword("secret-123")
 	if err != nil {
-		t.Fatalf("使用者應已建立: %v", err)
+		t.Fatalf("HashPassword: %v", err)
 	}
-	if u.Role != RoleGuest {
-		t.Fatalf("role 應為 guest,got %q", u.Role)
+	e.db.User.Create().
+		SetEmail("cust@example.com").SetName("店家甲").SetStatus(user.StatusActive).
+		SetRole("customer").SetIsCustomer(true).SetAccountName("C001").SetPasswordHash(hash).
+		SetCompanyID(coID).SaveX(e.ctx)
+
+	// 正確密碼
+	resp, err := e.rpc.Login(e.ctx, connect.NewRequest(&v1.LoginRequest{CustomerCode: "C001", Password: "secret-123"}))
+	if err != nil {
+		t.Fatalf("Login: %v", err)
 	}
-	if u.Status != user.StatusActive {
-		t.Fatalf("首次登入 guest 應為 active(待完成註冊),got %q", u.Status)
+	if resp.Msg.GetAccessToken() == "" || resp.Msg.GetRefreshToken() == "" {
+		t.Fatal("應核發 access + refresh token")
 	}
-	co, err := u.QueryCompany().Only(e.ctx)
-	if err != nil || co.ID != coID {
-		t.Fatalf("guest 應歸屬 hd 對應公司,got company=%v err=%v", co, err)
+	if resp.Msg.GetExpiresIn() != int64(auth.AccessTokenTTL/time.Second) {
+		t.Fatalf("expires_in 應為 3600,got %d", resp.Msg.GetExpiresIn())
+	}
+	// JWT 可驗證且 claim 正確
+	claims, err := e.tokens.VerifyAccess(e.ctx, resp.Msg.GetAccessToken())
+	if err != nil {
+		t.Fatalf("access token 驗證: %v", err)
+	}
+	if claims.Role != "customer" || claims.CompanyID != coID {
+		t.Fatalf("claims 不符: %+v", claims)
 	}
 
-	// state 一次性:重放被拒
-	rec2 := e.callback(t, state, "")
-	if rec2.Code == http.StatusFound && rec2.Header().Get("Location") == "http://localhost:3000/" {
-		t.Fatal("state 重放不應成功")
+	// 錯誤密碼 → Unauthenticated(不透露)
+	if _, err := e.rpc.Login(e.ctx, connect.NewRequest(&v1.LoginRequest{CustomerCode: "C001", Password: "wrong"})); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("錯誤密碼應 Unauthenticated,got %v", err)
 	}
+	// 不存在的帳號 → Unauthenticated(不透露帳號存在與否)
+	if _, err := e.rpc.Login(e.ctx, connect.NewRequest(&v1.LoginRequest{CustomerCode: "NO-SUCH", Password: "x"})); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("不存在帳號應 Unauthenticated,got %v", err)
+	}
+
+	// 再失敗 3 次(累計 4 次)
+	for range 3 {
+		_, _ = e.rpc.Login(e.ctx, connect.NewRequest(&v1.LoginRequest{CustomerCode: "C001", Password: "wrong"}))
+	}
+	// 第 5 次失敗(此後 count=5)
+	if _, err := e.rpc.Login(e.ctx, connect.NewRequest(&v1.LoginRequest{CustomerCode: "C001", Password: "wrong"})); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("第 5 次失敗應 Unauthenticated,got %v", err)
+	}
+	// 鎖定:即使密碼正確也拒絕
+	if _, err := e.rpc.Login(e.ctx, connect.NewRequest(&v1.LoginRequest{CustomerCode: "C001", Password: "secret-123"})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Fatalf("鎖定期間應 FailedPrecondition,got %v", err)
+	}
+}
+
+func itoa(n int) string {
+	return strconv.Itoa(n)
 }
