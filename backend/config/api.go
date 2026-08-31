@@ -8,4 +8,7 @@ type API struct {
 	// CASLEnforcementEnabled 控制後端 CASL 執行層(list 過濾與實例檢查,D30-2)。
 	// 三環境均預設 true;false = 降級回純 Casbin + RLS。
 	CASLEnforcementEnabled bool `envconfig:"CASL_ENFORCEMENT_ENABLED" default:"true"`
+	// DeveloperAccountEnabled 控制 developer 角色繞過 Casbin 授權與 RLS 資料範圍(設計書 §4.4)。
+	// development 預設 true;production 必須設為 false(Server.Init 啟動防護)。
+	DeveloperAccountEnabled bool `envconfig:"DEVELOPER_ACCOUNT_ENABLED" default:"true"`
 }

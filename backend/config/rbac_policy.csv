@@ -1,0 +1,54 @@
+# 內建 7 角色預設 Casbin policy(設計書 §3.2 + §4.4;系統 seed 值)。
+# p = sub(角色), obj(資源), act(動作), dom(公司;* = 全部公司)
+# g = 角色繼承(子角色取得父角色的全部權限)
+#
+# 資源慣例:company / department / user / role(角色與角色權限管理)/
+#   sales_order / customer / product / print / dispatch / accounting。
+# 動作慣例:create / read / update / delete / manage / print / dispatch / "*"(全部)。
+
+# --- 全權限角色 ---
+p, super, *, *, *
+p, developer, *, *, *
+
+# --- company_admin:等同該公司內的 super,可跨部門管理(設計書 3.2) ---
+# 公司主檔僅 read/update 自己公司(3.1.1 品牌編輯);create/delete 為 super 專屬(8.2)。
+p, company_admin, company, read, *
+p, company_admin, company, update, *
+p, company_admin, department, *, *
+p, company_admin, user, *, *
+p, company_admin, role, *, *
+p, company_admin, sales_order, *, *
+p, company_admin, customer, *, *
+p, company_admin, product, *, *
+p, company_admin, print, *, *
+p, company_admin, dispatch, *, *
+
+# --- dept_admin:管理該部門內 staff 帳號與部門業務(設計書 3.2) ---
+p, dept_admin, department, read, *
+p, dept_admin, user, read, *
+p, dept_admin, customer, *, *
+p, dept_admin, product, *, *
+p, dept_admin, sales_order, *, *
+p, dept_admin, print, *, *
+p, dept_admin, dispatch, *, *
+
+# --- staff:操作自己部門的客戶/商品/訂單,不能管理帳號;會計檢視(設計書 3.2) ---
+p, staff, customer, *, *
+p, staff, product, *, *
+p, staff, sales_order, *, *
+p, staff, print, *, *
+p, staff, dispatch, read, *
+p, staff, accounting, read, *
+
+# --- customer:外部店家,只能查看自己的訂單與商品(設計書 3.2) ---
+p, customer, sales_order, read, *
+p, customer, product, read, *
+
+# --- guest:首次登入待審核,僅可讀自身帳號(設計書 3.2 / 4.1) ---
+p, guest, user, read, *
+
+# --- 角色繼承(子角色 = 父角色的超集) ---
+g, company_admin, dept_admin
+g, dept_admin, staff
+g, staff, customer
+g, developer, super

@@ -6,11 +6,14 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
+	"github.com/alexedwards/scs/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -18,7 +21,9 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/config"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
+	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
+	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/handlers"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/cache"
@@ -54,6 +59,10 @@ func New(cfg *config.Config) *Server {
 
 // Init 執行 fail-fast 啟動檢查（DB/Valkey 連線、必要 secret 等，於各 domain 計畫補上）。
 func (s *Server) Init() error {
+	// 設計書 §4.4 啟動防護：production 誤開 developer 繞過授權 → 拒絕啟動。
+	if s.cfg.API.Env == "production" && s.cfg.API.DeveloperAccountEnabled {
+		return fmt.Errorf("config: ENV=production 且 DEVELOPER_ACCOUNT_ENABLED=true 會繞過 Casbin/RLS,拒絕啟動")
+	}
 	return nil
 }
 
@@ -65,6 +74,62 @@ func (s *Server) Run() error {
 // Handler 暴露路由供測試與掛載。
 func (s *Server) Handler() http.Handler {
 	return s.router
+}
+
+// authzMiddleware 將 scs session 身分轉換為 authz.Identity + RLS scope 注入 ctx（T14 Step 4）。
+// 必須位於 sessions.LoadAndSave 之後（ctx 才帶 session 資料）。
+// 未登入 / 查無使用者 / developer 關閉時以零值身分通過（fail-closed：CASL 規則載入全略過 → denied，
+// Casbin 由各服務層以 EnforceAny 判斷）。
+func (s *Server) authzMiddleware(entClient *ent.Client, sessions *scs.SessionManager, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		ctx = authz.WithCASLEnabled(ctx, s.cfg.API.CASLEnforcementEnabled)
+		ctx = authz.WithDB(ctx, entClient)
+
+		userID := auth.SessionUserID(ctx, sessions)
+		if userID > 0 {
+			if id, scope, ok := s.identityFor(ctx, entClient, userID); ok {
+				ctx = authz.WithIdentity(ctx, id)
+				ctx = auth.WithRLS(ctx, scope)
+			}
+		}
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// identityFor 由使用者載入身分與 RLS scope（company/department eager-load）。
+// 帳號不存在 / 非 active / developer 關閉 → ok=false（零值身分，fail-closed）。
+func (s *Server) identityFor(ctx context.Context, entClient *ent.Client, userID int) (authz.Identity, auth.RLSScope, bool) {
+	u, err := entClient.User.Query().WithCompany().WithDepartment().Where(user.ID(userID)).Only(ctx)
+	if err != nil || u.Status != user.StatusActive {
+		return authz.Identity{}, auth.RLSScope{}, false
+	}
+	// developer 帳號僅在開關啟用時繞過 Casbin/RLS（設計書 §4.4）。
+	if u.Role == "developer" && !s.cfg.API.DeveloperAccountEnabled {
+		return authz.Identity{}, auth.RLSScope{}, false
+	}
+
+	var companyID, deptID string
+	if u.Edges.Company != nil {
+		companyID = strconv.FormatInt(int64(u.Edges.Company.ID), 10)
+	}
+	if u.Edges.Department != nil {
+		deptID = strconv.FormatInt(int64(u.Edges.Department.ID), 10)
+	}
+	id := authz.Identity{
+		UserID:       strconv.FormatInt(int64(u.ID), 10),
+		CompanyID:    companyID,
+		DepartmentID: deptID,
+		Role:         u.Role,
+		Roles:        auth.RolesFor(u.Role), // 依 Casbin g 展開(含自身)
+	}
+	scope := auth.RLSScope{
+		UserID:       id.UserID,
+		CompanyID:    companyID,
+		DepartmentID: deptID,
+		DataScope:    auth.ScopeForRole(u.Role),
+	}
+	return id, scope, true
 }
 
 // mountAuth 組裝 auth domain：ent client + Valkey client → token/鎖定/一次性 store →
@@ -101,8 +166,9 @@ func (s *Server) mountAuth() {
 	// AuthService Connect-RPC（Web session cookie 亦經 scs 中介層讀寫）。
 	// connect 產生的 handler 依 r.URL.Path 全路徑分派,故以 http.StripPrefix 剝除
 	// /api/v1 前綴後掛載(與 services.RegisterCompanyServices 的掛載慣例一致)。
+	// authzMiddleware 位於 LoadAndSave 之內,將 session 身分注入 ctx(T14 Step 4)。
 	_, authHandler := salesorderv1connect.NewAuthServiceHandler(h)
-	s.router.Mount("/api/v1", http.StripPrefix("/api/v1", sessions.LoadAndSave(authHandler)))
+	s.router.Mount("/api/v1", http.StripPrefix("/api/v1", sessions.LoadAndSave(s.authzMiddleware(entClient, sessions, authHandler))))
 
 	// OIDC 公開端點：需 Google client id 與 discovery 可用
 	clientID := s.cfg.Auth.GoogleClientID
