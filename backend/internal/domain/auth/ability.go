@@ -98,15 +98,11 @@ func (h *AbilityHandler) loadRules(ctx context.Context, id authz.Identity) ([]ca
 	}).Rules(), nil
 }
 
-// condsToMap 將欄位條件還原為 CASL JSON 形:$eq 輸出裸值、其餘運算子輸出 {op: value},
-// 同欄位多運算子合併一個物件。
+// condsToMap 將欄位條件還原為 CASL JSON 形:每個運算子輸出 {op: value},
+// 同欄位多運算子(含 $eq)合併為一個物件({$eq: v, ...}),@casl/ability 原生支援。
 func condsToMap(conds []casl.FieldCondition) map[string]any {
 	out := map[string]any{}
 	for _, c := range conds {
-		if c.Op == casl.OpEq {
-			out[c.Field] = c.Value
-			continue
-		}
 		m, _ := out[c.Field].(map[string]any)
 		if m == nil {
 			m = map[string]any{}

@@ -51,16 +51,46 @@ func TestGetAbilityWithConditions(t *testing.T) {
 	if rules[0].GetInverted() {
 		t.Fatal("rules[0].inverted = true, want false")
 	}
-	if got := rules[0].GetConditions().GetFields()["status"].GetStringValue(); got != "pending" {
-		t.Fatalf("rules[0].conditions.status = %q, want pending", got)
+	// $eq 亦輸出 {op: value} 物件形(同欄位多運算子可合併)。
+	status := rules[0].GetConditions().GetFields()["status"].GetStructValue().GetFields()
+	if got := status["$eq"].GetStringValue(); got != "pending" {
+		t.Fatalf("rules[0].conditions.status.$eq = %q, want pending", got)
 	}
 
 	if rules[1].GetAction() != "read" {
 		t.Fatalf("rules[1].action = %q, want read", rules[1].GetAction())
 	}
-	// 佔位符已以身分展開為具體值。
-	if got := rules[1].GetConditions().GetFields()["department_id"].GetStringValue(); got != "d1" {
-		t.Fatalf("rules[1].conditions.department_id = %q, want d1(佔位符展開)", got)
+	// 佔位符已以身分展開為具體值($eq 物件形)。
+	dept := rules[1].GetConditions().GetFields()["department_id"].GetStructValue().GetFields()
+	if got := dept["$eq"].GetStringValue(); got != "d1" {
+		t.Fatalf("rules[1].conditions.department_id.$eq = %q, want d1(佔位符展開)", got)
+	}
+}
+
+func TestGetAbilityMultipleOperatorsSameField(t *testing.T) {
+	// P2-1 驗收:同欄位多運算子(含 $eq)合併為單一 {op: value} 物件,而非 $eq 覆蓋其他運算子。
+	h, client, ctx := newTestHandler(t, true)
+	role := client.Role.Create().SetCode("staff").SetName("門市").SetDataScope("department").SetIsSystem(true).SaveX(ctx)
+	client.RolePermission.Create().SetRoleID(role.ID).SetResource("sales_order").SetAction("cancel").
+		SetConditions(map[string]any{"status": map[string]any{"$eq": "pending", "$ne": "voided"}}).SaveX(ctx)
+
+	resp, err := h.GetAbility(
+		authz.WithIdentity(ctx, authz.Identity{UserID: "u1", CompanyID: "c1", DepartmentID: "d1", Roles: []string{"staff"}}),
+		connect.NewRequest(&v1.GetAbilityRequest{}),
+	)
+	if err != nil {
+		t.Fatalf("GetAbility: %v", err)
+	}
+	rules := resp.Msg.GetRules()
+	if len(rules) != 1 {
+		t.Fatalf("rules = %d, want 1", len(rules))
+	}
+	status := rules[0].GetConditions().GetFields()["status"].GetStructValue().GetFields()
+	if got := status["$eq"].GetStringValue(); got != "pending" {
+		t.Fatalf("conditions.status.$eq = %q, want pending", got)
+	}
+	if got := status["$ne"].GetStringValue(); got != "voided" {
+		t.Fatalf("conditions.status.$ne = %q, want voided($eq 不得覆蓋)", got)
 	}
 }
 

@@ -32,8 +32,8 @@ func (User) Fields() []ent.Field {
 			Default(false),
 		field.String("account_name").
 			Optional(),
-	field.Int("token_version").
-		Default(0),
+		field.Int("token_version").
+			Default(0),
 		field.String("password_hash").
 			NotEmpty().
 			Sensitive(),

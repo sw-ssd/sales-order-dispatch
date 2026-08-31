@@ -70,7 +70,7 @@ func TestUpdateRolePermissionsCaslValidation(t *testing.T) {
 		client, db := newRoleTestServer(t, super)
 		r := db.Role.Create().SetCode("super").SetName("超級管理員").SetDataScope(role.DataScopeAll).SetIsSystem(true).SaveX(ctx)
 		_, err := client.UpdateRolePermissions(ctx, connect.NewRequest(&v1.UpdateRolePermissionsRequest{
-			RoleId: strconvID(r.ID),
+			RoleId:      strconvID(r.ID),
 			Permissions: []*v1.Permission{{Resource: "role", Action: "manage", Inverted: true}},
 		}))
 		if connect.CodeOf(err) != connect.CodeFailedPrecondition {
@@ -84,11 +84,27 @@ func TestUpdateRolePermissionsCaslValidation(t *testing.T) {
 		client, db := newRoleTestServer(t, super)
 		r := db.Role.Create().SetCode("staff").SetName("門市人員").SetDataScope(role.DataScopeDepartment).SetIsSystem(true).SaveX(ctx)
 		_, err := client.UpdateRolePermissions(ctx, connect.NewRequest(&v1.UpdateRolePermissionsRequest{
-			RoleId: strconvID(r.ID),
+			RoleId:      strconvID(r.ID),
 			Permissions: []*v1.Permission{{Resource: "role", Action: "manage", Inverted: true}},
 		}))
 		if err != nil {
 			t.Fatalf("非自身角色應不觸發防鎖死,got %v", err)
+		}
+	})
+	t.Run("防鎖死:cannot manage all 被拒", func(t *testing.T) {
+		// P2-2 驗收:subject all/"*"(manage-all)視同 role/policy 納入防鎖死掃描;
+		// super 更新自身 super 角色為 cannot manage all → 喪失全部權限 → failed_precondition。
+		ctx := context.Background()
+		for _, subject := range []string{"all", "*"} {
+			client, db := newRoleTestServer(t, super)
+			r := db.Role.Create().SetCode("super").SetName("超級管理員").SetDataScope(role.DataScopeAll).SetIsSystem(true).SaveX(ctx)
+			_, err := client.UpdateRolePermissions(ctx, connect.NewRequest(&v1.UpdateRolePermissionsRequest{
+				RoleId:      strconvID(r.ID),
+				Permissions: []*v1.Permission{{Resource: subject, Action: "manage", Inverted: true}},
+			}))
+			if connect.CodeOf(err) != connect.CodeFailedPrecondition {
+				t.Fatalf("cannot manage %q 應 FailedPrecondition(防鎖死),got %v", subject, err)
+			}
 		}
 	})
 
@@ -109,6 +125,79 @@ func TestUpdateRolePermissionsCaslValidation(t *testing.T) {
 		}
 		if got := upd.Msg.GetPermissions()[0].GetConditions().GetFields()["status"].GetStringValue(); got != "pending" {
 			t.Fatalf("conditions 未回讀: got %q, want pending", got)
+		}
+	})
+}
+
+// TestUpdateRolePermissionsCompanyAdminOperatorForm P2-3 驗收:validateOwnCompany 以
+// casl.ParseConditions 展開後驗證,接受運算子形(如 {"$eq": "c1"} / {"$in": [...]}),
+// 但僅限自身公司或佔位符;$ne/$nin 等可能涵蓋其他公司 → 拒絕。
+func TestUpdateRolePermissionsCompanyAdminOperatorForm(t *testing.T) {
+	ctx := context.Background()
+	admin := authz.Identity{UserID: "u2", CompanyID: "c1", Role: "company_admin", Roles: []string{"company_admin"}}
+
+	t.Run("$eq 自身公司允許", func(t *testing.T) {
+		client, db := newRoleTestServer(t, admin)
+		custom := db.Role.Create().SetCode("regional").SetName("區域經理").SetDataScope(role.DataScopeCompany).SetIsSystem(false).SaveX(ctx)
+		_, err := client.UpdateRolePermissions(ctx, connect.NewRequest(&v1.UpdateRolePermissionsRequest{
+			RoleId: strconvID(custom.ID),
+			Permissions: []*v1.Permission{{Resource: "sales_order", Action: "read",
+				Conditions: mustStruct(t, map[string]any{"company_id": map[string]any{"$eq": "c1"}})}},
+		}))
+		if err != nil {
+			t.Fatalf("$eq 自身公司應允許,got %v", err)
+		}
+	})
+
+	t.Run("$in 含自身公司與佔位符允許", func(t *testing.T) {
+		client, db := newRoleTestServer(t, admin)
+		custom := db.Role.Create().SetCode("regional").SetName("區域經理").SetDataScope(role.DataScopeCompany).SetIsSystem(false).SaveX(ctx)
+		_, err := client.UpdateRolePermissions(ctx, connect.NewRequest(&v1.UpdateRolePermissionsRequest{
+			RoleId: strconvID(custom.ID),
+			Permissions: []*v1.Permission{{Resource: "sales_order", Action: "read",
+				Conditions: mustStruct(t, map[string]any{"company_id": map[string]any{"$in": []any{"c1", "${user.company_id}"}}})}},
+		}))
+		if err != nil {
+			t.Fatalf("$in 含自身公司應允許,got %v", err)
+		}
+	})
+
+	t.Run("$eq 其他公司拒絕", func(t *testing.T) {
+		client, db := newRoleTestServer(t, admin)
+		custom := db.Role.Create().SetCode("regional").SetName("區域經理").SetDataScope(role.DataScopeCompany).SetIsSystem(false).SaveX(ctx)
+		_, err := client.UpdateRolePermissions(ctx, connect.NewRequest(&v1.UpdateRolePermissionsRequest{
+			RoleId: strconvID(custom.ID),
+			Permissions: []*v1.Permission{{Resource: "sales_order", Action: "read",
+				Conditions: mustStruct(t, map[string]any{"company_id": map[string]any{"$eq": "c2"}})}},
+		}))
+		if connect.CodeOf(err) != connect.CodePermissionDenied {
+			t.Fatalf("$eq 其他公司應 PermissionDenied,got %v", err)
+		}
+	})
+
+	t.Run("$in 含其他公司拒絕", func(t *testing.T) {
+		client, db := newRoleTestServer(t, admin)
+		custom := db.Role.Create().SetCode("regional").SetName("區域經理").SetDataScope(role.DataScopeCompany).SetIsSystem(false).SaveX(ctx)
+		_, err := client.UpdateRolePermissions(ctx, connect.NewRequest(&v1.UpdateRolePermissionsRequest{
+			RoleId: strconvID(custom.ID),
+			Permissions: []*v1.Permission{{Resource: "sales_order", Action: "read",
+				Conditions: mustStruct(t, map[string]any{"company_id": map[string]any{"$in": []any{"c1", "c2"}}})}},
+		}))
+		if connect.CodeOf(err) != connect.CodePermissionDenied {
+			t.Fatalf("$in 含其他公司應 PermissionDenied,got %v", err)
+		}
+	})
+
+	t.Run("$ne 可能涵蓋其他公司拒絕", func(t *testing.T) {
+		client, db := newRoleTestServer(t, admin)
+		custom := db.Role.Create().SetCode("regional").SetName("區域經理").SetDataScope(role.DataScopeCompany).SetIsSystem(false).SaveX(ctx)
+		_, err := client.UpdateRolePermissions(ctx, connect.NewRequest(&v1.UpdateRolePermissionsRequest{
+			RoleId: strconvID(custom.ID),
+			Permissions: []*v1.Permission{{Resource: "sales_order", Action: "read",
+				Conditions: mustStruct(t, map[string]any{"company_id": map[string]any{"$ne": "c2"}})}},
+		}))
+		if connect.CodeOf(err) != connect.CodePermissionDenied {
+			t.Fatalf("$ne 應 PermissionDenied(無法保證限自己公司),got %v", err)
 		}
 	})
 }
