@@ -58,7 +58,7 @@
 **Interfaces:**
 - Produces: 下游所有 Task 的契約基準；無程式碼產物。
 
-- [ ] **Step 1: 決策記錄新增 D30（檔尾追加）**
+- [x] **Step 1: 決策記錄新增 D30（檔尾追加）**
 
 ```markdown
 ### D30：CASL JSON 為第二權限模型（後端執行層 + 前端同源）
@@ -78,7 +78,7 @@
 - **修訂（2026-08-24, D30）**：新增 CASL 執行層管 resource 屬性/狀態條件；Casbin 與 RLS 職責不變。
 ```
 
-- [ ] **Step 2: authorization/spec.md「CASL 前端能力」requirement 擴充**
+- [x] **Step 2: authorization/spec.md「CASL 前端能力」requirement 擴充**
 
 在該 Requirement 既有文字後追加（Scenarios 之前）：
 
@@ -110,7 +110,7 @@
 - **THEN** 下一次 `GetAbility`（前端）與下一次 list/實例檢查（後端）皆反映新條件，不需重啟
 ```
 
-- [ ] **Step 3: backend/detail/01-auth.md 修訂 1.8.1**
+- [x] **Step 3: backend/detail/01-auth.md 修訂 1.8.1**
 
 1.8.1「實作邏輯」第 1 點整點取代為：
 
@@ -124,7 +124,7 @@
 - **介面**: Connect-RPC `AbilityService.GetAbility() → { rules: [{action, subject, conditions?, inverted?}] }`（CASL.js 可消費的 JSON；保留字 `manage`/`all`）。
 ```
 
-- [ ] **Step 4: backend/detail/02-tenancy-users.md 修訂 2.9.x**
+- [x] **Step 4: backend/detail/02-tenancy-users.md 修訂 2.9.x**
 
 - 2.9.1 `role_permissions` 欄位列改為：`` `role_permissions`:id、`role_id`、`resource`、`action`、`conditions`(JSONB 可空)、`inverted`(bool 預設 false)、`sort_order`(int 預設 0)；唯一索引 `(role_id, resource, action, COALESCE(md5(conditions::text), ''))`（同 resource×action 允許多條件不同規則）。 ``
 - 2.9.3 實作邏輯第 3 點整點取代為：
@@ -135,11 +135,11 @@
 
 - 2.9.4 實作邏輯第 1 點末尾追加：「；規則輸出含 `conditions`（佔位符已展開）與 `inverted`，依 `sort_order` 排序」。
 
-- [ ] **Step 5: subproject-implementation-plan.md Task 4 依賴修正**
+- [x] **Step 5: subproject-implementation-plan.md Task 4 依賴修正**
 
 Step 1 依賴字串中的 `` `casl/ability`, `@casl/solid`, `` 取代為 `` `@casl/ability`, ``。
 
-- [ ] **Step 6: subproject-decomposition-design.md WEB-INF-05 展開**
+- [x] **Step 6: subproject-decomposition-design.md WEB-INF-05 展開**
 
 WEB-INF-05 列改為：
 
@@ -147,11 +147,11 @@ WEB-INF-05 列改為：
 | WEB-INF-05 | CASL ability 與 UI 權限遮蔽（`frontend/src/lib/ability/`：`context.tsx` Provider/useAbility、`service.ts` GetAbility query + createAppAbility、`Can.tsx` 顯示控制、`guards.ts` requireAbility 路由守衛；依賴 `@casl/ability`，無 `@casl/solid`） |
 ```
 
-- [ ] **Step 7: 客戶版規格書 §3.4 修訂 + 升版 v1.0.35**
+- [x] **Step 7: 客戶版規格書 §3.4 修訂 + 升版 v1.0.35**
 
 §3.4（前端權限 CASL 段落）追加一句：「同一份角色規則（含條件）亦由後端執行層用於列表過濾與操作檢查，可全域開關控制（預設啟用），關閉時仍以 API 權限與資料範圍隔離把關。」；§18 修訂記錄追加 v1.0.35 列：`v1.0.35 | 2026-08-24 | §3.4 CASL 規則前後端同源、後端執行層（D30）`。
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add docs/

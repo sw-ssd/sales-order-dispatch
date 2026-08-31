@@ -46,7 +46,7 @@ graph TD
 |------|------|------|------|------|------|
 | 主計畫 | `2026-08-05-sales-order-1.0-subproject-implementation-plan.md` | 三子專案 50 Tasks / 5 Waves | 5/298 | 進行中 | — |
 | go8-alignment | `backend/2026-08-24-backend-go8-alignment-plan.md` | 後端結構對齊（D31） | 38/38 | 完成 | 無；須先於 01 實作 |
-| casl-integration | `cross-cutting/2026-08-24-casl-integration-plan.md` | CASL 前後端整合 | 0/71 | 未開始 | 無；須先於 01/02 實作 |
+| casl-integration | `cross-cutting/2026-08-24-casl-integration-plan.md` | CASL 前後端整合 | 8/71 | 進行中 | 無；須先於 01/02 實作（Task 1 文件同步已完成；Task 2–13 程式碼待 01/02 產物） |
 | 01-auth | `backend/2026-08-17-backend-01-auth-plan.md` | 認證授權地基 | 0/75 | 未開始 | go8、casl |
 | 02-tenancy-users | `backend/2026-08-17-backend-02-tenancy-users-plan.md` | 多租戶與使用者 | 0/38 | 未開始 | 01、casl |
 | 03-metadicts-audit | `backend/2026-08-17-backend-03-metadicts-audit-plan.md` | 字典檔與稽核 | 0/28 | 未開始 | 01 |
