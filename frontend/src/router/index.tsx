@@ -3,6 +3,7 @@ import DepartmentsPage from "~/features/users/pages/DepartmentsPage";
 import { Route, Router } from "@solidjs/router";
 import App from "~/App";
 import LoginPage from "~/features/auth/pages/LoginPage";
+import RolesPage from "~/features/users/pages/RolesPage";
 
 function HomePage() {
   return (
@@ -20,6 +21,7 @@ export default function AppRouter() {
       <Route path="/login" component={LoginPage} />
       <Route path="/users/companies" component={CompaniesPage} />
       <Route path="/users/departments" component={DepartmentsPage} />
+      <Route path="/users/roles" component={RolesPage} />
     </Router>
   );
 }
