@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -182,6 +183,67 @@ func TestRefreshInvalidToken(t *testing.T) {
 	}
 	if _, _, err := tm.VerifyRefresh(ctx, ""); err != ErrInvalidRefresh {
 		t.Fatalf("空 refresh 應 ErrInvalidRefresh,got %v", err)
+	}
+}
+// TestRotateRefreshConcurrentReplay P1-4 驗收:並發重放同一 refresh token 時,讀-刪-寫
+// 以原子原語完成,恰一個請求消耗成功,其餘必回 ErrRefreshRevoked(第二次重放必拒)。
+func TestRotateRefreshConcurrentReplay(t *testing.T) {
+	tm, u, ctx := newTokenTestEnv(t)
+
+	r1, err := tm.IssueRefresh(ctx, u.ID, 0)
+	if err != nil {
+		t.Fatalf("IssueRefresh: %v", err)
+	}
+	const workers = 8
+	results := make(chan error, workers)
+	var wg sync.WaitGroup
+	for range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, err := tm.RotateRefresh(ctx, r1, u.ID, 0)
+			results <- err
+		}()
+	}
+	wg.Wait()
+	close(results)
+
+	success, revoked := 0, 0
+	for err := range results {
+		switch {
+		case err == nil:
+			success++
+		case errors.Is(err, ErrRefreshRevoked):
+			revoked++
+		default:
+			t.Fatalf("RotateRefresh 意外錯誤: %v", err)
+		}
+	}
+	if success != 1 {
+		t.Fatalf("並發旋轉應恰 1 個成功,got %d", success)
+	}
+	if revoked != workers-1 {
+		t.Fatalf("並發重放應 %d 個被拒,got %d", workers-1, revoked)
+	}
+	if _, _, err := tm.VerifyRefresh(ctx, r1); err != ErrInvalidRefresh {
+		t.Fatalf("並發旋轉後舊 token 應失效,got %v", err)
+	}
+}
+
+// TestVerifyAccessEmptySecret P1-3 驗收:空 JWT 密鑰時 VerifyAccess 一律拒絕
+// (fail-closed,防空鑰簽章繞過;正式環境由 Server.Init 擋下)。
+func TestVerifyAccessEmptySecret(t *testing.T) {
+	tm, u, ctx := newTokenTestEnv(t)
+	empty := NewTokenManager("", NewMemoryStore(), tm.db)
+	access, err := tm.IssueAccess(ctx, TokenSubject{UserID: u.ID, Role: "staff"})
+	if err != nil {
+		t.Fatalf("IssueAccess: %v", err)
+	}
+	if _, err := empty.VerifyAccess(ctx, access); err != ErrInvalidToken {
+		t.Fatalf("空密鑰 VerifyAccess 應 ErrInvalidToken,got %v", err)
+	}
+	if _, err := empty.VerifyAccess(ctx, "bogus"); err != ErrInvalidToken {
+		t.Fatalf("空密鑰 + 亂碼 token 應 ErrInvalidToken,got %v", err)
 	}
 }
 

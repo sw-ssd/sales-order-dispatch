@@ -2,7 +2,9 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -25,6 +27,63 @@ func openTestValkey(t *testing.T) *redis.Client {
 	}
 	t.Cleanup(func() { _ = c.Close() })
 	return c
+}
+
+// TestValkeyRotateRefreshConcurrentReplay P1-4 驗收:以真實 Valkey + Lua 原子消耗驗證
+// 並發重放同一 refresh token 時恰一個成功、其餘拒絕(Valkey 缺省時自動 skip)。
+func TestValkeyRotateRefreshConcurrentReplay(t *testing.T) {
+	c := openTestValkey(t)
+	ctx := context.Background()
+
+	name := strings.ReplaceAll(t.Name(), "/", "_")
+	db := enttest.Open(t, "sqlite3", "file:"+name+"?mode=memory&cache=shared&_fk=1")
+	t.Cleanup(func() { _ = db.Close() })
+	co := db.Company.Create().SetName("整合公司").SetIdentifier("IT-" + name).SaveX(ctx)
+	u := db.User.Create().
+		SetEmail("it-rot-" + name + "@example.com").SetName("整合").SetStatus(user.StatusActive).
+		SetRole("customer").SetPasswordHash("x").SetCompanyID(co.ID).SaveX(ctx)
+	t.Cleanup(func() { _ = c.Del(context.Background(), refreshUserSetKey(u.ID)) })
+
+	tm := NewTokenManager("it-secret", NewRedisStore(c), db)
+
+	r1, err := tm.IssueRefresh(ctx, u.ID, 0)
+	if err != nil {
+		t.Fatalf("IssueRefresh: %v", err)
+	}
+	const workers = 8
+	results := make(chan error, workers)
+	var wg sync.WaitGroup
+	for range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, err := tm.RotateRefresh(ctx, r1, u.ID, 0)
+			results <- err
+		}()
+	}
+	wg.Wait()
+	close(results)
+
+	success, revoked := 0, 0
+	for err := range results {
+		switch {
+		case err == nil:
+			success++
+		case errors.Is(err, ErrRefreshRevoked):
+			revoked++
+		default:
+			t.Fatalf("RotateRefresh 意外錯誤: %v", err)
+		}
+	}
+	if success != 1 {
+		t.Fatalf("並發旋轉應恰 1 個成功,got %d", success)
+	}
+	if revoked != workers-1 {
+		t.Fatalf("並發重放應 %d 個被拒,got %d", workers-1, revoked)
+	}
+	if _, _, err := tm.VerifyRefresh(ctx, r1); err != ErrInvalidRefresh {
+		t.Fatalf("並發旋轉後舊 token 應失效,got %v", err)
+	}
 }
 
 // TestValkeyTokenIssueRefreshRotation 以真實 Valkey 驗證 token 發行 / refresh 旋轉 / 撤銷

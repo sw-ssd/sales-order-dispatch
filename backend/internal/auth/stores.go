@@ -82,6 +82,35 @@ func (s *RedisStore) SetMembers(ctx context.Context, key string) ([]string, erro
 	return s.c.SMembers(ctx, key).Result()
 }
 
+// consumeRefreshScript 原子「讀取並作廢」refresh token:Lua 內 GET + DEL + SREM 一氣呵成,
+// 避免並發旋轉時兩個請求同時讀到同一 token(重放偵測)。不存在時回 nil。
+var consumeRefreshScript = redis.NewScript(`
+local v = redis.call('GET', KEYS[1])
+if not v then
+  return nil
+end
+redis.call('DEL', KEYS[1])
+redis.call('SREM', KEYS[2], ARGV[1])
+return v
+`)
+
+// ConsumeRefresh 原子讀取並刪除 refresh token 記錄,並自使用者集合移除;
+// 不存在 → ok=false。供 TokenManager.RotateRefresh 做並發安全的旋轉。
+func (s *RedisStore) ConsumeRefresh(ctx context.Context, key, userSetKey, member string) (string, bool, error) {
+	v, err := consumeRefreshScript.Run(ctx, s.c, []string{key, userSetKey}, member).Result()
+	if errors.Is(err, redis.Nil) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, err
+	}
+	val, ok := v.(string)
+	if !ok {
+		return "", false, errors.New("auth: consume refresh 回傳型別錯誤")
+	}
+	return val, true, nil
+}
+
 // memEntry 為 MemoryStore 的一筆記錄。
 type memEntry struct {
 	value   string
@@ -195,4 +224,23 @@ func (s *MemoryStore) SetMembers(ctx context.Context, key string) ([]string, err
 		out = append(out, m)
 	}
 	return out, nil
+}
+
+// ConsumeRefresh 原子讀取並刪除 refresh token 記錄(鎖保護,與 Redis Lua 等價);
+// 不存在 → ok=false。
+func (s *MemoryStore) ConsumeRefresh(ctx context.Context, key, userSetKey, member string) (string, bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	v, ok := s.getLocked(key)
+	if !ok {
+		return "", false, nil
+	}
+	delete(s.m, key)
+	if set, ok := s.sets[userSetKey]; ok {
+		delete(set, member)
+		if len(set) == 0 {
+			delete(s.sets, userSetKey)
+		}
+	}
+	return v, true, nil
 }

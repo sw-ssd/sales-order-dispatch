@@ -121,7 +121,11 @@ func (m *TokenManager) IssueAccess(ctx context.Context, s TokenSubject) (string,
 }
 
 // VerifyAccess 驗證 access token(簽章、exp、tv 與目前 token_version 比對)。
+// 空 JWT 密鑰視為未設定:任何 token 皆不可驗證(fail-closed,防空鑰簽章繞過)。
 func (m *TokenManager) VerifyAccess(ctx context.Context, token string) (*Claims, error) {
+	if len(m.secret) == 0 {
+		return nil, ErrInvalidToken
+	}
 	claims := &Claims{}
 	parsed, err := jwt.ParseWithClaims(token, claims, func(_ *jwt.Token) (any, error) {
 		return m.secret, nil
@@ -197,17 +201,46 @@ func (m *TokenManager) VerifyRefresh(ctx context.Context, plain string) (int, in
 	return userID, tv, nil
 }
 
+// refreshConsumer 由 KVStore 實作原子「讀取並作廢」refresh token 的能力
+// (RedisStore 以 Lua、MemoryStore 以鎖)。舊 token 在旋轉瞬間即消失,
+// 並發重放同一 token 時恰一個請求消耗成功,其餘必讀不到 → 拒絕。
+type refreshConsumer interface {
+	ConsumeRefresh(ctx context.Context, key, userSetKey, member string) (string, bool, error)
+}
+
 // RotateRefresh 作廢舊 refresh token 並發行新的(旋轉制;舊 token 重放會被拒)。
+// 讀-刪-寫以 KVStore 原子原語完成:並發重放第二次必回 ErrRefreshRevoked。
 func (m *TokenManager) RotateRefresh(ctx context.Context, plain string, userID, tokenVersion int) (string, error) {
 	hash, err := hashRefreshToken(plain)
 	if err != nil {
 		return "", ErrInvalidRefresh
 	}
-	if err := m.kv.Delete(ctx, refreshKey(hash)); err != nil {
-		return "", err
+	key, setKey := refreshKey(hash), refreshUserSetKey(userID)
+	var old string
+	var ok bool
+	if c, isAtomic := m.kv.(refreshConsumer); isAtomic {
+		old, ok, err = c.ConsumeRefresh(ctx, key, setKey, hash)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		// 非原子 fallback(理論上不會發生:RedisStore/MemoryStore 皆實作原子消耗)。
+		old, ok, err = m.kv.Get(ctx, key)
+		if err != nil {
+			return "", err
+		}
+		if ok {
+			_ = m.kv.Delete(ctx, key)
+			_ = m.kv.SetRemove(ctx, setKey, hash)
+		}
 	}
-	if err := m.kv.SetRemove(ctx, refreshUserSetKey(userID), hash); err != nil {
-		return "", err
+	if !ok {
+		// 已被並發旋轉消耗或原本不存在 → 拒絕重放
+		return "", ErrRefreshRevoked
+	}
+	gotUserID, gotTV, err := parseRefreshValue(old)
+	if err != nil || gotUserID != userID || gotTV != tokenVersion {
+		return "", ErrRefreshRevoked
 	}
 	return m.IssueRefresh(ctx, userID, tokenVersion)
 }

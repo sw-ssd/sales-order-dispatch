@@ -383,7 +383,7 @@ func (h *AuthHandler) completeLogin(w http.ResponseWriter, r *http.Request, u *e
 		http.Redirect(w, r, target, http.StatusFound)
 		return
 	}
-	auth.EstablishWebSession(ctx, h.deps.Sessions, u.ID, u.Role)
+	auth.EstablishWebSession(ctx, h.deps.Sessions, u.ID, u.Role, tv)
 	http.Redirect(w, r, h.deps.Cfg.Auth.FrontendURL+"/", http.StatusFound)
 }
 

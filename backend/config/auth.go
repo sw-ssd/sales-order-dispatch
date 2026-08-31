@@ -2,6 +2,10 @@ package config
 
 import "time"
 
+// DefaultJWTSecret 為 development 預設 JWT 密鑰(與 struct tag default 同值)。
+// production 啟動防護(Server.Init)以它比對,正式環境必須以 JWT_SECRET 覆寫。
+const DefaultJWTSecret = "dev-only-jwt-secret-change-me"
+
 // Auth 認證相關設定（OAuth、JWT、Web session）。
 type Auth struct {
 	GoogleClientID     string        `envconfig:"GOOGLE_CLIENT_ID"`

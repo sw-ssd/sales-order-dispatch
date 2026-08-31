@@ -65,6 +65,16 @@ func (s *Server) Init() error {
 	if s.cfg.API.Env == "production" && s.cfg.API.DeveloperAccountEnabled {
 		return fmt.Errorf("config: ENV=production 且 DEVELOPER_ACCOUNT_ENABLED=true 會繞過 Casbin/RLS,拒絕啟動")
 	}
+	// 啟動防護：production 不得使用空或預設 JWT 密鑰（JWT_SECRET 未設定時 envconfig 落回
+	// config/auth.go 的 dev 預設常數,等同未設定 → 拒絕啟動）。
+	if s.cfg.API.Env == "production" {
+		if s.cfg.Auth.JWTSecret == "" {
+			return fmt.Errorf("config: ENV=production 且 JWT_SECRET 為空,拒絕啟動")
+		}
+		if s.cfg.Auth.JWTSecret == config.DefaultJWTSecret {
+			return fmt.Errorf("config: ENV=production 且 JWT_SECRET 仍為預設值(dev-only),拒絕啟動")
+		}
+	}
 	return nil
 }
 
@@ -80,8 +90,9 @@ func (s *Server) Handler() http.Handler {
 
 // authzMiddleware 將 scs session 身分轉換為 authz.Identity + RLS scope 注入 ctx（T14 Step 4）。
 // 必須位於 sessions.LoadAndSave 之後（ctx 才帶 session 資料）。
-// 未登入 / 查無使用者 / developer 關閉時以零值身分通過（fail-closed：CASL 規則載入全略過 → denied，
-// Casbin 由各服務層以 EnforceAny 判斷）。
+// 未登入 / 查無使用者 / developer 關閉 / session token_version 與 DB 不符時以零值身分通過
+// （fail-closed：CASL 規則載入全略過 → denied，Casbin 由各服務層以 EnforceAny 判斷）。
+// token_version 不符代表改密碼 / 停用 / 強制登出已 bump——一併銷毀 session 使該請求即時登出。
 func (s *Server) authzMiddleware(entClient *ent.Client, sessions *scs.SessionManager, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -90,9 +101,13 @@ func (s *Server) authzMiddleware(entClient *ent.Client, sessions *scs.SessionMan
 
 		userID := auth.SessionUserID(ctx, sessions)
 		if userID > 0 {
-			if id, scope, ok := s.identityFor(ctx, entClient, userID); ok {
+			sessionTV := auth.SessionTokenVersion(ctx, sessions)
+			if id, scope, ok := s.identityFor(ctx, entClient, userID, sessionTV); ok {
 				ctx = authz.WithIdentity(ctx, id)
 				ctx = auth.WithRLS(ctx, scope)
+			} else if sessionTV >= 0 {
+				// session 已記錄 tv 卻身分失效（token_version 變更 / 帳號停用等）→ 銷毀 session 強制登出。
+				_ = sessions.Destroy(ctx)
 			}
 		}
 		next.ServeHTTP(w, r.WithContext(ctx))
@@ -100,10 +115,17 @@ func (s *Server) authzMiddleware(entClient *ent.Client, sessions *scs.SessionMan
 }
 
 // identityFor 由使用者載入身分與 RLS scope（company/department eager-load）。
+// sessionTokenVersion 為 session 簽發時記錄的 token_version；與 DB 目前值不符
+// （改密碼 / 停用 / 角色變更 / 強制登出已 bump）→ ok=false（fail-closed）。
 // 帳號不存在 / 非 active / developer 關閉 → ok=false（零值身分，fail-closed）。
-func (s *Server) identityFor(ctx context.Context, entClient *ent.Client, userID int) (authz.Identity, auth.RLSScope, bool) {
+func (s *Server) identityFor(ctx context.Context, entClient *ent.Client, userID int, sessionTokenVersion int) (authz.Identity, auth.RLSScope, bool) {
 	u, err := entClient.User.Query().WithCompany().WithDepartment().Where(user.ID(userID)).Only(ctx)
 	if err != nil || u.Status != user.StatusActive {
+		return authz.Identity{}, auth.RLSScope{}, false
+	}
+	// token_version 比對：session 簽發時的 tv(-1 = 未記錄的舊版 session,不比對)與 DB 現值
+	// 不一致 → 身分失效(401 落點)。
+	if sessionTokenVersion >= 0 && sessionTokenVersion != u.TokenVersion {
 		return authz.Identity{}, auth.RLSScope{}, false
 	}
 	// developer 帳號僅在開關啟用時繞過 Casbin/RLS（設計書 §4.4）。

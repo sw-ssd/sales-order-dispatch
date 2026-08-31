@@ -13,6 +13,9 @@ const (
 	SessionCookieName = "session"
 	SessionUserIDKey  = "user_id"
 	SessionRoleKey    = "role"
+	// SessionTokenVersionKey 記錄 session 簽發時的 users.token_version;
+	// authzMiddleware 驗證時與 DB 現值比對,不一致(改密碼/停用/強制登出)→ 登出。
+	SessionTokenVersionKey = "token_version"
 )
 
 // SessionStore 以 KVStore 實作 scs.Store 與 scs.CtxStore(Valkey 為正式儲存;測試用 scs memstore)。
@@ -91,13 +94,28 @@ func WebSessionManager(store scs.Store, lifetime time.Duration, secure bool, sam
 	return m
 }
 
-// EstablishWebSession 於 scs session 寫入使用者身分(供 callback / RPC 呼叫;由 LoadAndSave middleware 提交)。
-func EstablishWebSession(ctx context.Context, m *scs.SessionManager, userID int, role string) {
+// EstablishWebSession 於 scs session 寫入使用者身分與簽發時 token_version
+// （供 callback / RPC 呼叫；由 LoadAndSave middleware 提交）。
+func EstablishWebSession(ctx context.Context, m *scs.SessionManager, userID int, role string, tokenVersion int) {
 	m.Put(ctx, SessionUserIDKey, userID)
 	m.Put(ctx, SessionRoleKey, role)
+	m.Put(ctx, SessionTokenVersionKey, tokenVersion)
 }
 
 // SessionUserID 讀取 scs session 中的使用者 ID;未登入回傳 0。
 func SessionUserID(ctx context.Context, m *scs.SessionManager) int {
 	return m.GetInt(ctx, SessionUserIDKey)
+}
+
+// SessionTokenVersion 讀取 scs session 簽發時的 token_version;未記錄(舊版 session)
+// 回傳 -1,驗證端以此跳過比對(避免既有 session 在部署後全數失效)。
+func SessionTokenVersion(ctx context.Context, m *scs.SessionManager) int {
+	v := m.Get(ctx, SessionTokenVersionKey)
+	if v == nil {
+		return -1
+	}
+	if n, ok := v.(int); ok {
+		return n
+	}
+	return -1
 }

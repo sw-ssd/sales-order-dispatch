@@ -92,10 +92,15 @@ func newTestEnv(t *testing.T) *testEnv {
 }
 
 // seedWebSession 建立一個已登入的 Web session cookie(經 LoadAndSave 中介層寫入)。
+// token_version 取 DB 現值,與完整登入流程一致(供 authzMiddleware 驗證比對)。
 func (e *testEnv) seedWebSession(t *testing.T, userID int, role string) string {
 	t.Helper()
+	tv, err := e.tokens.CurrentTokenVersion(e.ctx, userID)
+	if err != nil {
+		t.Fatalf("seedWebSession: CurrentTokenVersion: %v", err)
+	}
 	seed := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		auth.EstablishWebSession(r.Context(), e.sessions, userID, role)
+		auth.EstablishWebSession(r.Context(), e.sessions, userID, role, tv)
 		w.WriteHeader(http.StatusNoContent)
 	})
 	rec := httptest.NewRecorder()
