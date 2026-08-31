@@ -1,7 +1,7 @@
 version: '3'
 
-# iOS scheme 備註:Xcode scheme(dev/prod)需於 macOS Xcode 環境建立,
-# 目前以 -t lib/main_dev.dart / lib/main_prod.dart 區分入口。
+# iOS:dev/prod scheme 與組態已建立(ios/setup_flavors.rb 為一次性注入腳本,
+# 僅供重建參考);Flutter/*-{dev,prod}.xcconfig 以 #include? 連結 Pods 設定。
 
 tasks:
   run:dev:

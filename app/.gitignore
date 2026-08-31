@@ -1,3 +1,28 @@
-
 # FVM Version Cache
 .fvm/
+
+# Flutter/Dart 建置產物
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Generated.xcconfig
+ios/Flutter/ephemeral/
+ios/Flutter/flutter_export_environment.sh
+**/dgph
+
+# Android
+android/.gradle/
+local.properties
+**/key.properties
+*.jks
+
+# IDE
+.idea/
+*.iml
+.vscode/

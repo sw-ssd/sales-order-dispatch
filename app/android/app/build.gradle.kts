@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.salesorder.sales_order_app"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 37 // flutter_secure_storage 11 需 37;高於 AGP 9.1 建議值,以 gradle.properties 抑制警告
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
