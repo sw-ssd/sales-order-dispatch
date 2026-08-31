@@ -188,3 +188,53 @@ func TestLoginSuccessWrongPasswordLockout(t *testing.T) {
 func itoa(n int) string {
 	return strconv.Itoa(n)
 }
+func TestRefreshRotation(t *testing.T) {
+	// T13:refresh 旋轉換發;舊 token 重放被拒。
+	e := newTestEnv(t)
+	coID := mustCreateCompany(t, e, "co-a")
+	hash, _ := auth.HashPassword("pw-123456")
+	e.db.User.Create().
+		SetEmail("cust2@example.com").SetName("店家乙").SetStatus(user.StatusActive).
+		SetRole("customer").SetIsCustomer(true).SetAccountName("C002").SetPasswordHash(hash).
+		SetCompanyID(coID).SaveX(e.ctx)
+
+	login, err := e.rpc.Login(e.ctx, connect.NewRequest(&v1.LoginRequest{CustomerCode: "C002", Password: "pw-123456"}))
+	if err != nil {
+		t.Fatalf("Login: %v", err)
+	}
+	r1 := login.Msg.GetRefreshToken()
+
+	ref, err := e.rpc.Refresh(e.ctx, connect.NewRequest(&v1.RefreshRequest{RefreshToken: r1}))
+	if err != nil {
+		t.Fatalf("Refresh: %v", err)
+	}
+	if ref.Msg.GetAccessToken() == "" || ref.Msg.GetRefreshToken() == "" || ref.Msg.GetRefreshToken() == r1 {
+		t.Fatal("Refresh 應旋轉發新 token 對")
+	}
+	r2 := ref.Msg.GetRefreshToken()
+
+	// 舊 token 重放 → Unauthenticated
+	if _, err := e.rpc.Refresh(e.ctx, connect.NewRequest(&v1.RefreshRequest{RefreshToken: r1})); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("舊 refresh 重放應 Unauthenticated,got %v", err)
+	}
+	// 新 token 可繼續旋轉
+	if _, err := e.rpc.Refresh(e.ctx, connect.NewRequest(&v1.RefreshRequest{RefreshToken: r2})); err != nil {
+		t.Fatalf("新 refresh 應可旋轉: %v", err)
+	}
+
+	// Logout 撤銷後 → Unauthenticated
+	login2, err := e.rpc.Login(e.ctx, connect.NewRequest(&v1.LoginRequest{CustomerCode: "C002", Password: "pw-123456"}))
+	if err != nil {
+		t.Fatalf("Login: %v", err)
+	}
+	if _, err := e.rpc.Logout(e.ctx, connect.NewRequest(&v1.LogoutRequest{RefreshToken: login2.Msg.GetRefreshToken()})); err != nil {
+		t.Fatalf("Logout: %v", err)
+	}
+	if _, err := e.rpc.Refresh(e.ctx, connect.NewRequest(&v1.RefreshRequest{RefreshToken: login2.Msg.GetRefreshToken()})); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("Logout 後 refresh 應失效,got %v", err)
+	}
+	// Logout 冪等
+	if _, err := e.rpc.Logout(e.ctx, connect.NewRequest(&v1.LogoutRequest{RefreshToken: login2.Msg.GetRefreshToken()})); err != nil {
+		t.Fatalf("Logout 應冪等: %v", err)
+	}
+}

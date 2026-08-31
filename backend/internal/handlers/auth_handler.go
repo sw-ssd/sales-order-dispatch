@@ -66,7 +66,7 @@ func (h *AuthHandler) SetOIDC(cfg *oauth2.Config, exchanger auth.OAuthExchanger,
 }
 
 // ---------------------------------------------------------------------------
-// AuthService RPC:Refresh / Logout(T13)、RegisterComplete(T17) 於後續任務補上;
+// AuthService RPC:RegisterComplete(T17) 於後續任務補上;
 // 現階段由內嵌 UnimplementedAuthServiceHandler 回 CodeUnimplemented。
 
 // Login 客戶密碼登入(T12):以 customer_code(= users.account_name)查客戶帳號,
@@ -106,6 +106,64 @@ func (h *AuthHandler) Login(ctx context.Context, req *connect.Request[v1.LoginRe
 		return nil, internal(err)
 	}
 	return h.issueTokenPair(ctx, u)
+}
+
+// Refresh 以 refresh token 旋轉換發新 token 對(T13):驗證 token 存在、使用者 token_version
+// 未變(撤銷比對)、帳號仍 active,舊 refresh 作廢並發新。
+func (h *AuthHandler) Refresh(ctx context.Context, req *connect.Request[v1.RefreshRequest]) (*connect.Response[v1.RefreshResponse], error) {
+	plain := strings.TrimSpace(req.Msg.GetRefreshToken())
+	if plain == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("refresh token 不可為空"))
+	}
+	uid, pinnedTV, err := h.deps.Tokens.VerifyRefresh(ctx, plain)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("refresh token 無效"))
+	}
+	liveTV, err := h.deps.Tokens.CurrentTokenVersion(ctx, uid)
+	if err != nil {
+		return nil, internal(err)
+	}
+	if liveTV != pinnedTV {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("refresh token 已撤銷,請重新登入"))
+	}
+	u, err := h.deps.DB.User.Get(ctx, uid)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("帳號不存在或已停用"))
+	}
+	if u.Status != user.StatusActive {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("帳號不存在或已停用"))
+	}
+
+	subject, err := h.subjectFromUser(ctx, u)
+	if err != nil {
+		return nil, err
+	}
+	access, err := h.deps.Tokens.IssueAccess(ctx, subject)
+	if err != nil {
+		return nil, internal(err)
+	}
+	newRefresh, err := h.deps.Tokens.RotateRefresh(ctx, plain, uid, pinnedTV)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("refresh token 無效"))
+	}
+	return connect.NewResponse(&v1.RefreshResponse{
+		AccessToken:  access,
+		RefreshToken: newRefresh,
+		ExpiresIn:    int64(auth.AccessTokenTTL / time.Second),
+	}), nil
+}
+
+// Logout 撤銷 refresh token 並清除 Web session(冪等)。
+func (h *AuthHandler) Logout(ctx context.Context, req *connect.Request[v1.LogoutRequest]) (*connect.Response[v1.LogoutResponse], error) {
+	if plain := strings.TrimSpace(req.Msg.GetRefreshToken()); plain != "" {
+		if err := h.deps.Tokens.RevokeRefresh(ctx, plain); err != nil {
+			return nil, internal(err)
+		}
+	}
+	if err := h.deps.Sessions.Destroy(ctx); err != nil {
+		return nil, internal(err)
+	}
+	return connect.NewResponse(&v1.LogoutResponse{}), nil
 }
 
 // QRLogin 於後續計畫實作(QR 兌換前段);本 wave 回 Unimplemented。
