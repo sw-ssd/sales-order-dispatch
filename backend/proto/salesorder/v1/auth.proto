@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package salesorder.v1;
+option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1";
+
+// 認證服務(v1):客戶密碼登入、token 換發/撤銷、員工註冊完成、QR 登入兌換。
+
+// LoginRequest:客戶帳號密碼登入(Task 12;Web 店家分頁與 App 店家登入共用)。
+message LoginRequest {
+  string customer_code = 1; // 客戶編號
+  string password = 2;      // 明文密碼(仰賴 TLS 傳輸保護)
+}
+
+// LoginResponse:登入成功核發的 token 對(Task 13)。
+message LoginResponse {
+  string access_token = 1;  // JWT access token(exp 1h)
+  string refresh_token = 2; // refresh token(30d,使用時旋轉)
+  int64 expires_in = 3;     // access token 有效秒數
+}
+
+// RefreshRequest:以 refresh token 旋轉換發新 token 對。
+message RefreshRequest {
+  string refresh_token = 1;
+}
+
+// RefreshResponse:旋轉後的新 token 對。
+message RefreshResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  int64 expires_in = 3;
+}
+
+// LogoutRequest:登出並撤銷指定 refresh token。
+message LogoutRequest {
+  string refresh_token = 1;
+}
+
+// LogoutResponse:登出結果(無內容)。
+message LogoutResponse {}
+
+// RegisterCompleteRequest:guest 補完註冊資料(Task 17:選公司、填姓名,轉 pending/approved)。
+message RegisterCompleteRequest {
+  string company_id = 1; // 目標公司 UUID
+  string name = 2;       // 使用者姓名
+}
+
+// RegisterCompleteResponse:註冊完成結果(無內容)。
+message RegisterCompleteResponse {}
+
+// QRLoginRequest:App 掃描客戶 QR 後兌換(前段:帶出身分,後續以子帳號 + 密碼完成登入)。
+message QRLoginRequest {
+  string token = 1; // QR 簽章 token
+}
+
+// QRLoginResponse:兌換結果 — 公司/客戶識別資訊與可選店家子帳號清單。
+message QRLoginResponse {
+  // Account:可選店家子帳號(僅店家子帳號;不含主帳號與業務子帳號)。
+  message Account {
+    string id = 1;           // 帳號 UUID
+    string account_name = 2; // 帳號顯示名稱
+  }
+
+  string company_id = 1;     // 公司 UUID
+  string company_name = 2;   // 公司顯示名稱
+  string customer_code = 3;  // 客戶編號
+  string customer_name = 4;  // 客戶顯示名稱
+  repeated Account accounts = 5;
+}
+
+// AuthService:認證相關 RPC。
+service AuthService {
+  // Login:客戶帳號密碼登入。
+  rpc Login(LoginRequest) returns (LoginResponse);
+  // Refresh:refresh token 旋轉換發。
+  rpc Refresh(RefreshRequest) returns (RefreshResponse);
+  // Logout:撤銷 refresh token(冪等)。
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+  // RegisterComplete:guest 補完註冊資料。
+  rpc RegisterComplete(RegisterCompleteRequest) returns (RegisterCompleteResponse);
+  // QRLogin:QR token 兌換,回公司/客戶與可選子帳號清單。
+  rpc QRLogin(QRLoginRequest) returns (QRLoginResponse);
+}
