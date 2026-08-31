@@ -4,6 +4,12 @@ includes:
   backend:
     taskfile: ./backend
     dir: ./backend
+  frontend:
+    taskfile: ./frontend
+    dir: ./frontend
+  app:
+    taskfile: ./app
+    dir: ./app
 
 vars:
   PODMAN_SOCK:
