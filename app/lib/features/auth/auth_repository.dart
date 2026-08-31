@@ -83,10 +83,8 @@ class AuthRepository {
       throw StateError('GOOGLE_CLIENT_ID 未設定,無法發起 Google 登入');
     }
     final codeVerifier = generatePkceCodeVerifier();
-    final authorizationUrl = Uri.https(
-      'accounts.google.com',
-      '/o/oauth2/v2/auth',
-      {
+    final authorizationUrl = Uri.parse(AuthConfig.googleAuthorizationEndpoint).replace(
+      queryParameters: {
         'client_id': AuthConfig.googleClientId,
         'redirect_uri': AuthConfig.callbackUrl,
         'response_type': 'code',
