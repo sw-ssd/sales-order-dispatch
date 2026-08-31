@@ -11,7 +11,6 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@ark-ui/solid": "3.0.0-7",
     "@bufbuild/protobuf": "^2.14.0",
     "@casl/ability": "^6.7.0",
     "@connectrpc/connect": "^2.1.2",

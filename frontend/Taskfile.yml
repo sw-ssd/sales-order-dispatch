@@ -1,0 +1,22 @@
+version: '3'
+
+tasks:
+  dev:
+    desc: Vite 開發伺服器
+    cmd: pnpm dev
+  build:
+    desc: 型別檢查 + 產出
+    cmd: pnpm build
+  typecheck:
+    desc: 型別檢查
+    cmd: pnpm typecheck
+  lint:
+    desc: ESLint
+    cmd: pnpm lint
+  test:
+    desc: 全部測試
+    cmd: pnpm test
+  gen:
+    desc: proto 生成(Go/TS/Dart,於 backend 執行)
+    dir: ../backend
+    cmd: task proto:gen
