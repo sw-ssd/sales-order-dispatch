@@ -1,1 +1,6 @@
 .omp
+.turbo
+node_modules
+.env*
+dist
+build
