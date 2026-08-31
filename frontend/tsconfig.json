@@ -5,17 +5,15 @@
     "moduleResolution": "bundler",
     "strict": true,
     "jsx": "preserve",
-    "jsxImportSource": "solid-js",
+    "jsxImportSource": "@solidjs/web",
     "paths": {
-      "~/*": ["src/*"]
+      "~/*": ["./src/*"]
     },
     "types": ["vite/client"],
     "noEmit": true,
     "skipLibCheck": true,
     "isolatedModules": true,
     "esModuleInterop": true,
-    "baseUrl": ".",
-    "ignoreDeprecations": "6.0",
   },
   "include": ["src"]
 }

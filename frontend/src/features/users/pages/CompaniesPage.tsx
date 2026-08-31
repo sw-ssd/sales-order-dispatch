@@ -1,13 +1,12 @@
 import { Code, ConnectError, createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
-import { Dialog } from "@ark-ui/solid/dialog";
-import { Fieldset } from "@ark-ui/solid/fieldset";
-import { createSignal, For, onMount, Show } from "solid-js";
+import { createSignal, For, onSettled, Show } from "solid-js";
 import {
   CompanyService,
   type Company,
 } from "~/lib/proto/salesorder/v1/company_pb";
 import { cn } from "~/lib/cn";
+import { FormDialog } from "../components/FormDialog";
 import { ListPagination } from "../components/ListPagination";
 
 const PAGE_SIZE = 20;
@@ -109,7 +108,9 @@ export default function CompaniesPage() {
       setLoading(false);
     }
   };
-  onMount(load);
+  onSettled(() => {
+    void load();
+  });
 
   const openCreate = () => {
     setEditing(null);
@@ -333,109 +334,96 @@ export default function CompaniesPage() {
         onPageChange={goToPage}
       />
 
-      <Dialog.Root open={dialogOpen()} onOpenChange={(e) => setDialogOpen(e.open)}>
-        <Dialog.Backdrop class="fixed inset-0 z-40 bg-black/40" />
-        <Dialog.Positioner class="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <Dialog.Content class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-            <div class="flex items-start justify-between">
-              <div>
-                <Dialog.Title class="text-lg font-bold text-gray-900">
-                  {editing() ? "編輯公司" : "新增公司"}
-                </Dialog.Title>
-                <Dialog.Description class="mt-1 text-sm text-gray-500">
-                  {editing() ? "修改名稱、統一編號或狀態" : "建立新的公司主檔"}
-                </Dialog.Description>
-              </div>
-              <Dialog.CloseTrigger
-                class="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                aria-label="關閉"
+      <FormDialog
+        open={dialogOpen()}
+        onClose={() => setDialogOpen(false)}
+        title={editing() ? "編輯公司" : "新增公司"}
+        description={editing() ? "修改名稱、統一編號或狀態" : "建立新的公司主檔"}
+      >
+        <form onSubmit={submit}>
+          <fieldset class="mt-4 space-y-4">
+            <legend class="sr-only">公司資料</legend>
+            <div>
+              <label for="company-name" class="block text-sm font-medium text-gray-700">
+                公司名稱 *
+              </label>
+              <input
+                id="company-name"
+                required
+                value={name()}
+                onInput={(e) => setName(e.currentTarget.value)}
+                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label
+                for="company-identifier"
+                class="block text-sm font-medium text-gray-700"
               >
-                ×
-              </Dialog.CloseTrigger>
+                識別碼(identifier) *
+              </label>
+              <input
+                id="company-identifier"
+                required
+                disabled={!!editing()}
+                value={identifier()}
+                onInput={(e) => setIdentifier(e.currentTarget.value)}
+                placeholder="建立後不可修改"
+                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-400"
+              />
+            </div>
+            <div>
+              <label for="company-tax-id" class="block text-sm font-medium text-gray-700">
+                統一編號
+              </label>
+              <input
+                id="company-tax-id"
+                value={taxId()}
+                onInput={(e) => setTaxId(e.currentTarget.value)}
+                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label for="company-status" class="block text-sm font-medium text-gray-700">
+                狀態
+              </label>
+              <select
+                id="company-status"
+                value={status()}
+                onChange={(e) => setStatus(e.currentTarget.value)}
+                class="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              >
+                <option value="active">啟用</option>
+                <option value="inactive">停用</option>
+                <option value="suspended">暫停</option>
+              </select>
             </div>
 
-            <form onSubmit={submit}>
-              <Fieldset.Root class="mt-4 space-y-4">
-                <Fieldset.Legend class="sr-only">公司資料</Fieldset.Legend>
-                <div>
-                  <label for="company-name" class="block text-sm font-medium text-gray-700">
-                    公司名稱 *
-                  </label>
-                  <input
-                    id="company-name"
-                    required
-                    value={name()}
-                    onInput={(e) => setName(e.currentTarget.value)}
-                    class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label
-                    for="company-identifier"
-                    class="block text-sm font-medium text-gray-700"
-                  >
-                    識別碼(identifier) *
-                  </label>
-                  <input
-                    id="company-identifier"
-                    required
-                    disabled={!!editing()}
-                    value={identifier()}
-                    onInput={(e) => setIdentifier(e.currentTarget.value)}
-                    placeholder="建立後不可修改"
-                    class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-400"
-                  />
-                </div>
-                <div>
-                  <label for="company-tax-id" class="block text-sm font-medium text-gray-700">
-                    統一編號
-                  </label>
-                  <input
-                    id="company-tax-id"
-                    value={taxId()}
-                    onInput={(e) => setTaxId(e.currentTarget.value)}
-                    class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label for="company-status" class="block text-sm font-medium text-gray-700">
-                    狀態
-                  </label>
-                  <select
-                    id="company-status"
-                    value={status()}
-                    onChange={(e) => setStatus(e.currentTarget.value)}
-                    class="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                  >
-                    <option value="active">啟用</option>
-                    <option value="inactive">停用</option>
-                    <option value="suspended">暫停</option>
-                  </select>
-                </div>
+            <Show when={formError()}>
+              <p class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+                {formError()}
+              </p>
+            </Show>
 
-                <Show when={formError()}>
-                  <p class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
-                    {formError()}
-                  </p>
-                </Show>
-
-                <div class="flex justify-end gap-3 pt-2">
-                  <Dialog.CloseTrigger class="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                    取消
-                  </Dialog.CloseTrigger>
-                  <button
-                    type="submit"
-                    disabled={saving()}
-                    class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {saving() ? "儲存中…" : "儲存"}
-                  </button>
-                </div>
-              </Fieldset.Root>
-            </form>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
+            <div class="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDialogOpen(false)}
+                class="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                取消
+              </button>
+              <button
+                type="submit"
+                disabled={saving()}
+                class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {saving() ? "儲存中…" : "儲存"}
+              </button>
+            </div>
+          </fieldset>
+        </form>
+      </FormDialog>
     </main>
   );
 }

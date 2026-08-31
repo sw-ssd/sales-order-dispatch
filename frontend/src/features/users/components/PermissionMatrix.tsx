@@ -1,4 +1,3 @@
-import { Checkbox } from "@ark-ui/solid/checkbox";
 import { create } from "@bufbuild/protobuf";
 import { For, Show } from "solid-js";
 import {
@@ -124,40 +123,39 @@ export function PermissionMatrix(props: PermissionMatrixProps) {
                 </td>
                 <For each={ACTIONS}>
                   {(action) => {
-                    const checked = rulesFor(resource, action).length > 0;
+                    // accessor 形式:checked 隨 props.permissions 重算(For callback 本體不追蹤)
+                    const checked = () => rulesFor(resource, action).length > 0;
                     return (
                       <td class="px-3 py-3 text-center">
-                        <Checkbox.Root
-                          checked={checked}
-                          onCheckedChange={(e) =>
-                            toggle(resource, action, e.checked === true)
-                          }
+                        {/* 原生 role="checkbox" 取代 ark Checkbox(ark 3.0.0-7 與 solid-js 2 不相容);
+                            外觀 class 沿用原 Checkbox.Control/Indicator 版 */}
+                        <button
+                          type="button"
+                          role="checkbox"
+                          aria-checked={checked() ? "true" : "false"}
+                          onClick={() => toggle(resource, action, !checked())}
                           aria-label={`${RESOURCE_LABELS[resource] ?? resource} ${ACTION_LABELS[action] ?? action}`}
+                          class={cn(
+                            "inline-flex h-4 w-4 items-center justify-center rounded border",
+                            checked()
+                              ? "border-blue-600 bg-blue-600"
+                              : "border-gray-300 bg-white",
+                          )}
                         >
-                          <Checkbox.Control
-                            class={cn(
-                              "inline-flex h-4 w-4 items-center justify-center rounded border",
-                              checked
-                                ? "border-blue-600 bg-blue-600"
-                                : "border-gray-300 bg-white",
-                            )}
-                          >
-                            <Checkbox.Indicator class="text-white">
-                              <svg
-                                viewBox="0 0 12 12"
-                                class="h-3 w-3"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                              >
-                                <path d="M2 6l3 3 5-6" />
-                              </svg>
-                            </Checkbox.Indicator>
-                          </Checkbox.Control>
-                          <Checkbox.HiddenInput />
-                        </Checkbox.Root>
+                          <Show when={checked()}>
+                            <svg
+                              viewBox="0 0 12 12"
+                              class="h-3 w-3 text-white"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            >
+                              <path d="M2 6l3 3 5-6" />
+                            </svg>
+                          </Show>
+                        </button>
                       </td>
                     );
                   }}

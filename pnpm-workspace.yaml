@@ -5,3 +5,5 @@ packages:
   - infra
 allowBuilds:
   esbuild: true
+minimumReleaseAgeExclude:
+  - '@solidjs/router@2.0.0-next.20'

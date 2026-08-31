@@ -1,8 +1,6 @@
 import { Code, ConnectError, createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
-import { Dialog } from "@ark-ui/solid/dialog";
-import { Fieldset } from "@ark-ui/solid/fieldset";
-import { createSignal, For, onMount, Show } from "solid-js";
+import { createSignal, For, onSettled, Show } from "solid-js";
 import {
   CompanyService,
   DepartmentService,
@@ -10,6 +8,7 @@ import {
   type Department,
 } from "~/lib/proto/salesorder/v1/company_pb";
 import { ListPagination } from "../components/ListPagination";
+import { FormDialog } from "../components/FormDialog";
 
 const PAGE_SIZE = 20;
 const COMPANY_PAGE_SIZE = 50;
@@ -122,9 +121,11 @@ export default function DepartmentsPage() {
     }
   };
 
-  onMount(async () => {
-    await loadCompanies(true);
-    await load();
+  onSettled(() => {
+    void (async () => {
+      await loadCompanies(true);
+      await load();
+    })();
   });
 
   const openCreate = () => {
@@ -366,92 +367,79 @@ export default function DepartmentsPage() {
         onPageChange={goToPage}
       />
 
-      <Dialog.Root open={dialogOpen()} onOpenChange={(e) => setDialogOpen(e.open)}>
-        <Dialog.Backdrop class="fixed inset-0 z-40 bg-black/40" />
-        <Dialog.Positioner class="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <Dialog.Content class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-            <div class="flex items-start justify-between">
-              <div>
-                <Dialog.Title class="text-lg font-bold text-gray-900">
-                  {editing() ? "編輯部門" : "新增部門"}
-                </Dialog.Title>
-                <Dialog.Description class="mt-1 text-sm text-gray-500">
-                  {editing() ? "修改部門名稱" : "在指定公司下建立部門"}
-                </Dialog.Description>
-              </div>
-              <Dialog.CloseTrigger
-                class="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-                aria-label="關閉"
+      <FormDialog
+        open={dialogOpen()}
+        onClose={() => setDialogOpen(false)}
+        title={editing() ? "編輯部門" : "新增部門"}
+        description={editing() ? "修改部門名稱" : "在指定公司下建立部門"}
+      >
+        <form onSubmit={submit}>
+          <fieldset class="mt-4 space-y-4">
+            <legend class="sr-only">部門資料</legend>
+            <div>
+              <label
+                for="department-name"
+                class="block text-sm font-medium text-gray-700"
               >
-                ×
-              </Dialog.CloseTrigger>
+                部門名稱 *
+              </label>
+              <input
+                id="department-name"
+                required
+                value={name()}
+                onInput={(e) => setName(e.currentTarget.value)}
+                class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label
+                for="department-company"
+                class="block text-sm font-medium text-gray-700"
+              >
+                所屬公司 *
+              </label>
+              <select
+                id="department-company"
+                required
+                disabled={!!editing()}
+                value={companyId()}
+                onChange={(e) => setCompanyId(e.currentTarget.value)}
+                class="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-400"
+              >
+                <option value="" disabled>
+                  請選擇公司
+                </option>
+                <For each={companies()}>
+                  {(c) => <option value={c.id}>{c.name}</option>}
+                </For>
+              </select>
             </div>
 
-            <form onSubmit={submit}>
-              <Fieldset.Root class="mt-4 space-y-4">
-                <Fieldset.Legend class="sr-only">部門資料</Fieldset.Legend>
-                <div>
-                  <label
-                    for="department-name"
-                    class="block text-sm font-medium text-gray-700"
-                  >
-                    部門名稱 *
-                  </label>
-                  <input
-                    id="department-name"
-                    required
-                    value={name()}
-                    onInput={(e) => setName(e.currentTarget.value)}
-                    class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label
-                    for="department-company"
-                    class="block text-sm font-medium text-gray-700"
-                  >
-                    所屬公司 *
-                  </label>
-                  <select
-                    id="department-company"
-                    required
-                    disabled={!!editing()}
-                    value={companyId()}
-                    onChange={(e) => setCompanyId(e.currentTarget.value)}
-                    class="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-400"
-                  >
-                    <option value="" disabled>
-                      請選擇公司
-                    </option>
-                    <For each={companies()}>
-                      {(c) => <option value={c.id}>{c.name}</option>}
-                    </For>
-                  </select>
-                </div>
+            <Show when={formError()}>
+              <p class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+                {formError()}
+              </p>
+            </Show>
 
-                <Show when={formError()}>
-                  <p class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
-                    {formError()}
-                  </p>
-                </Show>
-
-                <div class="flex justify-end gap-3 pt-2">
-                  <Dialog.CloseTrigger class="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                    取消
-                  </Dialog.CloseTrigger>
-                  <button
-                    type="submit"
-                    disabled={saving()}
-                    class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {saving() ? "儲存中…" : "儲存"}
-                  </button>
-                </div>
-              </Fieldset.Root>
-            </form>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
+            <div class="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setDialogOpen(false)}
+                class="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                取消
+              </button>
+              <button
+                type="submit"
+                disabled={saving()}
+                class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {saving() ? "儲存中…" : "儲存"}
+              </button>
+            </div>
+          </fieldset>
+        </form>
+      </FormDialog>
     </main>
   );
 }
