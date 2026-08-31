@@ -1,0 +1,14 @@
+version: '3'
+
+vars:
+  PODMAN_SOCK:
+    sh: podman machine inspect | jq -r '.[0].ConnectionInfo.PodmanSocket.Path'
+
+tasks:
+  infra:start:
+    desc: 起 PostgreSQL / Valkey / Gotenberg 開發環境
+    cmd: DOCKER_HOST="unix://{{.PODMAN_SOCK}}" docker-compose -f docker-compose.dev.yml up -d
+
+  infra:stop:
+    desc: 停止開發環境容器
+    cmd: DOCKER_HOST="unix://{{.PODMAN_SOCK}}" docker-compose -f docker-compose.dev.yml down
