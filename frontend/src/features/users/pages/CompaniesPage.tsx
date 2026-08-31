@@ -8,6 +8,9 @@ import {
   type Company,
 } from "~/lib/proto/salesorder/v1/company_pb";
 import { cn } from "~/lib/cn";
+import { ListPagination } from "../components/ListPagination";
+
+const PAGE_SIZE = 20;
 
 const companyClient = createClient(
   CompanyService,
@@ -62,6 +65,12 @@ export default function CompaniesPage() {
 
   const [keyword, setKeyword] = createSignal("");
   const [statusFilter, setStatusFilter] = createSignal("");
+  const [page, setPage] = createSignal(1);
+
+  const goToPage = (p: number) => {
+    setPage(p);
+    load();
+  };
 
   // 表單對話框狀態
   const [dialogOpen, setDialogOpen] = createSignal(false);
@@ -80,13 +89,20 @@ export default function CompaniesPage() {
     setError(null);
     try {
       const res = await companyClient.listCompanies({
-        page: 1,
-        pageSize: 100,
+        page: page(),
+        pageSize: PAGE_SIZE,
         status: statusFilter() || undefined,
         keyword: keyword() || undefined,
       });
       setCompanies(res.companies);
-      setTotal(Number(res.pagination?.total ?? 0));
+      const t = Number(res.pagination?.total ?? 0);
+      setTotal(t);
+      // 刪除/篩選後若目前頁碼超出總頁數,退回最後一頁並重新載入
+      const maxPage = Math.max(1, Math.ceil(t / PAGE_SIZE));
+      if (page() > maxPage) {
+        setPage(maxPage);
+        return load();
+      }
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -186,6 +202,7 @@ export default function CompaniesPage() {
         class="mb-4 flex flex-wrap items-end gap-3"
         onSubmit={(e) => {
           e.preventDefault();
+          setPage(1); // 查詢變更時回到第一頁
           load();
         }}
       >
@@ -309,6 +326,12 @@ export default function CompaniesPage() {
           </tbody>
         </table>
       </div>
+      <ListPagination
+        total={total()}
+        pageSize={PAGE_SIZE}
+        page={page()}
+        onPageChange={goToPage}
+      />
 
       <Dialog.Root open={dialogOpen()} onOpenChange={(e) => setDialogOpen(e.open)}>
         <Dialog.Backdrop class="fixed inset-0 z-40 bg-black/40" />

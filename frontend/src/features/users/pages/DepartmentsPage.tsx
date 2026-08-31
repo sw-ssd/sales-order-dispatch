@@ -9,6 +9,10 @@ import {
   type Company,
   type Department,
 } from "~/lib/proto/salesorder/v1/company_pb";
+import { ListPagination } from "../components/ListPagination";
+
+const PAGE_SIZE = 20;
+const COMPANY_PAGE_SIZE = 50;
 
 const departmentClient = createClient(
   DepartmentService,
@@ -46,6 +50,17 @@ export default function DepartmentsPage() {
   const [error, setError] = createSignal<string | null>(null);
 
   const [companyFilter, setCompanyFilter] = createSignal("");
+  // 公司下拉:可搜尋(keyword)+ 分頁載入
+  const [companyKeyword, setCompanyKeyword] = createSignal("");
+  const [companyPage, setCompanyPage] = createSignal(1);
+  const [companyTotal, setCompanyTotal] = createSignal(0);
+  const [companiesLoading, setCompaniesLoading] = createSignal(false);
+  const [page, setPage] = createSignal(1);
+
+  const goToPage = (p: number) => {
+    setPage(p);
+    load();
+  };
 
   // 表單對話框狀態
   const [dialogOpen, setDialogOpen] = createSignal(false);
@@ -57,12 +72,27 @@ export default function DepartmentsPage() {
   const [name, setName] = createSignal("");
   const [companyId, setCompanyId] = createSignal("");
 
-  const loadCompanies = async () => {
+  const loadCompanies = async (reset: boolean) => {
+    const target = reset ? 1 : companyPage();
+    setCompaniesLoading(true);
+    setError(null);
     try {
-      const res = await companyClient.listCompanies({ page: 1, pageSize: 100 });
-      setCompanies(res.companies);
+      const res = await companyClient.listCompanies({
+        page: target,
+        pageSize: COMPANY_PAGE_SIZE,
+        keyword: companyKeyword() || undefined,
+      });
+      setCompanies((prev) => {
+        if (reset) return res.companies;
+        const seen = new Set(prev.map((c) => c.id));
+        return [...prev, ...res.companies.filter((c) => !seen.has(c.id))];
+      });
+      setCompanyTotal(Number(res.pagination?.total ?? 0));
+      setCompanyPage(target + 1);
     } catch (err) {
       setError(errorMessage(err));
+    } finally {
+      setCompaniesLoading(false);
     }
   };
 
@@ -71,12 +101,19 @@ export default function DepartmentsPage() {
     setError(null);
     try {
       const res = await departmentClient.listDepartments({
-        page: 1,
-        pageSize: 100,
+        page: page(),
+        pageSize: PAGE_SIZE,
         companyId: companyFilter() || undefined,
       });
       setDepartments(res.departments);
-      setTotal(Number(res.pagination?.total ?? 0));
+      const t = Number(res.pagination?.total ?? 0);
+      setTotal(t);
+      // 刪除/篩選後若目前頁碼超出總頁數,退回最後一頁並重新載入
+      const maxPage = Math.max(1, Math.ceil(t / PAGE_SIZE));
+      if (page() > maxPage) {
+        setPage(maxPage);
+        return load();
+      }
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -85,7 +122,7 @@ export default function DepartmentsPage() {
   };
 
   onMount(async () => {
-    await loadCompanies();
+    await loadCompanies(true);
     await load();
   });
 
@@ -97,11 +134,25 @@ export default function DepartmentsPage() {
     setDialogOpen(true);
   };
 
-  const openEdit = (d: Department) => {
+  const openEdit = async (d: Department) => {
     setEditing(d);
     setName(d.name);
     setCompanyId(d.companyId);
     setFormError(null);
+    // 該部門的公司可能不在已載入的分頁內,先補載再開啟
+    if (!companies().some((c) => c.id === d.companyId)) {
+      try {
+        const res = await companyClient.getCompany({ companyId: d.companyId });
+        const c = res.company;
+        if (c) {
+          setCompanies((prev) =>
+            prev.some((x) => x.id === c.id) ? prev : [c, ...prev],
+          );
+        }
+      } catch {
+        // 找不到時仍可從下拉搜尋補上
+      }
+    }
     setDialogOpen(true);
   };
 
@@ -171,6 +222,48 @@ export default function DepartmentsPage() {
         class="mb-4 flex flex-wrap items-end gap-3"
         onSubmit={(e) => {
           e.preventDefault();
+          loadCompanies(true);
+        }}
+      >
+        <div>
+          <label for="company-search-keyword" class="block text-sm font-medium text-gray-700">
+            公司關鍵字
+          </label>
+          <input
+            id="company-search-keyword"
+            value={companyKeyword()}
+            onInput={(e) => setCompanyKeyword(e.currentTarget.value)}
+            placeholder="名稱 / 識別碼"
+            class="mt-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={companiesLoading()}
+          class="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+        >
+          搜尋公司
+        </button>
+        <div class="flex items-center gap-3 pb-1 text-sm text-gray-600">
+          <span>
+            已載入 {companies().length} 家,共 {companyTotal()} 家
+          </span>
+          <button
+            type="button"
+            onClick={() => loadCompanies(false)}
+            disabled={companiesLoading() || companies().length >= companyTotal()}
+            class="rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {companiesLoading() ? "載入中…" : "載入更多"}
+          </button>
+        </div>
+      </form>
+
+      <form
+        class="mb-4 flex flex-wrap items-end gap-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          setPage(1); // 查詢變更時回到第一頁
           load();
         }}
       >
@@ -265,6 +358,12 @@ export default function DepartmentsPage() {
           </tbody>
         </table>
       </div>
+      <ListPagination
+        total={total()}
+        pageSize={PAGE_SIZE}
+        page={page()}
+        onPageChange={goToPage}
+      />
 
       <Dialog.Root open={dialogOpen()} onOpenChange={(e) => setDialogOpen(e.open)}>
         <Dialog.Backdrop class="fixed inset-0 z-40 bg-black/40" />
