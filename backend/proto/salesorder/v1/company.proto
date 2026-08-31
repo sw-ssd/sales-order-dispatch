@@ -1,0 +1,150 @@
+syntax = "proto3";
+
+package salesorder.v1;
+option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1";
+
+import "salesorder/v1/common.proto";
+import "google/protobuf/struct.proto";
+
+// 多租戶主檔(v1;Wave 2):公司(Company)與部門(Department)CRUD。
+
+// Company:公司(租戶)主檔。
+message Company {
+  string id = 1;                // 公司 ID(現行 ent 自增 ID 字串化;D31 遷移 UUID 後格式不變)
+  string name = 2;              // 公司名稱
+  string tax_id = 3;            // 統一編號(可空)
+  string identifier = 4;        // 唯一識別碼(建立後不可修改)
+  string status = 5;            // active | inactive | suspended
+  google.protobuf.Struct public_info = 6; // 公開資訊(JSON,可空)
+  repeated string capabilities = 7;       // 能力旗標清單(可空)
+  string logo_url = 8;          // Logo 網址(可空)
+}
+
+// CompanyService:公司主檔 CRUD。
+service CompanyService {
+  // ListCompanies:分頁列出公司,可依 status / keyword(name、identifier 模糊)篩選。
+  rpc ListCompanies(ListCompaniesRequest) returns (ListCompaniesResponse);
+  // GetCompany:取得單一公司。
+  rpc GetCompany(GetCompanyRequest) returns (GetCompanyResponse);
+  // CreateCompany:建立公司。
+  rpc CreateCompany(CreateCompanyRequest) returns (CreateCompanyResponse);
+  // UpdateCompany:更新公司(name、tax_id、status;identifier 建立後不可修改)。
+  rpc UpdateCompany(UpdateCompanyRequest) returns (UpdateCompanyResponse);
+  // DeleteCompany:刪除公司。
+  rpc DeleteCompany(DeleteCompanyRequest) returns (DeleteCompanyResponse);
+}
+
+message ListCompaniesRequest {
+  int32 page = 1;      // 1-based 頁碼
+  int32 page_size = 2; // 每頁筆數
+  string status = 3;   // 篩選:active | inactive | suspended(空 = 全部)
+  string keyword = 4;  // name / identifier 模糊搜尋(空 = 全部)
+}
+
+message ListCompaniesResponse {
+  repeated Company companies = 1;
+  Pagination pagination = 2; // 分頁資訊(總筆數等)
+}
+
+message GetCompanyRequest {
+  string company_id = 1;
+}
+
+message GetCompanyResponse {
+  Company company = 1;
+}
+
+message CreateCompanyRequest {
+  string name = 1;       // 公司名稱
+  string tax_id = 2;     // 統一編號(可空)
+  string identifier = 3; // 唯一識別碼
+  string status = 4;     // active | inactive | suspended(空 = 預設 active)
+}
+
+message CreateCompanyResponse {
+  Company company = 1;
+}
+
+message UpdateCompanyRequest {
+  string company_id = 1;
+  optional string name = 2;   // 出現即更新
+  optional string tax_id = 3; // 出現即更新(含清空)
+  optional string status = 4; // 出現即更新
+  // identifier 建立後不可修改;於請求中出現即回 invalid_argument。
+  string identifier = 5;
+}
+
+message UpdateCompanyResponse {
+  Company company = 1;
+}
+
+message DeleteCompanyRequest {
+  string company_id = 1;
+}
+
+message DeleteCompanyResponse {}
+
+// Department:部門主檔(屬於單一公司)。
+message Department {
+  string id = 1;           // 部門 ID(現行 ent 自增 ID 字串化)
+  string company_id = 2;   // 所屬公司 ID
+  string company_name = 3; // 所屬公司名稱(eager-load 顯示用,可空)
+  string name = 4;         // 部門名稱
+}
+
+// DepartmentService:部門主檔 CRUD。
+service DepartmentService {
+  // ListDepartments:分頁列出部門,可依 company_id 篩選。
+  rpc ListDepartments(ListDepartmentsRequest) returns (ListDepartmentsResponse);
+  // GetDepartment:取得單一部門。
+  rpc GetDepartment(GetDepartmentRequest) returns (GetDepartmentResponse);
+  // CreateDepartment:建立部門(需指定所屬公司)。
+  rpc CreateDepartment(CreateDepartmentRequest) returns (CreateDepartmentResponse);
+  // UpdateDepartment:更新部門名稱。
+  rpc UpdateDepartment(UpdateDepartmentRequest) returns (UpdateDepartmentResponse);
+  // DeleteDepartment:刪除部門。
+  rpc DeleteDepartment(DeleteDepartmentRequest) returns (DeleteDepartmentResponse);
+}
+
+message ListDepartmentsRequest {
+  int32 page = 1;      // 1-based 頁碼
+  int32 page_size = 2; // 每頁筆數
+  string company_id = 3; // 篩選:僅列指定公司的部門(空 = 全部)
+}
+
+message ListDepartmentsResponse {
+  repeated Department departments = 1;
+  Pagination pagination = 2;
+}
+
+message GetDepartmentRequest {
+  string department_id = 1;
+}
+
+message GetDepartmentResponse {
+  Department department = 1;
+}
+
+message CreateDepartmentRequest {
+  string company_id = 1; // 所屬公司 ID
+  string name = 2;       // 部門名稱
+}
+
+message CreateDepartmentResponse {
+  Department department = 1;
+}
+
+message UpdateDepartmentRequest {
+  string department_id = 1;
+  optional string name = 2; // 出現即更新
+}
+
+message UpdateDepartmentResponse {
+  Department department = 1;
+}
+
+message DeleteDepartmentRequest {
+  string department_id = 1;
+}
+
+message DeleteDepartmentResponse {}
