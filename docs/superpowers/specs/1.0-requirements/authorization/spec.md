@@ -112,6 +112,8 @@ Casbin RBAC with domain（後端授權）+ PostgreSQL RLS（資料範圍）+ CAS
 
 Web MUST 於登入後向後端 `AbilityService.GetAbility` 載入當前使用者的 ability JSON 並快取，快取 TTL 為 60 秒，或於權限異動後主動重新載入；不得在每次路由切換時重新請求。Ability MUST 由後端依 `role_permissions` 表（resource × action）動態產生，預設值依內建角色定義由 migration seed 建立，非前端靜態規則。Web SHALL 使用 ability 進行路由守衛與按鈕/選單顯示控制。App 因功能較少，SHALL 使用簡單 role 判斷，不載入 CASL ability。
 
+後端 MUST 以同一份 `role_permissions` 規則（含 `conditions`、`inverted`）在 `CASL_ENFORCEMENT_ENABLED = true` 時執行：list 查詢依規則產生 SQL 過濾條件（無允許規則時回空集）；寫入/更新/取消等操作對實體做 `can(action, instance)` 條件檢查。開關關閉時後端跳過 CASL 執行層，行為等同 Casbin + RLS（RLS 仍為租戶隔離最後防線）。
+
 #### Scenario: 登入後載入並快取 ability
 
 - **WHEN** 使用者登入 Web 中台
@@ -132,6 +134,26 @@ Web MUST 於登入後向後端 `AbilityService.GetAbility` 載入當前使用者
 
 - **WHEN** 使用者 ability 不含某 resource 的 `read` action
 - **THEN** 前端路由守衛阻止進入對應頁面，相關選單與按鈕不顯示
+
+#### Scenario: list 查詢套用規則條件
+
+- **WHEN** `staff` 角色的 `role_permissions` 含 `read sales_order conditions={"department_id": "${user.department_id}"}`，且開關啟用
+- **THEN** 該使用者 list 訂單僅回符合條件的資料，且結果仍受 RLS 限制（交集語意）
+
+#### Scenario: 實例檢查攔截狀態越權
+
+- **WHEN** 規則為 `cancel sales_order conditions={"status": "pending"}`，staff 嘗試取消 `processing` 訂單，且開關啟用
+- **THEN** 後端回 `permission_denied`，不執行取消
+
+#### Scenario: 開關關閉時降級
+
+- **WHEN** `CASL_ENFORCEMENT_ENABLED = false`
+- **THEN** list 查詢不附加規則條件、實例檢查放行，Casbin 與 RLS 行為不變；`GetAbility` 回傳不受影響
+
+#### Scenario: 規則異動前後端同源生效
+
+- **WHEN** `super` 於權限設置頁修改某角色規則的 conditions
+- **THEN** 下一次 `GetAbility`（前端）與下一次 list/實例檢查（後端）皆反映新條件，不需重啟
 
 ### Requirement: 權限管理範圍與防鎖死
 

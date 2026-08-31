@@ -415,9 +415,9 @@
 - **檔案**:
   - Create `backend/internal/domain/auth/ability.go`
   - Update proto(`AbilityService`)
-- **介面**: Connect-RPC `AbilityService.GetAbility() → { rules: [{action, subject, conditions?, inverted?}] }`(CASL.js 可消費的 JSON)。
+- **介面**: Connect-RPC `AbilityService.GetAbility() → { rules: [{action, subject, conditions?, inverted?}] }`（CASL.js 可消費的 JSON；保留字 `manage`/`all`）。
 - **實作邏輯**:
-  1. Phase 1:依 role(內建五角色)從硬編碼預設矩陣產生規則;conditions 帶 `company_id`/`department_id`/`customer_id` 讓前端可做資料範圍判斷。
+  1. 規則來源為 `role_permissions`（2.9.4 接管後）；Phase 1 無表時以硬編碼預設矩陣產生。規則格式：`{action, subject, conditions?, inverted?}`，陣列順序 = `sort_order` 升冪；conditions 帶 `${user.company_id}` 等佔位符，由前端 CASL 直接消費（佔位符於後端產生時已以身分展開為具體值）。
   2. 規則詞彙(action/subject)與 Casbin `act`/`obj`(1.2.1)同源,避免前後端權限語意分歧;主帳號額外附加「僅帳號管理」反向規則。
   3. 回應可快取(短 TTL 60 秒,對齊前端 ability store);2.9.4 接管後改為讀 `role_permissions` 並於該表異動時失效。
 - **錯誤處理**: 未登入 → `unauthenticated`;未知角色 → 回空規則(前端預設全隱藏,fail-closed)。

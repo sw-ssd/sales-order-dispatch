@@ -313,7 +313,7 @@ decisions: [D3, D4, D5, D6, D7, D8, D9, D10, D17, D18, D20, D21]
   - Create: `backend/database/migrations/000XX_roles_seed.sql`
 - **介面**: Ent 實體
   - `roles`:id、`code`、`name`、`data_scope`(all / company / department / self)、`is_system`、`is_active`、`deleted_at`;`code` 部分唯一索引(`WHERE deleted_at IS NULL`)。
-  - `role_permissions`:id、`role_id`、`resource`(order / customer / product / dispatch / print / user / company 等)、`action`(create / read / update / delete / manage / print / dispatch 等);`role_id + resource + action` 唯一。
+  - `role_permissions`:id、`role_id`、`resource`、`action`、`conditions`(JSONB 可空)、`inverted`(bool 預設 false)、`sort_order`(int 預設 0)；唯一索引 `(role_id, resource, action, COALESCE(md5(conditions::text), ''))`（同 resource×action 允許多條件不同規則）。
 - **實作邏輯**:
   1. Ent schema 對齊規格 5.2 欄位定義;`roles` 適用軟刪除但僅自訂角色可用(規格 5.4)。
   2. migration seed 七內建角色(規格 3.2),`is_system = true`、`is_active = true`;`data_scope` 對應:super = all、company_admin = company、dept_admin = department、staff = department、customer = self、guest = self(待審核,僅本人帳號資料)、developer = all(D8)。
@@ -371,7 +371,7 @@ decisions: [D3, D4, D5, D6, D7, D8, D9, D10, D17, D18, D20, D21]
 - **實作邏輯**:
   1. 寫入權限僅 `super`;`company_admin` 可 GetPermissions 查閱(供其了解自己 domain 可用角色能力),不可 Update。
   2. UpdatePermissions 採全量覆寫語意:同一交易內刪除該角色既有 `role_permissions` 並插入新組合;resource / action 須為系統已定義的列舉值,未知值回 `invalid_argument`。
-  3. 內建角色的功能權允許調整(D9:預設值可於 Web 調);但本表僅驅動前端 CASL UI 顯示,後端授權由 Casbin policy 決定 — 防鎖死保證在 2.10.3 處理,此處不額外限制清空權限,惟 response 與稽核須如实反映。
+  3. 內建角色的功能權允許調整(D9)。`role_permissions` 同時驅動前端 CASL 顯示與後端 CASL 執行層(D30):conditions 寫入前以 FieldRegistry 白名單驗證(未知欄位/運算子/值型別 → `invalid_argument`);防鎖死延伸 — 操作者自身角色的權限管理 resource 不得加會排除自己的 conditions(以操作者身分代入驗證仍可 manage);`company_admin` 的 id 類條件值限 `${user.company_id}` 佔位符或自己公司範圍。
   4. 同一交易寫 `audit_logs`(resource_type = role,快照含前後權限組合)。
   5. 生效路徑:前端 ability 快取 60 秒 TTL 到期或權限異動後主動重載(規格 3.4),GetAbility 下次呼叫即反映新權限(見 2.9.4),無需重啟。
 - **錯誤處理**:
@@ -392,7 +392,7 @@ decisions: [D3, D4, D5, D6, D7, D8, D9, D10, D17, D18, D20, D21]
   - Update: `backend/internal/domain/roles/repository.go`(提供依角色查權限)
 - **介面**: Connect-RPC `AbilityService.GetAbility`(無參數,依當前認證身分)→ CASL 規則陣列(action + subject)。
 - **實作邏輯**:
-  1. 由認證 context 取當前使用者的全部角色(g 規則),查 `role_permissions` 取所有 resource × action 組合;多角色取聯集,對應為 CASL 的 subject(resource)× action 規則。
+  1. 由認證 context 取當前使用者的全部角色(g 規則),查 `role_permissions` 取所有 resource × action 組合;多角色取聯集,對應為 CASL 的 subject(resource)× action 規則；規則輸出含 `conditions`（佔位符已展開）與 `inverted`，依 `sort_order` 排序。
   2. 角色已停用(`is_active = false`)或其 `data_scope` 等級不影響本 RPC — 本 RPC 只反映功能權限矩陣;資料範圍由 RLS 處理(2.9.5)。
   3. `developer` 角色且開關啟用時,直接回傳 manage all 規則,不查表(對齊繞過語意,D8)。
   4. `guest` 無任何業務權限,回傳空規則或僅帳號相關最小規則。

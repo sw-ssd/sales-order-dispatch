@@ -216,7 +216,7 @@
 - Produces: dev server on port 3000, build to `dist/`
 
 - [ ] **Step 1: 初始化 package.json**
-  - Dependencies: `solid-js`, `@solidjs/router`, `@tanstack/solid-query`, `casl/ability`, `@casl/solid`, `valibot`, `tailwindcss`, `class-variance-authority`, `clsx`, `tailwind-merge`.
+  - Dependencies: `solid-js`, `@solidjs/router`, `@tanstack/solid-query`, `@casl/ability`, `valibot`, `tailwindcss`, `class-variance-authority`, `clsx`, `tailwind-merge`.
 - [ ] **Step 2: 設定 Vite + TypeScript**
   - Path alias `~/*` → `src/*`.
 - [ ] **Step 3: 設定 Tailwind CSS**

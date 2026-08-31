@@ -250,7 +250,7 @@
 | WEB-INF-02 | Tailwind CSS + shadcn-solid 元件庫整合 |
 | WEB-INF-03 | 路由架構（@solidjs/router）與守衛（AuthGuard / RoleGuard） |
 | WEB-INF-04 | TanStack Query 設定與錯誤處理 |
-| WEB-INF-05 | CASL ability 與 UI 權限遮蔽 |
+| WEB-INF-05 | CASL ability 與 UI 權限遮蔽（`frontend/src/lib/ability/`：`context.tsx` Provider/useAbility、`service.ts` GetAbility query + createAppAbility、`Can.tsx` 顯示控制、`guards.ts` requireAbility 路由守衛；依賴 `@casl/ability`，無 `@casl/solid`） |
 | WEB-INF-06 | Connect-RPC 產生 TypeScript client 整合 |
 
 ### 4.2 LAYOUT：版面與導覽

@@ -60,6 +60,7 @@
 - **選擇**：Casbin RBAC with domain（domain = `company_id`）只判「角色 × 公司 × 資源 × 動作」；部門級資料範圍不由 Casbin 承載，統一由 PostgreSQL RLS（`app.current_company_id` / `app.current_department_id` / `app.current_data_scope` / `app.current_customer_id`）+ repository 查詢條件實現；資料範圍依角色 `data_scope` 等級（`all` / `company` / `department` / `self`）決定，**不依角色名稱**。前端 CASL ability 由 `role_permissions` 表動態產生，登入後載入一次 + TTL 60 秒快取。
 - **理由**：Casbin policy 若承載部門維度會爆炸（policy 數 = 角色 × 部門 × 資源）；RLS 是資料庫最後防線，即使 usecase 漏寫條件也不越界；`data_scope` 等級化讓自訂角色不必改程式即可獲得正確資料範圍。
 - **已考慮 alternative**：純應用層 where 條件 — 拒絕，漏一處即越權；Casbin 承載部門 — 拒絕，policy 維護不可行。
+- **修訂（2026-08-24, D30）**：新增 CASL 執行層管 resource 屬性/狀態條件；Casbin 與 RLS 職責不變。
 
 ### D4：Connect-RPC 為業務 API 唯一來源，REST 僅公開端點
 
@@ -214,6 +215,16 @@
 - **理由**：「有人離職不用全店重設」的動機要閉環——若只有後台能管理，離職時店家仍需聯絡業務等待處理；店家自助讓老闆當場停用離職者帳號，後台負擔同步減輕。主帳號固定不可自停，確保店家永遠有一個能登入的管理身分；RLS self 範圍 + 防呆 + 後台逃生門把誤操作風險壓低。
 - **已考慮 alternative**：僅後台管理（dept_admin）— 行政負擔與等待成本仍在，離職場景未閉環；店家可停用任何帳號（無防呆）— 拒絕，可能把自己鎖死，必須有逃生門；任一帳號皆可管理其他帳號 — 拒絕，權限擴散，管理軌跡不清。
 - 修訂來源：2026-08-03 討論（客戶版規格書 v1.0.30）。
+
+### D30：CASL JSON 為第二權限模型（後端執行層 + 前端同源）
+
+- **選擇**：`role_permissions` 擴充為 CASL 規則表（`conditions` JSONB、`inverted`、`sort_order`），前後端同表同源；後端 Go 自研評估器執行 list 查詢過濾與單筆實例 `can(action, instance)` 檢查；Casbin（RPC 進入點）與 RLS（租戶最後防線）保留不動。
+- **D30-2 env 開關**：`CASL_ENFORCEMENT_ENABLED` 全域 server 級，dev/test/prod 均預設 `true`；關閉 = 降級回純 Casbin+RLS（RLS 仍擋租戶越界），`GetAbility` 不受影響。無 fail-fast；啟動 log 記錄狀態。
+- **D30-3 Go 手寫評估器 + golden fixture 對賭**：不內嵌 JS runtime；運算子白名單 `$eq/$ne/$in/$nin/$lt/$lte/$gt/$gte`、平鋪欄位；CI 以真 `@casl/ability` 產生 fixture、Go 測試重放比對。
+- **D30-4 前端**：`@casl/ability` + 自寫 Solid binding（`@casl/solid` 不存在於 npm）；修正 `2026-08-05-subproject-implementation-plan.md` Task 4 錯誤依賴。
+- **理由**：Casbin/RLS 無法表達屬性/狀態級條件（如「staff 僅能取消 pending 訂單」）；前後端各一份權限來源有分歧風險。CASL JSON 為 isomorphic 格式，天然可跨端共享。
+- **已考慮 alternative**：goja 內嵌 JS runtime（效能/部署成本）；Ent interceptor 全域自動套用（難表達 action 語意、隱式難測）；獨立 casl_rules 表（兩份來源分歧）；欄位級遮罩 fields/rulesToFields（1.0 YAGNI）。
+- **修訂來源**：2026-08-24 設計文件 `docs/superpowers/specs/2026-08-24-casl-integration-design.md`。D3 三層分工隨之改為四參與者：Casbin（進入點）/ CASL 執行層（屬性條件）/ RLS（資料範圍）/ 前端 CASL（UI）。
 
 ### D31：後端結構慣例對齊 go8（集中 DI / cmd 拆分 / config 逐檔 / third_party）
 
