@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { QueryClient } from "@tanstack/solid-query";
-import type { RoutePreloadFuncArgs } from "@solidjs/router";
+import { isRedirect } from "@tanstack/solid-router";
 
 const mockGetAbility = vi.fn();
 vi.mock("./service", async (orig) => {
@@ -16,34 +16,40 @@ vi.mock("./service", async (orig) => {
 
 import { makeRequireAbility } from "./guards";
 
-// 守衛只讀 args.intent,測試以最小形狀補齊型別。
-const args = (intent: RoutePreloadFuncArgs["intent"]) =>
-  ({ intent }) as RoutePreloadFuncArgs;
-
 describe("requireAbility", () => {
   beforeEach(() => mockGetAbility.mockReset());
 
-  it("有權限時放行(不導向)", async () => {
+  it("有權限時放行(不拋 redirect)", async () => {
     mockGetAbility.mockResolvedValue({ rules: [{ action: "read", subject: "sales_order" }] });
-    const navigate = vi.fn();
-    const guard = makeRequireAbility(new QueryClient(), () => navigate)("read", "sales_order");
-    await guard(args("navigate"));
-    expect(navigate).not.toHaveBeenCalled();
+    const guard = makeRequireAbility(new QueryClient())("read", "sales_order");
+    await expect(guard({ preload: false })).resolves.toBeUndefined();
   });
 
-  it("無權限時 navigate /403(replace)", async () => {
+  it("無權限時拋 redirect /403", async () => {
     mockGetAbility.mockResolvedValue({ rules: [] });
-    const navigate = vi.fn();
-    const guard = makeRequireAbility(new QueryClient(), () => navigate)("read", "sales_order");
-    await guard(args("navigate"));
-    expect(navigate).toHaveBeenCalledWith("/403", { replace: true });
+    const guard = makeRequireAbility(new QueryClient())("read", "sales_order");
+    try {
+      await guard({ preload: false });
+      expect.unreachable("應拋出 redirect");
+    } catch (e) {
+      // @tanstack/solid-router redirect 拋出Response:isRedirect 標記 + options.to 路由路徑
+      expect(isRedirect(e)).toBe(true);
+      if (e && typeof e === "object" && "options" in e) {
+        const options = e.options;
+        if (options && typeof options === "object" && "to" in options) {
+          expect(options.to).toBe("/403");
+        } else {
+          expect.unreachable("redirect options 缺少 to");
+        }
+      } else {
+        expect.unreachable("redirect Response 缺少 options");
+      }
+    }
   });
 
-  it("hover 預載(intent=preload)不查詢也不導向", async () => {
-    const navigate = vi.fn();
-    const guard = makeRequireAbility(new QueryClient(), () => navigate)("read", "sales_order");
-    await guard(args("preload"));
+  it("hover 預載(preload)不查詢也不導向", async () => {
+    const guard = makeRequireAbility(new QueryClient())("read", "sales_order");
+    await expect(guard({ preload: true })).resolves.toBeUndefined();
     expect(mockGetAbility).not.toHaveBeenCalled();
-    expect(navigate).not.toHaveBeenCalled();
   });
 });

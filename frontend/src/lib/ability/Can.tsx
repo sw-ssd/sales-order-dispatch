@@ -1,5 +1,4 @@
-import { Show, type ParentComponent } from "solid-js";
-import type { JSX } from "@solidjs/web";
+import { Show, type JSX, type ParentComponent } from "solid-js";
 import { useAbility } from "./context";
 
 /**

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@solidjs/testing-library";
-import { createSignal } from "solid-js";
-import type { JSX } from "@solidjs/web";
+import { createSignal, type JSX } from "solid-js";
 import { subject } from "@casl/ability";
 import { AbilityProvider } from "./context";
 import { createAppAbility } from "./service";

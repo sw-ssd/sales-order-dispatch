@@ -1,6 +1,6 @@
 import { Code, ConnectError, createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
-import { createSignal, For, onSettled, Show } from "solid-js";
+import { createSignal, For, onMount, Show } from "solid-js";
 import {
   RoleService,
   type Permission,
@@ -137,7 +137,7 @@ export default function RolesPage() {
     }
   };
 
-  onSettled(() => {
+  onMount(() => {
     void loadRoles();
   });
 

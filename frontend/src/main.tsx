@@ -1,4 +1,4 @@
-import { render } from "@solidjs/web";
+import { render } from "solid-js/web";
 import AppRouter from "~/router";
 import "~/index.css";
 
