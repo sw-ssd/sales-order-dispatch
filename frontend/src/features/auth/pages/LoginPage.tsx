@@ -1,7 +1,12 @@
 import { Code, ConnectError, createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 import { useNavigate } from "@tanstack/solid-router";
-import { Tabs } from "@ark-ui/solid/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "~/components/ui/tabs";
 import { createSignal, Show, type JSX } from "solid-js";
 import { AuthService } from "~/lib/proto/salesorder/v1/auth_pb";
 import GoogleLoginButton from "../components/GoogleLoginButton";
@@ -62,32 +67,26 @@ export default function LoginPage() {
         <h1 class="text-center text-2xl font-bold text-gray-900">登入</h1>
         <p class="mt-1 text-center text-sm text-gray-500">多公司訂出貨系統</p>
 
-        <Tabs.Root
+        <Tabs
           class="mt-6"
           value={tab()}
-          onValueChange={({ value }) => setTab(value as LoginTab)}
+          onChange={(value) => setTab(value as LoginTab)}
         >
-          <Tabs.List class="flex gap-1 rounded-lg bg-gray-100 p-1">
-            <Tabs.Trigger
-              value="employee"
-              class="flex-1 rounded-md px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-selected:bg-white data-selected:text-gray-900 data-selected:shadow"
-            >
+          <TabsList class="h-auto w-full">
+            <TabsTrigger value="employee" class="flex-1 py-2">
               員工
-            </Tabs.Trigger>
-            <Tabs.Trigger
-              value="store"
-              class="flex-1 rounded-md px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 data-selected:bg-white data-selected:text-gray-900 data-selected:shadow"
-            >
+            </TabsTrigger>
+            <TabsTrigger value="store" class="flex-1 py-2">
               店家
-            </Tabs.Trigger>
-          </Tabs.List>
+            </TabsTrigger>
+          </TabsList>
 
-          <Tabs.Content value="employee">
+          <TabsContent value="employee">
             <p class="mb-3 text-center text-sm text-gray-500">員工請使用公司 Google 帳號登入</p>
             <GoogleLoginButton />
-          </Tabs.Content>
+          </TabsContent>
 
-          <Tabs.Content value="store">
+          <TabsContent value="store">
             <form class="space-y-4" onSubmit={handleStoreSubmit}>
               <div>
                 <label for="customer_code" class="block text-sm font-medium text-gray-700">
@@ -136,8 +135,8 @@ export default function LoginPage() {
                 {submitting() ? "登入中…" : "登入"}
               </button>
             </form>
-          </Tabs.Content>
-        </Tabs.Root>
+          </TabsContent>
+        </Tabs>
       </div>
     </main>
   );

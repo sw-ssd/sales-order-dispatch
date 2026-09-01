@@ -15,13 +15,14 @@
     "@casl/ability": "^6.7.0",
     "@connectrpc/connect": "^2.1.2",
     "@connectrpc/connect-web": "^2.1.2",
-    "@ark-ui/solid": "^5.39.1",
+    "@kobalte/core": "^0.13.13",
     "@tanstack/solid-query": "^5.102.8",
     "@tanstack/solid-router": "^1.170.30",
-    "class-variance-authority": "^0.7.0",
-    "clsx": "^2.1.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-solid": "^1.38.0",
     "solid-js": "^1.9.15",
-    "tailwind-merge": "^3.0.0",
+    "tailwind-merge": "^3.6.0",
     "valibot": "^1.0.0"
   },
   "devDependencies": {

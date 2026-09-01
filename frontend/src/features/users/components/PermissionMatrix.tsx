@@ -1,11 +1,10 @@
-import { Checkbox } from "@ark-ui/solid/checkbox";
+import { Checkbox } from "~/components/ui/checkbox";
 import { create } from "@bufbuild/protobuf";
 import { For, Show } from "solid-js";
 import {
   PermissionSchema,
   type Permission,
 } from "~/lib/proto/salesorder/v1/role_pb";
-import { cn } from "~/lib/cn";
 
 // 權限矩陣目錄:資源/動作慣例對齊 rbac_policy.csv 與設計書 §3.3。
 const RESOURCES = [
@@ -128,37 +127,11 @@ export function PermissionMatrix(props: PermissionMatrixProps) {
                     const checked = () => rulesFor(resource, action).length > 0;
                     return (
                       <td class="px-3 py-3 text-center">
-                        <Checkbox.Root
+                        <Checkbox
                           checked={checked()}
-                          onCheckedChange={(e) =>
-                            toggle(resource, action, e.checked === true)
-                          }
+                          onChange={(value) => toggle(resource, action, value)}
                           aria-label={`${RESOURCE_LABELS[resource] ?? resource} ${ACTION_LABELS[action] ?? action}`}
-                        >
-                          <Checkbox.Control
-                            class={cn(
-                              "inline-flex h-4 w-4 items-center justify-center rounded border",
-                              checked()
-                                ? "border-blue-600 bg-blue-600"
-                                : "border-gray-300 bg-white",
-                            )}
-                          >
-                            <Checkbox.Indicator class="text-white">
-                              <svg
-                                viewBox="0 0 12 12"
-                                class="h-3 w-3"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                              >
-                                <path d="M2 6l3 3 5-6" />
-                              </svg>
-                            </Checkbox.Indicator>
-                          </Checkbox.Control>
-                          <Checkbox.HiddenInput />
-                        </Checkbox.Root>
+                        />
                       </td>
                     );
                   }}

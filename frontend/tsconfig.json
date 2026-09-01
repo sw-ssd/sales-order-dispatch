@@ -7,13 +7,22 @@
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
     "paths": {
-      "~/*": ["./src/*"]
+      "~/*": [
+        "./src/*"
+      ],
+      "@/*": [
+        "./src/*"
+      ]
     },
-    "types": ["vite/client"],
+    "types": [
+      "vite/client"
+    ],
     "noEmit": true,
     "skipLibCheck": true,
     "isolatedModules": true,
-    "esModuleInterop": true,
+    "esModuleInterop": true
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ]
 }

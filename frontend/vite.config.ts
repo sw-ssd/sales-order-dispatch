@@ -7,6 +7,7 @@ export default defineConfig({
   plugins: [tailwindcss(), solid()],
   resolve: {
     alias: {
+      "@": path.resolve(import.meta.dirname, "src"),
       "~": path.resolve(import.meta.dirname, "src"),
     },
   },

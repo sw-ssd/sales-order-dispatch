@@ -1,6 +1,12 @@
-import { Pagination } from "@ark-ui/solid/pagination";
 import { For, Show } from "solid-js";
-import { cn } from "~/lib/cn";
+import { createPagination } from "~/hooks/create-pagination";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+} from "~/components/ui/pagination";
 
 interface ListPaginationProps {
   /** 總筆數(後端 pagination.total) */
@@ -13,11 +19,15 @@ interface ListPaginationProps {
   onPageChange: (page: number) => void;
 }
 
-const triggerClass =
-  "rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50";
-
-/** 列表頁共用分頁列:顯示目前範圍(第 X–Y 筆,共 N 筆)與 Ark Pagination 控制。 */
+/** 列表頁共用分頁列:顯示目前範圍(第 X–Y 筆,共 N 筆)與分頁控制(含省略號)。 */
 export function ListPagination(props: ListPaginationProps) {
+  const pagination = createPagination({
+    count: () => props.total,
+    pageSize: () => props.pageSize,
+    page: () => props.page,
+    onChange: (p) => props.onPageChange(p),
+  });
+
   const rangeStart = () =>
     props.total === 0
       ? 0
@@ -32,49 +42,47 @@ export function ListPagination(props: ListPaginationProps) {
             ? "共 0 筆"
             : `第 ${rangeStart()}–${rangeEnd()} 筆,共 ${props.total} 筆`}
         </p>
-        <Pagination.Root
-          count={props.total}
-          pageSize={props.pageSize}
-          page={props.page}
-          onPageChange={(details) => props.onPageChange(details.page)}
-          class="flex items-center gap-1"
-        >
-          <Pagination.PrevTrigger class={triggerClass}>
-            上一頁
-          </Pagination.PrevTrigger>
-          <Pagination.Context>
-            {(pagination) => (
-              <For each={pagination().pages}>
-                {(item, index) =>
-                  item.type === "page" ? (
-                    <Pagination.Item
-                      {...item}
-                      aria-label={`第 ${item.value} 頁`}
-                      class={cn(
-                        "rounded-md border px-3 py-1.5 text-sm",
-                        item.value === pagination().page
-                          ? "border-blue-600 bg-blue-600 text-white"
-                          : "border-gray-300 text-gray-700 hover:bg-gray-50",
-                      )}
-                    >
-                      {item.value}
-                    </Pagination.Item>
+        <Pagination class="mx-0 w-auto justify-start">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationLink
+                aria-label="上一頁"
+                disabled={!pagination.hasPrevious()}
+                onClick={pagination.previous}
+              >
+                上一頁
+              </PaginationLink>
+            </PaginationItem>
+            <For each={pagination.range()}>
+              {(item) => (
+                <PaginationItem>
+                  {item === "ellipsis" ? (
+                    <PaginationEllipsis />
                   ) : (
-                    <Pagination.Ellipsis
-                      index={index()}
-                      class="px-1 text-sm text-gray-500"
+                    <PaginationLink
+                      isActive={item === props.page}
+                      aria-label={`第 ${item} 頁`}
+                      onClick={() =>
+                        item !== props.page && pagination.setPage(item)
+                      }
                     >
-                      …
-                    </Pagination.Ellipsis>
-                  )
-                }
-              </For>
-            )}
-          </Pagination.Context>
-          <Pagination.NextTrigger class={triggerClass}>
-            下一頁
-          </Pagination.NextTrigger>
-        </Pagination.Root>
+                      {item}
+                    </PaginationLink>
+                  )}
+                </PaginationItem>
+              )}
+            </For>
+            <PaginationItem>
+              <PaginationLink
+                aria-label="下一頁"
+                disabled={!pagination.hasNext()}
+                onClick={pagination.next}
+              >
+                下一頁
+              </PaginationLink>
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       </div>
     </Show>
   );
