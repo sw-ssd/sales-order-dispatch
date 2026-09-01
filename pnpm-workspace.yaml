@@ -6,4 +6,4 @@ packages:
 allowBuilds:
   esbuild: true
 minimumReleaseAgeExclude:
-  - '@solidjs/router@2.0.0-next.20'
+  - lucide-solid@1.38.0
