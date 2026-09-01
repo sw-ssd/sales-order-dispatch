@@ -26,7 +26,20 @@
 - Valkey 依賴的測試需有 skip 保護(本機無 Valkey 時自動略過)。
 - 授權門檻測試必含矩陣:未登入 / guest / staff / dept_admin / company_admin / super。
 
-## 4. 驗證與工具
+## 4. Modern Go Guidelines(必備)
+
+撰寫、修改、修復或重構任何 Go 程式碼前,**必須**以 Modern Go Guidelines CLI 為準則來源(go-modern-guidelines,規則可能新於模型知識 cutoff):
+
+```bash
+sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/scripts/run-tool.sh list            # 依 go.mod 版本列出適用規則
+sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/scripts/run-tool.sh explain <id>   # 讀取單條規則全文
+```
+
+- 首次執行會自動 `go install` CLI 至快取目錄;版本自 go.mod / go.work / 本地 toolchain 解析。
+- `list` 輸出必須完整讀取,**禁止** pipe 至 head/tail/grep 截斷(新規則排在前面,截斷會漏掉重要準則)。
+- 回傳的 guideline 視為本專案現代 Go 風格權威;與既有程式碼衝突時,新碼從 guideline、舊碼不主動回刷。
+
+## 5. 驗證與工具
 
 - 提交前必跑 `task check`(fmt + vet + lint + test);`task vuln` 掃弱點。
 - migration 操作:`task migrate:up` / `migrate:status` / `migrate:down`;seed:`task seed`。
