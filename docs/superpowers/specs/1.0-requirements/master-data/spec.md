@@ -97,6 +97,22 @@
 - **THEN** 該筆資料寫入 `deleted_at` 且不再出現於預設查詢結果
 - **AND** 既有歷史單據關聯的資料不受影響
 
+### Requirement: 客戶送貨地址座標（供 fleet 執行層）
+
+系統 SHALL 於 `customer_addresses`（`type=shipping`）記錄座標 `location geography(Point)`，於建立 / 更新地址時進行地理編碼（geocode），供 fleet 執行層的 OSRM 路線 / ETA 使用（D32）。**不另建立 Fleetbase 式 places 表**；地址簿仍為客戶子資源。地理編碼失敗時地址 MUST 仍可建立（僅 `location` 為空），於 fleet 路線計算時提示缺座標（見 fleet-execution spec）。PostGIS 不可用時 fallback `latitude` / `longitude` 欄位。
+
+#### Scenario: shipping 地址可取得座標
+
+- **WHEN** 建立或更新一筆 `type=shipping` 的 `customer_addresses` 且地理編碼成功
+- **THEN** 該地址取得 `location` 座標，後續可用於 OSRM 路線計算
+- **AND** 非 `shipping` 類型地址不強制地理編碼（`location` 可為空）
+
+#### Scenario: 地理編碼失敗不擋建檔
+
+- **WHEN** 地址無法地理編碼（如地址不完整）
+- **THEN** 地址照常建立、`location` 為空
+- **AND** 當該地址被納入 fleet 路線計算時，系統提示缺座標
+
 ### Requirement: 商品主檔維護
 
 系統 SHALL 提供商品主檔的新增、查詢、修改與軟刪除，商品隸屬部門（`department_id`）；`code` 於同一部門內 MUST 唯一（搭配軟刪除部分唯一索引）；商品 SHALL 記錄 `inventory_warehouse_id`（產品分庫）與 `picking_warehouse_id`（揀貨倉別）；商品可用的分切規格 MUST 以關聯表 `product_cutting_specs`（`product_id` + `cutting_spec_id`）維護，不得使用陣列欄位。

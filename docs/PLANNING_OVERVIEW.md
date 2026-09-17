@@ -37,12 +37,12 @@
 |---|---|---|
 | D1 | 全新 monorepo、不遷移資料 | 新倉庫 `backend/` + `frontend/` + `app/` + `infra/`（pnpm workspace + Turborepo），主檔與訂單全部重新建檔 |
 | D2 | Big Bang 上線 | 測試完成後全面切換、廢止舊系統；無試點、無並行、無唯讀期 |
-| D3 | 租戶隔離三層分工 | Casbin 管功能（domain=company_id）、PostgreSQL RLS 管資料範圍（`data_scope` 等級：all/company/department/self，不依角色名稱）、CASL 管 UI |
+| D3 | 租戶隔離 | OpenFGA 管功能/資源（userset）、PostgreSQL RLS 管資料範圍（`data_scope` 等級：all/company/department/self，不依角色名稱）；CASL 移除（D32 修訂） |
 | D4 | Connect-RPC 唯一 API 來源 | proto `v1` 產生三端型別；REST 僅留公開端點（版本、OAuth2、QR 兌換、檔案、公司公開資訊） |
 | D5 | 認證雙軌 + token_version 撤銷 | Web 用 scs+Valkey session cookie；App 用 access JWT 1h + refresh 30 天旋轉；停用/強制登出/改密碼/角色變更 → `token_version`+1 全數失效 |
 | D6 | 員工僅 Google Workspace OIDC | 首登未完成註冊完成頁（選公司+姓名）不建帳號；`guest` 待審核（super/company_admin 審） |
 | D7 | 編號 = 前綴 + 自增、樂觀鎖取號 | `customer_code` = 公司前綴（1–4 碼全系統唯一）+ 6 位自增；`order_no` = 來源碼 + 6 位自增；取號與建檔同一交易 |
-| D8 | developer 逃生門 | 第 7 內建角色，繞過 Casbin+RLS；`DEVELOPER_ACCOUNT_ENABLED`（prod 預設關、誤開 fail-fast 拒絕啟動） |
+| D8 | developer 逃生門 | 第 7 內建角色，繞過 OpenFGA Check + RLS（`data_scope=all`）；`DEVELOPER_ACCOUNT_ENABLED`（prod 預設關、誤開 fail-fast 拒絕啟動） |
 | D9 | 角色權限 seed 預設、可調、防鎖死 | 7 內建角色 + `role_permissions` seed；Web 兩頁面（角色權限、API 權限）；company_admin 限自己公司 |
 | D10 | 統一軟刪除 | 業務實體 `deleted_at` + 部分唯一索引；復原=清欄位+寫稽核 |
 | D11 | metadicts 單表兩層可見性 | 系統預設（`department_id IS NULL`）+ 部門擴充；倉別/車次/分切規格/商品分類為獨立實體表 |
@@ -76,7 +76,7 @@
 
 ### In Scope
 - 自建全部主檔（客戶、商品、業務、倉別、車次、分切規格、商品分類、字典檔）
-- Company → Department 兩層租戶、三重防護（Casbin + RLS + CASL）
+- Company → Department 兩層租戶、雙防護（OpenFGA + RLS；CASL 已移除）
 - 銷售訂單（狀態機、編號取號、客戶專屬商品清單、手打商品別名；**不儲存金額**）、退貨申請（客戶發起/業務審核/退貨證明）
 - 派車看板（Kanban 拖放、批次確認、Connect 串流推播）
 - 四種單據列印（單車總表、車次對點單、揀貨單、加工單）

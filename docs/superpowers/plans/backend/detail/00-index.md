@@ -20,6 +20,7 @@
 | `07-notifications.md` | 4.3、4.4 | 通知範本、FCM/站內發送、裝置管理 |
 | `08-dispatch.md` | 5.1、5.2 | 派車、Connect 串流看板(僅後端) |
 | `09-printing.md` | 5.3–5.5 | 四種單據模板、Gotenberg、列印記錄 |
+| `10-fleet-execution.md` | 5.8–5.24（Phase 5.5,1.0 已補入參考計畫） | fleet 執行層：主檔/指派/定位/簽收/閉環/司機身分/停點/console/App（D32） |
 
 原計畫各 Phase 驗收 Task(1.12、2.12、3.9、4.8、5.7)不拆,驗收時回到原計畫勾選。
 
@@ -33,7 +34,7 @@
 
 1. **交易與稽核**:取號 + 建檔、狀態異動 + 事件軌跡、業務操作 + audit log,皆同一 DB 交易,同成功同失敗(D18)。子功能「實作邏輯」欄明確標出交易邊界。
 2. **軟刪除**:業務實體統一 `deleted_at` + 部分唯一索引(D10);查詢預設排除;復原 = 清欄位 + 寫稽核。特殊規則(如 `customer_products` qty=0 保留)於各子功能註明。
-3. **多租戶**:每筆業務資料帶 `company_id` / `department_id`;Casbin 管功能(domain = company_id)、RLS 管資料範圍(`data_scope` 等級)、CASL 管 UI(D3)。RLS 注入(`app.current_company_id` / `app.current_department_id` / `app.current_data_scope`)為最後防線。
+3. **多租戶**:每筆業務資料帶 `company_id` / `department_id`;OpenFGA 管功能/資源(租戶型別 + userset rewrite,對受保護 RPC `Check`、`list-objects` 做可見性)、RLS 管資料範圍(`data_scope` 等級)(D32;CASL 已移除)。RLS 注入(`app.current_company_id` / `app.current_department_id` / `app.current_data_scope`)為資料庫最後防線。
 4. **錯誤處理約定**:統一以 Connect code 表述 —
    - `unauthenticated`:登入失效、token_version 不符
    - `permission_denied`:角色/範圍不符、主帳號呼叫業務 API
@@ -108,9 +109,14 @@ flowchart LR
     F --> G
     E --> H[08-dispatch<br/>5.1-5.2]
     H --> I[09-printing<br/>5.3-5.5]
+    H --> J[10-fleet-execution<br/>5.8-5.24]
 ```
 
+新增 `10-fleet-execution`（D32）：授權引擎改 **OpenFGA + RLS**（取代本目錄其他文件對 Casbin/CASL 的描述，衝突處以 D32 為準）；fleet 領域為部門級；API 走 Connect-RPC。
+
 關鍵跨檔依賴:
+- fleet 相關(新增, D32):`10.3`(地址座標)相依 `04-master-data`(customer_addresses);`10.7`(OSRM)相依 `10.3` 的 shipping 座標。
+- `10.4`(指派)相依 `08-dispatch`(車次 `route_id` 裝單完成);`10.8`(OpenFGA)為 fleet 全部 RPC 授權前置。
 - `4.2.x`(下單邏輯)相依 `3.3.3`(單位換算)、`3.5.3`(別名建立)、`3.1.5`(偏好送貨日)。
 - `5.1.2`(批次 Confirm)相依 `4.1.3`(狀態機);`5.1.4`(派車通知)相依 `4.4`。
 - `4.7.5`(退貨推播稽核)相依 `4.3`/`4.4`、`2.6`。

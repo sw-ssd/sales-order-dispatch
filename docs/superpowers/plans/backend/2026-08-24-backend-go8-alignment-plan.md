@@ -4,6 +4,8 @@
 
 **Goal:** 將 D31 五項 go8 結構/工具慣例（集中 DI、cmd 拆分、config 逐檔 envconfig struct、third_party/、air+check+govulncheck）編碼進全部既有規劃文件，消除新路徑與既有計畫的衝突。
 
+> ⚠️ **D32 覆寫（2026-09-17）**：`Server` struct 中的「Casbin enforcer、casl `FieldRegistry`」依 D32 改為 **OpenFGA client**；`CASL_ENFORCEMENT_ENABLED` 相關失效（CASL 移除）。本計畫其餘 go8 結構慣例不變。
+
 **Architecture:** 全部為文件修訂，無程式碼產出。核心策略 = 00-index 新增「架構慣例」章節作為唯一權威（含術語映射表），其餘文件以五條轉換規則（R1–R5）批次套用，每條規則附 grep 驗證。不逐處改寫既有程式碼片段的業務內容，只改路徑/tag/函式名/組裝術語。
 
 **Tech Stack:** 文件編修；驗證用 grep（ripgrep 語法）。

@@ -5,6 +5,8 @@
 > 本文件為**唯一實作計畫**，整合原里程碑總覽與詳細任務清單；舊版計畫（`2026-07-16-sales-order-2.0-phase1.md`、`2026-07-17-multi-company-sales-order-1-0.md`、`2026-07-17-multi-company-sales-order-1-0-companies.md`、`2026-07-17-sales-order-1-0-milestones.md`）已於 2026-07-17 收斂刪除。
 > 每個 Task 包含 Goal、Files、Interfaces、Steps、Acceptance Criteria，使用 checkbox 追蹤。
 
+> ⚠️ **D32 覆寫（2026-09-17）**：授權機制由 **Casbin/CASL 改為 OpenFGA + RLS**（CASL 移除）。凡提及 Casbin 之 Task(1.2、2.10)與 CASL 之 Task(1.8、1.9、2.9)以 D32 為準(授權層見 `plans/backend/detail/01-auth.md` 1.2.x、`02-tenancy-users.md` 2.10、`10-fleet-execution.md` §10.8)。**新增 fleet 執行層 Phase 5.5（Task 5.8–5.11）**：fleet 主檔/指派/定位/簽收/OSRM，見下方 Phase 5.5 與 `plans/backend/detail/10-fleet-execution.md`（嚴格遵循 go8 架構）。
+
 ---
 
 ## 里程碑總覽
@@ -12,7 +14,7 @@
 | Phase | 名稱 | 目標 | 主要交付物 | 相依於 |
 |:---:|---|---|---|---|
 | 0 | 基礎建設 | 建立 monorepo、開發環境、專案骨架 | Taskfile、docker-compose、Go/SolidJS/Flutter 骨架、CI/CD | — |
-| 1 | 認證與授權 | 實作多租戶認證與 RBAC | OAuth2（Google Workspace）、JWT/Session、Casbin、RLS、CASL.js、開發者帳號 | Phase 0 |
+| 1 | 認證與授權 | 實作多租戶認證與授權 | OAuth2（Google Workspace）、JWT/Session、OpenFGA、RLS、開發者帳號（D32；Casbin/CASL 已移除） | Phase 0 |
 | 2 | 多租戶主檔 | 公司、部門、使用者、角色權限、字典、稽核 | companies/departments/users、roles/role_permissions、metadicts、audit_logs | Phase 1 |
 | 3 | 業務主檔 | 客戶、商品、倉庫、車次、分切規格 | customers、customer_counters、products、warehouses、routes、cutting_specs、customer_products | Phase 2 |
 | 4 | 訂單與通知 | 下單流程、狀態機、退貨、通知系統 | sales_orders、return_requests、notifications（FCM/站內） | Phase 3 |
@@ -30,7 +32,7 @@
 3. **軟刪除**：所有業務實體統一使用 `deleted_at`，查詢預設排除。
 4. **多租戶**：每筆業務資料皆帶 `company_id` / `department_id`，RLS 為最後防線。
 5. **測試**：每個 Phase 結束前需有對應單元測試與至少一條整合測試路徑；三端覆蓋率門檻 70%（CI 強制）。
-6. **文件**：每個 domain 新增時同步更新 API 文件與前端 ability 規則。
+6. **文件**：每個 domain 新增時同步更新 API 文件與前端權限規則（OpenFGA `Check` / `list-objects` 驅動；CASL 已移除，D32）。
 
 ---
 
@@ -300,22 +302,22 @@
 
 ---
 
-### Task 1.2: 實作 Casbin model 與 policy 儲存
+### Task 1.2: 實作 OpenFGA 授權 model 與 tuple 儲存(D32)
 
-**Goal:** 建立 RBAC with domain 授權模型。
+**Goal:** 建立 OpenFGA 資源級授權模型（租戶型別 + userset rewrite）。
 
 **Files:**
-- Create: `backend/config/casbin_model.conf`
-- Create: `backend/internal/authz/casbin.go`
+- Create: `backend/internal/authz/model.go`（OpenFGA authorization model）
+- Create: `backend/internal/authz/openfga.go`（Go SDK client + PostgreSQL store）
 
 **Interfaces:**
-- `authz.Enforcer` 提供 `Enforce(sub, dom, obj, act)`。
+- `authz` 提供 `Check(ctx, user, relation, object)` 與 `list-objects`（資源可見性）。
 
 **Steps:**
-- [ ] Step 1: 定義 Casbin model（`p, sub, dom, obj, act` / `g, _, _, _`）。
-- [ ] Step 2: 使用 PostgreSQL adapter 初始化 enforcer。
-- [ ] Step 3: 建立預設 policy seeder（super、company_admin、dept_admin、staff、customer 權限）。
-- [ ] Step 4: 寫單元測試驗證權限判斷。
+- [ ] Step 1: 定義 OpenFGA authorization model（`company`/`department`/`role`/`system` 型別 + 資源 relation + userset rewrite）。
+- [ ] Step 2: 以 OpenFGA Go SDK + PostgreSQL datastore 初始化 client（單一 store）。
+- [ ] Step 3: seed 預設 model 與角色→資源 tuple（super/company_admin/dept_admin/staff/customer，冪等）。
+- [ ] Step 4: 寫單元測試驗證 `Check` / `list-objects` 決策。
 
 **Acceptance Criteria:**
 - [ ] `staff` 無法存取其他部門資源。
@@ -448,9 +450,9 @@
 
 ---
 
-### Task 1.8: 實作 ability API
+### Task 1.8: 實作權限能力 API（OpenFGA 驅動,D32）
 
-**Goal:** 前端可取得當前使用者的 ability JSON。
+**Goal:** 前端可取得當前使用者可執行權限（由 OpenFGA `Check` / `list-objects` 聚合）。
 
 **Files:**
 - Create: `backend/internal/domain/auth/ability.go`
@@ -459,11 +461,11 @@
 - Connect-RPC：`AbilityService.GetAbility`
 
 **Steps:**
-- [ ] Step 1: 依 role + company + department 產生 ability 規則（Phase 1 先以內建預設規則實作；Phase 2 Task 2.9 起改由 `role_permissions` 表驅動）。
-- [ ] Step 2: 回傳 CASL.js 可消费的 JSON。
+- [ ] Step 1: 依當前身分由 OpenFGA `Check` / `list-objects` 聚合可執行權限（Phase 1 以 seed tuple；Phase 2 Task 2.9 起隨 `role_permissions`/tuple 異動）。
+- [ ] Step 2: 回傳權限清單（`permissions: [{resource, action}]`，非 CASL 格式）。
 
 **Acceptance Criteria:**
-- [ ] 前端可取得 ability 並正確控制按鈕顯示。
+- [ ] 前端可取得權限清單並正確控制按鈕顯示（OpenFGA 驅動）。
 
 ---
 
@@ -530,7 +532,7 @@
 - [ ] Step 1: `config/api.go` 新增 `DEVELOPER_ACCOUNT_ENABLED`（development 預設 true、production 預設 false）。
 - [ ] Step 2: 啟動防護：`ENV=production` 且開關為 true 時拒絕啟動（fail fast）。
 - [ ] Step 3: seed `developer` 角色（`is_system=true`、`data_scope=all`）；開發環境 seed 預設開發者帳號（僅 `ENV=development`）。
-- [ ] Step 4: middleware：developer 角色且開關啟用時，跳過 Casbin 檢查，RLS 注入 `data_scope=all`；開關關閉時 developer 帳號無法登入。
+- [ ] Step 4: middleware：developer 角色且開關啟用時，跳過 OpenFGA `Check`，RLS 注入 `data_scope=all`；開關關閉時 developer 帳號無法登入（D32）。
 - [ ] Step 5: developer 操作照常寫入 `audit_logs`。
 
 **Acceptance Criteria:**
@@ -547,7 +549,7 @@
 **Acceptance Criteria:**
 - [ ] 員工 OAuth2 登入流程完整。
 - [ ] 客戶密碼與 QR Code 登入完整。
-- [ ] Casbin + RLS 權限隔離正確。
+- [ ] OpenFGA + RLS 權限隔離正確。
 - [ ] 開發者帳號於開發環境可不受限制存取；開關關閉後無法登入。
 - [ ] 強制登出有效。
 - [ ] Web/App 皆可取得 ability。
@@ -724,7 +726,7 @@
 - [ ] Step 2: migration seed 七個內建角色（super/company_admin/dept_admin/staff/customer/guest/developer）與其功能權限（依規格書 3.2 定義；developer 角色已由 Phase 1 Task 1.11 建立）。
 - [ ] Step 3: 角色 CRUD API；內建角色（`is_system = true`）不可刪除、不可修改 `code` 與 `data_scope`；自訂角色必須指定 `data_scope`（`company` 或 `department`）。
 - [ ] Step 4: 角色功能權限編輯 API（resource × action 矩陣）。
-- [ ] Step 5: `AbilityService.GetAbility` 改為依 `role_permissions` 動態產生 CASL JSON。
+- [ ] Step 5: `AbilityService.GetAbility` 改為依 OpenFGA（`Check`/`list-objects`）動態產生權限清單（非 CASL，D32）。
 - [ ] Step 6: RLS 注入 `app.current_data_scope`，依角色 `data_scope` 決定資料範圍。
 
 **Acceptance Criteria:**
@@ -734,9 +736,9 @@
 
 ---
 
-### Task 2.10: API 權限管理 API（Casbin policy）
+### Task 2.10: 授權 tuple 管理 API（OpenFGA,D32）
 
-**Goal:** 以 Web 管理 Casbin policy，預設值依角色定義 seed。
+**Goal:** 以 Web 管理 OpenFGA 授權 tuple，預設值依角色定義 seed。
 
 **Files:**
 - Create: `backend/internal/domain/policies/*`
@@ -1247,6 +1249,183 @@
 - [ ] 派車看板即時同步。
 - [ ] 四種單據可正確產生 PDF。
 - [ ] 列印記錄完整。
+
+---
+
+## Phase 5.5: fleet 執行層（物流現場執行,D32）
+
+> D32:授權 OpenFGA + RLS、API Connect-RPC、後台指派、部門級。嚴格遵循 go8 架構(see `plans/backend/detail/10-fleet-execution.md`):`internal/domain/fleet/`(handler/usecase/repository/register/transformation 六欄)、`config/fleet.go`(OSRM/geocode)、`third_party/{openfga,osrm,geocode}`、Connect handler 於 `internal/server/domains.go` `InitDomains()` 掛載。
+
+### Task 5.8: fleet 主檔與車次指派（FleetService + AssignmentService）
+
+**Goal:** 建立部門級 fleet 主檔（fleets/vehicles/drivers/service_areas/zones）並以 OpenFGA + RLS 管隔離；把車次指派實際車輛/司機（後台,Fleetbase 粒度落在 `fleet_delivery`）。
+
+**Files:**
+- Create: `ent/schema/fleet.go`、`vehicle.go`、`driver.go`、`service_area.go`、`zone.go`、`fleet_delivery.go`
+- Create: `backend/internal/domain/fleet/{handler.go,usecase.go,repository.go,register.go,transformation.go}`
+- Create: `backend/internal/authz/openfga.go`（client,PostgreSQL store）
+- Create: `backend/config/fleet.go`
+- Update: `proto/v1/fleet.proto`（FleetService/AssignmentService）;`backend/internal/server/domains.go`（InitDomains 掛載）
+
+**Interfaces:**
+- `FleetService.CreateVehicle/CreateDriver/ListVehicle/ListDriver/SoftDelete*`
+- `AssignmentService.AssignRouteDelivery(route_id, driver_uuid, vehicle_uuid, version)`
+
+**Steps:**
+- [ ] Step 1: Ent schema（department 級 + `deleted_at`,`plate_no` 部分唯一索引）。
+- [ ] Step 2: migration 建表 + RLS policy `fleet_dept_isolation`（`app.current_department_id`/`data_scope`）。
+- [ ] Step 3: OpenFGA model 定義 fleet 資源 + type seed;RPC 進入點 `Check`、list `list-objects`。
+- [ ] Step 4: 後台把 `route_id` 指派到 `fleet_delivery`（`driver_assigned_uuid`/`vehicle_assigned_uuid`/`version` 樂觀鎖）。
+
+**Acceptance Criteria:**
+- [ ] 跨部門資料隔離（RLS + OpenFGA）;並發指派樂觀鎖拒絕。
+- [ ] 司機 App 收到指派清單（`order.driver_assigned` 經 Valkey 串流）。
+
+---
+
+### Task 5.9: 即時定位與追蹤串流（TrackingService）
+
+**Goal:** 司機上報位置並以 Connect server-streaming + Valkey pub/sub 廣播 `driver.location_changed`。
+
+**Files:**
+- Create: `ent/schema/position.go`
+- Create: `backend/internal/domain/fleet/tracking.go`
+- Update: `proto/v1/tracking.proto`（`TrackingService.SubmitPosition/SubscribePositions`）
+
+**Interfaces:**
+- `SubmitPosition(location, heading, speed)`;`SubscribePositions()`（server-streaming）
+
+**Steps:**
+- [ ] Step 1: `positions` Ent（`geography(Point)`）;RLS 部門級。
+- [ ] Step 2: Connect streaming 認證（cookie/JWT）;串流斷線重連全量重查、連續失敗降級 30s 輪詢。
+- [ ] Step 3: Valkey pub/sub 部門 channel 跨 replica 廣播（複用 D14 基礎設施）。
+
+**Acceptance Criteria:**
+- [ ] 司機上報 → 後台連線收到 `driver.location_changed`;跨部門連線不收;未認證拒連。
+
+---
+
+### Task 5.10: 配送執行、簽收與路線（DeliveryService + OSRM）
+
+**Goal:** 司機配送執行（開始/完成/取消）、POD 簽收（photo/signature/scan）、OSRM 路線/ETA。
+
+**Files:**
+- Create: `ent/schema/proof.go`;`backend/internal/domain/fleet/delivery.go`、`routing.go`
+- Create: `backend/third_party/osrm/osrm.go`、`backend/third_party/geocode/geocode.go`
+- Update: `proto/v1/fleet.proto`（`DeliveryService`/`RoutingService`）;`config/fleet.go`（OSRM_HOST/geocode）
+
+**Interfaces:**
+- `DeliveryService.Start/Complete/Cancel`;`RoutingService.GetRoute(delivery_id)`
+
+**Steps:**
+- [ ] Step 1: `fleet_deliveries` 狀態機 + `fleet_delivery_events` + 稽核同事務（D18）。
+- [ ] Step 2: POD 上傳（photo/signature/scan）走檔案資產（D17）。
+- [ ] Step 3: `customer_addresses(type=shipping)` 座標（地理編碼,缺座標不擋建檔）;OSRM 路線/ETA。
+
+**Acceptance Criteria:**
+- [ ] 完成 + POD 上傳成功、寫稽核與事件;非被指派司機操作被拒（OpenFGA Check）。
+- [ ] 全地址有座標 → 回路線 + ETA;缺座標 → `invalid_argument`。
+
+---
+
+### Task 5.11: fleet 執行層驗收（D32）
+
+**Goal:** 確認 fleet 執行層與授權/隔離完整。
+
+**Acceptance Criteria:**
+- [ ] OpenFGA Check + RLS 部門隔離正確;`list-objects` 回正確集合。
+- [ ] 指派 → 定位 → 配送 → 簽收全鏈路可走;未認證/跨部門/無權限皆被拒。
+
+---
+
+### Task 5.12: fleet 閉環延伸（A：每單回寫 / geofence / 通知,1.0）
+
+**Goal:** 讓 fleet 執行層閉環：車次完成回寫每單 `sales_order`、geofence 自動到站判定、通知走既有 D16。
+
+**Files:**
+- Create: `backend/internal/domain/fleet/geofence.go`、`notify.go`（D16 路由）;update `delivery.go`（每單回寫）
+- Update: `proto/v1/…`（`sales_order.delivered_date`）;`fleet-execution` 延伸
+
+**Steps:**
+- [ ] Step 1: `DeliveryService.Complete` 同交易逐筆回寫車次所載 `sales_order` → `delivered` + 事件 + 稽核（D18）。
+- [ ] Step 2: geofence（service_area/zone 空間判定）進入配送點自動標到站、提示 POD。
+- [ ] Step 3: fleet 事件接 D16 通知（指派推司機、送達推店家/主責業務）。
+
+**Acceptance Criteria:**
+- [ ] 完成車次後每單可見 `delivered`;司機進 zone 自動到站;指派/送達走 D16 通知。
+
+---
+
+### Task 5.21: 司機身分 / 角色（1.0,負載關鍵）
+
+**Goal:** `drivers` 關聯 users,以 OpenFGA driver relation + RLS data_scope 賦權;司機用既有 JWT 登入只取被指派任務。
+
+**Files:** `internal/domain/fleet/driver.go`;`internal/authz`(model 增 driver relation);`config/fleet.go`
+
+**Steps:**
+- [ ] Step 1: `drivers` Ent + `user_id` 關聯;建司機時事件流寫 OpenFGA driver/assignee tuple。
+- [ ] Step 2: 認證 middleware 後 OpenFGA 判定 assignee;`ListMyDeliveries`。
+- [ ] Step 3: App JWT 帶司機身分;RLS data_scope=department/self。
+
+**Acceptance Criteria:**
+- [ ] 司機登入僅見被指派任務;它人 403。
+
+---
+
+### Task 5.22: 配送停點 / waypoint 清單（1.0 簡版）
+
+**Goal:** `fleet_delivery` 依 `delivery_sequence` 展開為停點清單(客戶/地址/訂單/座標)。
+
+**Files:** `internal/domain/fleet/delivery.go`(`GetStops`);由 `fleet_deliveries`+`sales_order`+`customer_addresses` join 產出
+
+**Acceptance Criteria:**
+- [ ] 司機取得依序停點清單;缺座標標示不擋清單。
+
+---
+
+### Task 5.23: 後台車隊管理 + 執行地圖（1.0,console）
+
+**Goal:** 中台車隊 CRUD 頁 + Leaflet 即時執行地圖(Connect 串流訂閱 `driver.location_changed`)。
+
+**Files:** `frontend/src/routes/admin/fleet.tsx`、`live-map.tsx`;沿 4.1 既有 TanStack Query + Connect 串流慣例
+
+**Acceptance Criteria:**
+- [ ] 可 CRUD 車/司機/車隊;地圖即時移動 marker。
+
+---
+
+### Task 5.24: 司機 App 模式（1.0, Phase 6）
+
+**Goal:** App 司機模式:我的任務、逐站執行、上報位置、POD 簽收。
+
+**Files:** `app/lib/...`(driver mode;沿既有 App 基建 + JWT);POD 走檔案資產
+
+**Acceptance Criteria:**
+- [ ] 司機 App 可載入任務 → 逐站執行 → 上報 → POD 完成,fleet 閉環。
+
+---
+
+## Phase 5.6: fleet 延伸（1.1+,v1 後）
+
+> 以下 fleet 能力**不在 1.0**，納入 1.1+（或另行評估），避免 1.0 fleet 執行層過重。詳 `fleet-execution/spec.md` §1.1+ 延伸。
+
+### Task 5.13（1.1+）: 自動派單（距離最近司機、容量/車型匹配）
+### Task 5.14（1.1+）: 多點路線優化（VRP/TSP）
+### Task 5.15（1.1+）: 現場拒收 / 部分交付（串 D25 退貨）
+### Task 5.16（1.1+）: ETA 異常通知（遲到/偏離路線）
+### Task 5.17（1.1+）: 客戶/店家即時追蹤與 live map
+### Task 5.18（1.1+）: 車輛狀態 / 保養 / 出勤
+### Task 5.19（1.1+）: 司機 App 背景 GPS / 離線快取
+### Task 5.20（1.1+）: 每單 tracking 狀態鏈（Fleetbase tracking_numbers/statuses）
+### Task 5.25（1.1+）: 位置軌跡保留 / 回播 / 稽核
+### Task 5.26（1.1+）: fleet 報表與績效分析
+### Task 5.27（1.1+）: 多公司 fleet 視圖（super 跨公司）
+### Task 5.28（1.1+）: 出庫 / 裝車確認（銜接揀貨單）
+### Task 5.29（1.1+）: 司機簽到 / 離班 / 交接
+### Task 5.30（1.1+）: 重簽 / 作廢 POD（簽收時效操作）
+### Task 5.31（1.1+）: 同車次多車拆分（車次單過多拆多趟）
+### Task 5.32（1.1+）: 送達時窗（送達時段）
+### Task 5.33（1.1+）: 異常通報（事故 / 緊急停單）
 
 ---
 

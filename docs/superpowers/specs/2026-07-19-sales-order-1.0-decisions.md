@@ -1,4 +1,4 @@
-# 多公司訂出貨系統 1.0 — 決策記錄（D1–D28）
+# 多公司訂出貨系統 1.0 — 決策記錄（D1–D32）
 
 > 來源：原 `openspec/changes/sales-order-1-0/design.md`（OpenSpec 工作流已於 2026-08-03 停用，本檔為遷移後的**決策層 single source of truth**）。
 > 細節權威：`docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（v1.0.34，18 章完整設計規格，為細節欄位與流程的唯一權威參考）；執行計畫：`docs/superpowers/plans/reference/2026-07-17-sales-order-1-0-tasks.md`（v2.9.0）。
@@ -23,7 +23,7 @@
 **Goals:**
 
 1. 完全取代外部系統依賴：客戶、商品、業務、報價（以客戶專屬商品清單取代）等主檔全部自建。
-2. 多租戶：Company → Department 兩層架構，Casbin RBAC with domain（後端）+ PostgreSQL RLS（資料庫）+ CASL.js（前端）三重防護。
+2. 多租戶：Company → Department 兩層架構，OpenFGA（後端資源級授權，userset）+ PostgreSQL RLS（資料庫資料範圍）雙防護（D32；Casbin 與 CASL 已移除）。
 3. 強化營運流程：派車 Kanban 看板（Connect 串流即時推播）、四種單據列印（單車總表/對點單/揀貨單/加工單）、倉儲分切規格。
 4. 三端一致：Go 後端 + SolidJS 中台 + Flutter App，proto 為唯一 API 來源，三端型別皆由 proto 產生。
 5. 安全合規：稽核日誌同步寫入、資料保留期限、傳輸/儲存加密、備份與災難復原（RTO 4h / RPO 1h）。
@@ -61,6 +61,7 @@
 - **理由**：Casbin policy 若承載部門維度會爆炸（policy 數 = 角色 × 部門 × 資源）；RLS 是資料庫最後防線，即使 usecase 漏寫條件也不越界；`data_scope` 等級化讓自訂角色不必改程式即可獲得正確資料範圍。
 - **已考慮 alternative**：純應用層 where 條件 — 拒絕，漏一處即越權；Casbin 承載部門 — 拒絕，policy 維護不可行。
 - **修訂（2026-08-24, D30）**：新增 CASL 執行層管 resource 屬性/狀態條件；Casbin 與 RLS 職責不變。
+- **修訂（2026-09-17, D32）**：Casbin 與 CASL 移除，授權決策改由 OpenFGA（資源級/userset）；RLS 資料範圍（data_scope）職責不變，仍是資料庫最後防線。
 
 ### D4：Connect-RPC 為業務 API 唯一來源，REST 僅公開端點
 
@@ -89,12 +90,14 @@
 ### D8：開發者逃生門 — `developer` 角色繞過 Casbin + RLS，環境開關 + fail-fast 防誤開
 
 - **選擇**：第 7 內建角色 `developer`（`is_system=true`、`data_scope=all`），通過認證後 middleware 跳過 Casbin、RLS 注入 `data_scope=all`。`DEVELOPER_ACCOUNT_ENABLED`（dev 預設 true、prod 預設 false）；`ENV=production` 且開關為 true 時後端**拒絕啟動**；開發環境 seed 本機開發者帳號；developer 操作照常寫 `audit_logs`；上架/上線檢查清單必含關閉確認。
+- **修訂（2026-09-17, D32）**：developer 改為跳過 OpenFGA Check；RLS 注入 `data_scope=all` 邏輯不變；fail-fast 防護不變。
 - **理由**：開發/除錯需要跨租戶視角，但不能以犧牲生產隔離為代價；fail-fast 讓誤開在部署時爆炸而非靜默開洞。
 - **已考慮 alternative**：super 兼用 — 拒絕，super 本身受 policy 限制且會汙染權限模型；feature flag 遠端開關 — 拒絕，引入外部依賴，env + 啟動防護更簡單可靠。
 
 ### D9：角色與權限為 seed 預設值，Web 兩頁面可調，防鎖死
 
 - **選擇**：7 內建角色、功能權限（`role_permissions`：resource × action）與 Casbin policy 皆由 migration seed 建立（`is_system=true` 不可刪、不可改 `code`/`data_scope`）；super 可新增自訂角色（必須指定 `data_scope` 為 `company` 或 `department`）；Web 提供「角色權限設置」與「API 權限設置」兩頁面；`company_admin` 僅限自己公司 domain；policy 異動即時生效（`e.AddPolicy`/`RemovePolicy` 不重啟）；防止移除操作者自身角色的最後一個管理權限；所有權限異動寫稽核。
+- **修訂（2026-09-17, D32）**：Casbin policy 改由 OpenFGA tuple 承載；`role_permissions` 繼續作為角色/功能權限定義來源，異動時寫入 OpenFGA；`e.AddPolicy/RemovePolicy` 對應 OpenFGA Write/Delete tuple。
 - **理由**：預設值 seed 讓新環境開箱即用且權限模型可調整而不需改碼；防鎖死避免管理員把自己鎖在門外。
 - **已考慮 alternative**：權限硬編碼 — 拒絕，每家公司的職責切分不同，上線後調整需發版不可接受。
 
@@ -225,6 +228,7 @@
 - **理由**：Casbin/RLS 無法表達屬性/狀態級條件（如「staff 僅能取消 pending 訂單」）；前後端各一份權限來源有分歧風險。CASL JSON 為 isomorphic 格式，天然可跨端共享。
 - **已考慮 alternative**：goja 內嵌 JS runtime（效能/部署成本）；Ent interceptor 全域自動套用（難表達 action 語意、隱式難測）；獨立 casl_rules 表（兩份來源分歧）；欄位級遮罩 fields/rulesToFields（1.0 YAGNI）。
 - **修訂來源**：2026-08-24 設計文件 `docs/superpowers/specs/2026-08-24-casl-integration-design.md`。D3 三層分工隨之改為四參與者：Casbin（進入點）/ CASL 執行層（屬性條件）/ RLS（資料範圍）/ 前端 CASL（UI）。
+- **修訂（2026-09-17, D32）**：CASL 移除（本決策 D30 及其設計作廢）；前端 UI 權限改由 OpenFGA `Check` / `list-objects` 驅動，不引入第二權限模型。屬性/狀態條件以 OpenFGA `condition` 表達。
 
 ### D31：後端結構慣例對齊 go8（集中 DI / cmd 拆分 / config 逐檔 / third_party）
 
@@ -233,6 +237,19 @@
 - **不採納**：e2e 臨時容器 harness（D21 整合測試 + Phase 8 驗收已覆蓋）；OTel traces/logs（D19 已定 metrics-only）；protovalidate/validator（proto 強型別 + usecase 驗證承擔）；sqlx（與 Ent 重疊）；go8 REST/DB-session 風格（衝突 D4/D5）；`cmd/route`（API 面由 proto 定義）；go8 介面子套件分層（對既有計畫 churn 過大）。
 - **理由**：集中 DI 讓啟動依賴與 fail-fast 檢查一目瞭然；cmd 拆分讓 migrate/seed 不依賴 server 啟動；config 逐檔有 code completion 且新增 key 有明確歸檔流程。
 - 修訂來源：2026-08-24 設計文件 `docs/superpowers/specs/2026-08-24-backend-go8-structure-design.md`；參考 https://github.com/sowiner/go8。（插入位置依編號排序；D29/D30 條目由其各自計畫執行時補入本節。）
+
+### D32：整合 Fleetbase 物流「執行層」— 授權改 OpenFGA + RLS、fleet 部門級、Connect-RPC、後台指派、NetSuite 不接
+
+- **選擇**：
+  1. **授權模型改為 OpenFGA + RLS，移除 Casbin 與 CASL**：服務/資源層授權決策交由內嵌 OpenFGA（Go library、PostgreSQL datastore、單一 store）；`company` / `department` 為租戶型別 + `role`/`group`/`system`，`driver`/`vehicle`/`fleet_delivery` 等資源以租戶 parent 邊 + **userset rewrite**；middleware 對受保護 RPC 做 `Check`（boolean 決策）、`list-objects` 做資源可見性。**RLS（data_scope all/company/department/self）保留為資料庫層兜底**（沿用 D3 的 RLS 半部）。**CASL 移除**——前端 UI 權限直接由 OpenFGA `Check` / list-objects 驅動，不引入 CASL ability。此項**修訂 D3 / D8 / D9 / D30 的 Casbin 與 CASL 部分**；因 1.0 尚未實作，零遷移成本。
+  2. **fleet 執行層納入 1.0，部門級**：drivers/vehicles/fleets/service_areas/zones/fleet_deliveries/positions/proofs 皆帶 `company_id` + `department_id`，RLS data_scope = department（staff/dept_admin 看本部門、company_admin 看全部門、super 全公司）。
+  3. **API = Connect-RPC（沿用 D4）**：fleet 能力以 proto service 定義（`FleetService` / `AssignmentService` / `TrackingService` / `DeliveryService`），不另走 REST/chi。
+  4. **vehicle/driver 由後台指派，粒度依 Fleetbase**：driver+vehicle 指派落在 `fleet_delivery`（每筆帶 `driver_assigned_uuid` / `vehicle_assigned_uuid`，對齊 Fleetbase `Order.php`），非固定「車次↔車」1:1 表；一車一司機可服務多車次、可重指派（`version` 樂觀鎖）；自動派單（距離最近）明確排 v1 之後。
+  5. **NetSuite 不接 fleet**：fleet 執行層完全獨立、不與 NetSuite 同步或產生任何耦合。
+  6. **客戶送貨地址補座標**：`customer_addresses` 增加 `location geography(Point)` + 地理編碼（`shipping` 地址建立/更新時 geocode），供 OSRM 路線 / ETA；**不另引入 Fleetbase 式 places 模型**（master-data 保留地址簿為客戶子資源）；PostGIS 不可用時 fallback `latitude`/`longitude`。
+- **理由**：1.0 覆蓋「規劃/裝單」層，fleet 執行層補足「現場配送/追蹤/簽收」層（派車看板完成的車次需實際綁定車輛與司機執行）。授權改 OpenFGA 提供資源級/使用者集合（userset）授權，比 Casbin 角色 RBAC 更適合 fleet 的資源歸屬；RLS 續當資料庫最後防線；CASL 移除避免「前端第二權限模型」與 OpenFGA 重疊（單一授權來源）。
+- **已考慮 alternative**：保留 Casbin + CASL（1.0 原 D3/D30）— 已修訂，整合 fleet 需資源級授權與單一授權來源；OpenFGA 僅用於 fleet、核心保留 Casbin — 拒絕，兩套授權引擎並存增加維運與不一致風險；WebSocket / Redis hub — 衝突 D4/D5/D14（沿用 Connect 串流 + Valkey pub/sub）。
+- **修訂來源**：2026-09-17 Fleetbase 整合決策（Fleetbase 側 `FLEETBASE_物流平台重建_PLAN.md` 之 F1–F4）；詳細需求見 `docs/superpowers/specs/1.0-requirements/fleet-execution/spec.md`、細部實作 `docs/superpowers/plans/backend/detail/10-fleet-execution.md`、master-data 地址座標見 master-data spec。
 
 ## Risks / Trade-offs
 

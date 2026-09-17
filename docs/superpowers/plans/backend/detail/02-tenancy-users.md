@@ -6,16 +6,18 @@ depends_on: ["01-auth.md(Task 1.1 users schema、Task 1.2 Casbin、Task 1.3 RLS 
 decisions: [D3, D4, D5, D6, D7, D8, D9, D10, D17, D18, D20, D21]
 ---
 
-# 02 — 多租戶主檔:公司 / 部門 / 使用者 / 角色權限 / Policy 管理
+# 02 — 多租戶主檔:公司 / 部門 / 使用者 / 角色權限 / 授權 tuple 管理(D32)
 
 > 對應原計畫 Phase 2 的 Task 2.1、2.2、2.3、2.4、2.9、2.10(Task 2.5、2.6 見 `03-metadicts-audit.md`;Task 2.7、2.8、2.11 為前端,不在本文件)。
 > 子功能編號可雙向追溯原計畫 Task;每個子功能六欄(目標/檔案/介面/實作邏輯/錯誤處理/驗收)即為該單元的 done 定義。
 
+> ⚠️ **D32 覆寫(2026-09-17)**:本文件所述 **Casbin / CASL** 機制已被「授權改用 **OpenFGA + RLS**、CASL 移除」取代。`2.10`(API 權限管理)由「Casbin policy」改為 **OpenFGA tuple 管理**;`2.9` 的 CASL `GetAbility` 改為 OpenFGA 驅動的權限回應;RLS(data_scope)職責不變。詳細授權層見 `01-auth.md` 1.2.x 與 `10-fleet-execution.md` §10.8。凡與 D32 衝突處以 D32 為準。
+
 ## 共通規則(各子功能引用、不重複)
 
 1. **軟刪除(D10)**:`companies` / `departments` / `users`(僅客戶帳號)/ `roles`(僅自訂角色)統一 `deleted_at` + 部分唯一索引(`WHERE deleted_at IS NULL`);列表預設排除已刪除;復原 = 清 `deleted_at` + 寫稽核;員工帳號不刪除、僅停用(規格 4.1);內建角色 `is_system = true` 不可刪除(規格 5.4)。
-2. **多租戶(D3)**:業務資料帶 `company_id` / `department_id`;Casbin 管功能(domain = `company_id`)、RLS 管資料範圍(`data_scope` 等級,不依角色名稱)、CASL 管 UI;RLS session 變數注入為最後防線,usecase 層仍須自行加查詢條件。
-3. **交易與稽核(D18)**:主檔異動 + `audit_logs`、角色變更 + `token_version + 1`、policy 異動 + enforcer 更新,皆同一 DB 交易,同成功同失敗;稽核記錄 `before_snapshot` / `after_snapshot`。
+2. **多租戶(D32)**:業務資料帶 `company_id` / `department_id`;OpenFGA 管功能/資源(租戶型別 + userset rewrite,`Check` / `list-objects`)、RLS 管資料範圍(`data_scope` 等級,不依角色名稱);CASL 已移除。RLS session 變數注入為資料庫最後防線,usecase 層仍須自行加查詢條件。
+3. **交易與稽核(D18)**:主檔異動 + `audit_logs`、角色變更 + `token_version + 1`、授權 tuple 異動 + OpenFGA tuple 同步(audit 同事務),皆同一 DB 交易,同成功同失敗;稽核記錄 `before_snapshot` / `after_snapshot`。
 4. **錯誤約定**:統一 Connect code — `unauthenticated`(登入失效、公司停用後的已登入請求)、`permission_denied`(角色/範圍不符)、`not_found`(不存在或已軟刪除)、`failed_precondition`(狀態不允許、防鎖死阻擋、樂觀鎖衝突)、`invalid_argument`(格式驗證失敗)、`already_exists`(唯一約束衝突)。
 5. **company_admin 範圍**:凡「管理所屬公司」的操作,usecase 入口先比對操作者 `company_id` 與目標資源 `company_id`,不符即 `permission_denied`,RLS 兜底。
 
@@ -435,96 +437,100 @@ decisions: [D3, D4, D5, D6, D7, D8, D9, D10, D17, D18, D20, D21]
 
 ---
 
-## Task 2.10 API 權限管理 API(Casbin policy)
+## Task 2.10 授權 tuple 管理 API(OpenFGA,D32)
 
-### 子功能 2.10.1: 預設 p 規則 seed
+> D32 覆寫:本 Task 由「Casbin policy 管理」改為「OpenFGA tuple 管理」(角色→資源 relation 的 tuple)。RLS 與角色定義不變。
 
-- **目標**: 以 migration seed 各角色預設 Casbin p 規則,取代/承接 Task 1.2 程式內 seeder,使預設 API 權限開箱即用且可由 Web 調整(D9)。相依: `01-auth.md` Task 1.2(enforcer 與 adapter)
+### 子功能 2.10.1: 預設授權 model 與角色→資源 tuple seed(D32)
+
+- **目標**: 以 migration / seeder seed OpenFGA **authorization model 與角色→資源 relation tuple**,使預設 API 權限開箱即用且可由 Web 調整(D9)。相依: `01-auth.md` Task 1.2(OpenFGA client 與 store)
 - **檔案**:
-  - Create: `backend/database/migrations/000XX_casbin_policies_seed.sql`
-- **介面**: Casbin `casbin_rules` 表(ptype = p;v0 = role_code、v1 = domain、v2 = 資源路徑、v3 = 動作)。
-  - Connect-RPC 資源路徑 = RPC method path(如 `/v1.SalesOrderService.ListSalesOrders`),動作恆為 POST;REST 公開端點 = URL path + HTTP method(規格 3.3)。
+  - Create: `backend/internal/authz/model.go`(`dsl.Transform` 定義 model)
+  - Create: `backend/internal/authz/seed.go`(冪等 tuple seed)
+  - Create migration 或啟動時冪等 seeder
+- **介面**: OpenFGA store 寫入 type/relation 與 tuple(user/type、relation、object/type);`authz.EnsureModel(ctx, client)` + `authz.SeedDefaultTuples(ctx, client)`(冪等)。
+  - Connect-RPC 資源 object = RPC method path(如 `sales_order:/v1.SalesOrderService.ListSalesOrders`),relation = 動作(`reader`/`writer`/...);REST 公開端點 = URL path + HTTP method(規格 3.3)。
 - **實作邏輯**:
-  1. 依規格 3.2 角色定義與 3.3 授權模型,列出各角色對各 Service method 的預設允許規則;domain 一律為公司層級佔位(各公司 domain 的實際綁定由 g 規則承載)。
-  2. seed 採冪等寫法(不存在才插入),重複執行無副作用;已被 Web 調整過的環境不因重跑 migration 被覆寫。
-  3. `developer` 角色不 seed 任何 p 規則(其繞過由 middleware 實現,D8);`guest` 僅 seed 完成註冊所需的最小端點。
-  4. 程式內 seeder(Task 1.2 Step 3)改為僅在 migration 資料缺失時報錯提示,不再負責寫入,避免雙來源。
-  5. enforcer 啟動時自 PostgreSQL adapter 載入全部規則;seed 完成後首次啟動即生效。
-- **錯誤處理**: migration 層無 Connect code;語法/約束錯誤由 goose 中止並保留版本紀錄;冪等保證重複執行不報錯。
+  1. 依規格 3.2 角色定義與 3.3 授權模型,seed 各角色的 resourceset tuple(role→resource relation);租戶(parent)`company`/`department` 以 set/parent 邊承載公司與部門歸屬。
+  2. seed 採冪等寫法(不存在才寫入),重複執行無副作用;已被 Web 調整過的環境不因重跑被覆寫。
+  3. `developer` 角色不 seed 任何資源 tuple(其繞過由 middleware 實現,D8);`guest` 僅 seed 完成註冊所需的最小 resourceset。
+  4. 程式內 seeder(Task 1.2.3)與本 seed 分工一致,避免雙來源。
+  5. 服務啟動時經 OpenFGA listTuples / 載入 store 即生效;`EnsureModel` 前先寫 model。
+- **錯誤處理**: seed 失敗 → 啟動 fail-fast;冪等保證重複執行不報錯。
 - **驗收**:
-  - [ ] migration 後 `casbin_rules` 含與規格 3.2 一致的各角色預設 p 規則。
-  - [ ] enforcer 載入後,各角色對應 API 依預設規則放行/拒絕。
-  - [ ] 重複執行 migration 不產生重複規則、不覆寫 Web 調整結果。
+  - [ ] 部署後 OpenFGA store 含與規格 3.2 一致的各角色預設 resourceset tuple。
+  - [ ] 各角色對應 API 以 OpenFGA `Check` 依預設 tuple 放行/拒絕。
+  - [ ] 重複執行 seed 不產生重複 tuple、不覆寫 Web 調整結果。
 
-### 子功能 2.10.2: Policy CRUD 即時生效
+### 子功能 2.10.2: 授權 tuple CRUD 即時生效(D32)
 
-- **目標**: 提供 policy 的列表、新增、刪除,異動經 enforcer 記憶體更新即時生效,不需重啟(D9)。相依: 2.10.1
+- **目標**: 提供 OpenFGA **tuple** 的列表、新增、刪除,異動寫入 store 後即時生效,不需重啟(D9)。相依: 2.10.1
 - **檔案**:
   - Create: `backend/internal/domain/policies/handler.go`
   - Create: `backend/internal/domain/policies/usecase.go`
-  - Create: `backend/internal/domain/policies/repository.go`(casbin_rules 直操作 + enforcer 協調)
+  - Create: `backend/internal/domain/policies/repository.go`(OpenFGA store 寫讀 + `authz.Write/Delete/ListTuples`)
 - **介面**: Connect-RPC `PolicyService`
-  - `ListPolicies`(分頁、role / domain 篩選)→ p 規則陣列(role、domain、資源路徑、動作)
-  - `AddPolicy`(role、domain、資源路徑、動作)→ 新規則
-  - `DeletePolicy`(rule_id 或完整四元組)→ 空回應
+  - `ListPolicies`(分頁、role / company 篩選)→ resourceset tuple 陣列(user/type、relation、object)
+  - `AddPolicy`(role、租戶、資源、relation)→ 新 tuple
+  - `DeletePolicy`(tuple_key)→ 空回應
 - **實作邏輯**:
-  1. 寫入前驗證:role 必須存在(查 `roles`);資源路徑須為合法 RPC method path 或 REST path 格式;動作 Connect 端點僅允許 POST、REST 端點允許對應 HTTP method;任一不符回 `invalid_argument`。
-  2. Add:先查重(同四元組已存在回 `already_exists`);同一交易寫入 `casbin_rules` + `audit_logs`;交易提交成功後呼叫 enforcer 新增規則使記憶體態同步,提交失敗則不動記憶體,保證 DB 與記憶體一致。
-  3. Delete:同樣先 DB 交易(刪除 + 稽核)再更新記憶體;防鎖死檢查見 2.10.3。
-  4. 多 replica 一致性:異動提交後經 Valkey pub/sub 廣播 policy 變更事件(複用 D14 的跨 replica 廣播基礎設施),其他 replica 收到後自 adapter 重新載入規則;單體部署時此步驟無害。
-  5. List 依操作者範圍過濾(見 2.10.3);讀取直查 DB 而非記憶體,保證所見即持久態。
+  1. 寫入前驗證:user(type) 必須存在(查 `roles` / `users`);資源 object 須為合法 RPC method path 或 REST path 格式;relation 動作須為 model 已定義值;任一不符回 `invalid_argument`。
+  2. Add:先 `CheckRelationTuples` 查重(已存在回 `already_exists`);同一交易寫入 OpenFGA tuple + `audit_logs`(`authz.Write`);OpenFGA datastore 即持久態,無另需記憶體同步。
+  3. Delete:先交易(刪除 tuple + 稽核)再 `authz.Delete`;防鎖死檢查見 2.10.3。
+  4. 多 replica 一致性:異動提交後經 Valkey pub/sub 廣播 tuple 變更事件(複用 D14 基礎設施),其他 replica 重讀 OpenFGA store / 快取失效;單體部署時此步驟無害。
+  5. List 依操作者範圍過濾(見 2.10.3);讀取以 `listTuples` / `listObjects` 查 store,所見即持久態。
 - **錯誤處理**:
   - 未認證 → `unauthenticated`
-  - 無權限(非 super / company_admin,或跨 domain)→ `permission_denied`
-  - role 不存在、路徑/動作格式非法 → `invalid_argument`
-  - 重複新增同四元組 → `already_exists`
-  - 刪除不存在的規則 → `not_found`
+  - 無權限(非 super / company_admin,或跨公司)→ `permission_denied`
+  - role/user 不存在、object/relation 格式非法 → `invalid_argument`
+  - 重複新增同一 tuple → `already_exists`
+  - 刪除不存在的 tuple → `not_found`
   - 觸發防鎖死 → `failed_precondition`(見 2.10.3)
 - **驗收**:
-  - [ ] 新增 policy 後,對應角色下一次 API 呼叫即被放行,無需重啟。
-  - [ ] 刪除 policy 後,對應呼叫即被拒絕。
-  - [ ] 重啟後異動結果仍存(DB 為準,記憶體重新載入一致)。
-  - [ ] 每筆異動寫入 `audit_logs` 且與規則異動同事務。
+  - [ ] 新增 tuple 後,對應角色下一次 API 呼叫即被放行,無需重啟。
+  - [ ] 刪除 tuple 後,對應呼叫即被拒絕。
+  - [ ] 重啟後異動結果仍存(OpenFGA datastore 為準)。
+  - [ ] 每筆異動寫入 `audit_logs` 且與 tuple 異動同事務。
 
-### 子功能 2.10.3: domain 範圍控制 + 防鎖死
+### 子功能 2.10.3: 公司範圍控制 + 防鎖死(D32)
 
-- **目標**: `super` 管理全域 policy,`company_admin` 僅限自己公司 domain;防止移除操作者自身角色的最後一個管理權限(D9)。相依: 2.10.2
+- **目標**: `super` 管理全域 tuple,`company_admin` 僅限自己公司;防止移除操作者自身角色的最後一個管理權限(D9)。相依: 2.10.2
 - **檔案**:
   - Update: `backend/internal/domain/policies/usecase.go`
 - **介面**: 無新增 RPC;為 2.10.2 各 RPC 與 2.10.4 的前置判斷規則。
 - **實作邏輯**:
-  1. domain 範圍判斷:
-     a. `super`:可操作任意 domain 的 policy。
-     b. `company_admin`:List 強制過濾自己公司 domain;Add 的 domain 參數必須等於自己公司;Delete 先查目標規則 domain 再比對;不符一律 `permission_denied`(規格 3.3)。
+  1. 公司(租戶)範圍判斷:
+     a. `super`:可操作任意公司(租戶)的 tuple。
+     b. `company_admin`:List 強制過濾自己公司租戶;Add 的租戶必須等於自己公司;Delete 先 `listTuples` 找目標 tuple 再比對租戶;不符一律 `permission_denied`。
      c. 其餘角色不開放 PolicyService 寫入。
   2. 防鎖死檢查(Delete 與 2.9.2 角色異動連動):
-     a. 刪除 policy 前,若該規則屬於「操作者自身角色於該 domain 的 policy 管理能力」(即 PolicyService 相關 method 的允許規則),檢查刪除後該角色在該 domain 是否仍有至少一條 policy 管理規則。
+     a. 刪除 tuple 前,若該 tuple 授予「操作者自身角色在此租戶的 policy 管理能力」(即 PolicyService 相關 relation),檢查刪除後該角色是否仍有至少一條可管理授權的 relation。
      b. 若為最後一條,拒絕刪除並回 `failed_precondition`,訊息指明會造成管理權限鎖死。
-     c. 同一交易內完成檢查與刪除,避免併發下兩個請求各自通過檢查(檢查查詢與刪除同交易,由交易隔離保證)。
-  3. `super` 角色的全域管理規則同受防鎖死保護:不可刪到 super 失去 PolicyService 管理能力。
-  4. 所有異動寫 `audit_logs`(resource_type = casbin_policy,快照含規則四元組),同事務。
+     c. 同一交易內完成檢查與刪除,避免併發下兩個請求各自通過檢查(檢查與刪除同交易、以 `Write` 的條件/交易語意保證)。
+  3. `super` 角色的全域管理 relation 同受防鎖死保護:不可刪到 super 失去 PolicyService 管理能力。
+  4. 所有異動寫 `audit_logs`(resource_type = authorization_tuple,快照含 tuple_key),同事務。
 - **錯誤處理**:
-  - `company_admin` 查/增/刪其他公司 domain 的 policy → `permission_denied`
+  - `company_admin` 查/增/刪其他公司租戶的 tuple → `permission_denied`
   - 非管理角色呼叫 → `permission_denied`
   - 刪除將移除自身最後管理權限 → `failed_precondition`
 - **驗收**:
-  - [ ] `company_admin` 僅見、僅能改自己公司 domain 的 policy;對他公司 domain 操作回 `permission_denied`。
-  - [ ] 嘗試刪除操作者自身角色最後一條 policy 管理規則時被拒,系統不鎖死。
+  - [ ] `company_admin` 僅見、僅能改自己公司租戶的 tuple;對他公司操作回 `permission_denied`。
+  - [ ] 嘗試刪除操作者自身角色最後一條可管理授權的 relation 時被拒,系統不鎖死。
   - [ ] 併發刪除情境下防鎖死仍成立(同事務檢查)。
-  - [ ] super 全域管理規則同受保護。
+  - [ ] super 全域管理 relation 同受保護。
 
-### 子功能 2.10.4: ListGrouping(g 規則檢視)
+### 子功能 2.10.4: 指派檢視(List user→role tuples)
 
-- **目標**: 提供 Casbin g 規則(使用者 → 角色 @ domain)的唯讀檢視,供 Web 權限管理頁核對指派現況。相依: 2.10.2
+- **目標**: 提供**使用者 → 角色指派**的 OpenFGA tuple 唯讀檢視,供 Web 權限管理頁核對指派現況(D32)。相依: 2.10.2
 - **檔案**:
   - Update: `backend/internal/domain/policies/handler.go`
   - Update: `backend/internal/domain/policies/usecase.go`
-- **介面**: Connect-RPC `PolicyService.ListGrouping`(分頁、role / domain / user 篩選)→ g 規則陣列(user、role、domain)。
+- **介面**: Connect-RPC `PolicyService.ListGrouping`(分頁、role / 公司 / user 篩選)→ 指派 tuple 陣列(user、role、公司租戶)。
 - **實作邏輯**:
-  1. 唯讀查詢,直查 `casbin_rules`(ptype = g),不讀 enforcer 記憶體。
-  2. 範圍控制:`super` 見全部;`company_admin` 強制過濾自己公司 domain;其餘角色不開放。
-  3. 支援依 user / role / domain 組合篩選與分頁;結果附對應使用者顯示名稱與角色名稱(join `users` / `roles`,僅顯示用途)。
-  4. g 規則的新增/移除不由本 RPC 提供 — 使用者角色指派統一走 2.3.1 `AssignRole`(單一寫入路徑,避免雙來源);本 RPC 僅檢視。
+  1. 唯讀查詢,以 `authz.ListObjects` / `listTuples`(relation = assignee)查 OpenFGA store。
+  2. 範圍控制:`super` 見全部;`company_admin` 強制過濾自己公司租戶;其餘角色不開放。
+  3. 支援依 user / role / 公司組合篩選與分頁;結果附對應使用者顯示名稱與角色名稱(join `users` / `roles`,僅顯示用途)。
+  4. 指派 tuple 的新增/移除不由本 RPC 提供 — 使用者角色指派統一走 2.3.1 `AssignRole`(單一寫入路徑,經事件流寫 OpenFGA,避免雙來源);本 RPC 僅檢視。
 - **錯誤處理**:
   - 未認證 → `unauthenticated`
   - 非 super / company_admin 呼叫 → `permission_denied`

@@ -66,8 +66,8 @@ backend/
 ## 3. DI 與啟動流程
 
 - `cmd/server/main.go` 極薄：`config.New()` → `server.New(cfg)` → `s.Init()` → `s.Run()`。
-- `Server` struct 持有：Config、`*ent.Client`、Valkey client、Casbin enforcer、casl `FieldRegistry`、scs manager、chi router——一眼可見伺服器全部依賴。
-- `Init()` 集中全部 fail-fast 啟動檢查（現行計畫散落各處者歸位）：DB/Valkey 連線、Casbin enforcer 初始化與預設 policy seed、`JWT_SECRET` 存在、production+`DEVELOPER_ACCOUNT_ENABLED` 拒啟（1.11.1）、CASL fixture 自驗（D30-3）。
+- `Server` struct 持有：Config、`*ent.Client`、Valkey client、OpenFGA client、scs manager、chi router——一眼可見伺服器全部依賴（D32；Casbin enforcer 與 casl `FieldRegistry` 已移除）。
+- `Init()` 集中全部 fail-fast 啟動檢查（現行計畫散落各處者歸位）：DB/Valkey 連線、OpenFGA store 初始化與預設 type/relation seed、`JWT_SECRET` 存在、production+`DEVELOPER_ACCOUNT_ENABLED` 拒啟（1.11.1）（CASL fixture 自驗已隨 D32 移除）。
 - `InitDomains()` 每 domain 一行組裝鏈（repo→usecase→handler），Connect handler 掛 chi router；新增 domain 只動此一檔。
 
 ## 4. config 逐檔 struct

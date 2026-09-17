@@ -5,6 +5,8 @@
 > - 相依文件:無(本文件為所有 domain 的前置);被相依:`02-tenancy-users.md`(2.9 接管 1.8)、其餘全部文件(認證 middleware、RLS 注入、稽核入口)。
 > - 範圍註記:Task 1.9(前端登入與路由守衛)、1.10(App 登入)為前端/App 範圍,不在本文件;本文件僅提供其所需後端介面(1.4 導向端點、1.6 JWT/refresh、1.8 ability、3.8 QR token 見 `04-master-data.md`)。
 
+> ⚠️ **D32 覆寫(2026-09-17)**:本文件所述 **Casbin / CASL** 機制已被「授權改用 **OpenFGA + RLS**、CASL 移除」取代。凡與 D32 衝突處以 D32 為準;`1.2.x` enforcer 改為 OpenFGA client(見下)、`1.8.x` CASL JSON 改為 OpenFGA 驅動的權限回應、`1.11.x` developer 繞過 OpenFGA **Check**(RLS 注入不變)。詳細授權層實作模式見 `10-fleet-execution.md` §10.8。
+
 ---
 
 ## 共通規則
@@ -13,7 +15,7 @@
 
 1. **交易與稽核**:登入成功/失敗、強制登出、密碼重置、guest 審核等關鍵操作與 audit log 寫入皆同一 DB 交易(D18);外部呼叫(如 OIDC token 交換)不納入交易。
 2. **軟刪除**:`users` 採 `deleted_at` 軟刪除,查詢預設排除;唯一性以部分唯一索引處理(D10)。
-3. **多租戶**:`users` 帶 `company_id` / `department_id`;Casbin 管功能(domain = company_id)、RLS 管資料範圍、CASL 管 UI(D3)。RLS 注入為最後防線。
+3. **多租戶**:`users` 帶 `company_id` / `department_id`;OpenFGA 管功能/資源、RLS 管資料範圍(D32;CASL 已移除)。RLS 注入為資料庫最後防線。
 4. **錯誤處理**:統一以 Connect code 表述;認證失敗一律 `unauthenticated` 且不透露帳號是否存在;授權失敗 `permission_denied`。
 5. **密碼安全**:雜湊一律 Argon2id;密碼、refresh token 僅存雜湊,不明文落盤、不入稽核快照。
 
@@ -73,49 +75,52 @@
   - [ ] 同客戶建立第二個 `is_primary = true` 帳號被 DB 拒絕。
   - [ ] `task backend:ent:gen` 產生碼可編譯(原 Task 1.1 驗收)。
 
-## 子功能 1.2.1: Casbin model 定義
+## 子功能 1.2.1: OpenFGA 授權模型與 store 初始化(D32)
 
-- **目標**: 定義 RBAC with domain 授權模型,功能權限以 domain = company_id 隔離(D3)。
+- **目標**: 以 OpenFGA 定義資源級授權(型別/relations/userset rewrite),取代 Casbin RBAC with domain。相依: D32、`10-fleet-execution.md` §10.8(同模式)。
 - **檔案**:
-  - Create `backend/config/casbin_model.conf`
-- **介面**: model 字串:`request = sub, dom, obj, act`;`policy = p, sub, dom, obj, act`;`role = g, _, _, _`(使用者→角色、角色繼承均在 domain 內);matcher 比對 `sub`/`dom` 相等 + `obj`/`act` keyMatch。
+  - Create `backend/internal/authz/openfga.go`(client + store 初始化)
+  - Create `third_party/openfga`(client,PostgreSQL datastore、單一 store)
+- **介面**: `authz.NewClient(cfg) (*openfga.Client, error)`;`authz.Check(ctx, user, relation, object) (bool, error)`;`authz.ListObjects(...)`(資源可見性);`authz.Write / Delete(tuples)`。
 - **實作邏輯**:
-  1. `dom` 一律帶 company_id;`super` 與 `developer` 不靠 model 特判,分別由 policy(seeder 發全域規則)與 middleware(1.11.2)處理。
-  2. `obj` 命名慣例:domain 資源路徑(如 `customers`、`sales_orders`);`act` 對齊 CRUD 動詞,供 2.9.3 功能權限矩陣與 2.10 policy 管理共用詞彙。
-- **錯誤處理**: model 檔語法錯誤 → enforcer 初始化失敗,啟動 fail-fast。
+  1. 型別:`company` / `department` 租戶型別 + `role`/`group`/`system`;資源(`driver`/`vehicle`/`fleet_delivery`/...)以租戶 parent 邊 + **userset rewrite** 繼承,不必逐筆 tuple。
+  2. 資源名稱詞彙對齊功能權限(如 `customers`、`sales_orders`、`roles`),供功能權限矩陣與 API 權限管理(**2.10 改為 tuple 管理**)共用。
+  3. client singleton 注入 middleware(1.6.5)與各 domain handler。
+- **錯誤處理**: store 初始化失敗 → 啟動 fail-fast;`Check` 執行期錯誤記 log 並 deny(預設拒絕)。
 - **驗收**:
-  - [ ] enforcer 以 model 初始化成功;`Enforce("u1","c1","customers","read")` 可依 policy 正確回應 allow/deny。
+  - [ ] 定義 company/role 型別 + userset rewrite 後,`Check`(user: 角色, relation: write, object: company::...::sales_order) 依 tuple/userset 正確 allow/deny。
 
-## 子功能 1.2.2: PostgreSQL adapter 初始化
+## 子功能 1.2.2: OpenFGA tuple 持久化與多 replica 一致性(D32)
 
-- **目標**: Casbin policy 持久化於 PostgreSQL,多 replica 共享同一份規則。`相依: 1.2.1`
+- **目標**: 授權 tuple 存於 PostgreSQL(OpenFGA datastore),多 replica 共享同一份規則。`相依: 1.2.1`
 - **檔案**:
-  - Create `backend/internal/authz/casbin.go`
-  - Create 對應 migration(`casbin_rule` 表)
-- **介面**: `authz.NewEnforcer(db, modelPath) (*authz.Enforcer, error)`;`Enforcer.Enforce(sub, dom, obj, act) (bool, error)`;`Enforcer.AddPolicy / RemovePolicy / ListPolicies`(供 2.10 使用)。
+  - Update `backend/internal/authz/openfga.go`
+  - Create 對應 migration(OpenFGA datastore 表,僅後端存取、不加 RLS)
+- **介面**: `authz.Write / Delete / ListTuples`(供 2.10 轉為 tuple 管理使用)。
 - **實作邏輯**:
-  1. 以 pgx adapter 初始化;`casbin_rule` 表與業務表同庫,不加 RLS(內部表,僅後端存取)。
-  2. `AddPolicy`/`RemovePolicy` 後呼叫 `LoadPolicy` 或開啟 auto-notify,確保多 replica 即時生效(2.10.2 完整處理;此處先保證單機正確)。
-  3. enforcer 以 singleton 注入 middleware(1.6.5)與各 domain handler。
-- **錯誤處理**: DB 連線失敗 → 啟動 fail-fast;`Enforce` 執行期錯誤記 log 並 deny(預設拒絕)。
+  1. OpenFGA 以 PostgreSQL datastore 儲存 tuple(單一 store);內部表與業務表同庫、僅後端存取。
+  2. tuple 異動經 Valkey pub/sub 廣播(複用 D14 跨 replica 基礎設施),其他 replica 重讀 store。
+  3. 角色/指派/資源歸屬異動**經事件流同步寫入 OpenFGA tuple**(見 `10-fleet-execution.md` §10.8),不在業務 handler 內同步處理。
+- **錯誤處理**: datastore 連線失敗 → 啟動 fail-fast;寫入失敗回寫稽核並提示。
 - **驗收**:
-  - [ ] 重啟後 policy 仍存在;新增規則後不重啟即生效。
+  - [ ] 重啟後 tuple 仍存在;新增 role→resource tuple 後不重啟即生效。
 
-## 子功能 1.2.3: 預設 policy seeder
+## 子功能 1.2.3: 預設授權 model 與 type/relation seed(D32)
 
-- **目標**: 部署後內建五角色(super/company_admin/dept_admin/staff/customer)具備規格定義的預設功能權限。`相依: 1.2.2`
+- **目標**: 部署後內建角色(super/company_admin/dept_admin/staff/customer)具備規格定義的預設功能權限,以 OpenFGA **authorization model + 預設 tuple** seed。`相依: 1.2.2`
 - **檔案**:
-  - Create `backend/internal/authz/seed.go`
+  - Create `backend/internal/authz/model.go`(以 `dsl.Transform` 注入 model)
+  - Create `backend/internal/authz/seed.go`(冪等)
   - Create seed migration 或啟動時冪等 seeder
-- **介面**: `authz.SeedDefaultPolicies(ctx, enforcer) error`(冪等)。
+- **介面**: `authz.EnsureModel(ctx, client) error`(確保 type/relation/userset 定義存在);`authz.SeedDefaultTuples(ctx, client) error`(冪等)。
 - **實作邏輯**:
-  1. 依規格 §3.4 預設矩陣建立各角色 `p` 規則;`super` 發全域規則(dom = `*`)。
-  2. seeder 冪等:以「規則不存在才新增」方式執行,重跑不產生重複列;使用者後續於 2.10 調整過的規則不被覆蓋(seeder 只補缺,不還原)。
-  3. `g` 規則(使用者→角色指派)不在 seeder,由 2.3.1 使用者 CRUD 動態建立。
-- **錯誤處理**: seed 失敗 → 啟動 fail-fast(無預設權限的系統不可用)。
+  1. 依規格 §3.4 預設矩陣建立**model**:型別 `company` / `department` / `role`/`group`/`system` + 資源(`sales_order`/`customer`/`role`/...)與其 relation(`writer`/`reader`/`assignee`…);以 **userset rewrite** 承載「角色→action→資源」,`super` 以 `system` 型別對全域資源建 relation。
+  2. seeder 冪等:以「type/relation 不存在才建立、tuple 不存在才寫入」方式執行,重跑不重複;使用者後續於 2.10 調整的 tuple 不被覆蓋(只補缺,不還原)。
+  3. 使用者→角色指派(**對應原 `g` 規則**)不在 seeder,由 2.3.1 使用者 CRUD / 角色變更**經事件流寫入 OpenFGA tuple**(見 `10-fleet-execution.md` §10.8)。
+- **錯誤處理**: seed 失敗 → 啟動 fail-fast(無預設授權的系統不可用)。
 - **驗收**:
-  - [ ] 全新部署後:`staff` 無法存取他部門資源、`company_admin` 可跨部門限自己公司、`super` 可存取所有公司(原 Task 1.2 驗收)。
-  - [ ] 重跑 seeder 不產生重複 policy、不覆蓋人工調整。
+  - [ ] 全新部署後:`staff` 無法存取他部門資源、`company_admin` 可跨部門限自己公司、`super` 可存取所有公司(以 OpenFGA `Check` 驗證)。
+  - [ ] 重跑 seeder 不產生重複 type/tuple、不覆蓋人工調整。
 
 ## 子功能 1.3.1: RLS policy migration
 
@@ -352,13 +357,13 @@
 
 ## 子功能 1.6.5: Authenticate middleware
 
-- **目標**: 統一解析 Web cookie session 與 Bearer JWT,注入身分供 Casbin、RLS、handler 使用。`相依: 1.6.1、1.6.2、1.6.4`
+- **目標**: 統一解析 Web cookie session 與 Bearer JWT,注入身分供 OpenFGA、RLS、handler 使用(D32)。`相依: 1.6.1、1.6.2、1.6.4`
 - **檔案**:
   - Create `backend/internal/middleware/auth.go`
-- **介面**: `middleware.Authenticate(sessionManager, enforcer, db)`;產出 ctx identity(user_id/role/company_id/department_id/customer_id/is_primary/data_scope),供 `rls.SetContext`(1.3.2)與各 handler。
+- **介面**: `middleware.Authenticate(sessionManager, openfgaClient, db)`;產出 ctx identity(user_id/role/company_id/department_id/customer_id/is_primary/data_scope),供 `rls.SetContext`(1.3.2)與各 handler。
 - **實作邏輯**:
   1. 依請求類型擇一:有 cookie → session 路徑;有 `Authorization: Bearer` → JWT 路徑;兩者皆無 → `unauthenticated`。
-  2. 身分確立後依序:公司 `status` 檢查(2.1.3 連鎖阻斷)→ `tv` 比對(1.6.4)→ 主帳號業務 API 限制(1.5.1:`is_primary` 且路徑屬業務 RPC → `permission_denied`)→ Casbin `Enforce`(1.2.2)→ `rls.SetContext`。
+  2. 身分確立後依序:公司 `status` 檢查(2.1.3 連鎖阻斷)→ `tv` 比對(1.6.4)→ 主帳號業務 API 限制(1.5.1:`is_primary` 且路徑屬業務 RPC → `permission_denied`)→ OpenFGA `Check`(1.2.1)+ `list-objects` 資源可見性 → `rls.SetContext`(D32)。
   3. 公開端點(1.4.1/1.4.2、2.4.3、3.8 兌換)以路由白名單跳過本 middleware。
   4. developer 繞過在 1.11.2 疊加於此 middleware 之後。
 - **錯誤處理**: 未登入/憑證無效 → `unauthenticated`;權限不足 → `permission_denied`;公司停用 → `unauthenticated`(附公司停用碼供前端提示)。
@@ -409,13 +414,13 @@
 - **驗收**:
   - [ ] dept_admin 可強登自己部門帳號、不可強登他部門;稽查 log 可查到操作記錄。
 
-## 子功能 1.8.1: 內建預設規則產生 CASL JSON
+## 子功能 1.8.1: 權限能力回應(OpenFGA 驅動;CASL 已移除,D32)
 
-- **目標**: 前端取得當前使用者的 CASL ability JSON,控制選單與按鈕顯示(Phase 1 先以內建規則;Phase 2 `2.9.4` 起改由 `role_permissions` 表驅動,屆時本子功能僅保留序列化層)。
+- **目標**: 前端取得當前使用者的可執行權限回應(由 OpenFGA `Check` / `list-objects` 聚合而成),控制選單與按鈕顯示。**CASL 已移除**(D32),不再產生 CASL.js 格式或引入 `@casl/ability`。
 - **檔案**:
   - Create `backend/internal/domain/auth/ability.go`
   - Update proto(`AbilityService`)
-- **介面**: Connect-RPC `AbilityService.GetAbility() → { rules: [{action, subject, conditions?, inverted?}] }`（CASL.js 可消費的 JSON；保留字 `manage`/`all`）。
+- **介面**: Connect-RPC `AbilityService.GetAbility() → { permissions: [{resource, action}] }`（由 OpenFGA 依當前身分查 `list-objects` / 角色權限聚合;前端 UI 依此啟用/隱藏,資料範圍由 RLS 承擔）。
 - **實作邏輯**:
   1. 規則來源為 `role_permissions`（2.9.4 接管後）；Phase 1 無表時以硬編碼預設矩陣產生。規則格式：`{action, subject, conditions?, inverted?}`，陣列順序 = `sort_order` 升冪；conditions 帶 `${user.company_id}` 等佔位符，由前端 CASL 直接消費（佔位符於後端產生時已以身分展開為具體值）。
   2. 規則詞彙(action/subject)與 Casbin `act`/`obj`(1.2.1)同源,避免前後端權限語意分歧;主帳號額外附加「僅帳號管理」反向規則。
@@ -440,13 +445,13 @@
 
 ## 子功能 1.11.2: developer middleware 繞過
 
-- **目標**: developer 角色且開關啟用時跳過 Casbin 並以 `data_scope = all` 注入 RLS,可跨公司/部門存取所有 API。`相依: 1.6.5、1.3.3、1.11.1`
+- **目標**: developer 角色且開關啟用時跳過 OpenFGA **Check** 並以 `data_scope = all` 注入 RLS,可跨公司/部門存取所有 API(D32)。`相依: 1.6.5、1.3.3、1.11.1`
 - **檔案**:
   - Create `backend/internal/middleware/developer.go`
-- **介面**: 疊加於 `Authenticate` 之後的 middleware:身分 `role = developer` 且開關啟用 → 設定 identity `data_scope = all`、`bypass_casbin = true`。
+- **介面**: 疊加於 `Authenticate` 之後的 middleware:身分 `role = developer` 且開關啟用 → 設定 identity `data_scope = all`、`bypass_openfga_check = true`(D32)。
 - **實作邏輯**:
   1. 繞過只發生在「開關啟用 + 身分為 developer」同時成立;開關關閉時 developer 帳號於登入階段即被拒(1.11.3 seed 不建/登入擋下)。
-  2. 繞過 Casbin 但**不繞過稽核**:developer 操作照常寫 `audit_logs`(原 Task 1.11 要求),actor 標記 developer。
+  2. 繞過 OpenFGA **Check** 但**不繞過稽核**:developer 操作照常寫 `audit_logs`(原 Task 1.11 要求),actor 標記 developer(D32);RLS 注入 `data_scope=all` 邏輯不變。
   3. 寫入操作仍須依 1.3.3 規則顯式帶入目標 `company_id`/`department_id`。
 - **錯誤處理**: 開關關閉下出現 developer 身分 → `unauthenticated` 並記 security log(異常狀態)。
 - **驗收**:
