@@ -45,6 +45,30 @@ func (f CustomerFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, er
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.CustomerMutation", m)
 }
 
+// The CustomerAddressFunc type is an adapter to allow the use of ordinary
+// function as CustomerAddress mutator.
+type CustomerAddressFunc func(context.Context, *ent.CustomerAddressMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f CustomerAddressFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.CustomerAddressMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.CustomerAddressMutation", m)
+}
+
+// The CustomerContactFunc type is an adapter to allow the use of ordinary
+// function as CustomerContact mutator.
+type CustomerContactFunc func(context.Context, *ent.CustomerContactMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f CustomerContactFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.CustomerContactMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.CustomerContactMutation", m)
+}
+
 // The CustomerCounterFunc type is an adapter to allow the use of ordinary
 // function as CustomerCounter mutator.
 type CustomerCounterFunc func(context.Context, *ent.CustomerCounterMutation) (ent.Value, error)

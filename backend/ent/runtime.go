@@ -8,6 +8,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/auditlog"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customer"
+	"github.com/salesorder/sales-order-1.0/backend/ent/customeraddress"
+	"github.com/salesorder/sales-order-1.0/backend/ent/customercontact"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customercounter"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
@@ -65,6 +67,50 @@ func init() {
 	customer.DefaultUpdatedAt = customerDescUpdatedAt.Default.(func() time.Time)
 	// customer.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	customer.UpdateDefaultUpdatedAt = customerDescUpdatedAt.UpdateDefault.(func() time.Time)
+	customeraddressFields := schema.CustomerAddress{}.Fields()
+	_ = customeraddressFields
+	// customeraddressDescRecipientName is the schema descriptor for recipient_name field.
+	customeraddressDescRecipientName := customeraddressFields[4].Descriptor()
+	// customeraddress.RecipientNameValidator is a validator for the "recipient_name" field. It is called by the builders before save.
+	customeraddress.RecipientNameValidator = customeraddressDescRecipientName.Validators[0].(func(string) error)
+	// customeraddressDescAddressLine is the schema descriptor for address_line field.
+	customeraddressDescAddressLine := customeraddressFields[6].Descriptor()
+	// customeraddress.AddressLineValidator is a validator for the "address_line" field. It is called by the builders before save.
+	customeraddress.AddressLineValidator = customeraddressDescAddressLine.Validators[0].(func(string) error)
+	// customeraddressDescIsDefault is the schema descriptor for is_default field.
+	customeraddressDescIsDefault := customeraddressFields[9].Descriptor()
+	// customeraddress.DefaultIsDefault holds the default value on creation for the is_default field.
+	customeraddress.DefaultIsDefault = customeraddressDescIsDefault.Default.(bool)
+	// customeraddressDescCreatedAt is the schema descriptor for created_at field.
+	customeraddressDescCreatedAt := customeraddressFields[12].Descriptor()
+	// customeraddress.DefaultCreatedAt holds the default value on creation for the created_at field.
+	customeraddress.DefaultCreatedAt = customeraddressDescCreatedAt.Default.(func() time.Time)
+	// customeraddressDescUpdatedAt is the schema descriptor for updated_at field.
+	customeraddressDescUpdatedAt := customeraddressFields[13].Descriptor()
+	// customeraddress.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	customeraddress.DefaultUpdatedAt = customeraddressDescUpdatedAt.Default.(func() time.Time)
+	// customeraddress.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	customeraddress.UpdateDefaultUpdatedAt = customeraddressDescUpdatedAt.UpdateDefault.(func() time.Time)
+	customercontactFields := schema.CustomerContact{}.Fields()
+	_ = customercontactFields
+	// customercontactDescName is the schema descriptor for name field.
+	customercontactDescName := customercontactFields[3].Descriptor()
+	// customercontact.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	customercontact.NameValidator = customercontactDescName.Validators[0].(func(string) error)
+	// customercontactDescIsDefault is the schema descriptor for is_default field.
+	customercontactDescIsDefault := customercontactFields[7].Descriptor()
+	// customercontact.DefaultIsDefault holds the default value on creation for the is_default field.
+	customercontact.DefaultIsDefault = customercontactDescIsDefault.Default.(bool)
+	// customercontactDescCreatedAt is the schema descriptor for created_at field.
+	customercontactDescCreatedAt := customercontactFields[10].Descriptor()
+	// customercontact.DefaultCreatedAt holds the default value on creation for the created_at field.
+	customercontact.DefaultCreatedAt = customercontactDescCreatedAt.Default.(func() time.Time)
+	// customercontactDescUpdatedAt is the schema descriptor for updated_at field.
+	customercontactDescUpdatedAt := customercontactFields[11].Descriptor()
+	// customercontact.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	customercontact.DefaultUpdatedAt = customercontactDescUpdatedAt.Default.(func() time.Time)
+	// customercontact.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	customercontact.UpdateDefaultUpdatedAt = customercontactDescUpdatedAt.UpdateDefault.(func() time.Time)
 	customercounterFields := schema.CustomerCounter{}.Fields()
 	_ = customercounterFields
 	// customercounterDescNextSeq is the schema descriptor for next_seq field.

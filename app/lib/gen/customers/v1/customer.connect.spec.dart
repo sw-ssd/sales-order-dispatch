@@ -58,4 +58,61 @@ abstract final class CustomerService {
     customersv1customer.RestoreCustomerRequest.new,
     customersv1customer.RestoreCustomerResponse.new,
   );
+
+  /// 以下為地址簿與聯絡人(3.2.1 / 3.2.2)。
+  static const listAddresses = connect.Spec(
+    '/$name/ListAddresses',
+    connect.StreamType.unary,
+    customersv1customer.ListAddressesRequest.new,
+    customersv1customer.ListAddressesResponse.new,
+  );
+
+  static const addAddress = connect.Spec(
+    '/$name/AddAddress',
+    connect.StreamType.unary,
+    customersv1customer.AddAddressRequest.new,
+    customersv1customer.AddAddressResponse.new,
+  );
+
+  static const updateAddress = connect.Spec(
+    '/$name/UpdateAddress',
+    connect.StreamType.unary,
+    customersv1customer.UpdateAddressRequest.new,
+    customersv1customer.UpdateAddressResponse.new,
+  );
+
+  static const deleteAddress = connect.Spec(
+    '/$name/DeleteAddress',
+    connect.StreamType.unary,
+    customersv1customer.DeleteAddressRequest.new,
+    customersv1customer.DeleteAddressResponse.new,
+  );
+
+  static const listContacts = connect.Spec(
+    '/$name/ListContacts',
+    connect.StreamType.unary,
+    customersv1customer.ListContactsRequest.new,
+    customersv1customer.ListContactsResponse.new,
+  );
+
+  static const addContact = connect.Spec(
+    '/$name/AddContact',
+    connect.StreamType.unary,
+    customersv1customer.AddContactRequest.new,
+    customersv1customer.AddContactResponse.new,
+  );
+
+  static const updateContact = connect.Spec(
+    '/$name/UpdateContact',
+    connect.StreamType.unary,
+    customersv1customer.UpdateContactRequest.new,
+    customersv1customer.UpdateContactResponse.new,
+  );
+
+  static const deleteContact = connect.Spec(
+    '/$name/DeleteContact',
+    connect.StreamType.unary,
+    customersv1customer.DeleteContactRequest.new,
+    customersv1customer.DeleteContactResponse.new,
+  );
 }

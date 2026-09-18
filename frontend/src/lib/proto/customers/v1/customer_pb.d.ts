@@ -500,6 +500,542 @@ export declare type RestoreCustomerResponse = Message<"customers.v1.RestoreCusto
 export declare const RestoreCustomerResponseSchema: GenMessage<RestoreCustomerResponse>;
 
 /**
+ * CustomerAddress:客戶地址(3.2.1)。
+ *
+ * @generated from message customers.v1.CustomerAddress
+ */
+export declare type CustomerAddress = Message<"customers.v1.CustomerAddress"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string customer_id = 2;
+   */
+  customerId: string;
+
+  /**
+   * shipping | billing | other
+   *
+   * @generated from field: string type = 3;
+   */
+  type: string;
+
+  /**
+   * @generated from field: string recipient_name = 4;
+   */
+  recipientName: string;
+
+  /**
+   * @generated from field: string phone = 5;
+   */
+  phone: string;
+
+  /**
+   * @generated from field: string address_line = 6;
+   */
+  addressLine: string;
+
+  /**
+   * @generated from field: string city = 7;
+   */
+  city: string;
+
+  /**
+   * @generated from field: string postal_code = 8;
+   */
+  postalCode: string;
+
+  /**
+   * @generated from field: bool is_default = 9;
+   */
+  isDefault: boolean;
+
+  /**
+   * RFC3339
+   *
+   * @generated from field: string created_at = 10;
+   */
+  createdAt: string;
+
+  /**
+   * RFC3339
+   *
+   * @generated from field: string updated_at = 11;
+   */
+  updatedAt: string;
+
+  /**
+   * RFC3339(可空;include_deleted 時回傳)
+   *
+   * @generated from field: string deleted_at = 12;
+   */
+  deletedAt: string;
+};
+
+/**
+ * Describes the message customers.v1.CustomerAddress.
+ * Use `create(CustomerAddressSchema)` to create a new message.
+ */
+export declare const CustomerAddressSchema: GenMessage<CustomerAddress>;
+
+/**
+ * @generated from message customers.v1.ListAddressesRequest
+ */
+export declare type ListAddressesRequest = Message<"customers.v1.ListAddressesRequest"> & {
+  /**
+   * @generated from field: string customer_id = 1;
+   */
+  customerId: string;
+
+  /**
+   * @generated from field: bool include_deleted = 2;
+   */
+  includeDeleted: boolean;
+};
+
+/**
+ * Describes the message customers.v1.ListAddressesRequest.
+ * Use `create(ListAddressesRequestSchema)` to create a new message.
+ */
+export declare const ListAddressesRequestSchema: GenMessage<ListAddressesRequest>;
+
+/**
+ * @generated from message customers.v1.ListAddressesResponse
+ */
+export declare type ListAddressesResponse = Message<"customers.v1.ListAddressesResponse"> & {
+  /**
+   * @generated from field: repeated customers.v1.CustomerAddress addresses = 1;
+   */
+  addresses: CustomerAddress[];
+};
+
+/**
+ * Describes the message customers.v1.ListAddressesResponse.
+ * Use `create(ListAddressesResponseSchema)` to create a new message.
+ */
+export declare const ListAddressesResponseSchema: GenMessage<ListAddressesResponse>;
+
+/**
+ * @generated from message customers.v1.AddAddressRequest
+ */
+export declare type AddAddressRequest = Message<"customers.v1.AddAddressRequest"> & {
+  /**
+   * @generated from field: string customer_id = 1;
+   */
+  customerId: string;
+
+  /**
+   * shipping | billing | other
+   *
+   * @generated from field: string type = 2;
+   */
+  type: string;
+
+  /**
+   * 必填
+   *
+   * @generated from field: string recipient_name = 3;
+   */
+  recipientName: string;
+
+  /**
+   * @generated from field: string phone = 4;
+   */
+  phone: string;
+
+  /**
+   * 必填
+   *
+   * @generated from field: string address_line = 5;
+   */
+  addressLine: string;
+
+  /**
+   * @generated from field: string city = 6;
+   */
+  city: string;
+
+  /**
+   * @generated from field: string postal_code = 7;
+   */
+  postalCode: string;
+
+  /**
+   * @generated from field: bool is_default = 8;
+   */
+  isDefault: boolean;
+};
+
+/**
+ * Describes the message customers.v1.AddAddressRequest.
+ * Use `create(AddAddressRequestSchema)` to create a new message.
+ */
+export declare const AddAddressRequestSchema: GenMessage<AddAddressRequest>;
+
+/**
+ * @generated from message customers.v1.AddAddressResponse
+ */
+export declare type AddAddressResponse = Message<"customers.v1.AddAddressResponse"> & {
+  /**
+   * @generated from field: customers.v1.CustomerAddress address = 1;
+   */
+  address?: CustomerAddress | undefined;
+};
+
+/**
+ * Describes the message customers.v1.AddAddressResponse.
+ * Use `create(AddAddressResponseSchema)` to create a new message.
+ */
+export declare const AddAddressResponseSchema: GenMessage<AddAddressResponse>;
+
+/**
+ * @generated from message customers.v1.UpdateAddressRequest
+ */
+export declare type UpdateAddressRequest = Message<"customers.v1.UpdateAddressRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: optional string type = 2;
+   */
+  type?: string | undefined;
+
+  /**
+   * @generated from field: optional string recipient_name = 3;
+   */
+  recipientName?: string | undefined;
+
+  /**
+   * @generated from field: optional string phone = 4;
+   */
+  phone?: string | undefined;
+
+  /**
+   * @generated from field: optional string address_line = 5;
+   */
+  addressLine?: string | undefined;
+
+  /**
+   * @generated from field: optional string city = 6;
+   */
+  city?: string | undefined;
+
+  /**
+   * @generated from field: optional string postal_code = 7;
+   */
+  postalCode?: string | undefined;
+
+  /**
+   * @generated from field: optional bool is_default = 8;
+   */
+  isDefault?: boolean | undefined;
+};
+
+/**
+ * Describes the message customers.v1.UpdateAddressRequest.
+ * Use `create(UpdateAddressRequestSchema)` to create a new message.
+ */
+export declare const UpdateAddressRequestSchema: GenMessage<UpdateAddressRequest>;
+
+/**
+ * @generated from message customers.v1.UpdateAddressResponse
+ */
+export declare type UpdateAddressResponse = Message<"customers.v1.UpdateAddressResponse"> & {
+  /**
+   * @generated from field: customers.v1.CustomerAddress address = 1;
+   */
+  address?: CustomerAddress | undefined;
+};
+
+/**
+ * Describes the message customers.v1.UpdateAddressResponse.
+ * Use `create(UpdateAddressResponseSchema)` to create a new message.
+ */
+export declare const UpdateAddressResponseSchema: GenMessage<UpdateAddressResponse>;
+
+/**
+ * @generated from message customers.v1.DeleteAddressRequest
+ */
+export declare type DeleteAddressRequest = Message<"customers.v1.DeleteAddressRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message customers.v1.DeleteAddressRequest.
+ * Use `create(DeleteAddressRequestSchema)` to create a new message.
+ */
+export declare const DeleteAddressRequestSchema: GenMessage<DeleteAddressRequest>;
+
+/**
+ * @generated from message customers.v1.DeleteAddressResponse
+ */
+export declare type DeleteAddressResponse = Message<"customers.v1.DeleteAddressResponse"> & {
+};
+
+/**
+ * Describes the message customers.v1.DeleteAddressResponse.
+ * Use `create(DeleteAddressResponseSchema)` to create a new message.
+ */
+export declare const DeleteAddressResponseSchema: GenMessage<DeleteAddressResponse>;
+
+/**
+ * CustomerContact:客戶聯絡人(3.2.2)。
+ *
+ * @generated from message customers.v1.CustomerContact
+ */
+export declare type CustomerContact = Message<"customers.v1.CustomerContact"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string customer_id = 2;
+   */
+  customerId: string;
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string title = 4;
+   */
+  title: string;
+
+  /**
+   * @generated from field: string email = 5;
+   */
+  email: string;
+
+  /**
+   * @generated from field: string phone = 6;
+   */
+  phone: string;
+
+  /**
+   * @generated from field: bool is_default = 7;
+   */
+  isDefault: boolean;
+
+  /**
+   * RFC3339
+   *
+   * @generated from field: string created_at = 8;
+   */
+  createdAt: string;
+
+  /**
+   * RFC3339
+   *
+   * @generated from field: string updated_at = 9;
+   */
+  updatedAt: string;
+
+  /**
+   * RFC3339(可空;include_deleted 時回傳)
+   *
+   * @generated from field: string deleted_at = 10;
+   */
+  deletedAt: string;
+};
+
+/**
+ * Describes the message customers.v1.CustomerContact.
+ * Use `create(CustomerContactSchema)` to create a new message.
+ */
+export declare const CustomerContactSchema: GenMessage<CustomerContact>;
+
+/**
+ * @generated from message customers.v1.ListContactsRequest
+ */
+export declare type ListContactsRequest = Message<"customers.v1.ListContactsRequest"> & {
+  /**
+   * @generated from field: string customer_id = 1;
+   */
+  customerId: string;
+
+  /**
+   * @generated from field: bool include_deleted = 2;
+   */
+  includeDeleted: boolean;
+};
+
+/**
+ * Describes the message customers.v1.ListContactsRequest.
+ * Use `create(ListContactsRequestSchema)` to create a new message.
+ */
+export declare const ListContactsRequestSchema: GenMessage<ListContactsRequest>;
+
+/**
+ * @generated from message customers.v1.ListContactsResponse
+ */
+export declare type ListContactsResponse = Message<"customers.v1.ListContactsResponse"> & {
+  /**
+   * @generated from field: repeated customers.v1.CustomerContact contacts = 1;
+   */
+  contacts: CustomerContact[];
+};
+
+/**
+ * Describes the message customers.v1.ListContactsResponse.
+ * Use `create(ListContactsResponseSchema)` to create a new message.
+ */
+export declare const ListContactsResponseSchema: GenMessage<ListContactsResponse>;
+
+/**
+ * @generated from message customers.v1.AddContactRequest
+ */
+export declare type AddContactRequest = Message<"customers.v1.AddContactRequest"> & {
+  /**
+   * @generated from field: string customer_id = 1;
+   */
+  customerId: string;
+
+  /**
+   * 必填
+   *
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string title = 3;
+   */
+  title: string;
+
+  /**
+   * @generated from field: string email = 4;
+   */
+  email: string;
+
+  /**
+   * @generated from field: string phone = 5;
+   */
+  phone: string;
+
+  /**
+   * @generated from field: bool is_default = 6;
+   */
+  isDefault: boolean;
+};
+
+/**
+ * Describes the message customers.v1.AddContactRequest.
+ * Use `create(AddContactRequestSchema)` to create a new message.
+ */
+export declare const AddContactRequestSchema: GenMessage<AddContactRequest>;
+
+/**
+ * @generated from message customers.v1.AddContactResponse
+ */
+export declare type AddContactResponse = Message<"customers.v1.AddContactResponse"> & {
+  /**
+   * @generated from field: customers.v1.CustomerContact contact = 1;
+   */
+  contact?: CustomerContact | undefined;
+};
+
+/**
+ * Describes the message customers.v1.AddContactResponse.
+ * Use `create(AddContactResponseSchema)` to create a new message.
+ */
+export declare const AddContactResponseSchema: GenMessage<AddContactResponse>;
+
+/**
+ * @generated from message customers.v1.UpdateContactRequest
+ */
+export declare type UpdateContactRequest = Message<"customers.v1.UpdateContactRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: optional string name = 2;
+   */
+  name?: string | undefined;
+
+  /**
+   * @generated from field: optional string title = 3;
+   */
+  title?: string | undefined;
+
+  /**
+   * @generated from field: optional string email = 4;
+   */
+  email?: string | undefined;
+
+  /**
+   * @generated from field: optional string phone = 5;
+   */
+  phone?: string | undefined;
+
+  /**
+   * @generated from field: optional bool is_default = 6;
+   */
+  isDefault?: boolean | undefined;
+};
+
+/**
+ * Describes the message customers.v1.UpdateContactRequest.
+ * Use `create(UpdateContactRequestSchema)` to create a new message.
+ */
+export declare const UpdateContactRequestSchema: GenMessage<UpdateContactRequest>;
+
+/**
+ * @generated from message customers.v1.UpdateContactResponse
+ */
+export declare type UpdateContactResponse = Message<"customers.v1.UpdateContactResponse"> & {
+  /**
+   * @generated from field: customers.v1.CustomerContact contact = 1;
+   */
+  contact?: CustomerContact | undefined;
+};
+
+/**
+ * Describes the message customers.v1.UpdateContactResponse.
+ * Use `create(UpdateContactResponseSchema)` to create a new message.
+ */
+export declare const UpdateContactResponseSchema: GenMessage<UpdateContactResponse>;
+
+/**
+ * @generated from message customers.v1.DeleteContactRequest
+ */
+export declare type DeleteContactRequest = Message<"customers.v1.DeleteContactRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message customers.v1.DeleteContactRequest.
+ * Use `create(DeleteContactRequestSchema)` to create a new message.
+ */
+export declare const DeleteContactRequestSchema: GenMessage<DeleteContactRequest>;
+
+/**
+ * @generated from message customers.v1.DeleteContactResponse
+ */
+export declare type DeleteContactResponse = Message<"customers.v1.DeleteContactResponse"> & {
+};
+
+/**
+ * Describes the message customers.v1.DeleteContactResponse.
+ * Use `create(DeleteContactResponseSchema)` to create a new message.
+ */
+export declare const DeleteContactResponseSchema: GenMessage<DeleteContactResponse>;
+
+/**
  * CustomerService:客戶主檔管理(dept_admin/staff 限所屬部門)。
  *
  * @generated from service customers.v1.CustomerService
@@ -564,6 +1100,72 @@ export declare const CustomerService: GenService<{
     methodKind: "unary";
     input: typeof RestoreCustomerRequestSchema;
     output: typeof RestoreCustomerResponseSchema;
+  },
+  /**
+   * 以下為地址簿與聯絡人(3.2.1 / 3.2.2)。
+   *
+   * @generated from rpc customers.v1.CustomerService.ListAddresses
+   */
+  listAddresses: {
+    methodKind: "unary";
+    input: typeof ListAddressesRequestSchema;
+    output: typeof ListAddressesResponseSchema;
+  },
+  /**
+   * @generated from rpc customers.v1.CustomerService.AddAddress
+   */
+  addAddress: {
+    methodKind: "unary";
+    input: typeof AddAddressRequestSchema;
+    output: typeof AddAddressResponseSchema;
+  },
+  /**
+   * @generated from rpc customers.v1.CustomerService.UpdateAddress
+   */
+  updateAddress: {
+    methodKind: "unary";
+    input: typeof UpdateAddressRequestSchema;
+    output: typeof UpdateAddressResponseSchema;
+  },
+  /**
+   * @generated from rpc customers.v1.CustomerService.DeleteAddress
+   */
+  deleteAddress: {
+    methodKind: "unary";
+    input: typeof DeleteAddressRequestSchema;
+    output: typeof DeleteAddressResponseSchema;
+  },
+  /**
+   * @generated from rpc customers.v1.CustomerService.ListContacts
+   */
+  listContacts: {
+    methodKind: "unary";
+    input: typeof ListContactsRequestSchema;
+    output: typeof ListContactsResponseSchema;
+  },
+  /**
+   * @generated from rpc customers.v1.CustomerService.AddContact
+   */
+  addContact: {
+    methodKind: "unary";
+    input: typeof AddContactRequestSchema;
+    output: typeof AddContactResponseSchema;
+  },
+  /**
+   * @generated from rpc customers.v1.CustomerService.UpdateContact
+   */
+  updateContact: {
+    methodKind: "unary";
+    input: typeof UpdateContactRequestSchema;
+    output: typeof UpdateContactResponseSchema;
+  },
+  /**
+   * @generated from rpc customers.v1.CustomerService.DeleteContact
+   */
+  deleteContact: {
+    methodKind: "unary";
+    input: typeof DeleteContactRequestSchema;
+    output: typeof DeleteContactResponseSchema;
   },
 }>;
 

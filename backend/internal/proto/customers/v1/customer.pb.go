@@ -924,6 +924,1152 @@ func (x *RestoreCustomerResponse) GetCustomer() *Customer {
 	return nil
 }
 
+// CustomerAddress:客戶地址(3.2.1)。
+type CustomerAddress struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	CustomerId    string                 `protobuf:"bytes,2,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"` // shipping | billing | other
+	RecipientName string                 `protobuf:"bytes,4,opt,name=recipient_name,json=recipientName,proto3" json:"recipient_name,omitempty"`
+	Phone         string                 `protobuf:"bytes,5,opt,name=phone,proto3" json:"phone,omitempty"`
+	AddressLine   string                 `protobuf:"bytes,6,opt,name=address_line,json=addressLine,proto3" json:"address_line,omitempty"`
+	City          string                 `protobuf:"bytes,7,opt,name=city,proto3" json:"city,omitempty"`
+	PostalCode    string                 `protobuf:"bytes,8,opt,name=postal_code,json=postalCode,proto3" json:"postal_code,omitempty"`
+	IsDefault     bool                   `protobuf:"varint,9,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty"`
+	CreatedAt     string                 `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"` // RFC3339
+	UpdatedAt     string                 `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"` // RFC3339
+	DeletedAt     string                 `protobuf:"bytes,12,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"` // RFC3339(可空;include_deleted 時回傳)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CustomerAddress) Reset() {
+	*x = CustomerAddress{}
+	mi := &file_customers_v1_customer_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CustomerAddress) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CustomerAddress) ProtoMessage() {}
+
+func (x *CustomerAddress) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CustomerAddress.ProtoReflect.Descriptor instead.
+func (*CustomerAddress) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *CustomerAddress) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CustomerAddress) GetCustomerId() string {
+	if x != nil {
+		return x.CustomerId
+	}
+	return ""
+}
+
+func (x *CustomerAddress) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *CustomerAddress) GetRecipientName() string {
+	if x != nil {
+		return x.RecipientName
+	}
+	return ""
+}
+
+func (x *CustomerAddress) GetPhone() string {
+	if x != nil {
+		return x.Phone
+	}
+	return ""
+}
+
+func (x *CustomerAddress) GetAddressLine() string {
+	if x != nil {
+		return x.AddressLine
+	}
+	return ""
+}
+
+func (x *CustomerAddress) GetCity() string {
+	if x != nil {
+		return x.City
+	}
+	return ""
+}
+
+func (x *CustomerAddress) GetPostalCode() string {
+	if x != nil {
+		return x.PostalCode
+	}
+	return ""
+}
+
+func (x *CustomerAddress) GetIsDefault() bool {
+	if x != nil {
+		return x.IsDefault
+	}
+	return false
+}
+
+func (x *CustomerAddress) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+func (x *CustomerAddress) GetUpdatedAt() string {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return ""
+}
+
+func (x *CustomerAddress) GetDeletedAt() string {
+	if x != nil {
+		return x.DeletedAt
+	}
+	return ""
+}
+
+type ListAddressesRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	CustomerId     string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	IncludeDeleted bool                   `protobuf:"varint,2,opt,name=include_deleted,json=includeDeleted,proto3" json:"include_deleted,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ListAddressesRequest) Reset() {
+	*x = ListAddressesRequest{}
+	mi := &file_customers_v1_customer_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAddressesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAddressesRequest) ProtoMessage() {}
+
+func (x *ListAddressesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAddressesRequest.ProtoReflect.Descriptor instead.
+func (*ListAddressesRequest) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *ListAddressesRequest) GetCustomerId() string {
+	if x != nil {
+		return x.CustomerId
+	}
+	return ""
+}
+
+func (x *ListAddressesRequest) GetIncludeDeleted() bool {
+	if x != nil {
+		return x.IncludeDeleted
+	}
+	return false
+}
+
+type ListAddressesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Addresses     []*CustomerAddress     `protobuf:"bytes,1,rep,name=addresses,proto3" json:"addresses,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAddressesResponse) Reset() {
+	*x = ListAddressesResponse{}
+	mi := &file_customers_v1_customer_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAddressesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAddressesResponse) ProtoMessage() {}
+
+func (x *ListAddressesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAddressesResponse.ProtoReflect.Descriptor instead.
+func (*ListAddressesResponse) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *ListAddressesResponse) GetAddresses() []*CustomerAddress {
+	if x != nil {
+		return x.Addresses
+	}
+	return nil
+}
+
+type AddAddressRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CustomerId    string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	Type          string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`                                        // shipping | billing | other
+	RecipientName string                 `protobuf:"bytes,3,opt,name=recipient_name,json=recipientName,proto3" json:"recipient_name,omitempty"` // 必填
+	Phone         string                 `protobuf:"bytes,4,opt,name=phone,proto3" json:"phone,omitempty"`
+	AddressLine   string                 `protobuf:"bytes,5,opt,name=address_line,json=addressLine,proto3" json:"address_line,omitempty"` // 必填
+	City          string                 `protobuf:"bytes,6,opt,name=city,proto3" json:"city,omitempty"`
+	PostalCode    string                 `protobuf:"bytes,7,opt,name=postal_code,json=postalCode,proto3" json:"postal_code,omitempty"`
+	IsDefault     bool                   `protobuf:"varint,8,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddAddressRequest) Reset() {
+	*x = AddAddressRequest{}
+	mi := &file_customers_v1_customer_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddAddressRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddAddressRequest) ProtoMessage() {}
+
+func (x *AddAddressRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddAddressRequest.ProtoReflect.Descriptor instead.
+func (*AddAddressRequest) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *AddAddressRequest) GetCustomerId() string {
+	if x != nil {
+		return x.CustomerId
+	}
+	return ""
+}
+
+func (x *AddAddressRequest) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *AddAddressRequest) GetRecipientName() string {
+	if x != nil {
+		return x.RecipientName
+	}
+	return ""
+}
+
+func (x *AddAddressRequest) GetPhone() string {
+	if x != nil {
+		return x.Phone
+	}
+	return ""
+}
+
+func (x *AddAddressRequest) GetAddressLine() string {
+	if x != nil {
+		return x.AddressLine
+	}
+	return ""
+}
+
+func (x *AddAddressRequest) GetCity() string {
+	if x != nil {
+		return x.City
+	}
+	return ""
+}
+
+func (x *AddAddressRequest) GetPostalCode() string {
+	if x != nil {
+		return x.PostalCode
+	}
+	return ""
+}
+
+func (x *AddAddressRequest) GetIsDefault() bool {
+	if x != nil {
+		return x.IsDefault
+	}
+	return false
+}
+
+type AddAddressResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Address       *CustomerAddress       `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddAddressResponse) Reset() {
+	*x = AddAddressResponse{}
+	mi := &file_customers_v1_customer_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddAddressResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddAddressResponse) ProtoMessage() {}
+
+func (x *AddAddressResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddAddressResponse.ProtoReflect.Descriptor instead.
+func (*AddAddressResponse) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *AddAddressResponse) GetAddress() *CustomerAddress {
+	if x != nil {
+		return x.Address
+	}
+	return nil
+}
+
+type UpdateAddressRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Type          *string                `protobuf:"bytes,2,opt,name=type,proto3,oneof" json:"type,omitempty"`
+	RecipientName *string                `protobuf:"bytes,3,opt,name=recipient_name,json=recipientName,proto3,oneof" json:"recipient_name,omitempty"`
+	Phone         *string                `protobuf:"bytes,4,opt,name=phone,proto3,oneof" json:"phone,omitempty"`
+	AddressLine   *string                `protobuf:"bytes,5,opt,name=address_line,json=addressLine,proto3,oneof" json:"address_line,omitempty"`
+	City          *string                `protobuf:"bytes,6,opt,name=city,proto3,oneof" json:"city,omitempty"`
+	PostalCode    *string                `protobuf:"bytes,7,opt,name=postal_code,json=postalCode,proto3,oneof" json:"postal_code,omitempty"`
+	IsDefault     *bool                  `protobuf:"varint,8,opt,name=is_default,json=isDefault,proto3,oneof" json:"is_default,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateAddressRequest) Reset() {
+	*x = UpdateAddressRequest{}
+	mi := &file_customers_v1_customer_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateAddressRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateAddressRequest) ProtoMessage() {}
+
+func (x *UpdateAddressRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateAddressRequest.ProtoReflect.Descriptor instead.
+func (*UpdateAddressRequest) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *UpdateAddressRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *UpdateAddressRequest) GetType() string {
+	if x != nil && x.Type != nil {
+		return *x.Type
+	}
+	return ""
+}
+
+func (x *UpdateAddressRequest) GetRecipientName() string {
+	if x != nil && x.RecipientName != nil {
+		return *x.RecipientName
+	}
+	return ""
+}
+
+func (x *UpdateAddressRequest) GetPhone() string {
+	if x != nil && x.Phone != nil {
+		return *x.Phone
+	}
+	return ""
+}
+
+func (x *UpdateAddressRequest) GetAddressLine() string {
+	if x != nil && x.AddressLine != nil {
+		return *x.AddressLine
+	}
+	return ""
+}
+
+func (x *UpdateAddressRequest) GetCity() string {
+	if x != nil && x.City != nil {
+		return *x.City
+	}
+	return ""
+}
+
+func (x *UpdateAddressRequest) GetPostalCode() string {
+	if x != nil && x.PostalCode != nil {
+		return *x.PostalCode
+	}
+	return ""
+}
+
+func (x *UpdateAddressRequest) GetIsDefault() bool {
+	if x != nil && x.IsDefault != nil {
+		return *x.IsDefault
+	}
+	return false
+}
+
+type UpdateAddressResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Address       *CustomerAddress       `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateAddressResponse) Reset() {
+	*x = UpdateAddressResponse{}
+	mi := &file_customers_v1_customer_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateAddressResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateAddressResponse) ProtoMessage() {}
+
+func (x *UpdateAddressResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateAddressResponse.ProtoReflect.Descriptor instead.
+func (*UpdateAddressResponse) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *UpdateAddressResponse) GetAddress() *CustomerAddress {
+	if x != nil {
+		return x.Address
+	}
+	return nil
+}
+
+type DeleteAddressRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteAddressRequest) Reset() {
+	*x = DeleteAddressRequest{}
+	mi := &file_customers_v1_customer_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteAddressRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteAddressRequest) ProtoMessage() {}
+
+func (x *DeleteAddressRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteAddressRequest.ProtoReflect.Descriptor instead.
+func (*DeleteAddressRequest) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *DeleteAddressRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type DeleteAddressResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteAddressResponse) Reset() {
+	*x = DeleteAddressResponse{}
+	mi := &file_customers_v1_customer_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteAddressResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteAddressResponse) ProtoMessage() {}
+
+func (x *DeleteAddressResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteAddressResponse.ProtoReflect.Descriptor instead.
+func (*DeleteAddressResponse) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{21}
+}
+
+// CustomerContact:客戶聯絡人(3.2.2)。
+type CustomerContact struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	CustomerId    string                 `protobuf:"bytes,2,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Title         string                 `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
+	Email         string                 `protobuf:"bytes,5,opt,name=email,proto3" json:"email,omitempty"`
+	Phone         string                 `protobuf:"bytes,6,opt,name=phone,proto3" json:"phone,omitempty"`
+	IsDefault     bool                   `protobuf:"varint,7,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty"`
+	CreatedAt     string                 `protobuf:"bytes,8,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`  // RFC3339
+	UpdatedAt     string                 `protobuf:"bytes,9,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`  // RFC3339
+	DeletedAt     string                 `protobuf:"bytes,10,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"` // RFC3339(可空;include_deleted 時回傳)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CustomerContact) Reset() {
+	*x = CustomerContact{}
+	mi := &file_customers_v1_customer_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CustomerContact) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CustomerContact) ProtoMessage() {}
+
+func (x *CustomerContact) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CustomerContact.ProtoReflect.Descriptor instead.
+func (*CustomerContact) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *CustomerContact) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CustomerContact) GetCustomerId() string {
+	if x != nil {
+		return x.CustomerId
+	}
+	return ""
+}
+
+func (x *CustomerContact) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CustomerContact) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *CustomerContact) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *CustomerContact) GetPhone() string {
+	if x != nil {
+		return x.Phone
+	}
+	return ""
+}
+
+func (x *CustomerContact) GetIsDefault() bool {
+	if x != nil {
+		return x.IsDefault
+	}
+	return false
+}
+
+func (x *CustomerContact) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+func (x *CustomerContact) GetUpdatedAt() string {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return ""
+}
+
+func (x *CustomerContact) GetDeletedAt() string {
+	if x != nil {
+		return x.DeletedAt
+	}
+	return ""
+}
+
+type ListContactsRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	CustomerId     string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	IncludeDeleted bool                   `protobuf:"varint,2,opt,name=include_deleted,json=includeDeleted,proto3" json:"include_deleted,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ListContactsRequest) Reset() {
+	*x = ListContactsRequest{}
+	mi := &file_customers_v1_customer_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListContactsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListContactsRequest) ProtoMessage() {}
+
+func (x *ListContactsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListContactsRequest.ProtoReflect.Descriptor instead.
+func (*ListContactsRequest) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *ListContactsRequest) GetCustomerId() string {
+	if x != nil {
+		return x.CustomerId
+	}
+	return ""
+}
+
+func (x *ListContactsRequest) GetIncludeDeleted() bool {
+	if x != nil {
+		return x.IncludeDeleted
+	}
+	return false
+}
+
+type ListContactsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Contacts      []*CustomerContact     `protobuf:"bytes,1,rep,name=contacts,proto3" json:"contacts,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListContactsResponse) Reset() {
+	*x = ListContactsResponse{}
+	mi := &file_customers_v1_customer_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListContactsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListContactsResponse) ProtoMessage() {}
+
+func (x *ListContactsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListContactsResponse.ProtoReflect.Descriptor instead.
+func (*ListContactsResponse) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *ListContactsResponse) GetContacts() []*CustomerContact {
+	if x != nil {
+		return x.Contacts
+	}
+	return nil
+}
+
+type AddContactRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CustomerId    string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"` // 必填
+	Title         string                 `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	Email         string                 `protobuf:"bytes,4,opt,name=email,proto3" json:"email,omitempty"`
+	Phone         string                 `protobuf:"bytes,5,opt,name=phone,proto3" json:"phone,omitempty"`
+	IsDefault     bool                   `protobuf:"varint,6,opt,name=is_default,json=isDefault,proto3" json:"is_default,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddContactRequest) Reset() {
+	*x = AddContactRequest{}
+	mi := &file_customers_v1_customer_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddContactRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddContactRequest) ProtoMessage() {}
+
+func (x *AddContactRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddContactRequest.ProtoReflect.Descriptor instead.
+func (*AddContactRequest) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *AddContactRequest) GetCustomerId() string {
+	if x != nil {
+		return x.CustomerId
+	}
+	return ""
+}
+
+func (x *AddContactRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *AddContactRequest) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *AddContactRequest) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *AddContactRequest) GetPhone() string {
+	if x != nil {
+		return x.Phone
+	}
+	return ""
+}
+
+func (x *AddContactRequest) GetIsDefault() bool {
+	if x != nil {
+		return x.IsDefault
+	}
+	return false
+}
+
+type AddContactResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Contact       *CustomerContact       `protobuf:"bytes,1,opt,name=contact,proto3" json:"contact,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AddContactResponse) Reset() {
+	*x = AddContactResponse{}
+	mi := &file_customers_v1_customer_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AddContactResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddContactResponse) ProtoMessage() {}
+
+func (x *AddContactResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddContactResponse.ProtoReflect.Descriptor instead.
+func (*AddContactResponse) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *AddContactResponse) GetContact() *CustomerContact {
+	if x != nil {
+		return x.Contact
+	}
+	return nil
+}
+
+type UpdateContactRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
+	Title         *string                `protobuf:"bytes,3,opt,name=title,proto3,oneof" json:"title,omitempty"`
+	Email         *string                `protobuf:"bytes,4,opt,name=email,proto3,oneof" json:"email,omitempty"`
+	Phone         *string                `protobuf:"bytes,5,opt,name=phone,proto3,oneof" json:"phone,omitempty"`
+	IsDefault     *bool                  `protobuf:"varint,6,opt,name=is_default,json=isDefault,proto3,oneof" json:"is_default,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateContactRequest) Reset() {
+	*x = UpdateContactRequest{}
+	mi := &file_customers_v1_customer_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateContactRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateContactRequest) ProtoMessage() {}
+
+func (x *UpdateContactRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateContactRequest.ProtoReflect.Descriptor instead.
+func (*UpdateContactRequest) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *UpdateContactRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *UpdateContactRequest) GetName() string {
+	if x != nil && x.Name != nil {
+		return *x.Name
+	}
+	return ""
+}
+
+func (x *UpdateContactRequest) GetTitle() string {
+	if x != nil && x.Title != nil {
+		return *x.Title
+	}
+	return ""
+}
+
+func (x *UpdateContactRequest) GetEmail() string {
+	if x != nil && x.Email != nil {
+		return *x.Email
+	}
+	return ""
+}
+
+func (x *UpdateContactRequest) GetPhone() string {
+	if x != nil && x.Phone != nil {
+		return *x.Phone
+	}
+	return ""
+}
+
+func (x *UpdateContactRequest) GetIsDefault() bool {
+	if x != nil && x.IsDefault != nil {
+		return *x.IsDefault
+	}
+	return false
+}
+
+type UpdateContactResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Contact       *CustomerContact       `protobuf:"bytes,1,opt,name=contact,proto3" json:"contact,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateContactResponse) Reset() {
+	*x = UpdateContactResponse{}
+	mi := &file_customers_v1_customer_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateContactResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateContactResponse) ProtoMessage() {}
+
+func (x *UpdateContactResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateContactResponse.ProtoReflect.Descriptor instead.
+func (*UpdateContactResponse) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *UpdateContactResponse) GetContact() *CustomerContact {
+	if x != nil {
+		return x.Contact
+	}
+	return nil
+}
+
+type DeleteContactRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteContactRequest) Reset() {
+	*x = DeleteContactRequest{}
+	mi := &file_customers_v1_customer_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteContactRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteContactRequest) ProtoMessage() {}
+
+func (x *DeleteContactRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteContactRequest.ProtoReflect.Descriptor instead.
+func (*DeleteContactRequest) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *DeleteContactRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type DeleteContactResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteContactResponse) Reset() {
+	*x = DeleteContactResponse{}
+	mi := &file_customers_v1_customer_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteContactResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteContactResponse) ProtoMessage() {}
+
+func (x *DeleteContactResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteContactResponse.ProtoReflect.Descriptor instead.
+func (*DeleteContactResponse) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{30}
+}
+
 var File_customers_v1_customer_proto protoreflect.FileDescriptor
 
 const file_customers_v1_customer_proto_rawDesc = "" +
@@ -1010,14 +2156,139 @@ const file_customers_v1_customer_proto_rawDesc = "" +
 	"\x16RestoreCustomerRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"M\n" +
 	"\x17RestoreCustomerResponse\x122\n" +
-	"\bcustomer\x18\x01 \x01(\v2\x16.customers.v1.CustomerR\bcustomer2\xb6\x04\n" +
+	"\bcustomer\x18\x01 \x01(\v2\x16.customers.v1.CustomerR\bcustomer\"\xe7\x02\n" +
+	"\x0fCustomerAddress\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vcustomer_id\x18\x02 \x01(\tR\n" +
+	"customerId\x12\x12\n" +
+	"\x04type\x18\x03 \x01(\tR\x04type\x12%\n" +
+	"\x0erecipient_name\x18\x04 \x01(\tR\rrecipientName\x12\x14\n" +
+	"\x05phone\x18\x05 \x01(\tR\x05phone\x12!\n" +
+	"\faddress_line\x18\x06 \x01(\tR\vaddressLine\x12\x12\n" +
+	"\x04city\x18\a \x01(\tR\x04city\x12\x1f\n" +
+	"\vpostal_code\x18\b \x01(\tR\n" +
+	"postalCode\x12\x1d\n" +
+	"\n" +
+	"is_default\x18\t \x01(\bR\tisDefault\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\n" +
+	" \x01(\tR\tcreatedAt\x12\x1d\n" +
+	"\n" +
+	"updated_at\x18\v \x01(\tR\tupdatedAt\x12\x1d\n" +
+	"\n" +
+	"deleted_at\x18\f \x01(\tR\tdeletedAt\"`\n" +
+	"\x14ListAddressesRequest\x12\x1f\n" +
+	"\vcustomer_id\x18\x01 \x01(\tR\n" +
+	"customerId\x12'\n" +
+	"\x0finclude_deleted\x18\x02 \x01(\bR\x0eincludeDeleted\"T\n" +
+	"\x15ListAddressesResponse\x12;\n" +
+	"\taddresses\x18\x01 \x03(\v2\x1d.customers.v1.CustomerAddressR\taddresses\"\xfc\x01\n" +
+	"\x11AddAddressRequest\x12\x1f\n" +
+	"\vcustomer_id\x18\x01 \x01(\tR\n" +
+	"customerId\x12\x12\n" +
+	"\x04type\x18\x02 \x01(\tR\x04type\x12%\n" +
+	"\x0erecipient_name\x18\x03 \x01(\tR\rrecipientName\x12\x14\n" +
+	"\x05phone\x18\x04 \x01(\tR\x05phone\x12!\n" +
+	"\faddress_line\x18\x05 \x01(\tR\vaddressLine\x12\x12\n" +
+	"\x04city\x18\x06 \x01(\tR\x04city\x12\x1f\n" +
+	"\vpostal_code\x18\a \x01(\tR\n" +
+	"postalCode\x12\x1d\n" +
+	"\n" +
+	"is_default\x18\b \x01(\bR\tisDefault\"M\n" +
+	"\x12AddAddressResponse\x127\n" +
+	"\aaddress\x18\x01 \x01(\v2\x1d.customers.v1.CustomerAddressR\aaddress\"\xf0\x02\n" +
+	"\x14UpdateAddressRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
+	"\x04type\x18\x02 \x01(\tH\x00R\x04type\x88\x01\x01\x12*\n" +
+	"\x0erecipient_name\x18\x03 \x01(\tH\x01R\rrecipientName\x88\x01\x01\x12\x19\n" +
+	"\x05phone\x18\x04 \x01(\tH\x02R\x05phone\x88\x01\x01\x12&\n" +
+	"\faddress_line\x18\x05 \x01(\tH\x03R\vaddressLine\x88\x01\x01\x12\x17\n" +
+	"\x04city\x18\x06 \x01(\tH\x04R\x04city\x88\x01\x01\x12$\n" +
+	"\vpostal_code\x18\a \x01(\tH\x05R\n" +
+	"postalCode\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"is_default\x18\b \x01(\bH\x06R\tisDefault\x88\x01\x01B\a\n" +
+	"\x05_typeB\x11\n" +
+	"\x0f_recipient_nameB\b\n" +
+	"\x06_phoneB\x0f\n" +
+	"\r_address_lineB\a\n" +
+	"\x05_cityB\x0e\n" +
+	"\f_postal_codeB\r\n" +
+	"\v_is_default\"P\n" +
+	"\x15UpdateAddressResponse\x127\n" +
+	"\aaddress\x18\x01 \x01(\v2\x1d.customers.v1.CustomerAddressR\aaddress\"&\n" +
+	"\x14DeleteAddressRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x17\n" +
+	"\x15DeleteAddressResponse\"\x94\x02\n" +
+	"\x0fCustomerContact\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vcustomer_id\x18\x02 \x01(\tR\n" +
+	"customerId\x12\x12\n" +
+	"\x04name\x18\x03 \x01(\tR\x04name\x12\x14\n" +
+	"\x05title\x18\x04 \x01(\tR\x05title\x12\x14\n" +
+	"\x05email\x18\x05 \x01(\tR\x05email\x12\x14\n" +
+	"\x05phone\x18\x06 \x01(\tR\x05phone\x12\x1d\n" +
+	"\n" +
+	"is_default\x18\a \x01(\bR\tisDefault\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\b \x01(\tR\tcreatedAt\x12\x1d\n" +
+	"\n" +
+	"updated_at\x18\t \x01(\tR\tupdatedAt\x12\x1d\n" +
+	"\n" +
+	"deleted_at\x18\n" +
+	" \x01(\tR\tdeletedAt\"_\n" +
+	"\x13ListContactsRequest\x12\x1f\n" +
+	"\vcustomer_id\x18\x01 \x01(\tR\n" +
+	"customerId\x12'\n" +
+	"\x0finclude_deleted\x18\x02 \x01(\bR\x0eincludeDeleted\"Q\n" +
+	"\x14ListContactsResponse\x129\n" +
+	"\bcontacts\x18\x01 \x03(\v2\x1d.customers.v1.CustomerContactR\bcontacts\"\xa9\x01\n" +
+	"\x11AddContactRequest\x12\x1f\n" +
+	"\vcustomer_id\x18\x01 \x01(\tR\n" +
+	"customerId\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
+	"\x05title\x18\x03 \x01(\tR\x05title\x12\x14\n" +
+	"\x05email\x18\x04 \x01(\tR\x05email\x12\x14\n" +
+	"\x05phone\x18\x05 \x01(\tR\x05phone\x12\x1d\n" +
+	"\n" +
+	"is_default\x18\x06 \x01(\bR\tisDefault\"M\n" +
+	"\x12AddContactResponse\x127\n" +
+	"\acontact\x18\x01 \x01(\v2\x1d.customers.v1.CustomerContactR\acontact\"\xea\x01\n" +
+	"\x14UpdateContactRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
+	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x19\n" +
+	"\x05title\x18\x03 \x01(\tH\x01R\x05title\x88\x01\x01\x12\x19\n" +
+	"\x05email\x18\x04 \x01(\tH\x02R\x05email\x88\x01\x01\x12\x19\n" +
+	"\x05phone\x18\x05 \x01(\tH\x03R\x05phone\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"is_default\x18\x06 \x01(\bH\x04R\tisDefault\x88\x01\x01B\a\n" +
+	"\x05_nameB\b\n" +
+	"\x06_titleB\b\n" +
+	"\x06_emailB\b\n" +
+	"\x06_phoneB\r\n" +
+	"\v_is_default\"P\n" +
+	"\x15UpdateContactResponse\x127\n" +
+	"\acontact\x18\x01 \x01(\v2\x1d.customers.v1.CustomerContactR\acontact\"&\n" +
+	"\x14DeleteContactRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x17\n" +
+	"\x15DeleteContactResponse2\xf1\t\n" +
 	"\x0fCustomerService\x12X\n" +
 	"\rListCustomers\x12\".customers.v1.ListCustomersRequest\x1a#.customers.v1.ListCustomersResponse\x12R\n" +
 	"\vGetCustomer\x12 .customers.v1.GetCustomerRequest\x1a!.customers.v1.GetCustomerResponse\x12[\n" +
 	"\x0eCreateCustomer\x12#.customers.v1.CreateCustomerRequest\x1a$.customers.v1.CreateCustomerResponse\x12[\n" +
 	"\x0eUpdateCustomer\x12#.customers.v1.UpdateCustomerRequest\x1a$.customers.v1.UpdateCustomerResponse\x12[\n" +
 	"\x0eDeleteCustomer\x12#.customers.v1.DeleteCustomerRequest\x1a$.customers.v1.DeleteCustomerResponse\x12^\n" +
-	"\x0fRestoreCustomer\x12$.customers.v1.RestoreCustomerRequest\x1a%.customers.v1.RestoreCustomerResponseBWZUgithub.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1;customersv1b\x06proto3"
+	"\x0fRestoreCustomer\x12$.customers.v1.RestoreCustomerRequest\x1a%.customers.v1.RestoreCustomerResponse\x12X\n" +
+	"\rListAddresses\x12\".customers.v1.ListAddressesRequest\x1a#.customers.v1.ListAddressesResponse\x12O\n" +
+	"\n" +
+	"AddAddress\x12\x1f.customers.v1.AddAddressRequest\x1a .customers.v1.AddAddressResponse\x12X\n" +
+	"\rUpdateAddress\x12\".customers.v1.UpdateAddressRequest\x1a#.customers.v1.UpdateAddressResponse\x12X\n" +
+	"\rDeleteAddress\x12\".customers.v1.DeleteAddressRequest\x1a#.customers.v1.DeleteAddressResponse\x12U\n" +
+	"\fListContacts\x12!.customers.v1.ListContactsRequest\x1a\".customers.v1.ListContactsResponse\x12O\n" +
+	"\n" +
+	"AddContact\x12\x1f.customers.v1.AddContactRequest\x1a .customers.v1.AddContactResponse\x12X\n" +
+	"\rUpdateContact\x12\".customers.v1.UpdateContactRequest\x1a#.customers.v1.UpdateContactResponse\x12X\n" +
+	"\rDeleteContact\x12\".customers.v1.DeleteContactRequest\x1a#.customers.v1.DeleteContactResponseBWZUgithub.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1;customersv1b\x06proto3"
 
 var (
 	file_customers_v1_customer_proto_rawDescOnce sync.Once
@@ -1031,7 +2302,7 @@ func file_customers_v1_customer_proto_rawDescGZIP() []byte {
 	return file_customers_v1_customer_proto_rawDescData
 }
 
-var file_customers_v1_customer_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_customers_v1_customer_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
 var file_customers_v1_customer_proto_goTypes = []any{
 	(*Customer)(nil),                // 0: customers.v1.Customer
 	(*ListCustomersRequest)(nil),    // 1: customers.v1.ListCustomersRequest
@@ -1046,32 +2317,72 @@ var file_customers_v1_customer_proto_goTypes = []any{
 	(*DeleteCustomerResponse)(nil),  // 10: customers.v1.DeleteCustomerResponse
 	(*RestoreCustomerRequest)(nil),  // 11: customers.v1.RestoreCustomerRequest
 	(*RestoreCustomerResponse)(nil), // 12: customers.v1.RestoreCustomerResponse
-	(*v1.Pagination)(nil),           // 13: salesorder.v1.Pagination
+	(*CustomerAddress)(nil),         // 13: customers.v1.CustomerAddress
+	(*ListAddressesRequest)(nil),    // 14: customers.v1.ListAddressesRequest
+	(*ListAddressesResponse)(nil),   // 15: customers.v1.ListAddressesResponse
+	(*AddAddressRequest)(nil),       // 16: customers.v1.AddAddressRequest
+	(*AddAddressResponse)(nil),      // 17: customers.v1.AddAddressResponse
+	(*UpdateAddressRequest)(nil),    // 18: customers.v1.UpdateAddressRequest
+	(*UpdateAddressResponse)(nil),   // 19: customers.v1.UpdateAddressResponse
+	(*DeleteAddressRequest)(nil),    // 20: customers.v1.DeleteAddressRequest
+	(*DeleteAddressResponse)(nil),   // 21: customers.v1.DeleteAddressResponse
+	(*CustomerContact)(nil),         // 22: customers.v1.CustomerContact
+	(*ListContactsRequest)(nil),     // 23: customers.v1.ListContactsRequest
+	(*ListContactsResponse)(nil),    // 24: customers.v1.ListContactsResponse
+	(*AddContactRequest)(nil),       // 25: customers.v1.AddContactRequest
+	(*AddContactResponse)(nil),      // 26: customers.v1.AddContactResponse
+	(*UpdateContactRequest)(nil),    // 27: customers.v1.UpdateContactRequest
+	(*UpdateContactResponse)(nil),   // 28: customers.v1.UpdateContactResponse
+	(*DeleteContactRequest)(nil),    // 29: customers.v1.DeleteContactRequest
+	(*DeleteContactResponse)(nil),   // 30: customers.v1.DeleteContactResponse
+	(*v1.Pagination)(nil),           // 31: salesorder.v1.Pagination
 }
 var file_customers_v1_customer_proto_depIdxs = []int32{
 	0,  // 0: customers.v1.ListCustomersResponse.customers:type_name -> customers.v1.Customer
-	13, // 1: customers.v1.ListCustomersResponse.pagination:type_name -> salesorder.v1.Pagination
+	31, // 1: customers.v1.ListCustomersResponse.pagination:type_name -> salesorder.v1.Pagination
 	0,  // 2: customers.v1.GetCustomerResponse.customer:type_name -> customers.v1.Customer
 	0,  // 3: customers.v1.CreateCustomerResponse.customer:type_name -> customers.v1.Customer
 	0,  // 4: customers.v1.UpdateCustomerResponse.customer:type_name -> customers.v1.Customer
 	0,  // 5: customers.v1.RestoreCustomerResponse.customer:type_name -> customers.v1.Customer
-	1,  // 6: customers.v1.CustomerService.ListCustomers:input_type -> customers.v1.ListCustomersRequest
-	3,  // 7: customers.v1.CustomerService.GetCustomer:input_type -> customers.v1.GetCustomerRequest
-	5,  // 8: customers.v1.CustomerService.CreateCustomer:input_type -> customers.v1.CreateCustomerRequest
-	7,  // 9: customers.v1.CustomerService.UpdateCustomer:input_type -> customers.v1.UpdateCustomerRequest
-	9,  // 10: customers.v1.CustomerService.DeleteCustomer:input_type -> customers.v1.DeleteCustomerRequest
-	11, // 11: customers.v1.CustomerService.RestoreCustomer:input_type -> customers.v1.RestoreCustomerRequest
-	2,  // 12: customers.v1.CustomerService.ListCustomers:output_type -> customers.v1.ListCustomersResponse
-	4,  // 13: customers.v1.CustomerService.GetCustomer:output_type -> customers.v1.GetCustomerResponse
-	6,  // 14: customers.v1.CustomerService.CreateCustomer:output_type -> customers.v1.CreateCustomerResponse
-	8,  // 15: customers.v1.CustomerService.UpdateCustomer:output_type -> customers.v1.UpdateCustomerResponse
-	10, // 16: customers.v1.CustomerService.DeleteCustomer:output_type -> customers.v1.DeleteCustomerResponse
-	12, // 17: customers.v1.CustomerService.RestoreCustomer:output_type -> customers.v1.RestoreCustomerResponse
-	12, // [12:18] is the sub-list for method output_type
-	6,  // [6:12] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	13, // 6: customers.v1.ListAddressesResponse.addresses:type_name -> customers.v1.CustomerAddress
+	13, // 7: customers.v1.AddAddressResponse.address:type_name -> customers.v1.CustomerAddress
+	13, // 8: customers.v1.UpdateAddressResponse.address:type_name -> customers.v1.CustomerAddress
+	22, // 9: customers.v1.ListContactsResponse.contacts:type_name -> customers.v1.CustomerContact
+	22, // 10: customers.v1.AddContactResponse.contact:type_name -> customers.v1.CustomerContact
+	22, // 11: customers.v1.UpdateContactResponse.contact:type_name -> customers.v1.CustomerContact
+	1,  // 12: customers.v1.CustomerService.ListCustomers:input_type -> customers.v1.ListCustomersRequest
+	3,  // 13: customers.v1.CustomerService.GetCustomer:input_type -> customers.v1.GetCustomerRequest
+	5,  // 14: customers.v1.CustomerService.CreateCustomer:input_type -> customers.v1.CreateCustomerRequest
+	7,  // 15: customers.v1.CustomerService.UpdateCustomer:input_type -> customers.v1.UpdateCustomerRequest
+	9,  // 16: customers.v1.CustomerService.DeleteCustomer:input_type -> customers.v1.DeleteCustomerRequest
+	11, // 17: customers.v1.CustomerService.RestoreCustomer:input_type -> customers.v1.RestoreCustomerRequest
+	14, // 18: customers.v1.CustomerService.ListAddresses:input_type -> customers.v1.ListAddressesRequest
+	16, // 19: customers.v1.CustomerService.AddAddress:input_type -> customers.v1.AddAddressRequest
+	18, // 20: customers.v1.CustomerService.UpdateAddress:input_type -> customers.v1.UpdateAddressRequest
+	20, // 21: customers.v1.CustomerService.DeleteAddress:input_type -> customers.v1.DeleteAddressRequest
+	23, // 22: customers.v1.CustomerService.ListContacts:input_type -> customers.v1.ListContactsRequest
+	25, // 23: customers.v1.CustomerService.AddContact:input_type -> customers.v1.AddContactRequest
+	27, // 24: customers.v1.CustomerService.UpdateContact:input_type -> customers.v1.UpdateContactRequest
+	29, // 25: customers.v1.CustomerService.DeleteContact:input_type -> customers.v1.DeleteContactRequest
+	2,  // 26: customers.v1.CustomerService.ListCustomers:output_type -> customers.v1.ListCustomersResponse
+	4,  // 27: customers.v1.CustomerService.GetCustomer:output_type -> customers.v1.GetCustomerResponse
+	6,  // 28: customers.v1.CustomerService.CreateCustomer:output_type -> customers.v1.CreateCustomerResponse
+	8,  // 29: customers.v1.CustomerService.UpdateCustomer:output_type -> customers.v1.UpdateCustomerResponse
+	10, // 30: customers.v1.CustomerService.DeleteCustomer:output_type -> customers.v1.DeleteCustomerResponse
+	12, // 31: customers.v1.CustomerService.RestoreCustomer:output_type -> customers.v1.RestoreCustomerResponse
+	15, // 32: customers.v1.CustomerService.ListAddresses:output_type -> customers.v1.ListAddressesResponse
+	17, // 33: customers.v1.CustomerService.AddAddress:output_type -> customers.v1.AddAddressResponse
+	19, // 34: customers.v1.CustomerService.UpdateAddress:output_type -> customers.v1.UpdateAddressResponse
+	21, // 35: customers.v1.CustomerService.DeleteAddress:output_type -> customers.v1.DeleteAddressResponse
+	24, // 36: customers.v1.CustomerService.ListContacts:output_type -> customers.v1.ListContactsResponse
+	26, // 37: customers.v1.CustomerService.AddContact:output_type -> customers.v1.AddContactResponse
+	28, // 38: customers.v1.CustomerService.UpdateContact:output_type -> customers.v1.UpdateContactResponse
+	30, // 39: customers.v1.CustomerService.DeleteContact:output_type -> customers.v1.DeleteContactResponse
+	26, // [26:40] is the sub-list for method output_type
+	12, // [12:26] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_customers_v1_customer_proto_init() }
@@ -1080,13 +2391,15 @@ func file_customers_v1_customer_proto_init() {
 		return
 	}
 	file_customers_v1_customer_proto_msgTypes[7].OneofWrappers = []any{}
+	file_customers_v1_customer_proto_msgTypes[18].OneofWrappers = []any{}
+	file_customers_v1_customer_proto_msgTypes[27].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_customers_v1_customer_proto_rawDesc), len(file_customers_v1_customer_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   31,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

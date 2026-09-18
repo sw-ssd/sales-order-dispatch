@@ -51,6 +51,30 @@ const (
 	// CustomerServiceRestoreCustomerProcedure is the fully-qualified name of the CustomerService's
 	// RestoreCustomer RPC.
 	CustomerServiceRestoreCustomerProcedure = "/customers.v1.CustomerService/RestoreCustomer"
+	// CustomerServiceListAddressesProcedure is the fully-qualified name of the CustomerService's
+	// ListAddresses RPC.
+	CustomerServiceListAddressesProcedure = "/customers.v1.CustomerService/ListAddresses"
+	// CustomerServiceAddAddressProcedure is the fully-qualified name of the CustomerService's
+	// AddAddress RPC.
+	CustomerServiceAddAddressProcedure = "/customers.v1.CustomerService/AddAddress"
+	// CustomerServiceUpdateAddressProcedure is the fully-qualified name of the CustomerService's
+	// UpdateAddress RPC.
+	CustomerServiceUpdateAddressProcedure = "/customers.v1.CustomerService/UpdateAddress"
+	// CustomerServiceDeleteAddressProcedure is the fully-qualified name of the CustomerService's
+	// DeleteAddress RPC.
+	CustomerServiceDeleteAddressProcedure = "/customers.v1.CustomerService/DeleteAddress"
+	// CustomerServiceListContactsProcedure is the fully-qualified name of the CustomerService's
+	// ListContacts RPC.
+	CustomerServiceListContactsProcedure = "/customers.v1.CustomerService/ListContacts"
+	// CustomerServiceAddContactProcedure is the fully-qualified name of the CustomerService's
+	// AddContact RPC.
+	CustomerServiceAddContactProcedure = "/customers.v1.CustomerService/AddContact"
+	// CustomerServiceUpdateContactProcedure is the fully-qualified name of the CustomerService's
+	// UpdateContact RPC.
+	CustomerServiceUpdateContactProcedure = "/customers.v1.CustomerService/UpdateContact"
+	// CustomerServiceDeleteContactProcedure is the fully-qualified name of the CustomerService's
+	// DeleteContact RPC.
+	CustomerServiceDeleteContactProcedure = "/customers.v1.CustomerService/DeleteContact"
 )
 
 // CustomerServiceClient is a client for the customers.v1.CustomerService service.
@@ -67,6 +91,15 @@ type CustomerServiceClient interface {
 	DeleteCustomer(context.Context, *connect.Request[v1.DeleteCustomerRequest]) (*connect.Response[v1.DeleteCustomerResponse], error)
 	// RestoreCustomer:復原(清 deleted_at)。
 	RestoreCustomer(context.Context, *connect.Request[v1.RestoreCustomerRequest]) (*connect.Response[v1.RestoreCustomerResponse], error)
+	// 以下為地址簿與聯絡人(3.2.1 / 3.2.2)。
+	ListAddresses(context.Context, *connect.Request[v1.ListAddressesRequest]) (*connect.Response[v1.ListAddressesResponse], error)
+	AddAddress(context.Context, *connect.Request[v1.AddAddressRequest]) (*connect.Response[v1.AddAddressResponse], error)
+	UpdateAddress(context.Context, *connect.Request[v1.UpdateAddressRequest]) (*connect.Response[v1.UpdateAddressResponse], error)
+	DeleteAddress(context.Context, *connect.Request[v1.DeleteAddressRequest]) (*connect.Response[v1.DeleteAddressResponse], error)
+	ListContacts(context.Context, *connect.Request[v1.ListContactsRequest]) (*connect.Response[v1.ListContactsResponse], error)
+	AddContact(context.Context, *connect.Request[v1.AddContactRequest]) (*connect.Response[v1.AddContactResponse], error)
+	UpdateContact(context.Context, *connect.Request[v1.UpdateContactRequest]) (*connect.Response[v1.UpdateContactResponse], error)
+	DeleteContact(context.Context, *connect.Request[v1.DeleteContactRequest]) (*connect.Response[v1.DeleteContactResponse], error)
 }
 
 // NewCustomerServiceClient constructs a client for the customers.v1.CustomerService service. By
@@ -116,6 +149,54 @@ func NewCustomerServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(customerServiceMethods.ByName("RestoreCustomer")),
 			connect.WithClientOptions(opts...),
 		),
+		listAddresses: connect.NewClient[v1.ListAddressesRequest, v1.ListAddressesResponse](
+			httpClient,
+			baseURL+CustomerServiceListAddressesProcedure,
+			connect.WithSchema(customerServiceMethods.ByName("ListAddresses")),
+			connect.WithClientOptions(opts...),
+		),
+		addAddress: connect.NewClient[v1.AddAddressRequest, v1.AddAddressResponse](
+			httpClient,
+			baseURL+CustomerServiceAddAddressProcedure,
+			connect.WithSchema(customerServiceMethods.ByName("AddAddress")),
+			connect.WithClientOptions(opts...),
+		),
+		updateAddress: connect.NewClient[v1.UpdateAddressRequest, v1.UpdateAddressResponse](
+			httpClient,
+			baseURL+CustomerServiceUpdateAddressProcedure,
+			connect.WithSchema(customerServiceMethods.ByName("UpdateAddress")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteAddress: connect.NewClient[v1.DeleteAddressRequest, v1.DeleteAddressResponse](
+			httpClient,
+			baseURL+CustomerServiceDeleteAddressProcedure,
+			connect.WithSchema(customerServiceMethods.ByName("DeleteAddress")),
+			connect.WithClientOptions(opts...),
+		),
+		listContacts: connect.NewClient[v1.ListContactsRequest, v1.ListContactsResponse](
+			httpClient,
+			baseURL+CustomerServiceListContactsProcedure,
+			connect.WithSchema(customerServiceMethods.ByName("ListContacts")),
+			connect.WithClientOptions(opts...),
+		),
+		addContact: connect.NewClient[v1.AddContactRequest, v1.AddContactResponse](
+			httpClient,
+			baseURL+CustomerServiceAddContactProcedure,
+			connect.WithSchema(customerServiceMethods.ByName("AddContact")),
+			connect.WithClientOptions(opts...),
+		),
+		updateContact: connect.NewClient[v1.UpdateContactRequest, v1.UpdateContactResponse](
+			httpClient,
+			baseURL+CustomerServiceUpdateContactProcedure,
+			connect.WithSchema(customerServiceMethods.ByName("UpdateContact")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteContact: connect.NewClient[v1.DeleteContactRequest, v1.DeleteContactResponse](
+			httpClient,
+			baseURL+CustomerServiceDeleteContactProcedure,
+			connect.WithSchema(customerServiceMethods.ByName("DeleteContact")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -127,6 +208,14 @@ type customerServiceClient struct {
 	updateCustomer  *connect.Client[v1.UpdateCustomerRequest, v1.UpdateCustomerResponse]
 	deleteCustomer  *connect.Client[v1.DeleteCustomerRequest, v1.DeleteCustomerResponse]
 	restoreCustomer *connect.Client[v1.RestoreCustomerRequest, v1.RestoreCustomerResponse]
+	listAddresses   *connect.Client[v1.ListAddressesRequest, v1.ListAddressesResponse]
+	addAddress      *connect.Client[v1.AddAddressRequest, v1.AddAddressResponse]
+	updateAddress   *connect.Client[v1.UpdateAddressRequest, v1.UpdateAddressResponse]
+	deleteAddress   *connect.Client[v1.DeleteAddressRequest, v1.DeleteAddressResponse]
+	listContacts    *connect.Client[v1.ListContactsRequest, v1.ListContactsResponse]
+	addContact      *connect.Client[v1.AddContactRequest, v1.AddContactResponse]
+	updateContact   *connect.Client[v1.UpdateContactRequest, v1.UpdateContactResponse]
+	deleteContact   *connect.Client[v1.DeleteContactRequest, v1.DeleteContactResponse]
 }
 
 // ListCustomers calls customers.v1.CustomerService.ListCustomers.
@@ -159,6 +248,46 @@ func (c *customerServiceClient) RestoreCustomer(ctx context.Context, req *connec
 	return c.restoreCustomer.CallUnary(ctx, req)
 }
 
+// ListAddresses calls customers.v1.CustomerService.ListAddresses.
+func (c *customerServiceClient) ListAddresses(ctx context.Context, req *connect.Request[v1.ListAddressesRequest]) (*connect.Response[v1.ListAddressesResponse], error) {
+	return c.listAddresses.CallUnary(ctx, req)
+}
+
+// AddAddress calls customers.v1.CustomerService.AddAddress.
+func (c *customerServiceClient) AddAddress(ctx context.Context, req *connect.Request[v1.AddAddressRequest]) (*connect.Response[v1.AddAddressResponse], error) {
+	return c.addAddress.CallUnary(ctx, req)
+}
+
+// UpdateAddress calls customers.v1.CustomerService.UpdateAddress.
+func (c *customerServiceClient) UpdateAddress(ctx context.Context, req *connect.Request[v1.UpdateAddressRequest]) (*connect.Response[v1.UpdateAddressResponse], error) {
+	return c.updateAddress.CallUnary(ctx, req)
+}
+
+// DeleteAddress calls customers.v1.CustomerService.DeleteAddress.
+func (c *customerServiceClient) DeleteAddress(ctx context.Context, req *connect.Request[v1.DeleteAddressRequest]) (*connect.Response[v1.DeleteAddressResponse], error) {
+	return c.deleteAddress.CallUnary(ctx, req)
+}
+
+// ListContacts calls customers.v1.CustomerService.ListContacts.
+func (c *customerServiceClient) ListContacts(ctx context.Context, req *connect.Request[v1.ListContactsRequest]) (*connect.Response[v1.ListContactsResponse], error) {
+	return c.listContacts.CallUnary(ctx, req)
+}
+
+// AddContact calls customers.v1.CustomerService.AddContact.
+func (c *customerServiceClient) AddContact(ctx context.Context, req *connect.Request[v1.AddContactRequest]) (*connect.Response[v1.AddContactResponse], error) {
+	return c.addContact.CallUnary(ctx, req)
+}
+
+// UpdateContact calls customers.v1.CustomerService.UpdateContact.
+func (c *customerServiceClient) UpdateContact(ctx context.Context, req *connect.Request[v1.UpdateContactRequest]) (*connect.Response[v1.UpdateContactResponse], error) {
+	return c.updateContact.CallUnary(ctx, req)
+}
+
+// DeleteContact calls customers.v1.CustomerService.DeleteContact.
+func (c *customerServiceClient) DeleteContact(ctx context.Context, req *connect.Request[v1.DeleteContactRequest]) (*connect.Response[v1.DeleteContactResponse], error) {
+	return c.deleteContact.CallUnary(ctx, req)
+}
+
 // CustomerServiceHandler is an implementation of the customers.v1.CustomerService service.
 type CustomerServiceHandler interface {
 	// ListCustomers:分頁查詢(keyword 模糊比對 name/customer_code/tax_id;可 include_deleted)。
@@ -173,6 +302,15 @@ type CustomerServiceHandler interface {
 	DeleteCustomer(context.Context, *connect.Request[v1.DeleteCustomerRequest]) (*connect.Response[v1.DeleteCustomerResponse], error)
 	// RestoreCustomer:復原(清 deleted_at)。
 	RestoreCustomer(context.Context, *connect.Request[v1.RestoreCustomerRequest]) (*connect.Response[v1.RestoreCustomerResponse], error)
+	// 以下為地址簿與聯絡人(3.2.1 / 3.2.2)。
+	ListAddresses(context.Context, *connect.Request[v1.ListAddressesRequest]) (*connect.Response[v1.ListAddressesResponse], error)
+	AddAddress(context.Context, *connect.Request[v1.AddAddressRequest]) (*connect.Response[v1.AddAddressResponse], error)
+	UpdateAddress(context.Context, *connect.Request[v1.UpdateAddressRequest]) (*connect.Response[v1.UpdateAddressResponse], error)
+	DeleteAddress(context.Context, *connect.Request[v1.DeleteAddressRequest]) (*connect.Response[v1.DeleteAddressResponse], error)
+	ListContacts(context.Context, *connect.Request[v1.ListContactsRequest]) (*connect.Response[v1.ListContactsResponse], error)
+	AddContact(context.Context, *connect.Request[v1.AddContactRequest]) (*connect.Response[v1.AddContactResponse], error)
+	UpdateContact(context.Context, *connect.Request[v1.UpdateContactRequest]) (*connect.Response[v1.UpdateContactResponse], error)
+	DeleteContact(context.Context, *connect.Request[v1.DeleteContactRequest]) (*connect.Response[v1.DeleteContactResponse], error)
 }
 
 // NewCustomerServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -218,6 +356,54 @@ func NewCustomerServiceHandler(svc CustomerServiceHandler, opts ...connect.Handl
 		connect.WithSchema(customerServiceMethods.ByName("RestoreCustomer")),
 		connect.WithHandlerOptions(opts...),
 	)
+	customerServiceListAddressesHandler := connect.NewUnaryHandler(
+		CustomerServiceListAddressesProcedure,
+		svc.ListAddresses,
+		connect.WithSchema(customerServiceMethods.ByName("ListAddresses")),
+		connect.WithHandlerOptions(opts...),
+	)
+	customerServiceAddAddressHandler := connect.NewUnaryHandler(
+		CustomerServiceAddAddressProcedure,
+		svc.AddAddress,
+		connect.WithSchema(customerServiceMethods.ByName("AddAddress")),
+		connect.WithHandlerOptions(opts...),
+	)
+	customerServiceUpdateAddressHandler := connect.NewUnaryHandler(
+		CustomerServiceUpdateAddressProcedure,
+		svc.UpdateAddress,
+		connect.WithSchema(customerServiceMethods.ByName("UpdateAddress")),
+		connect.WithHandlerOptions(opts...),
+	)
+	customerServiceDeleteAddressHandler := connect.NewUnaryHandler(
+		CustomerServiceDeleteAddressProcedure,
+		svc.DeleteAddress,
+		connect.WithSchema(customerServiceMethods.ByName("DeleteAddress")),
+		connect.WithHandlerOptions(opts...),
+	)
+	customerServiceListContactsHandler := connect.NewUnaryHandler(
+		CustomerServiceListContactsProcedure,
+		svc.ListContacts,
+		connect.WithSchema(customerServiceMethods.ByName("ListContacts")),
+		connect.WithHandlerOptions(opts...),
+	)
+	customerServiceAddContactHandler := connect.NewUnaryHandler(
+		CustomerServiceAddContactProcedure,
+		svc.AddContact,
+		connect.WithSchema(customerServiceMethods.ByName("AddContact")),
+		connect.WithHandlerOptions(opts...),
+	)
+	customerServiceUpdateContactHandler := connect.NewUnaryHandler(
+		CustomerServiceUpdateContactProcedure,
+		svc.UpdateContact,
+		connect.WithSchema(customerServiceMethods.ByName("UpdateContact")),
+		connect.WithHandlerOptions(opts...),
+	)
+	customerServiceDeleteContactHandler := connect.NewUnaryHandler(
+		CustomerServiceDeleteContactProcedure,
+		svc.DeleteContact,
+		connect.WithSchema(customerServiceMethods.ByName("DeleteContact")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/customers.v1.CustomerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case CustomerServiceListCustomersProcedure:
@@ -232,6 +418,22 @@ func NewCustomerServiceHandler(svc CustomerServiceHandler, opts ...connect.Handl
 			customerServiceDeleteCustomerHandler.ServeHTTP(w, r)
 		case CustomerServiceRestoreCustomerProcedure:
 			customerServiceRestoreCustomerHandler.ServeHTTP(w, r)
+		case CustomerServiceListAddressesProcedure:
+			customerServiceListAddressesHandler.ServeHTTP(w, r)
+		case CustomerServiceAddAddressProcedure:
+			customerServiceAddAddressHandler.ServeHTTP(w, r)
+		case CustomerServiceUpdateAddressProcedure:
+			customerServiceUpdateAddressHandler.ServeHTTP(w, r)
+		case CustomerServiceDeleteAddressProcedure:
+			customerServiceDeleteAddressHandler.ServeHTTP(w, r)
+		case CustomerServiceListContactsProcedure:
+			customerServiceListContactsHandler.ServeHTTP(w, r)
+		case CustomerServiceAddContactProcedure:
+			customerServiceAddContactHandler.ServeHTTP(w, r)
+		case CustomerServiceUpdateContactProcedure:
+			customerServiceUpdateContactHandler.ServeHTTP(w, r)
+		case CustomerServiceDeleteContactProcedure:
+			customerServiceDeleteContactHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -263,4 +465,36 @@ func (UnimplementedCustomerServiceHandler) DeleteCustomer(context.Context, *conn
 
 func (UnimplementedCustomerServiceHandler) RestoreCustomer(context.Context, *connect.Request[v1.RestoreCustomerRequest]) (*connect.Response[v1.RestoreCustomerResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("customers.v1.CustomerService.RestoreCustomer is not implemented"))
+}
+
+func (UnimplementedCustomerServiceHandler) ListAddresses(context.Context, *connect.Request[v1.ListAddressesRequest]) (*connect.Response[v1.ListAddressesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("customers.v1.CustomerService.ListAddresses is not implemented"))
+}
+
+func (UnimplementedCustomerServiceHandler) AddAddress(context.Context, *connect.Request[v1.AddAddressRequest]) (*connect.Response[v1.AddAddressResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("customers.v1.CustomerService.AddAddress is not implemented"))
+}
+
+func (UnimplementedCustomerServiceHandler) UpdateAddress(context.Context, *connect.Request[v1.UpdateAddressRequest]) (*connect.Response[v1.UpdateAddressResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("customers.v1.CustomerService.UpdateAddress is not implemented"))
+}
+
+func (UnimplementedCustomerServiceHandler) DeleteAddress(context.Context, *connect.Request[v1.DeleteAddressRequest]) (*connect.Response[v1.DeleteAddressResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("customers.v1.CustomerService.DeleteAddress is not implemented"))
+}
+
+func (UnimplementedCustomerServiceHandler) ListContacts(context.Context, *connect.Request[v1.ListContactsRequest]) (*connect.Response[v1.ListContactsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("customers.v1.CustomerService.ListContacts is not implemented"))
+}
+
+func (UnimplementedCustomerServiceHandler) AddContact(context.Context, *connect.Request[v1.AddContactRequest]) (*connect.Response[v1.AddContactResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("customers.v1.CustomerService.AddContact is not implemented"))
+}
+
+func (UnimplementedCustomerServiceHandler) UpdateContact(context.Context, *connect.Request[v1.UpdateContactRequest]) (*connect.Response[v1.UpdateContactResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("customers.v1.CustomerService.UpdateContact is not implemented"))
+}
+
+func (UnimplementedCustomerServiceHandler) DeleteContact(context.Context, *connect.Request[v1.DeleteContactRequest]) (*connect.Response[v1.DeleteContactResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("customers.v1.CustomerService.DeleteContact is not implemented"))
 }

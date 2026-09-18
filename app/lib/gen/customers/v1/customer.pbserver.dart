@@ -33,6 +33,22 @@ abstract class CustomerServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $1.DeleteCustomerRequest request);
   $async.Future<$1.RestoreCustomerResponse> restoreCustomer(
       $pb.ServerContext ctx, $1.RestoreCustomerRequest request);
+  $async.Future<$1.ListAddressesResponse> listAddresses(
+      $pb.ServerContext ctx, $1.ListAddressesRequest request);
+  $async.Future<$1.AddAddressResponse> addAddress(
+      $pb.ServerContext ctx, $1.AddAddressRequest request);
+  $async.Future<$1.UpdateAddressResponse> updateAddress(
+      $pb.ServerContext ctx, $1.UpdateAddressRequest request);
+  $async.Future<$1.DeleteAddressResponse> deleteAddress(
+      $pb.ServerContext ctx, $1.DeleteAddressRequest request);
+  $async.Future<$1.ListContactsResponse> listContacts(
+      $pb.ServerContext ctx, $1.ListContactsRequest request);
+  $async.Future<$1.AddContactResponse> addContact(
+      $pb.ServerContext ctx, $1.AddContactRequest request);
+  $async.Future<$1.UpdateContactResponse> updateContact(
+      $pb.ServerContext ctx, $1.UpdateContactRequest request);
+  $async.Future<$1.DeleteContactResponse> deleteContact(
+      $pb.ServerContext ctx, $1.DeleteContactRequest request);
 
   $pb.GeneratedMessage createRequest($core.String methodName) {
     switch (methodName) {
@@ -48,6 +64,22 @@ abstract class CustomerServiceBase extends $pb.GeneratedService {
         return $1.DeleteCustomerRequest();
       case 'RestoreCustomer':
         return $1.RestoreCustomerRequest();
+      case 'ListAddresses':
+        return $1.ListAddressesRequest();
+      case 'AddAddress':
+        return $1.AddAddressRequest();
+      case 'UpdateAddress':
+        return $1.UpdateAddressRequest();
+      case 'DeleteAddress':
+        return $1.DeleteAddressRequest();
+      case 'ListContacts':
+        return $1.ListContactsRequest();
+      case 'AddContact':
+        return $1.AddContactRequest();
+      case 'UpdateContact':
+        return $1.UpdateContactRequest();
+      case 'DeleteContact':
+        return $1.DeleteContactRequest();
       default:
         throw $core.ArgumentError('Unknown method: $methodName');
     }
@@ -68,6 +100,22 @@ abstract class CustomerServiceBase extends $pb.GeneratedService {
         return deleteCustomer(ctx, request as $1.DeleteCustomerRequest);
       case 'RestoreCustomer':
         return restoreCustomer(ctx, request as $1.RestoreCustomerRequest);
+      case 'ListAddresses':
+        return listAddresses(ctx, request as $1.ListAddressesRequest);
+      case 'AddAddress':
+        return addAddress(ctx, request as $1.AddAddressRequest);
+      case 'UpdateAddress':
+        return updateAddress(ctx, request as $1.UpdateAddressRequest);
+      case 'DeleteAddress':
+        return deleteAddress(ctx, request as $1.DeleteAddressRequest);
+      case 'ListContacts':
+        return listContacts(ctx, request as $1.ListContactsRequest);
+      case 'AddContact':
+        return addContact(ctx, request as $1.AddContactRequest);
+      case 'UpdateContact':
+        return updateContact(ctx, request as $1.UpdateContactRequest);
+      case 'DeleteContact':
+        return deleteContact(ctx, request as $1.DeleteContactRequest);
       default:
         throw $core.ArgumentError('Unknown method: $methodName');
     }

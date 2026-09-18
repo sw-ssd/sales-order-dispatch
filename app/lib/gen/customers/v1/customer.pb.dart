@@ -1259,6 +1259,1573 @@ class RestoreCustomerResponse extends $pb.GeneratedMessage {
   Customer ensureCustomer() => $_ensure(0);
 }
 
+/// CustomerAddress:客戶地址(3.2.1)。
+class CustomerAddress extends $pb.GeneratedMessage {
+  factory CustomerAddress({
+    $core.String? id,
+    $core.String? customerId,
+    $core.String? type,
+    $core.String? recipientName,
+    $core.String? phone,
+    $core.String? addressLine,
+    $core.String? city,
+    $core.String? postalCode,
+    $core.bool? isDefault,
+    $core.String? createdAt,
+    $core.String? updatedAt,
+    $core.String? deletedAt,
+  }) {
+    final result = CustomerAddress._();
+    if (id != null) result.id = id;
+    if (customerId != null) result.customerId = customerId;
+    if (type != null) result.type = type;
+    if (recipientName != null) result.recipientName = recipientName;
+    if (phone != null) result.phone = phone;
+    if (addressLine != null) result.addressLine = addressLine;
+    if (city != null) result.city = city;
+    if (postalCode != null) result.postalCode = postalCode;
+    if (isDefault != null) result.isDefault = isDefault;
+    if (createdAt != null) result.createdAt = createdAt;
+    if (updatedAt != null) result.updatedAt = updatedAt;
+    if (deletedAt != null) result.deletedAt = deletedAt;
+    return result;
+  }
+
+  CustomerAddress._();
+
+  factory CustomerAddress.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CustomerAddress()..mergeFromBuffer(data, registry);
+  factory CustomerAddress.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CustomerAddress()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CustomerAddress',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: CustomerAddress.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'customerId')
+    ..aOS(3, _omitFieldNames ? '' : 'type')
+    ..aOS(4, _omitFieldNames ? '' : 'recipientName')
+    ..aOS(5, _omitFieldNames ? '' : 'phone')
+    ..aOS(6, _omitFieldNames ? '' : 'addressLine')
+    ..aOS(7, _omitFieldNames ? '' : 'city')
+    ..aOS(8, _omitFieldNames ? '' : 'postalCode')
+    ..aOB(9, _omitFieldNames ? '' : 'isDefault')
+    ..aOS(10, _omitFieldNames ? '' : 'createdAt')
+    ..aOS(11, _omitFieldNames ? '' : 'updatedAt')
+    ..aOS(12, _omitFieldNames ? '' : 'deletedAt')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CustomerAddress clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CustomerAddress copyWith(void Function(CustomerAddress) updates) =>
+      super.copyWith((message) => updates(message as CustomerAddress))
+          as CustomerAddress;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use CustomerAddress() / CustomerAddress.new instead')
+  static CustomerAddress create() => CustomerAddress._();
+  static $pb.GeneratedMessage $_createMessage() => CustomerAddress._();
+  @$core.override
+  CustomerAddress createEmptyInstance() => CustomerAddress._();
+  @$core.pragma('dart2js:noInline')
+  static CustomerAddress getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<CustomerAddress>(
+          CustomerAddress.$_createMessage);
+  static CustomerAddress? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get customerId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set customerId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasCustomerId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearCustomerId() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get type => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set type($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasType() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearType() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get recipientName => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set recipientName($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasRecipientName() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearRecipientName() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get phone => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set phone($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasPhone() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearPhone() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get addressLine => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set addressLine($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasAddressLine() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearAddressLine() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get city => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set city($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasCity() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearCity() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.String get postalCode => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set postalCode($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasPostalCode() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearPostalCode() => $_clearField(8);
+
+  @$pb.TagNumber(9)
+  $core.bool get isDefault => $_getBF(8);
+  @$pb.TagNumber(9)
+  set isDefault($core.bool value) => $_setBool(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasIsDefault() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearIsDefault() => $_clearField(9);
+
+  @$pb.TagNumber(10)
+  $core.String get createdAt => $_getSZ(9);
+  @$pb.TagNumber(10)
+  set createdAt($core.String value) => $_setString(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasCreatedAt() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearCreatedAt() => $_clearField(10);
+
+  @$pb.TagNumber(11)
+  $core.String get updatedAt => $_getSZ(10);
+  @$pb.TagNumber(11)
+  set updatedAt($core.String value) => $_setString(10, value);
+  @$pb.TagNumber(11)
+  $core.bool hasUpdatedAt() => $_has(10);
+  @$pb.TagNumber(11)
+  void clearUpdatedAt() => $_clearField(11);
+
+  @$pb.TagNumber(12)
+  $core.String get deletedAt => $_getSZ(11);
+  @$pb.TagNumber(12)
+  set deletedAt($core.String value) => $_setString(11, value);
+  @$pb.TagNumber(12)
+  $core.bool hasDeletedAt() => $_has(11);
+  @$pb.TagNumber(12)
+  void clearDeletedAt() => $_clearField(12);
+}
+
+class ListAddressesRequest extends $pb.GeneratedMessage {
+  factory ListAddressesRequest({
+    $core.String? customerId,
+    $core.bool? includeDeleted,
+  }) {
+    final result = ListAddressesRequest._();
+    if (customerId != null) result.customerId = customerId;
+    if (includeDeleted != null) result.includeDeleted = includeDeleted;
+    return result;
+  }
+
+  ListAddressesRequest._();
+
+  factory ListAddressesRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListAddressesRequest()..mergeFromBuffer(data, registry);
+  factory ListAddressesRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListAddressesRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListAddressesRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: ListAddressesRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'customerId')
+    ..aOB(2, _omitFieldNames ? '' : 'includeDeleted')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListAddressesRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListAddressesRequest copyWith(void Function(ListAddressesRequest) updates) =>
+      super.copyWith((message) => updates(message as ListAddressesRequest))
+          as ListAddressesRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListAddressesRequest() / ListAddressesRequest.new instead')
+  static ListAddressesRequest create() => ListAddressesRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ListAddressesRequest._();
+  @$core.override
+  ListAddressesRequest createEmptyInstance() => ListAddressesRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ListAddressesRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListAddressesRequest>(
+          ListAddressesRequest.$_createMessage);
+  static ListAddressesRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get customerId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set customerId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasCustomerId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCustomerId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.bool get includeDeleted => $_getBF(1);
+  @$pb.TagNumber(2)
+  set includeDeleted($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasIncludeDeleted() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearIncludeDeleted() => $_clearField(2);
+}
+
+class ListAddressesResponse extends $pb.GeneratedMessage {
+  factory ListAddressesResponse({
+    $core.Iterable<CustomerAddress>? addresses,
+  }) {
+    final result = ListAddressesResponse._();
+    if (addresses != null) result.addresses.addAll(addresses);
+    return result;
+  }
+
+  ListAddressesResponse._();
+
+  factory ListAddressesResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListAddressesResponse()..mergeFromBuffer(data, registry);
+  factory ListAddressesResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListAddressesResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListAddressesResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: ListAddressesResponse.$_createMessage)
+    ..pPM<CustomerAddress>(1, _omitFieldNames ? '' : 'addresses',
+        subBuilder: CustomerAddress.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListAddressesResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListAddressesResponse copyWith(
+          void Function(ListAddressesResponse) updates) =>
+      super.copyWith((message) => updates(message as ListAddressesResponse))
+          as ListAddressesResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListAddressesResponse() / ListAddressesResponse.new instead')
+  static ListAddressesResponse create() => ListAddressesResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ListAddressesResponse._();
+  @$core.override
+  ListAddressesResponse createEmptyInstance() => ListAddressesResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ListAddressesResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListAddressesResponse>(
+          ListAddressesResponse.$_createMessage);
+  static ListAddressesResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<CustomerAddress> get addresses => $_getList(0);
+}
+
+class AddAddressRequest extends $pb.GeneratedMessage {
+  factory AddAddressRequest({
+    $core.String? customerId,
+    $core.String? type,
+    $core.String? recipientName,
+    $core.String? phone,
+    $core.String? addressLine,
+    $core.String? city,
+    $core.String? postalCode,
+    $core.bool? isDefault,
+  }) {
+    final result = AddAddressRequest._();
+    if (customerId != null) result.customerId = customerId;
+    if (type != null) result.type = type;
+    if (recipientName != null) result.recipientName = recipientName;
+    if (phone != null) result.phone = phone;
+    if (addressLine != null) result.addressLine = addressLine;
+    if (city != null) result.city = city;
+    if (postalCode != null) result.postalCode = postalCode;
+    if (isDefault != null) result.isDefault = isDefault;
+    return result;
+  }
+
+  AddAddressRequest._();
+
+  factory AddAddressRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddAddressRequest()..mergeFromBuffer(data, registry);
+  factory AddAddressRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddAddressRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AddAddressRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: AddAddressRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'customerId')
+    ..aOS(2, _omitFieldNames ? '' : 'type')
+    ..aOS(3, _omitFieldNames ? '' : 'recipientName')
+    ..aOS(4, _omitFieldNames ? '' : 'phone')
+    ..aOS(5, _omitFieldNames ? '' : 'addressLine')
+    ..aOS(6, _omitFieldNames ? '' : 'city')
+    ..aOS(7, _omitFieldNames ? '' : 'postalCode')
+    ..aOB(8, _omitFieldNames ? '' : 'isDefault')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddAddressRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddAddressRequest copyWith(void Function(AddAddressRequest) updates) =>
+      super.copyWith((message) => updates(message as AddAddressRequest))
+          as AddAddressRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use AddAddressRequest() / AddAddressRequest.new instead')
+  static AddAddressRequest create() => AddAddressRequest._();
+  static $pb.GeneratedMessage $_createMessage() => AddAddressRequest._();
+  @$core.override
+  AddAddressRequest createEmptyInstance() => AddAddressRequest._();
+  @$core.pragma('dart2js:noInline')
+  static AddAddressRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<AddAddressRequest>(
+          AddAddressRequest.$_createMessage);
+  static AddAddressRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get customerId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set customerId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasCustomerId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCustomerId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get type => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set type($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasType() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearType() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get recipientName => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set recipientName($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasRecipientName() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearRecipientName() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get phone => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set phone($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasPhone() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearPhone() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get addressLine => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set addressLine($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasAddressLine() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearAddressLine() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get city => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set city($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasCity() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearCity() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get postalCode => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set postalCode($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasPostalCode() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearPostalCode() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.bool get isDefault => $_getBF(7);
+  @$pb.TagNumber(8)
+  set isDefault($core.bool value) => $_setBool(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasIsDefault() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearIsDefault() => $_clearField(8);
+}
+
+class AddAddressResponse extends $pb.GeneratedMessage {
+  factory AddAddressResponse({
+    CustomerAddress? address,
+  }) {
+    final result = AddAddressResponse._();
+    if (address != null) result.address = address;
+    return result;
+  }
+
+  AddAddressResponse._();
+
+  factory AddAddressResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddAddressResponse()..mergeFromBuffer(data, registry);
+  factory AddAddressResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddAddressResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AddAddressResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: AddAddressResponse.$_createMessage)
+    ..aOM<CustomerAddress>(1, _omitFieldNames ? '' : 'address',
+        subBuilder: CustomerAddress.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddAddressResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddAddressResponse copyWith(void Function(AddAddressResponse) updates) =>
+      super.copyWith((message) => updates(message as AddAddressResponse))
+          as AddAddressResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use AddAddressResponse() / AddAddressResponse.new instead')
+  static AddAddressResponse create() => AddAddressResponse._();
+  static $pb.GeneratedMessage $_createMessage() => AddAddressResponse._();
+  @$core.override
+  AddAddressResponse createEmptyInstance() => AddAddressResponse._();
+  @$core.pragma('dart2js:noInline')
+  static AddAddressResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<AddAddressResponse>(
+          AddAddressResponse.$_createMessage);
+  static AddAddressResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  CustomerAddress get address => $_getN(0);
+  @$pb.TagNumber(1)
+  set address(CustomerAddress value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasAddress() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearAddress() => $_clearField(1);
+  @$pb.TagNumber(1)
+  CustomerAddress ensureAddress() => $_ensure(0);
+}
+
+class UpdateAddressRequest extends $pb.GeneratedMessage {
+  factory UpdateAddressRequest({
+    $core.String? id,
+    $core.String? type,
+    $core.String? recipientName,
+    $core.String? phone,
+    $core.String? addressLine,
+    $core.String? city,
+    $core.String? postalCode,
+    $core.bool? isDefault,
+  }) {
+    final result = UpdateAddressRequest._();
+    if (id != null) result.id = id;
+    if (type != null) result.type = type;
+    if (recipientName != null) result.recipientName = recipientName;
+    if (phone != null) result.phone = phone;
+    if (addressLine != null) result.addressLine = addressLine;
+    if (city != null) result.city = city;
+    if (postalCode != null) result.postalCode = postalCode;
+    if (isDefault != null) result.isDefault = isDefault;
+    return result;
+  }
+
+  UpdateAddressRequest._();
+
+  factory UpdateAddressRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UpdateAddressRequest()..mergeFromBuffer(data, registry);
+  factory UpdateAddressRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UpdateAddressRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'UpdateAddressRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: UpdateAddressRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'type')
+    ..aOS(3, _omitFieldNames ? '' : 'recipientName')
+    ..aOS(4, _omitFieldNames ? '' : 'phone')
+    ..aOS(5, _omitFieldNames ? '' : 'addressLine')
+    ..aOS(6, _omitFieldNames ? '' : 'city')
+    ..aOS(7, _omitFieldNames ? '' : 'postalCode')
+    ..aOB(8, _omitFieldNames ? '' : 'isDefault')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpdateAddressRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpdateAddressRequest copyWith(void Function(UpdateAddressRequest) updates) =>
+      super.copyWith((message) => updates(message as UpdateAddressRequest))
+          as UpdateAddressRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use UpdateAddressRequest() / UpdateAddressRequest.new instead')
+  static UpdateAddressRequest create() => UpdateAddressRequest._();
+  static $pb.GeneratedMessage $_createMessage() => UpdateAddressRequest._();
+  @$core.override
+  UpdateAddressRequest createEmptyInstance() => UpdateAddressRequest._();
+  @$core.pragma('dart2js:noInline')
+  static UpdateAddressRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<UpdateAddressRequest>(
+          UpdateAddressRequest.$_createMessage);
+  static UpdateAddressRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get type => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set type($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasType() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearType() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get recipientName => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set recipientName($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasRecipientName() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearRecipientName() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get phone => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set phone($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasPhone() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearPhone() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get addressLine => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set addressLine($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasAddressLine() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearAddressLine() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get city => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set city($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasCity() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearCity() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get postalCode => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set postalCode($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasPostalCode() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearPostalCode() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.bool get isDefault => $_getBF(7);
+  @$pb.TagNumber(8)
+  set isDefault($core.bool value) => $_setBool(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasIsDefault() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearIsDefault() => $_clearField(8);
+}
+
+class UpdateAddressResponse extends $pb.GeneratedMessage {
+  factory UpdateAddressResponse({
+    CustomerAddress? address,
+  }) {
+    final result = UpdateAddressResponse._();
+    if (address != null) result.address = address;
+    return result;
+  }
+
+  UpdateAddressResponse._();
+
+  factory UpdateAddressResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UpdateAddressResponse()..mergeFromBuffer(data, registry);
+  factory UpdateAddressResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UpdateAddressResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'UpdateAddressResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: UpdateAddressResponse.$_createMessage)
+    ..aOM<CustomerAddress>(1, _omitFieldNames ? '' : 'address',
+        subBuilder: CustomerAddress.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpdateAddressResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpdateAddressResponse copyWith(
+          void Function(UpdateAddressResponse) updates) =>
+      super.copyWith((message) => updates(message as UpdateAddressResponse))
+          as UpdateAddressResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use UpdateAddressResponse() / UpdateAddressResponse.new instead')
+  static UpdateAddressResponse create() => UpdateAddressResponse._();
+  static $pb.GeneratedMessage $_createMessage() => UpdateAddressResponse._();
+  @$core.override
+  UpdateAddressResponse createEmptyInstance() => UpdateAddressResponse._();
+  @$core.pragma('dart2js:noInline')
+  static UpdateAddressResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<UpdateAddressResponse>(
+          UpdateAddressResponse.$_createMessage);
+  static UpdateAddressResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  CustomerAddress get address => $_getN(0);
+  @$pb.TagNumber(1)
+  set address(CustomerAddress value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasAddress() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearAddress() => $_clearField(1);
+  @$pb.TagNumber(1)
+  CustomerAddress ensureAddress() => $_ensure(0);
+}
+
+class DeleteAddressRequest extends $pb.GeneratedMessage {
+  factory DeleteAddressRequest({
+    $core.String? id,
+  }) {
+    final result = DeleteAddressRequest._();
+    if (id != null) result.id = id;
+    return result;
+  }
+
+  DeleteAddressRequest._();
+
+  factory DeleteAddressRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DeleteAddressRequest()..mergeFromBuffer(data, registry);
+  factory DeleteAddressRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DeleteAddressRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DeleteAddressRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: DeleteAddressRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DeleteAddressRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DeleteAddressRequest copyWith(void Function(DeleteAddressRequest) updates) =>
+      super.copyWith((message) => updates(message as DeleteAddressRequest))
+          as DeleteAddressRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use DeleteAddressRequest() / DeleteAddressRequest.new instead')
+  static DeleteAddressRequest create() => DeleteAddressRequest._();
+  static $pb.GeneratedMessage $_createMessage() => DeleteAddressRequest._();
+  @$core.override
+  DeleteAddressRequest createEmptyInstance() => DeleteAddressRequest._();
+  @$core.pragma('dart2js:noInline')
+  static DeleteAddressRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<DeleteAddressRequest>(
+          DeleteAddressRequest.$_createMessage);
+  static DeleteAddressRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+}
+
+class DeleteAddressResponse extends $pb.GeneratedMessage {
+  factory DeleteAddressResponse() => DeleteAddressResponse._();
+
+  DeleteAddressResponse._();
+
+  factory DeleteAddressResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DeleteAddressResponse()..mergeFromBuffer(data, registry);
+  factory DeleteAddressResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DeleteAddressResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DeleteAddressResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: DeleteAddressResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DeleteAddressResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DeleteAddressResponse copyWith(
+          void Function(DeleteAddressResponse) updates) =>
+      super.copyWith((message) => updates(message as DeleteAddressResponse))
+          as DeleteAddressResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use DeleteAddressResponse() / DeleteAddressResponse.new instead')
+  static DeleteAddressResponse create() => DeleteAddressResponse._();
+  static $pb.GeneratedMessage $_createMessage() => DeleteAddressResponse._();
+  @$core.override
+  DeleteAddressResponse createEmptyInstance() => DeleteAddressResponse._();
+  @$core.pragma('dart2js:noInline')
+  static DeleteAddressResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<DeleteAddressResponse>(
+          DeleteAddressResponse.$_createMessage);
+  static DeleteAddressResponse? _defaultInstance;
+}
+
+/// CustomerContact:客戶聯絡人(3.2.2)。
+class CustomerContact extends $pb.GeneratedMessage {
+  factory CustomerContact({
+    $core.String? id,
+    $core.String? customerId,
+    $core.String? name,
+    $core.String? title,
+    $core.String? email,
+    $core.String? phone,
+    $core.bool? isDefault,
+    $core.String? createdAt,
+    $core.String? updatedAt,
+    $core.String? deletedAt,
+  }) {
+    final result = CustomerContact._();
+    if (id != null) result.id = id;
+    if (customerId != null) result.customerId = customerId;
+    if (name != null) result.name = name;
+    if (title != null) result.title = title;
+    if (email != null) result.email = email;
+    if (phone != null) result.phone = phone;
+    if (isDefault != null) result.isDefault = isDefault;
+    if (createdAt != null) result.createdAt = createdAt;
+    if (updatedAt != null) result.updatedAt = updatedAt;
+    if (deletedAt != null) result.deletedAt = deletedAt;
+    return result;
+  }
+
+  CustomerContact._();
+
+  factory CustomerContact.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CustomerContact()..mergeFromBuffer(data, registry);
+  factory CustomerContact.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CustomerContact()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CustomerContact',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: CustomerContact.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'customerId')
+    ..aOS(3, _omitFieldNames ? '' : 'name')
+    ..aOS(4, _omitFieldNames ? '' : 'title')
+    ..aOS(5, _omitFieldNames ? '' : 'email')
+    ..aOS(6, _omitFieldNames ? '' : 'phone')
+    ..aOB(7, _omitFieldNames ? '' : 'isDefault')
+    ..aOS(8, _omitFieldNames ? '' : 'createdAt')
+    ..aOS(9, _omitFieldNames ? '' : 'updatedAt')
+    ..aOS(10, _omitFieldNames ? '' : 'deletedAt')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CustomerContact clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CustomerContact copyWith(void Function(CustomerContact) updates) =>
+      super.copyWith((message) => updates(message as CustomerContact))
+          as CustomerContact;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use CustomerContact() / CustomerContact.new instead')
+  static CustomerContact create() => CustomerContact._();
+  static $pb.GeneratedMessage $_createMessage() => CustomerContact._();
+  @$core.override
+  CustomerContact createEmptyInstance() => CustomerContact._();
+  @$core.pragma('dart2js:noInline')
+  static CustomerContact getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<CustomerContact>(
+          CustomerContact.$_createMessage);
+  static CustomerContact? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get customerId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set customerId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasCustomerId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearCustomerId() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get name => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set name($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasName() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearName() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get title => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set title($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasTitle() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearTitle() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get email => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set email($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasEmail() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearEmail() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get phone => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set phone($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasPhone() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearPhone() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.bool get isDefault => $_getBF(6);
+  @$pb.TagNumber(7)
+  set isDefault($core.bool value) => $_setBool(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasIsDefault() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearIsDefault() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.String get createdAt => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set createdAt($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasCreatedAt() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearCreatedAt() => $_clearField(8);
+
+  @$pb.TagNumber(9)
+  $core.String get updatedAt => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set updatedAt($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasUpdatedAt() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearUpdatedAt() => $_clearField(9);
+
+  @$pb.TagNumber(10)
+  $core.String get deletedAt => $_getSZ(9);
+  @$pb.TagNumber(10)
+  set deletedAt($core.String value) => $_setString(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasDeletedAt() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearDeletedAt() => $_clearField(10);
+}
+
+class ListContactsRequest extends $pb.GeneratedMessage {
+  factory ListContactsRequest({
+    $core.String? customerId,
+    $core.bool? includeDeleted,
+  }) {
+    final result = ListContactsRequest._();
+    if (customerId != null) result.customerId = customerId;
+    if (includeDeleted != null) result.includeDeleted = includeDeleted;
+    return result;
+  }
+
+  ListContactsRequest._();
+
+  factory ListContactsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListContactsRequest()..mergeFromBuffer(data, registry);
+  factory ListContactsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListContactsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListContactsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: ListContactsRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'customerId')
+    ..aOB(2, _omitFieldNames ? '' : 'includeDeleted')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListContactsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListContactsRequest copyWith(void Function(ListContactsRequest) updates) =>
+      super.copyWith((message) => updates(message as ListContactsRequest))
+          as ListContactsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use ListContactsRequest() / ListContactsRequest.new instead')
+  static ListContactsRequest create() => ListContactsRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ListContactsRequest._();
+  @$core.override
+  ListContactsRequest createEmptyInstance() => ListContactsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ListContactsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListContactsRequest>(
+          ListContactsRequest.$_createMessage);
+  static ListContactsRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get customerId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set customerId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasCustomerId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCustomerId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.bool get includeDeleted => $_getBF(1);
+  @$pb.TagNumber(2)
+  set includeDeleted($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasIncludeDeleted() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearIncludeDeleted() => $_clearField(2);
+}
+
+class ListContactsResponse extends $pb.GeneratedMessage {
+  factory ListContactsResponse({
+    $core.Iterable<CustomerContact>? contacts,
+  }) {
+    final result = ListContactsResponse._();
+    if (contacts != null) result.contacts.addAll(contacts);
+    return result;
+  }
+
+  ListContactsResponse._();
+
+  factory ListContactsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListContactsResponse()..mergeFromBuffer(data, registry);
+  factory ListContactsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListContactsResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListContactsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: ListContactsResponse.$_createMessage)
+    ..pPM<CustomerContact>(1, _omitFieldNames ? '' : 'contacts',
+        subBuilder: CustomerContact.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListContactsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListContactsResponse copyWith(void Function(ListContactsResponse) updates) =>
+      super.copyWith((message) => updates(message as ListContactsResponse))
+          as ListContactsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListContactsResponse() / ListContactsResponse.new instead')
+  static ListContactsResponse create() => ListContactsResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ListContactsResponse._();
+  @$core.override
+  ListContactsResponse createEmptyInstance() => ListContactsResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ListContactsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListContactsResponse>(
+          ListContactsResponse.$_createMessage);
+  static ListContactsResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<CustomerContact> get contacts => $_getList(0);
+}
+
+class AddContactRequest extends $pb.GeneratedMessage {
+  factory AddContactRequest({
+    $core.String? customerId,
+    $core.String? name,
+    $core.String? title,
+    $core.String? email,
+    $core.String? phone,
+    $core.bool? isDefault,
+  }) {
+    final result = AddContactRequest._();
+    if (customerId != null) result.customerId = customerId;
+    if (name != null) result.name = name;
+    if (title != null) result.title = title;
+    if (email != null) result.email = email;
+    if (phone != null) result.phone = phone;
+    if (isDefault != null) result.isDefault = isDefault;
+    return result;
+  }
+
+  AddContactRequest._();
+
+  factory AddContactRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddContactRequest()..mergeFromBuffer(data, registry);
+  factory AddContactRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddContactRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AddContactRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: AddContactRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'customerId')
+    ..aOS(2, _omitFieldNames ? '' : 'name')
+    ..aOS(3, _omitFieldNames ? '' : 'title')
+    ..aOS(4, _omitFieldNames ? '' : 'email')
+    ..aOS(5, _omitFieldNames ? '' : 'phone')
+    ..aOB(6, _omitFieldNames ? '' : 'isDefault')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddContactRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddContactRequest copyWith(void Function(AddContactRequest) updates) =>
+      super.copyWith((message) => updates(message as AddContactRequest))
+          as AddContactRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use AddContactRequest() / AddContactRequest.new instead')
+  static AddContactRequest create() => AddContactRequest._();
+  static $pb.GeneratedMessage $_createMessage() => AddContactRequest._();
+  @$core.override
+  AddContactRequest createEmptyInstance() => AddContactRequest._();
+  @$core.pragma('dart2js:noInline')
+  static AddContactRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<AddContactRequest>(
+          AddContactRequest.$_createMessage);
+  static AddContactRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get customerId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set customerId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasCustomerId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCustomerId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get name => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set name($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasName() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearName() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get title => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set title($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasTitle() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearTitle() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get email => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set email($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasEmail() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearEmail() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get phone => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set phone($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasPhone() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearPhone() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.bool get isDefault => $_getBF(5);
+  @$pb.TagNumber(6)
+  set isDefault($core.bool value) => $_setBool(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasIsDefault() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearIsDefault() => $_clearField(6);
+}
+
+class AddContactResponse extends $pb.GeneratedMessage {
+  factory AddContactResponse({
+    CustomerContact? contact,
+  }) {
+    final result = AddContactResponse._();
+    if (contact != null) result.contact = contact;
+    return result;
+  }
+
+  AddContactResponse._();
+
+  factory AddContactResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddContactResponse()..mergeFromBuffer(data, registry);
+  factory AddContactResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      AddContactResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'AddContactResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: AddContactResponse.$_createMessage)
+    ..aOM<CustomerContact>(1, _omitFieldNames ? '' : 'contact',
+        subBuilder: CustomerContact.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddContactResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  AddContactResponse copyWith(void Function(AddContactResponse) updates) =>
+      super.copyWith((message) => updates(message as AddContactResponse))
+          as AddContactResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use AddContactResponse() / AddContactResponse.new instead')
+  static AddContactResponse create() => AddContactResponse._();
+  static $pb.GeneratedMessage $_createMessage() => AddContactResponse._();
+  @$core.override
+  AddContactResponse createEmptyInstance() => AddContactResponse._();
+  @$core.pragma('dart2js:noInline')
+  static AddContactResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<AddContactResponse>(
+          AddContactResponse.$_createMessage);
+  static AddContactResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  CustomerContact get contact => $_getN(0);
+  @$pb.TagNumber(1)
+  set contact(CustomerContact value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasContact() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearContact() => $_clearField(1);
+  @$pb.TagNumber(1)
+  CustomerContact ensureContact() => $_ensure(0);
+}
+
+class UpdateContactRequest extends $pb.GeneratedMessage {
+  factory UpdateContactRequest({
+    $core.String? id,
+    $core.String? name,
+    $core.String? title,
+    $core.String? email,
+    $core.String? phone,
+    $core.bool? isDefault,
+  }) {
+    final result = UpdateContactRequest._();
+    if (id != null) result.id = id;
+    if (name != null) result.name = name;
+    if (title != null) result.title = title;
+    if (email != null) result.email = email;
+    if (phone != null) result.phone = phone;
+    if (isDefault != null) result.isDefault = isDefault;
+    return result;
+  }
+
+  UpdateContactRequest._();
+
+  factory UpdateContactRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UpdateContactRequest()..mergeFromBuffer(data, registry);
+  factory UpdateContactRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UpdateContactRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'UpdateContactRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: UpdateContactRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'name')
+    ..aOS(3, _omitFieldNames ? '' : 'title')
+    ..aOS(4, _omitFieldNames ? '' : 'email')
+    ..aOS(5, _omitFieldNames ? '' : 'phone')
+    ..aOB(6, _omitFieldNames ? '' : 'isDefault')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpdateContactRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpdateContactRequest copyWith(void Function(UpdateContactRequest) updates) =>
+      super.copyWith((message) => updates(message as UpdateContactRequest))
+          as UpdateContactRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use UpdateContactRequest() / UpdateContactRequest.new instead')
+  static UpdateContactRequest create() => UpdateContactRequest._();
+  static $pb.GeneratedMessage $_createMessage() => UpdateContactRequest._();
+  @$core.override
+  UpdateContactRequest createEmptyInstance() => UpdateContactRequest._();
+  @$core.pragma('dart2js:noInline')
+  static UpdateContactRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<UpdateContactRequest>(
+          UpdateContactRequest.$_createMessage);
+  static UpdateContactRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get name => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set name($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasName() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearName() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get title => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set title($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasTitle() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearTitle() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get email => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set email($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasEmail() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearEmail() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get phone => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set phone($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasPhone() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearPhone() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.bool get isDefault => $_getBF(5);
+  @$pb.TagNumber(6)
+  set isDefault($core.bool value) => $_setBool(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasIsDefault() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearIsDefault() => $_clearField(6);
+}
+
+class UpdateContactResponse extends $pb.GeneratedMessage {
+  factory UpdateContactResponse({
+    CustomerContact? contact,
+  }) {
+    final result = UpdateContactResponse._();
+    if (contact != null) result.contact = contact;
+    return result;
+  }
+
+  UpdateContactResponse._();
+
+  factory UpdateContactResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UpdateContactResponse()..mergeFromBuffer(data, registry);
+  factory UpdateContactResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UpdateContactResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'UpdateContactResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: UpdateContactResponse.$_createMessage)
+    ..aOM<CustomerContact>(1, _omitFieldNames ? '' : 'contact',
+        subBuilder: CustomerContact.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpdateContactResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpdateContactResponse copyWith(
+          void Function(UpdateContactResponse) updates) =>
+      super.copyWith((message) => updates(message as UpdateContactResponse))
+          as UpdateContactResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use UpdateContactResponse() / UpdateContactResponse.new instead')
+  static UpdateContactResponse create() => UpdateContactResponse._();
+  static $pb.GeneratedMessage $_createMessage() => UpdateContactResponse._();
+  @$core.override
+  UpdateContactResponse createEmptyInstance() => UpdateContactResponse._();
+  @$core.pragma('dart2js:noInline')
+  static UpdateContactResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<UpdateContactResponse>(
+          UpdateContactResponse.$_createMessage);
+  static UpdateContactResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  CustomerContact get contact => $_getN(0);
+  @$pb.TagNumber(1)
+  set contact(CustomerContact value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasContact() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearContact() => $_clearField(1);
+  @$pb.TagNumber(1)
+  CustomerContact ensureContact() => $_ensure(0);
+}
+
+class DeleteContactRequest extends $pb.GeneratedMessage {
+  factory DeleteContactRequest({
+    $core.String? id,
+  }) {
+    final result = DeleteContactRequest._();
+    if (id != null) result.id = id;
+    return result;
+  }
+
+  DeleteContactRequest._();
+
+  factory DeleteContactRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DeleteContactRequest()..mergeFromBuffer(data, registry);
+  factory DeleteContactRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DeleteContactRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DeleteContactRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: DeleteContactRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DeleteContactRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DeleteContactRequest copyWith(void Function(DeleteContactRequest) updates) =>
+      super.copyWith((message) => updates(message as DeleteContactRequest))
+          as DeleteContactRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use DeleteContactRequest() / DeleteContactRequest.new instead')
+  static DeleteContactRequest create() => DeleteContactRequest._();
+  static $pb.GeneratedMessage $_createMessage() => DeleteContactRequest._();
+  @$core.override
+  DeleteContactRequest createEmptyInstance() => DeleteContactRequest._();
+  @$core.pragma('dart2js:noInline')
+  static DeleteContactRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<DeleteContactRequest>(
+          DeleteContactRequest.$_createMessage);
+  static DeleteContactRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+}
+
+class DeleteContactResponse extends $pb.GeneratedMessage {
+  factory DeleteContactResponse() => DeleteContactResponse._();
+
+  DeleteContactResponse._();
+
+  factory DeleteContactResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DeleteContactResponse()..mergeFromBuffer(data, registry);
+  factory DeleteContactResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DeleteContactResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DeleteContactResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: DeleteContactResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DeleteContactResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DeleteContactResponse copyWith(
+          void Function(DeleteContactResponse) updates) =>
+      super.copyWith((message) => updates(message as DeleteContactResponse))
+          as DeleteContactResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use DeleteContactResponse() / DeleteContactResponse.new instead')
+  static DeleteContactResponse create() => DeleteContactResponse._();
+  static $pb.GeneratedMessage $_createMessage() => DeleteContactResponse._();
+  @$core.override
+  DeleteContactResponse createEmptyInstance() => DeleteContactResponse._();
+  @$core.pragma('dart2js:noInline')
+  static DeleteContactResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<DeleteContactResponse>(
+          DeleteContactResponse.$_createMessage);
+  static DeleteContactResponse? _defaultInstance;
+}
+
 /// CustomerService:客戶主檔管理(dept_admin/staff 限所屬部門)。
 class CustomerServiceApi {
   final $pb.RpcClient _client;
@@ -1300,6 +2867,40 @@ class CustomerServiceApi {
           $pb.ClientContext? ctx, RestoreCustomerRequest request) =>
       _client.invoke<RestoreCustomerResponse>(ctx, 'CustomerService',
           'RestoreCustomer', request, RestoreCustomerResponse());
+
+  /// 以下為地址簿與聯絡人(3.2.1 / 3.2.2)。
+  $async.Future<ListAddressesResponse> listAddresses(
+          $pb.ClientContext? ctx, ListAddressesRequest request) =>
+      _client.invoke<ListAddressesResponse>(ctx, 'CustomerService',
+          'ListAddresses', request, ListAddressesResponse());
+  $async.Future<AddAddressResponse> addAddress(
+          $pb.ClientContext? ctx, AddAddressRequest request) =>
+      _client.invoke<AddAddressResponse>(
+          ctx, 'CustomerService', 'AddAddress', request, AddAddressResponse());
+  $async.Future<UpdateAddressResponse> updateAddress(
+          $pb.ClientContext? ctx, UpdateAddressRequest request) =>
+      _client.invoke<UpdateAddressResponse>(ctx, 'CustomerService',
+          'UpdateAddress', request, UpdateAddressResponse());
+  $async.Future<DeleteAddressResponse> deleteAddress(
+          $pb.ClientContext? ctx, DeleteAddressRequest request) =>
+      _client.invoke<DeleteAddressResponse>(ctx, 'CustomerService',
+          'DeleteAddress', request, DeleteAddressResponse());
+  $async.Future<ListContactsResponse> listContacts(
+          $pb.ClientContext? ctx, ListContactsRequest request) =>
+      _client.invoke<ListContactsResponse>(ctx, 'CustomerService',
+          'ListContacts', request, ListContactsResponse());
+  $async.Future<AddContactResponse> addContact(
+          $pb.ClientContext? ctx, AddContactRequest request) =>
+      _client.invoke<AddContactResponse>(
+          ctx, 'CustomerService', 'AddContact', request, AddContactResponse());
+  $async.Future<UpdateContactResponse> updateContact(
+          $pb.ClientContext? ctx, UpdateContactRequest request) =>
+      _client.invoke<UpdateContactResponse>(ctx, 'CustomerService',
+          'UpdateContact', request, UpdateContactResponse());
+  $async.Future<DeleteContactResponse> deleteContact(
+          $pb.ClientContext? ctx, DeleteContactRequest request) =>
+      _client.invoke<DeleteContactResponse>(ctx, 'CustomerService',
+          'DeleteContact', request, DeleteContactResponse());
 }
 
 const $core.bool _omitFieldNames =
