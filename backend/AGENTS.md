@@ -16,7 +16,7 @@
 
 ## 2. 分層與目錄
 
-- `proto/`:proto 定義唯一來源;改動後必跑 `task proto:gen`(buf 產生 Go/TS/Dart;TS 只產 `*_pb`,前端自 GenService 匯入,不產 `*_connect`)。
+- `proto/`:proto 定義唯一來源;改動後必跑 `task proto:gen`(buf 產生 Go/TS/Dart;TS 只產 `*_pb`,前端自 GenService 匯入,不產 `*_connect`)。`protoc-gen-dart`(於 `~/.pub-cache/bin`)為本地 plugin,**須以 fvm pin 的 Dart SDK 執行**(專案 `.fvmrc` stable = 3.13.3):`export PATH="$HOME/fvm/versions/3.47.4/bin:$HOME/.pub-cache/bin:$PATH"` 後再跑;若 `dart` 解析到錯誤版本會報 `wire unmarshal: cannot parse invalid wire-format data`。
 - `internal/services/`:Connect-RPC handler;每 service 提供 `Register*Services(mux *http.ServeMux, db *ent.Client)`,由 `internal/server` 的 `mountAuth` 掛進單一 `apiMux`(**禁止** chi `Mount` 掛重複 `/api/v1` 路徑,會 panic;用 `apiMux.Handle` + `http.StripPrefix`)。
 - `internal/domain/<name>/`:usecase + repository 介面;不反向依賴 services。
 - `internal/auth/`:JWT/refresh(旋轉採原子消耗,Lua/鎖,禁止先讀後刪)、session、token_version(DB 欄位為準)、OIDC。
