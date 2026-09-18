@@ -289,3 +289,27 @@ git commit -m "docs(plans): 02 Task 3 UserService 完工狀態更新"
 - AssignRole 含 guest 審核 + token_version+1 + OpenFGA assigned tuple 同步 + audit。
 - Deactivate / ForceLogout 含範圍控制 + tv+1 + audit。
 - 02 計畫 Task 3 勾選更新、README 同步。
+
+---
+
+## 審查修正（2026-09-18 複查後,commit `f03b834` / `057c6e6`）
+
+執行完畢後以 `requesting-code-review` 模板複查,發現並修正下列問題(以 TDD 先寫失敗測試再修):
+
+| 編號 | 嚴重度 | 問題 | 修正 |
+|---|---|---|---|
+| C1 | Critical | `ListUsers` 無授權下限且範圍判斷依賴「請求參數」— 非管理角色(staff/customer/guest)帶空 `company_id` 可列舉全系統使用者 | 加 `isUserManager` 門檻;非 super 一律強制注入自己公司/部門(fail-closed) |
+| C2 | Critical | `CreateUser`/`AssignRole` 未限制可授予角色,company_admin 可授予(含自己)`super` → 權限提升 | 新增 `grantableRoles` 授予上限(super 全部/company_admin 限三個/dept_admin 僅 staff) |
+| I1 | Important | `scopeForTarget` 在 `CompanyID` 空時跳過公司檢查(fail-open) | 改 fail-closed:非 super 缺公司脈絡即拒絕 |
+| I2 | Important | Deactivate 稽核 `after_snapshot` 實際記的是「舊狀態」 | `recordAudit` 新增 before/after 兩參;Deactivate 記 before=舊、after=inactive |
+| I3 | Important | `ListUsers` 的 `department_id` 篩選宣告但從未套用(no-op) | 實際套用(super/company_admin 可依請求部門縮小) |
+| I4 | Important | `CreateUser`/`UpdateUser` 未寫稽核也未用交易(違 D18/2.3.1) | 兩者納入交易 + `audit.Record`(含前後快照) |
+| I5 | Important | `AssignRole` 無條件 `SetStatus(active)` — 可默默復活已停用帳號 | 僅 `pending` 轉 `active`;其餘不動狀態 |
+| I6 | Important | `department_id` 未驗證歸屬(可跨公司擺放) | 新增 `validateDepartmentInCompany`(不屬即 `InvalidArgument`) |
+| I7 | Important | `audit_logs` 缺 FK、無 RLS policy(03 2.6.1) | 新增 `00010_audit_logs_fk_rls.sql`(冪等補 FK + 定義 policy) |
+| I8 | Important | 缺 D18 回滾測試、範圍矩陣不完整 | 新增 11 個測試(含稽核失敗回滾、權限提升負向) |
+| I9 | Important | 稽核未帶 ip_address / user_agent | `audit.Meta` + middleware 注入;`recordAudit` 寫入 |
+
+**已知殘留(非阻擋,已記錄)**:`isValidRole` 僅內建角色(自訂角色待 2.9.2);Deactivate 未刪 Valkey session(tv+1 已兜底);`syncUserRoleTuple` 失敗時業務已 commit(計畫已接受之取捨)。
+
+*審查修正日期:2026-09-18*
