@@ -3,7 +3,7 @@ module github.com/salesorder/sales-order-1.0/backend
 go 1.25.7
 
 require (
-	connectrpc.com/connect v1.20.0
+	connectrpc.com/connect v1.21.0
 	entgo.io/ent v0.14.6
 	github.com/alexedwards/scs/v2 v2.9.0
 	github.com/coreos/go-oidc/v3 v3.20.0
