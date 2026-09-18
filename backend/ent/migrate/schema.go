@@ -39,12 +39,71 @@ var (
 		{Name: "public_info", Type: field.TypeJSON, Nullable: true},
 		{Name: "capabilities", Type: field.TypeJSON, Nullable: true},
 		{Name: "logo_url", Type: field.TypeString, Nullable: true},
+		{Name: "customer_code_prefix", Type: field.TypeString, Nullable: true},
 	}
 	// CompaniesTable holds the schema information for the "companies" table.
 	CompaniesTable = &schema.Table{
 		Name:       "companies",
 		Columns:    CompaniesColumns,
 		PrimaryKey: []*schema.Column{CompaniesColumns[0]},
+	}
+	// CustomersColumns holds the columns for the "customers" table.
+	CustomersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "company_id", Type: field.TypeInt},
+		{Name: "department_id", Type: field.TypeInt, Nullable: true},
+		{Name: "customer_code", Type: field.TypeString},
+		{Name: "name", Type: field.TypeString},
+		{Name: "tax_id", Type: field.TypeString, Nullable: true},
+		{Name: "payment_method_id", Type: field.TypeInt, Nullable: true},
+		{Name: "settlement_method_id", Type: field.TypeInt, Nullable: true},
+		{Name: "customer_type_id", Type: field.TypeInt, Nullable: true},
+		{Name: "invoice_type_id", Type: field.TypeInt, Nullable: true},
+		{Name: "default_sales_rep_id", Type: field.TypeInt, Nullable: true},
+		{Name: "preferred_delivery_days", Type: field.TypeJSON},
+		{Name: "promo_tag_ids", Type: field.TypeJSON},
+		{Name: "created_by", Type: field.TypeInt, Nullable: true},
+		{Name: "updated_by", Type: field.TypeInt, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+	}
+	// CustomersTable holds the schema information for the "customers" table.
+	CustomersTable = &schema.Table{
+		Name:       "customers",
+		Columns:    CustomersColumns,
+		PrimaryKey: []*schema.Column{CustomersColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "customer_company_id_customer_code",
+				Unique:  false,
+				Columns: []*schema.Column{CustomersColumns[1], CustomersColumns[3]},
+			},
+			{
+				Name:    "customer_department_id",
+				Unique:  false,
+				Columns: []*schema.Column{CustomersColumns[2]},
+			},
+			{
+				Name:    "customer_default_sales_rep_id",
+				Unique:  false,
+				Columns: []*schema.Column{CustomersColumns[10]},
+			},
+		},
+	}
+	// CustomerCountersColumns holds the columns for the "customer_counters" table.
+	CustomerCountersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "company_id", Type: field.TypeInt, Unique: true},
+		{Name: "next_seq", Type: field.TypeInt, Default: 1},
+		{Name: "version", Type: field.TypeInt, Default: 0},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// CustomerCountersTable holds the schema information for the "customer_counters" table.
+	CustomerCountersTable = &schema.Table{
+		Name:       "customer_counters",
+		Columns:    CustomerCountersColumns,
+		PrimaryKey: []*schema.Column{CustomerCountersColumns[0]},
 	}
 	// DepartmentsColumns holds the columns for the "departments" table.
 	DepartmentsColumns = []*schema.Column{
@@ -181,6 +240,8 @@ var (
 	Tables = []*schema.Table{
 		AuditLogsTable,
 		CompaniesTable,
+		CustomersTable,
+		CustomerCountersTable,
 		DepartmentsTable,
 		MetadictsTable,
 		RolesTable,

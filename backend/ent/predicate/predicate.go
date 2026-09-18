@@ -12,6 +12,12 @@ type AuditLog func(*sql.Selector)
 // Company is the predicate function for company builders.
 type Company func(*sql.Selector)
 
+// Customer is the predicate function for customer builders.
+type Customer func(*sql.Selector)
+
+// CustomerCounter is the predicate function for customercounter builders.
+type CustomerCounter func(*sql.Selector)
+
 // Department is the predicate function for department builders.
 type Department func(*sql.Selector)
 

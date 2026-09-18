@@ -30,6 +30,8 @@ func (Company) Fields() []ent.Field {
 			Optional(),
 		field.String("logo_url").
 			Optional(),
+		field.String("customer_code_prefix").
+			Optional(), // D7:客戶編號前綴(大寫英數 1–4;全系統唯一由 Service/migration 把關)
 	}
 }
 

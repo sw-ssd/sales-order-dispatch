@@ -87,6 +87,20 @@ func (_c *CompanyCreate) SetNillableLogoURL(v *string) *CompanyCreate {
 	return _c
 }
 
+// SetCustomerCodePrefix sets the "customer_code_prefix" field.
+func (_c *CompanyCreate) SetCustomerCodePrefix(v string) *CompanyCreate {
+	_c.mutation.SetCustomerCodePrefix(v)
+	return _c
+}
+
+// SetNillableCustomerCodePrefix sets the "customer_code_prefix" field if the given value is not nil.
+func (_c *CompanyCreate) SetNillableCustomerCodePrefix(v *string) *CompanyCreate {
+	if v != nil {
+		_c.SetCustomerCodePrefix(*v)
+	}
+	return _c
+}
+
 // AddDepartmentIDs adds the "departments" edge to the Department entity by IDs.
 func (_c *CompanyCreate) AddDepartmentIDs(ids ...int) *CompanyCreate {
 	_c.mutation.AddDepartmentIDs(ids...)
@@ -237,6 +251,10 @@ func (_c *CompanyCreate) createSpec() (*Company, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.LogoURL(); ok {
 		_spec.SetField(company.FieldLogoURL, field.TypeString, value)
 		_node.LogoURL = value
+	}
+	if value, ok := _c.mutation.CustomerCodePrefix(); ok {
+		_spec.SetField(company.FieldCustomerCodePrefix, field.TypeString, value)
+		_node.CustomerCodePrefix = value
 	}
 	if nodes := _c.mutation.DepartmentsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

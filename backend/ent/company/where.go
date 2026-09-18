@@ -73,6 +73,11 @@ func LogoURL(v string) predicate.Company {
 	return predicate.Company(sql.FieldEQ(FieldLogoURL, v))
 }
 
+// CustomerCodePrefix applies equality check predicate on the "customer_code_prefix" field. It's identical to CustomerCodePrefixEQ.
+func CustomerCodePrefix(v string) predicate.Company {
+	return predicate.Company(sql.FieldEQ(FieldCustomerCodePrefix, v))
+}
+
 // NameEQ applies the EQ predicate on the "name" field.
 func NameEQ(v string) predicate.Company {
 	return predicate.Company(sql.FieldEQ(FieldName, v))
@@ -391,6 +396,81 @@ func LogoURLEqualFold(v string) predicate.Company {
 // LogoURLContainsFold applies the ContainsFold predicate on the "logo_url" field.
 func LogoURLContainsFold(v string) predicate.Company {
 	return predicate.Company(sql.FieldContainsFold(FieldLogoURL, v))
+}
+
+// CustomerCodePrefixEQ applies the EQ predicate on the "customer_code_prefix" field.
+func CustomerCodePrefixEQ(v string) predicate.Company {
+	return predicate.Company(sql.FieldEQ(FieldCustomerCodePrefix, v))
+}
+
+// CustomerCodePrefixNEQ applies the NEQ predicate on the "customer_code_prefix" field.
+func CustomerCodePrefixNEQ(v string) predicate.Company {
+	return predicate.Company(sql.FieldNEQ(FieldCustomerCodePrefix, v))
+}
+
+// CustomerCodePrefixIn applies the In predicate on the "customer_code_prefix" field.
+func CustomerCodePrefixIn(vs ...string) predicate.Company {
+	return predicate.Company(sql.FieldIn(FieldCustomerCodePrefix, vs...))
+}
+
+// CustomerCodePrefixNotIn applies the NotIn predicate on the "customer_code_prefix" field.
+func CustomerCodePrefixNotIn(vs ...string) predicate.Company {
+	return predicate.Company(sql.FieldNotIn(FieldCustomerCodePrefix, vs...))
+}
+
+// CustomerCodePrefixGT applies the GT predicate on the "customer_code_prefix" field.
+func CustomerCodePrefixGT(v string) predicate.Company {
+	return predicate.Company(sql.FieldGT(FieldCustomerCodePrefix, v))
+}
+
+// CustomerCodePrefixGTE applies the GTE predicate on the "customer_code_prefix" field.
+func CustomerCodePrefixGTE(v string) predicate.Company {
+	return predicate.Company(sql.FieldGTE(FieldCustomerCodePrefix, v))
+}
+
+// CustomerCodePrefixLT applies the LT predicate on the "customer_code_prefix" field.
+func CustomerCodePrefixLT(v string) predicate.Company {
+	return predicate.Company(sql.FieldLT(FieldCustomerCodePrefix, v))
+}
+
+// CustomerCodePrefixLTE applies the LTE predicate on the "customer_code_prefix" field.
+func CustomerCodePrefixLTE(v string) predicate.Company {
+	return predicate.Company(sql.FieldLTE(FieldCustomerCodePrefix, v))
+}
+
+// CustomerCodePrefixContains applies the Contains predicate on the "customer_code_prefix" field.
+func CustomerCodePrefixContains(v string) predicate.Company {
+	return predicate.Company(sql.FieldContains(FieldCustomerCodePrefix, v))
+}
+
+// CustomerCodePrefixHasPrefix applies the HasPrefix predicate on the "customer_code_prefix" field.
+func CustomerCodePrefixHasPrefix(v string) predicate.Company {
+	return predicate.Company(sql.FieldHasPrefix(FieldCustomerCodePrefix, v))
+}
+
+// CustomerCodePrefixHasSuffix applies the HasSuffix predicate on the "customer_code_prefix" field.
+func CustomerCodePrefixHasSuffix(v string) predicate.Company {
+	return predicate.Company(sql.FieldHasSuffix(FieldCustomerCodePrefix, v))
+}
+
+// CustomerCodePrefixIsNil applies the IsNil predicate on the "customer_code_prefix" field.
+func CustomerCodePrefixIsNil() predicate.Company {
+	return predicate.Company(sql.FieldIsNull(FieldCustomerCodePrefix))
+}
+
+// CustomerCodePrefixNotNil applies the NotNil predicate on the "customer_code_prefix" field.
+func CustomerCodePrefixNotNil() predicate.Company {
+	return predicate.Company(sql.FieldNotNull(FieldCustomerCodePrefix))
+}
+
+// CustomerCodePrefixEqualFold applies the EqualFold predicate on the "customer_code_prefix" field.
+func CustomerCodePrefixEqualFold(v string) predicate.Company {
+	return predicate.Company(sql.FieldEqualFold(FieldCustomerCodePrefix, v))
+}
+
+// CustomerCodePrefixContainsFold applies the ContainsFold predicate on the "customer_code_prefix" field.
+func CustomerCodePrefixContainsFold(v string) predicate.Company {
+	return predicate.Company(sql.FieldContainsFold(FieldCustomerCodePrefix, v))
 }
 
 // HasDepartments applies the HasEdge predicate on the "departments" edge.

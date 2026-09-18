@@ -142,6 +142,26 @@ func (_u *CompanyUpdate) ClearLogoURL() *CompanyUpdate {
 	return _u
 }
 
+// SetCustomerCodePrefix sets the "customer_code_prefix" field.
+func (_u *CompanyUpdate) SetCustomerCodePrefix(v string) *CompanyUpdate {
+	_u.mutation.SetCustomerCodePrefix(v)
+	return _u
+}
+
+// SetNillableCustomerCodePrefix sets the "customer_code_prefix" field if the given value is not nil.
+func (_u *CompanyUpdate) SetNillableCustomerCodePrefix(v *string) *CompanyUpdate {
+	if v != nil {
+		_u.SetCustomerCodePrefix(*v)
+	}
+	return _u
+}
+
+// ClearCustomerCodePrefix clears the value of the "customer_code_prefix" field.
+func (_u *CompanyUpdate) ClearCustomerCodePrefix() *CompanyUpdate {
+	_u.mutation.ClearCustomerCodePrefix()
+	return _u
+}
+
 // AddDepartmentIDs adds the "departments" edge to the Department entity by IDs.
 func (_u *CompanyUpdate) AddDepartmentIDs(ids ...int) *CompanyUpdate {
 	_u.mutation.AddDepartmentIDs(ids...)
@@ -315,6 +335,12 @@ func (_u *CompanyUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.LogoURLCleared() {
 		_spec.ClearField(company.FieldLogoURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.CustomerCodePrefix(); ok {
+		_spec.SetField(company.FieldCustomerCodePrefix, field.TypeString, value)
+	}
+	if _u.mutation.CustomerCodePrefixCleared() {
+		_spec.ClearField(company.FieldCustomerCodePrefix, field.TypeString)
 	}
 	if _u.mutation.DepartmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -538,6 +564,26 @@ func (_u *CompanyUpdateOne) ClearLogoURL() *CompanyUpdateOne {
 	return _u
 }
 
+// SetCustomerCodePrefix sets the "customer_code_prefix" field.
+func (_u *CompanyUpdateOne) SetCustomerCodePrefix(v string) *CompanyUpdateOne {
+	_u.mutation.SetCustomerCodePrefix(v)
+	return _u
+}
+
+// SetNillableCustomerCodePrefix sets the "customer_code_prefix" field if the given value is not nil.
+func (_u *CompanyUpdateOne) SetNillableCustomerCodePrefix(v *string) *CompanyUpdateOne {
+	if v != nil {
+		_u.SetCustomerCodePrefix(*v)
+	}
+	return _u
+}
+
+// ClearCustomerCodePrefix clears the value of the "customer_code_prefix" field.
+func (_u *CompanyUpdateOne) ClearCustomerCodePrefix() *CompanyUpdateOne {
+	_u.mutation.ClearCustomerCodePrefix()
+	return _u
+}
+
 // AddDepartmentIDs adds the "departments" edge to the Department entity by IDs.
 func (_u *CompanyUpdateOne) AddDepartmentIDs(ids ...int) *CompanyUpdateOne {
 	_u.mutation.AddDepartmentIDs(ids...)
@@ -741,6 +787,12 @@ func (_u *CompanyUpdateOne) sqlSave(ctx context.Context) (_node *Company, err er
 	}
 	if _u.mutation.LogoURLCleared() {
 		_spec.ClearField(company.FieldLogoURL, field.TypeString)
+	}
+	if value, ok := _u.mutation.CustomerCodePrefix(); ok {
+		_spec.SetField(company.FieldCustomerCodePrefix, field.TypeString, value)
+	}
+	if _u.mutation.CustomerCodePrefixCleared() {
+		_spec.ClearField(company.FieldCustomerCodePrefix, field.TypeString)
 	}
 	if _u.mutation.DepartmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{

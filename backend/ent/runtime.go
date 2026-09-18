@@ -7,6 +7,8 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/ent/auditlog"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
+	"github.com/salesorder/sales-order-1.0/backend/ent/customer"
+	"github.com/salesorder/sales-order-1.0/backend/ent/customercounter"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
@@ -35,6 +37,50 @@ func init() {
 	companyDescIdentifier := companyFields[3].Descriptor()
 	// company.IdentifierValidator is a validator for the "identifier" field. It is called by the builders before save.
 	company.IdentifierValidator = companyDescIdentifier.Validators[0].(func(string) error)
+	customerFields := schema.Customer{}.Fields()
+	_ = customerFields
+	// customerDescCustomerCode is the schema descriptor for customer_code field.
+	customerDescCustomerCode := customerFields[2].Descriptor()
+	// customer.CustomerCodeValidator is a validator for the "customer_code" field. It is called by the builders before save.
+	customer.CustomerCodeValidator = customerDescCustomerCode.Validators[0].(func(string) error)
+	// customerDescName is the schema descriptor for name field.
+	customerDescName := customerFields[3].Descriptor()
+	// customer.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	customer.NameValidator = customerDescName.Validators[0].(func(string) error)
+	// customerDescPreferredDeliveryDays is the schema descriptor for preferred_delivery_days field.
+	customerDescPreferredDeliveryDays := customerFields[10].Descriptor()
+	// customer.DefaultPreferredDeliveryDays holds the default value on creation for the preferred_delivery_days field.
+	customer.DefaultPreferredDeliveryDays = customerDescPreferredDeliveryDays.Default.([]bool)
+	// customerDescPromoTagIds is the schema descriptor for promo_tag_ids field.
+	customerDescPromoTagIds := customerFields[11].Descriptor()
+	// customer.DefaultPromoTagIds holds the default value on creation for the promo_tag_ids field.
+	customer.DefaultPromoTagIds = customerDescPromoTagIds.Default.([]int)
+	// customerDescCreatedAt is the schema descriptor for created_at field.
+	customerDescCreatedAt := customerFields[14].Descriptor()
+	// customer.DefaultCreatedAt holds the default value on creation for the created_at field.
+	customer.DefaultCreatedAt = customerDescCreatedAt.Default.(func() time.Time)
+	// customerDescUpdatedAt is the schema descriptor for updated_at field.
+	customerDescUpdatedAt := customerFields[15].Descriptor()
+	// customer.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	customer.DefaultUpdatedAt = customerDescUpdatedAt.Default.(func() time.Time)
+	// customer.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	customer.UpdateDefaultUpdatedAt = customerDescUpdatedAt.UpdateDefault.(func() time.Time)
+	customercounterFields := schema.CustomerCounter{}.Fields()
+	_ = customercounterFields
+	// customercounterDescNextSeq is the schema descriptor for next_seq field.
+	customercounterDescNextSeq := customercounterFields[1].Descriptor()
+	// customercounter.DefaultNextSeq holds the default value on creation for the next_seq field.
+	customercounter.DefaultNextSeq = customercounterDescNextSeq.Default.(int)
+	// customercounterDescVersion is the schema descriptor for version field.
+	customercounterDescVersion := customercounterFields[2].Descriptor()
+	// customercounter.DefaultVersion holds the default value on creation for the version field.
+	customercounter.DefaultVersion = customercounterDescVersion.Default.(int)
+	// customercounterDescUpdatedAt is the schema descriptor for updated_at field.
+	customercounterDescUpdatedAt := customercounterFields[3].Descriptor()
+	// customercounter.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	customercounter.DefaultUpdatedAt = customercounterDescUpdatedAt.Default.(func() time.Time)
+	// customercounter.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	customercounter.UpdateDefaultUpdatedAt = customercounterDescUpdatedAt.UpdateDefault.(func() time.Time)
 	departmentFields := schema.Department{}.Fields()
 	_ = departmentFields
 	// departmentDescName is the schema descriptor for name field.

@@ -31,6 +31,8 @@ type Company struct {
 	Capabilities []string `json:"capabilities,omitempty"`
 	// LogoURL holds the value of the "logo_url" field.
 	LogoURL string `json:"logo_url,omitempty"`
+	// CustomerCodePrefix holds the value of the "customer_code_prefix" field.
+	CustomerCodePrefix string `json:"customer_code_prefix,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the CompanyQuery when eager-loading is set.
 	Edges        CompanyEdges `json:"edges"`
@@ -75,7 +77,7 @@ func (*Company) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case company.FieldID:
 			values[i] = new(sql.NullInt64)
-		case company.FieldName, company.FieldTaxID, company.FieldStatus, company.FieldIdentifier, company.FieldLogoURL:
+		case company.FieldName, company.FieldTaxID, company.FieldStatus, company.FieldIdentifier, company.FieldLogoURL, company.FieldCustomerCodePrefix:
 			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -144,6 +146,12 @@ func (_m *Company) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.LogoURL = value.String
 			}
+		case company.FieldCustomerCodePrefix:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field customer_code_prefix", values[i])
+			} else if value.Valid {
+				_m.CustomerCodePrefix = value.String
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -210,6 +218,9 @@ func (_m *Company) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("logo_url=")
 	builder.WriteString(_m.LogoURL)
+	builder.WriteString(", ")
+	builder.WriteString("customer_code_prefix=")
+	builder.WriteString(_m.CustomerCodePrefix)
 	builder.WriteByte(')')
 	return builder.String()
 }

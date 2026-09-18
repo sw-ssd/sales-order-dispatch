@@ -14,6 +14,8 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/salesorder/sales-order-1.0/backend/ent/auditlog"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
+	"github.com/salesorder/sales-order-1.0/backend/ent/customer"
+	"github.com/salesorder/sales-order-1.0/backend/ent/customercounter"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
@@ -79,13 +81,15 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			auditlog.Table:       auditlog.ValidColumn,
-			company.Table:        company.ValidColumn,
-			department.Table:     department.ValidColumn,
-			metadict.Table:       metadict.ValidColumn,
-			role.Table:           role.ValidColumn,
-			rolepermission.Table: rolepermission.ValidColumn,
-			user.Table:           user.ValidColumn,
+			auditlog.Table:        auditlog.ValidColumn,
+			company.Table:         company.ValidColumn,
+			customer.Table:        customer.ValidColumn,
+			customercounter.Table: customercounter.ValidColumn,
+			department.Table:      department.ValidColumn,
+			metadict.Table:        metadict.ValidColumn,
+			role.Table:            role.ValidColumn,
+			rolepermission.Table:  rolepermission.ValidColumn,
+			user.Table:            user.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

@@ -16,6 +16,10 @@ type Tx struct {
 	AuditLog *AuditLogClient
 	// Company is the client for interacting with the Company builders.
 	Company *CompanyClient
+	// Customer is the client for interacting with the Customer builders.
+	Customer *CustomerClient
+	// CustomerCounter is the client for interacting with the CustomerCounter builders.
+	CustomerCounter *CustomerCounterClient
 	// Department is the client for interacting with the Department builders.
 	Department *DepartmentClient
 	// Metadict is the client for interacting with the Metadict builders.
@@ -159,6 +163,8 @@ func (tx *Tx) Client() *Client {
 func (tx *Tx) init() {
 	tx.AuditLog = NewAuditLogClient(tx.config)
 	tx.Company = NewCompanyClient(tx.config)
+	tx.Customer = NewCustomerClient(tx.config)
+	tx.CustomerCounter = NewCustomerCounterClient(tx.config)
 	tx.Department = NewDepartmentClient(tx.config)
 	tx.Metadict = NewMetadictClient(tx.config)
 	tx.Role = NewRoleClient(tx.config)
