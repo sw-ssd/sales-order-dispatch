@@ -1,0 +1,105 @@
+syntax = "proto3";
+
+package metadict.v1;
+option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/proto/metadict/v1;metadictv1";
+
+import "salesorder/v1/common.proto";
+
+// 字典檔(metadicts, Wave 3;03 計畫 2.5, D10/D11)。
+// 單表兩層:department_id 空 = 系統預設(僅 super 可寫);非空 = 部門擴充。
+// 軟刪除(deleted_at);order_source 為系統級固定值,API 不可異動。
+
+// Metadict:字典值。
+message Metadict {
+  string id = 1;             // 字典 ID
+  string type = 2;           // 字典類型:unit|payment_method|settlement_method|customer_type|invoice_type|order_source
+  string code = 3;           // 程式識別(同 type + 部門範圍內唯一;建立後不可改)
+  string display_name = 4;   // 顯示名稱
+  string department_id = 5;  // 所屬部門 ID;空 = 系統預設
+  int32 sort_order = 6;      // 排序
+  bool is_active = 7;        // 是否啟用
+  string created_at = 8;     // RFC3339
+  string updated_at = 9;     // RFC3339
+}
+
+// MetadictService:字典管理。
+service MetadictService {
+  // ListMetadicts:分頁查詢(系統預設 + 當前部門擴充合併),可依 type 篩選。
+  rpc ListMetadicts(ListMetadictsRequest) returns (ListMetadictsResponse);
+  // GetMetadict:取得單一字典。
+  rpc GetMetadict(GetMetadictRequest) returns (GetMetadictResponse);
+  // CreateMetadict:建立字典(super 建系統級;dept_admin/staff 自動帶當前部門,不接受請求帶 department_id)。
+  rpc CreateMetadict(CreateMetadictRequest) returns (CreateMetadictResponse);
+  // UpdateMetadict:更新 display_name / sort_order / is_active(不含 type / code)。
+  rpc UpdateMetadict(UpdateMetadictRequest) returns (UpdateMetadictResponse);
+  // DeleteMetadict:軟刪除(order_source 不可刪)。
+  rpc DeleteMetadict(DeleteMetadictRequest) returns (DeleteMetadictResponse);
+  // ListOptions:表單下拉選項(僅可選用啟用值;客戶端身分僅回系統預設)。
+  rpc ListOptions(ListOptionsRequest) returns (ListOptionsResponse);
+}
+
+message ListMetadictsRequest {
+  int32 page = 1;             // 1-based 頁碼
+  int32 page_size = 2;        // 每頁筆數
+  string type = 3;            // 篩選:字典類型
+  bool include_inactive = 4;  // 是否含停用值(管理視角)
+  bool include_deleted = 5;   // 是否含已刪除(僅 super 管理介面)
+  string department_id = 6;   // super 管理用途:指定部門檢視其擴充;空 = 系統預設
+}
+
+message ListMetadictsResponse {
+  repeated Metadict items = 1;
+  salesorder.v1.Pagination pagination = 2;
+}
+
+message GetMetadictRequest {
+  string id = 1;
+}
+
+message GetMetadictResponse {
+  Metadict metadict = 1;
+}
+
+message CreateMetadictRequest {
+  string type = 1;          // 字典類型(必填)
+  string code = 2;          // 程式識別(必填)
+  string display_name = 3;  // 顯示名稱(必填)
+  int32 sort_order = 4;     // 排序
+  bool is_active = 5;       // 啟用
+}
+
+message CreateMetadictResponse {
+  Metadict metadict = 1;
+}
+
+message UpdateMetadictRequest {
+  string id = 1;
+  optional string display_name = 2;  // 出現即更新
+  optional int32 sort_order = 3;     // 出現即更新
+  optional bool is_active = 4;       // 出現即更新
+}
+
+message UpdateMetadictResponse {
+  Metadict metadict = 1;
+}
+
+message DeleteMetadictRequest {
+  string id = 1;
+}
+
+message DeleteMetadictResponse {}
+
+message ListOptionsRequest {
+  string type = 1;      // 字典類型(必填)
+  string keyword = 2;   // 可選:對 display_name / code 做包含比對
+}
+
+message ListOptionsResponse {
+  repeated Option options = 1;
+}
+
+// Option:表單下拉選項(精簡)。
+message Option {
+  string code = 1;
+  string display_name = 2;
+}
