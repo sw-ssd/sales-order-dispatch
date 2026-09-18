@@ -2,8 +2,13 @@ package auth
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
+)
+
+import (
+	"golang.org/x/crypto/bcrypt"
 )
 
 func TestHashVerifyPassword(t *testing.T) {
@@ -89,5 +94,38 @@ func TestLoginLockTTLExpiry(t *testing.T) {
 	locked, _ = lock.IsLocked(ctx, "C002")
 	if locked {
 		t.Fatal("TTL 到期後應自動解除鎖定")
+	}
+}
+
+func TestHashPasswordArgon2id(t *testing.T) {
+	hash, err := HashPassword("secret-123")
+	if err != nil {
+		t.Fatalf("HashPassword: %v", err)
+	}
+	// Argon2id 編碼格式: $argon2id$v=19$m=...,t=...,p=...$<salt>$<key>
+	if len(hash) < 30 || !strings.HasPrefix(hash, "$argon2id$v=19$") {
+		t.Fatalf("非預期雜湊格式: %q", hash)
+	}
+	if !VerifyPassword(hash, "secret-123") {
+		t.Fatal("Argon2id 正確密碼應通過")
+	}
+	if VerifyPassword(hash, "wrong") {
+		t.Fatal("錯誤密碼不應通過")
+	}
+	// 每次 salt 隨機 → 相同明文產生不同 hash
+	h2, err := HashPassword("secret-123")
+	if err != nil {
+		t.Fatalf("HashPassword: %v", err)
+	}
+	if hash == h2 {
+		t.Fatal("同一明文兩次雜湊應不同(salt 隨機)")
+	}
+	// 舊 bcrypt 雜湊必須被拒(Argon2id 取代 bcrypt,規格)
+	legacyBcrypt, err := bcrypt.GenerateFromPassword([]byte("secret-123"), bcrypt.DefaultCost)
+	if err != nil {
+		t.Fatalf("bcrypt: %v", err)
+	}
+	if VerifyPassword(string(legacyBcrypt), "secret-123") {
+		t.Fatal("舊 bcrypt 雜湊不得通過 Argon2id 驗證")
 	}
 }

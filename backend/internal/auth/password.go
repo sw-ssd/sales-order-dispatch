@@ -2,35 +2,103 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/subtle"
+	"encoding/base64"
+	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/crypto/argon2"
 )
 
-// 密碼政策:連續 5 次錯誤鎖定 30 分鐘(T12;密碼以 bcrypt 雜湊儲存)。
+// 密碼政策:連續 5 次錯誤鎖定 30 分鐘(T12;密碼以 Argon2id 雜湊儲存,對齊 identity-access 規格)。
 const (
 	MaxLoginFailures = 5
 	LockDuration     = 30 * time.Minute
 
 	// OIDCPasswordSentinel 為僅 OIDC 登入(員工)帳號的 password_hash 佔位值。
-	// 員工走 Google 登入不存密碼(規格 4.1);sentinel 非合法 bcrypt,密碼登入必失敗。
+	// 員工走 Google 登入不存密碼(規格 4.1);sentinel 非合法 Argon2id,密碼登入必失敗。
 	OIDCPasswordSentinel = "!"
 )
 
-// HashPassword 以 bcrypt 雜湊明文密碼。
+// Argon2id 參數(OWASP 建議等級)。
+const (
+	argon2Time    uint32 = 1
+	argon2Memory  uint32 = 64 * 1024 // 64 MiB
+	argon2Threads uint8  = 4
+	argon2KeyLen  uint32 = 32
+	argon2SaltLen        = 16
+)
+
+// HashPassword 以 Argon2id 雜湊明文密碼,編碼格式(對齊 PHP password_hash):
+// $argon2id$v=19$m=<memory>,t=<time>,p=<threads>$<salt_b64>$<key_b64>
 func HashPassword(plain string) (string, error) {
-	b, err := bcrypt.GenerateFromPassword([]byte(plain), bcrypt.DefaultCost)
-	if err != nil {
-		return "", fmt.Errorf("auth: 密碼雜湊失敗: %w", err)
+	salt := make([]byte, argon2SaltLen)
+	if _, err := rand.Read(salt); err != nil {
+		return "", fmt.Errorf("auth: 產生 salt 失敗: %w", err)
 	}
-	return string(b), nil
+	key := argon2.IDKey([]byte(plain), salt, argon2Time, argon2Memory, argon2Threads, argon2KeyLen)
+	b64Salt := base64.RawStdEncoding.EncodeToString(salt)
+	b64Key := base64.RawStdEncoding.EncodeToString(key)
+	return fmt.Sprintf("$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s",
+		argon2.Version, argon2Memory, argon2Time, argon2Threads, b64Salt, b64Key), nil
 }
 
-// VerifyPassword 驗證密碼是否與雜湊相符;儲存值非合法 bcrypt(如 OIDC 帳號)一律視為不符。
+// VerifyPassword 驗證密碼是否與 Argon2id 雜湊相符;非合法 Argon2id 格式(如 OIDC sentinel、
+// 舊 bcrypt、空值)一律視為不符(fail-closed)。
 func VerifyPassword(hash, plain string) bool {
-	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(plain)) == nil
+	parts := strings.Split(hash, "$")
+	// ["", "argon2id", "v=19", "m=..,t=..,p=..", salt, key] -> len 6
+	if len(parts) != 6 || parts[1] != "argon2id" {
+		return false
+	}
+	m, t, p, err := parseArgon2Params(parts[3])
+	if err != nil {
+		return false
+	}
+	salt, err := base64.RawStdEncoding.DecodeString(parts[4])
+	if err != nil {
+		return false
+	}
+	key, err := base64.RawStdEncoding.DecodeString(parts[5])
+	if err != nil {
+		return false
+	}
+	expected := argon2.IDKey([]byte(plain), salt, t, m, p, uint32(len(key)))
+	return subtle.ConstantTimeCompare(expected, key) == 1
+}
+
+// parseArgon2Params 解析 "m=...,t=...,p=..." 參數段。
+func parseArgon2Params(s string) (memory, time uint32, threads uint8, err error) {
+	for _, kv := range strings.Split(s, ",") {
+		kv = strings.TrimSpace(kv)
+		key, val, _ := strings.Cut(kv, "=")
+		switch key {
+		case "m":
+			memory, err = parseUint32(val)
+		case "t":
+			time, err = parseUint32(val)
+		case "p":
+			var n uint64
+			n, err = strconv.ParseUint(val, 10, 8)
+			threads = uint8(n)
+		}
+		if err != nil {
+			return 0, 0, 0, err
+		}
+	}
+	if memory == 0 || time == 0 || threads == 0 {
+		return 0, 0, 0, errors.New("auth: 非法 argon2 參數")
+	}
+	return memory, time, threads, nil
+}
+
+func parseUint32(s string) (uint32, error) {
+	n, err := strconv.ParseUint(s, 10, 32)
+	return uint32(n), err
 }
 
 // loginFailKey 回傳登入失敗計數鍵(以 customer_code 為鍵,不區分帳號是否存在,避免列舉)。
