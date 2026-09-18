@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	openfgav1 "github.com/openfga/api/proto/openfga/v1"
+	"github.com/openfga/language/pkg/go/transformer"
 	"github.com/openfga/openfga/pkg/server"
 	"github.com/openfga/openfga/pkg/storage"
 	"github.com/openfga/openfga/pkg/storage/memory"
@@ -15,10 +16,14 @@ import (
 	"github.com/openfga/openfga/pkg/storage/sqlcommon"
 )
 
-// Client 包裝內嵌 OpenFGA server 與 store id,提供授權決策介面。
+// SchemaVersion 對齊 model.fga 的 schema 版本。
+const SchemaVersion = "1.1"
+
+// Client 包裝內嵌 OpenFGA server 與 store id/model id,提供授權決策介面。
 type Client struct {
 	srv     *server.Server
 	StoreID string
+	ModelID string
 }
 
 // NewPostgres 以 PostgreSQL datastore 起內嵌 server 並建立 store(生產單一 store)。
@@ -44,7 +49,30 @@ func newClient(ctx context.Context, ds storage.OpenFGADatastore, storeName strin
 	if err != nil {
 		return nil, fmt.Errorf("openfga: create store: %w", err)
 	}
-	return &Client{srv: srv, StoreID: store.GetId()}, nil
+	c := &Client{srv: srv, StoreID: store.GetId()}
+	if err := c.WriteDefaultModel(ctx); err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+// WriteDefaultModel 將 modelDSL 寫為 store 的 authorization model,並記錄 ModelID。
+func (c *Client) WriteDefaultModel(ctx context.Context) error {
+	model, err := transformer.TransformDSLToProto(modelDSL)
+	if err != nil {
+		return fmt.Errorf("openfga: model DSL 解析失敗: %w", err)
+	}
+	resp, err := c.srv.WriteAuthorizationModel(ctx, &openfgav1.WriteAuthorizationModelRequest{
+		StoreId:         c.StoreID,
+		SchemaVersion:   SchemaVersion,
+		TypeDefinitions: model.GetTypeDefinitions(),
+		Conditions:      model.GetConditions(),
+	})
+	if err != nil {
+		return fmt.Errorf("openfga: write model: %w", err)
+	}
+	c.ModelID = resp.GetAuthorizationModelId()
+	return nil
 }
 
 // Close 關閉內嵌 server 資源。

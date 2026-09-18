@@ -15,6 +15,7 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mattn/go-sqlite3 v1.14.28
 	github.com/openfga/api/proto v0.0.0-20260319214821-f153694bfc20
+	github.com/openfga/language/pkg/go v0.3.2-0.20260730144454-83fedf8a4e70
 	github.com/openfga/openfga v1.20.0
 	github.com/pressly/goose/v3 v3.27.3
 	github.com/redis/go-redis/v9 v9.22.0
@@ -66,7 +67,6 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/natefinch/wrap v0.2.0 // indirect
 	github.com/oklog/ulid/v2 v2.1.2 // indirect
-	github.com/openfga/language/pkg/go v0.3.2-0.20260730144454-83fedf8a4e70 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/prometheus/client_golang v1.24.1 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
