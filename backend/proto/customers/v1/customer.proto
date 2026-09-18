@@ -1,0 +1,115 @@
+syntax = "proto3";
+
+package customers.v1;
+option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1;customersv1";
+
+import "salesorder/v1/common.proto";
+
+// 客戶主檔(04 計畫 3.1, D7/D10/D18)。
+// customer_code 由系統取號(公司前綴+6 位自增),建立後不可改。
+// 字典欄位(payment/settlement/customer_type/invoice_type)驗證指向 metadicts;
+// default_sales_rep_id 驗證指向同公司同部門有效業務。
+
+// Customer:客戶主檔。
+message Customer {
+  string id = 1;
+  string company_id = 2;
+  string department_id = 3;          // 可空
+  string customer_code = 4;          // 系統取號,建立後不可改
+  string name = 5;
+  string tax_id = 6;                 // 可空
+  string payment_method_id = 7;      // 可空(metadicts 參考)
+  string settlement_method_id = 8;   // 可空
+  string customer_type_id = 9;       // 可空
+  string invoice_type_id = 10;       // 可空
+  string default_sales_rep_id = 11;  // 可空(users 業務)
+  repeated bool preferred_delivery_days = 12; // 一~六(長度 6)
+  repeated int64 promo_tag_ids = 13;          // 促銷分類標籤
+  string created_at = 14;            // RFC3339
+  string updated_at = 15;            // RFC3339
+  string deleted_at = 16;            // RFC3339(可空;include_deleted 時回傳)
+}
+
+// CustomerService:客戶主檔管理(dept_admin/staff 限所屬部門)。
+service CustomerService {
+  // ListCustomers:分頁查詢(keyword 模糊比對 name/customer_code/tax_id;可 include_deleted)。
+  rpc ListCustomers(ListCustomersRequest) returns (ListCustomersResponse);
+  // GetCustomer:以 id 取單筆(限可見範圍)。
+  rpc GetCustomer(GetCustomerRequest) returns (GetCustomerResponse);
+  // CreateCustomer:建立客戶(系統取號;字典/業務 reference 驗證)。
+  rpc CreateCustomer(CreateCustomerRequest) returns (CreateCustomerResponse);
+  // UpdateCustomer:欄位式更新(customer_code 不可改)。
+  rpc UpdateCustomer(UpdateCustomerRequest) returns (UpdateCustomerResponse);
+  // DeleteCustomer:軟刪除。
+  rpc DeleteCustomer(DeleteCustomerRequest) returns (DeleteCustomerResponse);
+  // RestoreCustomer:復原(清 deleted_at)。
+  rpc RestoreCustomer(RestoreCustomerRequest) returns (RestoreCustomerResponse);
+}
+
+message ListCustomersRequest {
+  int32 page = 1;             // 1-based
+  int32 page_size = 2;
+  string keyword = 3;         // 對 name / customer_code / tax_id 不區分大小寫 OR 模糊比對
+  bool include_deleted = 4;   // 是否含已刪除(管理介面)
+  string sort = 5;            // name | customer_code | created_at(白名單)
+}
+
+message ListCustomersResponse {
+  repeated Customer customers = 1;
+  salesorder.v1.Pagination pagination = 2;
+}
+
+message GetCustomerRequest {
+  string id = 1;
+}
+
+message GetCustomerResponse {
+  Customer customer = 1;
+}
+
+message CreateCustomerRequest {
+  string name = 1;                    // 必填
+  string tax_id = 2;                  // 可空
+  string payment_method_id = 3;       // 可空
+  string settlement_method_id = 4;    // 可空
+  string customer_type_id = 5;        // 可空
+  string invoice_type_id = 6;         // 可空
+  string default_sales_rep_id = 7;    // 可空
+  repeated bool preferred_delivery_days = 8;
+  repeated int64 promo_tag_ids = 9;
+}
+
+message CreateCustomerResponse {
+  Customer customer = 1;
+}
+
+message UpdateCustomerRequest {
+  string id = 1;
+  optional string name = 2;                  // 出現即更新
+  optional string tax_id = 3;                // 出現即更新(可清空)
+  optional string payment_method_id = 4;     // 出現即更新(可清空)
+  optional string settlement_method_id = 5;
+  optional string customer_type_id = 6;
+  optional string invoice_type_id = 7;
+  optional string default_sales_rep_id = 8;  // 出現即更新(可清空)
+  repeated bool preferred_delivery_days = 9; // 出現即取代
+  repeated int64 promo_tag_ids = 10;         // 出現即取代
+}
+
+message UpdateCustomerResponse {
+  Customer customer = 1;
+}
+
+message DeleteCustomerRequest {
+  string id = 1;
+}
+
+message DeleteCustomerResponse {}
+
+message RestoreCustomerRequest {
+  string id = 1;
+}
+
+message RestoreCustomerResponse {
+  Customer customer = 1;
+}
