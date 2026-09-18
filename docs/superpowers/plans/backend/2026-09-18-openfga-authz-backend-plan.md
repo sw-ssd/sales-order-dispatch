@@ -1,5 +1,7 @@
 # 後端 OpenFGA 授權對齊與地基補齊 Implementation Plan
 
+> **修訂（2026-09-18）**：採「租戶 userset + 角色指派分離、資料驅動」model（`role` 僅 `assigned:[user]`；`role→權限` 由 `role_permissions`→tuples 承載，**彈性自訂角色不需改 model**）；條件採兩層分工（OpenFGA 管角色/範圍；物件狀態條件歸 domain 狀態機 D13，不推入 CEL）。詳見 spec §3 與決策記錄 D32 修訂。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 把後端授權引擎由 Casbin + CASL 遷移至內嵌 OpenFGA + RLS（D32），並補齊核心表 migration / 角色 seed / Argon2id，使後端可端到端運作且授權決策由 OpenFGA 驅動。

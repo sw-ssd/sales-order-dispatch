@@ -250,6 +250,9 @@
 - **理由**：1.0 覆蓋「規劃/裝單」層，fleet 執行層補足「現場配送/追蹤/簽收」層（派車看板完成的車次需實際綁定車輛與司機執行）。授權改 OpenFGA 提供資源級/使用者集合（userset）授權，比 Casbin 角色 RBAC 更適合 fleet 的資源歸屬；RLS 續當資料庫最後防線；CASL 移除避免「前端第二權限模型」與 OpenFGA 重疊（單一授權來源）。
 - **已考慮 alternative**：保留 Casbin + CASL（1.0 原 D3/D30）— 已修訂，整合 fleet 需資源級授權與單一授權來源；OpenFGA 僅用於 fleet、核心保留 Casbin — 拒絕，兩套授權引擎並存增加維運與不一致風險；WebSocket / Redis hub — 衝突 D4/D5/D14（沿用 Connect 串流 + Valkey pub/sub）。
 - **修訂來源**：2026-09-17 Fleetbase 整合決策（Fleetbase 側 `FLEETBASE_物流平台重建_PLAN.md` 之 F1–F4）；詳細需求見 `docs/superpowers/specs/1.0-requirements/fleet-execution/spec.md`、細部實作 `docs/superpowers/plans/backend/detail/10-fleet-execution.md`、master-data 地址座標見 master-data spec。
+- **修訂（2026-09-18）**：
+  1. **彈性角色＝資料驅動**：D9 自訂角色可彈性建立；`role → 權限` 的對映以 **tuples（資料）** 承載，由 `role_permissions` 異動時 translate 成 OpenFGA tuples（`<role_code> → 資源 can_read/can_write 關係`）。**model 固定一組資源型別與 relations，不隨角色增減；新增自訂角色不動 model**。
+  2. **條件採兩層分工（取代「屬性/狀態條件以 OpenFGA condition 表達」之字面）**：OpenFGA 僅負責**關係性 / 角色 / 租戶範圍**授權（userset member/admin、資源歸屬、`role_permissions` 之身分層級）;對**物件可變狀態**的條件（如「僅能 cancel pending 訂單」）由 **domain 狀態機 / use-case 層**執行（D13），避免把資料模型洩漏進授權層、避免狀態規則於兩處重複漂移。前端 UI 權限仍由 OpenFGA `Check`/list-objects 驅動。
 
 ## Risks / Trade-offs
 

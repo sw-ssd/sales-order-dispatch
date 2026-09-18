@@ -34,12 +34,12 @@
 - 異動時同步 translate 成 OpenFGA tuples（`Write`/`Delete`）；`GetAbility`/前端權限由 OpenFGA 驅動。
 - developer 逃生門：跳過 OpenFGA `Check`；RLS 注入 `data_scope=all`；`ENV=production` 誤開 → fail-fast（D8/D32 不變）。
 
-## 3. 授權 model（取向 1：每資源型別 + userset rewrite + conditions）
+## 3. 授權 model（取向 1：租戶 userset + 角色指派分離，資料驅動）
 
-- 每受保護資源型別（`role`、`company`、`department`、`ability`…）定義 relations（`can_read` / `can_write` …）。
-- `company` / `department` 為租戶型別；`role` 以 userset rewrite 綁定到資源 relations。
-- 屬性/狀態條件（如「staff 僅能取消 pending 訂單」）以 **OpenFGA condition** 表達（沿用 `role_permissions.conditions` 語意映射）。
-- model 以 `.fga` DSL 為唯一來源，版本化；未來領域僅需擴充 model 與 relations。
+- **固定資源型別與 relations**（`role`、`company`、`department`、`ability`… 各帶 `can_read` / `can_write`…）；`company`/`department` 為租戶型別，`member`/`admin` 以 `[user#assigned]` userset 展開。
+- **`role` 型別僅 `assigned: [user]`（角色指派）**；`role → 權限` 的對映**不進 model**，由 `role_permissions` 異動時 translate 成 OpenFGA tuples（資料驅動）→ **彈性自訂角色（D9）不需改 model／發版**。
+- **兩層分工（2026-09-18 修訂 D32）**：OpenFGA 只做關係性 / 角色 / 租戶範圍授權；對**物件可變狀態**的條件（如「僅能取消 pending 訂單」）由 **domain 狀態機 / use-case 層**執行（D13），不推入 OpenFGA CEL（避免資料模型洩漏與狀態規則重複漂移）。
+- model 以 `.fga` DSL 為唯一來源，版本化；未來領域僅需擴充 model 資源型別與 relations。
 
 ## 4. 前端遷移
 
