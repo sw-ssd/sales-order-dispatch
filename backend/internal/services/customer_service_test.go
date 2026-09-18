@@ -202,6 +202,62 @@ func TestUpdateKeepsCodeAndDeleteRestore(t *testing.T) {
 	}
 }
 
+// TestCreateCustomerWithValidDictRefAndRep:合法字典參考與業務 → 成功且欄位落庫。
+func TestCreateCustomerWithValidDictRefAndRep(t *testing.T) {
+	ctx := context.Background()
+	_, db := newCustomerTestServer(t, authz.Identity{})
+	coID, deptID := seedCustomerCompany(t, db, "TR", true)
+	// 系統級 payment_method 字典。
+	md, err := db.Metadict.Create().SetType("payment_method").SetCode("CASH").SetDisplayName("現金").SetIsActive(true).Save(ctx)
+	if err != nil {
+		t.Fatalf("metadict: %v", err)
+	}
+	// 同公司同部門業務。
+	rep, err := db.User.Create().SetCompanyID(coID).SetDepartmentID(deptID).SetEmail("rep@t.com").SetName("業務").SetRole("staff").SetPasswordHash("x").Save(ctx)
+	if err != nil {
+		t.Fatalf("rep: %v", err)
+	}
+	client, _ := newCustomerTestServer(t, deptAdminID(coID, deptID))
+	resp, err := client.CreateCustomer(ctx, connect.NewRequest(&customersv1.CreateCustomerRequest{
+		Name: "王小明", PaymentMethodId: uItoa(md.ID), DefaultSalesRepId: uItoa(rep.ID),
+	}))
+	if err != nil {
+		t.Fatalf("CreateCustomer: %v", err)
+	}
+	if resp.Msg.GetCustomer().GetPaymentMethodId() != uItoa(md.ID) || resp.Msg.GetCustomer().GetDefaultSalesRepId() != uItoa(rep.ID) {
+		t.Fatalf("字典/業務參考應落庫,得到 %+v", resp.Msg.GetCustomer())
+	}
+	// 偏好送貨日預設為長度 6 全 false。
+	if len(resp.Msg.GetCustomer().GetPreferredDeliveryDays()) != 6 {
+		t.Fatalf("偏好送貨日預設應為長度 6,得到 %d", len(resp.Msg.GetCustomer().GetPreferredDeliveryDays()))
+	}
+}
+
+// TestCreateCustomerInvalidDictRef:字典參考不存在 → invalid_argument,不建檔。
+func TestCreateCustomerInvalidDictRef(t *testing.T) {
+	ctx := context.Background()
+	_, db := newCustomerTestServer(t, authz.Identity{})
+	coID, deptID := seedCustomerCompany(t, db, "TV", true)
+	client, _ := newCustomerTestServer(t, deptAdminID(coID, deptID))
+	if _, err := client.CreateCustomer(ctx, connect.NewRequest(&customersv1.CreateCustomerRequest{Name: "王", PaymentMethodId: "99999"})); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("非法字典參考應 invalid_argument,got %v", err)
+	}
+	if n, _ := db.Customer.Query().Count(ctx); n != 0 {
+		t.Fatalf("驗證失敗不應建檔,得到 %d", n)
+	}
+}
+
+// TestCreateCustomerInvalidRep:業務參考不存在 → invalid_argument。
+func TestCreateCustomerInvalidRep(t *testing.T) {
+	ctx := context.Background()
+	_, db := newCustomerTestServer(t, authz.Identity{})
+	coID, deptID := seedCustomerCompany(t, db, "TW", true)
+	client, _ := newCustomerTestServer(t, deptAdminID(coID, deptID))
+	if _, err := client.CreateCustomer(ctx, connect.NewRequest(&customersv1.CreateCustomerRequest{Name: "王", DefaultSalesRepId: "88888"})); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("非法業務參考應 invalid_argument,got %v", err)
+	}
+}
+
 // TestCustomerScopeCrossDept:dept_admin 查他部門客戶 → not_found(範圍隔離)。
 func TestCustomerScopeCrossDept(t *testing.T) {
 	ctx := context.Background()

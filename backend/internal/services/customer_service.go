@@ -180,44 +180,47 @@ func (s *CustomerService) validateSalesRep(ctx context.Context, uid, cid int, di
 	return uid, nil
 }
 
-// nextCustomerCode 於交易內以樂觀鎖 counter 取號回傳 customer_code(公司前綴 + 6 位補零)。
-// version 衝突則重試更新(上限 maxCustomerCodeRetries);逾限回 failed_precondition。
+// ensureCustomerCounter 確保該公司的 counter 列存在(獨立、幂等的建前步驟)。
+// 為何不放在主交易內建:併發首次建立會在 Postgres 造成唯一衝突而 abort 整個交易,
+// 之後的取號重試無法進行;故先以獨立小交易建好,主交易內只做樂觀更新(0 列非錯誤,交易仍健康)。
+func (s *CustomerService) ensureCustomerCounter(ctx context.Context, cid int) error {
+	exists, err := s.db.CustomerCounter.Query().Where(customercounter.CompanyIDEQ(cid)).Exist(ctx)
+	if err != nil {
+		return toConnectError(err)
+	}
+	if exists {
+		return nil
+	}
+	if _, err := s.db.CustomerCounter.Create().SetCompanyID(cid).SetNextSeq(1).SetVersion(0).Save(ctx); err != nil {
+		if ent.IsConstraintError(err) {
+			return nil // 已被併發建立,視為成功
+		}
+		return toConnectError(err)
+	}
+	return nil
+}
+
+// nextCustomerCode 於交易內以樂觀鎖 counter 取號,回傳 customer_code(公司前綴 + 6 位補零)。
+// 呼叫前須先 ensureCustomerCounter。version 衝突(影響 0 列,非錯誤)則重試;逾限回 failed_precondition。
 func nextCustomerCode(ctx context.Context, tx *ent.Tx, cid int, prefix string) (string, error) {
 	for i := 0; i < maxCustomerCodeRetries; i++ {
 		c, err := tx.CustomerCounter.Query().Where(customercounter.CompanyIDEQ(cid)).Only(ctx)
-		switch {
-		case ent.IsNotFound(err):
-			// 無 counter:插入初始列(next_seq=1, version=0),本次序號 1 並推進。
-			if _, err := tx.CustomerCounter.Create().SetCompanyID(cid).SetNextSeq(1).SetVersion(0).Save(ctx); err != nil {
-				if ent.IsConstraintError(err) {
-					continue // 併發插入衝突 → 重試
-				}
-				return "", err
+		if err != nil {
+			if ent.IsNotFound(err) {
+				return "", connect.NewError(connect.CodeFailedPrecondition, errors.New("客戶編號計數器未初始化"))
 			}
-			n, err := tx.CustomerCounter.Update().
-				Where(customercounter.CompanyIDEQ(cid), customercounter.VersionEQ(0)).
-				SetNextSeq(2).SetVersion(1).Save(ctx)
-			if err != nil {
-				return "", err
-			}
-			if n == 0 {
-				continue // version 衝突 → 重試
-			}
-			return fmt.Sprintf("%s%06d", prefix, 1), nil
-		case err != nil:
 			return "", err
-		default:
-			n, err := tx.CustomerCounter.Update().
-				Where(customercounter.CompanyIDEQ(cid), customercounter.VersionEQ(c.Version)).
-				SetNextSeq(c.NextSeq + 1).SetVersion(c.Version + 1).Save(ctx)
-			if err != nil {
-				return "", err
-			}
-			if n == 0 {
-				continue // version 衝突 → 重試
-			}
-			return fmt.Sprintf("%s%06d", prefix, c.NextSeq), nil
 		}
+		n, err := tx.CustomerCounter.Update().
+			Where(customercounter.CompanyIDEQ(cid), customercounter.VersionEQ(c.Version)).
+			SetNextSeq(c.NextSeq + 1).SetVersion(c.Version + 1).Save(ctx)
+		if err != nil {
+			return "", err
+		}
+		if n == 0 {
+			continue // version 衝突 → 重試
+		}
+		return fmt.Sprintf("%s%06d", prefix, c.NextSeq), nil
 	}
 	return "", connect.NewError(connect.CodeFailedPrecondition, errors.New("客戶編號取號衝突,請稍後重試"))
 }
@@ -359,6 +362,11 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *connect.Reque
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("公司未設定客戶編號前綴"))
 	}
 
+	// 先確保 counter 列存在(獨立幂等步驟,避免主交易被唯一衝突 abort;見 ensureCustomerCounter)。
+	if err := s.ensureCustomerCounter(ctx, cid); err != nil {
+		return nil, err
+	}
+
 	tx, err := s.db.Tx(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
@@ -369,11 +377,16 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *connect.Reque
 	if err != nil {
 		return nil, toConnectError(err)
 	}
+	// 偏好送貨日未帶時套預設(一~六全 false, 長度 6, D26)。
+	days := req.Msg.GetPreferredDeliveryDays()
+	if len(days) == 0 {
+		days = []bool{false, false, false, false, false, false}
+	}
 	build := tx.Customer.Create().
 		SetCompanyID(cid).
 		SetCustomerCode(code).
 		SetName(name).
-		SetPreferredDeliveryDays(req.Msg.GetPreferredDeliveryDays()).
+		SetPreferredDeliveryDays(days).
 		SetPromoTagIds(intSlice(req.Msg.GetPromoTagIds()))
 	if did != nil {
 		build = build.SetDepartmentID(*did)

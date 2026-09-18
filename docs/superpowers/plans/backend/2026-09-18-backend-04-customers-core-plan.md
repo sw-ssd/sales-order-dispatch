@@ -68,4 +68,14 @@
 
 ---
 
-*最後更新：2026-09-18（04 customers 核心批）*
+## 複審登錄（requesting-code-review, 2026-09-18）
+
+- ✅ **已修 #1（Important）**：取號重試原在單一交易內含「初次建立 counter」分支；併發首次建立於 Postgres 會因唯一衝突 abort 整個交易,後續重試失效。改為 **`ensureCustomerCounter` 獨立冪等建前步驟**（主交易外）,主交易內僅做樂觀更新(0 列非錯誤,交易仍健康)。
+- ✅ **已修 #2（Minor）**：Create 未帶 `preferred_delivery_days` 時補預設 [false×6]（D26）。
+- ✅ **已修 #3（Minor）**：補字典參考/業務參考驗證測試（合法落庫、非法 `invalid_argument` 不建檔）。
+- **#4 註記**：`Get/Update` 先 `Only` 再開 tx;可接受,不另動。
+- **待 CI**：併發取號（兩請求同 version）之真併發驗證需 Postgres 整合測試（sqlite 無法真併發）。
+
+---
+
+*最後更新：2026-09-18（04 customers 核心批；含複審修正）*
