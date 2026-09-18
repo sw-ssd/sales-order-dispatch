@@ -5,6 +5,26 @@ option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/prot
 
 // 認證服務(v1):客戶密碼登入、token 換發/撤銷、員工註冊完成、QR 登入兌換。
 
+// ChangePasswordRequest:登入態修改密碼(A3 1.5.2;must_change_password=true 時唯一可用 RPC)。
+message ChangePasswordRequest {
+  string old_password = 1; // 舊密碼(臨時密碼亦以此驗證)
+  string new_password = 2; // 新密碼(強度 ≥ 8 字元)
+}
+
+// ChangePasswordResponse:修改結果(無內容)。
+message ChangePasswordResponse {}
+
+// ResetCustomerPasswordRequest:密碼重置(A3 1.5.4;dept_admin 以上)。
+message ResetCustomerPasswordRequest {
+  string user_id = 1; // 目標客戶帳號
+}
+
+// ResetCustomerPasswordResponse:新臨時密碼(僅本次回應回傳,不落盤)。
+message ResetCustomerPasswordResponse {
+  string temp_password = 1; // 臨時密碼(≥12 字元)
+  int64 expires_at = 2;     // 效期 Unix 秒(now+24h)
+}
+
 // LoginRequest:客戶帳號密碼登入(Task 12;Web 店家分頁與 App 店家登入共用)。
 message LoginRequest {
   string customer_code = 1; // 客戶編號
@@ -16,6 +36,7 @@ message LoginResponse {
   string access_token = 1;  // JWT access token(exp 1h)
   string refresh_token = 2; // refresh token(30d,使用時旋轉)
   int64 expires_in = 3;     // access token 有效秒數
+  bool must_change_password = 4; // A3(1.5.2):true = 首登/臨時密碼,僅 ChangePassword 可用
 }
 
 // RefreshRequest:以 refresh token 旋轉換發新 token 對。
@@ -79,4 +100,8 @@ service AuthService {
   rpc RegisterComplete(RegisterCompleteRequest) returns (RegisterCompleteResponse);
   // QRLogin:QR token 兌換,回公司/客戶與可選子帳號清單。
   rpc QRLogin(QRLoginRequest) returns (QRLoginResponse);
+  // ChangePassword:登入態修改密碼(1.5.2;must_change_password 時唯一可用)。
+  rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
+  // ResetCustomerPassword:密碼重置,重新發臨時密碼(1.5.4;dept_admin 以上)。
+  rpc ResetCustomerPassword(ResetCustomerPasswordRequest) returns (ResetCustomerPasswordResponse);
 }

@@ -44,6 +44,12 @@ const (
 	AuthServiceRegisterCompleteProcedure = "/salesorder.v1.AuthService/RegisterComplete"
 	// AuthServiceQRLoginProcedure is the fully-qualified name of the AuthService's QRLogin RPC.
 	AuthServiceQRLoginProcedure = "/salesorder.v1.AuthService/QRLogin"
+	// AuthServiceChangePasswordProcedure is the fully-qualified name of the AuthService's
+	// ChangePassword RPC.
+	AuthServiceChangePasswordProcedure = "/salesorder.v1.AuthService/ChangePassword"
+	// AuthServiceResetCustomerPasswordProcedure is the fully-qualified name of the AuthService's
+	// ResetCustomerPassword RPC.
+	AuthServiceResetCustomerPasswordProcedure = "/salesorder.v1.AuthService/ResetCustomerPassword"
 )
 
 // AuthServiceClient is a client for the salesorder.v1.AuthService service.
@@ -58,6 +64,10 @@ type AuthServiceClient interface {
 	RegisterComplete(context.Context, *connect.Request[v1.RegisterCompleteRequest]) (*connect.Response[v1.RegisterCompleteResponse], error)
 	// QRLogin:QR token 兌換,回公司/客戶與可選子帳號清單。
 	QRLogin(context.Context, *connect.Request[v1.QRLoginRequest]) (*connect.Response[v1.QRLoginResponse], error)
+	// ChangePassword:登入態修改密碼(1.5.2;must_change_password 時唯一可用)。
+	ChangePassword(context.Context, *connect.Request[v1.ChangePasswordRequest]) (*connect.Response[v1.ChangePasswordResponse], error)
+	// ResetCustomerPassword:密碼重置,重新發臨時密碼(1.5.4;dept_admin 以上)。
+	ResetCustomerPassword(context.Context, *connect.Request[v1.ResetCustomerPasswordRequest]) (*connect.Response[v1.ResetCustomerPasswordResponse], error)
 }
 
 // NewAuthServiceClient constructs a client for the salesorder.v1.AuthService service. By default,
@@ -101,16 +111,30 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(authServiceMethods.ByName("QRLogin")),
 			connect.WithClientOptions(opts...),
 		),
+		changePassword: connect.NewClient[v1.ChangePasswordRequest, v1.ChangePasswordResponse](
+			httpClient,
+			baseURL+AuthServiceChangePasswordProcedure,
+			connect.WithSchema(authServiceMethods.ByName("ChangePassword")),
+			connect.WithClientOptions(opts...),
+		),
+		resetCustomerPassword: connect.NewClient[v1.ResetCustomerPasswordRequest, v1.ResetCustomerPasswordResponse](
+			httpClient,
+			baseURL+AuthServiceResetCustomerPasswordProcedure,
+			connect.WithSchema(authServiceMethods.ByName("ResetCustomerPassword")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // authServiceClient implements AuthServiceClient.
 type authServiceClient struct {
-	login            *connect.Client[v1.LoginRequest, v1.LoginResponse]
-	refresh          *connect.Client[v1.RefreshRequest, v1.RefreshResponse]
-	logout           *connect.Client[v1.LogoutRequest, v1.LogoutResponse]
-	registerComplete *connect.Client[v1.RegisterCompleteRequest, v1.RegisterCompleteResponse]
-	qRLogin          *connect.Client[v1.QRLoginRequest, v1.QRLoginResponse]
+	login                 *connect.Client[v1.LoginRequest, v1.LoginResponse]
+	refresh               *connect.Client[v1.RefreshRequest, v1.RefreshResponse]
+	logout                *connect.Client[v1.LogoutRequest, v1.LogoutResponse]
+	registerComplete      *connect.Client[v1.RegisterCompleteRequest, v1.RegisterCompleteResponse]
+	qRLogin               *connect.Client[v1.QRLoginRequest, v1.QRLoginResponse]
+	changePassword        *connect.Client[v1.ChangePasswordRequest, v1.ChangePasswordResponse]
+	resetCustomerPassword *connect.Client[v1.ResetCustomerPasswordRequest, v1.ResetCustomerPasswordResponse]
 }
 
 // Login calls salesorder.v1.AuthService.Login.
@@ -138,6 +162,16 @@ func (c *authServiceClient) QRLogin(ctx context.Context, req *connect.Request[v1
 	return c.qRLogin.CallUnary(ctx, req)
 }
 
+// ChangePassword calls salesorder.v1.AuthService.ChangePassword.
+func (c *authServiceClient) ChangePassword(ctx context.Context, req *connect.Request[v1.ChangePasswordRequest]) (*connect.Response[v1.ChangePasswordResponse], error) {
+	return c.changePassword.CallUnary(ctx, req)
+}
+
+// ResetCustomerPassword calls salesorder.v1.AuthService.ResetCustomerPassword.
+func (c *authServiceClient) ResetCustomerPassword(ctx context.Context, req *connect.Request[v1.ResetCustomerPasswordRequest]) (*connect.Response[v1.ResetCustomerPasswordResponse], error) {
+	return c.resetCustomerPassword.CallUnary(ctx, req)
+}
+
 // AuthServiceHandler is an implementation of the salesorder.v1.AuthService service.
 type AuthServiceHandler interface {
 	// Login:客戶帳號密碼登入。
@@ -150,6 +184,10 @@ type AuthServiceHandler interface {
 	RegisterComplete(context.Context, *connect.Request[v1.RegisterCompleteRequest]) (*connect.Response[v1.RegisterCompleteResponse], error)
 	// QRLogin:QR token 兌換,回公司/客戶與可選子帳號清單。
 	QRLogin(context.Context, *connect.Request[v1.QRLoginRequest]) (*connect.Response[v1.QRLoginResponse], error)
+	// ChangePassword:登入態修改密碼(1.5.2;must_change_password 時唯一可用)。
+	ChangePassword(context.Context, *connect.Request[v1.ChangePasswordRequest]) (*connect.Response[v1.ChangePasswordResponse], error)
+	// ResetCustomerPassword:密碼重置,重新發臨時密碼(1.5.4;dept_admin 以上)。
+	ResetCustomerPassword(context.Context, *connect.Request[v1.ResetCustomerPasswordRequest]) (*connect.Response[v1.ResetCustomerPasswordResponse], error)
 }
 
 // NewAuthServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -189,6 +227,18 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(authServiceMethods.ByName("QRLogin")),
 		connect.WithHandlerOptions(opts...),
 	)
+	authServiceChangePasswordHandler := connect.NewUnaryHandler(
+		AuthServiceChangePasswordProcedure,
+		svc.ChangePassword,
+		connect.WithSchema(authServiceMethods.ByName("ChangePassword")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceResetCustomerPasswordHandler := connect.NewUnaryHandler(
+		AuthServiceResetCustomerPasswordProcedure,
+		svc.ResetCustomerPassword,
+		connect.WithSchema(authServiceMethods.ByName("ResetCustomerPassword")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/salesorder.v1.AuthService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AuthServiceLoginProcedure:
@@ -201,6 +251,10 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 			authServiceRegisterCompleteHandler.ServeHTTP(w, r)
 		case AuthServiceQRLoginProcedure:
 			authServiceQRLoginHandler.ServeHTTP(w, r)
+		case AuthServiceChangePasswordProcedure:
+			authServiceChangePasswordHandler.ServeHTTP(w, r)
+		case AuthServiceResetCustomerPasswordProcedure:
+			authServiceResetCustomerPasswordHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -228,4 +282,12 @@ func (UnimplementedAuthServiceHandler) RegisterComplete(context.Context, *connec
 
 func (UnimplementedAuthServiceHandler) QRLogin(context.Context, *connect.Request[v1.QRLoginRequest]) (*connect.Response[v1.QRLoginResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("salesorder.v1.AuthService.QRLogin is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) ChangePassword(context.Context, *connect.Request[v1.ChangePasswordRequest]) (*connect.Response[v1.ChangePasswordResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("salesorder.v1.AuthService.ChangePassword is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) ResetCustomerPassword(context.Context, *connect.Request[v1.ResetCustomerPasswordRequest]) (*connect.Response[v1.ResetCustomerPasswordResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("salesorder.v1.AuthService.ResetCustomerPassword is not implemented"))
 }

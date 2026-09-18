@@ -21,6 +21,194 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// ChangePasswordRequest:登入態修改密碼(A3 1.5.2;must_change_password=true 時唯一可用 RPC)。
+type ChangePasswordRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OldPassword   string                 `protobuf:"bytes,1,opt,name=old_password,json=oldPassword,proto3" json:"old_password,omitempty"` // 舊密碼(臨時密碼亦以此驗證)
+	NewPassword   string                 `protobuf:"bytes,2,opt,name=new_password,json=newPassword,proto3" json:"new_password,omitempty"` // 新密碼(強度 ≥ 8 字元)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChangePasswordRequest) Reset() {
+	*x = ChangePasswordRequest{}
+	mi := &file_salesorder_v1_auth_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChangePasswordRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChangePasswordRequest) ProtoMessage() {}
+
+func (x *ChangePasswordRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_auth_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChangePasswordRequest.ProtoReflect.Descriptor instead.
+func (*ChangePasswordRequest) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *ChangePasswordRequest) GetOldPassword() string {
+	if x != nil {
+		return x.OldPassword
+	}
+	return ""
+}
+
+func (x *ChangePasswordRequest) GetNewPassword() string {
+	if x != nil {
+		return x.NewPassword
+	}
+	return ""
+}
+
+// ChangePasswordResponse:修改結果(無內容)。
+type ChangePasswordResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChangePasswordResponse) Reset() {
+	*x = ChangePasswordResponse{}
+	mi := &file_salesorder_v1_auth_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChangePasswordResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChangePasswordResponse) ProtoMessage() {}
+
+func (x *ChangePasswordResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_auth_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChangePasswordResponse.ProtoReflect.Descriptor instead.
+func (*ChangePasswordResponse) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{1}
+}
+
+// ResetCustomerPasswordRequest:密碼重置(A3 1.5.4;dept_admin 以上)。
+type ResetCustomerPasswordRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"` // 目標客戶帳號
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResetCustomerPasswordRequest) Reset() {
+	*x = ResetCustomerPasswordRequest{}
+	mi := &file_salesorder_v1_auth_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResetCustomerPasswordRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResetCustomerPasswordRequest) ProtoMessage() {}
+
+func (x *ResetCustomerPasswordRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_auth_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResetCustomerPasswordRequest.ProtoReflect.Descriptor instead.
+func (*ResetCustomerPasswordRequest) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ResetCustomerPasswordRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+// ResetCustomerPasswordResponse:新臨時密碼(僅本次回應回傳,不落盤)。
+type ResetCustomerPasswordResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TempPassword  string                 `protobuf:"bytes,1,opt,name=temp_password,json=tempPassword,proto3" json:"temp_password,omitempty"` // 臨時密碼(≥12 字元)
+	ExpiresAt     int64                  `protobuf:"varint,2,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`         // 效期 Unix 秒(now+24h)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResetCustomerPasswordResponse) Reset() {
+	*x = ResetCustomerPasswordResponse{}
+	mi := &file_salesorder_v1_auth_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResetCustomerPasswordResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResetCustomerPasswordResponse) ProtoMessage() {}
+
+func (x *ResetCustomerPasswordResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_auth_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResetCustomerPasswordResponse.ProtoReflect.Descriptor instead.
+func (*ResetCustomerPasswordResponse) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ResetCustomerPasswordResponse) GetTempPassword() string {
+	if x != nil {
+		return x.TempPassword
+	}
+	return ""
+}
+
+func (x *ResetCustomerPasswordResponse) GetExpiresAt() int64 {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return 0
+}
+
 // LoginRequest:客戶帳號密碼登入(Task 12;Web 店家分頁與 App 店家登入共用)。
 type LoginRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -32,7 +220,7 @@ type LoginRequest struct {
 
 func (x *LoginRequest) Reset() {
 	*x = LoginRequest{}
-	mi := &file_salesorder_v1_auth_proto_msgTypes[0]
+	mi := &file_salesorder_v1_auth_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -44,7 +232,7 @@ func (x *LoginRequest) String() string {
 func (*LoginRequest) ProtoMessage() {}
 
 func (x *LoginRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_auth_proto_msgTypes[0]
+	mi := &file_salesorder_v1_auth_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -57,7 +245,7 @@ func (x *LoginRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LoginRequest.ProtoReflect.Descriptor instead.
 func (*LoginRequest) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{0}
+	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *LoginRequest) GetCustomerCode() string {
@@ -76,17 +264,18 @@ func (x *LoginRequest) GetPassword() string {
 
 // LoginResponse:登入成功核發的 token 對(Task 13)。
 type LoginResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AccessToken   string                 `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`    // JWT access token(exp 1h)
-	RefreshToken  string                 `protobuf:"bytes,2,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"` // refresh token(30d,使用時旋轉)
-	ExpiresIn     int64                  `protobuf:"varint,3,opt,name=expires_in,json=expiresIn,proto3" json:"expires_in,omitempty"`         // access token 有效秒數
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	AccessToken        string                 `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`                         // JWT access token(exp 1h)
+	RefreshToken       string                 `protobuf:"bytes,2,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`                      // refresh token(30d,使用時旋轉)
+	ExpiresIn          int64                  `protobuf:"varint,3,opt,name=expires_in,json=expiresIn,proto3" json:"expires_in,omitempty"`                              // access token 有效秒數
+	MustChangePassword bool                   `protobuf:"varint,4,opt,name=must_change_password,json=mustChangePassword,proto3" json:"must_change_password,omitempty"` // A3(1.5.2):true = 首登/臨時密碼,僅 ChangePassword 可用
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *LoginResponse) Reset() {
 	*x = LoginResponse{}
-	mi := &file_salesorder_v1_auth_proto_msgTypes[1]
+	mi := &file_salesorder_v1_auth_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -98,7 +287,7 @@ func (x *LoginResponse) String() string {
 func (*LoginResponse) ProtoMessage() {}
 
 func (x *LoginResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_auth_proto_msgTypes[1]
+	mi := &file_salesorder_v1_auth_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -111,7 +300,7 @@ func (x *LoginResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LoginResponse.ProtoReflect.Descriptor instead.
 func (*LoginResponse) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{1}
+	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *LoginResponse) GetAccessToken() string {
@@ -135,6 +324,13 @@ func (x *LoginResponse) GetExpiresIn() int64 {
 	return 0
 }
 
+func (x *LoginResponse) GetMustChangePassword() bool {
+	if x != nil {
+		return x.MustChangePassword
+	}
+	return false
+}
+
 // RefreshRequest:以 refresh token 旋轉換發新 token 對。
 type RefreshRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -145,7 +341,7 @@ type RefreshRequest struct {
 
 func (x *RefreshRequest) Reset() {
 	*x = RefreshRequest{}
-	mi := &file_salesorder_v1_auth_proto_msgTypes[2]
+	mi := &file_salesorder_v1_auth_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -157,7 +353,7 @@ func (x *RefreshRequest) String() string {
 func (*RefreshRequest) ProtoMessage() {}
 
 func (x *RefreshRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_auth_proto_msgTypes[2]
+	mi := &file_salesorder_v1_auth_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -170,7 +366,7 @@ func (x *RefreshRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshRequest.ProtoReflect.Descriptor instead.
 func (*RefreshRequest) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{2}
+	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *RefreshRequest) GetRefreshToken() string {
@@ -192,7 +388,7 @@ type RefreshResponse struct {
 
 func (x *RefreshResponse) Reset() {
 	*x = RefreshResponse{}
-	mi := &file_salesorder_v1_auth_proto_msgTypes[3]
+	mi := &file_salesorder_v1_auth_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -204,7 +400,7 @@ func (x *RefreshResponse) String() string {
 func (*RefreshResponse) ProtoMessage() {}
 
 func (x *RefreshResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_auth_proto_msgTypes[3]
+	mi := &file_salesorder_v1_auth_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -217,7 +413,7 @@ func (x *RefreshResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshResponse.ProtoReflect.Descriptor instead.
 func (*RefreshResponse) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{3}
+	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *RefreshResponse) GetAccessToken() string {
@@ -251,7 +447,7 @@ type LogoutRequest struct {
 
 func (x *LogoutRequest) Reset() {
 	*x = LogoutRequest{}
-	mi := &file_salesorder_v1_auth_proto_msgTypes[4]
+	mi := &file_salesorder_v1_auth_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -263,7 +459,7 @@ func (x *LogoutRequest) String() string {
 func (*LogoutRequest) ProtoMessage() {}
 
 func (x *LogoutRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_auth_proto_msgTypes[4]
+	mi := &file_salesorder_v1_auth_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -276,7 +472,7 @@ func (x *LogoutRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogoutRequest.ProtoReflect.Descriptor instead.
 func (*LogoutRequest) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{4}
+	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *LogoutRequest) GetRefreshToken() string {
@@ -295,7 +491,7 @@ type LogoutResponse struct {
 
 func (x *LogoutResponse) Reset() {
 	*x = LogoutResponse{}
-	mi := &file_salesorder_v1_auth_proto_msgTypes[5]
+	mi := &file_salesorder_v1_auth_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -307,7 +503,7 @@ func (x *LogoutResponse) String() string {
 func (*LogoutResponse) ProtoMessage() {}
 
 func (x *LogoutResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_auth_proto_msgTypes[5]
+	mi := &file_salesorder_v1_auth_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -320,7 +516,7 @@ func (x *LogoutResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogoutResponse.ProtoReflect.Descriptor instead.
 func (*LogoutResponse) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{5}
+	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{9}
 }
 
 // RegisterCompleteRequest:guest 補完註冊資料(Task 17:選公司、填姓名,轉 pending/approved)。
@@ -334,7 +530,7 @@ type RegisterCompleteRequest struct {
 
 func (x *RegisterCompleteRequest) Reset() {
 	*x = RegisterCompleteRequest{}
-	mi := &file_salesorder_v1_auth_proto_msgTypes[6]
+	mi := &file_salesorder_v1_auth_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -346,7 +542,7 @@ func (x *RegisterCompleteRequest) String() string {
 func (*RegisterCompleteRequest) ProtoMessage() {}
 
 func (x *RegisterCompleteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_auth_proto_msgTypes[6]
+	mi := &file_salesorder_v1_auth_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -359,7 +555,7 @@ func (x *RegisterCompleteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterCompleteRequest.ProtoReflect.Descriptor instead.
 func (*RegisterCompleteRequest) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{6}
+	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *RegisterCompleteRequest) GetCompanyId() string {
@@ -385,7 +581,7 @@ type RegisterCompleteResponse struct {
 
 func (x *RegisterCompleteResponse) Reset() {
 	*x = RegisterCompleteResponse{}
-	mi := &file_salesorder_v1_auth_proto_msgTypes[7]
+	mi := &file_salesorder_v1_auth_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -397,7 +593,7 @@ func (x *RegisterCompleteResponse) String() string {
 func (*RegisterCompleteResponse) ProtoMessage() {}
 
 func (x *RegisterCompleteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_auth_proto_msgTypes[7]
+	mi := &file_salesorder_v1_auth_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -410,7 +606,7 @@ func (x *RegisterCompleteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterCompleteResponse.ProtoReflect.Descriptor instead.
 func (*RegisterCompleteResponse) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{7}
+	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{11}
 }
 
 // QRLoginRequest:App 掃描客戶 QR 後兌換(前段:帶出身分,後續以子帳號 + 密碼完成登入)。
@@ -423,7 +619,7 @@ type QRLoginRequest struct {
 
 func (x *QRLoginRequest) Reset() {
 	*x = QRLoginRequest{}
-	mi := &file_salesorder_v1_auth_proto_msgTypes[8]
+	mi := &file_salesorder_v1_auth_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -435,7 +631,7 @@ func (x *QRLoginRequest) String() string {
 func (*QRLoginRequest) ProtoMessage() {}
 
 func (x *QRLoginRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_auth_proto_msgTypes[8]
+	mi := &file_salesorder_v1_auth_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -448,7 +644,7 @@ func (x *QRLoginRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QRLoginRequest.ProtoReflect.Descriptor instead.
 func (*QRLoginRequest) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{8}
+	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *QRLoginRequest) GetToken() string {
@@ -472,7 +668,7 @@ type QRLoginResponse struct {
 
 func (x *QRLoginResponse) Reset() {
 	*x = QRLoginResponse{}
-	mi := &file_salesorder_v1_auth_proto_msgTypes[9]
+	mi := &file_salesorder_v1_auth_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -484,7 +680,7 @@ func (x *QRLoginResponse) String() string {
 func (*QRLoginResponse) ProtoMessage() {}
 
 func (x *QRLoginResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_auth_proto_msgTypes[9]
+	mi := &file_salesorder_v1_auth_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -497,7 +693,7 @@ func (x *QRLoginResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QRLoginResponse.ProtoReflect.Descriptor instead.
 func (*QRLoginResponse) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{9}
+	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *QRLoginResponse) GetCompanyId() string {
@@ -546,7 +742,7 @@ type QRLoginResponse_Account struct {
 
 func (x *QRLoginResponse_Account) Reset() {
 	*x = QRLoginResponse_Account{}
-	mi := &file_salesorder_v1_auth_proto_msgTypes[10]
+	mi := &file_salesorder_v1_auth_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -558,7 +754,7 @@ func (x *QRLoginResponse_Account) String() string {
 func (*QRLoginResponse_Account) ProtoMessage() {}
 
 func (x *QRLoginResponse_Account) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_auth_proto_msgTypes[10]
+	mi := &file_salesorder_v1_auth_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -571,7 +767,7 @@ func (x *QRLoginResponse_Account) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QRLoginResponse_Account.ProtoReflect.Descriptor instead.
 func (*QRLoginResponse_Account) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{9, 0}
+	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{13, 0}
 }
 
 func (x *QRLoginResponse_Account) GetId() string {
@@ -592,15 +788,26 @@ var File_salesorder_v1_auth_proto protoreflect.FileDescriptor
 
 const file_salesorder_v1_auth_proto_rawDesc = "" +
 	"\n" +
-	"\x18salesorder/v1/auth.proto\x12\rsalesorder.v1\"O\n" +
+	"\x18salesorder/v1/auth.proto\x12\rsalesorder.v1\"]\n" +
+	"\x15ChangePasswordRequest\x12!\n" +
+	"\fold_password\x18\x01 \x01(\tR\voldPassword\x12!\n" +
+	"\fnew_password\x18\x02 \x01(\tR\vnewPassword\"\x18\n" +
+	"\x16ChangePasswordResponse\"7\n" +
+	"\x1cResetCustomerPasswordRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"c\n" +
+	"\x1dResetCustomerPasswordResponse\x12#\n" +
+	"\rtemp_password\x18\x01 \x01(\tR\ftempPassword\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\x02 \x01(\x03R\texpiresAt\"O\n" +
 	"\fLoginRequest\x12#\n" +
 	"\rcustomer_code\x18\x01 \x01(\tR\fcustomerCode\x12\x1a\n" +
-	"\bpassword\x18\x02 \x01(\tR\bpassword\"v\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\"\xa8\x01\n" +
 	"\rLoginResponse\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
 	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12\x1d\n" +
 	"\n" +
-	"expires_in\x18\x03 \x01(\x03R\texpiresIn\"5\n" +
+	"expires_in\x18\x03 \x01(\x03R\texpiresIn\x120\n" +
+	"\x14must_change_password\x18\x04 \x01(\bR\x12mustChangePassword\"5\n" +
 	"\x0eRefreshRequest\x12#\n" +
 	"\rrefresh_token\x18\x01 \x01(\tR\frefreshToken\"x\n" +
 	"\x0fRefreshResponse\x12!\n" +
@@ -627,13 +834,15 @@ const file_salesorder_v1_auth_proto_rawDesc = "" +
 	"\baccounts\x18\x05 \x03(\v2&.salesorder.v1.QRLoginResponse.AccountR\baccounts\x1a<\n" +
 	"\aAccount\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
-	"\faccount_name\x18\x02 \x01(\tR\vaccountName2\x91\x03\n" +
+	"\faccount_name\x18\x02 \x01(\tR\vaccountName2\xe4\x04\n" +
 	"\vAuthService\x12B\n" +
 	"\x05Login\x12\x1b.salesorder.v1.LoginRequest\x1a\x1c.salesorder.v1.LoginResponse\x12H\n" +
 	"\aRefresh\x12\x1d.salesorder.v1.RefreshRequest\x1a\x1e.salesorder.v1.RefreshResponse\x12E\n" +
 	"\x06Logout\x12\x1c.salesorder.v1.LogoutRequest\x1a\x1d.salesorder.v1.LogoutResponse\x12c\n" +
 	"\x10RegisterComplete\x12&.salesorder.v1.RegisterCompleteRequest\x1a'.salesorder.v1.RegisterCompleteResponse\x12H\n" +
-	"\aQRLogin\x12\x1d.salesorder.v1.QRLoginRequest\x1a\x1e.salesorder.v1.QRLoginResponseBYZWgithub.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1b\x06proto3"
+	"\aQRLogin\x12\x1d.salesorder.v1.QRLoginRequest\x1a\x1e.salesorder.v1.QRLoginResponse\x12]\n" +
+	"\x0eChangePassword\x12$.salesorder.v1.ChangePasswordRequest\x1a%.salesorder.v1.ChangePasswordResponse\x12r\n" +
+	"\x15ResetCustomerPassword\x12+.salesorder.v1.ResetCustomerPasswordRequest\x1a,.salesorder.v1.ResetCustomerPasswordResponseBYZWgithub.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1b\x06proto3"
 
 var (
 	file_salesorder_v1_auth_proto_rawDescOnce sync.Once
@@ -647,34 +856,42 @@ func file_salesorder_v1_auth_proto_rawDescGZIP() []byte {
 	return file_salesorder_v1_auth_proto_rawDescData
 }
 
-var file_salesorder_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_salesorder_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_salesorder_v1_auth_proto_goTypes = []any{
-	(*LoginRequest)(nil),             // 0: salesorder.v1.LoginRequest
-	(*LoginResponse)(nil),            // 1: salesorder.v1.LoginResponse
-	(*RefreshRequest)(nil),           // 2: salesorder.v1.RefreshRequest
-	(*RefreshResponse)(nil),          // 3: salesorder.v1.RefreshResponse
-	(*LogoutRequest)(nil),            // 4: salesorder.v1.LogoutRequest
-	(*LogoutResponse)(nil),           // 5: salesorder.v1.LogoutResponse
-	(*RegisterCompleteRequest)(nil),  // 6: salesorder.v1.RegisterCompleteRequest
-	(*RegisterCompleteResponse)(nil), // 7: salesorder.v1.RegisterCompleteResponse
-	(*QRLoginRequest)(nil),           // 8: salesorder.v1.QRLoginRequest
-	(*QRLoginResponse)(nil),          // 9: salesorder.v1.QRLoginResponse
-	(*QRLoginResponse_Account)(nil),  // 10: salesorder.v1.QRLoginResponse.Account
+	(*ChangePasswordRequest)(nil),         // 0: salesorder.v1.ChangePasswordRequest
+	(*ChangePasswordResponse)(nil),        // 1: salesorder.v1.ChangePasswordResponse
+	(*ResetCustomerPasswordRequest)(nil),  // 2: salesorder.v1.ResetCustomerPasswordRequest
+	(*ResetCustomerPasswordResponse)(nil), // 3: salesorder.v1.ResetCustomerPasswordResponse
+	(*LoginRequest)(nil),                  // 4: salesorder.v1.LoginRequest
+	(*LoginResponse)(nil),                 // 5: salesorder.v1.LoginResponse
+	(*RefreshRequest)(nil),                // 6: salesorder.v1.RefreshRequest
+	(*RefreshResponse)(nil),               // 7: salesorder.v1.RefreshResponse
+	(*LogoutRequest)(nil),                 // 8: salesorder.v1.LogoutRequest
+	(*LogoutResponse)(nil),                // 9: salesorder.v1.LogoutResponse
+	(*RegisterCompleteRequest)(nil),       // 10: salesorder.v1.RegisterCompleteRequest
+	(*RegisterCompleteResponse)(nil),      // 11: salesorder.v1.RegisterCompleteResponse
+	(*QRLoginRequest)(nil),                // 12: salesorder.v1.QRLoginRequest
+	(*QRLoginResponse)(nil),               // 13: salesorder.v1.QRLoginResponse
+	(*QRLoginResponse_Account)(nil),       // 14: salesorder.v1.QRLoginResponse.Account
 }
 var file_salesorder_v1_auth_proto_depIdxs = []int32{
-	10, // 0: salesorder.v1.QRLoginResponse.accounts:type_name -> salesorder.v1.QRLoginResponse.Account
-	0,  // 1: salesorder.v1.AuthService.Login:input_type -> salesorder.v1.LoginRequest
-	2,  // 2: salesorder.v1.AuthService.Refresh:input_type -> salesorder.v1.RefreshRequest
-	4,  // 3: salesorder.v1.AuthService.Logout:input_type -> salesorder.v1.LogoutRequest
-	6,  // 4: salesorder.v1.AuthService.RegisterComplete:input_type -> salesorder.v1.RegisterCompleteRequest
-	8,  // 5: salesorder.v1.AuthService.QRLogin:input_type -> salesorder.v1.QRLoginRequest
-	1,  // 6: salesorder.v1.AuthService.Login:output_type -> salesorder.v1.LoginResponse
-	3,  // 7: salesorder.v1.AuthService.Refresh:output_type -> salesorder.v1.RefreshResponse
-	5,  // 8: salesorder.v1.AuthService.Logout:output_type -> salesorder.v1.LogoutResponse
-	7,  // 9: salesorder.v1.AuthService.RegisterComplete:output_type -> salesorder.v1.RegisterCompleteResponse
-	9,  // 10: salesorder.v1.AuthService.QRLogin:output_type -> salesorder.v1.QRLoginResponse
-	6,  // [6:11] is the sub-list for method output_type
-	1,  // [1:6] is the sub-list for method input_type
+	14, // 0: salesorder.v1.QRLoginResponse.accounts:type_name -> salesorder.v1.QRLoginResponse.Account
+	4,  // 1: salesorder.v1.AuthService.Login:input_type -> salesorder.v1.LoginRequest
+	6,  // 2: salesorder.v1.AuthService.Refresh:input_type -> salesorder.v1.RefreshRequest
+	8,  // 3: salesorder.v1.AuthService.Logout:input_type -> salesorder.v1.LogoutRequest
+	10, // 4: salesorder.v1.AuthService.RegisterComplete:input_type -> salesorder.v1.RegisterCompleteRequest
+	12, // 5: salesorder.v1.AuthService.QRLogin:input_type -> salesorder.v1.QRLoginRequest
+	0,  // 6: salesorder.v1.AuthService.ChangePassword:input_type -> salesorder.v1.ChangePasswordRequest
+	2,  // 7: salesorder.v1.AuthService.ResetCustomerPassword:input_type -> salesorder.v1.ResetCustomerPasswordRequest
+	5,  // 8: salesorder.v1.AuthService.Login:output_type -> salesorder.v1.LoginResponse
+	7,  // 9: salesorder.v1.AuthService.Refresh:output_type -> salesorder.v1.RefreshResponse
+	9,  // 10: salesorder.v1.AuthService.Logout:output_type -> salesorder.v1.LogoutResponse
+	11, // 11: salesorder.v1.AuthService.RegisterComplete:output_type -> salesorder.v1.RegisterCompleteResponse
+	13, // 12: salesorder.v1.AuthService.QRLogin:output_type -> salesorder.v1.QRLoginResponse
+	1,  // 13: salesorder.v1.AuthService.ChangePassword:output_type -> salesorder.v1.ChangePasswordResponse
+	3,  // 14: salesorder.v1.AuthService.ResetCustomerPassword:output_type -> salesorder.v1.ResetCustomerPasswordResponse
+	8,  // [8:15] is the sub-list for method output_type
+	1,  // [1:8] is the sub-list for method input_type
 	1,  // [1:1] is the sub-list for extension type_name
 	1,  // [1:1] is the sub-list for extension extendee
 	0,  // [0:1] is the sub-list for field type_name
@@ -691,7 +908,7 @@ func file_salesorder_v1_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_salesorder_v1_auth_proto_rawDesc), len(file_salesorder_v1_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
