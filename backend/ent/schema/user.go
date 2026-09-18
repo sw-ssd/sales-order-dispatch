@@ -30,6 +30,13 @@ func (User) Fields() []ent.Field {
 			Optional(),
 		field.Bool("is_customer").
 			Default(false),
+		field.Int("customer_id").
+			Optional().
+			Nillable(), // D22 建檔連動:指向所屬 customers(可空,員工/管理員無)
+		field.Bool("is_primary").
+			Default(false), // D22:每客戶恆恰一主帳號(部分唯一索引兜底)
+		field.Bool("system_generated").
+			Default(false), // D22:業務子帳號由建檔自動附帶,供灰化判斷
 		field.String("account_name").
 			Optional(),
 		field.Int("token_version").

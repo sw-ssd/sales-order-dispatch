@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
+	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
@@ -24,7 +26,7 @@ func newCustomerTestServer(t *testing.T, id authz.Identity) (customersv1connect.
 	db := enttest.Open(t, "sqlite3", dsn)
 	t.Cleanup(func() { _ = db.Close() })
 	mux := http.NewServeMux()
-	RegisterCustomerServices(mux, db)
+	RegisterCustomerServices(mux, db, "http://localhost:3000")
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := authz.WithIdentity(r.Context(), id)
 		ctx = authz.WithDB(ctx, db)
@@ -54,19 +56,32 @@ func seedCustomerCompany(t *testing.T, db *ent.Client, prefix string, withDept b
 	return co.ID, d.ID
 }
 
+// seedCustomerRep 建立同公司同部門的有效業務(staff),回傳其 id。
+func seedCustomerRep(t *testing.T, db *ent.Client, coID, deptID int) int {
+	t.Helper()
+	r, err := db.User.Create().SetCompanyID(coID).SetDepartmentID(deptID).
+		SetEmail("rep-" + t.Name() + "@t.com").SetName("業務").SetRole("staff").SetPasswordHash("x").Save(context.Background())
+	if err != nil {
+		t.Fatalf("seed rep: %v", err)
+	}
+	return r.ID
+}
+
 // deptAdminID 組裝 dept_admin 身分。
 func deptAdminID(coID, deptID int) authz.Identity {
 	return authz.Identity{UserID: "1", CompanyID: uItoa(coID), DepartmentID: uItoa(deptID), Role: "dept_admin", Roles: []string{"dept_admin", "staff"}}
 }
 
-// TestCreateCustomerGeneratesCodeAndCounter D7:dept_admin 建立客戶 → 取號 TY000001、counter 推進、稽核存在。
+// TestCreateCustomerGeneratesCodeAndCounter D7+D22:dept_admin 建立客戶(帶業務)→ 取號 TY000001、counter 推進、
+// 連動建主/業務子帳號、稽核共 3 筆、回應含交付欄位。
 func TestCreateCustomerGeneratesCodeAndCounter(t *testing.T) {
 	ctx := context.Background()
 	_, db := newCustomerTestServer(t, authz.Identity{})
 	coID, deptID := seedCustomerCompany(t, db, "TY", true)
+	repID := seedCustomerRep(t, db, coID, deptID)
 	client, _ := newCustomerTestServer(t, deptAdminID(coID, deptID))
 
-	resp, err := client.CreateCustomer(ctx, connect.NewRequest(&customersv1.CreateCustomerRequest{Name: "王小明"}))
+	resp, err := client.CreateCustomer(ctx, connect.NewRequest(&customersv1.CreateCustomerRequest{Name: "王小明", DefaultSalesRepId: uItoa(repID)}))
 	if err != nil {
 		t.Fatalf("CreateCustomer: %v", err)
 	}
@@ -81,12 +96,13 @@ func TestCreateCustomerGeneratesCodeAndCounter(t *testing.T) {
 	if err != nil || cnt.NextSeq != 2 {
 		t.Fatalf("counter next_seq 應為 2,得到 %+v (err=%v)", cnt, err)
 	}
-	// 稽核存在。
-	if n, _ := db.AuditLog.Query().Count(ctx); n != 1 {
-		t.Fatalf("建檔應寫 1 筆稽核,得到 %d", n)
+	// 稽核:客戶 + 兩帳號 = 3 筆。
+	if n, _ := db.AuditLog.Query().Count(ctx); n != 3 {
+		t.Fatalf("建檔應寫 3 筆稽核,得到 %d", n)
 	}
+	assertD22Accounts(t, db, ctx, resp, "王小明")
 	// 第二個客戶取號連續。
-	resp2, err := client.CreateCustomer(ctx, connect.NewRequest(&customersv1.CreateCustomerRequest{Name: "李四"}))
+	resp2, err := client.CreateCustomer(ctx, connect.NewRequest(&customersv1.CreateCustomerRequest{Name: "李四", DefaultSalesRepId: uItoa(repID)}))
 	if err != nil {
 		t.Fatalf("CreateCustomer2: %v", err)
 	}
@@ -95,17 +111,35 @@ func TestCreateCustomerGeneratesCodeAndCounter(t *testing.T) {
 	}
 }
 
-// TestCreateCustomerWithoutPrefixFailedPrecondition:公司未設前綴 → failed_precondition,不建檔。
+// TestCreateCustomerWithoutPrefixFailedPrecondition:公司未設前綴(帶合法業務)→ failed_precondition,不建檔、不建帳號。
 func TestCreateCustomerWithoutPrefixFailedPrecondition(t *testing.T) {
 	ctx := context.Background()
 	_, db := newCustomerTestServer(t, authz.Identity{})
 	coID, deptID := seedCustomerCompany(t, db, "", true)
+	repID := seedCustomerRep(t, db, coID, deptID)
 	client, _ := newCustomerTestServer(t, deptAdminID(coID, deptID))
-	if _, err := client.CreateCustomer(ctx, connect.NewRequest(&customersv1.CreateCustomerRequest{Name: "王"})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+	if _, err := client.CreateCustomer(ctx, connect.NewRequest(&customersv1.CreateCustomerRequest{Name: "王", DefaultSalesRepId: uItoa(repID)})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
 		t.Fatalf("無前綴建檔應 failed_precondition,got %v", err)
 	}
 	if n, _ := db.Customer.Query().Count(ctx); n != 0 {
 		t.Fatalf("無前綴時不應建檔,得到 %d 列", n)
+	}
+}
+
+// TestCreateCustomerRequiresSalesRep:D22 交付必要——缺 default_sales_rep_id → invalid_argument,不建檔不建帳號。
+func TestCreateCustomerRequiresSalesRep(t *testing.T) {
+	ctx := context.Background()
+	_, db := newCustomerTestServer(t, authz.Identity{})
+	coID, deptID := seedCustomerCompany(t, db, "TZ", true)
+	client, _ := newCustomerTestServer(t, deptAdminID(coID, deptID))
+	if _, err := client.CreateCustomer(ctx, connect.NewRequest(&customersv1.CreateCustomerRequest{Name: "王"})); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("缺 default_sales_rep_id 應 invalid_argument,got %v", err)
+	}
+	if n, _ := db.Customer.Query().Count(ctx); n != 0 {
+		t.Fatalf("缺業務時不應建檔,得到 %d 列", n)
+	}
+	if n, _ := db.User.Query().Count(ctx); n != 0 {
+		t.Fatalf("缺業務時不應建帳號,得到 %d 列", n)
 	}
 }
 
@@ -199,6 +233,57 @@ func TestUpdateKeepsCodeAndDeleteRestore(t *testing.T) {
 	}
 	if got := db.Customer.GetX(ctx, c.ID); got.DeletedAt != nil {
 		t.Fatal("Restore 應清 deleted_at")
+	}
+}
+
+// assertD22Accounts 驗證 D22 建檔連動:回應交付欄位 + DB 中主/業務子帳號正確。
+func assertD22Accounts(t *testing.T, db *ent.Client, ctx context.Context, resp *connect.Response[customersv1.CreateCustomerResponse], customerName string) {
+	t.Helper()
+	if resp.Msg.GetPrimaryAccountName() != customerName {
+		t.Fatalf("主帳號名稱應=客戶名稱 %q,得到 %q", customerName, resp.Msg.GetPrimaryAccountName())
+	}
+	if resp.Msg.GetSalesRepAccountName() != customerName+"(業務)" {
+		t.Fatalf("業務子帳號名稱應=%s(業務),得到 %q", customerName, resp.Msg.GetSalesRepAccountName())
+	}
+	if resp.Msg.GetPrimaryTempPassword() == "" || resp.Msg.GetSalesRepTempPassword() == "" {
+		t.Fatal("兩組臨時密碼應非空")
+	}
+	if resp.Msg.GetPrimaryTempPassword() == resp.Msg.GetSalesRepTempPassword() {
+		t.Fatal("兩組臨時密碼應不同")
+	}
+	if got := resp.Msg.GetAccountManageUrl(); got != "http://localhost:3000/customer_account_manage" {
+		t.Fatalf("account_manage_url 不正確,得到 %q", got)
+	}
+
+	c := resp.Msg.GetCustomer()
+	uid, _ := strconv.Atoi(c.GetId())
+	users := db.User.Query().Where(user.CustomerIDEQ(uid)).AllX(ctx)
+	if len(users) != 2 {
+		t.Fatalf("該客戶應恰有 2 個連動帳號,得到 %d", len(users))
+	}
+	var primary, sub *ent.User
+	for _, u := range users {
+		if u.IsPrimary {
+			primary = u
+		}
+		if u.SystemGenerated {
+			sub = u
+		}
+		if u.Role != "customer" || !u.IsCustomer || !u.MustChangePassword || u.TempPasswordExpiresAt == nil {
+			t.Fatalf("連動帳號欄位錯誤: role=%s is_customer=%v must_change=%v exp=%v", u.Role, u.IsCustomer, u.MustChangePassword, u.TempPasswordExpiresAt)
+		}
+	}
+	if primary == nil || sub == nil {
+		t.Fatal("應存在 1 主帳號 + 1 業務子帳號")
+	}
+	if primary.SystemGenerated {
+		t.Fatal("主帳號 system_generated 應為 false")
+	}
+	if sub.IsPrimary {
+		t.Fatal("業務子帳號 is_primary 應為 false")
+	}
+	if !primary.TempPasswordExpiresAt.After(time.Now()) || primary.TempPasswordExpiresAt.After(time.Now().Add(25*time.Hour)) {
+		t.Fatalf("主帳號臨時密碼應約 24h 效期,得到 %v", primary.TempPasswordExpiresAt)
 	}
 }
 

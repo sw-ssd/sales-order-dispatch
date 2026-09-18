@@ -173,16 +173,24 @@ func init() {
 	userDescIsCustomer := userFields[6].Descriptor()
 	// user.DefaultIsCustomer holds the default value on creation for the is_customer field.
 	user.DefaultIsCustomer = userDescIsCustomer.Default.(bool)
+	// userDescIsPrimary is the schema descriptor for is_primary field.
+	userDescIsPrimary := userFields[8].Descriptor()
+	// user.DefaultIsPrimary holds the default value on creation for the is_primary field.
+	user.DefaultIsPrimary = userDescIsPrimary.Default.(bool)
+	// userDescSystemGenerated is the schema descriptor for system_generated field.
+	userDescSystemGenerated := userFields[9].Descriptor()
+	// user.DefaultSystemGenerated holds the default value on creation for the system_generated field.
+	user.DefaultSystemGenerated = userDescSystemGenerated.Default.(bool)
 	// userDescTokenVersion is the schema descriptor for token_version field.
-	userDescTokenVersion := userFields[8].Descriptor()
+	userDescTokenVersion := userFields[11].Descriptor()
 	// user.DefaultTokenVersion holds the default value on creation for the token_version field.
 	user.DefaultTokenVersion = userDescTokenVersion.Default.(int)
 	// userDescPasswordHash is the schema descriptor for password_hash field.
-	userDescPasswordHash := userFields[9].Descriptor()
+	userDescPasswordHash := userFields[12].Descriptor()
 	// user.PasswordHashValidator is a validator for the "password_hash" field. It is called by the builders before save.
 	user.PasswordHashValidator = userDescPasswordHash.Validators[0].(func(string) error)
 	// userDescMustChangePassword is the schema descriptor for must_change_password field.
-	userDescMustChangePassword := userFields[10].Descriptor()
+	userDescMustChangePassword := userFields[13].Descriptor()
 	// user.DefaultMustChangePassword holds the default value on creation for the must_change_password field.
 	user.DefaultMustChangePassword = userDescMustChangePassword.Default.(bool)
 }

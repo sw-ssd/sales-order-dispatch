@@ -22,6 +22,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
+	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1/customersv1connect"
@@ -38,18 +39,20 @@ const maxCustomerCodeRetries = 5
 
 // CustomerService 實作 customers.v1.CustomerService。
 type CustomerService struct {
-	db *ent.Client
+	db                   *ent.Client
+	accountManageBaseURL string // config.Auth.FrontendURL(組 D22 帳號管理深層連結)
 	customersv1connect.UnimplementedCustomerServiceHandler
 }
 
-// NewCustomerService 建立 CustomerService。
-func NewCustomerService(db *ent.Client) *CustomerService {
-	return &CustomerService{db: db}
+// NewCustomerService 建立 CustomerService。accountManageBaseURL 為前端 base URL,用於組出
+// D22 帳號管理深層連結(config.Auth.FrontendURL)。
+func NewCustomerService(db *ent.Client, accountManageBaseURL string) *CustomerService {
+	return &CustomerService{db: db, accountManageBaseURL: accountManageBaseURL}
 }
 
 // RegisterCustomerServices 將 CustomerService 掛到 mux。
-func RegisterCustomerServices(mux *http.ServeMux, db *ent.Client) {
-	path, handler := customersv1connect.NewCustomerServiceHandler(NewCustomerService(db))
+func RegisterCustomerServices(mux *http.ServeMux, db *ent.Client, accountManageBaseURL string) {
+	path, handler := customersv1connect.NewCustomerServiceHandler(NewCustomerService(db, accountManageBaseURL))
 	mux.Handle(path, handler)
 }
 
@@ -339,15 +342,17 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *connect.Reque
 		return nil, err
 	}
 	var repID int
-	if req.Msg.GetDefaultSalesRepId() != "" {
-		ruid, err := parseID(req.Msg.GetDefaultSalesRepId())
-		if err != nil {
-			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("default_sales_rep_id 格式錯誤"))
-		}
-		repID, err = s.validateSalesRep(ctx, ruid, cid, did)
-		if err != nil {
-			return nil, err
-		}
+	// D22 交付流程必要:業務子帳號憑證交予 default_sales_rep(3.1.4 錯誤處理:未提供/非法 → invalid_argument)。
+	if req.Msg.GetDefaultSalesRepId() == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("default_sales_rep_id 必填(建檔連動業務子帳號交付)"))
+	}
+	ruid, err := parseID(req.Msg.GetDefaultSalesRepId())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("default_sales_rep_id 格式錯誤"))
+	}
+	repID, err = s.validateSalesRep(ctx, ruid, cid, did)
+	if err != nil {
+		return nil, err
 	}
 	// 公司前綴(customer_code 取號必要)。
 	co, err := s.db.Company.Get(ctx, cid)
@@ -430,10 +435,69 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *connect.Reque
 	}); err != nil {
 		return nil, toConnectError(err)
 	}
+
+	// D22(3.1.4)同期建主帳號 + 業務子帳號:兩帳號各自 24h 隨機臨時密碼、must_change_password=true;
+	// 主帳號 system_generated=false、業務子帳號 system_generated=true(灰化標記)。
+	// email 以全域唯一之 customer_code 生成佔位(user.email 全域唯一,避免撞既有帳號)。
+	primaryEmail := fmt.Sprintf("customer.%s@system.local", created.CustomerCode)
+	subEmail := fmt.Sprintf("salesrep.%s@system.local", created.CustomerCode)
+	subName := created.Name + "(業務)"
+	primaryTemp, err := auth.GenerateTempPassword()
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	primaryHash, err := auth.HashPassword(primaryTemp)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	subTemp, err := auth.GenerateTempPassword()
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	subHash, err := auth.HashPassword(subTemp)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	exp := time.Now().UTC().Add(customerTempPasswordTTL)
+
+	primaryUser, err := buildCustomerAccount(ctx, tx, accountSpec{
+		CompanyID: cid, DepartmentID: did, CustomerID: created.ID,
+		Email: primaryEmail, Name: created.Name, AccountName: created.Name,
+		IsPrimary: true, SystemGenerated: false,
+		PasswordHash: primaryHash, MustChange: true, TempExpiresAt: exp,
+	})
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	subUser, err := buildCustomerAccount(ctx, tx, accountSpec{
+		CompanyID: cid, DepartmentID: did, CustomerID: created.ID,
+		Email: subEmail, Name: subName, AccountName: subName,
+		IsPrimary: false, SystemGenerated: true,
+		PasswordHash: subHash, MustChange: true, TempExpiresAt: exp,
+	})
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+
+	// 兩帳號建檔稽核(與客戶建檔同交易,D18)。
+	if err := auditUserCreate(ctx, tx, actor, cid, did, primaryUser.ID, primaryEmail, created.Name); err != nil {
+		return nil, toConnectError(err)
+	}
+	if err := auditUserCreate(ctx, tx, actor, cid, did, subUser.ID, subEmail, subName); err != nil {
+		return nil, toConnectError(err)
+	}
+
 	if err := tx.Commit(); err != nil {
 		return nil, toConnectError(err)
 	}
-	return connect.NewResponse(&customersv1.CreateCustomerResponse{Customer: customerToProto(created)}), nil
+	return connect.NewResponse(&customersv1.CreateCustomerResponse{
+		Customer:             customerToProto(created),
+		PrimaryAccountName:   primaryUser.Name,
+		PrimaryTempPassword:  primaryTemp,
+		SalesRepAccountName:  subUser.Name,
+		SalesRepTempPassword: subTemp,
+		AccountManageUrl:     s.accountManageURL(),
+	}), nil
 }
 
 // UpdateCustomer 欄位式更新(customer_code 不可改;update 請求無 code 欄位,天然拒絕)。
@@ -683,4 +747,69 @@ func intSlice(in []int64) []int {
 		out = append(out, int(v))
 	}
 	return out
+}
+
+// customerTempPasswordTTL 為建檔連動帳號臨時密碼效期(now+24h, D22/01-auth 1.5.2)。
+const customerTempPasswordTTL = 24 * time.Hour
+
+// accountSpec 描述 D22 建檔連動要建立的客戶帳號。
+type accountSpec struct {
+	CompanyID       int
+	DepartmentID    *int
+	CustomerID      int
+	Email           string
+	Name            string
+	AccountName     string
+	IsPrimary       bool
+	SystemGenerated bool
+	PasswordHash    string
+	MustChange      bool
+	TempExpiresAt   time.Time
+}
+
+// buildCustomerAccount 於交易內建立客戶帳號(角色 customer、is_customer=true)。
+func buildCustomerAccount(ctx context.Context, tx *ent.Tx, s accountSpec) (*ent.User, error) {
+	b := tx.User.Create().
+		SetCompanyID(s.CompanyID).
+		SetEmail(s.Email).
+		SetName(s.Name).
+		SetRole("customer").
+		SetStatus(user.StatusActive).
+		SetAccountName(s.AccountName).
+		SetIsCustomer(true).
+		SetCustomerID(s.CustomerID).
+		SetIsPrimary(s.IsPrimary).
+		SetSystemGenerated(s.SystemGenerated).
+		SetPasswordHash(s.PasswordHash).
+		SetMustChangePassword(s.MustChange).
+		SetTempPasswordExpiresAt(s.TempExpiresAt)
+	if s.DepartmentID != nil {
+		b = b.SetDepartmentID(*s.DepartmentID)
+	}
+	return b.Save(ctx)
+}
+
+// auditUserCreate 在交易內寫一筆「客戶帳號建檔」稽核(與客戶主檔建檔同回滾,D18)。
+func auditUserCreate(ctx context.Context, tx *ent.Tx, actor, cid int, did *int, uid int, email, name string) error {
+	meta := audit.MetaFrom(ctx)
+	return audit.Record(ctx, tx, audit.Entry{
+		Action:       "create",
+		ResourceType: "user",
+		ResourceID:   strconv.Itoa(uid),
+		CompanyID:    cid,
+		DepartmentID: did,
+		UserID:       actor,
+		After:        map[string]any{"email": email, "name": name, "account_type": "customer"},
+		IPAddress:    meta.IP,
+		UserAgent:    meta.UserAgent,
+	})
+}
+
+// accountManageURL 組出 D22 帳號管理深層連結 https://<domain>/customer_account_manage(規格 §9.4)。
+func (s *CustomerService) accountManageURL() string {
+	base := strings.TrimRight(s.accountManageBaseURL, "/")
+	if base == "" {
+		return "/customer_account_manage"
+	}
+	return base + "/customer_account_manage"
 }

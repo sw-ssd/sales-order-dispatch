@@ -140,6 +140,61 @@ func (_u *UserUpdate) SetNillableIsCustomer(v *bool) *UserUpdate {
 	return _u
 }
 
+// SetCustomerID sets the "customer_id" field.
+func (_u *UserUpdate) SetCustomerID(v int) *UserUpdate {
+	_u.mutation.ResetCustomerID()
+	_u.mutation.SetCustomerID(v)
+	return _u
+}
+
+// SetNillableCustomerID sets the "customer_id" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableCustomerID(v *int) *UserUpdate {
+	if v != nil {
+		_u.SetCustomerID(*v)
+	}
+	return _u
+}
+
+// AddCustomerID adds value to the "customer_id" field.
+func (_u *UserUpdate) AddCustomerID(v int) *UserUpdate {
+	_u.mutation.AddCustomerID(v)
+	return _u
+}
+
+// ClearCustomerID clears the value of the "customer_id" field.
+func (_u *UserUpdate) ClearCustomerID() *UserUpdate {
+	_u.mutation.ClearCustomerID()
+	return _u
+}
+
+// SetIsPrimary sets the "is_primary" field.
+func (_u *UserUpdate) SetIsPrimary(v bool) *UserUpdate {
+	_u.mutation.SetIsPrimary(v)
+	return _u
+}
+
+// SetNillableIsPrimary sets the "is_primary" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableIsPrimary(v *bool) *UserUpdate {
+	if v != nil {
+		_u.SetIsPrimary(*v)
+	}
+	return _u
+}
+
+// SetSystemGenerated sets the "system_generated" field.
+func (_u *UserUpdate) SetSystemGenerated(v bool) *UserUpdate {
+	_u.mutation.SetSystemGenerated(v)
+	return _u
+}
+
+// SetNillableSystemGenerated sets the "system_generated" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableSystemGenerated(v *bool) *UserUpdate {
+	if v != nil {
+		_u.SetSystemGenerated(*v)
+	}
+	return _u
+}
+
 // SetAccountName sets the "account_name" field.
 func (_u *UserUpdate) SetAccountName(v string) *UserUpdate {
 	_u.mutation.SetAccountName(v)
@@ -375,6 +430,21 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.IsCustomer(); ok {
 		_spec.SetField(user.FieldIsCustomer, field.TypeBool, value)
 	}
+	if value, ok := _u.mutation.CustomerID(); ok {
+		_spec.SetField(user.FieldCustomerID, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedCustomerID(); ok {
+		_spec.AddField(user.FieldCustomerID, field.TypeInt, value)
+	}
+	if _u.mutation.CustomerIDCleared() {
+		_spec.ClearField(user.FieldCustomerID, field.TypeInt)
+	}
+	if value, ok := _u.mutation.IsPrimary(); ok {
+		_spec.SetField(user.FieldIsPrimary, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SystemGenerated(); ok {
+		_spec.SetField(user.FieldSystemGenerated, field.TypeBool, value)
+	}
 	if value, ok := _u.mutation.AccountName(); ok {
 		_spec.SetField(user.FieldAccountName, field.TypeString, value)
 	}
@@ -583,6 +653,61 @@ func (_u *UserUpdateOne) SetIsCustomer(v bool) *UserUpdateOne {
 func (_u *UserUpdateOne) SetNillableIsCustomer(v *bool) *UserUpdateOne {
 	if v != nil {
 		_u.SetIsCustomer(*v)
+	}
+	return _u
+}
+
+// SetCustomerID sets the "customer_id" field.
+func (_u *UserUpdateOne) SetCustomerID(v int) *UserUpdateOne {
+	_u.mutation.ResetCustomerID()
+	_u.mutation.SetCustomerID(v)
+	return _u
+}
+
+// SetNillableCustomerID sets the "customer_id" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableCustomerID(v *int) *UserUpdateOne {
+	if v != nil {
+		_u.SetCustomerID(*v)
+	}
+	return _u
+}
+
+// AddCustomerID adds value to the "customer_id" field.
+func (_u *UserUpdateOne) AddCustomerID(v int) *UserUpdateOne {
+	_u.mutation.AddCustomerID(v)
+	return _u
+}
+
+// ClearCustomerID clears the value of the "customer_id" field.
+func (_u *UserUpdateOne) ClearCustomerID() *UserUpdateOne {
+	_u.mutation.ClearCustomerID()
+	return _u
+}
+
+// SetIsPrimary sets the "is_primary" field.
+func (_u *UserUpdateOne) SetIsPrimary(v bool) *UserUpdateOne {
+	_u.mutation.SetIsPrimary(v)
+	return _u
+}
+
+// SetNillableIsPrimary sets the "is_primary" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableIsPrimary(v *bool) *UserUpdateOne {
+	if v != nil {
+		_u.SetIsPrimary(*v)
+	}
+	return _u
+}
+
+// SetSystemGenerated sets the "system_generated" field.
+func (_u *UserUpdateOne) SetSystemGenerated(v bool) *UserUpdateOne {
+	_u.mutation.SetSystemGenerated(v)
+	return _u
+}
+
+// SetNillableSystemGenerated sets the "system_generated" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableSystemGenerated(v *bool) *UserUpdateOne {
+	if v != nil {
+		_u.SetSystemGenerated(*v)
 	}
 	return _u
 }
@@ -851,6 +976,21 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	}
 	if value, ok := _u.mutation.IsCustomer(); ok {
 		_spec.SetField(user.FieldIsCustomer, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.CustomerID(); ok {
+		_spec.SetField(user.FieldCustomerID, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.AddedCustomerID(); ok {
+		_spec.AddField(user.FieldCustomerID, field.TypeInt, value)
+	}
+	if _u.mutation.CustomerIDCleared() {
+		_spec.ClearField(user.FieldCustomerID, field.TypeInt)
+	}
+	if value, ok := _u.mutation.IsPrimary(); ok {
+		_spec.SetField(user.FieldIsPrimary, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.SystemGenerated(); ok {
+		_spec.SetField(user.FieldSystemGenerated, field.TypeBool, value)
 	}
 	if value, ok := _u.mutation.AccountName(); ok {
 		_spec.SetField(user.FieldAccountName, field.TypeString, value)

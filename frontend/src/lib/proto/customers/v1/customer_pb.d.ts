@@ -305,6 +305,43 @@ export declare type CreateCustomerResponse = Message<"customers.v1.CreateCustome
    * @generated from field: customers.v1.Customer customer = 1;
    */
   customer?: Customer | undefined;
+
+  /**
+   * D22 建檔連動帳號交付(規格 §4.2/§9.4):臨時密碼僅本次回應出現,系統不留明文。
+   *
+   * 主帳號帳號名稱(預設=客戶名稱),交付店家
+   *
+   * @generated from field: string primary_account_name = 2;
+   */
+  primaryAccountName: string;
+
+  /**
+   * 主帳號臨時密碼(24h,首登強制改)
+   *
+   * @generated from field: string primary_temp_password = 3;
+   */
+  primaryTempPassword: string;
+
+  /**
+   * 業務子帳號帳號名稱(預設=客戶名稱(業務)),交付業務
+   *
+   * @generated from field: string sales_rep_account_name = 4;
+   */
+  salesRepAccountName: string;
+
+  /**
+   * 業務子帳號臨時密碼(24h,首登強制改)
+   *
+   * @generated from field: string sales_rep_temp_password = 5;
+   */
+  salesRepTempPassword: string;
+
+  /**
+   * 帳號管理深層連結 https://<domain>/customer_account_manage
+   *
+   * @generated from field: string account_manage_url = 6;
+   */
+  accountManageUrl: string;
 };
 
 /**

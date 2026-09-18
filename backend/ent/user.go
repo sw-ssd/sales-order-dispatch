@@ -33,6 +33,12 @@ type User struct {
 	EmployeeNo string `json:"employee_no,omitempty"`
 	// IsCustomer holds the value of the "is_customer" field.
 	IsCustomer bool `json:"is_customer,omitempty"`
+	// CustomerID holds the value of the "customer_id" field.
+	CustomerID *int `json:"customer_id,omitempty"`
+	// IsPrimary holds the value of the "is_primary" field.
+	IsPrimary bool `json:"is_primary,omitempty"`
+	// SystemGenerated holds the value of the "system_generated" field.
+	SystemGenerated bool `json:"system_generated,omitempty"`
 	// AccountName holds the value of the "account_name" field.
 	AccountName string `json:"account_name,omitempty"`
 	// TokenVersion holds the value of the "token_version" field.
@@ -89,9 +95,9 @@ func (*User) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case user.FieldIsCustomer, user.FieldMustChangePassword:
+		case user.FieldIsCustomer, user.FieldIsPrimary, user.FieldSystemGenerated, user.FieldMustChangePassword:
 			values[i] = new(sql.NullBool)
-		case user.FieldID, user.FieldTokenVersion:
+		case user.FieldID, user.FieldCustomerID, user.FieldTokenVersion:
 			values[i] = new(sql.NullInt64)
 		case user.FieldEmail, user.FieldName, user.FieldStatus, user.FieldRole, user.FieldPhone, user.FieldEmployeeNo, user.FieldAccountName, user.FieldPasswordHash:
 			values[i] = new(sql.NullString)
@@ -163,6 +169,25 @@ func (_m *User) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field is_customer", values[i])
 			} else if value.Valid {
 				_m.IsCustomer = value.Bool
+			}
+		case user.FieldCustomerID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field customer_id", values[i])
+			} else if value.Valid {
+				_m.CustomerID = new(int)
+				*_m.CustomerID = int(value.Int64)
+			}
+		case user.FieldIsPrimary:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field is_primary", values[i])
+			} else if value.Valid {
+				_m.IsPrimary = value.Bool
+			}
+		case user.FieldSystemGenerated:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field system_generated", values[i])
+			} else if value.Valid {
+				_m.SystemGenerated = value.Bool
 			}
 		case user.FieldAccountName:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -275,6 +300,17 @@ func (_m *User) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("is_customer=")
 	builder.WriteString(fmt.Sprintf("%v", _m.IsCustomer))
+	builder.WriteString(", ")
+	if v := _m.CustomerID; v != nil {
+		builder.WriteString("customer_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("is_primary=")
+	builder.WriteString(fmt.Sprintf("%v", _m.IsPrimary))
+	builder.WriteString(", ")
+	builder.WriteString("system_generated=")
+	builder.WriteString(fmt.Sprintf("%v", _m.SystemGenerated))
 	builder.WriteString(", ")
 	builder.WriteString("account_name=")
 	builder.WriteString(_m.AccountName)

@@ -96,6 +96,48 @@ func (_c *UserCreate) SetNillableIsCustomer(v *bool) *UserCreate {
 	return _c
 }
 
+// SetCustomerID sets the "customer_id" field.
+func (_c *UserCreate) SetCustomerID(v int) *UserCreate {
+	_c.mutation.SetCustomerID(v)
+	return _c
+}
+
+// SetNillableCustomerID sets the "customer_id" field if the given value is not nil.
+func (_c *UserCreate) SetNillableCustomerID(v *int) *UserCreate {
+	if v != nil {
+		_c.SetCustomerID(*v)
+	}
+	return _c
+}
+
+// SetIsPrimary sets the "is_primary" field.
+func (_c *UserCreate) SetIsPrimary(v bool) *UserCreate {
+	_c.mutation.SetIsPrimary(v)
+	return _c
+}
+
+// SetNillableIsPrimary sets the "is_primary" field if the given value is not nil.
+func (_c *UserCreate) SetNillableIsPrimary(v *bool) *UserCreate {
+	if v != nil {
+		_c.SetIsPrimary(*v)
+	}
+	return _c
+}
+
+// SetSystemGenerated sets the "system_generated" field.
+func (_c *UserCreate) SetSystemGenerated(v bool) *UserCreate {
+	_c.mutation.SetSystemGenerated(v)
+	return _c
+}
+
+// SetNillableSystemGenerated sets the "system_generated" field if the given value is not nil.
+func (_c *UserCreate) SetNillableSystemGenerated(v *bool) *UserCreate {
+	if v != nil {
+		_c.SetSystemGenerated(*v)
+	}
+	return _c
+}
+
 // SetAccountName sets the "account_name" field.
 func (_c *UserCreate) SetAccountName(v string) *UserCreate {
 	_c.mutation.SetAccountName(v)
@@ -231,6 +273,14 @@ func (_c *UserCreate) defaults() {
 		v := user.DefaultIsCustomer
 		_c.mutation.SetIsCustomer(v)
 	}
+	if _, ok := _c.mutation.IsPrimary(); !ok {
+		v := user.DefaultIsPrimary
+		_c.mutation.SetIsPrimary(v)
+	}
+	if _, ok := _c.mutation.SystemGenerated(); !ok {
+		v := user.DefaultSystemGenerated
+		_c.mutation.SetSystemGenerated(v)
+	}
 	if _, ok := _c.mutation.TokenVersion(); !ok {
 		v := user.DefaultTokenVersion
 		_c.mutation.SetTokenVersion(v)
@@ -277,6 +327,12 @@ func (_c *UserCreate) check() error {
 	}
 	if _, ok := _c.mutation.IsCustomer(); !ok {
 		return &ValidationError{Name: "is_customer", err: errors.New(`ent: missing required field "User.is_customer"`)}
+	}
+	if _, ok := _c.mutation.IsPrimary(); !ok {
+		return &ValidationError{Name: "is_primary", err: errors.New(`ent: missing required field "User.is_primary"`)}
+	}
+	if _, ok := _c.mutation.SystemGenerated(); !ok {
+		return &ValidationError{Name: "system_generated", err: errors.New(`ent: missing required field "User.system_generated"`)}
 	}
 	if _, ok := _c.mutation.TokenVersion(); !ok {
 		return &ValidationError{Name: "token_version", err: errors.New(`ent: missing required field "User.token_version"`)}
@@ -348,6 +404,18 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.IsCustomer(); ok {
 		_spec.SetField(user.FieldIsCustomer, field.TypeBool, value)
 		_node.IsCustomer = value
+	}
+	if value, ok := _c.mutation.CustomerID(); ok {
+		_spec.SetField(user.FieldCustomerID, field.TypeInt, value)
+		_node.CustomerID = &value
+	}
+	if value, ok := _c.mutation.IsPrimary(); ok {
+		_spec.SetField(user.FieldIsPrimary, field.TypeBool, value)
+		_node.IsPrimary = value
+	}
+	if value, ok := _c.mutation.SystemGenerated(); ok {
+		_spec.SetField(user.FieldSystemGenerated, field.TypeBool, value)
+		_node.SystemGenerated = value
 	}
 	if value, ok := _c.mutation.AccountName(); ok {
 		_spec.SetField(user.FieldAccountName, field.TypeString, value)

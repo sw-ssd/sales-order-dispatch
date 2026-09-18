@@ -7123,6 +7123,10 @@ type UserMutation struct {
 	phone                    *string
 	employee_no              *string
 	is_customer              *bool
+	customer_id              *int
+	addcustomer_id           *int
+	is_primary               *bool
+	system_generated         *bool
 	account_name             *string
 	token_version            *int
 	addtoken_version         *int
@@ -7515,6 +7519,148 @@ func (m *UserMutation) ResetIsCustomer() {
 	m.is_customer = nil
 }
 
+// SetCustomerID sets the "customer_id" field.
+func (m *UserMutation) SetCustomerID(i int) {
+	m.customer_id = &i
+	m.addcustomer_id = nil
+}
+
+// CustomerID returns the value of the "customer_id" field in the mutation.
+func (m *UserMutation) CustomerID() (r int, exists bool) {
+	v := m.customer_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCustomerID returns the old "customer_id" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldCustomerID(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCustomerID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCustomerID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCustomerID: %w", err)
+	}
+	return oldValue.CustomerID, nil
+}
+
+// AddCustomerID adds i to the "customer_id" field.
+func (m *UserMutation) AddCustomerID(i int) {
+	if m.addcustomer_id != nil {
+		*m.addcustomer_id += i
+	} else {
+		m.addcustomer_id = &i
+	}
+}
+
+// AddedCustomerID returns the value that was added to the "customer_id" field in this mutation.
+func (m *UserMutation) AddedCustomerID() (r int, exists bool) {
+	v := m.addcustomer_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearCustomerID clears the value of the "customer_id" field.
+func (m *UserMutation) ClearCustomerID() {
+	m.customer_id = nil
+	m.addcustomer_id = nil
+	m.clearedFields[user.FieldCustomerID] = struct{}{}
+}
+
+// CustomerIDCleared returns if the "customer_id" field was cleared in this mutation.
+func (m *UserMutation) CustomerIDCleared() bool {
+	_, ok := m.clearedFields[user.FieldCustomerID]
+	return ok
+}
+
+// ResetCustomerID resets all changes to the "customer_id" field.
+func (m *UserMutation) ResetCustomerID() {
+	m.customer_id = nil
+	m.addcustomer_id = nil
+	delete(m.clearedFields, user.FieldCustomerID)
+}
+
+// SetIsPrimary sets the "is_primary" field.
+func (m *UserMutation) SetIsPrimary(b bool) {
+	m.is_primary = &b
+}
+
+// IsPrimary returns the value of the "is_primary" field in the mutation.
+func (m *UserMutation) IsPrimary() (r bool, exists bool) {
+	v := m.is_primary
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsPrimary returns the old "is_primary" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldIsPrimary(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsPrimary is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsPrimary requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsPrimary: %w", err)
+	}
+	return oldValue.IsPrimary, nil
+}
+
+// ResetIsPrimary resets all changes to the "is_primary" field.
+func (m *UserMutation) ResetIsPrimary() {
+	m.is_primary = nil
+}
+
+// SetSystemGenerated sets the "system_generated" field.
+func (m *UserMutation) SetSystemGenerated(b bool) {
+	m.system_generated = &b
+}
+
+// SystemGenerated returns the value of the "system_generated" field in the mutation.
+func (m *UserMutation) SystemGenerated() (r bool, exists bool) {
+	v := m.system_generated
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSystemGenerated returns the old "system_generated" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldSystemGenerated(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSystemGenerated is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSystemGenerated requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSystemGenerated: %w", err)
+	}
+	return oldValue.SystemGenerated, nil
+}
+
+// ResetSystemGenerated resets all changes to the "system_generated" field.
+func (m *UserMutation) ResetSystemGenerated() {
+	m.system_generated = nil
+}
+
 // SetAccountName sets the "account_name" field.
 func (m *UserMutation) SetAccountName(s string) {
 	m.account_name = &s
@@ -7853,7 +7999,7 @@ func (m *UserMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 12)
+	fields := make([]string, 0, 15)
 	if m.email != nil {
 		fields = append(fields, user.FieldEmail)
 	}
@@ -7874,6 +8020,15 @@ func (m *UserMutation) Fields() []string {
 	}
 	if m.is_customer != nil {
 		fields = append(fields, user.FieldIsCustomer)
+	}
+	if m.customer_id != nil {
+		fields = append(fields, user.FieldCustomerID)
+	}
+	if m.is_primary != nil {
+		fields = append(fields, user.FieldIsPrimary)
+	}
+	if m.system_generated != nil {
+		fields = append(fields, user.FieldSystemGenerated)
 	}
 	if m.account_name != nil {
 		fields = append(fields, user.FieldAccountName)
@@ -7912,6 +8067,12 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.EmployeeNo()
 	case user.FieldIsCustomer:
 		return m.IsCustomer()
+	case user.FieldCustomerID:
+		return m.CustomerID()
+	case user.FieldIsPrimary:
+		return m.IsPrimary()
+	case user.FieldSystemGenerated:
+		return m.SystemGenerated()
 	case user.FieldAccountName:
 		return m.AccountName()
 	case user.FieldTokenVersion:
@@ -7945,6 +8106,12 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldEmployeeNo(ctx)
 	case user.FieldIsCustomer:
 		return m.OldIsCustomer(ctx)
+	case user.FieldCustomerID:
+		return m.OldCustomerID(ctx)
+	case user.FieldIsPrimary:
+		return m.OldIsPrimary(ctx)
+	case user.FieldSystemGenerated:
+		return m.OldSystemGenerated(ctx)
 	case user.FieldAccountName:
 		return m.OldAccountName(ctx)
 	case user.FieldTokenVersion:
@@ -8013,6 +8180,27 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetIsCustomer(v)
 		return nil
+	case user.FieldCustomerID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCustomerID(v)
+		return nil
+	case user.FieldIsPrimary:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsPrimary(v)
+		return nil
+	case user.FieldSystemGenerated:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSystemGenerated(v)
+		return nil
 	case user.FieldAccountName:
 		v, ok := value.(string)
 		if !ok {
@@ -8056,6 +8244,9 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 // this mutation.
 func (m *UserMutation) AddedFields() []string {
 	var fields []string
+	if m.addcustomer_id != nil {
+		fields = append(fields, user.FieldCustomerID)
+	}
 	if m.addtoken_version != nil {
 		fields = append(fields, user.FieldTokenVersion)
 	}
@@ -8067,6 +8258,8 @@ func (m *UserMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *UserMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case user.FieldCustomerID:
+		return m.AddedCustomerID()
 	case user.FieldTokenVersion:
 		return m.AddedTokenVersion()
 	}
@@ -8078,6 +8271,13 @@ func (m *UserMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *UserMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case user.FieldCustomerID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCustomerID(v)
+		return nil
 	case user.FieldTokenVersion:
 		v, ok := value.(int)
 		if !ok {
@@ -8098,6 +8298,9 @@ func (m *UserMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(user.FieldEmployeeNo) {
 		fields = append(fields, user.FieldEmployeeNo)
+	}
+	if m.FieldCleared(user.FieldCustomerID) {
+		fields = append(fields, user.FieldCustomerID)
 	}
 	if m.FieldCleared(user.FieldAccountName) {
 		fields = append(fields, user.FieldAccountName)
@@ -8124,6 +8327,9 @@ func (m *UserMutation) ClearField(name string) error {
 		return nil
 	case user.FieldEmployeeNo:
 		m.ClearEmployeeNo()
+		return nil
+	case user.FieldCustomerID:
+		m.ClearCustomerID()
 		return nil
 	case user.FieldAccountName:
 		m.ClearAccountName()
@@ -8159,6 +8365,15 @@ func (m *UserMutation) ResetField(name string) error {
 		return nil
 	case user.FieldIsCustomer:
 		m.ResetIsCustomer()
+		return nil
+	case user.FieldCustomerID:
+		m.ResetCustomerID()
+		return nil
+	case user.FieldIsPrimary:
+		m.ResetIsPrimary()
+		return nil
+	case user.FieldSystemGenerated:
+		m.ResetSystemGenerated()
 		return nil
 	case user.FieldAccountName:
 		m.ResetAccountName()

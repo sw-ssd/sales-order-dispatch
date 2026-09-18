@@ -512,10 +512,16 @@ func (x *CreateCustomerRequest) GetPromoTagIds() []int64 {
 }
 
 type CreateCustomerResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Customer      *Customer              `protobuf:"bytes,1,opt,name=customer,proto3" json:"customer,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Customer *Customer              `protobuf:"bytes,1,opt,name=customer,proto3" json:"customer,omitempty"`
+	// D22 建檔連動帳號交付(規格 §4.2/§9.4):臨時密碼僅本次回應出現,系統不留明文。
+	PrimaryAccountName   string `protobuf:"bytes,2,opt,name=primary_account_name,json=primaryAccountName,proto3" json:"primary_account_name,omitempty"`         // 主帳號帳號名稱(預設=客戶名稱),交付店家
+	PrimaryTempPassword  string `protobuf:"bytes,3,opt,name=primary_temp_password,json=primaryTempPassword,proto3" json:"primary_temp_password,omitempty"`      // 主帳號臨時密碼(24h,首登強制改)
+	SalesRepAccountName  string `protobuf:"bytes,4,opt,name=sales_rep_account_name,json=salesRepAccountName,proto3" json:"sales_rep_account_name,omitempty"`    // 業務子帳號帳號名稱(預設=客戶名稱(業務)),交付業務
+	SalesRepTempPassword string `protobuf:"bytes,5,opt,name=sales_rep_temp_password,json=salesRepTempPassword,proto3" json:"sales_rep_temp_password,omitempty"` // 業務子帳號臨時密碼(24h,首登強制改)
+	AccountManageUrl     string `protobuf:"bytes,6,opt,name=account_manage_url,json=accountManageUrl,proto3" json:"account_manage_url,omitempty"`               // 帳號管理深層連結 https://<domain>/customer_account_manage
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *CreateCustomerResponse) Reset() {
@@ -553,6 +559,41 @@ func (x *CreateCustomerResponse) GetCustomer() *Customer {
 		return x.Customer
 	}
 	return nil
+}
+
+func (x *CreateCustomerResponse) GetPrimaryAccountName() string {
+	if x != nil {
+		return x.PrimaryAccountName
+	}
+	return ""
+}
+
+func (x *CreateCustomerResponse) GetPrimaryTempPassword() string {
+	if x != nil {
+		return x.PrimaryTempPassword
+	}
+	return ""
+}
+
+func (x *CreateCustomerResponse) GetSalesRepAccountName() string {
+	if x != nil {
+		return x.SalesRepAccountName
+	}
+	return ""
+}
+
+func (x *CreateCustomerResponse) GetSalesRepTempPassword() string {
+	if x != nil {
+		return x.SalesRepTempPassword
+	}
+	return ""
+}
+
+func (x *CreateCustomerResponse) GetAccountManageUrl() string {
+	if x != nil {
+		return x.AccountManageUrl
+	}
+	return ""
 }
 
 type UpdateCustomerRequest struct {
@@ -934,9 +975,14 @@ const file_customers_v1_customer_proto_rawDesc = "" +
 	"\x0finvoice_type_id\x18\x06 \x01(\tR\rinvoiceTypeId\x12/\n" +
 	"\x14default_sales_rep_id\x18\a \x01(\tR\x11defaultSalesRepId\x126\n" +
 	"\x17preferred_delivery_days\x18\b \x03(\bR\x15preferredDeliveryDays\x12\"\n" +
-	"\rpromo_tag_ids\x18\t \x03(\x03R\vpromoTagIds\"L\n" +
+	"\rpromo_tag_ids\x18\t \x03(\x03R\vpromoTagIds\"\xcc\x02\n" +
 	"\x16CreateCustomerResponse\x122\n" +
-	"\bcustomer\x18\x01 \x01(\v2\x16.customers.v1.CustomerR\bcustomer\"\xb7\x04\n" +
+	"\bcustomer\x18\x01 \x01(\v2\x16.customers.v1.CustomerR\bcustomer\x120\n" +
+	"\x14primary_account_name\x18\x02 \x01(\tR\x12primaryAccountName\x122\n" +
+	"\x15primary_temp_password\x18\x03 \x01(\tR\x13primaryTempPassword\x123\n" +
+	"\x16sales_rep_account_name\x18\x04 \x01(\tR\x13salesRepAccountName\x125\n" +
+	"\x17sales_rep_temp_password\x18\x05 \x01(\tR\x14salesRepTempPassword\x12,\n" +
+	"\x12account_manage_url\x18\x06 \x01(\tR\x10accountManageUrl\"\xb7\x04\n" +
 	"\x15UpdateCustomerRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12\x1a\n" +

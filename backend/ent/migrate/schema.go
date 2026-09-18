@@ -208,6 +208,9 @@ var (
 		{Name: "phone", Type: field.TypeString, Nullable: true},
 		{Name: "employee_no", Type: field.TypeString, Nullable: true},
 		{Name: "is_customer", Type: field.TypeBool, Default: false},
+		{Name: "customer_id", Type: field.TypeInt, Nullable: true},
+		{Name: "is_primary", Type: field.TypeBool, Default: false},
+		{Name: "system_generated", Type: field.TypeBool, Default: false},
 		{Name: "account_name", Type: field.TypeString, Nullable: true},
 		{Name: "token_version", Type: field.TypeInt, Default: 0},
 		{Name: "password_hash", Type: field.TypeString},
@@ -224,13 +227,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "users_companies_users",
-				Columns:    []*schema.Column{UsersColumns[13]},
+				Columns:    []*schema.Column{UsersColumns[16]},
 				RefColumns: []*schema.Column{CompaniesColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "users_departments_users",
-				Columns:    []*schema.Column{UsersColumns[14]},
+				Columns:    []*schema.Column{UsersColumns[17]},
 				RefColumns: []*schema.Column{DepartmentsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},

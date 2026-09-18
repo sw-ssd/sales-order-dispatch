@@ -28,6 +28,12 @@ const (
 	FieldEmployeeNo = "employee_no"
 	// FieldIsCustomer holds the string denoting the is_customer field in the database.
 	FieldIsCustomer = "is_customer"
+	// FieldCustomerID holds the string denoting the customer_id field in the database.
+	FieldCustomerID = "customer_id"
+	// FieldIsPrimary holds the string denoting the is_primary field in the database.
+	FieldIsPrimary = "is_primary"
+	// FieldSystemGenerated holds the string denoting the system_generated field in the database.
+	FieldSystemGenerated = "system_generated"
 	// FieldAccountName holds the string denoting the account_name field in the database.
 	FieldAccountName = "account_name"
 	// FieldTokenVersion holds the string denoting the token_version field in the database.
@@ -70,6 +76,9 @@ var Columns = []string{
 	FieldPhone,
 	FieldEmployeeNo,
 	FieldIsCustomer,
+	FieldCustomerID,
+	FieldIsPrimary,
+	FieldSystemGenerated,
 	FieldAccountName,
 	FieldTokenVersion,
 	FieldPasswordHash,
@@ -108,6 +117,10 @@ var (
 	RoleValidator func(string) error
 	// DefaultIsCustomer holds the default value on creation for the "is_customer" field.
 	DefaultIsCustomer bool
+	// DefaultIsPrimary holds the default value on creation for the "is_primary" field.
+	DefaultIsPrimary bool
+	// DefaultSystemGenerated holds the default value on creation for the "system_generated" field.
+	DefaultSystemGenerated bool
 	// DefaultTokenVersion holds the default value on creation for the "token_version" field.
 	DefaultTokenVersion int
 	// PasswordHashValidator is a validator for the "password_hash" field. It is called by the builders before save.
@@ -184,6 +197,21 @@ func ByEmployeeNo(opts ...sql.OrderTermOption) OrderOption {
 // ByIsCustomer orders the results by the is_customer field.
 func ByIsCustomer(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldIsCustomer, opts...).ToFunc()
+}
+
+// ByCustomerID orders the results by the customer_id field.
+func ByCustomerID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCustomerID, opts...).ToFunc()
+}
+
+// ByIsPrimary orders the results by the is_primary field.
+func ByIsPrimary(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldIsPrimary, opts...).ToFunc()
+}
+
+// BySystemGenerated orders the results by the system_generated field.
+func BySystemGenerated(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSystemGenerated, opts...).ToFunc()
 }
 
 // ByAccountName orders the results by the account_name field.

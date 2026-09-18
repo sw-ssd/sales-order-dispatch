@@ -71,11 +71,11 @@ func (s *Server) mountAuth() {
 	// AbilityService(T9/D30):CASL 規則下發給前端 @casl/ability 初始化。
 	abilityPath, abilityHandler := salesorderv1connect.NewAbilityServiceHandler(domainauth.NewAbilityHandler(entClient, domainauth.Config{DeveloperAccountEnabled: s.cfg.API.DeveloperAccountEnabled}))
 	apiMux.Handle(abilityPath, abilityHandler)
-	services.RegisterCompanyServices(apiMux, entClient)  // CompanyService/DepartmentService(T20)
-	services.RegisterUserServices(apiMux, entClient)     // UserService(02 Task 3)
-	services.RegisterMetadictServices(apiMux, entClient) // MetadictService(03 Task 2)
-	services.RegisterAuditServices(apiMux, entClient)    // AuditService(03 Task 6, A4)
-	services.RegisterCustomerServices(apiMux, entClient) // CustomerService(04 Task 1-2)
+	services.RegisterCompanyServices(apiMux, entClient)                          // CompanyService/DepartmentService(T20)
+	services.RegisterUserServices(apiMux, entClient)                             // UserService(02 Task 3)
+	services.RegisterMetadictServices(apiMux, entClient)                         // MetadictService(03 Task 2)
+	services.RegisterAuditServices(apiMux, entClient)                            // AuditService(03 Task 6, A4)
+	services.RegisterCustomerServices(apiMux, entClient, s.cfg.Auth.FrontendURL) // CustomerService(04 Task 1-2 + D22 帳號交付 URL)
 	s.router.Mount("/api/v1", http.StripPrefix("/api/v1", sessions.LoadAndSave(s.authzMiddleware(entClient, sessions, apiMux))))
 
 	// OIDC 公開端點：需 Google client id 與 discovery 可用

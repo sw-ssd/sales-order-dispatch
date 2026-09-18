@@ -85,6 +85,21 @@ func IsCustomer(v bool) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldIsCustomer, v))
 }
 
+// CustomerID applies equality check predicate on the "customer_id" field. It's identical to CustomerIDEQ.
+func CustomerID(v int) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldCustomerID, v))
+}
+
+// IsPrimary applies equality check predicate on the "is_primary" field. It's identical to IsPrimaryEQ.
+func IsPrimary(v bool) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldIsPrimary, v))
+}
+
+// SystemGenerated applies equality check predicate on the "system_generated" field. It's identical to SystemGeneratedEQ.
+func SystemGenerated(v bool) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSystemGenerated, v))
+}
+
 // AccountName applies equality check predicate on the "account_name" field. It's identical to AccountNameEQ.
 func AccountName(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldAccountName, v))
@@ -483,6 +498,76 @@ func IsCustomerEQ(v bool) predicate.User {
 // IsCustomerNEQ applies the NEQ predicate on the "is_customer" field.
 func IsCustomerNEQ(v bool) predicate.User {
 	return predicate.User(sql.FieldNEQ(FieldIsCustomer, v))
+}
+
+// CustomerIDEQ applies the EQ predicate on the "customer_id" field.
+func CustomerIDEQ(v int) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldCustomerID, v))
+}
+
+// CustomerIDNEQ applies the NEQ predicate on the "customer_id" field.
+func CustomerIDNEQ(v int) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldCustomerID, v))
+}
+
+// CustomerIDIn applies the In predicate on the "customer_id" field.
+func CustomerIDIn(vs ...int) predicate.User {
+	return predicate.User(sql.FieldIn(FieldCustomerID, vs...))
+}
+
+// CustomerIDNotIn applies the NotIn predicate on the "customer_id" field.
+func CustomerIDNotIn(vs ...int) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldCustomerID, vs...))
+}
+
+// CustomerIDGT applies the GT predicate on the "customer_id" field.
+func CustomerIDGT(v int) predicate.User {
+	return predicate.User(sql.FieldGT(FieldCustomerID, v))
+}
+
+// CustomerIDGTE applies the GTE predicate on the "customer_id" field.
+func CustomerIDGTE(v int) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldCustomerID, v))
+}
+
+// CustomerIDLT applies the LT predicate on the "customer_id" field.
+func CustomerIDLT(v int) predicate.User {
+	return predicate.User(sql.FieldLT(FieldCustomerID, v))
+}
+
+// CustomerIDLTE applies the LTE predicate on the "customer_id" field.
+func CustomerIDLTE(v int) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldCustomerID, v))
+}
+
+// CustomerIDIsNil applies the IsNil predicate on the "customer_id" field.
+func CustomerIDIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldCustomerID))
+}
+
+// CustomerIDNotNil applies the NotNil predicate on the "customer_id" field.
+func CustomerIDNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldCustomerID))
+}
+
+// IsPrimaryEQ applies the EQ predicate on the "is_primary" field.
+func IsPrimaryEQ(v bool) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldIsPrimary, v))
+}
+
+// IsPrimaryNEQ applies the NEQ predicate on the "is_primary" field.
+func IsPrimaryNEQ(v bool) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldIsPrimary, v))
+}
+
+// SystemGeneratedEQ applies the EQ predicate on the "system_generated" field.
+func SystemGeneratedEQ(v bool) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldSystemGenerated, v))
+}
+
+// SystemGeneratedNEQ applies the NEQ predicate on the "system_generated" field.
+func SystemGeneratedNEQ(v bool) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldSystemGenerated, v))
 }
 
 // AccountNameEQ applies the EQ predicate on the "account_name" field.

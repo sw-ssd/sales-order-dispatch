@@ -81,6 +81,12 @@ message CreateCustomerRequest {
 
 message CreateCustomerResponse {
   Customer customer = 1;
+  // D22 建檔連動帳號交付(規格 §4.2/§9.4):臨時密碼僅本次回應出現,系統不留明文。
+  string primary_account_name = 2;        // 主帳號帳號名稱(預設=客戶名稱),交付店家
+  string primary_temp_password = 3;        // 主帳號臨時密碼(24h,首登強制改)
+  string sales_rep_account_name = 4;       // 業務子帳號帳號名稱(預設=客戶名稱(業務)),交付業務
+  string sales_rep_temp_password = 5;      // 業務子帳號臨時密碼(24h,首登強制改)
+  string account_manage_url = 6;           // 帳號管理深層連結 https://<domain>/customer_account_manage
 }
 
 message UpdateCustomerRequest {
