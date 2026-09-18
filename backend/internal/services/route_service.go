@@ -1,4 +1,5 @@
 // RouteService 車次(04 計畫 3.4.2, D10/D18):部門級主檔 CRUD + 軟刪除/復原 + 分頁。
+// 共用流程見 master_crud.go。
 package services
 
 import (
@@ -13,11 +14,8 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/route"
-	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
-	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	mastersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/masters/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/masters/v1/mastersv1connect"
-	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 )
 
 // RouteService 實作 masters.v1.RouteService。
@@ -27,9 +25,7 @@ type RouteService struct {
 }
 
 // NewRouteService 建立 RouteService。
-func NewRouteService(db *ent.Client) *RouteService {
-	return &RouteService{db: db}
-}
+func NewRouteService(db *ent.Client) *RouteService { return &RouteService{db: db} }
 
 // RegisterRouteService 將 RouteService 掛到 mux。
 func RegisterRouteService(mux *http.ServeMux, db *ent.Client) {
@@ -65,16 +61,22 @@ func routeToProto(r *ent.Route) *mastersv1.Route {
 	return p
 }
 
+type routeListSource struct{ q *ent.RouteQuery }
+
+func (s routeListSource) Count(ctx context.Context) (int, error) { return s.q.Count(ctx) }
+func (s routeListSource) Page(ctx context.Context, off, lim int) ([]*ent.Route, error) {
+	return s.q.Clone().Order(ent.Asc(route.FieldSortOrder)).Offset(off).Limit(lim).All(ctx)
+}
+
 func (s *RouteService) ListRoutes(ctx context.Context, req *connect.Request[mastersv1.ListRoutesRequest]) (*connect.Response[mastersv1.ListRoutesResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := masterRequireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	cid, did, err := masterScope(id)
 	if err != nil {
 		return nil, err
 	}
-	page, pageSize := normalizePage(req.Msg.GetPage(), req.Msg.GetPageSize())
 	q := routeScopeQuery(s.db.Route.Query(), cid, did)
 	if !req.Msg.GetIncludeDeleted() {
 		q = q.Where(route.DeletedAtIsNil())
@@ -82,36 +84,25 @@ func (s *RouteService) ListRoutes(ctx context.Context, req *connect.Request[mast
 	if kw := strings.TrimSpace(req.Msg.GetKeyword()); kw != "" {
 		q = q.Where(route.Or(route.CodeContainsFold(kw), route.NameContainsFold(kw)))
 	}
-	total, err := q.Count(ctx)
+	list, pg, err := masterPage(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), routeListSource{q}, routeToProto)
 	if err != nil {
-		return nil, toConnectError(err)
+		return nil, err
 	}
-	items, err := q.Clone().Order(ent.Asc(route.FieldSortOrder)).Offset((page - 1) * pageSize).Limit(pageSize).All(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
-	}
-	out := make([]*mastersv1.Route, 0, len(items))
-	for _, r := range items {
-		out = append(out, routeToProto(r))
-	}
-	return connect.NewResponse(&mastersv1.ListRoutesResponse{
-		Routes: out, Pagination: &v1.Pagination{Page: int32(page), PageSize: int32(pageSize), Total: int64(total)},
-	}), nil
+	return connect.NewResponse(&mastersv1.ListRoutesResponse{Routes: list, Pagination: pg}), nil
 }
 
 func (s *RouteService) CreateRoute(ctx context.Context, req *connect.Request[mastersv1.CreateRouteRequest]) (*connect.Response[mastersv1.CreateRouteResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := masterRequireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	cid, did, err := masterScope(id)
 	if err != nil {
 		return nil, err
 	}
-	code := strings.TrimSpace(req.Msg.GetCode())
-	name := strings.TrimSpace(req.Msg.GetName())
-	if code == "" || name == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("code 與 name 必填"))
+	code, name, err := masterCodeName(req.Msg.GetCode(), req.Msg.GetName())
+	if err != nil {
+		return nil, err
 	}
 	tx, err := s.db.Tx(ctx)
 	if err != nil {
@@ -133,12 +124,7 @@ func (s *RouteService) CreateRoute(ctx context.Context, req *connect.Request[mas
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := audit.Record(ctx, tx, audit.Entry{
-		Action: "create", ResourceType: "route", ResourceID: strconv.FormatInt(int64(created.ID), 10),
-		CompanyID: cid, DepartmentID: created.DepartmentID, UserID: actor,
-		After:     map[string]any{"code": created.Code, "name": created.Name},
-		IPAddress: audit.MetaFrom(ctx).IP, UserAgent: audit.MetaFrom(ctx).UserAgent,
-	}); err != nil {
+	if err := recordMasterAudit(ctx, tx, "route", "create", created.ID, cid, created.DepartmentID, actor, map[string]any{"code": created.Code, "name": created.Name}); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -148,9 +134,9 @@ func (s *RouteService) CreateRoute(ctx context.Context, req *connect.Request[mas
 }
 
 func (s *RouteService) UpdateRoute(ctx context.Context, req *connect.Request[mastersv1.UpdateRouteRequest]) (*connect.Response[mastersv1.UpdateRouteResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := masterRequireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	cid, did, err := masterScope(id)
 	if err != nil {
@@ -170,16 +156,16 @@ func (s *RouteService) UpdateRoute(ctx context.Context, req *connect.Request[mas
 	defer func() { _ = tx.Rollback() }()
 	upd := tx.Route.UpdateOneID(rid)
 	if req.Msg.Code != nil {
-		c := strings.TrimSpace(*req.Msg.Code)
-		if c == "" {
-			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("code 不可為空"))
+		c, err := masterTrimNonEmpty(*req.Msg.Code, "code 不可為空")
+		if err != nil {
+			return nil, err
 		}
 		upd = upd.SetCode(c)
 	}
 	if req.Msg.Name != nil {
-		n := strings.TrimSpace(*req.Msg.Name)
-		if n == "" {
-			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("name 不可為空"))
+		n, err := masterTrimNonEmpty(*req.Msg.Name, "name 不可為空")
+		if err != nil {
+			return nil, err
 		}
 		upd = upd.SetName(n)
 	}
@@ -193,17 +179,11 @@ func (s *RouteService) UpdateRoute(ctx context.Context, req *connect.Request[mas
 		upd = upd.SetIsActive(*req.Msg.IsActive)
 	}
 	actor, _ := parseID(id.UserID)
-	upd = upd.SetUpdatedBy(actor)
-	updated, err := upd.Save(ctx)
+	updated, err := upd.SetUpdatedBy(actor).Save(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := audit.Record(ctx, tx, audit.Entry{
-		Action: "update", ResourceType: "route", ResourceID: strconv.FormatInt(int64(rid), 10),
-		CompanyID: cid, DepartmentID: updated.DepartmentID, UserID: actor,
-		After:     map[string]any{"name": updated.Name},
-		IPAddress: audit.MetaFrom(ctx).IP, UserAgent: audit.MetaFrom(ctx).UserAgent,
-	}); err != nil {
+	if err := recordMasterAudit(ctx, tx, "route", "update", rid, cid, updated.DepartmentID, actor, map[string]any{"name": updated.Name}); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -213,9 +193,9 @@ func (s *RouteService) UpdateRoute(ctx context.Context, req *connect.Request[mas
 }
 
 func (s *RouteService) DeleteRoute(ctx context.Context, req *connect.Request[mastersv1.DeleteRouteRequest]) (*connect.Response[mastersv1.DeleteRouteResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := masterRequireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	cid, did, err := masterScope(id)
 	if err != nil {
@@ -238,12 +218,7 @@ func (s *RouteService) DeleteRoute(ctx context.Context, req *connect.Request[mas
 	if err := tx.Route.UpdateOneID(rid).SetDeletedAt(time.Now().UTC()).SetUpdatedBy(actor).Exec(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := audit.Record(ctx, tx, audit.Entry{
-		Action: "delete", ResourceType: "route", ResourceID: strconv.FormatInt(int64(rid), 10),
-		CompanyID: cid, DepartmentID: cur.DepartmentID, UserID: actor,
-		Before:    map[string]any{"code": cur.Code, "name": cur.Name},
-		IPAddress: audit.MetaFrom(ctx).IP, UserAgent: audit.MetaFrom(ctx).UserAgent,
-	}); err != nil {
+	if err := recordMasterAudit(ctx, tx, "route", "delete", rid, cid, cur.DepartmentID, actor, map[string]any{"code": cur.Code, "name": cur.Name}); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -253,9 +228,9 @@ func (s *RouteService) DeleteRoute(ctx context.Context, req *connect.Request[mas
 }
 
 func (s *RouteService) RestoreRoute(ctx context.Context, req *connect.Request[mastersv1.RestoreRouteRequest]) (*connect.Response[mastersv1.RestoreRouteResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := masterRequireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	cid, did, err := masterScope(id)
 	if err != nil {
@@ -282,12 +257,7 @@ func (s *RouteService) RestoreRoute(ctx context.Context, req *connect.Request[ma
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := audit.Record(ctx, tx, audit.Entry{
-		Action: "update", ResourceType: "route", ResourceID: strconv.FormatInt(int64(rid), 10),
-		CompanyID: cid, DepartmentID: restored.DepartmentID, UserID: actor,
-		After:     map[string]any{"restored": true, "code": restored.Code},
-		IPAddress: audit.MetaFrom(ctx).IP, UserAgent: audit.MetaFrom(ctx).UserAgent,
-	}); err != nil {
+	if err := recordMasterAudit(ctx, tx, "route", "update", rid, cid, restored.DepartmentID, actor, map[string]any{"restored": true, "code": restored.Code}); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {

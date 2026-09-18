@@ -10,6 +10,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
+	"github.com/salesorder/sales-order-1.0/backend/ent/auditlog"
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
@@ -219,4 +220,135 @@ func seedMasterDept2(t *testing.T, db *ent.Client, coID int, ident string) (int,
 		t.Fatalf("dept2: %v", err)
 	}
 	return coID, d.ID
+}
+
+// assertMasterAudit 斷言某 resource/action 之稽核列數與租戶/資源 id(複審 Minor 5)。
+func assertMasterAudit(t *testing.T, db *ent.Client, resource string, action auditlog.Action, rid string, cid, deptID, want int) {
+	t.Helper()
+	rows, err := db.AuditLog.Query().
+		Where(auditlog.ResourceTypeEQ(resource), auditlog.ActionEQ(action)).All(context.Background())
+	if err != nil {
+		t.Fatalf("查稽核: %v", err)
+	}
+	if len(rows) != want {
+		t.Fatalf("稽核 %s/%s 應 %d 筆,got %d", resource, action, want, len(rows))
+	}
+	for _, r := range rows {
+		if r.ResourceID != rid {
+			t.Fatalf("稽核 resource_id 應 %q,got %q", rid, r.ResourceID)
+		}
+		if r.CompanyID != cid {
+			t.Fatalf("稽核 company_id 應 %d,got %d", cid, r.CompanyID)
+		}
+		if r.DepartmentID != deptID {
+			t.Fatalf("稽核 department_id 應 %d,got %d", deptID, r.DepartmentID)
+		}
+	}
+}
+
+// TestMasterAuditRecorded 複審 Minor 5:每異動寫稽核(D18)、validation 失敗不留稽核(同交易回滾)。
+func TestMasterAuditRecorded(t *testing.T) {
+	ctx := context.Background()
+	db := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared&_fk=1")
+	t.Cleanup(func() { _ = db.Close() })
+	coID, deptID := seedMasterDept(t, db, t.Name())
+	_, wh, _, spec, _ := newMasterServer(t, deptAdminID(coID, deptID))
+
+	resp, err := wh.CreateWarehouse(ctx, connect.NewRequest(&mastersv1.CreateWarehouseRequest{Code: "WH-A", Name: "A倉"}))
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	wid := resp.Msg.GetWarehouse().GetId()
+	assertMasterAudit(t, db, "warehouse", auditlog.ActionCreate, wid, coID, deptID, 1)
+
+	if _, err := wh.UpdateWarehouse(ctx, connect.NewRequest(&mastersv1.UpdateWarehouseRequest{Id: wid, Name: strPtr("A倉2")})); err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	assertMasterAudit(t, db, "warehouse", auditlog.ActionUpdate, wid, coID, deptID, 1)
+
+	if _, err := wh.DeleteWarehouse(ctx, connect.NewRequest(&mastersv1.DeleteWarehouseRequest{Id: wid})); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	assertMasterAudit(t, db, "warehouse", auditlog.ActionDelete, wid, coID, deptID, 1)
+
+	// restore 亦記 action=update → update 累計 2 筆。
+	if _, err := wh.RestoreWarehouse(ctx, connect.NewRequest(&mastersv1.RestoreWarehouseRequest{Id: wid})); err != nil {
+		t.Fatalf("restore: %v", err)
+	}
+	assertMasterAudit(t, db, "warehouse", auditlog.ActionUpdate, wid, coID, deptID, 2)
+
+	// validation 失敗(兩旗標皆 false)→ 不留任何 processing_spec 稽核。
+	if _, err := spec.CreateProcessingSpec(ctx, connect.NewRequest(&mastersv1.CreateProcessingSpecRequest{Code: "S-BAD", Name: "x"})); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("want invalid_argument,got %v", err)
+	}
+	if n, _ := db.AuditLog.Query().Where(auditlog.ResourceTypeEQ("processing_spec")).Count(ctx); n != 0 {
+		t.Fatalf("validation 失敗不應留稽核,got %d", n)
+	}
+}
+
+// TestProcessingSpecAttributesRoundTrip 複審 Minor 4:attributes 空/非空往返與清除語意。
+func TestProcessingSpecAttributesRoundTrip(t *testing.T) {
+	ctx := context.Background()
+	db := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared&_fk=1")
+	t.Cleanup(func() { _ = db.Close() })
+	coID, deptID := seedMasterDept(t, db, t.Name())
+	_, _, _, spec, _ := newMasterServer(t, deptAdminID(coID, deptID))
+
+	// 非空(含字串/陣列/數字/布林)應等值讀回。
+	attrs, _ := structpb.NewStruct(map[string]any{
+		"output_unit": "盒", "steps": []any{"去骨", "切0.6kg/盒"}, "portions": float64(4), "chilled": true,
+	})
+	r1, err := spec.CreateProcessingSpec(ctx, connect.NewRequest(&mastersv1.CreateProcessingSpecRequest{
+		Code: "S-NEST", Name: "n", AppliesToProcessing: true, Attributes: attrs,
+	}))
+	if err != nil {
+		t.Fatalf("create nested: %v", err)
+	}
+	m := r1.Msg.GetProcessingSpec().GetAttributes().AsMap()
+	if m["output_unit"] != "盒" || m["chilled"] != true {
+		t.Fatalf("非空屬性應讀回,got %v", m)
+	}
+	if steps, ok := m["steps"].([]any); !ok || len(steps) != 2 {
+		t.Fatalf("陣列應保留,got %v", m["steps"])
+	}
+	if p, ok := m["portions"].(float64); !ok || p != 4 {
+		t.Fatalf("數字應保留,got %v", m["portions"])
+	}
+
+	// 顯式空 {} → 讀回空。
+	empty, _ := structpb.NewStruct(map[string]any{})
+	r2, err := spec.CreateProcessingSpec(ctx, connect.NewRequest(&mastersv1.CreateProcessingSpecRequest{
+		Code: "S-EMPTY", Name: "e", AppliesToPicking: true, Attributes: empty,
+	}))
+	if err != nil {
+		t.Fatalf("create empty: %v", err)
+	}
+	if n := len(r2.Msg.GetProcessingSpec().GetAttributes().AsMap()); n != 0 {
+		t.Fatalf("顯式空應讀回空,got %d", n)
+	}
+
+	// 未帶 attributes → 不報錯且為空。
+	r3, err := spec.CreateProcessingSpec(ctx, connect.NewRequest(&mastersv1.CreateProcessingSpecRequest{
+		Code: "S-ABSENT", Name: "a", AppliesToProcessing: true,
+	}))
+	if err != nil {
+		t.Fatalf("create absent: %v", err)
+	}
+	if att := r3.Msg.GetProcessingSpec().GetAttributes(); att != nil && len(att.AsMap()) != 0 {
+		t.Fatalf("未帶屬性應為空,got %v", att.AsMap())
+	}
+
+	// 更新非空 → 空 {} → 讀回空。
+	if _, err := spec.UpdateProcessingSpec(ctx, connect.NewRequest(&mastersv1.UpdateProcessingSpecRequest{
+		Id: r1.Msg.GetProcessingSpec().GetId(), Attributes: empty,
+	})); err != nil {
+		t.Fatalf("update to empty: %v", err)
+	}
+	lg, err := spec.ListProcessingSpecs(ctx, connect.NewRequest(&mastersv1.ListProcessingSpecsRequest{Keyword: "S-NEST"}))
+	if err != nil || len(lg.Msg.GetProcessingSpecs()) != 1 {
+		t.Fatalf("list: %v len=%d", err, len(lg.Msg.GetProcessingSpecs()))
+	}
+	if n := len(lg.Msg.GetProcessingSpecs()[0].GetAttributes().AsMap()); n != 0 {
+		t.Fatalf("更新為空後應讀回空,got %d", n)
+	}
 }
