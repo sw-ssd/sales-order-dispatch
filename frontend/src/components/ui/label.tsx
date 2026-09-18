@@ -2,8 +2,12 @@ import { splitProps, type Component, type JSX } from "solid-js";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/cn";
 
+/**
+ * Label 樣式：`inline-block font-medium` 的結構與字重照 Tailkit
+ * （a-c-form-elements-01/16、a-c-form-layouts-02/03），顏色改寫為語意 token。
+ */
 export const labelVariants = cva(
-  "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-foreground select-none"
+  "inline-block text-sm font-medium text-foreground select-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
 );
 
 export interface LabelProps

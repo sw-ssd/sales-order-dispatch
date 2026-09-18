@@ -6,7 +6,11 @@ export interface FieldProps extends JSX.HTMLAttributes<HTMLDivElement> {
   class?: string;
 }
 
-/** A consistent layout wrapper for labels, controls, descriptions, and errors. */
+/**
+ * 單一欄位的包裝層（label／控件／說明／錯誤），對應 Tailkit 表單裡的
+ * `div.space-y-1`（a-c-form-elements-01、a-c-form-layouts-02）。
+ * Tailkit 欄位與欄位之間的 `space-y-6` 屬頁面層版面，交由頁面自行處理。
+ */
 export const Field: Component<FieldProps> = (props) => {
   const [local, rest] = splitProps(props, ["class", "children"]);
 
@@ -22,11 +26,12 @@ export interface FieldLabelProps extends LabelProps {
   children?: JSX.Element;
 }
 
+/** 欄位標籤：尺寸與字重由 `Label`（Tailkit `inline-block font-medium`）提供。 */
 export const FieldLabel: Component<FieldLabelProps> = (props) => {
   const [local, rest] = splitProps(props, ["class", "children"]);
 
   return (
-    <Label class={cn("text-sm font-medium", local.class)} {...rest}>
+    <Label class={local.class} {...rest}>
       {local.children}
     </Label>
   );
@@ -37,6 +42,7 @@ export interface FieldDescriptionProps
   class?: string;
 }
 
+/** 欄位說明文字：Tailkit 的次要灰階 → `text-muted-foreground`。 */
 export const FieldDescription: Component<FieldDescriptionProps> = (props) => {
   const [local, rest] = splitProps(props, ["class", "children"]);
 
@@ -52,6 +58,7 @@ export interface FieldErrorProps
   class?: string;
 }
 
+/** 欄位錯誤訊息：搭配 `Input` 的 `aria-invalid:border-destructive` 使用。 */
 export const FieldError: Component<FieldErrorProps> = (props) => {
   const [local, rest] = splitProps(props, ["class", "children"]);
 
