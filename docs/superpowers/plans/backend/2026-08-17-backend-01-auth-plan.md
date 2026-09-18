@@ -19,8 +19,8 @@
 | 4 | OAuth2 導向與 callback | ✅ 完成 | `internal/auth/oidc.go`、`handlers/auth_handler.go` |
 | 5 | 註冊完成與 guest 審核 | 🟡 部分 | `RegisterComplete` handler |
 | 6 | 客戶帳密登入 | ✅ 完成 | `internal/auth/password.go`、`handlers/auth_handler.go` |
-| 7 | 臨時密碼與首登強制修改 | ⬜ 未開始 | —（user 欄位未含 temp_password/must_change） |
-| 8 | 登入鎖定與密碼重置 | 🟡 部分 | `internal/auth/password.go`（鎖定完成、重置待） |
+| 7 | 臨時密碼與首登強制修改 | ✅ 完成（2026-09-18, A3）| `internal/handlers/auth_password.go`、migration `00012`（must_change/temp 效期）、受限 claim + middleware 攔截 |
+| 8 | 登入鎖定與密碼重置 | ✅ 完成（2026-09-18, A3）| `internal/auth/password.go`（鎖定）+ `ResetCustomerPassword`（auth_password.go）|
 | 9 | scs+Valkey session 與 access JWT | ✅ 完成 | `internal/auth/{session,token,stores}.go` |
 | 10 | refresh 旋轉與 token_version | ✅ 完成 | `internal/auth/token.go`、migration `00004` |
 | 11 | Authenticate 與 X-Api-Token middleware | ⬜ 未開始 | —（無 middleware 目錄） |

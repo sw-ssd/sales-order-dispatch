@@ -328,9 +328,10 @@ func (h *AuthHandler) issueTokenPair(ctx context.Context, u *ent.User) (*connect
 		return nil, internal(err)
 	}
 	return connect.NewResponse(&v1.LoginResponse{
-		AccessToken:  access,
-		RefreshToken: refresh,
-		ExpiresIn:    int64(auth.AccessTokenTTL / time.Second),
+		AccessToken:        access,
+		RefreshToken:       refresh,
+		ExpiresIn:          int64(auth.AccessTokenTTL / time.Second),
+		MustChangePassword: u.MustChangePassword, // A3 1.5.2:前端導向改密碼頁
 	}), nil
 }
 

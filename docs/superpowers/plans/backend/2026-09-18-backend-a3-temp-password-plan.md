@@ -12,6 +12,8 @@
 
 **狀態基準：** 2026-09-18 盤點。user schema 缺 `must_change_password`/`temp_password_expires_at`；auth.proto 無 ChangePassword/Reset；LoginResponse 無 must_change_password；JWT Claims 無受限旗標。
 
+> **✅ 執行結果（2026-09-18）**：Task 1–6 全數完成並 commit（`development`）。交付：migration 00012、ChangePassword/ResetCustomerPassword、`GenerateTempPassword`、受限 claim（Claims.MustChangePassword）＋ authzMiddleware 攔截（僅放行 ChangePassword）、LoginResponse.must_change_password。臨時密碼效期 24h；改/重置皆 `token_version+1` 並稽核（D18）。
+
 ---
 
 ## Global Constraints
