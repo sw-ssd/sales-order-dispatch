@@ -12,6 +12,8 @@
 
 **狀態基準：** 2026-09-18 盤點。audit 部分（`audit.Recorder` DB + `audit_logs` schema/migration 00009/00010）已由「02-UserService」批次提前落地；本計畫**僅處理 metadicts 字典檔**（Task 1–3）。
 
+> **✅ 執行結果（2026-09-18）**：Task 1–6 全數完成並 commit。Task 5（合併查詢 + ListOptions）隨 Task 4 的 `metadictScope` 一併落地（非獨立 commit）。RLS D3 接線仍待（`00011` policy 僅定義不 ENABLE）。唯一約束（部分唯一索引）之 DB 層驗證於 sqlite 單元測試不套用，待 Postgres CI 驗證。
+
 ---
 
 ## Global Constraints

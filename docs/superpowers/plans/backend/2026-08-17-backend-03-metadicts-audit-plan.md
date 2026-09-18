@@ -14,14 +14,14 @@
 
 | Task | 內容 | 狀態 |
 |---|---|---|
-| 1 | metadicts schema、migration、系統預設 seed（細部 2.5.1） | ⬜ 未開始 |
-| 2 | MetadictService CRUD 與軟刪除（細部 2.5.2） | ⬜ 未開始 |
-| 3 | 合併查詢與 ListOptions（細部 2.5.3–2.5.4） | ⬜ 未開始 |
-| 4 | audit_logs schema 與 migration（細部 2.6.1） | ⬜ 未開始 |
-| 5 | audit.Recorder 的 DB 實作（細部 2.6.2，接管 01 NoopRecorder） | ⬜ 未開始 |
-| 6 | 稽核查詢 API（細部 2.6.3） | ⬜ 未開始 |
+| 1 | metadicts schema、migration、系統預設 seed（細部 2.5.1） | ✅ 完成（2026-09-18）|
+| 2 | MetadictService CRUD 與軟刪除（細部 2.5.2） | ✅ 完成（2026-09-18）|
+| 3 | 合併查詢與 ListOptions（細部 2.5.3–2.5.4） | ✅ 完成（2026-09-18，隨 Task 2 一併落地）|
+| 4 | audit_logs schema 與 migration（細部 2.6.1） | ✅ 完成（2026-09-18，02-UserService 批次提前落地:00009/00010）|
+| 5 | audit.Recorder 的 DB 實作（細部 2.6.2，接管 01 NoopRecorder） | ✅ 完成（2026-09-18，02-UserService 批次提前落地:internal/audit）|
+| 6 | 稽核查詢 API（細部 2.6.3） | ⬜ 未開始（= A4,待後續批次）|
 
-**實作範圍**：0%（全部待辦）。本計畫為 03 領域（字典 + 稽核）的目標藍圖，尚未落地。
+**實作範圍**：metadicts（Task 1–3）＋ audit 地基（Task 4–5）皆已落地；**剩 Task 6 稽核查詢 API**。執行細節見 `2026-09-18-backend-metadicts-execution-plan.md`。
 
 ---
 

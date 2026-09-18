@@ -142,8 +142,8 @@ func (s *MetadictService) ListMetadicts(ctx context.Context, req *connect.Reques
 		q = scope(q)
 	}
 
-	// 已刪除:預設排除;include_deleted 僅 super 管理介面可用。
-	if !req.Msg.GetIncludeDeleted() {
+	// 已刪除:預設排除;include_deleted 僅 super 管理介面可用(非 super 一律排除)。
+	if !req.Msg.GetIncludeDeleted() || !isSuperIdentity(id) {
 		q = q.Where(metadict.DeletedAtIsNil())
 	}
 	if t := req.Msg.GetType(); t != "" {
