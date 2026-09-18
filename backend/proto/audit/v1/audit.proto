@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package audit.v1;
+option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/proto/audit/v1;auditv1";
+
+import "salesorder/v1/common.proto";
+
+// 稽核日誌查詢(03 計畫 2.6.3, D27)。
+// audit_logs 只由服務層同事務寫入(03 計畫 2.6.2, D18),本 service 僅提供查詢。
+// 範圍:super 全系統(可選 company_id);company_admin 僅自己公司;其餘角色不可查詢。
+
+// AuditLog:一筆稽核紀錄。
+message AuditLog {
+  string id = 1;
+  string company_id = 2;
+  string department_id = 3;  // 可空
+  string user_id = 4;
+  string user_name = 5;      // 操作者顯示名稱(join users)
+  string action = 6;         // create|update|delete|login|logout|print|force_logout|role_change|dispatch_cancel|void
+  string resource_type = 7;
+  string resource_id = 8;    // 可空
+  string before_snapshot = 9;  // JSON 字串(可空)
+  string after_snapshot = 10;  // JSON 字串(可空)
+  string ip_address = 11;
+  string user_agent = 12;
+  string created_at = 13;    // RFC3339
+}
+
+// AuditService:稽核查詢。
+service AuditService {
+  // ListAuditLogs:分頁查詢,可依時間(預設近 3 個月)/action/resource/user 篩選;時間降冪。
+  rpc ListAuditLogs(ListAuditLogsRequest) returns (ListAuditLogsResponse);
+}
+
+message ListAuditLogsRequest {
+  int32 page = 1;             // 1-based 頁碼
+  int32 page_size = 2;        // 每頁筆數
+  string from = 3;            // 時間起(RFC3339,可空;與 to 皆空時套用近 3 個月)
+  string to = 4;              // 時間迄(RFC3339,可空)
+  string company_id = 5;      // 篩選:公司 ID(super 可用)
+  string action = 6;          // 篩選:action 單選
+  string resource_type = 7;   // 篩選:資源類型
+  string resource_id = 8;     // 篩選:資源 ID(通常與 resource_type 併用)
+  string user_id = 9;         // 篩選:操作者
+}
+
+message ListAuditLogsResponse {
+  repeated AuditLog items = 1;
+  salesorder.v1.Pagination pagination = 2;
+}

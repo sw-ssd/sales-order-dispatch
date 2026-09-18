@@ -19,9 +19,9 @@
 | 3 | 合併查詢與 ListOptions（細部 2.5.3–2.5.4） | ✅ 完成（2026-09-18，隨 Task 2 一併落地）|
 | 4 | audit_logs schema 與 migration（細部 2.6.1） | ✅ 完成（2026-09-18，02-UserService 批次提前落地:00009/00010）|
 | 5 | audit.Recorder 的 DB 實作（細部 2.6.2，接管 01 NoopRecorder） | ✅ 完成（2026-09-18，02-UserService 批次提前落地:internal/audit）|
-| 6 | 稽核查詢 API（細部 2.6.3） | ⬜ 未開始（= A4,待後續批次）|
+| 6 | 稽核查詢 API（細部 2.6.3） | ✅ 完成（2026-09-18, AuditService.List, D27 時間窗）|
 
-**實作範圍**：metadicts（Task 1–3）＋ audit 地基（Task 4–5）皆已落地；**剩 Task 6 稽核查詢 API**。執行細節見 `2026-09-18-backend-metadicts-execution-plan.md`。
+**實作範圍**：全部落地（Task 1–6）。A4 稽核查詢 API 執行見 `2026-09-18-backend-audit-query-execution-plan.md`。
 
 ---
 
