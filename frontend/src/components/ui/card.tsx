@@ -7,6 +7,9 @@ export interface CardProps extends JSX.HTMLAttributes<HTMLDivElement> {
 
 /**
  * Root Card container component.
+ *
+ * 視覺結構取自 Tailkit（a-c-cards-01/03/09：flex-col、overflow-hidden、rounded-lg、
+ * shadow-xs、標題／頁尾為 bg-muted 色帶），顏色改用語意 token。
  */
 export const Card: Component<CardProps> = (props) => {
   const [local, rest] = splitProps(props, ["class"]);
@@ -14,7 +17,7 @@ export const Card: Component<CardProps> = (props) => {
   return (
     <div
       class={cn(
-        "rounded-lg border border-border bg-card text-card-foreground shadow-sm",
+        "flex flex-col overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-xs",
         local.class
       )}
       {...rest}
@@ -34,7 +37,7 @@ export const CardHeader: Component<CardHeaderProps> = (props) => {
 
   return (
     <div
-      class={cn("flex flex-col space-y-1.5 p-6", local.class)}
+      class={cn("flex flex-col gap-1.5 bg-muted px-5 py-4", local.class)}
       {...rest}
     />
   );
@@ -88,7 +91,7 @@ export const CardContent: Component<CardContentProps> = (props) => {
 
   return (
     <div
-      class={cn("p-6 pt-0", local.class)}
+      class={cn("grow p-5", local.class)}
       {...rest}
     />
   );
@@ -106,7 +109,10 @@ export const CardFooter: Component<CardFooterProps> = (props) => {
 
   return (
     <div
-      class={cn("flex items-center p-6 pt-0", local.class)}
+      class={cn(
+        "flex items-center gap-2 bg-muted px-5 py-4 text-sm text-muted-foreground",
+        local.class
+      )}
       {...rest}
     />
   );

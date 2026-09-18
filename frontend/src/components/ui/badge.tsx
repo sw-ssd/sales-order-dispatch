@@ -4,26 +4,22 @@ import { cn } from "@/lib/cn";
 
 /**
  * Class variance authority configuration for badge styling variants.
+ *
+ * 視覺結構取自 Tailkit（a-c-badges-01/03：rounded-sm、px-2、py-1、text-xs、leading-4、
+ * 無邊框軟底），顏色一律改寫為 index.css 的語意 token；色階字面值與深色模式顏色變體一併刪除。
  */
 export const badgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center rounded-sm px-2 py-1 text-xs leading-4 font-semibold focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       variant: {
-        default:
-          "border-transparent bg-primary text-primary-foreground shadow hover:bg-primary/80",
-        secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        destructive:
-          "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
-        outline:
-          "text-foreground border-border",
-        success:
-          "border-transparent bg-green-600 text-zinc-50 shadow-sm hover:bg-green-600/90 dark:bg-green-900 dark:text-zinc-50 dark:hover:bg-green-900/90",
-        warning:
-          "border-transparent bg-yellow-600 text-zinc-50 shadow-sm hover:bg-yellow-600/90 dark:bg-yellow-900 dark:text-zinc-50 dark:hover:bg-yellow-900/90",
-        info:
-          "border-transparent bg-blue-600 text-zinc-50 shadow-sm hover:bg-blue-600/90 dark:bg-blue-900 dark:text-zinc-50 dark:hover:bg-blue-900/90",
+        default: "bg-primary text-primary-foreground",
+        secondary: "bg-muted text-muted-foreground",
+        destructive: "bg-destructive text-destructive-foreground",
+        outline: "border border-border text-foreground",
+        success: "bg-success/15 text-success",
+        warning: "bg-warning/15 text-warning",
+        info: "bg-primary/10 text-primary",
       },
     },
     defaultVariants: {
@@ -42,7 +38,7 @@ export interface BadgeProps
 }
 
 /**
- * Nikala UI Badge component built for SolidJS with Tailwind CSS v4 styling.
+ * 徽章元件（SolidJS）：靜態標籤，視覺照 Tailkit + 語意 token。
  */
 export const Badge: Component<BadgeProps> = (props) => {
   // Use splitProps to preserve SolidJS reactivity
