@@ -47,6 +47,34 @@ func newTokenTestEnv(t *testing.T) (*TokenManager, *ent.User, context.Context) {
 	return tm, u, ctx
 }
 
+func TestAccessTokenMustChangePasswordClaim(t *testing.T) {
+	tm, u, ctx := newTokenTestEnv(t)
+	// MustChangePassword=true → claim 帶 true。
+	access, err := tm.IssueAccess(ctx, TokenSubject{UserID: u.ID, Role: "customer", MustChangePassword: true})
+	if err != nil {
+		t.Fatalf("IssueAccess: %v", err)
+	}
+	claims, err := tm.VerifyAccess(ctx, access)
+	if err != nil {
+		t.Fatalf("VerifyAccess: %v", err)
+	}
+	if !claims.MustChangePassword {
+		t.Fatal("MustChangePassword=true 的 subject,claim 應為 true")
+	}
+	// 預設(false)→ claim 為 false。
+	access2, err := tm.IssueAccess(ctx, TokenSubject{UserID: u.ID, Role: "customer"})
+	if err != nil {
+		t.Fatalf("IssueAccess: %v", err)
+	}
+	claims2, err := tm.VerifyAccess(ctx, access2)
+	if err != nil {
+		t.Fatalf("VerifyAccess: %v", err)
+	}
+	if claims2.MustChangePassword {
+		t.Fatal("預設 subject 的 claim 應為 false")
+	}
+}
+
 func TestAccessTokenIssueVerify(t *testing.T) {
 	tm, u, ctx := newTokenTestEnv(t)
 

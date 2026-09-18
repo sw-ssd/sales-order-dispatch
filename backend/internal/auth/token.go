@@ -34,22 +34,24 @@ var (
 )
 
 // Claims 為 access token 內容;tv 對應 token_version(撤銷比對用,存放於 DB 的
-// users.token_version 欄位)。
+// users.token_version 欄位);mcp 為 A3(1.5.2)首登/臨時密碼態受限旗標。
 type Claims struct {
-	UserID       int    `json:"sub"`
-	Role         string `json:"role"`
-	CompanyID    int    `json:"cid,omitempty"`
-	DepartmentID int    `json:"did,omitempty"`
-	TokenVersion int    `json:"tv"`
+	UserID             int    `json:"sub"`
+	Role               string `json:"role"`
+	CompanyID          int    `json:"cid,omitempty"`
+	DepartmentID       int    `json:"did,omitempty"`
+	TokenVersion       int    `json:"tv"`
+	MustChangePassword bool   `json:"mcp,omitempty"`
 	jwt.RegisteredClaims
 }
 
 // TokenSubject 為簽發 access token 所需的使用者身分快照。
 type TokenSubject struct {
-	UserID       int
-	CompanyID    int
-	DepartmentID int // 0 = 無部門
-	Role         string
+	UserID             int
+	CompanyID          int
+	DepartmentID       int // 0 = 無部門
+	Role               string
+	MustChangePassword bool // A3(1.5.2)首登/臨時密碼受限態
 }
 
 // TokenManager 負責 access token 簽發/驗證、refresh token 發行/旋轉/撤銷、token_version 管理。
@@ -105,11 +107,12 @@ func (m *TokenManager) IssueAccess(ctx context.Context, s TokenSubject) (string,
 	}
 	now := time.Now()
 	claims := Claims{
-		UserID:       s.UserID,
-		Role:         s.Role,
-		CompanyID:    s.CompanyID,
-		DepartmentID: s.DepartmentID,
-		TokenVersion: tv,
+		UserID:             s.UserID,
+		Role:               s.Role,
+		CompanyID:          s.CompanyID,
+		DepartmentID:       s.DepartmentID,
+		TokenVersion:       tv,
+		MustChangePassword: s.MustChangePassword,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   strconv.Itoa(s.UserID),
 			IssuedAt:  jwt.NewNumericDate(now),

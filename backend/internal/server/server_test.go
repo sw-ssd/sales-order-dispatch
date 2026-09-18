@@ -251,6 +251,55 @@ func testSessionCookie(t *testing.T, sessions *scs.SessionManager, userID int, r
 	return nil
 }
 
+// TestMustChangePasswordRestrictsRPC A3(1.5.2):must_change_password=true 時受保護與業務 RPC
+// 被 middleware 攔截(failed_precondition),僅 ChangePassword path 放行(probe 執行)。
+func TestMustChangePasswordRestrictsRPC(t *testing.T) {
+	s, sessions := newIdentityTestEnv()
+	ctx := context.Background()
+	db := openIdentityDB(t, "file:mcp-mw?mode=memory&cache=shared&_fk=1")
+	co := db.Company.Create().SetName("測試公司").SetIdentifier("T-mcp").SaveX(ctx)
+	u := db.User.Create().SetEmail("mcp@example.com").SetName("測試").SetStatus(user.StatusActive).
+		SetRole("customer").SetPasswordHash("x").SetCompanyID(co.ID).SetMustChangePassword(true).SaveX(ctx)
+
+	var called bool
+	probe := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusNoContent)
+	})
+	mw := sessions.LoadAndSave(s.authzMiddleware(db, sessions, probe))
+
+	const changePwdPath = "/salesorder.v1.AuthService/ChangePassword"
+	const businessPath = "/salesorder.v1.UserService/ListUsers"
+	cookie := testSessionCookie(t, sessions, u.ID, u.Role)
+
+	t.Run("業務 RPC 被拒且 probe 未執行", func(t *testing.T) {
+		called = false
+		rec := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, businessPath, nil)
+		r.AddCookie(cookie)
+		mw.ServeHTTP(rec, r)
+		if called {
+			t.Fatal("受限態下業務 RPC 不應執行 probe")
+		}
+		if rec.Code == http.StatusNoContent {
+			t.Fatalf("受限態下業務 RPC 應被攔截,得到 204")
+		}
+	})
+	t.Run("ChangePassword 放行", func(t *testing.T) {
+		called = false
+		rec := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, changePwdPath, nil)
+		r.AddCookie(cookie)
+		mw.ServeHTTP(rec, r)
+		if !called {
+			t.Fatal("ChangePassword path 應放行且 probe 執行")
+		}
+		if rec.Code != http.StatusNoContent {
+			t.Fatalf("ChangePassword path 應回 204,得到 %d", rec.Code)
+		}
+	})
+}
+
 // TestAuthzMiddlewareOpenFGA D32 驗收:受保護 RPC path 由 OpenFGA Check 判定。
 // 有權 → 放行(probe 執行);未登入 → Unauthenticated;developer 跳過。write 拒絕對應之
 // TestAuthorizeRPCWriteDenied 單測覆蓋(不受 HTTP 層 session 影響)。

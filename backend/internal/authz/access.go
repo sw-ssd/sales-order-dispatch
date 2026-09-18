@@ -30,6 +30,10 @@ type Identity struct {
 	CustomerID   string
 	Role         string
 	Roles        []string // 全部角色 code(依 Casbin g 規則展開)
+
+	// MustChangePassword 為首登/臨時密碼態(A3 1.5.2):true 時 middleware 僅放行
+	// ChangePassword,其餘受保護 RPC 回 failed_precondition。
+	MustChangePassword bool
 }
 
 // WithIdentity 將身分放入 ctx(測試與 middleware 使用)。

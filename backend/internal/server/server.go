@@ -25,6 +25,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	authzopenfga "github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
+	salesorderv1connect "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/cache"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/database"
 )
@@ -171,6 +172,12 @@ func (s *Server) authzMiddleware(entClient *ent.Client, sessions *scs.SessionMan
 				_ = sessions.Destroy(ctx)
 			}
 		}
+		// A3 受限態(1.5.2):must_change_password=true 時僅放行 ChangePassword,其餘回 failed_precondition,
+		// 強制首登改密碼後才能使用業務 RPC。
+		if id := authz.IdentityFrom(ctx); id.MustChangePassword && r.URL.Path != salesorderv1connect.AuthServiceChangePasswordProcedure {
+			writeConnectError(w, connect.NewError(connect.CodeFailedPrecondition, errors.New("首次登入須先修改密碼")))
+			return
+		}
 		// OpenFGA 授權閘門(D32):受保護 RPC path 以 OpenFGA Check 判定;developer 跳過。
 		if rpc, ok := protectedRPC[r.URL.Path]; ok {
 			if err := s.authorizeRPC(ctx, rpc); err != nil {
@@ -276,11 +283,12 @@ func (s *Server) identityFor(ctx context.Context, entClient *ent.Client, userID 
 		deptID = strconv.FormatInt(int64(u.Edges.Department.ID), 10)
 	}
 	id := authz.Identity{
-		UserID:       strconv.FormatInt(int64(u.ID), 10),
-		CompanyID:    companyID,
-		DepartmentID: deptID,
-		Role:         u.Role,
-		Roles:        auth.RolesFor(u.Role), // 依 Casbin g 展開(含自身)
+		UserID:             strconv.FormatInt(int64(u.ID), 10),
+		CompanyID:          companyID,
+		DepartmentID:       deptID,
+		Role:               u.Role,
+		Roles:              auth.RolesFor(u.Role), // 依 Casbin g 展開(含自身)
+		MustChangePassword: u.MustChangePassword,  // A3 首登/臨時密碼態
 	}
 	scope := auth.RLSScope{
 		UserID:       id.UserID,

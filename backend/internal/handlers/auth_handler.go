@@ -343,7 +343,7 @@ func (h *AuthHandler) subjectFromUser(ctx context.Context, u *ent.User) (auth.To
 		}
 		return auth.TokenSubject{}, internal(err)
 	}
-	s := auth.TokenSubject{UserID: u.ID, CompanyID: co.ID, Role: u.Role}
+	s := auth.TokenSubject{UserID: u.ID, CompanyID: co.ID, Role: u.Role, MustChangePassword: u.MustChangePassword}
 	dep, err := u.QueryDepartment().Only(ctx)
 	if err == nil {
 		s.DepartmentID = dep.ID
