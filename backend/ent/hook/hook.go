@@ -9,6 +9,18 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 )
 
+// The AuditLogFunc type is an adapter to allow the use of ordinary
+// function as AuditLog mutator.
+type AuditLogFunc func(context.Context, *ent.AuditLogMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AuditLogFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AuditLogMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AuditLogMutation", m)
+}
+
 // The CompanyFunc type is an adapter to allow the use of ordinary
 // function as Company mutator.
 type CompanyFunc func(context.Context, *ent.CompanyMutation) (ent.Value, error)

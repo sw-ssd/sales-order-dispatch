@@ -8,6 +8,27 @@ import (
 )
 
 var (
+	// AuditLogsColumns holds the columns for the "audit_logs" table.
+	AuditLogsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "company_id", Type: field.TypeInt},
+		{Name: "department_id", Type: field.TypeInt, Nullable: true},
+		{Name: "user_id", Type: field.TypeInt},
+		{Name: "action", Type: field.TypeEnum, Enums: []string{"create", "update", "delete", "login", "logout", "print", "force_logout", "role_change", "dispatch_cancel", "void"}},
+		{Name: "resource_type", Type: field.TypeString},
+		{Name: "resource_id", Type: field.TypeString, Nullable: true},
+		{Name: "before_snapshot", Type: field.TypeJSON, Nullable: true},
+		{Name: "after_snapshot", Type: field.TypeJSON, Nullable: true},
+		{Name: "ip_address", Type: field.TypeString, Nullable: true},
+		{Name: "user_agent", Type: field.TypeString, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// AuditLogsTable holds the schema information for the "audit_logs" table.
+	AuditLogsTable = &schema.Table{
+		Name:       "audit_logs",
+		Columns:    AuditLogsColumns,
+		PrimaryKey: []*schema.Column{AuditLogsColumns[0]},
+	}
 	// CompaniesColumns holds the columns for the "companies" table.
 	CompaniesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -130,6 +151,7 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		AuditLogsTable,
 		CompaniesTable,
 		DepartmentsTable,
 		RolesTable,
