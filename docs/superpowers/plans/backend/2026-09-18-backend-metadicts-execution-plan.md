@@ -238,9 +238,9 @@
 - ✅ **已修 #1**：`ListOptions` 原用 `metadictScope(super)`（identity → 洩漏各部門私有選項），已改為 super **僅系統預設**（與 `ListMetadicts` 預設一致）；補測試 `TestListOptionsSuperSystemOnly`。
 - ✅ **已修 #3**：`CreateMetadict` 加 `code` 長度上限（`maxMetadictCodeLen = 64` → `invalid_argument`）。
 - ⬜ **#2 待辦**：D18「稽核寫入失敗 → 業務回滾」尚未有測試（sqlite 強制稽核失敗注入較難）；建議以 ent hook 或後續整合測試（Postgres）補。
-- ⬜ **#4 待辦**：`ListMetadictsRequest.include_inactive` 宣告但 List 恆含停用（未使用）→ 死欄位，建議移除或明定語意。
-- ⬜ **#5 待辦**：`GetMetadict` 冗餘 `Only`＋`Exist` 兩次查詢（可合併為範圍條件查詢）。
-- **#6 記錄**：系統級字典被軟刪除後重跑 migration 會 re-seed（允許共存），為可接受行為。
+- ✅ **已修 #5**：`GetMetadict` 合併為單次查詢（scope 條件併入首查，範圍外一律 `not_found`）。
+- **#6 註記（非缺陷）**：系統級字典被軟刪後**同一支 migration 再執行**會 re-seed（goose 版本化正常不會重跑;down/up 或全新 DB 才觸發;部分唯一索引允許已刪+現行共存）。無需動作。
+- ⬜ **#4 待決**：`include_inactive` 為死欄位;根因是「欄位註解 vs §2.5.3 驗收」矛盾。待決：移除欄位 / 改為具語意 / 保留並標註。
 
 ---
 

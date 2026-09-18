@@ -187,21 +187,14 @@ func (s *MetadictService) GetMetadict(ctx context.Context, req *connect.Request[
 	if err != nil {
 		return nil, err
 	}
-	m, err := s.db.Metadict.Query().Where(metadict.ID(mid), metadict.DeletedAtIsNil()).Only(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
-	}
-	// 可見範圍檢查(Get 亦須受範圍限制;RLS 為最後防線)。
+	// 可見範圍條件直接併入查詢(單次往返);範圍外一律 not_found(不區分不存在/越權)。
 	scope, err := metadictScope(id)
 	if err != nil {
 		return nil, err
 	}
-	visible, err := scope(s.db.Metadict.Query().Where(metadict.ID(mid), metadict.DeletedAtIsNil())).Exist(ctx)
+	m, err := scope(s.db.Metadict.Query().Where(metadict.ID(mid), metadict.DeletedAtIsNil())).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
-	}
-	if !visible {
-		return nil, connect.NewError(connect.CodeNotFound, errors.New("字典不存在"))
 	}
 	return connect.NewResponse(&metadictv1.GetMetadictResponse{Metadict: metadictToProto(m)}), nil
 }
