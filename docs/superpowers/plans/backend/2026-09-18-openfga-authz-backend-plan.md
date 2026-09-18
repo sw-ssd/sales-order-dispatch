@@ -363,3 +363,14 @@ git commit -m "refactor(backend): 移除 Casbin/CASL;CASL 依賴退場;GetAbilit
 - OpenFGA + RLS 授權隔離整合測試（D21）通過。
 
 *最後更新：2026-09-18*
+
+---
+
+## 收尾修正（2026-09-18 複查後）
+合併後補齊三項殘餘風險（D32 複查修正）：
+
+1. **雙 ACL 單一來源（Task A）**：`auth.BuiltinRolePermissions()`（單一來源 `rolePolicy`+`roleInheritance`）展開 7 內建角色「有效（繼承後）」`role_permissions` 種子；`cmd/seed/SeedBuiltinRolePermissions` 冪等寫入（僅補缺列、不覆寫使用者自訂），使 DB 成為唯一持久來源、OpenFGA provision 得以產出 role→ability tuples。`super/developer`（`"*":{"*"}` 全資源）展開為固定業務資源 × read/write；`authorizeRPC` 對 **super 亦加逃生門**（對齊 developer，防新增資源即鎖死 super）。
+2. **migration 既有 DB 缺口（Task B）**：新增 `00008_forward_fix.sql`，以 `DO $$` 冪等對既有 DB 補 `role_permissions.role_id → roles(id)` FK、`users.token_version` 欄（全新 DB no-op；不影響 goose 版本表）。
+3. **RLS 真實隔離（Task C）**：**暫緩（C2）**。`00007` 仍只定義 policy 不 ENABLE/FORCE。原因：OpenFGA 與業務共用同一 PostgreSQL datastore，`FORCE` 會致 OpenFGA 自有表遭套用（無 policy → 全拒、OpenFGA 崩潰）；非 FORCE 對表 owner 連線不生效；且 services 無每請求交易套用點。待 repository/每請求交易層 + 資料庫角色分離設計後再另立任務。
+
+*收尾更新：2026-09-18*
