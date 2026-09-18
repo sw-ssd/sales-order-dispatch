@@ -1,6 +1,4 @@
-// 冪等 seeder 入口（D31 cmd 拆分）。
-// roles / 預設 policies / developer 帳號的 seed 於 02-tenancy-users 計畫落地；
-// 現階段僅做連線檢查，保證入口可用。
+// 冪等 seeder 入口（D31 cmd 拆分）：建立 7 內建角色與（development）本機開發者帳號。
 package main
 
 import (
@@ -18,5 +16,20 @@ func main() {
 		log.Fatalf("連線資料庫: %v", err)
 	}
 	defer pool.Close()
-	log.Println("seed: 資料庫連線正常；目前無 seed 項目（roles seed 於 02 計畫落地）")
+
+	// seeder 以 ent client 操作角色/使用者;與 server 共用同一初始化路徑(D31)。
+	client, err := database.OpenEnt(cfg.Database.DatabaseURL)
+	if err != nil {
+		log.Fatalf("開啟 ent client: %v", err)
+	}
+	ctx := context.Background()
+	if err := SeedBuiltinRoles(ctx, client); err != nil {
+		log.Fatalf("seed 角色: %v", err)
+	}
+	log.Println("seed: 7 內建角色已確保（冪等）")
+	// developer 帳號僅 ENV != production;需既有 dev company 錨點,無則略過提示。
+	if err := SeedDeveloper(ctx, client, cfg.API.Env, firstCompanyID(ctx, client)); err != nil {
+		log.Fatalf("seed developer: %v", err)
+	}
+	log.Println("seed: 完成")
 }
