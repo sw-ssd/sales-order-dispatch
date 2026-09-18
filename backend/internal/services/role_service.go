@@ -78,35 +78,31 @@ func (s *RoleService) ListRoles(ctx context.Context, req *connect.Request[v1.Lis
 	if err := requireRole(ctx, "read"); err != nil {
 		return nil, err
 	}
-	page, pageSize := normalizePage(req.Msg.GetPage(), req.Msg.GetPageSize())
-
-	total, err := s.db.Role.Query().Count(ctx)
+	list, pg, err := pageList(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), roleListSource{q: s.db.Role.Query()}, roleToProto)
 	if err != nil {
-		return nil, toConnectError(err)
+		return nil, err
 	}
-	items, err := s.db.Role.Query().
-		Order(ent.Asc(role.FieldID)).
-		Offset((page - 1) * pageSize).Limit(pageSize).
-		All(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
-	}
+	return connect.NewResponse(&v1.ListRolesResponse{Roles: list, Pagination: pg}), nil
+}
 
-	roles := make([]*v1.Role, 0, len(items))
-	for _, r := range items {
-		roles = append(roles, &v1.Role{
-			Id:        strconv.FormatInt(int64(r.ID), 10),
-			Code:      r.Code,
-			Name:      r.Name,
-			DataScope: string(r.DataScope),
-			IsSystem:  r.IsSystem,
-			IsActive:  r.IsActive,
-		})
+// roleToProto 將 ent.Role 轉為 proto Role。
+func roleToProto(r *ent.Role) *v1.Role {
+	return &v1.Role{
+		Id:        strconv.FormatInt(int64(r.ID), 10),
+		Code:      r.Code,
+		Name:      r.Name,
+		DataScope: string(r.DataScope),
+		IsSystem:  r.IsSystem,
+		IsActive:  r.IsActive,
 	}
-	return connect.NewResponse(&v1.ListRolesResponse{
-		Roles:      roles,
-		Pagination: &v1.Pagination{Page: int32(page), PageSize: int32(pageSize), Total: int64(total)},
-	}), nil
+}
+
+// roleListSource 為 pageList 的 ent 查詢橋接。
+type roleListSource struct{ q *ent.RoleQuery }
+
+func (s roleListSource) Count(ctx context.Context) (int, error) { return s.q.Count(ctx) }
+func (s roleListSource) Page(ctx context.Context, off, lim int) ([]*ent.Role, error) {
+	return s.q.Clone().Order(ent.Asc(role.FieldID)).Offset(off).Limit(lim).All(ctx)
 }
 
 // GetRolePermissions 取得角色功能權限(依 sort_order 升冪)。

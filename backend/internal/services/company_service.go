@@ -99,8 +99,6 @@ func (s *CompanyService) ListCompanies(ctx context.Context, req *connect.Request
 	if err := requireScope(ctx, "company", "read"); err != nil {
 		return nil, err
 	}
-	page, pageSize := normalizePage(req.Msg.GetPage(), req.Msg.GetPageSize())
-
 	q := s.db.Company.Query()
 	if status := strings.TrimSpace(req.Msg.GetStatus()); status != "" {
 		if !validCompanyStatuses[status] {
@@ -112,27 +110,19 @@ func (s *CompanyService) ListCompanies(ctx context.Context, req *connect.Request
 		q = q.Where(company.Or(company.NameContainsFold(keyword), company.IdentifierContainsFold(keyword)))
 	}
 
-	total, err := q.Count(ctx)
+	list, pg, err := pageListE(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), companyListSource{q}, companyToProto)
 	if err != nil {
-		return nil, toConnectError(err)
+		return nil, err
 	}
-	items, err := q.Order(ent.Desc(company.FieldID)).Offset((page - 1) * pageSize).Limit(pageSize).All(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
-	}
+	return connect.NewResponse(&v1.ListCompaniesResponse{Companies: list, Pagination: pg}), nil
+}
 
-	companies := make([]*v1.Company, 0, len(items))
-	for _, c := range items {
-		p, err := companyToProto(c)
-		if err != nil {
-			return nil, toConnectError(err)
-		}
-		companies = append(companies, p)
-	}
-	return connect.NewResponse(&v1.ListCompaniesResponse{
-		Companies:  companies,
-		Pagination: &v1.Pagination{Page: int32(page), PageSize: int32(pageSize), Total: int64(total)},
-	}), nil
+// companyListSource 為 pageListE 的 ent 查詢橋接。
+type companyListSource struct{ q *ent.CompanyQuery }
+
+func (s companyListSource) Count(ctx context.Context) (int, error) { return s.q.Count(ctx) }
+func (s companyListSource) Page(ctx context.Context, off, lim int) ([]*ent.Company, error) {
+	return s.q.Clone().Order(ent.Desc(company.FieldID)).Offset(off).Limit(lim).All(ctx)
 }
 
 // GetCompany 取得單一公司。

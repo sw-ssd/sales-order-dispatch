@@ -51,8 +51,14 @@ type listSource[M any] interface {
 	Page(ctx context.Context, offset, limit int) ([]M, error)
 }
 
-// pageList 以分頁查詢取得列、轉 proto 並組分頁 meta(共用 List 尾段)。
+// pageList 與 pageListE 以分頁查詢取得列、轉 proto 並組分頁 meta(共用 List 尾段)。
+// toProto 不 error 者用 pageList;會 error 者(如 company)用 pageListE。
 func pageList[M any, P any](ctx context.Context, page, pageSize int32, src listSource[M], toProto func(M) P) ([]P, *v1.Pagination, error) {
+	return pageListE(ctx, page, pageSize, src, func(m M) (P, error) { return toProto(m), nil })
+}
+
+// pageListE 為 toProto 會回 error 的變體。
+func pageListE[M any, P any](ctx context.Context, page, pageSize int32, src listSource[M], toProto func(M) (P, error)) ([]P, *v1.Pagination, error) {
 	p, ps := normalizePage(page, pageSize)
 	total, err := src.Count(ctx)
 	if err != nil {
@@ -64,7 +70,11 @@ func pageList[M any, P any](ctx context.Context, page, pageSize int32, src listS
 	}
 	out := make([]P, 0, len(items))
 	for _, it := range items {
-		out = append(out, toProto(it))
+		pp, err := toProto(it)
+		if err != nil {
+			return nil, nil, toConnectError(err)
+		}
+		out = append(out, pp)
 	}
 	return out, &v1.Pagination{Page: int32(p), PageSize: int32(ps), Total: int64(total)}, nil
 }
