@@ -45,15 +45,45 @@ func newClient(ctx context.Context, ds storage.OpenFGADatastore, storeName strin
 	if err != nil {
 		return nil, fmt.Errorf("openfga: server 建置失敗: %w", err)
 	}
-	store, err := srv.CreateStore(ctx, &openfgav1.CreateStoreRequest{Name: storeName})
+	// 依名稱複用既有 store(D32 單一 store):僅在不存在時才建立,避免每次重啟重建 store
+	// 使已寫入的 tuples/model 消失。ListStores 依 name 過濾回傳相符 store。
+	existing, err := findStoreByName(ctx, srv, storeName)
 	if err != nil {
-		return nil, fmt.Errorf("openfga: create store: %w", err)
+		return nil, err
 	}
-	c := &Client{srv: srv, StoreID: store.GetId()}
-	if err := c.WriteDefaultModel(ctx); err != nil {
+	if existing == "" {
+		created, err := srv.CreateStore(ctx, &openfgav1.CreateStoreRequest{Name: storeName})
+		if err != nil {
+			return nil, fmt.Errorf("openfga: create store: %w", err)
+		}
+		existing = created.GetId()
+	}
+	c := &Client{srv: srv, StoreID: existing}
+	// 僅在 store 尚未有 authorization model 時寫入預設 model(避免每次重啟覆寫/更替 model id)。
+	if err := c.EnsureDefaultModel(ctx); err != nil {
 		return nil, err
 	}
 	return c, nil
+}
+
+// findStoreByName 依名稱查詢既有 store;不存在回傳空字串。ListStores 分頁,逐頁掃描。
+func findStoreByName(ctx context.Context, srv *server.Server, name string) (string, error) {
+	token := ""
+	for {
+		resp, err := srv.ListStores(ctx, &openfgav1.ListStoresRequest{Name: name, ContinuationToken: token})
+		if err != nil {
+			return "", fmt.Errorf("openfga: list stores: %w", err)
+		}
+		for _, st := range resp.GetStores() {
+			if st.GetName() == name {
+				return st.GetId(), nil
+			}
+		}
+		token = resp.GetContinuationToken()
+		if token == "" {
+			return "", nil
+		}
+	}
 }
 
 // WriteDefaultModel 將 modelDSL 寫為 store 的 authorization model,並記錄 ModelID。
@@ -73,6 +103,21 @@ func (c *Client) WriteDefaultModel(ctx context.Context) error {
 	}
 	c.ModelID = resp.GetAuthorizationModelId()
 	return nil
+}
+
+// EnsureDefaultModel 於 store 尚未有 authorization model 時寫入預設 model,並記錄 ModelID。
+// 已存在 model 時僅選取最新 model id,避免重啟後每次覆寫、造成 store/model id 漂移。
+func (c *Client) EnsureDefaultModel(ctx context.Context) error {
+	list, err := c.srv.ReadAuthorizationModels(ctx, &openfgav1.ReadAuthorizationModelsRequest{StoreId: c.StoreID})
+	if err != nil {
+		return fmt.Errorf("openfga: list models: %w", err)
+	}
+	if len(list.GetAuthorizationModels()) > 0 {
+		// 最新 model id 為清單首筆(依時間遞減)。
+		c.ModelID = list.GetAuthorizationModels()[0].GetId()
+		return nil
+	}
+	return c.WriteDefaultModel(ctx)
 }
 
 // Close 關閉內嵌 server 資源。
@@ -132,4 +177,33 @@ func (c *Client) DeleteTuple(ctx context.Context, user, relation, object string)
 		}},
 	})
 	return err
+}
+
+// ListRoleTuples 列舉 role userset(user=role:<rid>#assigned)的既有 tuples,供 reconcile
+// 刪除已移除的 role→ability 權限。OpenFGA Read 於僅給 user 時要求 object type;
+// 此處以全量讀取(空 filter)再於客戶端過濾,確保取得該 role 的全部 role→ability tuples。
+func (c *Client) ListRoleTuples(ctx context.Context, roleID int) ([][3]string, error) {
+	userset := fmt.Sprintf("role:%d#assigned", roleID)
+	var out [][3]string
+	token := ""
+	for {
+		resp, err := c.srv.Read(ctx, &openfgav1.ReadRequest{
+			StoreId:           c.StoreID,
+			ContinuationToken: token,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("openfga: read role tuples: %w", err)
+		}
+		for _, t := range resp.GetTuples() {
+			k := t.GetKey()
+			if k == nil || k.GetUser() != userset {
+				continue
+			}
+			out = append(out, [3]string{k.GetUser(), k.GetRelation(), k.GetObject()})
+		}
+		token = resp.GetContinuationToken()
+		if token == "" {
+			return out, nil
+		}
+	}
 }

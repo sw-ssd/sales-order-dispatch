@@ -273,11 +273,18 @@ func TestAuthzMiddlewareOpenFGA(t *testing.T) {
 			t.Fatal("有權時 probe 應被呼叫")
 		}
 	})
-	t.Run("未登入 → 403", func(t *testing.T) {
+	t.Run("未登入 → 401 Unauthenticated + 合法 JSON body", func(t *testing.T) {
 		rec := httptest.NewRecorder()
 		mw.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, protectedPath, nil))
-		if rec.Code != http.StatusForbidden {
-			t.Fatalf("status = %d, want 403", rec.Code)
+		if rec.Code != http.StatusUnauthorized {
+			t.Fatalf("status = %d, want 401", rec.Code)
+		}
+		var body map[string]string
+		if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+			t.Fatalf("錯誤 body 應為合法 JSON: %v (body=%q)", err, rec.Body.Bytes())
+		}
+		if body["code"] != "unauthenticated" {
+			t.Fatalf("body.code = %q, want unauthenticated", body["code"])
 		}
 	})
 	t.Run("developer → 跳過放行", func(t *testing.T) {

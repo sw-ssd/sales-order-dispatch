@@ -175,8 +175,9 @@ func (s *Server) authorizeRPC(ctx context.Context, rpc rpcAuth) error {
 	}
 	e := authz.EngineFrom(ctx)
 	if e == nil {
-		// 未注入引擎(尚未接線/測試環境)→ 放行,授權由各服務層既有檢查(RLS/Casbin 至 D32 退場)承擔。
-		return nil
+		// OpenFGA 已啟用卻無引擎 → 視為建置/接線失敗,fail-closed:拒絕(避免授權被靜默繞過)。
+		// production 由 mountOpenFGA fail-fast 避免此態;此處為防線(即使單元測試亦不誤放行)。
+		return connect.NewError(connect.CodeInternal, errors.New("OpenFGA 授權引擎未就緒"))
 	}
 	relation := "can_read"
 	if rpc.action == "write" {
@@ -193,17 +194,31 @@ func (s *Server) authorizeRPC(ctx context.Context, rpc rpcAuth) error {
 }
 
 // writeConnectError 以 Connect 錯誤協定寫出錯誤回應(供 middleware)。
+// 以 JSON 物件(單次 Marshal)輸出合法 body,並依 connect code 對映正確 HTTP 狀態:
+// unauthenticated→401、permission_denied→403、invalid_argument→400,其餘→500。
 func writeConnectError(w http.ResponseWriter, err error) {
-	// Connect 錯誤需以應用 JSON 包裝;此處以 application/json 輸出 error code,前端 connect 客戶端可解析。
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusForbidden)
-	_, _ = fmt.Fprintf(w, "{\"code\":\"%s\",\"message\":\"%s\"}", connect.CodeOf(err), jsonEscape(err.Error()))
+	w.WriteHeader(httpStatusForCode(connect.CodeOf(err)))
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"code":    connect.CodeOf(err).String(),
+		"message": err.Error(),
+	})
 }
 
-// jsonEscape 逸出字串供 JSON 內嵌。
-func jsonEscape(s string) string {
-	b, _ := json.Marshal(s)
-	return string(b)
+// httpStatusForCode 對映 Connect code → HTTP 狀態碼(供 middleware 錯誤回應)。
+func httpStatusForCode(c connect.Code) int {
+	switch c {
+	case connect.CodeUnauthenticated:
+		return http.StatusUnauthorized // 401
+	case connect.CodePermissionDenied:
+		return http.StatusForbidden // 403
+	case connect.CodeInvalidArgument:
+		return http.StatusBadRequest // 400
+	case connect.CodeInternal:
+		return http.StatusInternalServerError // 500
+	default:
+		return http.StatusInternalServerError
+	}
 }
 
 // identityFor 由使用者載入身分與 RLS scope（company/department eager-load）。

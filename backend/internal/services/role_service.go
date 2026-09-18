@@ -267,7 +267,12 @@ func (s *RoleService) loadPermissionModels(ctx context.Context, roleID int) ([]p
 // 動作對映:read → can_read;其餘(create/update/delete/cancel 等) → can_write
 // (OpenFGA model 僅兩類能力,條件/狀態由 domain 狀態機處理,不進 CEL)。
 // 回傳 (user, relation, object);不支援的動作回 ok=false(略過不寫)。
+// 注意:inverted(拒絕)規則不得轉為 allow tuple——「不能」語意於 OpenFGA 無對應,
+// 一律略過(拒絕),避免把禁令當成授予(安全漏洞)。
 func permissionTupleKey(roleID int, p permission) (user, relation, object string, ok bool) {
+	if p.inverted {
+		return "", "", "", false
+	}
 	relation, ok = permissionRelation(p.action)
 	if !ok {
 		return "", "", "", false

@@ -60,3 +60,12 @@ func (e *Engine) DeleteTuple(ctx context.Context, user, relation, object string)
 	}
 	return e.client.DeleteTuple(ctx, user, relation, object)
 }
+
+// ListRoleTuples 列舉特定 role userset(user=role:<rid>#assigned, relation/object 可為空通配)
+// 的既有 tuples(供 reconcile 刪除已移除的 role→ability 權限)。回傳 (user, relation, object) 清單。
+func (e *Engine) ListRoleTuples(ctx context.Context, roleID int) ([][3]string, error) {
+	if e == nil || e.client == nil {
+		return nil, errors.New("authz/openfga: engine 未初始化")
+	}
+	return e.client.ListRoleTuples(ctx, roleID)
+}

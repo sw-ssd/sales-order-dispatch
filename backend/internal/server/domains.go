@@ -11,6 +11,7 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
+	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	authzopenfga "github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
 	domainauth "github.com/salesorder/sales-order-1.0/backend/internal/domain/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/handlers"
@@ -37,7 +38,7 @@ func (s *Server) mountAuth() {
 		log.Printf("auth: 略過掛載（ent client: %v）", err)
 		return
 	}
-	s.mountOpenFGA()
+	s.mountOpenFGA(entClient)
 	valkeyClient := cache.NewClient(s.cfg.Cache.ValkeyAddr)
 	if err := cache.Ping(context.Background(), valkeyClient); err != nil {
 		log.Printf("auth: 略過掛載（Valkey: %v）", err)
@@ -101,9 +102,9 @@ func (s *Server) openEntClient() (*ent.Client, error) {
 
 // mountOpenFGA 建立內嵌 OpenFGA 授權引擎(D32)並注入 Server。
 // datastore 與業務共用 PostgreSQL(單一 store);dsn 沿用 Database.DatabaseURL。
-// 開發降級:引擎建立失敗時 log 並以 nil 繼續(授權檢查由各服務層既有 RLS/Casbin 承擔),
-// 正式環境由 Init() fail-fast 保證引擎就緒。
-func (s *Server) mountOpenFGA() {
+// production 為 fail-closed:引擎建立失敗即終止啟動(fail-fast),避免授權閘門被靜默繞過。
+// 非 production 開發降級:失敗時 log 並以 nil 繼續(此環境由各服務層既有授權承擔)。
+func (s *Server) mountOpenFGA(db *ent.Client) {
 	if !s.cfg.OpenFGA.Enabled {
 		return
 	}
@@ -113,9 +114,20 @@ func (s *Server) mountOpenFGA() {
 	}
 	client, err := ofga.NewPostgres(context.Background(), dsn, s.cfg.OpenFGA.StoreName)
 	if err != nil {
+		if s.cfg.API.Env == "production" {
+			log.Fatalf("config: ENV=production 且 OPENFGA_ENABLED=true 但 OpenFGA 引擎建立失敗,拒絕啟動: %v", err)
+		}
 		log.Printf("openfga: 略過授權引擎掛載(engine: %v),回退既有 RLS/Casbin 授權", err)
 		return
 	}
 	s.SetOpenFGA(authzopenfga.New(client))
+	// 供給 OpenFGA 授權資料(role_permissions→role ability;users→role assigned),
+	// 使 middleware Check 得以判定(修復零 tuple → 全員 deny)。production 供給失敗即終止。
+	if err := authz.Provision(context.Background(), authzopenfga.New(client), db); err != nil {
+		if s.cfg.API.Env == "production" {
+			log.Fatalf("config: OpenFGA 授權資料供給失敗,拒絕啟動: %v", err)
+		}
+		log.Printf("openfga: 授權資料供給失敗(略過): %v", err)
+	}
 	log.Println("openfga: 內嵌授權引擎已掛載(D32)")
 }

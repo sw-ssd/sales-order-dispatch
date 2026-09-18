@@ -53,30 +53,13 @@ CREATE POLICY core_roles_read ON roles
 CREATE POLICY core_role_permissions_read ON role_permissions
     USING (COALESCE(current_setting('app.current_data_scope', true), '') <> '');
 
--- 對核心表強制啟用 RLS(force 使表 owner 亦受限制)。
-ALTER TABLE companies      ENABLE ROW LEVEL SECURITY;
-ALTER TABLE companies      FORCE ROW LEVEL SECURITY;
-ALTER TABLE departments    ENABLE ROW LEVEL SECURITY;
-ALTER TABLE departments    FORCE ROW LEVEL SECURITY;
-ALTER TABLE users          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE users          FORCE ROW LEVEL SECURITY;
-ALTER TABLE roles          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE roles          FORCE ROW LEVEL SECURITY;
-ALTER TABLE role_permissions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE role_permissions FORCE ROW LEVEL SECURITY;
+-- 注意:本波僅「定義」RLS policy,並不 ENABLE/FORCE RLS。
+-- services 目前以 ent client 直接查詢(無每請求交易的 ApplyRLS 套用點);
+-- 若此刻 FORCE RLS 而 app.current_* GUC 未設定,會使核心表全量不可見(黑屏)。
+-- 待 repository/每請求交易層落定 SET LOCAL app.* 後,再以另一次 migration 啟用 RLS。
 
 -- +goose Down
 -- +goose StatementBegin
-ALTER TABLE companies      NO FORCE ROW LEVEL SECURITY;
-ALTER TABLE companies      DISABLE ROW LEVEL SECURITY;
-ALTER TABLE departments    NO FORCE ROW LEVEL SECURITY;
-ALTER TABLE departments    DISABLE ROW LEVEL SECURITY;
-ALTER TABLE users          NO FORCE ROW LEVEL SECURITY;
-ALTER TABLE users          DISABLE ROW LEVEL SECURITY;
-ALTER TABLE roles          NO FORCE ROW LEVEL SECURITY;
-ALTER TABLE roles          DISABLE ROW LEVEL SECURITY;
-ALTER TABLE role_permissions NO FORCE ROW LEVEL SECURITY;
-ALTER TABLE role_permissions DISABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS core_companies_scope ON companies;
 DROP POLICY IF EXISTS core_departments_scope ON departments;
 DROP POLICY IF EXISTS core_users_scope ON users;
