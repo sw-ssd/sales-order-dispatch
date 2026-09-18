@@ -17,6 +17,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/salesorder/sales-order-1.0/backend/config"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
+	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
@@ -249,6 +250,68 @@ func testSessionCookie(t *testing.T, sessions *scs.SessionManager, userID int, r
 	}
 	t.Fatal("seed: 未取得 session cookie")
 	return nil
+}
+
+// TestCompanyDeactivationBlocksRPC A2(2.1.3):公司停用 → 已登入請求身分失效(unauthenticated)
+// 且 Web session 銷毀;developer 豁免。
+func TestCompanyDeactivationBlocksRPC(t *testing.T) {
+	s, sessions := newIdentityTestEnv()
+	ctx := context.Background()
+	db := openIdentityDB(t, "file:co-mw?mode=memory&cache=shared&_fk=1")
+	co := db.Company.Create().SetName("測試公司").SetIdentifier("T-co").SetStatus(company.StatusActive).SaveX(ctx)
+	staff := db.User.Create().SetEmail("co@example.com").SetName("測試").SetStatus(user.StatusActive).
+		SetRole("staff").SetPasswordHash("x").SetCompanyID(co.ID).SaveX(ctx)
+	dev := db.User.Create().SetEmail("codev@example.com").SetName("dev").SetStatus(user.StatusActive).
+		SetRole("developer").SetPasswordHash("x").SetCompanyID(co.ID).SaveX(ctx)
+
+	var gotID authz.Identity
+	probe := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotID = authz.IdentityFrom(r.Context())
+		w.WriteHeader(http.StatusNoContent)
+	})
+	mw := sessions.LoadAndSave(s.authzMiddleware(db, sessions, probe))
+	staffCookie := testSessionCookie(t, sessions, int(staff.ID), "staff")
+	devCookie := testSessionCookie(t, sessions, int(dev.ID), "developer")
+
+	// 公司 active:員工與 developer 都注入身分。
+	gotID = authz.Identity{}
+	r := httptest.NewRequest(http.MethodGet, "/probe", nil)
+	r.AddCookie(staffCookie)
+	mw.ServeHTTP(httptest.NewRecorder(), r)
+	if gotID.UserID == "" {
+		t.Fatal("公司 active 時員工應注入身分")
+	}
+
+	// 停用公司。
+	db.Company.UpdateOneID(co.ID).SetStatus(company.StatusInactive).SaveX(ctx)
+
+	// 員工:身分失效(session 銷毀)。
+	r2 := httptest.NewRequest(http.MethodGet, "/probe", nil)
+	r2.AddCookie(staffCookie)
+	gotID = authz.Identity{}
+	mw.ServeHTTP(httptest.NewRecorder(), r2)
+	if gotID.UserID != "" {
+		t.Fatalf("公司停用後員工不應注入身分,得到 %+v", gotID)
+	}
+
+	// developer:豁免,仍注入身分。
+	r3 := httptest.NewRequest(http.MethodGet, "/probe", nil)
+	r3.AddCookie(devCookie)
+	gotID = authz.Identity{}
+	mw.ServeHTTP(httptest.NewRecorder(), r3)
+	if gotID.UserID == "" {
+		t.Fatal("developer 應不受公司停用阻斷")
+	}
+
+	// 恢復 active:既有 session 可續用(未在停用期間被刪除),身分重新注入。
+	db.Company.UpdateOneID(co.ID).SetStatus(company.StatusActive).SaveX(ctx)
+	r4 := httptest.NewRequest(http.MethodGet, "/probe", nil)
+	r4.AddCookie(staffCookie)
+	gotID = authz.Identity{}
+	mw.ServeHTTP(httptest.NewRecorder(), r4)
+	if gotID.UserID == "" {
+		t.Fatal("公司恢復 active 後既有 session 應可續用並注入身分")
+	}
 }
 
 // TestMustChangePasswordRestrictsRPC A3(1.5.2):must_change_password=true 時受保護與業務 RPC

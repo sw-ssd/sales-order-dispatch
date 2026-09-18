@@ -19,6 +19,7 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/config"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
+	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
@@ -172,6 +173,15 @@ func (s *Server) authzMiddleware(entClient *ent.Client, sessions *scs.SessionMan
 				_ = sessions.Destroy(ctx)
 			}
 		}
+		// A2 公司停用連鎖(2.1.3):所屬公司非 active(非 developer)→ unauthenticated。
+		// 不解銷 session(scope.CompanyActive=false 時 identity 仍注入),使公司恢復 active 後
+		// 既有 session 可續用,不需重新登入。
+		if id := authz.IdentityFrom(ctx); len(id.Roles) > 0 && id.Role != "developer" {
+			if scope := auth.RLSFrom(ctx); !scope.CompanyActive {
+				writeConnectError(w, connect.NewError(connect.CodeUnauthenticated, errors.New("所屬公司已停用,無法繼續操作")))
+				return
+			}
+		}
 		// A3 受限態(1.5.2):must_change_password=true 時僅放行 ChangePassword,其餘回 failed_precondition,
 		// 強制首登改密碼後才能使用業務 RPC。
 		if id := authz.IdentityFrom(ctx); id.MustChangePassword && r.URL.Path != salesorderv1connect.AuthServiceChangePasswordProcedure {
@@ -290,11 +300,15 @@ func (s *Server) identityFor(ctx context.Context, entClient *ent.Client, userID 
 		Roles:              auth.RolesFor(u.Role), // 依 Casbin g 展開(含自身)
 		MustChangePassword: u.MustChangePassword,  // A3 首登/臨時密碼態
 	}
+	// A2 公司停用連鎖(2.1.3):companyActive=false 表示公司非 active(company 為 nil 視同停用),
+	// 由 middleware 阻擋該請求(unauthenticated)但不刪 session,恢復 active 後可續用。
+	companyActive := u.Edges.Company != nil && u.Edges.Company.Status == company.StatusActive
 	scope := auth.RLSScope{
-		UserID:       id.UserID,
-		CompanyID:    companyID,
-		DepartmentID: deptID,
-		DataScope:    dataScopeForUser(ctx, entClient, u.Role),
+		UserID:        id.UserID,
+		CompanyID:     companyID,
+		DepartmentID:  deptID,
+		DataScope:     dataScopeForUser(ctx, entClient, u.Role),
+		CompanyActive: companyActive,
 	}
 	return id, scope, true
 }

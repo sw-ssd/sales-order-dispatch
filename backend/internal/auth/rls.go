@@ -29,6 +29,9 @@ type RLSScope struct {
 	DepartmentID string
 	CustomerID   string
 	DataScope    DataScope
+	// CompanyActive 為公司停用連鎖(A2 2.1.3):false 表示所屬公司非 active,該請求應被阻擋
+	// (保留 session 不刪除,恢復 active 後可續用)。
+	CompanyActive bool
 }
 
 type rlsCtxKey struct{}
