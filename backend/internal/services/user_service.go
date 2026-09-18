@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
+	"log"
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
@@ -66,6 +67,30 @@ func grantableRoles(id authz.Identity) map[string]bool {
 		return map[string]bool{"staff": true}
 	}
 	return nil
+}
+
+// canGrantRole 判定操作者可否授予指定角色(DB-aware,殘留 #1)。
+// super/developer 可授予任何「既有角色」——內建或 role 表存在且 active 的自訂角色;
+// 其餘角色維持固定授予上限(grantableRoles,不含自訂,防權限提升)。
+func (s *UserService) canGrantRole(ctx context.Context, id authz.Identity, roleCode string) (bool, error) {
+	if isSuperIdentity(id) {
+		if isValidRole(roleCode) {
+			return true, nil
+		}
+		return s.roleActive(ctx, roleCode)
+	}
+	return grantableRoles(id)[roleCode], nil
+}
+
+// roleActive 判斷角色 code 是否存在於 roles 表且 active 未刪(自訂角色判定)。
+func (s *UserService) roleActive(ctx context.Context, code string) (bool, error) {
+	ok, err := s.db.Role.Query().
+		Where(role.CodeEQ(code), role.IsActiveEQ(true), role.DeletedAtIsNil()).
+		Exist(ctx)
+	if err != nil {
+		return false, toConnectError(err)
+	}
+	return ok, nil
 }
 
 // UserService 實作 salesorder.v1.UserService(使用者管理,02 計畫 Task 3)。
@@ -152,9 +177,7 @@ func (s *UserService) ListUsers(ctx context.Context, req *connect.Request[v1.Lis
 	}
 
 	if role := req.Msg.GetRole(); role != "" {
-		if !isValidRole(role) {
-			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("無效的角色 %q", role))
-		}
+		// 角色篩選:內建或自訂角色皆可(未知角色回空結果即可,不需 reject)。
 		q = q.Where(user.Role(role))
 	}
 	if status := req.Msg.GetStatus(); status != "" {
@@ -230,11 +253,15 @@ func (s *UserService) CreateUser(ctx context.Context, req *connect.Request[v1.Cr
 		}
 	}
 	roleCode := req.Msg.GetRole()
-	if !isValidRole(roleCode) {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("無效的角色 %q", roleCode))
+	if strings.TrimSpace(roleCode) == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("role 必填"))
 	}
-	// 授予上限(C2):操作者不得建立高於自身可授予範圍的角色(防止權限提升)。
-	if !grantableRoles(id)[roleCode] {
+	// 授予判定(DB-aware,殘留 #1):super/developer 可授予既有自訂角色;其餘維持固定上限。
+	granted, err := s.canGrantRole(ctx, id, roleCode)
+	if err != nil {
+		return nil, err
+	}
+	if !granted {
 		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("無權限授予角色 %q", roleCode))
 	}
 
@@ -425,14 +452,18 @@ func (s *UserService) AssignRole(ctx context.Context, req *connect.Request[v1.As
 		return nil, err
 	}
 	roleCode := req.Msg.GetRole()
-	if !isValidRole(roleCode) {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("無效的角色 %q", roleCode))
+	if strings.TrimSpace(roleCode) == "" {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("role 必填"))
 	}
 	if roleCode == "guest" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("不可指派為 guest(待審核狀態)"))
 	}
-	// 授予上限(C2):不得指派高於自身可授予範圍的角色(防止權限提升,含自我升權)。
-	if !grantableRoles(id)[roleCode] {
+	// 授予判定(DB-aware,殘留 #1):super/developer 可授予既有自訂角色;其餘維持固定上限。
+	granted, err := s.canGrantRole(ctx, id, roleCode)
+	if err != nil {
+		return nil, err
+	}
+	if !granted {
 		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("無權限授予角色 %q", roleCode))
 	}
 
@@ -481,9 +512,12 @@ func (s *UserService) AssignRole(ctx context.Context, req *connect.Request[v1.As
 	}
 
 	// 同步 OpenFGA assigned tuple(引擎未注入時略過,OpenFGA 停用/開發降級時由 rolePolicy 承擔)。
-	// 對齊 role_service.syncRolePermissions:OpenFGA 與業務非同交易,commit 後執行。
+	// 對齊 role_service.syncRolePermissions:OpenFGA 與業務非同交易,在 commit 後執行。
+	// 殘留 #3:sync 失敗於 commit 之後——業務已提交(role/tv 已變更),此時不得回報請求失敗,
+	// 否則呼叫端會重試而二次 bump token_version,且資料庫與 OpenFGA 皆已變。
+	// 改以 log 記錄並回成功,授權由 OpenFGA 於下次 reconcile/provision(啟動)補齊(最終一致)。
 	if err := s.syncUserRoleTuple(ctx, target, roleCode); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("OpenFGA tuple 同步失敗: %w", err))
+		log.Printf("user_service: AssignRole(user=%d) OpenFGA assigned tuple 同步失敗(延遲補齊): %v", userID, err)
 	}
 
 	u, err := s.db.User.Query().WithCompany().WithDepartment().Where(user.ID(userID)).Only(ctx)

@@ -233,6 +233,68 @@ func TestCreateUserRejectsForeignDepartment(t *testing.T) {
 	}
 }
 
+// TestAssignSuperCustomRole:super 可授予「既有自訂角色」(殘留 #1)。
+func TestAssignSuperCustomRole(t *testing.T) {
+	ctx := context.Background()
+	_, db := newUserTestServer(t, authz.Identity{})
+	coID, deptA, _ := seedUserCompany(t, db)
+	// 建立自訂角色(非 is_system, active)。
+	if _, err := db.Role.Create().SetCode("ops_manager").SetName("營運主管").SetDataScope("department").SetIsSystem(false).SetIsActive(true).Save(ctx); err != nil {
+		t.Fatalf("role: %v", err)
+	}
+	target, err := db.User.Create().SetCompanyID(coID).SetDepartmentID(deptA).SetEmail("cu@t.com").SetName("c").SetRole("staff").SetPasswordHash("x").Save(ctx)
+	if err != nil {
+		t.Fatalf("user: %v", err)
+	}
+	id := authz.Identity{UserID: "1", Role: "super", Roles: []string{"super"}}
+	client := newUserTestServerWithDB(t, id, db)
+	resp, err := client.AssignRole(ctx, connect.NewRequest(&v1.AssignRoleRequest{UserId: uItoa(target.ID), Role: "ops_manager"}))
+	if err != nil {
+		t.Fatalf("super 授予自訂角色應成功:%v", err)
+	}
+	if resp.Msg.GetUser().GetRole() != "ops_manager" {
+		t.Errorf("期望 role=ops_manager,得到 %s", resp.Msg.GetUser().GetRole())
+	}
+}
+
+// TestCompanyAdminCannotGrantCustomRole:company_admin 不得授予自訂角色(殘留 #1 之安全下限)。
+func TestCompanyAdminCannotGrantCustomRole(t *testing.T) {
+	ctx := context.Background()
+	_, db := newUserTestServer(t, authz.Identity{})
+	coID, deptA, _ := seedUserCompany(t, db)
+	if _, err := db.Role.Create().SetCode("ops_manager").SetName("營運主管").SetDataScope("department").SetIsSystem(false).SetIsActive(true).Save(ctx); err != nil {
+		t.Fatalf("role: %v", err)
+	}
+	target, err := db.User.Create().SetCompanyID(coID).SetDepartmentID(deptA).SetEmail("c2@t.com").SetName("c2").SetRole("staff").SetPasswordHash("x").Save(ctx)
+	if err != nil {
+		t.Fatalf("user: %v", err)
+	}
+	id := authz.Identity{UserID: "2", CompanyID: uItoa(coID), Role: "company_admin", Roles: []string{"company_admin", "dept_admin", "staff"}}
+	client := newUserTestServerWithDB(t, id, db)
+	_, err = client.AssignRole(ctx, connect.NewRequest(&v1.AssignRoleRequest{UserId: uItoa(target.ID), Role: "ops_manager"}))
+	if connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Fatalf("company_admin 授予自訂角色應回 permission_denied,得到 %v", err)
+	}
+}
+
+// TestCreateCustomRoleNotEscalateFromCompanyAdmin:company_admin 不得建立自訂角色帳號(殘留 #1)。
+func TestCreateCustomRoleNotEscalateFromCompanyAdmin(t *testing.T) {
+	ctx := context.Background()
+	_, db := newUserTestServer(t, authz.Identity{})
+	coID, _, _ := seedUserCompany(t, db)
+	if _, err := db.Role.Create().SetCode("ops_manager").SetName("營運主管").SetDataScope("department").SetIsSystem(false).SetIsActive(true).Save(ctx); err != nil {
+		t.Fatalf("role: %v", err)
+	}
+	id := authz.Identity{UserID: "2", CompanyID: uItoa(coID), Role: "company_admin", Roles: []string{"company_admin", "dept_admin", "staff"}}
+	client := newUserTestServerWithDB(t, id, db)
+	_, err := client.CreateUser(ctx, connect.NewRequest(&v1.CreateUserRequest{
+		Name: "x", Email: "c@t.com", CompanyId: uItoa(coID), Role: "ops_manager",
+	}))
+	if connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Fatalf("company_admin 建立自訂角色帳號應回 permission_denied,得到 %v", err)
+	}
+}
+
 // TestCreateAndUpdateUserWriteAudit:CreateUser / UpdateUser 亦須寫稽核(I4;2.3.1)。
 func TestCreateAndUpdateUserWriteAudit(t *testing.T) {
 	ctx := context.Background()
