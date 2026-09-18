@@ -316,3 +316,15 @@ git commit -m "docs(plans): 02 Task 3 UserService 完工狀態更新"
 3. **`syncUserRoleTuple` post-commit 失敗**：改為**不誤報請求失敗**——業務已 commit(role/tv 已變),若回錯誤會致呼叫端重試二次 bump token_version;改記 log 並回成功,授權由 OpenFGA 下次 reconcile/provision 補齊(最終一致)。✅
 
 *審查修正日期:2026-09-18*
+
+### 範圍複審（自訂角色授予批次,commit `77fc94d`）
+
+對「自訂角色授予」再複審,發現 1 項 Important 缺陷並修正:
+
+| 編號 | 嚴重度 | 問題 | 修正 |
+|---|---|---|---|
+| R1 | Important | `server.identityFor` 以硬編碼 `auth.ScopeForRole(u.Role)` 推導 RLS 範圍;自訂角色回空字串 → `RLSStatements` 不注入 `app.current_data_scope`。RLS 啟用後,`data_scope=department` 的自訂角色會被 policy 的 company 分支視為「全公司」(隱含跨部門過度授權),`all` 則反向不足 | 新增 `dataScopeForUser`:優先讀 `roles.data_scope`(表為權威來源),查無列時回退內建對映;皆無 → 空(fail-closed)。測試 `TestDataScopeForUserCustomRole` |
+
+**複審殘留(非阻擋)**:`auth.EnforceAny` 的 fallback ACL(rolePolicy)不識自訂角色,故自訂角色使用者於服務層 fallback 閘門會被拒——生產以 OpenFGA 為主要決策,影響有限;`dataScopeForUser` 每請求一次 roles 查詢,日後可考慮快取。
+
+*範圍複審日期:2026-09-18*
