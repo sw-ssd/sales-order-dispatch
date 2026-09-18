@@ -32,6 +32,25 @@
 
 ---
 
+## 領域模型 schema 細目（Fleetbase 逆向 → 1.0 收斂）
+
+> 本節為 fleet 執行層各表的欄位級細目，**源自 Fleetbase 逆向 `docs/study/erd/go-fleet.mmd`（Fleetbase 倉庫）**，但已收斂為 1.0 語彙：`bigserial id + uuid`（D31）、`company_id/department_id`（F4）、D10 軟刪除（部分唯一索引）、D18 稽核。**不引入** Fleetbase 的 `_key`、多型 `*_type/*_uuid`、MySQL `VARCHAR` 金額/度量。以本節與下方各 10.x 為權威，Fleetbase 僅為欄位參考。
+
+### fleet schemas 欄位綱要（目標 Ent）
+
+- **vehicles**：`id bigserial PK` + `uuid unique`;`company_id`/`department_id`（mixin_tenant）;`plate_no`（部分唯一:同部門 + deleted_at IS NULL）、`vehicle_type`、`capacity`（含 `capacity_volume`/`capacity_pallets`/`capacity_parcels` 可選）、`make`/`model`/`year`、`vin`/`engine_number`、`fuel_type`/`fuel_volume_unit`、`odometer`/`odometer_unit`、`last_position geography(Point)`（快照,見 10.5）、`status`（狀態機）、`deleted_at`/`created_at`/`updated_at`。
+- **drivers**：`id uuid`;`company_id`/`department_id`;`user_id`（關聯既有 `users`）;`name`/`phone`（可自 `users` 同步）;`assigned_vehicle_id`;`current_status`（online/offline/on_task）;`skills JSONB`;`location geography(Point)`（快照）;`slug`/`deleted_at`/`created_at`/`updated_at`。
+- **fleets**：`id uuid`;`company_id`/`department_id`;`name`/`color`/`task`/`status`/`parent_fleet_id`（自引用）;`deleted_at`/`created_at`/`updated_at`;關聯表 `fleet_drivers`（`(fleet_id, driver_id)` PK）、`fleet_vehicles`（`(fleet_id, vehicle_id)` PK）。
+- **service_areas / zones**：`id uuid`;`company_id`/`department_id`;`name`/`type`/`color`/`stroke_color`;`border geography(Polygon)`（fallback GeoJSON 文字欄位）;`trigger_on_entry`/`trigger_on_exit`/`dwell_threshold_minutes`/`speed_limit_kmh`;`parent_id`（service_areas 自引用,階層）;zones 帶 `service_area_id`;`status`/`deleted_at`/`created_at`/`updated_at`。
+- **positions（GPS 歷史,append-only）**：`id bigserial`;`company_id`/`department_id`;`driver_id`/`vehicle_id`（可其一或兩者）;`location geography(Point)` + `heading`/`speed`（`numeric`）;`timestamp timestamptz`;`created_at`。**不下 `deleted_at`**,`UNIQUE(uuid)` + `(company_id, created_at)` 索引 + 依時間分區（見 10.5）。**快照層**：`drivers.location`/`vehicles.last_position` 為 denormalized 當下位置,供看板秒查。
+- **fleet_deliveries**：`id uuid`;`company_id`/`department_id`;`route_id`（承接車次,1.0 sales_order route）;`driver_assigned_id`/`vehicle_assigned_id`/`assigned_by`;`status`（pending/dispatched/in_progress/completed/cancelled）;`started_at`/`completed_at`;`delivery_sequence`（停點順序）;`version`（樂觀鎖,重指派遞增）;`reassigned_from_id`/`reassigned_to_id`（重指派軌跡,可空）;`deleted_at`/`created_at`/`updated_at`。
+- **fleet_delivery_events**：`id uuid`;`fleet_delivery_id`;`event_type`（`driver.location_changed`/`order.driver_assigned`/`delivery.started`/`delivery.completed`/`delivery.cancelled` 等,D16 範本鍵）;`payload JSONB`;`created_at`。**append-only**（不下 deleted_at）。
+- **proofs（POD）**：`id uuid`;`fleet_delivery_id`;`type`（photo/signature/scan）;`file_asset_id`（D17 檔案資產）;`captured_at timestamptz`;`remarks`;`deleted_at`/`created_at`/`updated_at`。
+
+> 對照清單:完整逐欄建議見 Fleetbase 倉庫 `docs/study/erd/go/schema-improvement.md` 域 D；本節僅取 1.0 承接部分並收斂。
+
+---
+
 ### 10.1 建立 fleet 主檔 schema（fleets / vehicles / drivers）
 
 - **目標**：建立部門級 fleet 主檔的 Ent schema + RLS policy + 建檔 RPC。
@@ -74,7 +93,8 @@
 - **目標**：司機上報位置並以 Connect 串流 + Valkey pub/sub 廣播 `driver.location_changed`。
 - **檔案**：`ent/schema/position.go`;`internal/domain/fleet/tracking.go`;`proto/v1/tracking.proto`(`TrackingService.SubmitPosition` / `SubscribePositions`)。
 - **介面**：`SubmitPosition(location, heading, speed)`;`SubscribePositions()`(server-streaming)。
-- **實作邏輯**：`SubmitPosition` 寫 `positions`(RLS 部門級);`SubscribePositions` 訂閱部門 channel(Valkey pub/sub 跨 replica,D14);事件僅作失效提示;斷線重連全量重查、連續失敗降級 30 秒輪詢。認證同其他 RPC(cookie/token),無一次性 ticket。
+- **實作邏輯**：`SubmitPosition` 寫 `positions`(RLS 部門級);同一交易內同時更新**快照層** `drivers.location`(或 `vehicles.last_position`)為當下位置(供看板秒查,不做歷史累加);`SubscribePositions` 訂閱部門 channel(Valkey pub/sub 跨 replica,D14);事件僅作失效提示;斷線重連全量重查、連續失敗降級 30 秒輪詢。認證同其他 RPC(cookie/token),無一次性 ticket。
+- **positions 高頻表設計**：`positions` 為 **append-only**(不下 `deleted_at`,D10 不適用)、`UNIQUE(uuid)`+`(company_id, created_at)` 索引、**依 `created_at` 時間分區**(如按月);RLS policy 與分區鍵一起存在(避免跨租戶掃全表);歷史保留策略於 Phase 8 維運(D27 同理)。快照(當下位置)由 `drivers.location`/`vehicles.last_position` 承載,`positions` 僅存軌跡供稽核/回播(1.1+ 回播功能)。從 Fleetbase 逆向:定位欄位 `geography(Point)` + `heading`/`speed` 為 `numeric`(不存字串)。
 - **錯誤處理**：`unauthenticated`(無憑證)、`permission_denied`(跨部門)、`invalid_argument`(座標缺失)。
 - **驗收**：司機上報 → 後台連線收到 `driver.location_changed`;跨部門連線不收;未認證拒連;斷線重連補齊。
 

@@ -6,6 +6,20 @@
 
 fleet 執行層補足 1.0「規劃/裝單」之後的「現場配送/追蹤/簽收」層：把派車看板完成的車次（`route_id`）實際綁定車輛與司機執行，並提供即時定位、路線/ETA、簽收（POD）。fleet 領域為**部門級**（`company_id` + `department_id`），資料範圍依 D3 data_scope。授權由 **OpenFGA**（資源級）+ RLS（資料庫兜底）承擔（D32），CASL 不保留。**NetSuite 不接 fleet**。
 
+## Schema 承襲與收斂
+
+> fleet 執行層的 schema 源自 Fleetbase 逆向（Fleetbase 倉庫 `docs/study/erd/go-*.mmd` 與 `docs/study/erd/go/schema-improvement.md`），但**已收斂至 1.0 語彙與慣例**，Fleetbase 僅為欄位級參考、非權威。
+
+- **識別符**：採用 1.0 的 `bigserial id + uuid`（D31），**不引入** Fleetbase 的 `_key` 與雙主鍵冗餘；對外一律 `uuid`。
+- **租戶**：一律 `company_id` + `department_id`（F4），資料範圍依 D3 data_scope；Fleetbase 的 `company_uuid` 單租戶欄對應為 1.0 兩層。
+- **多型**：**不引入** Fleetbase 的 `*_type/*_uuid` 多型欄位；能具體化就拆明確 FK（如 `customer` 收斂至既有主檔關聯），真多型加 `CHECK`。
+- **金額/度量**：一律 `BIGINT`+`currency`、`NUMERIC`+`*_unit`，**不引入** MySQL `VARCHAR` 金額/度量欄。
+- **軟刪除**：業務主檔（fleets/vehicles/drivers/fleet_deliveries）依 D10 軟刪除 + 部分唯一索引；軌跡表（`positions`/`fleet_delivery_events`）**append-only**、不下 `deleted_at`。
+- **稽核**：指派/狀態異動/簽收與稽核同一交易（D18），共用既有 `audit_logs`。
+- **欄位細目**：以 `docs/superpowers/plans/backend/detail/10-fleet-execution.md`「領域模型 schema 細目」為權威。
+
+此收斂確保 1.0 不因「照抄 Fleetbase 表」而承接 MySQL 逆向的技術債（多型、字串數值、雙主鍵）。
+
 ## Requirements
 
 ### Requirement: fleet 主檔為部門級實體
