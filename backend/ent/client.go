@@ -24,7 +24,10 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/processingspec"
+	"github.com/salesorder/sales-order-1.0/backend/ent/product"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productcategory"
+	"github.com/salesorder/sales-order-1.0/backend/ent/productprocessingspec"
+	"github.com/salesorder/sales-order-1.0/backend/ent/productunit"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/ent/rolepermission"
 	"github.com/salesorder/sales-order-1.0/backend/ent/route"
@@ -55,8 +58,14 @@ type Client struct {
 	Metadict *MetadictClient
 	// ProcessingSpec is the client for interacting with the ProcessingSpec builders.
 	ProcessingSpec *ProcessingSpecClient
+	// Product is the client for interacting with the Product builders.
+	Product *ProductClient
 	// ProductCategory is the client for interacting with the ProductCategory builders.
 	ProductCategory *ProductCategoryClient
+	// ProductProcessingSpec is the client for interacting with the ProductProcessingSpec builders.
+	ProductProcessingSpec *ProductProcessingSpecClient
+	// ProductUnit is the client for interacting with the ProductUnit builders.
+	ProductUnit *ProductUnitClient
 	// Role is the client for interacting with the Role builders.
 	Role *RoleClient
 	// RolePermission is the client for interacting with the RolePermission builders.
@@ -87,7 +96,10 @@ func (c *Client) init() {
 	c.Department = NewDepartmentClient(c.config)
 	c.Metadict = NewMetadictClient(c.config)
 	c.ProcessingSpec = NewProcessingSpecClient(c.config)
+	c.Product = NewProductClient(c.config)
 	c.ProductCategory = NewProductCategoryClient(c.config)
+	c.ProductProcessingSpec = NewProductProcessingSpecClient(c.config)
+	c.ProductUnit = NewProductUnitClient(c.config)
 	c.Role = NewRoleClient(c.config)
 	c.RolePermission = NewRolePermissionClient(c.config)
 	c.Route = NewRouteClient(c.config)
@@ -183,23 +195,26 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:             ctx,
-		config:          cfg,
-		AuditLog:        NewAuditLogClient(cfg),
-		Company:         NewCompanyClient(cfg),
-		Customer:        NewCustomerClient(cfg),
-		CustomerAddress: NewCustomerAddressClient(cfg),
-		CustomerContact: NewCustomerContactClient(cfg),
-		CustomerCounter: NewCustomerCounterClient(cfg),
-		Department:      NewDepartmentClient(cfg),
-		Metadict:        NewMetadictClient(cfg),
-		ProcessingSpec:  NewProcessingSpecClient(cfg),
-		ProductCategory: NewProductCategoryClient(cfg),
-		Role:            NewRoleClient(cfg),
-		RolePermission:  NewRolePermissionClient(cfg),
-		Route:           NewRouteClient(cfg),
-		User:            NewUserClient(cfg),
-		Warehouse:       NewWarehouseClient(cfg),
+		ctx:                   ctx,
+		config:                cfg,
+		AuditLog:              NewAuditLogClient(cfg),
+		Company:               NewCompanyClient(cfg),
+		Customer:              NewCustomerClient(cfg),
+		CustomerAddress:       NewCustomerAddressClient(cfg),
+		CustomerContact:       NewCustomerContactClient(cfg),
+		CustomerCounter:       NewCustomerCounterClient(cfg),
+		Department:            NewDepartmentClient(cfg),
+		Metadict:              NewMetadictClient(cfg),
+		ProcessingSpec:        NewProcessingSpecClient(cfg),
+		Product:               NewProductClient(cfg),
+		ProductCategory:       NewProductCategoryClient(cfg),
+		ProductProcessingSpec: NewProductProcessingSpecClient(cfg),
+		ProductUnit:           NewProductUnitClient(cfg),
+		Role:                  NewRoleClient(cfg),
+		RolePermission:        NewRolePermissionClient(cfg),
+		Route:                 NewRouteClient(cfg),
+		User:                  NewUserClient(cfg),
+		Warehouse:             NewWarehouseClient(cfg),
 	}, nil
 }
 
@@ -217,23 +232,26 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:             ctx,
-		config:          cfg,
-		AuditLog:        NewAuditLogClient(cfg),
-		Company:         NewCompanyClient(cfg),
-		Customer:        NewCustomerClient(cfg),
-		CustomerAddress: NewCustomerAddressClient(cfg),
-		CustomerContact: NewCustomerContactClient(cfg),
-		CustomerCounter: NewCustomerCounterClient(cfg),
-		Department:      NewDepartmentClient(cfg),
-		Metadict:        NewMetadictClient(cfg),
-		ProcessingSpec:  NewProcessingSpecClient(cfg),
-		ProductCategory: NewProductCategoryClient(cfg),
-		Role:            NewRoleClient(cfg),
-		RolePermission:  NewRolePermissionClient(cfg),
-		Route:           NewRouteClient(cfg),
-		User:            NewUserClient(cfg),
-		Warehouse:       NewWarehouseClient(cfg),
+		ctx:                   ctx,
+		config:                cfg,
+		AuditLog:              NewAuditLogClient(cfg),
+		Company:               NewCompanyClient(cfg),
+		Customer:              NewCustomerClient(cfg),
+		CustomerAddress:       NewCustomerAddressClient(cfg),
+		CustomerContact:       NewCustomerContactClient(cfg),
+		CustomerCounter:       NewCustomerCounterClient(cfg),
+		Department:            NewDepartmentClient(cfg),
+		Metadict:              NewMetadictClient(cfg),
+		ProcessingSpec:        NewProcessingSpecClient(cfg),
+		Product:               NewProductClient(cfg),
+		ProductCategory:       NewProductCategoryClient(cfg),
+		ProductProcessingSpec: NewProductProcessingSpecClient(cfg),
+		ProductUnit:           NewProductUnitClient(cfg),
+		Role:                  NewRoleClient(cfg),
+		RolePermission:        NewRolePermissionClient(cfg),
+		Route:                 NewRouteClient(cfg),
+		User:                  NewUserClient(cfg),
+		Warehouse:             NewWarehouseClient(cfg),
 	}, nil
 }
 
@@ -264,8 +282,9 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.AuditLog, c.Company, c.Customer, c.CustomerAddress, c.CustomerContact,
-		c.CustomerCounter, c.Department, c.Metadict, c.ProcessingSpec,
-		c.ProductCategory, c.Role, c.RolePermission, c.Route, c.User, c.Warehouse,
+		c.CustomerCounter, c.Department, c.Metadict, c.ProcessingSpec, c.Product,
+		c.ProductCategory, c.ProductProcessingSpec, c.ProductUnit, c.Role,
+		c.RolePermission, c.Route, c.User, c.Warehouse,
 	} {
 		n.Use(hooks...)
 	}
@@ -276,8 +295,9 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.AuditLog, c.Company, c.Customer, c.CustomerAddress, c.CustomerContact,
-		c.CustomerCounter, c.Department, c.Metadict, c.ProcessingSpec,
-		c.ProductCategory, c.Role, c.RolePermission, c.Route, c.User, c.Warehouse,
+		c.CustomerCounter, c.Department, c.Metadict, c.ProcessingSpec, c.Product,
+		c.ProductCategory, c.ProductProcessingSpec, c.ProductUnit, c.Role,
+		c.RolePermission, c.Route, c.User, c.Warehouse,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -304,8 +324,14 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Metadict.mutate(ctx, m)
 	case *ProcessingSpecMutation:
 		return c.ProcessingSpec.mutate(ctx, m)
+	case *ProductMutation:
+		return c.Product.mutate(ctx, m)
 	case *ProductCategoryMutation:
 		return c.ProductCategory.mutate(ctx, m)
+	case *ProductProcessingSpecMutation:
+		return c.ProductProcessingSpec.mutate(ctx, m)
+	case *ProductUnitMutation:
+		return c.ProductUnit.mutate(ctx, m)
 	case *RoleMutation:
 		return c.Role.mutate(ctx, m)
 	case *RolePermissionMutation:
@@ -1582,6 +1608,139 @@ func (c *ProcessingSpecClient) mutate(ctx context.Context, m *ProcessingSpecMuta
 	}
 }
 
+// ProductClient is a client for the Product schema.
+type ProductClient struct {
+	config
+}
+
+// NewProductClient returns a client for the Product from the given config.
+func NewProductClient(c config) *ProductClient {
+	return &ProductClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `product.Hooks(f(g(h())))`.
+func (c *ProductClient) Use(hooks ...Hook) {
+	c.hooks.Product = append(c.hooks.Product, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `product.Intercept(f(g(h())))`.
+func (c *ProductClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Product = append(c.inters.Product, interceptors...)
+}
+
+// Create returns a builder for creating a Product entity.
+func (c *ProductClient) Create() *ProductCreate {
+	mutation := newProductMutation(c.config, OpCreate)
+	return &ProductCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Product entities.
+func (c *ProductClient) CreateBulk(builders ...*ProductCreate) *ProductCreateBulk {
+	return &ProductCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ProductClient) MapCreateBulk(slice any, setFunc func(*ProductCreate, int)) *ProductCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ProductCreateBulk{err: fmt.Errorf("calling to ProductClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ProductCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ProductCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Product.
+func (c *ProductClient) Update() *ProductUpdate {
+	mutation := newProductMutation(c.config, OpUpdate)
+	return &ProductUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ProductClient) UpdateOne(_m *Product) *ProductUpdateOne {
+	mutation := newProductMutation(c.config, OpUpdateOne, withProduct(_m))
+	return &ProductUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ProductClient) UpdateOneID(id int) *ProductUpdateOne {
+	mutation := newProductMutation(c.config, OpUpdateOne, withProductID(id))
+	return &ProductUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Product.
+func (c *ProductClient) Delete() *ProductDelete {
+	mutation := newProductMutation(c.config, OpDelete)
+	return &ProductDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ProductClient) DeleteOne(_m *Product) *ProductDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ProductClient) DeleteOneID(id int) *ProductDeleteOne {
+	builder := c.Delete().Where(product.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ProductDeleteOne{builder}
+}
+
+// Query returns a query builder for Product.
+func (c *ProductClient) Query() *ProductQuery {
+	return &ProductQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeProduct},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Product entity by its id.
+func (c *ProductClient) Get(ctx context.Context, id int) (*Product, error) {
+	return c.Query().Where(product.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ProductClient) GetX(ctx context.Context, id int) *Product {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ProductClient) Hooks() []Hook {
+	return c.hooks.Product
+}
+
+// Interceptors returns the client interceptors.
+func (c *ProductClient) Interceptors() []Interceptor {
+	return c.inters.Product
+}
+
+func (c *ProductClient) mutate(ctx context.Context, m *ProductMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ProductCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ProductUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ProductUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ProductDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Product mutation op: %q", m.Op())
+	}
+}
+
 // ProductCategoryClient is a client for the ProductCategory schema.
 type ProductCategoryClient struct {
 	config
@@ -1712,6 +1871,272 @@ func (c *ProductCategoryClient) mutate(ctx context.Context, m *ProductCategoryMu
 		return (&ProductCategoryDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown ProductCategory mutation op: %q", m.Op())
+	}
+}
+
+// ProductProcessingSpecClient is a client for the ProductProcessingSpec schema.
+type ProductProcessingSpecClient struct {
+	config
+}
+
+// NewProductProcessingSpecClient returns a client for the ProductProcessingSpec from the given config.
+func NewProductProcessingSpecClient(c config) *ProductProcessingSpecClient {
+	return &ProductProcessingSpecClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `productprocessingspec.Hooks(f(g(h())))`.
+func (c *ProductProcessingSpecClient) Use(hooks ...Hook) {
+	c.hooks.ProductProcessingSpec = append(c.hooks.ProductProcessingSpec, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `productprocessingspec.Intercept(f(g(h())))`.
+func (c *ProductProcessingSpecClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ProductProcessingSpec = append(c.inters.ProductProcessingSpec, interceptors...)
+}
+
+// Create returns a builder for creating a ProductProcessingSpec entity.
+func (c *ProductProcessingSpecClient) Create() *ProductProcessingSpecCreate {
+	mutation := newProductProcessingSpecMutation(c.config, OpCreate)
+	return &ProductProcessingSpecCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ProductProcessingSpec entities.
+func (c *ProductProcessingSpecClient) CreateBulk(builders ...*ProductProcessingSpecCreate) *ProductProcessingSpecCreateBulk {
+	return &ProductProcessingSpecCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ProductProcessingSpecClient) MapCreateBulk(slice any, setFunc func(*ProductProcessingSpecCreate, int)) *ProductProcessingSpecCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ProductProcessingSpecCreateBulk{err: fmt.Errorf("calling to ProductProcessingSpecClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ProductProcessingSpecCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ProductProcessingSpecCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ProductProcessingSpec.
+func (c *ProductProcessingSpecClient) Update() *ProductProcessingSpecUpdate {
+	mutation := newProductProcessingSpecMutation(c.config, OpUpdate)
+	return &ProductProcessingSpecUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ProductProcessingSpecClient) UpdateOne(_m *ProductProcessingSpec) *ProductProcessingSpecUpdateOne {
+	mutation := newProductProcessingSpecMutation(c.config, OpUpdateOne, withProductProcessingSpec(_m))
+	return &ProductProcessingSpecUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ProductProcessingSpecClient) UpdateOneID(id int) *ProductProcessingSpecUpdateOne {
+	mutation := newProductProcessingSpecMutation(c.config, OpUpdateOne, withProductProcessingSpecID(id))
+	return &ProductProcessingSpecUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ProductProcessingSpec.
+func (c *ProductProcessingSpecClient) Delete() *ProductProcessingSpecDelete {
+	mutation := newProductProcessingSpecMutation(c.config, OpDelete)
+	return &ProductProcessingSpecDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ProductProcessingSpecClient) DeleteOne(_m *ProductProcessingSpec) *ProductProcessingSpecDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ProductProcessingSpecClient) DeleteOneID(id int) *ProductProcessingSpecDeleteOne {
+	builder := c.Delete().Where(productprocessingspec.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ProductProcessingSpecDeleteOne{builder}
+}
+
+// Query returns a query builder for ProductProcessingSpec.
+func (c *ProductProcessingSpecClient) Query() *ProductProcessingSpecQuery {
+	return &ProductProcessingSpecQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeProductProcessingSpec},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ProductProcessingSpec entity by its id.
+func (c *ProductProcessingSpecClient) Get(ctx context.Context, id int) (*ProductProcessingSpec, error) {
+	return c.Query().Where(productprocessingspec.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ProductProcessingSpecClient) GetX(ctx context.Context, id int) *ProductProcessingSpec {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ProductProcessingSpecClient) Hooks() []Hook {
+	return c.hooks.ProductProcessingSpec
+}
+
+// Interceptors returns the client interceptors.
+func (c *ProductProcessingSpecClient) Interceptors() []Interceptor {
+	return c.inters.ProductProcessingSpec
+}
+
+func (c *ProductProcessingSpecClient) mutate(ctx context.Context, m *ProductProcessingSpecMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ProductProcessingSpecCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ProductProcessingSpecUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ProductProcessingSpecUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ProductProcessingSpecDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ProductProcessingSpec mutation op: %q", m.Op())
+	}
+}
+
+// ProductUnitClient is a client for the ProductUnit schema.
+type ProductUnitClient struct {
+	config
+}
+
+// NewProductUnitClient returns a client for the ProductUnit from the given config.
+func NewProductUnitClient(c config) *ProductUnitClient {
+	return &ProductUnitClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `productunit.Hooks(f(g(h())))`.
+func (c *ProductUnitClient) Use(hooks ...Hook) {
+	c.hooks.ProductUnit = append(c.hooks.ProductUnit, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `productunit.Intercept(f(g(h())))`.
+func (c *ProductUnitClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ProductUnit = append(c.inters.ProductUnit, interceptors...)
+}
+
+// Create returns a builder for creating a ProductUnit entity.
+func (c *ProductUnitClient) Create() *ProductUnitCreate {
+	mutation := newProductUnitMutation(c.config, OpCreate)
+	return &ProductUnitCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ProductUnit entities.
+func (c *ProductUnitClient) CreateBulk(builders ...*ProductUnitCreate) *ProductUnitCreateBulk {
+	return &ProductUnitCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ProductUnitClient) MapCreateBulk(slice any, setFunc func(*ProductUnitCreate, int)) *ProductUnitCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ProductUnitCreateBulk{err: fmt.Errorf("calling to ProductUnitClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ProductUnitCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ProductUnitCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ProductUnit.
+func (c *ProductUnitClient) Update() *ProductUnitUpdate {
+	mutation := newProductUnitMutation(c.config, OpUpdate)
+	return &ProductUnitUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ProductUnitClient) UpdateOne(_m *ProductUnit) *ProductUnitUpdateOne {
+	mutation := newProductUnitMutation(c.config, OpUpdateOne, withProductUnit(_m))
+	return &ProductUnitUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ProductUnitClient) UpdateOneID(id int) *ProductUnitUpdateOne {
+	mutation := newProductUnitMutation(c.config, OpUpdateOne, withProductUnitID(id))
+	return &ProductUnitUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ProductUnit.
+func (c *ProductUnitClient) Delete() *ProductUnitDelete {
+	mutation := newProductUnitMutation(c.config, OpDelete)
+	return &ProductUnitDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ProductUnitClient) DeleteOne(_m *ProductUnit) *ProductUnitDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ProductUnitClient) DeleteOneID(id int) *ProductUnitDeleteOne {
+	builder := c.Delete().Where(productunit.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ProductUnitDeleteOne{builder}
+}
+
+// Query returns a query builder for ProductUnit.
+func (c *ProductUnitClient) Query() *ProductUnitQuery {
+	return &ProductUnitQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeProductUnit},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ProductUnit entity by its id.
+func (c *ProductUnitClient) Get(ctx context.Context, id int) (*ProductUnit, error) {
+	return c.Query().Where(productunit.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ProductUnitClient) GetX(ctx context.Context, id int) *ProductUnit {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ProductUnitClient) Hooks() []Hook {
+	return c.hooks.ProductUnit
+}
+
+// Interceptors returns the client interceptors.
+func (c *ProductUnitClient) Interceptors() []Interceptor {
+	return c.inters.ProductUnit
+}
+
+func (c *ProductUnitClient) mutate(ctx context.Context, m *ProductUnitMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ProductUnitCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ProductUnitUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ProductUnitUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ProductUnitDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ProductUnit mutation op: %q", m.Op())
 	}
 }
 
@@ -2432,12 +2857,14 @@ func (c *WarehouseClient) mutate(ctx context.Context, m *WarehouseMutation) (Val
 type (
 	hooks struct {
 		AuditLog, Company, Customer, CustomerAddress, CustomerContact, CustomerCounter,
-		Department, Metadict, ProcessingSpec, ProductCategory, Role, RolePermission,
-		Route, User, Warehouse []ent.Hook
+		Department, Metadict, ProcessingSpec, Product, ProductCategory,
+		ProductProcessingSpec, ProductUnit, Role, RolePermission, Route, User,
+		Warehouse []ent.Hook
 	}
 	inters struct {
 		AuditLog, Company, Customer, CustomerAddress, CustomerContact, CustomerCounter,
-		Department, Metadict, ProcessingSpec, ProductCategory, Role, RolePermission,
-		Route, User, Warehouse []ent.Interceptor
+		Department, Metadict, ProcessingSpec, Product, ProductCategory,
+		ProductProcessingSpec, ProductUnit, Role, RolePermission, Route, User,
+		Warehouse []ent.Interceptor
 	}
 )

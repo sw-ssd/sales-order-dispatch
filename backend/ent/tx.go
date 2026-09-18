@@ -30,8 +30,14 @@ type Tx struct {
 	Metadict *MetadictClient
 	// ProcessingSpec is the client for interacting with the ProcessingSpec builders.
 	ProcessingSpec *ProcessingSpecClient
+	// Product is the client for interacting with the Product builders.
+	Product *ProductClient
 	// ProductCategory is the client for interacting with the ProductCategory builders.
 	ProductCategory *ProductCategoryClient
+	// ProductProcessingSpec is the client for interacting with the ProductProcessingSpec builders.
+	ProductProcessingSpec *ProductProcessingSpecClient
+	// ProductUnit is the client for interacting with the ProductUnit builders.
+	ProductUnit *ProductUnitClient
 	// Role is the client for interacting with the Role builders.
 	Role *RoleClient
 	// RolePermission is the client for interacting with the RolePermission builders.
@@ -182,7 +188,10 @@ func (tx *Tx) init() {
 	tx.Department = NewDepartmentClient(tx.config)
 	tx.Metadict = NewMetadictClient(tx.config)
 	tx.ProcessingSpec = NewProcessingSpecClient(tx.config)
+	tx.Product = NewProductClient(tx.config)
 	tx.ProductCategory = NewProductCategoryClient(tx.config)
+	tx.ProductProcessingSpec = NewProductProcessingSpecClient(tx.config)
+	tx.ProductUnit = NewProductUnitClient(tx.config)
 	tx.Role = NewRoleClient(tx.config)
 	tx.RolePermission = NewRolePermissionClient(tx.config)
 	tx.Route = NewRouteClient(tx.config)

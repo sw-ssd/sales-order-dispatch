@@ -21,7 +21,10 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/processingspec"
+	"github.com/salesorder/sales-order-1.0/backend/ent/product"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productcategory"
+	"github.com/salesorder/sales-order-1.0/backend/ent/productprocessingspec"
+	"github.com/salesorder/sales-order-1.0/backend/ent/productunit"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/ent/rolepermission"
 	"github.com/salesorder/sales-order-1.0/backend/ent/route"
@@ -87,21 +90,24 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			auditlog.Table:        auditlog.ValidColumn,
-			company.Table:         company.ValidColumn,
-			customer.Table:        customer.ValidColumn,
-			customeraddress.Table: customeraddress.ValidColumn,
-			customercontact.Table: customercontact.ValidColumn,
-			customercounter.Table: customercounter.ValidColumn,
-			department.Table:      department.ValidColumn,
-			metadict.Table:        metadict.ValidColumn,
-			processingspec.Table:  processingspec.ValidColumn,
-			productcategory.Table: productcategory.ValidColumn,
-			role.Table:            role.ValidColumn,
-			rolepermission.Table:  rolepermission.ValidColumn,
-			route.Table:           route.ValidColumn,
-			user.Table:            user.ValidColumn,
-			warehouse.Table:       warehouse.ValidColumn,
+			auditlog.Table:              auditlog.ValidColumn,
+			company.Table:               company.ValidColumn,
+			customer.Table:              customer.ValidColumn,
+			customeraddress.Table:       customeraddress.ValidColumn,
+			customercontact.Table:       customercontact.ValidColumn,
+			customercounter.Table:       customercounter.ValidColumn,
+			department.Table:            department.ValidColumn,
+			metadict.Table:              metadict.ValidColumn,
+			processingspec.Table:        processingspec.ValidColumn,
+			product.Table:               product.ValidColumn,
+			productcategory.Table:       productcategory.ValidColumn,
+			productprocessingspec.Table: productprocessingspec.ValidColumn,
+			productunit.Table:           productunit.ValidColumn,
+			role.Table:                  role.ValidColumn,
+			rolepermission.Table:        rolepermission.ValidColumn,
+			route.Table:                 route.ValidColumn,
+			user.Table:                  user.ValidColumn,
+			warehouse.Table:             warehouse.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

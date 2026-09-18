@@ -250,6 +250,37 @@ var (
 			},
 		},
 	}
+	// ProductsColumns holds the columns for the "products" table.
+	ProductsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "company_id", Type: field.TypeInt},
+		{Name: "department_id", Type: field.TypeInt, Nullable: true},
+		{Name: "code", Type: field.TypeString},
+		{Name: "name", Type: field.TypeString},
+		{Name: "category_id", Type: field.TypeInt, Nullable: true},
+		{Name: "inventory_warehouse_id", Type: field.TypeInt, Nullable: true},
+		{Name: "picking_warehouse_id", Type: field.TypeInt, Nullable: true},
+		{Name: "description", Type: field.TypeString, Nullable: true},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "created_by", Type: field.TypeInt, Nullable: true},
+		{Name: "updated_by", Type: field.TypeInt, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+	}
+	// ProductsTable holds the schema information for the "products" table.
+	ProductsTable = &schema.Table{
+		Name:       "products",
+		Columns:    ProductsColumns,
+		PrimaryKey: []*schema.Column{ProductsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "product_department_id_code",
+				Unique:  false,
+				Columns: []*schema.Column{ProductsColumns[2], ProductsColumns[3]},
+			},
+		},
+	}
 	// ProductCategoriesColumns holds the columns for the "product_categories" table.
 	ProductCategoriesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -275,6 +306,53 @@ var (
 				Name:    "productcategory_department_id_code",
 				Unique:  false,
 				Columns: []*schema.Column{ProductCategoriesColumns[2], ProductCategoriesColumns[3]},
+			},
+		},
+	}
+	// ProductProcessingSpecsColumns holds the columns for the "product_processing_specs" table.
+	ProductProcessingSpecsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "product_id", Type: field.TypeInt},
+		{Name: "processing_spec_id", Type: field.TypeInt},
+		{Name: "attributes", Type: field.TypeJSON, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// ProductProcessingSpecsTable holds the schema information for the "product_processing_specs" table.
+	ProductProcessingSpecsTable = &schema.Table{
+		Name:       "product_processing_specs",
+		Columns:    ProductProcessingSpecsColumns,
+		PrimaryKey: []*schema.Column{ProductProcessingSpecsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "productprocessingspec_product_id_processing_spec_id",
+				Unique:  true,
+				Columns: []*schema.Column{ProductProcessingSpecsColumns[1], ProductProcessingSpecsColumns[2]},
+			},
+		},
+	}
+	// ProductUnitsColumns holds the columns for the "product_units" table.
+	ProductUnitsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "product_id", Type: field.TypeInt},
+		{Name: "unit_code", Type: field.TypeString},
+		{Name: "conversion_rate", Type: field.TypeString},
+		{Name: "is_base", Type: field.TypeBool, Default: false},
+		{Name: "sort_order", Type: field.TypeInt, Default: 0},
+		{Name: "size_desc", Type: field.TypeString, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// ProductUnitsTable holds the schema information for the "product_units" table.
+	ProductUnitsTable = &schema.Table{
+		Name:       "product_units",
+		Columns:    ProductUnitsColumns,
+		PrimaryKey: []*schema.Column{ProductUnitsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "productunit_product_id_unit_code",
+				Unique:  true,
+				Columns: []*schema.Column{ProductUnitsColumns[1], ProductUnitsColumns[2]},
 			},
 		},
 	}
@@ -434,7 +512,10 @@ var (
 		DepartmentsTable,
 		MetadictsTable,
 		ProcessingSpecsTable,
+		ProductsTable,
 		ProductCategoriesTable,
+		ProductProcessingSpecsTable,
+		ProductUnitsTable,
 		RolesTable,
 		RolePermissionsTable,
 		RoutesTable,

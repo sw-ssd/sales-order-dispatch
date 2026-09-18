@@ -182,6 +182,8 @@
 
 ## 3. Task 3.3:商品主檔 API
 
+> **實作註記(2026-09-19)**:① 開工時依 D33 於 `backend/internal/services/shared_service.go` 抽出服務層 `validateDeptMasterRef`(deptRefProbe interface + Count 存在性檢查),供分類/倉別/處理規格跨主檔參照驗證(不涉 OpenFGA 閘門)。② `conversion_rate` 採 **十進位文字(text)欄位**儲存(ent schema + migration 00017 皆 text),以 `math/big.Rat` 解析計算,滿足 3.3.3「禁二進位浮點」與 sqlite(enttest)測試相容;production 亦以 text 保存正規化小數字串。③ unit_code 對應 metadicts `type=unit` 之 Code(系統 + 所在部門擴充聯集)。④ 換算邏輯實作於 `backend/internal/domain/products/conversion.go`(3.3.3,消費端見 05)。
+
 ### 子功能 3.3.1: products schema(單位換算、倉別、處理規格關聯)
 
 - **目標**: 定義 `products`、`product_units`、`product_processing_specs` 三實體,承載商品主檔、多組單位換算率與處理規格關聯。
@@ -199,8 +201,8 @@
   6. **單位與換算約定(2026-09-19 定稿)**:單位一律走 `product_units`(`conversion_rate` 到基本單位 + `size_desc`)。當「基本單位是重量(如斤)、報價/訂單單位是盒(如 1 盒=3kg=5 斤)」:盒為商品的一種單位,`conversion_rate = 盒對基本單位之比率`(例 1 盒=5 斤),訂單 `base_qty = qty × rate`;盒的規格描述記於該單位列 `size_desc`。處理規格(3.4.3)**不自行換算**,其內部數量/輸出單位僅存於 `attributes`(顯示用,不參與 base 換算,因切/包有損耗且輸出單位與原料基本單位不成固定比率)。
 - **錯誤處理**: schema 定義,無執行期錯誤。
 - **驗收**:
-  - [ ] 三表建立,索引如上;同部門同 `code` 未刪除商品不可並存,軟刪除後可重建同碼。
-  - [ ] 一商品無法寫入第二個 `is_base = true` 的單位(索引擋下)。
+  - [x] 三表建立,索引如上;同部門同 `code` 未刪除商品不可並存,軟刪除後可重建同碼(migration 00017 部分唯一索引)。
+  - [x] 一商品無法寫入第二個 `is_base = true` 的單位(部分唯一索引 + 3.3.2 服務層驗證雙重保證)。
 
 ### 子功能 3.3.2: 商品 CRUD + 軟刪除 + 分類關聯
 
@@ -221,9 +223,9 @@
   - 倉別 / 分類 / 處理規格跨部門或已刪除:`invalid_argument`。
   - 單位組非法(無基本單位、多個基本單位、換算率非正數、單位字典不存在):`invalid_argument`。
 - **驗收**:
-  - [ ] 商品可設定多組單位換算率並隨 GetProduct 讀回。
-  - [ ] 商品可指定產品分庫與揀貨倉別,且只能選本部門倉別。
-  - [ ] 軟刪除後同部門可以同 `code` 重建;軟刪除商品不出現於新單據選品,歷史單據仍顯示。
+  - [x] 商品可設定多組單位換算率並隨 GetProduct 讀回。
+  - [x] 商品可指定產品分庫與揀貨倉別,且只能選本部門倉別(跨部門引用 `invalid_argument`)。
+  - [x] 軟刪除後同部門可以同 `code` 重建;軟刪除商品不出現於新單據選品,歷史單據仍顯示(測試 TestProductCrossDeptRef / TestProductCreateGetUpdateDeleteRestore)。
 
 ### 子功能 3.3.3: 單位換算計算邏輯
 
@@ -242,9 +244,9 @@
   - 單位未設定於該商品、數量為負:`invalid_argument`。
   - 商品單位組異常(基本單位個數不為 1):`failed_precondition`。
 - **驗收**:
-  - [ ] 基本單位 `kg` + 換算單位「條」(0.6)的商品,輸入 2 條得 1.2 kg;反向 1.2 kg 得 2 條。
-  - [ ] 換算率設為 0 或負數於 3.3.2 寫入時即被拒。
-  - [ ] 十進位精度:0.1 kg 級連續換算不產生浮點誤差。
+  - [x] 基本單位 `kg` + 換算單位「條」(0.6)的商品,輸入 2 條得 1.2 kg;反向 1.2 kg 得 2 條(conversion_test.go TestConversion)。
+  - [x] 換算率設為 0 或負數於 3.3.2 寫入時即被拒(3.3.1 約定 + TestProductUnitValidation「換算率非正」)。
+  - [x] 十進位精度:0.1 kg 級連續換算不產生浮點誤差(big.Rat 有理數算術,TestConversionDecimalExact)。
 
 ---
 
@@ -496,7 +498,7 @@
 2. **一主多子建檔原子性(3.1.4)**:注入帳號建立失敗,驗證客戶主檔、計數器、兩帳號、稽核全部回滾;成功路徑驗證恰一個 `is_primary`、兩組臨時密碼不同且 24h 效期。
 3. **軟刪除部分唯一索引**:客戶 `customer_code`、商品 `code`、customer_products `(customer_id, product_id)` 三組,各自驗證「未刪除重複被拒 → 軟刪除 → 同鍵重建成功」。
 4. **預設唯一性(3.2.1 / 3.2.2)**:併發設定同客戶同類型兩筆地址為預設,最終恰一筆 `is_default = true`。
-5. **單位換算(3.3.3)**:多組單位換算與 `base_qty` 快照語意;換算率修改後歷史明細不變。
+5. **單位換算(3.3.3)**:已以 `conversion_test.go`(十進位精確/進位/0/負)覆蓋換算核心;`base_qty` 快照語意與「換算率修改後歷史明細不變」屬下單端(05),待 05 開工時以訂單明細測試確認。
 6. **RLS / 跨部門隔離(3.1–3.5)**:以乙部門身分對甲部門資源逐一嘗試讀寫(客戶、商品、倉別、車次、分切規格、分類、專屬清單),全部 `permission_denied` / `not_found`。
 7. **檔案上傳三重檢查與隔離(3.6)**:偽裝檔、超限檔、跨公司下載、軟刪除後下載各案例;儲存失敗 / DB 失敗的孤兒清理。
 8. **QR token(3.8)**:簽章竄改、過期、一次性(含併發雙兌換)、跨公司同 `customer_code` 定位、rate limit 觸發、清單排除主帳號與業務子帳號。
@@ -504,4 +506,4 @@
 
 ---
 
-*最後更新:2026-08-17*
+*最後更新:2026-09-19*(3.3 商品主檔完成,3.5/3.6/3.8 待續)

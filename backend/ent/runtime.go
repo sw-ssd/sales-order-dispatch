@@ -14,7 +14,10 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/processingspec"
+	"github.com/salesorder/sales-order-1.0/backend/ent/product"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productcategory"
+	"github.com/salesorder/sales-order-1.0/backend/ent/productprocessingspec"
+	"github.com/salesorder/sales-order-1.0/backend/ent/productunit"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/ent/rolepermission"
 	"github.com/salesorder/sales-order-1.0/backend/ent/route"
@@ -209,6 +212,30 @@ func init() {
 	processingspec.DefaultUpdatedAt = processingspecDescUpdatedAt.Default.(func() time.Time)
 	// processingspec.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	processingspec.UpdateDefaultUpdatedAt = processingspecDescUpdatedAt.UpdateDefault.(func() time.Time)
+	productFields := schema.Product{}.Fields()
+	_ = productFields
+	// productDescCode is the schema descriptor for code field.
+	productDescCode := productFields[2].Descriptor()
+	// product.CodeValidator is a validator for the "code" field. It is called by the builders before save.
+	product.CodeValidator = productDescCode.Validators[0].(func(string) error)
+	// productDescName is the schema descriptor for name field.
+	productDescName := productFields[3].Descriptor()
+	// product.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	product.NameValidator = productDescName.Validators[0].(func(string) error)
+	// productDescIsActive is the schema descriptor for is_active field.
+	productDescIsActive := productFields[8].Descriptor()
+	// product.DefaultIsActive holds the default value on creation for the is_active field.
+	product.DefaultIsActive = productDescIsActive.Default.(bool)
+	// productDescCreatedAt is the schema descriptor for created_at field.
+	productDescCreatedAt := productFields[11].Descriptor()
+	// product.DefaultCreatedAt holds the default value on creation for the created_at field.
+	product.DefaultCreatedAt = productDescCreatedAt.Default.(func() time.Time)
+	// productDescUpdatedAt is the schema descriptor for updated_at field.
+	productDescUpdatedAt := productFields[12].Descriptor()
+	// product.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	product.DefaultUpdatedAt = productDescUpdatedAt.Default.(func() time.Time)
+	// product.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	product.UpdateDefaultUpdatedAt = productDescUpdatedAt.UpdateDefault.(func() time.Time)
 	productcategoryFields := schema.ProductCategory{}.Fields()
 	_ = productcategoryFields
 	// productcategoryDescCode is the schema descriptor for code field.
@@ -237,6 +264,46 @@ func init() {
 	productcategory.DefaultUpdatedAt = productcategoryDescUpdatedAt.Default.(func() time.Time)
 	// productcategory.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	productcategory.UpdateDefaultUpdatedAt = productcategoryDescUpdatedAt.UpdateDefault.(func() time.Time)
+	productprocessingspecFields := schema.ProductProcessingSpec{}.Fields()
+	_ = productprocessingspecFields
+	// productprocessingspecDescCreatedAt is the schema descriptor for created_at field.
+	productprocessingspecDescCreatedAt := productprocessingspecFields[3].Descriptor()
+	// productprocessingspec.DefaultCreatedAt holds the default value on creation for the created_at field.
+	productprocessingspec.DefaultCreatedAt = productprocessingspecDescCreatedAt.Default.(func() time.Time)
+	// productprocessingspecDescUpdatedAt is the schema descriptor for updated_at field.
+	productprocessingspecDescUpdatedAt := productprocessingspecFields[4].Descriptor()
+	// productprocessingspec.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	productprocessingspec.DefaultUpdatedAt = productprocessingspecDescUpdatedAt.Default.(func() time.Time)
+	// productprocessingspec.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	productprocessingspec.UpdateDefaultUpdatedAt = productprocessingspecDescUpdatedAt.UpdateDefault.(func() time.Time)
+	productunitFields := schema.ProductUnit{}.Fields()
+	_ = productunitFields
+	// productunitDescUnitCode is the schema descriptor for unit_code field.
+	productunitDescUnitCode := productunitFields[1].Descriptor()
+	// productunit.UnitCodeValidator is a validator for the "unit_code" field. It is called by the builders before save.
+	productunit.UnitCodeValidator = productunitDescUnitCode.Validators[0].(func(string) error)
+	// productunitDescConversionRate is the schema descriptor for conversion_rate field.
+	productunitDescConversionRate := productunitFields[2].Descriptor()
+	// productunit.ConversionRateValidator is a validator for the "conversion_rate" field. It is called by the builders before save.
+	productunit.ConversionRateValidator = productunitDescConversionRate.Validators[0].(func(string) error)
+	// productunitDescIsBase is the schema descriptor for is_base field.
+	productunitDescIsBase := productunitFields[3].Descriptor()
+	// productunit.DefaultIsBase holds the default value on creation for the is_base field.
+	productunit.DefaultIsBase = productunitDescIsBase.Default.(bool)
+	// productunitDescSortOrder is the schema descriptor for sort_order field.
+	productunitDescSortOrder := productunitFields[4].Descriptor()
+	// productunit.DefaultSortOrder holds the default value on creation for the sort_order field.
+	productunit.DefaultSortOrder = productunitDescSortOrder.Default.(int)
+	// productunitDescCreatedAt is the schema descriptor for created_at field.
+	productunitDescCreatedAt := productunitFields[6].Descriptor()
+	// productunit.DefaultCreatedAt holds the default value on creation for the created_at field.
+	productunit.DefaultCreatedAt = productunitDescCreatedAt.Default.(func() time.Time)
+	// productunitDescUpdatedAt is the schema descriptor for updated_at field.
+	productunitDescUpdatedAt := productunitFields[7].Descriptor()
+	// productunit.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	productunit.DefaultUpdatedAt = productunitDescUpdatedAt.Default.(func() time.Time)
+	// productunit.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	productunit.UpdateDefaultUpdatedAt = productunitDescUpdatedAt.UpdateDefault.(func() time.Time)
 	roleFields := schema.Role{}.Fields()
 	_ = roleFields
 	// roleDescCode is the schema descriptor for code field.

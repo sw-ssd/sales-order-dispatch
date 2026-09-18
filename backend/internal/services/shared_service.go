@@ -98,6 +98,26 @@ func pageListE[M any, P any](ctx context.Context, page, pageSize int32, src list
 	return out, &v1.Pagination{Page: int32(p), PageSize: int32(ps), Total: int64(total)}, nil
 }
 
+// deptRefProbe 供 validateDeptMasterRef 檢查部門級主檔參照是否存在(已套租戶範圍 + 未刪除過濾由呼叫端套用)。
+// ent 對各實體生成具體查詢型別,故以最小 interface 收斂(與 listSource 同思路)。
+type deptRefProbe interface {
+	Count(ctx context.Context) (int, error)
+}
+
+// validateDeptMasterRef 驗證部門級主檔參照:恰一列存在(範圍內且未軟刪除)。
+// 供商品主檔(04 計畫 3.3)等跨主檔參照驗證;不存在/範圍外/已刪除 → invalid_argument(引用非法,
+// 非權限錯誤)。呼叫端以帶 id + company/department 範圍 + DeletedAtIsNil 的查詢作為 probe。
+func validateDeptMasterRef(ctx context.Context, ref string, probe deptRefProbe) error {
+	n, err := probe.Count(ctx)
+	if err != nil {
+		return toConnectError(err)
+	}
+	if n == 0 {
+		return connect.NewError(connect.CodeInvalidArgument, errors.New("參照主檔不存在或已刪除: "+ref))
+	}
+	return nil
+}
+
 // recordAudit 寫一筆稽核(共用;D18 同事務)。
 // action 為 create/update/delete;payload 依 action 語意放 after 或 before 內容。
 func recordAudit(ctx context.Context, tx *ent.Tx, resource, action string, id, cid int, did *int, actor int, payload map[string]any) error {

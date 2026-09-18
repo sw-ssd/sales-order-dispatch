@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+package products.v1;
+option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/proto/products/v1;productsv1";
+
+import "google/protobuf/struct.proto";
+import "salesorder/v1/common.proto";
+
+// 商品主檔(04 計畫 3.3, D10/D18)。一商品含多組單位換算(product_units)與處理規格關聯
+// (product_processing_specs);units / processing_specs 採整組替換語意(3.3.2)。
+// 權限 dept_admin/staff 限本部門;code 部門內部分唯一,軟刪除後可重建。
+
+// ---- 子訊息 ----
+message ProductUnit {
+  string unit_code = 1;        // 對應 metadicts unit 字典字值
+  string conversion_rate = 2;  // 十進位文字,換算為基本單位之比率(如 1 盒=5 斤 → "5")
+  bool is_base = 3;
+  int32 sort_order = 4;
+  string size_desc = 5;        // 單位規格描述,如「1盒=3kg」
+}
+
+message ProductProcessingSpec {
+  string processing_spec_id = 1;
+  google.protobuf.Struct attributes = 2; // 配對層覆寫指令(後端不解析)
+}
+
+// ---- Product ----
+message Product {
+  string id = 1;
+  string company_id = 2;
+  string department_id = 3;
+  string code = 4;
+  string name = 5;
+  string category_id = 6;
+  string inventory_warehouse_id = 7;
+  string picking_warehouse_id = 8;
+  string description = 9;
+  bool is_active = 10;
+  repeated ProductUnit units = 11;
+  repeated ProductProcessingSpec processing_specs = 12;
+  string created_at = 13;
+  string updated_at = 14;
+  string deleted_at = 15;
+}
+
+service ProductService {
+  rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse);
+  rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
+  rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse);
+  rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse);
+  rpc RestoreProduct(RestoreProductRequest) returns (RestoreProductResponse);
+}
+
+message ListProductsRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  string keyword = 3;
+  string category_id = 4; // 精確篩選分類
+  bool include_deleted = 5;
+}
+message ListProductsResponse { repeated Product products = 1; salesorder.v1.Pagination pagination = 2; }
+
+message GetProductRequest { string id = 1; }
+message GetProductResponse { Product product = 1; }
+
+message CreateProductRequest {
+  string code = 1;
+  string name = 2;
+  string category_id = 3;
+  string inventory_warehouse_id = 4;
+  string picking_warehouse_id = 5;
+  string description = 6;
+  bool is_active = 7;
+  repeated ProductUnit units = 8;
+  repeated ProductProcessingSpec processing_specs = 9;
+}
+message CreateProductResponse { Product product = 1; }
+
+message UpdateProductRequest {
+  string id = 1;
+  optional string code = 2;
+  optional string name = 3;
+  optional string category_id = 4;
+  optional string inventory_warehouse_id = 5;
+  optional string picking_warehouse_id = 6;
+  optional string description = 7;
+  optional bool is_active = 8;
+  repeated ProductUnit units = 9;          // 提供即整組替換(空陣列 = 清空)
+  repeated ProductProcessingSpec processing_specs = 10;
+}
+message UpdateProductResponse { Product product = 1; }
+
+message DeleteProductRequest { string id = 1; }
+message DeleteProductResponse {}
+
+message RestoreProductRequest { string id = 1; }
+message RestoreProductResponse { Product product = 1; }

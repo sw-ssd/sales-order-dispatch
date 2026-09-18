@@ -82,6 +82,7 @@ func (s *Server) mountAuth() {
 	services.RegisterRouteService(apiMux, entClient)
 	services.RegisterProcessingSpecService(apiMux, entClient)
 	services.RegisterProductCategoryService(apiMux, entClient)
+	services.RegisterProductService(apiMux, entClient) // 04 Task 3.3 商品主檔
 	s.router.Mount("/api/v1", http.StripPrefix("/api/v1", sessions.LoadAndSave(s.authzMiddleware(entClient, sessions, apiMux))))
 
 	// OIDC 公開端點：需 Google client id 與 discovery 可用

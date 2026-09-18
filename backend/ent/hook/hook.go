@@ -117,6 +117,18 @@ func (f ProcessingSpecFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Val
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProcessingSpecMutation", m)
 }
 
+// The ProductFunc type is an adapter to allow the use of ordinary
+// function as Product mutator.
+type ProductFunc func(context.Context, *ent.ProductMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ProductFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ProductMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProductMutation", m)
+}
+
 // The ProductCategoryFunc type is an adapter to allow the use of ordinary
 // function as ProductCategory mutator.
 type ProductCategoryFunc func(context.Context, *ent.ProductCategoryMutation) (ent.Value, error)
@@ -127,6 +139,30 @@ func (f ProductCategoryFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Va
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProductCategoryMutation", m)
+}
+
+// The ProductProcessingSpecFunc type is an adapter to allow the use of ordinary
+// function as ProductProcessingSpec mutator.
+type ProductProcessingSpecFunc func(context.Context, *ent.ProductProcessingSpecMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ProductProcessingSpecFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ProductProcessingSpecMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProductProcessingSpecMutation", m)
+}
+
+// The ProductUnitFunc type is an adapter to allow the use of ordinary
+// function as ProductUnit mutator.
+type ProductUnitFunc func(context.Context, *ent.ProductUnitMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ProductUnitFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ProductUnitMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProductUnitMutation", m)
 }
 
 // The RoleFunc type is an adapter to allow the use of ordinary

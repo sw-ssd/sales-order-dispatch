@@ -33,8 +33,17 @@ type Metadict func(*sql.Selector)
 // ProcessingSpec is the predicate function for processingspec builders.
 type ProcessingSpec func(*sql.Selector)
 
+// Product is the predicate function for product builders.
+type Product func(*sql.Selector)
+
 // ProductCategory is the predicate function for productcategory builders.
 type ProductCategory func(*sql.Selector)
+
+// ProductProcessingSpec is the predicate function for productprocessingspec builders.
+type ProductProcessingSpec func(*sql.Selector)
+
+// ProductUnit is the predicate function for productunit builders.
+type ProductUnit func(*sql.Selector)
 
 // Role is the predicate function for role builders.
 type Role func(*sql.Selector)
