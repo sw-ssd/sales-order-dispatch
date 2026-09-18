@@ -40,8 +40,9 @@
 | `ring-secondary-200/50`、`ring-offset-secondary-900` | `ring-border`、`ring-offset-background` |
 | `shadow-secondary-300/25` | `shadow-border/25`（無對應者直接刪 shadow 色） |
 | `orange-*`（品牌色：`bg-orange-700`、`text-orange-500/600`、`border-orange-*`） | `bg-primary` / `text-primary` / `border-primary`；淺底用 `bg-primary/10` |
-| `emerald-*`（成功狀態） | `bg-success/15`、`text-success`（新 token，T1 建立） |
-| `orange-100/900`（表格警告狀態） | `bg-warning/15`、`text-warning`（新 token，T1 建立） |
+| `emerald-*`（成功狀態） | `bg-success/15`、`text-success`（token 於 T1 建立，值於 T4 校正） |
+| `orange-100/900`（表格警告狀態） | `bg-warning/15`、`text-warning`（token 於 T1 建立，值於 T4 校正） |
+| 資訊狀態（Tailkit 無對應色） | `bg-info/15`、`text-info`（token 於 T4 建立） |
 | 第三方品牌色（`text-[#1877f2]` 等） | **保留字面值**（唯一例外） |
 
 ---
@@ -227,10 +228,29 @@ git commit -m "refactor(frontend): input/label/field 改用 Tailkit 結構與語
 ### Task 4: 靜態元件 C — table / pagination / spinner
 
 **Files:**
-- Modify: `frontend/src/components/ui/table.tsx`、`pagination.tsx`、`spinner.tsx`
+- Modify: `frontend/src/components/ui/table.tsx`、`pagination.tsx`、`spinner.tsx`、`frontend/src/index.css`（狀態色 token）
 
 **Interfaces:**
-- Produces: 對外 props 不變。
+- Produces: 對外 props 不變；`--success`/`--warning`/`--info` 在淺色與深色模式下都能當**文字色**使用（T2 實測淺色 `bg-warning/15 + text-warning` 對比僅約 1.8:1）
+
+- [ ] **Step 0: 修狀態色 token（`index.css`）**
+
+T2 的回報指出：`--warning: oklch(0.75 0.15 95)` 當文字用對比不足，且 `info` 無 token（T2 暫借 primary）。作法是讓 status token 在淺色模式偏深、深色模式偏亮，並在 `.dark` 區塊覆寫：
+
+```css
+:root {
+  --success: oklch(0.55 0.13 155);
+  --warning: oklch(0.55 0.13 85);
+  --info: oklch(0.55 0.13 250);
+}
+.dark {
+  --success: oklch(0.80 0.13 155);
+  --warning: oklch(0.82 0.13 85);
+  --info: oklch(0.80 0.13 250);
+}
+```
+
+`@theme inline` 需補 `--color-info: var(--info);`（`--color-success`/`--color-warning` 已存在）。驗收：`bg-warning/15 text-warning` 在淺色的對比 ≥ 4.5:1（用 chrome-headless-shell 量 computed 值或以 WCAG 公式核算，把數字寫進報告）。
 
 - [ ] **Step 1: 取 Tailkit 結構**
 
