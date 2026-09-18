@@ -39,10 +39,10 @@ service MetadictService {
 }
 
 message ListMetadictsRequest {
+  reserved 4;                 // 原 include_inactive(死欄位,複審 #4 移除);List 為管理視角,恆含停用
   int32 page = 1;             // 1-based 頁碼
   int32 page_size = 2;        // 每頁筆數
   string type = 3;            // 篩選:字典類型
-  bool include_inactive = 4;  // 是否含停用值(管理視角)
   bool include_deleted = 5;   // 是否含已刪除(僅 super 管理介面)
   string department_id = 6;   // super 管理用途:指定部門檢視其擴充;空 = 系統預設
 }

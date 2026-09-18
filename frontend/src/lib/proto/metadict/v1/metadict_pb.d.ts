@@ -113,13 +113,6 @@ export declare type ListMetadictsRequest = Message<"metadict.v1.ListMetadictsReq
   type: string;
 
   /**
-   * 是否含停用值(管理視角)
-   *
-   * @generated from field: bool include_inactive = 4;
-   */
-  includeInactive: boolean;
-
-  /**
    * 是否含已刪除(僅 super 管理介面)
    *
    * @generated from field: bool include_deleted = 5;

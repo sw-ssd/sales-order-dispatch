@@ -240,7 +240,7 @@
 - ⬜ **#2 待辦**：D18「稽核寫入失敗 → 業務回滾」尚未有測試（sqlite 強制稽核失敗注入較難）；建議以 ent hook 或後續整合測試（Postgres）補。
 - ✅ **已修 #5**：`GetMetadict` 合併為單次查詢（scope 條件併入首查，範圍外一律 `not_found`）。
 - **#6 註記（非缺陷）**：系統級字典被軟刪後**同一支 migration 再執行**會 re-seed（goose 版本化正常不會重跑;down/up 或全新 DB 才觸發;部分唯一索引允許已刪+現行共存）。無需動作。
-- ⬜ **#4 待決**：`include_inactive` 為死欄位;根因是「欄位註解 vs §2.5.3 驗收」矛盾。待決：移除欄位 / 改為具語意 / 保留並標註。
+- ✅ **已修 #4（選 A）**：移除 `ListMetadictsRequest.include_inactive`（proto 加 `reserved 4` 防重用;重產 Go + 前端 TS）。List 維持「管理視角·恆含停用」;ListOptions 提供「僅啟用」選項,分工清楚。
 
 ---
 

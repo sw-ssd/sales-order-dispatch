@@ -132,15 +132,14 @@ func (x *Metadict) GetUpdatedAt() string {
 }
 
 type ListMetadictsRequest struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Page            int32                  `protobuf:"varint,1,opt,name=page,proto3" json:"page,omitempty"`                                              // 1-based 頁碼
-	PageSize        int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`                      // 每頁筆數
-	Type            string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`                                               // 篩選:字典類型
-	IncludeInactive bool                   `protobuf:"varint,4,opt,name=include_inactive,json=includeInactive,proto3" json:"include_inactive,omitempty"` // 是否含停用值(管理視角)
-	IncludeDeleted  bool                   `protobuf:"varint,5,opt,name=include_deleted,json=includeDeleted,proto3" json:"include_deleted,omitempty"`    // 是否含已刪除(僅 super 管理介面)
-	DepartmentId    string                 `protobuf:"bytes,6,opt,name=department_id,json=departmentId,proto3" json:"department_id,omitempty"`           // super 管理用途:指定部門檢視其擴充;空 = 系統預設
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Page           int32                  `protobuf:"varint,1,opt,name=page,proto3" json:"page,omitempty"`                                           // 1-based 頁碼
+	PageSize       int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`                   // 每頁筆數
+	Type           string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`                                            // 篩選:字典類型
+	IncludeDeleted bool                   `protobuf:"varint,5,opt,name=include_deleted,json=includeDeleted,proto3" json:"include_deleted,omitempty"` // 是否含已刪除(僅 super 管理介面)
+	DepartmentId   string                 `protobuf:"bytes,6,opt,name=department_id,json=departmentId,proto3" json:"department_id,omitempty"`        // super 管理用途:指定部門檢視其擴充;空 = 系統預設
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ListMetadictsRequest) Reset() {
@@ -192,13 +191,6 @@ func (x *ListMetadictsRequest) GetType() string {
 		return x.Type
 	}
 	return ""
-}
-
-func (x *ListMetadictsRequest) GetIncludeInactive() bool {
-	if x != nil {
-		return x.IncludeInactive
-	}
-	return false
 }
 
 func (x *ListMetadictsRequest) GetIncludeDeleted() bool {
@@ -833,14 +825,13 @@ const file_metadict_v1_metadict_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\b \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\t \x01(\tR\tupdatedAt\"\xd4\x01\n" +
+	"updated_at\x18\t \x01(\tR\tupdatedAt\"\xaf\x01\n" +
 	"\x14ListMetadictsRequest\x12\x12\n" +
 	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x12\n" +
-	"\x04type\x18\x03 \x01(\tR\x04type\x12)\n" +
-	"\x10include_inactive\x18\x04 \x01(\bR\x0fincludeInactive\x12'\n" +
+	"\x04type\x18\x03 \x01(\tR\x04type\x12'\n" +
 	"\x0finclude_deleted\x18\x05 \x01(\bR\x0eincludeDeleted\x12#\n" +
-	"\rdepartment_id\x18\x06 \x01(\tR\fdepartmentId\"\x7f\n" +
+	"\rdepartment_id\x18\x06 \x01(\tR\fdepartmentIdJ\x04\b\x04\x10\x05\"\x7f\n" +
 	"\x15ListMetadictsResponse\x12+\n" +
 	"\x05items\x18\x01 \x03(\v2\x15.metadict.v1.MetadictR\x05items\x129\n" +
 	"\n" +
