@@ -58,4 +58,12 @@ RLS 接線（D3 每請求交易的 `ApplyRLS` 啟用）為獨立設計任務，�
 
 ---
 
+## 已知缺口 / 後續待辦（複審登錄 2026-09-18）
+
+- **App JWT 路徑的停用阻斷未落實**：A2 阻斷在 `authzMiddleware`,僅涵蓋 session(Web) 路徑;Bearer JWT 的逐請求授權 middleware（01 Task 11 `Authenticate/X-Api-Token`）未實作,故驗收項「App JWT 請求回 unauthenticated」暫無法成立。**併入 01 Task 11**。
+- **App Dart 產碼**：本波僅同步 Go + 前端 TS（`task proto:gen` 的 Dart 目標因本機缺 `protoc-gen-dart` 未能執行）;app `lib/gen` 待有 plugin 時補跑。
+- **前端職責**：公司停用 401 後的 cookie 清除由前端執行（見 detail/02 §2.1.3 註記）。
+
+---
+
 *最後更新：2026-09-18（A2 公司停用連鎖）*

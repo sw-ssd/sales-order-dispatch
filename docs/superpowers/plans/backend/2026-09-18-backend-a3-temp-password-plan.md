@@ -74,6 +74,13 @@
 - [ ] 測試：範圍外 `permission_denied`、非客戶 `invalid_argument`、重置後舊 session 失效 + 新臨時密碼可登入且強制改
 - [ ] `task check` → commit
 
+## 已知缺口（複審登錄 2026-09-18）
+
+- **產碼同步**：`auth.proto` 變更已同步 **Go**（`internal/proto`）與**前端 TS**（`frontend/src/lib/proto`）;**App Dart**（`app/lib/gen`）待本機有 `protoc-gen-dart` 時補跑 `task proto:gen`。
+- **must_change 受限態對非 RPC 路徑亦生效**：must_change 使用者無法呼叫 `Logout`（規格「僅 ChangePassword 可用」的必然結果,UX 註記）。
+
+---
+
 ## Task 6: 複審 + 文件對齊 + 收尾
 
 - [ ] 複審（requesting-code-review 內聯）；README 01/02 反映 Task 7/8 落地；01-auth 計畫 Task 7→✅、Task 8 重置→✅

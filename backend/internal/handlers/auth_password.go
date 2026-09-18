@@ -136,7 +136,13 @@ func (h *AuthHandler) ResetCustomerPassword(ctx context.Context, req *connect.Re
 		Save(ctx); err != nil {
 		return nil, internal(err)
 	}
-	if err := auditResetPassword(ctx, tx, id, targetID); err != nil {
+	// 稽核公司歸屬取「目標」公司(非操作者公司),符稽核追溯語意(super 跨公司重置時)。
+	tgtCompanyID := 0
+	if target.Edges.Company != nil {
+		tgtCompanyID = target.Edges.Company.ID
+	}
+	_, actor := auditActor(id)
+	if err := auditResetPassword(ctx, tx, actor, tgtCompanyID, targetID); err != nil {
 		return nil, internal(err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -162,14 +168,14 @@ func auditChangePassword(ctx context.Context, tx *ent.Tx, id authz.Identity, uid
 }
 
 // auditResetPassword 於交易內寫一筆「重置密碼」稽核(操作者 + 目標,不含密碼)。
-func auditResetPassword(ctx context.Context, tx *ent.Tx, id authz.Identity, targetID int) error {
-	cid, actor := auditActor(id)
+// companyID 為「目標」所屬公司(稽核追溯對象);actor 為操作者。
+func auditResetPassword(ctx context.Context, tx *ent.Tx, actor, companyID, targetID int) error {
 	meta := audit.MetaFrom(ctx)
 	return audit.Record(ctx, tx, audit.Entry{
 		Action:       "update",
 		ResourceType: "user",
 		ResourceID:   strconv.Itoa(targetID),
-		CompanyID:    cid,
+		CompanyID:    companyID,
 		UserID:       actor,
 		After:        map[string]any{"must_change_password": true, "force_reset": true},
 		IPAddress:    meta.IP,

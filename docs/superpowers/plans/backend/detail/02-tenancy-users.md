@@ -95,7 +95,7 @@ decisions: [D3, D4, D5, D6, D7, D8, D9, D10, D17, D18, D20, D21]
 - **介面**: 無新增 RPC;影響所有需認證端點與登入端點的行為。
 - **實作邏輯**:
   1. 認證 middleware 在驗證 session(Web)或 JWT(App)通過後,取出使用者 `company_id`,查詢該公司 status;查詢與既有 `token_version` 比對同一資料庫往返內完成,不額外快取,保證停用即時生效。
-  2. 公司 status 非 active:已登入請求一律回 `unauthenticated`(Web 端同時清除 session cookie),讓前端導回登入頁;App 端 JWT 失效,需重新登入。
+  2. 公司 status 非 active:已登入請求一律回 `unauthenticated`,讓前端導回登入頁;App 端 JWT 失效,需重新登入。**責任釐清(2026-09-18)**:後端**只回 `unauthenticated` 不主動刪除 server session**(與下項 6 一致,供恢復 active 後續用);「清除 session cookie」由**前端**於收到 401 時執行。
   3. 登入端點(OAuth2 callback 建 session、客戶帳密登入、QR token 兌換)在建 session/發 token 前檢查公司 status,非 active 回 `permission_denied` 並註明公司已停用,不建立任何憑證。
   4. `developer` 帳號不受公司停用阻斷(其繞過語意見 D8,且開發者帳號歸屬公司停用不應鎖住開發工作);其餘角色無例外。
   5. 公司停用本身 = 2.1.1 的 Update status;status 變更 + `audit_logs` 同一交易(D18)。

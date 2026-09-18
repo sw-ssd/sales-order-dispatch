@@ -67,10 +67,13 @@ func (s *AuditService) ListAuditLogs(ctx context.Context, req *connect.Request[a
 	// 範圍推導:super 全域(可選 company_id);company_admin 強制自己公司;其餘角色不可查。
 	switch {
 	case isSuperIdentity(id):
-		if cid, err := parseID(req.Msg.GetCompanyId()); err == nil && req.Msg.GetCompanyId() != "" {
+		// super/developer:全域;可選 company_id 篩選(非法值 → invalid_argument)。
+		if raw := req.Msg.GetCompanyId(); raw != "" {
+			cid, err := parseID(raw)
+			if err != nil {
+				return nil, err
+			}
 			q = q.Where(auditlog.CompanyIDEQ(cid))
-		} else if req.Msg.GetCompanyId() != "" {
-			return nil, err
 		}
 	case isCompanyAdmin(id):
 		// fail-closed:缺公司脈絡 → 拒絕。
