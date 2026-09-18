@@ -26,7 +26,10 @@ func main() {
 	if err := SeedBuiltinRoles(ctx, client); err != nil {
 		log.Fatalf("seed 角色: %v", err)
 	}
-	log.Println("seed: 7 內建角色已確保（冪等）")
+	if err := SeedBuiltinRolePermissions(ctx, client); err != nil {
+		log.Fatalf("seed 角色權限: %v", err)
+	}
+	log.Println("seed: 7 內建角色與 role_permissions 已確保（冪等）")
 	// developer 帳號僅 ENV != production;需既有 dev company 錨點,無則略過提示。
 	if err := SeedDeveloper(ctx, client, cfg.API.Env, firstCompanyID(ctx, client)); err != nil {
 		log.Fatalf("seed developer: %v", err)

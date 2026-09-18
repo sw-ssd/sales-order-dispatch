@@ -5,6 +5,11 @@
 // (middleware 閘門)執行;RLS 承擔資料範圍隔離(company/department/self)。
 package auth
 
+import (
+	"cmp"
+	"slices"
+)
+
 // BuiltinRoles 內建 7 角色(設計書 §3.2 + §4.4),系統 seed 值。
 var BuiltinRoles = []string{"super", "company_admin", "dept_admin", "staff", "customer", "guest", "developer"}
 
@@ -132,4 +137,76 @@ func actionAllowed(acts []string, act string) bool {
 		}
 	}
 	return false
+}
+
+// adminResources 為「全資源」內建角色( super / developer )萬用展開的具名業務資源集合。
+// OpenFGA ability:<res> 為資料驅動、無全域萬用(見 third_party/openfga/model.go),
+// 故以固定業務資源集種出 read/write,涵蓋受保護 RPC 與服務層檢查之資源。
+var adminResources = []string{
+	"company", "department", "user", "role",
+	"sales_order", "customer", "product", "print", "dispatch", "accounting",
+}
+
+// PermissionSeed 描述單一 role_permissions 種子列( role code → resource → action )。
+// Resource/Action 直接寫入 role_permissions(resource,action)欄;Action 用 read/write 兩類
+// 覆蓋 OpenFGA 的 can_read/can_write( permissionRelation 對映),具名動作(如 update)原樣保留。
+type PermissionSeed struct {
+	Role     string
+	Resource string
+	Action   string
+}
+
+// BuiltinRolePermissions 由單一來源 rolePolicy+roleInheritance(本檔)展開 7 內建角色的
+// 「有效(繼承後)」權限種子;供 cmd/seed 冪等寫入 role_permissions,使 DB 成為唯一持久來源、
+// OpenFGA provision 得以產出 role→ability tuples( D32 修訂,消除雙來源漂移 )。
+// "*"(全資源/全動作)展開為固定業務資源 × read/write。回傳以 (role,resource,action) 排序,
+// 決定性次序( map 迭代不保證順序,測試與寫入需穩定排序)。
+func BuiltinRolePermissions() []PermissionSeed {
+	seen := map[string]bool{} // (role,resource,action) 去重
+	var seeds []PermissionSeed
+	add := func(role, res, act string) {
+		k := role + "\x00" + res + "\x00" + act
+		if !seen[k] {
+			seen[k] = true
+			seeds = append(seeds, PermissionSeed{Role: role, Resource: res, Action: act})
+		}
+	}
+	for _, role := range BuiltinRoles {
+		// 展開繼承鏈(子角色取得父角色全部權限,對齊 effectiveRoles)。
+		for _, r := range effectiveRoles(role) {
+			perms := rolePolicy[r]
+			if allRes := perms["*"]; len(allRes) > 0 && allRes[0] == "*" {
+				// 全資源全動作(super/developer)→ 具名資源 × read/write。
+				for _, res := range adminResources {
+					add(role, res, "read")
+					add(role, res, "write")
+				}
+				continue
+			}
+			for res, acts := range perms {
+				if res == "*" {
+					continue
+				}
+				for _, act := range acts {
+					if act == "*" {
+						add(role, res, "read")
+						add(role, res, "write")
+					} else {
+						add(role, res, act)
+					}
+				}
+			}
+		}
+	}
+	// 決定性排序。
+	slices.SortFunc(seeds, func(a, b PermissionSeed) int {
+		if a.Role != b.Role {
+			return cmp.Compare(a.Role, b.Role)
+		}
+		if a.Resource != b.Resource {
+			return cmp.Compare(a.Resource, b.Resource)
+		}
+		return cmp.Compare(a.Action, b.Action)
+	})
+	return seeds
 }

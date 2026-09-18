@@ -162,7 +162,7 @@ func (s *Server) authzMiddleware(entClient *ent.Client, sessions *scs.SessionMan
 }
 
 // authorizeRPC 對受保護 RPC path 執行 OpenFGA Check 授權閘門:
-// 未登入 → Unauthenticated;無權 → PermissionDenied;developer 逃生門(開關啟用)跳過。
+// 未登入 → Unauthenticated;無權 → PermissionDenied;developer/super 逃生門(開關啟用)跳過。
 // OpenFGA 停用(OPENFGA_ENABLED=false) → 回退(放行,授權由各服務層檢查承擔);
 // OpenFGA 啟用卻無引擎 → 視為接線失敗,fail-closed(拒絕),避免授權被靜默繞過。
 func (s *Server) authorizeRPC(ctx context.Context, rpc rpcAuth) error {
@@ -170,8 +170,10 @@ func (s *Server) authorizeRPC(ctx context.Context, rpc rpcAuth) error {
 	if len(id.Roles) == 0 {
 		return connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
 	}
-	// developer 逃生門:僅在開關啟用時(身分成立)跳過 OpenFGA 檢查。
-	if id.Role == "developer" && s.cfg.API.DeveloperAccountEnabled {
+	// developer/super 逃生門:僅在開關啟用時(身分成立)跳過 OpenFGA 檢查。
+	// super 為「全資源」管理角色(rolePolicy "*":{"*"}),其 role_permissions 亦有具體能力 tuples;
+	// 逃生門提供對「未列入 adminResources 之新資源」的防禦(避免新增資源即鎖死 super)。
+	if (id.Role == "developer" || id.Role == "super") && s.cfg.API.DeveloperAccountEnabled {
 		return nil
 	}
 	if !s.cfg.OpenFGA.Enabled {

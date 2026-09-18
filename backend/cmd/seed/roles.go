@@ -2,10 +2,13 @@ package main
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
+	"github.com/salesorder/sales-order-1.0/backend/ent/rolepermission"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
+	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 )
 
 // builtinRole 為 7 個內建角色(code/name/data_scope/is_system=true)(D9)。
@@ -80,4 +83,40 @@ func firstCompanyID(ctx context.Context, client *ent.Client) int {
 		return 0
 	}
 	return c.ID
+}
+
+// SeedBuiltinRolePermissions 以 auth.BuiltinRolePermissions(單一來源 rolePolicy+roleInheritance)
+// 冪等填寫 7 內建角色的 role_permissions( D32 修訂,消除雙來源漂移 )。
+// 已存在的 (role,resource,action,conditions IS NULL) 列略過;使用者後續自訂/編輯不被覆寫
+// (僅在缺列時補種子)。使 DB 成為唯一持久來源、OpenFGA provision 得以產出 role→ability tuples。
+func SeedBuiltinRolePermissions(ctx context.Context, client *ent.Client) error {
+	for _, s := range auth.BuiltinRolePermissions() {
+		r, err := client.Role.Query().Where(role.CodeEQ(s.Role)).Only(ctx)
+		if err != nil {
+			return fmt.Errorf("seed 權限: 查無角色 %q: %w", s.Role, err)
+		}
+		exists, err := client.RolePermission.Query().
+			Where(
+				rolepermission.RoleID(r.ID),
+				rolepermission.ResourceEQ(s.Resource),
+				rolepermission.ActionEQ(s.Action),
+				rolepermission.ConditionsIsNil(),
+			).Exist(ctx)
+		if err != nil {
+			return fmt.Errorf("seed 權限: 查詢 %s/%s: %w", s.Resource, s.Action, err)
+		}
+		if exists {
+			continue
+		}
+		if _, err := client.RolePermission.Create().
+			SetRoleID(r.ID).
+			SetResource(s.Resource).
+			SetAction(s.Action).
+			SetSortOrder(0).
+			SetInverted(false).
+			Save(ctx); err != nil {
+			return fmt.Errorf("seed 權限: 建立 %s/%s: %w", s.Resource, s.Action, err)
+		}
+	}
+	return nil
 }
