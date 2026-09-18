@@ -24,11 +24,6 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-const (
-	defaultPageSize = 20
-	maxPageSize     = 100
-)
-
 // validCompanyStatuses 為 Company.status 允許值(對齊 ent enum)。
 var validCompanyStatuses = map[string]bool{
 	string(company.StatusActive):    true,
@@ -301,8 +296,6 @@ func (s *DepartmentService) ListDepartments(ctx context.Context, req *connect.Re
 	if err := requireScope(ctx, "department", "read"); err != nil {
 		return nil, err
 	}
-	page, pageSize := normalizePage(req.Msg.GetPage(), req.Msg.GetPageSize())
-
 	q := s.db.Department.Query().WithCompany()
 	if companyID := strings.TrimSpace(req.Msg.GetCompanyId()); companyID != "" {
 		cid, err := parseID(companyID)
@@ -312,23 +305,19 @@ func (s *DepartmentService) ListDepartments(ctx context.Context, req *connect.Re
 		q = q.Where(department.HasCompanyWith(company.ID(cid)))
 	}
 
-	total, err := q.Count(ctx)
+	list, pg, err := pageList(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), departmentListSource{q}, departmentToProto)
 	if err != nil {
-		return nil, toConnectError(err)
+		return nil, err
 	}
-	items, err := q.Order(ent.Desc(department.FieldID)).Offset((page - 1) * pageSize).Limit(pageSize).All(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
-	}
+	return connect.NewResponse(&v1.ListDepartmentsResponse{Departments: list, Pagination: pg}), nil
+}
 
-	departments := make([]*v1.Department, 0, len(items))
-	for _, d := range items {
-		departments = append(departments, departmentToProto(d))
-	}
-	return connect.NewResponse(&v1.ListDepartmentsResponse{
-		Departments: departments,
-		Pagination:  &v1.Pagination{Page: int32(page), PageSize: int32(pageSize), Total: int64(total)},
-	}), nil
+// departmentListSource 為 pageList 的 ent 查詢橋接(部門需 eager-load 公司名稱供 toProto)。
+type departmentListSource struct{ q *ent.DepartmentQuery }
+
+func (s departmentListSource) Count(ctx context.Context) (int, error) { return s.q.Count(ctx) }
+func (s departmentListSource) Page(ctx context.Context, off, lim int) ([]*ent.Department, error) {
+	return s.q.Clone().Order(ent.Desc(department.FieldID)).Offset(off).Limit(lim).All(ctx)
 }
 
 // GetDepartment 取得單一部門(含所屬公司名稱)。
@@ -439,20 +428,6 @@ func (s *DepartmentService) DeleteDepartment(ctx context.Context, req *connect.R
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&v1.DeleteDepartmentResponse{}), nil
-}
-
-// normalizePage 收斂分頁參數:page ≥ 1、page_size 落在 [1, maxPageSize]。
-func normalizePage(page, pageSize int32) (int, int) {
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 {
-		pageSize = defaultPageSize
-	}
-	if pageSize > maxPageSize {
-		pageSize = maxPageSize
-	}
-	return int(page), int(pageSize)
 }
 
 // parseID 將字串 ID 轉為 ent 自增 int64 ID;格式錯誤回 InvalidArgument。

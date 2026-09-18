@@ -254,6 +254,32 @@ func TestUpdateRolePermissionsValidation(t *testing.T) {
 	}
 }
 
+// TestListRolesPagination 複審 Minor 4:分頁 meta(Total/PageSize)與跨頁切分正確(走 pageList)。
+func TestListRolesPagination(t *testing.T) {
+	ctx := context.Background()
+	super := authz.Identity{UserID: "u0", CompanyID: "c1", Role: "super", Roles: []string{"super"}}
+	client, db := newRoleTestServer(t, super)
+
+	for i, n := range []string{"門市人員", "區域經理", "總部稽核"} {
+		db.Role.Create().SetCode("role" + strconvID(i+1)).SetName(n).SetDataScope(role.DataScopeCompany).SetIsSystem(false).SaveX(ctx)
+	}
+
+	p1, err := client.ListRoles(ctx, connect.NewRequest(&v1.ListRolesRequest{Page: 1, PageSize: 2}))
+	if err != nil {
+		t.Fatalf("ListRoles: %v", err)
+	}
+	if pg := p1.Msg.GetPagination(); pg.GetTotal() != 3 || pg.GetPageSize() != 2 || len(p1.Msg.GetRoles()) != 2 {
+		t.Fatalf("第1頁分頁應 total=3 size=2 roles=2,got total=%d size=%d roles=%d", pg.GetTotal(), pg.GetPageSize(), len(p1.Msg.GetRoles()))
+	}
+	p2, err := client.ListRoles(ctx, connect.NewRequest(&v1.ListRolesRequest{Page: 2, PageSize: 2}))
+	if err != nil {
+		t.Fatalf("ListRoles p2: %v", err)
+	}
+	if len(p2.Msg.GetRoles()) != 1 {
+		t.Fatalf("第2頁應剩 1 筆,got %d", len(p2.Msg.GetRoles()))
+	}
+}
+
 func strconvID(id int) string {
 	return fmt.Sprintf("%d", id)
 }

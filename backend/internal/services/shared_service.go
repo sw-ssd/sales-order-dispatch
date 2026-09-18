@@ -17,6 +17,11 @@ import (
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 )
 
+const (
+	defaultPageSize = 20
+	maxPageSize     = 100
+)
+
 // requireAuth 取得已登入身分;未登入 → unauthenticated(所有主檔方法共用)。
 func requireAuth(ctx context.Context) (authz.Identity, error) {
 	id := authz.IdentityFrom(ctx)
@@ -34,6 +39,20 @@ func codeName(code, name string) (string, string, error) {
 		return "", "", connect.NewError(connect.CodeInvalidArgument, errors.New("code 與 name 必填"))
 	}
 	return c, n, nil
+}
+
+// normalizePage 收斂分頁參數:page ≥ 1、page_size 落在 [1, maxPageSize](全 domain 共用)。
+func normalizePage(page, pageSize int32) (int, int) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = defaultPageSize
+	}
+	if pageSize > maxPageSize {
+		pageSize = maxPageSize
+	}
+	return int(page), int(pageSize)
 }
 
 // trimNonEmpty 修剪並驗證單一欄位不可為空(供 update 使用);空 → errMsg。
