@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -19,6 +20,9 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
+	authzopenfga "github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
+	ofga "github.com/salesorder/sales-order-1.0/backend/third_party/openfga"
+	"connectrpc.com/connect"
 )
 
 func TestVersionEndpoint(t *testing.T) {
@@ -196,5 +200,122 @@ func TestAuthzMiddlewareDestroysStaleSession(t *testing.T) {
 	}
 	if strings.TrimSpace(rec.Header().Get("Set-Cookie")) == "" {
 		t.Log("注意:session 銷毀後應清除 cookie(scs 依實作決定是否重送)")
+	}
+}
+
+// testSessionCookie 建立指定使用者身分的 session 並回傳 cookie(供 middleware probe)。
+func testSessionCookie(t *testing.T, sessions *scs.SessionManager, userID int, role string) *http.Cookie {
+	t.Helper()
+	seed := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		auth.EstablishWebSession(r.Context(), sessions, userID, role, 0)
+		w.WriteHeader(http.StatusNoContent)
+	})
+	rec := httptest.NewRecorder()
+	sessions.LoadAndSave(seed).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/seed", nil))
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == auth.SessionCookieName {
+			return c
+		}
+	}
+	t.Fatal("seed: 未取得 session cookie")
+	return nil
+}
+
+// TestAuthzMiddlewareOpenFGA D32 驗收:受保護 RPC path 由 OpenFGA Check 判定。
+// 有權 → 放行(probe 執行);未登入 → Unauthenticated;developer 跳過。write 拒絕對應之
+// TestAuthorizeRPCWriteDenied 單測覆蓋(不受 HTTP 層 session 影響)。
+func TestAuthzMiddlewareOpenFGA(t *testing.T) {
+	s, sessions := newIdentityTestEnv()
+	ctx := context.Background()
+	db := openIdentityDB(t, "file:ofga-mw?mode=memory&cache=shared&_fk=1")
+	co := db.Company.Create().SetName("測試公司").SetIdentifier("T-3").SaveX(ctx)
+	staff := db.User.Create().SetEmail("staff@example.com").SetName("staff").SetStatus(user.StatusActive).
+		SetRole("staff").SetPasswordHash("x").SetCompanyID(co.ID).SaveX(ctx)
+	dev := db.User.Create().SetEmail("dev@example.com").SetName("dev").SetStatus(user.StatusActive).
+		SetRole("developer").SetPasswordHash("x").SetCompanyID(co.ID).SaveX(ctx)
+
+	// 起 OpenFGA 記憶體 engine 並注入 Server。
+	fgaClient, err := ofga.NewMemory(ctx, "server-test-store")
+	if err != nil {
+		t.Fatalf("NewMemory: %v", err)
+	}
+	t.Cleanup(fgaClient.Close)
+	fga := authzopenfga.New(fgaClient)
+	s.SetOpenFGA(fga)
+	// 授予 staff 對 role 資源的 can_read(資料驅動 tuple)。
+	if err := fga.WriteTuple(ctx, "user:"+strconv.FormatInt(int64(staff.ID), 10), "can_read", "ability:role"); err != nil {
+		t.Fatalf("WriteTuple: %v", err)
+	}
+	// 受保護 path:RoleService/ListRoles → role/read。
+	const protectedPath = "/salesorder.v1.RoleService/ListRoles"
+
+	var called bool
+	probe := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusNoContent)
+	})
+	mw := sessions.LoadAndSave(s.authzMiddleware(db, sessions, probe))
+
+	req := func(user int, role string) *http.Request {
+		r := httptest.NewRequest(http.MethodGet, protectedPath, nil)
+		r.AddCookie(testSessionCookie(t, sessions, user, role))
+		return r
+	}
+
+	t.Run("staff 有權 → 放行", func(t *testing.T) {
+		called = false
+		rec := httptest.NewRecorder()
+		mw.ServeHTTP(rec, req(int(staff.ID), "staff"))
+		if rec.Code != http.StatusNoContent {
+			t.Fatalf("status = %d, want 204", rec.Code)
+		}
+		if !called {
+			t.Fatal("有權時 probe 應被呼叫")
+		}
+	})
+	t.Run("未登入 → 403", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		mw.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, protectedPath, nil))
+		if rec.Code != http.StatusForbidden {
+			t.Fatalf("status = %d, want 403", rec.Code)
+		}
+	})
+	t.Run("developer → 跳過放行", func(t *testing.T) {
+		called = false
+		rec := httptest.NewRecorder()
+		mw.ServeHTTP(rec, req(int(dev.ID), "developer"))
+		if rec.Code != http.StatusNoContent {
+			t.Fatalf("developer status = %d, want 204", rec.Code)
+		}
+		if !called {
+			t.Fatal("developer 應跳過 Check 並放行")
+		}
+	})
+}
+
+// TestAuthorizeRPCWriteDenied 驗證 authorizeRPC 對未授予 write 動作回 PermissionDenied。
+func TestAuthorizeRPCWriteDenied(t *testing.T) {
+	s, _ := newIdentityTestEnv()
+	ctx := context.Background()
+	fgaClient, err := ofga.NewMemory(ctx, "rpc-denied-store")
+	if err != nil {
+		t.Fatalf("NewMemory: %v", err)
+	}
+	t.Cleanup(fgaClient.Close)
+	fga := authzopenfga.New(fgaClient)
+	s.SetOpenFGA(fga)
+	// staff 僅授予 can_read role;未授予 can_write。
+	if err := fga.WriteTuple(ctx, "user:7", "can_read", "ability:role"); err != nil {
+		t.Fatalf("WriteTuple: %v", err)
+	}
+	c := authz.WithEngine(authz.WithIdentity(ctx, authz.Identity{UserID: "7", Roles: []string{"staff"}}), fga)
+	// role/write → can_write 未授予 → PermissionDenied。
+	err = s.authorizeRPC(c, rpcAuth{resource: "role", action: "write"})
+	if connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Fatalf("write 未授予應 permission_denied,got %v", err)
+	}
+	// role/read → can_read 已授予 → 放行。
+	if err := s.authorizeRPC(c, rpcAuth{resource: "role", action: "read"}); err != nil {
+		t.Fatalf("read 已授予應放行,got %v", err)
 	}
 }

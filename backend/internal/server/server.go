@@ -5,6 +5,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -13,12 +14,14 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"connectrpc.com/connect"
 
 	"github.com/salesorder/sales-order-1.0/backend/config"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
+	authzopenfga "github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/cache"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/database"
 )
@@ -30,6 +33,39 @@ var Version = "0.1.0-dev"
 type Server struct {
 	cfg    *config.Config
 	router *chi.Mux
+	fga    *authzopenfga.Engine // 可選:OpenFGA 授權引擎(設入後 middleware 對受保護 RPC 做 Check,D32)
+}
+
+// rpcAuth 為受保護 RPC path 的 OpenFGA 對映(resource, action)。
+// action 只取 read/write 兩類,對應授權 model 的 can_read/can_write。
+// 新增領域時,於此表補上相應的受保護 RPC path(資料驅動能力由 role_permissions→tuples 承載)。
+type rpcAuth struct {
+	resource string
+	action   string
+}
+
+// protectedRPC 對映受保護 RPC path → OpenFGA (resource, action)。
+// path 為 Connect-RPC 全路徑(剝除 /api/v1 前綴後)。未登入/無權 → Unauthenticated/PermissionDenied。
+var protectedRPC = map[string]rpcAuth{
+"/salesorder.v1.RoleService/ListRoles":            {"role", "read"},
+	"/salesorder.v1.RoleService/GetRolePermissions":    {"role", "read"},
+	"/salesorder.v1.RoleService/UpdateRolePermissions": {"role", "write"},
+	"/salesorder.v1.RoleService/ListConditionFields":   {"role", "read"},
+	"/salesorder.v1.CompanyService/ListCompanies":      {"company", "read"},
+	"/salesorder.v1.CompanyService/GetCompany":         {"company", "read"},
+	"/salesorder.v1.CompanyService/CreateCompany":      {"company", "write"},
+	"/salesorder.v1.CompanyService/UpdateCompany":      {"company", "write"},
+	"/salesorder.v1.CompanyService/DeleteCompany":      {"company", "write"},
+	"/salesorder.v1.DepartmentService/ListDepartments":    {"department", "read"},
+	"/salesorder.v1.DepartmentService/GetDepartment":     {"department", "read"},
+	"/salesorder.v1.DepartmentService/CreateDepartment":  {"department", "write"},
+	"/salesorder.v1.DepartmentService/UpdateDepartment":  {"department", "write"},
+	"/salesorder.v1.DepartmentService/DeleteDepartment":  {"department", "write"},
+}
+
+// SetOpenFGA 注入 OpenFGA 授權引擎(啟動組裝時;nil 則跳過 middleware 檢查)。
+func (s *Server) SetOpenFGA(e *authzopenfga.Engine) {
+	s.fga = e
 }
 
 // New 建立 Server 並掛上全域 middleware 與基礎路由。
@@ -99,6 +135,9 @@ func (s *Server) authzMiddleware(entClient *ent.Client, sessions *scs.SessionMan
 		ctx := r.Context()
 		ctx = authz.WithCASLEnabled(ctx, s.cfg.API.CASLEnforcementEnabled)
 		ctx = authz.WithDB(ctx, entClient)
+		if s.fga != nil {
+			ctx = authz.WithEngine(ctx, s.fga)
+		}
 
 		userID := auth.SessionUserID(ctx, sessions)
 		if userID > 0 {
@@ -111,8 +150,60 @@ func (s *Server) authzMiddleware(entClient *ent.Client, sessions *scs.SessionMan
 				_ = sessions.Destroy(ctx)
 			}
 		}
+		// OpenFGA 授權閘門(D32):受保護 RPC path 以 OpenFGA Check 判定;developer 跳過。
+		if rpc, ok := protectedRPC[r.URL.Path]; ok {
+			if err := s.authorizeRPC(ctx, rpc); err != nil {
+				writeConnectError(w, err)
+				return
+			}
+		}
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+// authorizeRPC 對受保護 RPC path 執行 OpenFGA Check 授權閘門:
+// 未登入 → Unauthenticated;無權 → PermissionDenied。
+// 未注入 engine 或 developer 逃生門(開關啟用) → 放行(向後相容未接線期間)。
+func (s *Server) authorizeRPC(ctx context.Context, rpc rpcAuth) error {
+	id := authz.IdentityFrom(ctx)
+	if len(id.Roles) == 0 {
+		return connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	}
+	// developer 逃生門:僅在開關啟用時(身分成立)跳過 OpenFGA 檢查。
+	if id.Role == "developer" && s.cfg.API.DeveloperAccountEnabled {
+		return nil
+	}
+	e := authz.EngineFrom(ctx)
+	if e == nil {
+		// 未注入引擎(尚未接線/測試環境)→ 放行,授權由各服務層既有檢查(RLS/Casbin 至 D32 退場)承擔。
+		return nil
+	}
+	relation := "can_read"
+	if rpc.action == "write" {
+		relation = "can_write"
+	}
+	allowed, err := e.Check(ctx, "user:"+id.UserID, relation, "ability:"+rpc.resource)
+	if err != nil {
+		return connect.NewError(connect.CodeInternal, err)
+	}
+	if !allowed {
+		return connect.NewError(connect.CodePermissionDenied, errors.New("無權限執行此操作"))
+	}
+	return nil
+}
+
+// writeConnectError 以 Connect 錯誤協定寫出錯誤回應(供 middleware)。
+func writeConnectError(w http.ResponseWriter, err error) {
+	// Connect 錯誤需以應用 JSON 包裝;此處以 application/json 輸出 error code,前端 connect 客戶端可解析。
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusForbidden)
+	_, _ = fmt.Fprintf(w, "{\"code\":\"%s\",\"message\":\"%s\"}", connect.CodeOf(err), jsonEscape(err.Error()))
+}
+
+// jsonEscape 逸出字串供 JSON 內嵌。
+func jsonEscape(s string) string {
+	b, _ := json.Marshal(s)
+	return string(b)
 }
 
 // identityFor 由使用者載入身分與 RLS scope（company/department eager-load）。

@@ -13,10 +13,12 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	domainauth "github.com/salesorder/sales-order-1.0/backend/internal/domain/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/handlers"
+	authzopenfga "github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/internal/services"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/cache"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/database"
+	ofga "github.com/salesorder/sales-order-1.0/backend/third_party/openfga"
 )
 
 // InitDomains 逐 domain 組裝 repo→usecase→handler 並掛上 router。
@@ -35,6 +37,7 @@ func (s *Server) mountAuth() {
 		log.Printf("auth: 略過掛載（ent client: %v）", err)
 		return
 	}
+	s.mountOpenFGA()
 	valkeyClient := cache.NewClient(s.cfg.Cache.ValkeyAddr)
 	if err := cache.Ping(context.Background(), valkeyClient); err != nil {
 		log.Printf("auth: 略過掛載（Valkey: %v）", err)
@@ -94,4 +97,25 @@ func (s *Server) mountAuth() {
 // openEntClient 開啟 PostgreSQL ent client（委派 third_party/database，統一初始化路徑，D31）。
 func (s *Server) openEntClient() (*ent.Client, error) {
 	return database.OpenEnt(s.cfg.Database.DatabaseURL)
+}
+
+// mountOpenFGA 建立內嵌 OpenFGA 授權引擎(D32)並注入 Server。
+// datastore 與業務共用 PostgreSQL(單一 store);dsn 沿用 Database.DatabaseURL。
+// 開發降級:引擎建立失敗時 log 並以 nil 繼續(授權檢查由各服務層既有 RLS/Casbin 承擔),
+// 正式環境由 Init() fail-fast 保證引擎就緒。
+func (s *Server) mountOpenFGA() {
+	if !s.cfg.OpenFGA.Enabled {
+		return
+	}
+	dsn := s.cfg.OpenFGA.DatabaseURL
+	if dsn == "" {
+		dsn = s.cfg.Database.DatabaseURL
+	}
+	client, err := ofga.NewPostgres(context.Background(), dsn, s.cfg.OpenFGA.StoreName)
+	if err != nil {
+		log.Printf("openfga: 略過授權引擎掛載(engine: %v),回退既有 RLS/Casbin 授權", err)
+		return
+	}
+	s.SetOpenFGA(authzopenfga.New(client))
+	log.Println("openfga: 內嵌授權引擎已掛載(D32)")
 }
