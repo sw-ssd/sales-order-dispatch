@@ -30,11 +30,23 @@ type Department func(*sql.Selector)
 // Metadict is the predicate function for metadict builders.
 type Metadict func(*sql.Selector)
 
+// ProcessingSpec is the predicate function for processingspec builders.
+type ProcessingSpec func(*sql.Selector)
+
+// ProductCategory is the predicate function for productcategory builders.
+type ProductCategory func(*sql.Selector)
+
 // Role is the predicate function for role builders.
 type Role func(*sql.Selector)
 
 // RolePermission is the predicate function for rolepermission builders.
 type RolePermission func(*sql.Selector)
 
+// Route is the predicate function for route builders.
+type Route func(*sql.Selector)
+
 // User is the predicate function for user builders.
 type User func(*sql.Selector)
+
+// Warehouse is the predicate function for warehouse builders.
+type Warehouse func(*sql.Selector)

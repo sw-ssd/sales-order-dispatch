@@ -218,6 +218,66 @@ var (
 			},
 		},
 	}
+	// ProcessingSpecsColumns holds the columns for the "processing_specs" table.
+	ProcessingSpecsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "company_id", Type: field.TypeInt},
+		{Name: "department_id", Type: field.TypeInt, Nullable: true},
+		{Name: "code", Type: field.TypeString},
+		{Name: "name", Type: field.TypeString},
+		{Name: "kind", Type: field.TypeString, Default: "other"},
+		{Name: "applies_to_processing", Type: field.TypeBool, Default: false},
+		{Name: "applies_to_picking", Type: field.TypeBool, Default: false},
+		{Name: "attributes", Type: field.TypeJSON, Nullable: true},
+		{Name: "sort_order", Type: field.TypeInt, Default: 0},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "created_by", Type: field.TypeInt, Nullable: true},
+		{Name: "updated_by", Type: field.TypeInt, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+	}
+	// ProcessingSpecsTable holds the schema information for the "processing_specs" table.
+	ProcessingSpecsTable = &schema.Table{
+		Name:       "processing_specs",
+		Columns:    ProcessingSpecsColumns,
+		PrimaryKey: []*schema.Column{ProcessingSpecsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "processingspec_department_id_code",
+				Unique:  false,
+				Columns: []*schema.Column{ProcessingSpecsColumns[2], ProcessingSpecsColumns[3]},
+			},
+		},
+	}
+	// ProductCategoriesColumns holds the columns for the "product_categories" table.
+	ProductCategoriesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "company_id", Type: field.TypeInt},
+		{Name: "department_id", Type: field.TypeInt, Nullable: true},
+		{Name: "code", Type: field.TypeString},
+		{Name: "name", Type: field.TypeString},
+		{Name: "sort_order", Type: field.TypeInt, Default: 0},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "created_by", Type: field.TypeInt, Nullable: true},
+		{Name: "updated_by", Type: field.TypeInt, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+	}
+	// ProductCategoriesTable holds the schema information for the "product_categories" table.
+	ProductCategoriesTable = &schema.Table{
+		Name:       "product_categories",
+		Columns:    ProductCategoriesColumns,
+		PrimaryKey: []*schema.Column{ProductCategoriesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "productcategory_department_id_code",
+				Unique:  false,
+				Columns: []*schema.Column{ProductCategoriesColumns[2], ProductCategoriesColumns[3]},
+			},
+		},
+	}
 	// RolesColumns holds the columns for the "roles" table.
 	RolesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -265,6 +325,35 @@ var (
 			},
 		},
 	}
+	// RoutesColumns holds the columns for the "routes" table.
+	RoutesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "company_id", Type: field.TypeInt},
+		{Name: "department_id", Type: field.TypeInt, Nullable: true},
+		{Name: "code", Type: field.TypeString},
+		{Name: "name", Type: field.TypeString},
+		{Name: "description", Type: field.TypeString, Nullable: true},
+		{Name: "sort_order", Type: field.TypeInt, Default: 0},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "created_by", Type: field.TypeInt, Nullable: true},
+		{Name: "updated_by", Type: field.TypeInt, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+	}
+	// RoutesTable holds the schema information for the "routes" table.
+	RoutesTable = &schema.Table{
+		Name:       "routes",
+		Columns:    RoutesColumns,
+		PrimaryKey: []*schema.Column{RoutesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "route_department_id_code",
+				Unique:  false,
+				Columns: []*schema.Column{RoutesColumns[2], RoutesColumns[3]},
+			},
+		},
+	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -306,6 +395,34 @@ var (
 			},
 		},
 	}
+	// WarehousesColumns holds the columns for the "warehouses" table.
+	WarehousesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "company_id", Type: field.TypeInt},
+		{Name: "department_id", Type: field.TypeInt, Nullable: true},
+		{Name: "code", Type: field.TypeString},
+		{Name: "name", Type: field.TypeString},
+		{Name: "address", Type: field.TypeString, Nullable: true},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "created_by", Type: field.TypeInt, Nullable: true},
+		{Name: "updated_by", Type: field.TypeInt, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+	}
+	// WarehousesTable holds the schema information for the "warehouses" table.
+	WarehousesTable = &schema.Table{
+		Name:       "warehouses",
+		Columns:    WarehousesColumns,
+		PrimaryKey: []*schema.Column{WarehousesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "warehouse_department_id_code",
+				Unique:  false,
+				Columns: []*schema.Column{WarehousesColumns[2], WarehousesColumns[3]},
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		AuditLogsTable,
@@ -316,9 +433,13 @@ var (
 		CustomerCountersTable,
 		DepartmentsTable,
 		MetadictsTable,
+		ProcessingSpecsTable,
+		ProductCategoriesTable,
 		RolesTable,
 		RolePermissionsTable,
+		RoutesTable,
 		UsersTable,
+		WarehousesTable,
 	}
 )
 

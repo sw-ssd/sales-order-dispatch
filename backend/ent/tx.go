@@ -28,12 +28,20 @@ type Tx struct {
 	Department *DepartmentClient
 	// Metadict is the client for interacting with the Metadict builders.
 	Metadict *MetadictClient
+	// ProcessingSpec is the client for interacting with the ProcessingSpec builders.
+	ProcessingSpec *ProcessingSpecClient
+	// ProductCategory is the client for interacting with the ProductCategory builders.
+	ProductCategory *ProductCategoryClient
 	// Role is the client for interacting with the Role builders.
 	Role *RoleClient
 	// RolePermission is the client for interacting with the RolePermission builders.
 	RolePermission *RolePermissionClient
+	// Route is the client for interacting with the Route builders.
+	Route *RouteClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
+	// Warehouse is the client for interacting with the Warehouse builders.
+	Warehouse *WarehouseClient
 
 	// lazily loaded.
 	client     *Client
@@ -173,9 +181,13 @@ func (tx *Tx) init() {
 	tx.CustomerCounter = NewCustomerCounterClient(tx.config)
 	tx.Department = NewDepartmentClient(tx.config)
 	tx.Metadict = NewMetadictClient(tx.config)
+	tx.ProcessingSpec = NewProcessingSpecClient(tx.config)
+	tx.ProductCategory = NewProductCategoryClient(tx.config)
 	tx.Role = NewRoleClient(tx.config)
 	tx.RolePermission = NewRolePermissionClient(tx.config)
+	tx.Route = NewRouteClient(tx.config)
 	tx.User = NewUserClient(tx.config)
+	tx.Warehouse = NewWarehouseClient(tx.config)
 }
 
 // txDriver wraps the given dialect.Tx with a nop dialect.Driver implementation.

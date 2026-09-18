@@ -77,6 +77,11 @@ func (s *Server) mountAuth() {
 	services.RegisterMetadictServices(apiMux, entClient)                         // MetadictService(03 Task 2)
 	services.RegisterAuditServices(apiMux, entClient)                            // AuditService(03 Task 6, A4)
 	services.RegisterCustomerServices(apiMux, entClient, s.cfg.Auth.FrontendURL) // CustomerService(04 Task 1-2 + D22 帳號交付 URL)
+	// 04 Task 3.4 部門級主檔(Warehouse/Route/ProcessingSpec/ProductCategory)。
+	services.RegisterWarehouseService(apiMux, entClient)
+	services.RegisterRouteService(apiMux, entClient)
+	services.RegisterProcessingSpecService(apiMux, entClient)
+	services.RegisterProductCategoryService(apiMux, entClient)
 	s.router.Mount("/api/v1", http.StripPrefix("/api/v1", sessions.LoadAndSave(s.authzMiddleware(entClient, sessions, apiMux))))
 
 	// OIDC 公開端點：需 Google client id 與 discovery 可用

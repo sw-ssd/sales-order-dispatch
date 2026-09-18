@@ -13,10 +13,14 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/customercounter"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
+	"github.com/salesorder/sales-order-1.0/backend/ent/processingspec"
+	"github.com/salesorder/sales-order-1.0/backend/ent/productcategory"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/ent/rolepermission"
+	"github.com/salesorder/sales-order-1.0/backend/ent/route"
 	"github.com/salesorder/sales-order-1.0/backend/ent/schema"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
+	"github.com/salesorder/sales-order-1.0/backend/ent/warehouse"
 )
 
 // The init function reads all schema descriptors with runtime code
@@ -165,6 +169,74 @@ func init() {
 	metadict.DefaultUpdatedAt = metadictDescUpdatedAt.Default.(func() time.Time)
 	// metadict.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	metadict.UpdateDefaultUpdatedAt = metadictDescUpdatedAt.UpdateDefault.(func() time.Time)
+	processingspecFields := schema.ProcessingSpec{}.Fields()
+	_ = processingspecFields
+	// processingspecDescCode is the schema descriptor for code field.
+	processingspecDescCode := processingspecFields[2].Descriptor()
+	// processingspec.CodeValidator is a validator for the "code" field. It is called by the builders before save.
+	processingspec.CodeValidator = processingspecDescCode.Validators[0].(func(string) error)
+	// processingspecDescName is the schema descriptor for name field.
+	processingspecDescName := processingspecFields[3].Descriptor()
+	// processingspec.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	processingspec.NameValidator = processingspecDescName.Validators[0].(func(string) error)
+	// processingspecDescKind is the schema descriptor for kind field.
+	processingspecDescKind := processingspecFields[4].Descriptor()
+	// processingspec.DefaultKind holds the default value on creation for the kind field.
+	processingspec.DefaultKind = processingspecDescKind.Default.(string)
+	// processingspecDescAppliesToProcessing is the schema descriptor for applies_to_processing field.
+	processingspecDescAppliesToProcessing := processingspecFields[5].Descriptor()
+	// processingspec.DefaultAppliesToProcessing holds the default value on creation for the applies_to_processing field.
+	processingspec.DefaultAppliesToProcessing = processingspecDescAppliesToProcessing.Default.(bool)
+	// processingspecDescAppliesToPicking is the schema descriptor for applies_to_picking field.
+	processingspecDescAppliesToPicking := processingspecFields[6].Descriptor()
+	// processingspec.DefaultAppliesToPicking holds the default value on creation for the applies_to_picking field.
+	processingspec.DefaultAppliesToPicking = processingspecDescAppliesToPicking.Default.(bool)
+	// processingspecDescSortOrder is the schema descriptor for sort_order field.
+	processingspecDescSortOrder := processingspecFields[8].Descriptor()
+	// processingspec.DefaultSortOrder holds the default value on creation for the sort_order field.
+	processingspec.DefaultSortOrder = processingspecDescSortOrder.Default.(int)
+	// processingspecDescIsActive is the schema descriptor for is_active field.
+	processingspecDescIsActive := processingspecFields[9].Descriptor()
+	// processingspec.DefaultIsActive holds the default value on creation for the is_active field.
+	processingspec.DefaultIsActive = processingspecDescIsActive.Default.(bool)
+	// processingspecDescCreatedAt is the schema descriptor for created_at field.
+	processingspecDescCreatedAt := processingspecFields[12].Descriptor()
+	// processingspec.DefaultCreatedAt holds the default value on creation for the created_at field.
+	processingspec.DefaultCreatedAt = processingspecDescCreatedAt.Default.(func() time.Time)
+	// processingspecDescUpdatedAt is the schema descriptor for updated_at field.
+	processingspecDescUpdatedAt := processingspecFields[13].Descriptor()
+	// processingspec.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	processingspec.DefaultUpdatedAt = processingspecDescUpdatedAt.Default.(func() time.Time)
+	// processingspec.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	processingspec.UpdateDefaultUpdatedAt = processingspecDescUpdatedAt.UpdateDefault.(func() time.Time)
+	productcategoryFields := schema.ProductCategory{}.Fields()
+	_ = productcategoryFields
+	// productcategoryDescCode is the schema descriptor for code field.
+	productcategoryDescCode := productcategoryFields[2].Descriptor()
+	// productcategory.CodeValidator is a validator for the "code" field. It is called by the builders before save.
+	productcategory.CodeValidator = productcategoryDescCode.Validators[0].(func(string) error)
+	// productcategoryDescName is the schema descriptor for name field.
+	productcategoryDescName := productcategoryFields[3].Descriptor()
+	// productcategory.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	productcategory.NameValidator = productcategoryDescName.Validators[0].(func(string) error)
+	// productcategoryDescSortOrder is the schema descriptor for sort_order field.
+	productcategoryDescSortOrder := productcategoryFields[4].Descriptor()
+	// productcategory.DefaultSortOrder holds the default value on creation for the sort_order field.
+	productcategory.DefaultSortOrder = productcategoryDescSortOrder.Default.(int)
+	// productcategoryDescIsActive is the schema descriptor for is_active field.
+	productcategoryDescIsActive := productcategoryFields[5].Descriptor()
+	// productcategory.DefaultIsActive holds the default value on creation for the is_active field.
+	productcategory.DefaultIsActive = productcategoryDescIsActive.Default.(bool)
+	// productcategoryDescCreatedAt is the schema descriptor for created_at field.
+	productcategoryDescCreatedAt := productcategoryFields[8].Descriptor()
+	// productcategory.DefaultCreatedAt holds the default value on creation for the created_at field.
+	productcategory.DefaultCreatedAt = productcategoryDescCreatedAt.Default.(func() time.Time)
+	// productcategoryDescUpdatedAt is the schema descriptor for updated_at field.
+	productcategoryDescUpdatedAt := productcategoryFields[9].Descriptor()
+	// productcategory.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	productcategory.DefaultUpdatedAt = productcategoryDescUpdatedAt.Default.(func() time.Time)
+	// productcategory.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	productcategory.UpdateDefaultUpdatedAt = productcategoryDescUpdatedAt.UpdateDefault.(func() time.Time)
 	roleFields := schema.Role{}.Fields()
 	_ = roleFields
 	// roleDescCode is the schema descriptor for code field.
@@ -201,6 +273,34 @@ func init() {
 	rolepermissionDescSortOrder := rolepermissionFields[5].Descriptor()
 	// rolepermission.DefaultSortOrder holds the default value on creation for the sort_order field.
 	rolepermission.DefaultSortOrder = rolepermissionDescSortOrder.Default.(int)
+	routeFields := schema.Route{}.Fields()
+	_ = routeFields
+	// routeDescCode is the schema descriptor for code field.
+	routeDescCode := routeFields[2].Descriptor()
+	// route.CodeValidator is a validator for the "code" field. It is called by the builders before save.
+	route.CodeValidator = routeDescCode.Validators[0].(func(string) error)
+	// routeDescName is the schema descriptor for name field.
+	routeDescName := routeFields[3].Descriptor()
+	// route.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	route.NameValidator = routeDescName.Validators[0].(func(string) error)
+	// routeDescSortOrder is the schema descriptor for sort_order field.
+	routeDescSortOrder := routeFields[5].Descriptor()
+	// route.DefaultSortOrder holds the default value on creation for the sort_order field.
+	route.DefaultSortOrder = routeDescSortOrder.Default.(int)
+	// routeDescIsActive is the schema descriptor for is_active field.
+	routeDescIsActive := routeFields[6].Descriptor()
+	// route.DefaultIsActive holds the default value on creation for the is_active field.
+	route.DefaultIsActive = routeDescIsActive.Default.(bool)
+	// routeDescCreatedAt is the schema descriptor for created_at field.
+	routeDescCreatedAt := routeFields[9].Descriptor()
+	// route.DefaultCreatedAt holds the default value on creation for the created_at field.
+	route.DefaultCreatedAt = routeDescCreatedAt.Default.(func() time.Time)
+	// routeDescUpdatedAt is the schema descriptor for updated_at field.
+	routeDescUpdatedAt := routeFields[10].Descriptor()
+	// route.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	route.DefaultUpdatedAt = routeDescUpdatedAt.Default.(func() time.Time)
+	// route.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	route.UpdateDefaultUpdatedAt = routeDescUpdatedAt.UpdateDefault.(func() time.Time)
 	userFields := schema.User{}.Fields()
 	_ = userFields
 	// userDescEmail is the schema descriptor for email field.
@@ -239,4 +339,28 @@ func init() {
 	userDescMustChangePassword := userFields[13].Descriptor()
 	// user.DefaultMustChangePassword holds the default value on creation for the must_change_password field.
 	user.DefaultMustChangePassword = userDescMustChangePassword.Default.(bool)
+	warehouseFields := schema.Warehouse{}.Fields()
+	_ = warehouseFields
+	// warehouseDescCode is the schema descriptor for code field.
+	warehouseDescCode := warehouseFields[2].Descriptor()
+	// warehouse.CodeValidator is a validator for the "code" field. It is called by the builders before save.
+	warehouse.CodeValidator = warehouseDescCode.Validators[0].(func(string) error)
+	// warehouseDescName is the schema descriptor for name field.
+	warehouseDescName := warehouseFields[3].Descriptor()
+	// warehouse.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	warehouse.NameValidator = warehouseDescName.Validators[0].(func(string) error)
+	// warehouseDescIsActive is the schema descriptor for is_active field.
+	warehouseDescIsActive := warehouseFields[5].Descriptor()
+	// warehouse.DefaultIsActive holds the default value on creation for the is_active field.
+	warehouse.DefaultIsActive = warehouseDescIsActive.Default.(bool)
+	// warehouseDescCreatedAt is the schema descriptor for created_at field.
+	warehouseDescCreatedAt := warehouseFields[8].Descriptor()
+	// warehouse.DefaultCreatedAt holds the default value on creation for the created_at field.
+	warehouse.DefaultCreatedAt = warehouseDescCreatedAt.Default.(func() time.Time)
+	// warehouseDescUpdatedAt is the schema descriptor for updated_at field.
+	warehouseDescUpdatedAt := warehouseFields[9].Descriptor()
+	// warehouse.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	warehouse.DefaultUpdatedAt = warehouseDescUpdatedAt.Default.(func() time.Time)
+	// warehouse.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	warehouse.UpdateDefaultUpdatedAt = warehouseDescUpdatedAt.UpdateDefault.(func() time.Time)
 }

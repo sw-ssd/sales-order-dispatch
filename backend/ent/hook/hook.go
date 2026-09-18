@@ -105,6 +105,30 @@ func (f MetadictFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, er
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.MetadictMutation", m)
 }
 
+// The ProcessingSpecFunc type is an adapter to allow the use of ordinary
+// function as ProcessingSpec mutator.
+type ProcessingSpecFunc func(context.Context, *ent.ProcessingSpecMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ProcessingSpecFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ProcessingSpecMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProcessingSpecMutation", m)
+}
+
+// The ProductCategoryFunc type is an adapter to allow the use of ordinary
+// function as ProductCategory mutator.
+type ProductCategoryFunc func(context.Context, *ent.ProductCategoryMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ProductCategoryFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ProductCategoryMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProductCategoryMutation", m)
+}
+
 // The RoleFunc type is an adapter to allow the use of ordinary
 // function as Role mutator.
 type RoleFunc func(context.Context, *ent.RoleMutation) (ent.Value, error)
@@ -129,6 +153,18 @@ func (f RolePermissionFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Val
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RolePermissionMutation", m)
 }
 
+// The RouteFunc type is an adapter to allow the use of ordinary
+// function as Route mutator.
+type RouteFunc func(context.Context, *ent.RouteMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f RouteFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.RouteMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RouteMutation", m)
+}
+
 // The UserFunc type is an adapter to allow the use of ordinary
 // function as User mutator.
 type UserFunc func(context.Context, *ent.UserMutation) (ent.Value, error)
@@ -139,6 +175,18 @@ func (f UserFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error)
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.UserMutation", m)
+}
+
+// The WarehouseFunc type is an adapter to allow the use of ordinary
+// function as Warehouse mutator.
+type WarehouseFunc func(context.Context, *ent.WarehouseMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f WarehouseFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.WarehouseMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.WarehouseMutation", m)
 }
 
 // Condition is a hook condition function.
