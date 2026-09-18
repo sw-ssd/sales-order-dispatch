@@ -18,7 +18,9 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
+	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
+	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 )
@@ -361,5 +363,103 @@ func TestRefreshRotation(t *testing.T) {
 	// Logout 冪等
 	if _, err := e.rpc.Logout(e.ctx, connect.NewRequest(&v1.LogoutRequest{RefreshToken: login2.Msg.GetRefreshToken()})); err != nil {
 		t.Fatalf("Logout 應冪等: %v", err)
+	}
+}
+
+// openAuthDB 開啟 enttest sqlite db(供 auth 測試)。
+func openAuthDB(t *testing.T) *ent.Client {
+	t.Helper()
+	db := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared&_fk=1")
+	t.Cleanup(func() { _ = db.Close() })
+	return db
+}
+
+// newIdentifiedAuthClientWithDB 以指定 db 建立注入身分 + 稽核來源的 AuthService client。
+func newIdentifiedAuthClientWithDB(t *testing.T, db *ent.Client, id authz.Identity) salesorderv1connect.AuthServiceClient {
+	t.Helper()
+	kv := auth.NewMemoryStore()
+	sessions := auth.WebSessionManager(memstore.New(), 30*24*time.Hour, false, "lax")
+	h := NewAuthHandler(AuthDeps{
+		DB: db, Tokens: auth.NewTokenManager("test-secret", kv, db),
+		Lockout: auth.NewLoginLock(kv), OneTime: auth.NewOneTimeStore(kv), Sessions: sessions,
+	})
+	path, handler := salesorderv1connect.NewAuthServiceHandler(h)
+	mux := http.NewServeMux()
+	mux.Handle(path, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := authz.WithIdentity(r.Context(), id)
+		ctx = audit.WithMeta(ctx, audit.Meta{IP: "1.2.3.4", UserAgent: "t"})
+		handler.ServeHTTP(w, r.WithContext(ctx))
+	}))
+	ts := httptest.NewServer(mux)
+	t.Cleanup(ts.Close)
+	return salesorderv1connect.NewAuthServiceClient(http.DefaultClient, ts.URL)
+}
+
+// seedAuthCompany 建立 company 回傳其真實 id(供 auth 測試 FK)。
+func seedAuthCompany(t *testing.T, db *ent.Client) int {
+	t.Helper()
+	co, err := db.Company.Create().SetName("公司").SetIdentifier("T-" + t.Name()).Save(context.Background())
+	if err != nil {
+		t.Fatalf("seed company: %v", err)
+	}
+	return co.ID
+}
+
+// TestChangePasswordSuccess A3 1.5.2:改密碼成功 → hash 更新、must_change 清空、temp 效期清空、token_version+1、稽核存在。
+func TestChangePasswordSuccess(t *testing.T) {
+	ctx := context.Background()
+	db := openAuthDB(t)
+	cid := seedAuthCompany(t, db)
+	old, _ := auth.HashPassword("OldPass123")
+	u := db.User.Create().SetCompanyID(cid).SetEmail("cp@t.com").SetName("改密").SetRole("customer").SetIsCustomer(true).
+		SetPasswordHash(old).SetMustChangePassword(true).SetTempPasswordExpiresAt(time.Now().Add(24 * time.Hour)).SaveX(ctx)
+	client := newIdentifiedAuthClientWithDB(t, db, authz.Identity{UserID: strconv.Itoa(u.ID), CompanyID: strconv.Itoa(cid), Role: "customer", Roles: []string{"customer"}})
+	if _, err := client.ChangePassword(ctx, connect.NewRequest(&v1.ChangePasswordRequest{OldPassword: "OldPass123", NewPassword: "NewPass123456"})); err != nil {
+		t.Fatalf("ChangePassword 應成功: %v", err)
+	}
+	got := db.User.GetX(ctx, u.ID)
+	if !auth.VerifyPassword(got.PasswordHash, "NewPass123456") {
+		t.Fatal("新密碼應可驗證")
+	}
+	if got.MustChangePassword {
+		t.Fatal("must_change_password 應清為 false")
+	}
+	if got.TempPasswordExpiresAt != nil {
+		t.Fatal("temp_password_expires_at 應清空")
+	}
+	if got.TokenVersion != 1 {
+		t.Fatalf("token_version 應 +1 為 1,得到 %d", got.TokenVersion)
+	}
+	if n, _ := db.AuditLog.Query().Count(ctx); n != 1 {
+		t.Fatalf("改密碼應寫 1 筆稽核,得到 %d", n)
+	}
+}
+
+// TestChangePasswordWrongOld:舊密碼錯誤 → unauthenticated,不動資料。
+func TestChangePasswordWrongOld(t *testing.T) {
+	ctx := context.Background()
+	db := openAuthDB(t)
+	cid := seedAuthCompany(t, db)
+	old, _ := auth.HashPassword("OldPass123")
+	u := db.User.Create().SetCompanyID(cid).SetEmail("cp2@t.com").SetName("甲").SetRole("customer").SetPasswordHash(old).SaveX(ctx)
+	client := newIdentifiedAuthClientWithDB(t, db, authz.Identity{UserID: strconv.Itoa(u.ID), CompanyID: strconv.Itoa(cid), Role: "customer"})
+	if _, err := client.ChangePassword(ctx, connect.NewRequest(&v1.ChangePasswordRequest{OldPassword: "WrongOld1", NewPassword: "NewPass123456"})); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("舊密碼錯應 unauthenticated,got %v", err)
+	}
+	if got := db.User.GetX(ctx, u.ID); got.TokenVersion != 0 {
+		t.Fatalf("失敗不應 bump token_version,得到 %d", got.TokenVersion)
+	}
+}
+
+// TestChangePasswordTooShort:新密碼 < 8 → invalid_argument。
+func TestChangePasswordTooShort(t *testing.T) {
+	ctx := context.Background()
+	db := openAuthDB(t)
+	cid := seedAuthCompany(t, db)
+	old, _ := auth.HashPassword("OldPass123")
+	u := db.User.Create().SetCompanyID(cid).SetEmail("cp3@t.com").SetName("乙").SetRole("customer").SetPasswordHash(old).SaveX(ctx)
+	client := newIdentifiedAuthClientWithDB(t, db, authz.Identity{UserID: strconv.Itoa(u.ID), CompanyID: strconv.Itoa(cid), Role: "customer"})
+	if _, err := client.ChangePassword(ctx, connect.NewRequest(&v1.ChangePasswordRequest{OldPassword: "OldPass123", NewPassword: "short"})); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("新密碼過短應 invalid_argument,got %v", err)
 	}
 }

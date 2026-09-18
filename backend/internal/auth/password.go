@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 	"time"
@@ -150,4 +151,24 @@ func (l *LoginLock) IsLocked(ctx context.Context, account string) (bool, error) 
 // Clear 清除失敗記錄(登入成功時)。
 func (l *LoginLock) Clear(ctx context.Context, account string) error {
 	return l.kv.Delete(ctx, loginFailKey(account))
+}
+
+// tempPasswordChars 為臨時密碼字元集(去除易混淆的 0/O/1/l/I, A3 1.5.2/1.5.4)。
+const tempPasswordChars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"
+
+// TempPasswordLength 為臨時密碼長度(≥ 12,規格 1.5.2)。
+const TempPasswordLength = 12
+
+// GenerateTempPassword 產生隨機臨時密碼(≥ 12 字元,字母+數字)。
+func GenerateTempPassword() (string, error) {
+	b := make([]byte, TempPasswordLength)
+	max := big.NewInt(int64(len(tempPasswordChars)))
+	for i := range b {
+		n, err := rand.Int(rand.Reader, max)
+		if err != nil {
+			return "", fmt.Errorf("auth: 產生臨時密碼失敗: %w", err)
+		}
+		b[i] = tempPasswordChars[n.Int64()]
+	}
+	return string(b), nil
 }
