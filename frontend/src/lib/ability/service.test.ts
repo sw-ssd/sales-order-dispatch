@@ -1,26 +1,18 @@
-import { subject } from "@casl/ability";
 import { describe, expect, it } from "vitest";
-import { createAppAbility } from "./service";
+import { createPermissions, hasPermission } from "./service";
 
-describe("createAppAbility", () => {
-  it("由 proto 規則建 ability,支援 conditions 與 inverted", () => {
-    const ability = createAppAbility([
-      { action: "read", subject: "sales_order", conditions: { status: "pending" } },
-      { action: "cancel", subject: "sales_order", inverted: true },
+describe("ability service (OpenFGA proxy)", () => {
+  it("createPermissions 建集合並可查詢", () => {
+    const perms = createPermissions([
+      { action: "read", resource: "sales_order" },
+      { action: "write", resource: "sales_order" },
     ]);
-    expect(ability.can("read", "sales_order")).toBe(true);
-    expect(ability.can("cancel", "sales_order")).toBe(false);
-    expect(ability.can("read", "customer")).toBe(false);
-  });
-  it("conditions 參與 instance 判斷", () => {
-    const ability = createAppAbility([
-      { action: "cancel", subject: "sales_order", conditions: { status: "pending" } },
-    ]);
-    expect(ability.can("cancel", subject("sales_order", { status: "pending" }))).toBe(true);
-    expect(ability.can("cancel", subject("sales_order", { status: "processing" }))).toBe(false);
+    expect(hasPermission(perms, "sales_order", "read")).toBe(true);
+    expect(hasPermission(perms, "sales_order", "write")).toBe(true);
+    expect(hasPermission(perms, "customer", "read")).toBe(false);
   });
   it("空規則 fail-closed", () => {
-    const ability = createAppAbility([]);
-    expect(ability.can("read", "sales_order")).toBe(false);
+    const perms = createPermissions([]);
+    expect(hasPermission(perms, "sales_order", "read")).toBe(false);
   });
 });

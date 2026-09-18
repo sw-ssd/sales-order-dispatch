@@ -9,30 +9,38 @@ vi.mock("./service", async (orig) => {
     ...mod,
     abilityQueryOptions: {
       ...mod.abilityQueryOptions,
-      queryFn: async () => (await mockGetAbility()).rules,
+      queryFn: async () => createPermissions(mockGetAbility()),
     },
   };
 });
 
+import { createPermissions, hasPermission } from "./permissions";
 import { makeRequireAbility } from "./guards";
+
+describe("permissions", () => {
+  it("hasPermission 依集合查詢", () => {
+    const perms = createPermissions([{ resource: "sales_order", action: "read" }]);
+    expect(hasPermission(perms, "sales_order", "read")).toBe(true);
+    expect(hasPermission(perms, "sales_order", "write")).toBe(false);
+  });
+});
 
 describe("requireAbility", () => {
   beforeEach(() => mockGetAbility.mockReset());
 
   it("有權限時放行(不拋 redirect)", async () => {
-    mockGetAbility.mockResolvedValue({ rules: [{ action: "read", subject: "sales_order" }] });
+    mockGetAbility.mockReturnValue([{ resource: "sales_order", action: "read" }]);
     const guard = makeRequireAbility(new QueryClient())("read", "sales_order");
     await expect(guard({ preload: false })).resolves.toBeUndefined();
   });
 
   it("無權限時拋 redirect /403", async () => {
-    mockGetAbility.mockResolvedValue({ rules: [] });
+    mockGetAbility.mockReturnValue([]);
     const guard = makeRequireAbility(new QueryClient())("read", "sales_order");
     try {
       await guard({ preload: false });
       expect.unreachable("應拋出 redirect");
     } catch (e) {
-      // @tanstack/solid-router redirect 拋出Response:isRedirect 標記 + options.to 路由路徑
       expect(isRedirect(e)).toBe(true);
       if (e && typeof e === "object" && "options" in e) {
         const options = e.options;

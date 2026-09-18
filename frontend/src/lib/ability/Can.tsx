@@ -1,16 +1,18 @@
 import { Show, type JSX, type ParentComponent } from "solid-js";
 import { useAbility } from "./context";
+import { hasPermission } from "./permissions";
 
 /**
- * 顯示控制元件。instance 判斷時以 CASL subject() 包裝傳入(前端唯一 instance 包裝慣例):
- *   <Can I="cancel" a={subject("sales_order", order)} fallback={<Disabled/>}>
+ * 顯示控制元件:依權限集合判斷 resource 是否具 action(取代 CASL ability)。
+ *   <Can I="read" a="sales_order" fallback={<Disabled/>}>
+ * 物件狀態條件由 domain 處理,不在此做 instance 判斷。
  */
 export const Can: ParentComponent<{
   I: string;
-  a: string | object;
+  a: string;
   fallback?: JSX.Element;
 }> = (props) => {
   const ability = useAbility();
-  const allowed = () => ability().can(props.I, props.a as never);
+  const allowed = () => hasPermission(ability(), props.a, props.I);
   return <Show when={allowed()} fallback={props.fallback}>{props.children}</Show>;
 };
