@@ -10,6 +10,7 @@ type Config struct {
 	Database      Database
 	Storage       Storage
 	Observability Observability
+	OpenFGA       OpenFGA
 }
 
 // New 由環境變數載入全部設定；解析失敗即 fail-fast。
@@ -21,5 +22,6 @@ func New() *Config {
 	mustProcess(&c.Database)
 	mustProcess(&c.Storage)
 	mustProcess(&c.Observability)
+	mustProcess(&c.OpenFGA)
 	return &c
 }
