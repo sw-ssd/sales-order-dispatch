@@ -36,9 +36,9 @@ graph TD
 | 計畫 | 路徑 | 範圍 | 狀態 | 說明 |
 |------|------|------|------|------|
 | 主計畫 | `2026-08-05-sales-order-1.0-subproject-implementation-plan.md` | 三子專案 50 Tasks / 5 Waves | ⬜ 未開始（實作暫緩） | 供未來開工直接指派 |
-| 01-auth | `backend/2026-08-17-backend-01-auth-plan.md` | 認證授權地基 | 🟡 部分 | OIDC/登入/JWT-session/Casbin/RLS/ability/role 權限已實作；middleware、developer/audit 待 |
-| 02-tenancy-users | `backend/2026-08-17-backend-02-tenancy-users-plan.md` | 多租戶與使用者 | 🟡 部分 | Company/Department/Role CRUD 已實作；UserService 已落地（2026-09-18，含 AssignRole/Deactivate/ForceLogout+稽核）；主帳號連鎖(D22)待 |
-| 03-metadicts-audit | `backend/2026-08-17-backend-03-metadicts-audit-plan.md` | 字典檔與稽核 | ⬜ 未開始 | 領域無 code |
+| 01-auth | `backend/2026-08-17-backend-01-auth-plan.md` | 認證授權地基 | 🟡 部分 | OIDC/登入/JWT-session/Casbin/RLS/ability/role 權限、middleware（authzMiddleware/protectedRPC）、developer 逃生門（SeedDeveloper）、audit 地基（audit.Recorder DB）已實作；RLS 接線（D3 最後防線）與 OpenFGA 待定 |
+| 02-tenancy-users | `backend/2026-08-17-backend-02-tenancy-users-plan.md` | 多租戶與使用者 | 🟡 部分 | Company/Department/Role CRUD 已實作；UserService 7 支 RPC（ListUsers/GetUser/CreateUser/UpdateUser/AssignRole/Deactivate/ForceLogout）已落地（2026-09-18，含稽核＋`dataScopeForUser` 自訂角色範圍）；主帳號連鎖(D22)待 |
+| 03-metadicts-audit | `backend/2026-08-17-backend-03-metadicts-audit-plan.md` | 字典檔與稽核 | 🟡 部分 | audit 部分（audit_logs schema/migration 00009/00010 + audit.Recorder DB 實作）已由 02-UserService 提前落地；metadicts 字典檔（Task 1–3）仍 ⬜ |
 | 04-master-data | `backend/2026-08-17-backend-04-master-data-plan.md` | 主檔與檔案資產 | ⬜ 未開始 | 領域無 code |
 | 05-sales-orders | `backend/2026-08-17-backend-05-sales-orders-plan.md` | 銷售訂單 | ⬜ 未開始 | 領域無 code |
 | 06-returns | `backend/2026-08-17-backend-06-returns-plan.md` | 退貨 | ⬜ 未開始 | 領域無 code |
