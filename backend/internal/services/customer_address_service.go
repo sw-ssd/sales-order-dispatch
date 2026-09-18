@@ -235,11 +235,13 @@ func (s *CustomerService) UpdateAddress(ctx context.Context, req *connect.Reques
 	defer func() { _ = tx.Rollback() }()
 
 	upd := tx.CustomerAddress.UpdateOneID(addrID)
+	typeChanged := false
 	if req.Msg.Type != nil {
 		typ := strings.TrimSpace(*req.Msg.Type)
 		if !validAddressType(typ) {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("type 僅接受 shipping / billing / other"))
 		}
+		typeChanged = customeraddress.Type(typ) != cur.Type
 		upd = upd.SetType(customeraddress.Type(typ))
 	}
 	if req.Msg.RecipientName != nil {
@@ -283,6 +285,11 @@ func (s *CustomerService) UpdateAddress(ctx context.Context, req *connect.Reques
 		}
 		upd = upd.SetIsDefault(true)
 	} else if req.Msg.IsDefault != nil {
+		upd = upd.SetIsDefault(false)
+	} else if typeChanged && cur.IsDefault {
+		// 型別搬移且未明示預設:原預設不得自動成為新類型預設,避免與新類型既有預設
+		// 同時成立(違反部分唯一索引;Postgres 會擋為 already_exists)。搬移後舊類型無預設,
+		// 不回遞補(同刪除語意)。
 		upd = upd.SetIsDefault(false)
 	}
 	actor, _ := parseID(id.UserID)

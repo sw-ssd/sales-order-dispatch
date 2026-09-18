@@ -144,6 +144,49 @@ func TestAddressSetDefaultClearsOthers(t *testing.T) {
 	}
 }
 
+// TestAddressTypeChangeDoesNotCollideDefaults 複審邊界:型別搬移一筆預設地址時,
+// 不得與新類型既有預設同時成立(未明示 is_default → 原預設失效)。
+func TestAddressTypeChangeDoesNotCollideDefaults(t *testing.T) {
+	ctx := context.Background()
+	client, _, _, custID := newAddressContactClient(t)
+	add := func(typ, line string) string {
+		r, err := client.AddAddress(ctx, connect.NewRequest(&customersv1.AddAddressRequest{
+			CustomerId: uItoa(custID), Type: typ, RecipientName: "王", AddressLine: line}))
+		if err != nil {
+			t.Fatalf("AddAddress(%s): %v", typ, err)
+		}
+		return r.Msg.GetAddress().GetId()
+	}
+	ship := add("shipping", "地址S") // shipping 首筆 → 預設
+	bill := add("billing", "地址B")  // billing 首筆 → 預設
+
+	// 將 shipping 預設地址改為 billing(未明示 is_default)→ 不得與 billing 既有預設並存。
+	res, err := client.UpdateAddress(ctx, connect.NewRequest(&customersv1.UpdateAddressRequest{
+		Id: ship, Type: strPtr("billing")}))
+	if err != nil {
+		t.Fatalf("UpdateAddress type change: %v", err)
+	}
+	if res.Msg.GetAddress().GetIsDefault() {
+		t.Fatal("型別搬移且未明示預設時,該地址不應仍為預設")
+	}
+	list, err := client.ListAddresses(ctx, connect.NewRequest(&customersv1.ListAddressesRequest{CustomerId: uItoa(custID)}))
+	if err != nil {
+		t.Fatalf("ListAddresses: %v", err)
+	}
+	billDefaults := 0
+	for _, a := range list.Msg.GetAddresses() {
+		if a.GetType() == "billing" && a.GetIsDefault() {
+			billDefaults++
+			if a.GetId() != bill {
+				t.Fatalf("billing 預設應仍為原地址 %s,got %s", bill, a.GetId())
+			}
+		}
+	}
+	if billDefaults != 1 {
+		t.Fatalf("billing 預設應恰一筆,got %d", billDefaults)
+	}
+}
+
 // TestAddressInvalidTypeAndDelete 3.2.1:非法 type → invalid_argument;刪除後預設列表不再出現。
 func TestAddressInvalidTypeAndDelete(t *testing.T) {
 	ctx := context.Background()
