@@ -1,24 +1,24 @@
 //
 //  Generated code. Do not modify.
-//  source: salesorder/v1/auth.proto
+//  source: customers/v1/customer.proto
 //
 
 import "package:connectrpc/connect.dart" as connect;
-import "auth.pb.dart" as salesorderv1auth;
-import "auth.connect.spec.dart" as specs;
+import "customer.pb.dart" as customersv1customer;
+import "customer.connect.spec.dart" as specs;
 
-/// AuthService:認證相關 RPC。
-extension type AuthServiceClient (connect.Transport _transport) {
-  /// Login:客戶帳號密碼登入。
-  Future<salesorderv1auth.LoginResponse> login(
-    salesorderv1auth.LoginRequest input, {
+/// CustomerService:客戶主檔管理(dept_admin/staff 限所屬部門)。
+extension type CustomerServiceClient (connect.Transport _transport) {
+  /// ListCustomers:分頁查詢(keyword 模糊比對 name/customer_code/tax_id;可 include_deleted)。
+  Future<customersv1customer.ListCustomersResponse> listCustomers(
+    customersv1customer.ListCustomersRequest input, {
     connect.Headers? headers,
     connect.AbortSignal? signal,
     Function(connect.Headers)? onHeader,
     Function(connect.Headers)? onTrailer,
   }) {
     return connect.Client(_transport).unary(
-      specs.AuthService.login,
+      specs.CustomerService.listCustomers,
       input,
       signal: signal,
       headers: headers,
@@ -27,16 +27,16 @@ extension type AuthServiceClient (connect.Transport _transport) {
     );
   }
 
-  /// Refresh:refresh token 旋轉換發。
-  Future<salesorderv1auth.RefreshResponse> refresh(
-    salesorderv1auth.RefreshRequest input, {
+  /// GetCustomer:以 id 取單筆(限可見範圍)。
+  Future<customersv1customer.GetCustomerResponse> getCustomer(
+    customersv1customer.GetCustomerRequest input, {
     connect.Headers? headers,
     connect.AbortSignal? signal,
     Function(connect.Headers)? onHeader,
     Function(connect.Headers)? onTrailer,
   }) {
     return connect.Client(_transport).unary(
-      specs.AuthService.refresh,
+      specs.CustomerService.getCustomer,
       input,
       signal: signal,
       headers: headers,
@@ -45,16 +45,16 @@ extension type AuthServiceClient (connect.Transport _transport) {
     );
   }
 
-  /// Logout:撤銷 refresh token(冪等)。
-  Future<salesorderv1auth.LogoutResponse> logout(
-    salesorderv1auth.LogoutRequest input, {
+  /// CreateCustomer:建立客戶(系統取號;字典/業務 reference 驗證)。
+  Future<customersv1customer.CreateCustomerResponse> createCustomer(
+    customersv1customer.CreateCustomerRequest input, {
     connect.Headers? headers,
     connect.AbortSignal? signal,
     Function(connect.Headers)? onHeader,
     Function(connect.Headers)? onTrailer,
   }) {
     return connect.Client(_transport).unary(
-      specs.AuthService.logout,
+      specs.CustomerService.createCustomer,
       input,
       signal: signal,
       headers: headers,
@@ -63,16 +63,16 @@ extension type AuthServiceClient (connect.Transport _transport) {
     );
   }
 
-  /// RegisterComplete:guest 補完註冊資料。
-  Future<salesorderv1auth.RegisterCompleteResponse> registerComplete(
-    salesorderv1auth.RegisterCompleteRequest input, {
+  /// UpdateCustomer:欄位式更新(customer_code 不可改)。
+  Future<customersv1customer.UpdateCustomerResponse> updateCustomer(
+    customersv1customer.UpdateCustomerRequest input, {
     connect.Headers? headers,
     connect.AbortSignal? signal,
     Function(connect.Headers)? onHeader,
     Function(connect.Headers)? onTrailer,
   }) {
     return connect.Client(_transport).unary(
-      specs.AuthService.registerComplete,
+      specs.CustomerService.updateCustomer,
       input,
       signal: signal,
       headers: headers,
@@ -81,16 +81,16 @@ extension type AuthServiceClient (connect.Transport _transport) {
     );
   }
 
-  /// QRLogin:QR token 兌換,回公司/客戶與可選子帳號清單。
-  Future<salesorderv1auth.QRLoginResponse> qRLogin(
-    salesorderv1auth.QRLoginRequest input, {
+  /// DeleteCustomer:軟刪除。
+  Future<customersv1customer.DeleteCustomerResponse> deleteCustomer(
+    customersv1customer.DeleteCustomerRequest input, {
     connect.Headers? headers,
     connect.AbortSignal? signal,
     Function(connect.Headers)? onHeader,
     Function(connect.Headers)? onTrailer,
   }) {
     return connect.Client(_transport).unary(
-      specs.AuthService.qRLogin,
+      specs.CustomerService.deleteCustomer,
       input,
       signal: signal,
       headers: headers,
@@ -99,34 +99,16 @@ extension type AuthServiceClient (connect.Transport _transport) {
     );
   }
 
-  /// ChangePassword:登入態修改密碼(1.5.2;must_change_password 時唯一可用)。
-  Future<salesorderv1auth.ChangePasswordResponse> changePassword(
-    salesorderv1auth.ChangePasswordRequest input, {
+  /// RestoreCustomer:復原(清 deleted_at)。
+  Future<customersv1customer.RestoreCustomerResponse> restoreCustomer(
+    customersv1customer.RestoreCustomerRequest input, {
     connect.Headers? headers,
     connect.AbortSignal? signal,
     Function(connect.Headers)? onHeader,
     Function(connect.Headers)? onTrailer,
   }) {
     return connect.Client(_transport).unary(
-      specs.AuthService.changePassword,
-      input,
-      signal: signal,
-      headers: headers,
-      onHeader: onHeader,
-      onTrailer: onTrailer,
-    );
-  }
-
-  /// ResetCustomerPassword:密碼重置,重新發臨時密碼(1.5.4;dept_admin 以上)。
-  Future<salesorderv1auth.ResetCustomerPasswordResponse> resetCustomerPassword(
-    salesorderv1auth.ResetCustomerPasswordRequest input, {
-    connect.Headers? headers,
-    connect.AbortSignal? signal,
-    Function(connect.Headers)? onHeader,
-    Function(connect.Headers)? onTrailer,
-  }) {
-    return connect.Client(_transport).unary(
-      specs.AuthService.resetCustomerPassword,
+      specs.CustomerService.restoreCustomer,
       input,
       signal: signal,
       headers: headers,

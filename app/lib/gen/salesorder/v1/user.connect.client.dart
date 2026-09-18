@@ -1,24 +1,24 @@
 //
 //  Generated code. Do not modify.
-//  source: salesorder/v1/auth.proto
+//  source: salesorder/v1/user.proto
 //
 
 import "package:connectrpc/connect.dart" as connect;
-import "auth.pb.dart" as salesorderv1auth;
-import "auth.connect.spec.dart" as specs;
+import "user.pb.dart" as salesorderv1user;
+import "user.connect.spec.dart" as specs;
 
-/// AuthService:認證相關 RPC。
-extension type AuthServiceClient (connect.Transport _transport) {
-  /// Login:客戶帳號密碼登入。
-  Future<salesorderv1auth.LoginResponse> login(
-    salesorderv1auth.LoginRequest input, {
+/// UserService:使用者管理。
+extension type UserServiceClient (connect.Transport _transport) {
+  /// ListUsers:分頁列出使用者,可依 company_id / department_id / role / status 篩選。
+  Future<salesorderv1user.ListUsersResponse> listUsers(
+    salesorderv1user.ListUsersRequest input, {
     connect.Headers? headers,
     connect.AbortSignal? signal,
     Function(connect.Headers)? onHeader,
     Function(connect.Headers)? onTrailer,
   }) {
     return connect.Client(_transport).unary(
-      specs.AuthService.login,
+      specs.UserService.listUsers,
       input,
       signal: signal,
       headers: headers,
@@ -27,16 +27,16 @@ extension type AuthServiceClient (connect.Transport _transport) {
     );
   }
 
-  /// Refresh:refresh token 旋轉換發。
-  Future<salesorderv1auth.RefreshResponse> refresh(
-    salesorderv1auth.RefreshRequest input, {
+  /// GetUser:取得單一使用者(不含 password_hash)。
+  Future<salesorderv1user.GetUserResponse> getUser(
+    salesorderv1user.GetUserRequest input, {
     connect.Headers? headers,
     connect.AbortSignal? signal,
     Function(connect.Headers)? onHeader,
     Function(connect.Headers)? onTrailer,
   }) {
     return connect.Client(_transport).unary(
-      specs.AuthService.refresh,
+      specs.UserService.getUser,
       input,
       signal: signal,
       headers: headers,
@@ -45,16 +45,16 @@ extension type AuthServiceClient (connect.Transport _transport) {
     );
   }
 
-  /// Logout:撤銷 refresh token(冪等)。
-  Future<salesorderv1auth.LogoutResponse> logout(
-    salesorderv1auth.LogoutRequest input, {
+  /// CreateUser:建立員工帳號(super 直接建立;password_hash 依 OAuth 流程填補)。
+  Future<salesorderv1user.CreateUserResponse> createUser(
+    salesorderv1user.CreateUserRequest input, {
     connect.Headers? headers,
     connect.AbortSignal? signal,
     Function(connect.Headers)? onHeader,
     Function(connect.Headers)? onTrailer,
   }) {
     return connect.Client(_transport).unary(
-      specs.AuthService.logout,
+      specs.UserService.createUser,
       input,
       signal: signal,
       headers: headers,
@@ -63,16 +63,16 @@ extension type AuthServiceClient (connect.Transport _transport) {
     );
   }
 
-  /// RegisterComplete:guest 補完註冊資料。
-  Future<salesorderv1auth.RegisterCompleteResponse> registerComplete(
-    salesorderv1auth.RegisterCompleteRequest input, {
+  /// UpdateUser:更新使用者(name / department_id / phone / employee_no / status)。
+  Future<salesorderv1user.UpdateUserResponse> updateUser(
+    salesorderv1user.UpdateUserRequest input, {
     connect.Headers? headers,
     connect.AbortSignal? signal,
     Function(connect.Headers)? onHeader,
     Function(connect.Headers)? onTrailer,
   }) {
     return connect.Client(_transport).unary(
-      specs.AuthService.registerComplete,
+      specs.UserService.updateUser,
       input,
       signal: signal,
       headers: headers,
@@ -81,16 +81,16 @@ extension type AuthServiceClient (connect.Transport _transport) {
     );
   }
 
-  /// QRLogin:QR token 兌換,回公司/客戶與可選子帳號清單。
-  Future<salesorderv1auth.QRLoginResponse> qRLogin(
-    salesorderv1auth.QRLoginRequest input, {
+  /// AssignRole:角色指派(含 guest 審核:status pending → active 並指派部門與角色)。
+  Future<salesorderv1user.AssignRoleResponse> assignRole(
+    salesorderv1user.AssignRoleRequest input, {
     connect.Headers? headers,
     connect.AbortSignal? signal,
     Function(connect.Headers)? onHeader,
     Function(connect.Headers)? onTrailer,
   }) {
     return connect.Client(_transport).unary(
-      specs.AuthService.qRLogin,
+      specs.UserService.assignRole,
       input,
       signal: signal,
       headers: headers,
@@ -99,16 +99,16 @@ extension type AuthServiceClient (connect.Transport _transport) {
     );
   }
 
-  /// ChangePassword:登入態修改密碼(1.5.2;must_change_password 時唯一可用)。
-  Future<salesorderv1auth.ChangePasswordResponse> changePassword(
-    salesorderv1auth.ChangePasswordRequest input, {
+  /// Deactivate:停用帳號(status → inactive, token_version+1, 刪 session)。
+  Future<salesorderv1user.DeactivateResponse> deactivate(
+    salesorderv1user.DeactivateRequest input, {
     connect.Headers? headers,
     connect.AbortSignal? signal,
     Function(connect.Headers)? onHeader,
     Function(connect.Headers)? onTrailer,
   }) {
     return connect.Client(_transport).unary(
-      specs.AuthService.changePassword,
+      specs.UserService.deactivate,
       input,
       signal: signal,
       headers: headers,
@@ -117,16 +117,16 @@ extension type AuthServiceClient (connect.Transport _transport) {
     );
   }
 
-  /// ResetCustomerPassword:密碼重置,重新發臨時密碼(1.5.4;dept_admin 以上)。
-  Future<salesorderv1auth.ResetCustomerPasswordResponse> resetCustomerPassword(
-    salesorderv1auth.ResetCustomerPasswordRequest input, {
+  /// ForceLogout:強制登出(token_version+1, 使該使用者在途憑證失效)。
+  Future<salesorderv1user.ForceLogoutResponse> forceLogout(
+    salesorderv1user.ForceLogoutRequest input, {
     connect.Headers? headers,
     connect.AbortSignal? signal,
     Function(connect.Headers)? onHeader,
     Function(connect.Headers)? onTrailer,
   }) {
     return connect.Client(_transport).unary(
-      specs.AuthService.resetCustomerPassword,
+      specs.UserService.forceLogout,
       input,
       signal: signal,
       headers: headers,

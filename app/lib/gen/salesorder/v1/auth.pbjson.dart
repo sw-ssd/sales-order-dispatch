@@ -14,6 +14,58 @@ import 'dart:convert' as $convert;
 import 'dart:core' as $core;
 import 'dart:typed_data' as $typed_data;
 
+@$core.Deprecated('Use changePasswordRequestDescriptor instead')
+const ChangePasswordRequest$json = {
+  '1': 'ChangePasswordRequest',
+  '2': [
+    {'1': 'old_password', '3': 1, '4': 1, '5': 9, '10': 'oldPassword'},
+    {'1': 'new_password', '3': 2, '4': 1, '5': 9, '10': 'newPassword'},
+  ],
+};
+
+/// Descriptor for `ChangePasswordRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List changePasswordRequestDescriptor = $convert.base64Decode(
+    'ChVDaGFuZ2VQYXNzd29yZFJlcXVlc3QSIQoMb2xkX3Bhc3N3b3JkGAEgASgJUgtvbGRQYXNzd2'
+    '9yZBIhCgxuZXdfcGFzc3dvcmQYAiABKAlSC25ld1Bhc3N3b3Jk');
+
+@$core.Deprecated('Use changePasswordResponseDescriptor instead')
+const ChangePasswordResponse$json = {
+  '1': 'ChangePasswordResponse',
+};
+
+/// Descriptor for `ChangePasswordResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List changePasswordResponseDescriptor =
+    $convert.base64Decode('ChZDaGFuZ2VQYXNzd29yZFJlc3BvbnNl');
+
+@$core.Deprecated('Use resetCustomerPasswordRequestDescriptor instead')
+const ResetCustomerPasswordRequest$json = {
+  '1': 'ResetCustomerPasswordRequest',
+  '2': [
+    {'1': 'user_id', '3': 1, '4': 1, '5': 9, '10': 'userId'},
+  ],
+};
+
+/// Descriptor for `ResetCustomerPasswordRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List resetCustomerPasswordRequestDescriptor =
+    $convert.base64Decode(
+        'ChxSZXNldEN1c3RvbWVyUGFzc3dvcmRSZXF1ZXN0EhcKB3VzZXJfaWQYASABKAlSBnVzZXJJZA'
+        '==');
+
+@$core.Deprecated('Use resetCustomerPasswordResponseDescriptor instead')
+const ResetCustomerPasswordResponse$json = {
+  '1': 'ResetCustomerPasswordResponse',
+  '2': [
+    {'1': 'temp_password', '3': 1, '4': 1, '5': 9, '10': 'tempPassword'},
+    {'1': 'expires_at', '3': 2, '4': 1, '5': 3, '10': 'expiresAt'},
+  ],
+};
+
+/// Descriptor for `ResetCustomerPasswordResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List resetCustomerPasswordResponseDescriptor =
+    $convert.base64Decode(
+        'Ch1SZXNldEN1c3RvbWVyUGFzc3dvcmRSZXNwb25zZRIjCg10ZW1wX3Bhc3N3b3JkGAEgASgJUg'
+        'x0ZW1wUGFzc3dvcmQSHQoKZXhwaXJlc19hdBgCIAEoA1IJZXhwaXJlc0F0');
+
 @$core.Deprecated('Use loginRequestDescriptor instead')
 const LoginRequest$json = {
   '1': 'LoginRequest',
@@ -35,6 +87,13 @@ const LoginResponse$json = {
     {'1': 'access_token', '3': 1, '4': 1, '5': 9, '10': 'accessToken'},
     {'1': 'refresh_token', '3': 2, '4': 1, '5': 9, '10': 'refreshToken'},
     {'1': 'expires_in', '3': 3, '4': 1, '5': 3, '10': 'expiresIn'},
+    {
+      '1': 'must_change_password',
+      '3': 4,
+      '4': 1,
+      '5': 8,
+      '10': 'mustChangePassword'
+    },
   ],
 };
 
@@ -42,7 +101,8 @@ const LoginResponse$json = {
 final $typed_data.Uint8List loginResponseDescriptor = $convert.base64Decode(
     'Cg1Mb2dpblJlc3BvbnNlEiEKDGFjY2Vzc190b2tlbhgBIAEoCVILYWNjZXNzVG9rZW4SIwoNcm'
     'VmcmVzaF90b2tlbhgCIAEoCVIMcmVmcmVzaFRva2VuEh0KCmV4cGlyZXNfaW4YAyABKANSCWV4'
-    'cGlyZXNJbg==');
+    'cGlyZXNJbhIwChRtdXN0X2NoYW5nZV9wYXNzd29yZBgEIAEoCFISbXVzdENoYW5nZVBhc3N3b3'
+    'Jk');
 
 @$core.Deprecated('Use refreshRequestDescriptor instead')
 const RefreshRequest$json = {
@@ -195,6 +255,16 @@ const $core.Map<$core.String, $core.dynamic> AuthServiceBase$json = {
       '2': '.salesorder.v1.QRLoginRequest',
       '3': '.salesorder.v1.QRLoginResponse'
     },
+    {
+      '1': 'ChangePassword',
+      '2': '.salesorder.v1.ChangePasswordRequest',
+      '3': '.salesorder.v1.ChangePasswordResponse'
+    },
+    {
+      '1': 'ResetCustomerPassword',
+      '2': '.salesorder.v1.ResetCustomerPasswordRequest',
+      '3': '.salesorder.v1.ResetCustomerPasswordResponse'
+    },
   ],
 };
 
@@ -212,6 +282,12 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.salesorder.v1.QRLoginRequest': QRLoginRequest$json,
   '.salesorder.v1.QRLoginResponse': QRLoginResponse$json,
   '.salesorder.v1.QRLoginResponse.Account': QRLoginResponse_Account$json,
+  '.salesorder.v1.ChangePasswordRequest': ChangePasswordRequest$json,
+  '.salesorder.v1.ChangePasswordResponse': ChangePasswordResponse$json,
+  '.salesorder.v1.ResetCustomerPasswordRequest':
+      ResetCustomerPasswordRequest$json,
+  '.salesorder.v1.ResetCustomerPasswordResponse':
+      ResetCustomerPasswordResponse$json,
 };
 
 /// Descriptor for `AuthService`. Decode as a `google.protobuf.ServiceDescriptorProto`.
@@ -223,4 +299,8 @@ final $typed_data.Uint8List authServiceDescriptor = $convert.base64Decode(
     'b25zZRJjChBSZWdpc3RlckNvbXBsZXRlEiYuc2FsZXNvcmRlci52MS5SZWdpc3RlckNvbXBsZX'
     'RlUmVxdWVzdBonLnNhbGVzb3JkZXIudjEuUmVnaXN0ZXJDb21wbGV0ZVJlc3BvbnNlEkgKB1FS'
     'TG9naW4SHS5zYWxlc29yZGVyLnYxLlFSTG9naW5SZXF1ZXN0Gh4uc2FsZXNvcmRlci52MS5RUk'
-    'xvZ2luUmVzcG9uc2U=');
+    'xvZ2luUmVzcG9uc2USXQoOQ2hhbmdlUGFzc3dvcmQSJC5zYWxlc29yZGVyLnYxLkNoYW5nZVBh'
+    'c3N3b3JkUmVxdWVzdBolLnNhbGVzb3JkZXIudjEuQ2hhbmdlUGFzc3dvcmRSZXNwb25zZRJyCh'
+    'VSZXNldEN1c3RvbWVyUGFzc3dvcmQSKy5zYWxlc29yZGVyLnYxLlJlc2V0Q3VzdG9tZXJQYXNz'
+    'd29yZFJlcXVlc3QaLC5zYWxlc29yZGVyLnYxLlJlc2V0Q3VzdG9tZXJQYXNzd29yZFJlc3Bvbn'
+    'Nl');

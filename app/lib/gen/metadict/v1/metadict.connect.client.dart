@@ -1,24 +1,24 @@
 //
 //  Generated code. Do not modify.
-//  source: salesorder/v1/auth.proto
+//  source: metadict/v1/metadict.proto
 //
 
 import "package:connectrpc/connect.dart" as connect;
-import "auth.pb.dart" as salesorderv1auth;
-import "auth.connect.spec.dart" as specs;
+import "metadict.pb.dart" as metadictv1metadict;
+import "metadict.connect.spec.dart" as specs;
 
-/// AuthService:認證相關 RPC。
-extension type AuthServiceClient (connect.Transport _transport) {
-  /// Login:客戶帳號密碼登入。
-  Future<salesorderv1auth.LoginResponse> login(
-    salesorderv1auth.LoginRequest input, {
+/// MetadictService:字典管理。
+extension type MetadictServiceClient (connect.Transport _transport) {
+  /// ListMetadicts:分頁查詢(系統預設 + 當前部門擴充合併),可依 type 篩選。
+  Future<metadictv1metadict.ListMetadictsResponse> listMetadicts(
+    metadictv1metadict.ListMetadictsRequest input, {
     connect.Headers? headers,
     connect.AbortSignal? signal,
     Function(connect.Headers)? onHeader,
     Function(connect.Headers)? onTrailer,
   }) {
     return connect.Client(_transport).unary(
-      specs.AuthService.login,
+      specs.MetadictService.listMetadicts,
       input,
       signal: signal,
       headers: headers,
@@ -27,16 +27,16 @@ extension type AuthServiceClient (connect.Transport _transport) {
     );
   }
 
-  /// Refresh:refresh token 旋轉換發。
-  Future<salesorderv1auth.RefreshResponse> refresh(
-    salesorderv1auth.RefreshRequest input, {
+  /// GetMetadict:取得單一字典。
+  Future<metadictv1metadict.GetMetadictResponse> getMetadict(
+    metadictv1metadict.GetMetadictRequest input, {
     connect.Headers? headers,
     connect.AbortSignal? signal,
     Function(connect.Headers)? onHeader,
     Function(connect.Headers)? onTrailer,
   }) {
     return connect.Client(_transport).unary(
-      specs.AuthService.refresh,
+      specs.MetadictService.getMetadict,
       input,
       signal: signal,
       headers: headers,
@@ -45,16 +45,16 @@ extension type AuthServiceClient (connect.Transport _transport) {
     );
   }
 
-  /// Logout:撤銷 refresh token(冪等)。
-  Future<salesorderv1auth.LogoutResponse> logout(
-    salesorderv1auth.LogoutRequest input, {
+  /// CreateMetadict:建立字典(super 建系統級;dept_admin/staff 自動帶當前部門,不接受請求帶 department_id)。
+  Future<metadictv1metadict.CreateMetadictResponse> createMetadict(
+    metadictv1metadict.CreateMetadictRequest input, {
     connect.Headers? headers,
     connect.AbortSignal? signal,
     Function(connect.Headers)? onHeader,
     Function(connect.Headers)? onTrailer,
   }) {
     return connect.Client(_transport).unary(
-      specs.AuthService.logout,
+      specs.MetadictService.createMetadict,
       input,
       signal: signal,
       headers: headers,
@@ -63,16 +63,16 @@ extension type AuthServiceClient (connect.Transport _transport) {
     );
   }
 
-  /// RegisterComplete:guest 補完註冊資料。
-  Future<salesorderv1auth.RegisterCompleteResponse> registerComplete(
-    salesorderv1auth.RegisterCompleteRequest input, {
+  /// UpdateMetadict:更新 display_name / sort_order / is_active(不含 type / code)。
+  Future<metadictv1metadict.UpdateMetadictResponse> updateMetadict(
+    metadictv1metadict.UpdateMetadictRequest input, {
     connect.Headers? headers,
     connect.AbortSignal? signal,
     Function(connect.Headers)? onHeader,
     Function(connect.Headers)? onTrailer,
   }) {
     return connect.Client(_transport).unary(
-      specs.AuthService.registerComplete,
+      specs.MetadictService.updateMetadict,
       input,
       signal: signal,
       headers: headers,
@@ -81,16 +81,16 @@ extension type AuthServiceClient (connect.Transport _transport) {
     );
   }
 
-  /// QRLogin:QR token 兌換,回公司/客戶與可選子帳號清單。
-  Future<salesorderv1auth.QRLoginResponse> qRLogin(
-    salesorderv1auth.QRLoginRequest input, {
+  /// DeleteMetadict:軟刪除(order_source 不可刪)。
+  Future<metadictv1metadict.DeleteMetadictResponse> deleteMetadict(
+    metadictv1metadict.DeleteMetadictRequest input, {
     connect.Headers? headers,
     connect.AbortSignal? signal,
     Function(connect.Headers)? onHeader,
     Function(connect.Headers)? onTrailer,
   }) {
     return connect.Client(_transport).unary(
-      specs.AuthService.qRLogin,
+      specs.MetadictService.deleteMetadict,
       input,
       signal: signal,
       headers: headers,
@@ -99,34 +99,16 @@ extension type AuthServiceClient (connect.Transport _transport) {
     );
   }
 
-  /// ChangePassword:登入態修改密碼(1.5.2;must_change_password 時唯一可用)。
-  Future<salesorderv1auth.ChangePasswordResponse> changePassword(
-    salesorderv1auth.ChangePasswordRequest input, {
+  /// ListOptions:表單下拉選項(僅可選用啟用值;客戶端身分僅回系統預設)。
+  Future<metadictv1metadict.ListOptionsResponse> listOptions(
+    metadictv1metadict.ListOptionsRequest input, {
     connect.Headers? headers,
     connect.AbortSignal? signal,
     Function(connect.Headers)? onHeader,
     Function(connect.Headers)? onTrailer,
   }) {
     return connect.Client(_transport).unary(
-      specs.AuthService.changePassword,
-      input,
-      signal: signal,
-      headers: headers,
-      onHeader: onHeader,
-      onTrailer: onTrailer,
-    );
-  }
-
-  /// ResetCustomerPassword:密碼重置,重新發臨時密碼(1.5.4;dept_admin 以上)。
-  Future<salesorderv1auth.ResetCustomerPasswordResponse> resetCustomerPassword(
-    salesorderv1auth.ResetCustomerPasswordRequest input, {
-    connect.Headers? headers,
-    connect.AbortSignal? signal,
-    Function(connect.Headers)? onHeader,
-    Function(connect.Headers)? onTrailer,
-  }) {
-    return connect.Client(_transport).unary(
-      specs.AuthService.resetCustomerPassword,
+      specs.MetadictService.listOptions,
       input,
       signal: signal,
       headers: headers,

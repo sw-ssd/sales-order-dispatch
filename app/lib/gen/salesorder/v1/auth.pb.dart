@@ -18,6 +18,254 @@ import 'package:protobuf/protobuf.dart' as $pb;
 
 export 'package:protobuf/protobuf.dart' show GeneratedMessageGenericExtensions;
 
+/// ChangePasswordRequest:登入態修改密碼(A3 1.5.2;must_change_password=true 時唯一可用 RPC)。
+class ChangePasswordRequest extends $pb.GeneratedMessage {
+  factory ChangePasswordRequest({
+    $core.String? oldPassword,
+    $core.String? newPassword,
+  }) {
+    final result = create();
+    if (oldPassword != null) result.oldPassword = oldPassword;
+    if (newPassword != null) result.newPassword = newPassword;
+    return result;
+  }
+
+  ChangePasswordRequest._();
+
+  factory ChangePasswordRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory ChangePasswordRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ChangePasswordRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'oldPassword')
+    ..aOS(2, _omitFieldNames ? '' : 'newPassword')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ChangePasswordRequest clone() =>
+      ChangePasswordRequest()..mergeFromMessage(this);
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ChangePasswordRequest copyWith(
+          void Function(ChangePasswordRequest) updates) =>
+      super.copyWith((message) => updates(message as ChangePasswordRequest))
+          as ChangePasswordRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ChangePasswordRequest create() => ChangePasswordRequest._();
+  @$core.override
+  ChangePasswordRequest createEmptyInstance() => create();
+  static $pb.PbList<ChangePasswordRequest> createRepeated() =>
+      $pb.PbList<ChangePasswordRequest>();
+  @$core.pragma('dart2js:noInline')
+  static ChangePasswordRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ChangePasswordRequest>(create);
+  static ChangePasswordRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get oldPassword => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set oldPassword($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasOldPassword() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearOldPassword() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get newPassword => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set newPassword($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasNewPassword() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearNewPassword() => $_clearField(2);
+}
+
+/// ChangePasswordResponse:修改結果(無內容)。
+class ChangePasswordResponse extends $pb.GeneratedMessage {
+  factory ChangePasswordResponse() => create();
+
+  ChangePasswordResponse._();
+
+  factory ChangePasswordResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory ChangePasswordResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ChangePasswordResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: create)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ChangePasswordResponse clone() =>
+      ChangePasswordResponse()..mergeFromMessage(this);
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ChangePasswordResponse copyWith(
+          void Function(ChangePasswordResponse) updates) =>
+      super.copyWith((message) => updates(message as ChangePasswordResponse))
+          as ChangePasswordResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ChangePasswordResponse create() => ChangePasswordResponse._();
+  @$core.override
+  ChangePasswordResponse createEmptyInstance() => create();
+  static $pb.PbList<ChangePasswordResponse> createRepeated() =>
+      $pb.PbList<ChangePasswordResponse>();
+  @$core.pragma('dart2js:noInline')
+  static ChangePasswordResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ChangePasswordResponse>(create);
+  static ChangePasswordResponse? _defaultInstance;
+}
+
+/// ResetCustomerPasswordRequest:密碼重置(A3 1.5.4;dept_admin 以上)。
+class ResetCustomerPasswordRequest extends $pb.GeneratedMessage {
+  factory ResetCustomerPasswordRequest({
+    $core.String? userId,
+  }) {
+    final result = create();
+    if (userId != null) result.userId = userId;
+    return result;
+  }
+
+  ResetCustomerPasswordRequest._();
+
+  factory ResetCustomerPasswordRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory ResetCustomerPasswordRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ResetCustomerPasswordRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'userId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ResetCustomerPasswordRequest clone() =>
+      ResetCustomerPasswordRequest()..mergeFromMessage(this);
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ResetCustomerPasswordRequest copyWith(
+          void Function(ResetCustomerPasswordRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as ResetCustomerPasswordRequest))
+          as ResetCustomerPasswordRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ResetCustomerPasswordRequest create() =>
+      ResetCustomerPasswordRequest._();
+  @$core.override
+  ResetCustomerPasswordRequest createEmptyInstance() => create();
+  static $pb.PbList<ResetCustomerPasswordRequest> createRepeated() =>
+      $pb.PbList<ResetCustomerPasswordRequest>();
+  @$core.pragma('dart2js:noInline')
+  static ResetCustomerPasswordRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ResetCustomerPasswordRequest>(create);
+  static ResetCustomerPasswordRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get userId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set userId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasUserId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearUserId() => $_clearField(1);
+}
+
+/// ResetCustomerPasswordResponse:新臨時密碼(僅本次回應回傳,不落盤)。
+class ResetCustomerPasswordResponse extends $pb.GeneratedMessage {
+  factory ResetCustomerPasswordResponse({
+    $core.String? tempPassword,
+    $fixnum.Int64? expiresAt,
+  }) {
+    final result = create();
+    if (tempPassword != null) result.tempPassword = tempPassword;
+    if (expiresAt != null) result.expiresAt = expiresAt;
+    return result;
+  }
+
+  ResetCustomerPasswordResponse._();
+
+  factory ResetCustomerPasswordResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromBuffer(data, registry);
+  factory ResetCustomerPasswordResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      create()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ResetCustomerPasswordResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'tempPassword')
+    ..aInt64(2, _omitFieldNames ? '' : 'expiresAt')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ResetCustomerPasswordResponse clone() =>
+      ResetCustomerPasswordResponse()..mergeFromMessage(this);
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ResetCustomerPasswordResponse copyWith(
+          void Function(ResetCustomerPasswordResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as ResetCustomerPasswordResponse))
+          as ResetCustomerPasswordResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ResetCustomerPasswordResponse create() =>
+      ResetCustomerPasswordResponse._();
+  @$core.override
+  ResetCustomerPasswordResponse createEmptyInstance() => create();
+  static $pb.PbList<ResetCustomerPasswordResponse> createRepeated() =>
+      $pb.PbList<ResetCustomerPasswordResponse>();
+  @$core.pragma('dart2js:noInline')
+  static ResetCustomerPasswordResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ResetCustomerPasswordResponse>(create);
+  static ResetCustomerPasswordResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get tempPassword => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set tempPassword($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasTempPassword() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearTempPassword() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $fixnum.Int64 get expiresAt => $_getI64(1);
+  @$pb.TagNumber(2)
+  set expiresAt($fixnum.Int64 value) => $_setInt64(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasExpiresAt() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearExpiresAt() => $_clearField(2);
+}
+
 /// LoginRequest:客戶帳號密碼登入(Task 12;Web 店家分頁與 App 店家登入共用)。
 class LoginRequest extends $pb.GeneratedMessage {
   factory LoginRequest({
@@ -93,11 +341,14 @@ class LoginResponse extends $pb.GeneratedMessage {
     $core.String? accessToken,
     $core.String? refreshToken,
     $fixnum.Int64? expiresIn,
+    $core.bool? mustChangePassword,
   }) {
     final result = create();
     if (accessToken != null) result.accessToken = accessToken;
     if (refreshToken != null) result.refreshToken = refreshToken;
     if (expiresIn != null) result.expiresIn = expiresIn;
+    if (mustChangePassword != null)
+      result.mustChangePassword = mustChangePassword;
     return result;
   }
 
@@ -117,6 +368,7 @@ class LoginResponse extends $pb.GeneratedMessage {
     ..aOS(1, _omitFieldNames ? '' : 'accessToken')
     ..aOS(2, _omitFieldNames ? '' : 'refreshToken')
     ..aInt64(3, _omitFieldNames ? '' : 'expiresIn')
+    ..aOB(4, _omitFieldNames ? '' : 'mustChangePassword')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -166,6 +418,15 @@ class LoginResponse extends $pb.GeneratedMessage {
   $core.bool hasExpiresIn() => $_has(2);
   @$pb.TagNumber(3)
   void clearExpiresIn() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.bool get mustChangePassword => $_getBF(3);
+  @$pb.TagNumber(4)
+  set mustChangePassword($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasMustChangePassword() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearMustChangePassword() => $_clearField(4);
 }
 
 /// RefreshRequest:以 refresh token 旋轉換發新 token 對。
@@ -782,6 +1043,18 @@ class AuthServiceApi {
           $pb.ClientContext? ctx, QRLoginRequest request) =>
       _client.invoke<QRLoginResponse>(
           ctx, 'AuthService', 'QRLogin', request, QRLoginResponse());
+
+  /// ChangePassword:登入態修改密碼(1.5.2;must_change_password 時唯一可用)。
+  $async.Future<ChangePasswordResponse> changePassword(
+          $pb.ClientContext? ctx, ChangePasswordRequest request) =>
+      _client.invoke<ChangePasswordResponse>(ctx, 'AuthService',
+          'ChangePassword', request, ChangePasswordResponse());
+
+  /// ResetCustomerPassword:密碼重置,重新發臨時密碼(1.5.4;dept_admin 以上)。
+  $async.Future<ResetCustomerPasswordResponse> resetCustomerPassword(
+          $pb.ClientContext? ctx, ResetCustomerPasswordRequest request) =>
+      _client.invoke<ResetCustomerPasswordResponse>(ctx, 'AuthService',
+          'ResetCustomerPassword', request, ResetCustomerPasswordResponse());
 }
 
 const $core.bool _omitFieldNames =

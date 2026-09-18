@@ -63,7 +63,8 @@
 - ✅ 內聯唯讀複審完成（本 harness 無通用子代理派送，採內聯）：`default_sales_rep_id` 於 Create 改為必填；兩帳號與客戶/取號/稽核同一交易（D18），任一 `buildCustomerAccount` 失敗於 commit 前回傳並回滾，不產生孤兒；`user.email` 以全域唯一之 `customer_code` 生成佔位不撞既有帳號；`account_manage_url` 由 `config.Auth.FrontendURL`＋`/customer_account_manage` 經 domains.go 注入。
 - **註記 #1（防禦性、可接受）**：規格 3.1.4 步驟 4「帳號名稱於客戶內唯一」未以 DB 唯一索引強制——新建客戶恰一次建立兩帳號且名稱由客戶名稱推導（理論不可能重複），`account_name` 亦非唯一欄位；採服務層保證，不另建索引。
 - **註記 #2**：「每客戶恰一 `is_primary=true`」由 migration `00014` 部分唯一索引 `(customer_id) WHERE is_primary=true AND customer_id IS NOT NULL` 兜底（Postgres）；ent/sqlite 測試不建該索引，由服務層正確寫入（測試內驗證）。
-- 已知 gap：App Dart `lib/gen` 未同步（本機無 `protoc-gen-dart`）；buf 重產對不相關前端 proto 的版本註解 churn 已還原，僅保留本任務 `customer_pb.*`；A2「App JWT 路徑停用阻斷」併入 01 Task 11 未作。
+- ✅ **App Dart `lib/gen` 已補齊（2026-09-18）**：原缺 `protoc-gen-dart`，已以 `protoc_plugin 22.5.0`（對齊 `protobuf` 4.2.0）＋ `buf generate` 補跑；新增 `customers/v1`、`audit/v1`、`metadict/v1`、`salesorder/v1/user`，並補上 `salesorder/v1/auth` 落後的 A3 RPC。`flutter analyze`（fvm `stable`, Dart 3.13.3）對全 app 與 `lib/gen` 皆「No issues found!」。工具鏈前置：`dart pub global activate protoc_plugin 22.5.0`、`PATH` 需含 `~/.pub-cache/bin`（`task proto:gen` 已處理）。
+- buf 重產對不相關前端 proto 的版本註解 churn 已還原，僅保留本任務 `customer_pb.*`；A2「App JWT 路徑停用阻斷」併入 01 Task 11 未作。
 
 ### 複審 recheck（requesting-code-review, 2026-09-18 第二輪）
 

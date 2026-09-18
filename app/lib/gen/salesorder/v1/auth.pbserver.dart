@@ -31,6 +31,10 @@ abstract class AuthServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.RegisterCompleteRequest request);
   $async.Future<$0.QRLoginResponse> qRLogin(
       $pb.ServerContext ctx, $0.QRLoginRequest request);
+  $async.Future<$0.ChangePasswordResponse> changePassword(
+      $pb.ServerContext ctx, $0.ChangePasswordRequest request);
+  $async.Future<$0.ResetCustomerPasswordResponse> resetCustomerPassword(
+      $pb.ServerContext ctx, $0.ResetCustomerPasswordRequest request);
 
   $pb.GeneratedMessage createRequest($core.String methodName) {
     switch (methodName) {
@@ -44,6 +48,10 @@ abstract class AuthServiceBase extends $pb.GeneratedService {
         return $0.RegisterCompleteRequest();
       case 'QRLogin':
         return $0.QRLoginRequest();
+      case 'ChangePassword':
+        return $0.ChangePasswordRequest();
+      case 'ResetCustomerPassword':
+        return $0.ResetCustomerPasswordRequest();
       default:
         throw $core.ArgumentError('Unknown method: $methodName');
     }
@@ -62,6 +70,11 @@ abstract class AuthServiceBase extends $pb.GeneratedService {
         return registerComplete(ctx, request as $0.RegisterCompleteRequest);
       case 'QRLogin':
         return qRLogin(ctx, request as $0.QRLoginRequest);
+      case 'ChangePassword':
+        return changePassword(ctx, request as $0.ChangePasswordRequest);
+      case 'ResetCustomerPassword':
+        return resetCustomerPassword(
+            ctx, request as $0.ResetCustomerPasswordRequest);
       default:
         throw $core.ArgumentError('Unknown method: $methodName');
     }

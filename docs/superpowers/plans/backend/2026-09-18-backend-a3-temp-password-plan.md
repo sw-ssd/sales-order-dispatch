@@ -76,7 +76,7 @@
 
 ## 已知缺口（複審登錄 2026-09-18）
 
-- **產碼同步**：`auth.proto` 變更已同步 **Go**（`internal/proto`）與**前端 TS**（`frontend/src/lib/proto`）;**App Dart**（`app/lib/gen`）待本機有 `protoc-gen-dart` 時補跑 `task proto:gen`。
+- ✅ **產碼同步（已補齊）**：`auth.proto` 已同步 **Go** / **前端 TS** / **App Dart**（`app/lib/gen`，2026-09-18 以 `protoc_plugin 22.5.0` + `buf generate` 補跑，含 A3 的 ChangePassword/ResetCustomerPassword）。
 - **must_change 受限態對非 RPC 路徑亦生效**：must_change 使用者無法呼叫 `Logout`（規格「僅 ChangePassword 可用」的必然結果,UX 註記）。
 
 ---

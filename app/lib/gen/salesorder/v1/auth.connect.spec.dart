@@ -50,4 +50,20 @@ abstract final class AuthService {
     salesorderv1auth.QRLoginRequest.new,
     salesorderv1auth.QRLoginResponse.new,
   );
+
+  /// ChangePassword:登入態修改密碼(1.5.2;must_change_password 時唯一可用)。
+  static const changePassword = connect.Spec(
+    '/$name/ChangePassword',
+    connect.StreamType.unary,
+    salesorderv1auth.ChangePasswordRequest.new,
+    salesorderv1auth.ChangePasswordResponse.new,
+  );
+
+  /// ResetCustomerPassword:密碼重置,重新發臨時密碼(1.5.4;dept_admin 以上)。
+  static const resetCustomerPassword = connect.Spec(
+    '/$name/ResetCustomerPassword',
+    connect.StreamType.unary,
+    salesorderv1auth.ResetCustomerPasswordRequest.new,
+    salesorderv1auth.ResetCustomerPasswordResponse.new,
+  );
 }
