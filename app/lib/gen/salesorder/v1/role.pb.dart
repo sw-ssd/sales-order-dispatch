@@ -8,14 +8,14 @@
 // ignore_for_file: constant_identifier_names
 // ignore_for_file: curly_braces_in_flow_control_structures
 // ignore_for_file: deprecated_member_use_from_same_package, library_prefixes
-// ignore_for_file: non_constant_identifier_names
+// ignore_for_file: non_constant_identifier_names, prefer_relative_imports
 
 import 'dart:async' as $async;
 import 'dart:core' as $core;
 
 import 'package:protobuf/protobuf.dart' as $pb;
+import 'package:protobuf/well_known_types/google/protobuf/struct.pb.dart' as $0;
 
-import '../../google/protobuf/struct.pb.dart' as $0;
 import 'common.pb.dart' as $1;
 
 export 'package:protobuf/protobuf.dart' show GeneratedMessageGenericExtensions;
@@ -30,7 +30,7 @@ class Role extends $pb.GeneratedMessage {
     $core.bool? isSystem,
     $core.bool? isActive,
   }) {
-    final result = create();
+    final result = Role._();
     if (id != null) result.id = id;
     if (code != null) result.code = code;
     if (name != null) result.name = name;
@@ -44,15 +44,15 @@ class Role extends $pb.GeneratedMessage {
 
   factory Role.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      Role()..mergeFromBuffer(data, registry);
   factory Role.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      Role()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'Role',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: Role.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'id')
     ..aOS(2, _omitFieldNames ? '' : 'code')
     ..aOS(3, _omitFieldNames ? '' : 'name')
@@ -62,7 +62,7 @@ class Role extends $pb.GeneratedMessage {
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  Role clone() => Role()..mergeFromMessage(this);
+  Role clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   Role copyWith(void Function(Role) updates) =>
       super.copyWith((message) => updates(message as Role)) as Role;
@@ -71,13 +71,14 @@ class Role extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use Role() / Role.new instead')
   static Role create() => Role._();
+  static $pb.GeneratedMessage $_createMessage() => Role._();
   @$core.override
-  Role createEmptyInstance() => create();
-  static $pb.PbList<Role> createRepeated() => $pb.PbList<Role>();
+  Role createEmptyInstance() => Role._();
   @$core.pragma('dart2js:noInline')
-  static Role getDefault() =>
-      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<Role>(create);
+  static Role getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<Role>(Role.$_createMessage);
   static Role? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -144,7 +145,7 @@ class Permission extends $pb.GeneratedMessage {
     $core.bool? inverted,
     $core.int? sortOrder,
   }) {
-    final result = create();
+    final result = Permission._();
     if (resource != null) result.resource = resource;
     if (action != null) result.action = action;
     if (conditions != null) result.conditions = conditions;
@@ -157,25 +158,25 @@ class Permission extends $pb.GeneratedMessage {
 
   factory Permission.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      Permission()..mergeFromBuffer(data, registry);
   factory Permission.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      Permission()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'Permission',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: Permission.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'resource')
     ..aOS(2, _omitFieldNames ? '' : 'action')
     ..aOM<$0.Struct>(3, _omitFieldNames ? '' : 'conditions',
-        subBuilder: $0.Struct.create)
+        subBuilder: $0.Struct.$_createMessage)
     ..aOB(4, _omitFieldNames ? '' : 'inverted')
-    ..a<$core.int>(5, _omitFieldNames ? '' : 'sortOrder', $pb.PbFieldType.O3)
+    ..aI(5, _omitFieldNames ? '' : 'sortOrder')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  Permission clone() => Permission()..mergeFromMessage(this);
+  Permission clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   Permission copyWith(void Function(Permission) updates) =>
       super.copyWith((message) => updates(message as Permission)) as Permission;
@@ -184,13 +185,14 @@ class Permission extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use Permission() / Permission.new instead')
   static Permission create() => Permission._();
+  static $pb.GeneratedMessage $_createMessage() => Permission._();
   @$core.override
-  Permission createEmptyInstance() => create();
-  static $pb.PbList<Permission> createRepeated() => $pb.PbList<Permission>();
+  Permission createEmptyInstance() => Permission._();
   @$core.pragma('dart2js:noInline')
   static Permission getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<Permission>(create);
+      $pb.GeneratedMessage.$_defaultFor<Permission>(Permission.$_createMessage);
   static Permission? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -247,7 +249,7 @@ class ListRolesRequest extends $pb.GeneratedMessage {
     $core.int? page,
     $core.int? pageSize,
   }) {
-    final result = create();
+    final result = ListRolesRequest._();
     if (page != null) result.page = page;
     if (pageSize != null) result.pageSize = pageSize;
     return result;
@@ -257,21 +259,21 @@ class ListRolesRequest extends $pb.GeneratedMessage {
 
   factory ListRolesRequest.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      ListRolesRequest()..mergeFromBuffer(data, registry);
   factory ListRolesRequest.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      ListRolesRequest()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'ListRolesRequest',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
-    ..a<$core.int>(1, _omitFieldNames ? '' : 'page', $pb.PbFieldType.O3)
-    ..a<$core.int>(2, _omitFieldNames ? '' : 'pageSize', $pb.PbFieldType.O3)
+      createEmptyInstance: ListRolesRequest.$_createMessage)
+    ..aI(1, _omitFieldNames ? '' : 'page')
+    ..aI(2, _omitFieldNames ? '' : 'pageSize')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  ListRolesRequest clone() => ListRolesRequest()..mergeFromMessage(this);
+  ListRolesRequest clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   ListRolesRequest copyWith(void Function(ListRolesRequest) updates) =>
       super.copyWith((message) => updates(message as ListRolesRequest))
@@ -281,14 +283,15 @@ class ListRolesRequest extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ListRolesRequest() / ListRolesRequest.new instead')
   static ListRolesRequest create() => ListRolesRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ListRolesRequest._();
   @$core.override
-  ListRolesRequest createEmptyInstance() => create();
-  static $pb.PbList<ListRolesRequest> createRepeated() =>
-      $pb.PbList<ListRolesRequest>();
+  ListRolesRequest createEmptyInstance() => ListRolesRequest._();
   @$core.pragma('dart2js:noInline')
-  static ListRolesRequest getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<ListRolesRequest>(create);
+  static ListRolesRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ListRolesRequest>(
+          ListRolesRequest.$_createMessage);
   static ListRolesRequest? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -316,7 +319,7 @@ class ListRolesResponse extends $pb.GeneratedMessage {
     $core.Iterable<Role>? roles,
     $1.Pagination? pagination,
   }) {
-    final result = create();
+    final result = ListRolesResponse._();
     if (roles != null) result.roles.addAll(roles);
     if (pagination != null) result.pagination = pagination;
     return result;
@@ -326,23 +329,23 @@ class ListRolesResponse extends $pb.GeneratedMessage {
 
   factory ListRolesResponse.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      ListRolesResponse()..mergeFromBuffer(data, registry);
   factory ListRolesResponse.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      ListRolesResponse()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'ListRolesResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
-    ..pc<Role>(1, _omitFieldNames ? '' : 'roles', $pb.PbFieldType.PM,
-        subBuilder: Role.create)
+      createEmptyInstance: ListRolesResponse.$_createMessage)
+    ..pPM<Role>(1, _omitFieldNames ? '' : 'roles',
+        subBuilder: Role.$_createMessage)
     ..aOM<$1.Pagination>(2, _omitFieldNames ? '' : 'pagination',
-        subBuilder: $1.Pagination.create)
+        subBuilder: $1.Pagination.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  ListRolesResponse clone() => ListRolesResponse()..mergeFromMessage(this);
+  ListRolesResponse clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   ListRolesResponse copyWith(void Function(ListRolesResponse) updates) =>
       super.copyWith((message) => updates(message as ListRolesResponse))
@@ -352,14 +355,15 @@ class ListRolesResponse extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ListRolesResponse() / ListRolesResponse.new instead')
   static ListRolesResponse create() => ListRolesResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ListRolesResponse._();
   @$core.override
-  ListRolesResponse createEmptyInstance() => create();
-  static $pb.PbList<ListRolesResponse> createRepeated() =>
-      $pb.PbList<ListRolesResponse>();
+  ListRolesResponse createEmptyInstance() => ListRolesResponse._();
   @$core.pragma('dart2js:noInline')
-  static ListRolesResponse getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<ListRolesResponse>(create);
+  static ListRolesResponse getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ListRolesResponse>(
+          ListRolesResponse.$_createMessage);
   static ListRolesResponse? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -382,7 +386,7 @@ class GetRolePermissionsRequest extends $pb.GeneratedMessage {
   factory GetRolePermissionsRequest({
     $core.String? roleId,
   }) {
-    final result = create();
+    final result = GetRolePermissionsRequest._();
     if (roleId != null) result.roleId = roleId;
     return result;
   }
@@ -391,21 +395,20 @@ class GetRolePermissionsRequest extends $pb.GeneratedMessage {
 
   factory GetRolePermissionsRequest.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      GetRolePermissionsRequest()..mergeFromBuffer(data, registry);
   factory GetRolePermissionsRequest.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      GetRolePermissionsRequest()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'GetRolePermissionsRequest',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: GetRolePermissionsRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'roleId')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  GetRolePermissionsRequest clone() =>
-      GetRolePermissionsRequest()..mergeFromMessage(this);
+  GetRolePermissionsRequest clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   GetRolePermissionsRequest copyWith(
           void Function(GetRolePermissionsRequest) updates) =>
@@ -416,14 +419,18 @@ class GetRolePermissionsRequest extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetRolePermissionsRequest() / GetRolePermissionsRequest.new instead')
   static GetRolePermissionsRequest create() => GetRolePermissionsRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      GetRolePermissionsRequest._();
   @$core.override
-  GetRolePermissionsRequest createEmptyInstance() => create();
-  static $pb.PbList<GetRolePermissionsRequest> createRepeated() =>
-      $pb.PbList<GetRolePermissionsRequest>();
+  GetRolePermissionsRequest createEmptyInstance() =>
+      GetRolePermissionsRequest._();
   @$core.pragma('dart2js:noInline')
   static GetRolePermissionsRequest getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<GetRolePermissionsRequest>(create);
+      $pb.GeneratedMessage.$_defaultFor<GetRolePermissionsRequest>(
+          GetRolePermissionsRequest.$_createMessage);
   static GetRolePermissionsRequest? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -441,7 +448,7 @@ class GetRolePermissionsResponse extends $pb.GeneratedMessage {
   factory GetRolePermissionsResponse({
     $core.Iterable<Permission>? permissions,
   }) {
-    final result = create();
+    final result = GetRolePermissionsResponse._();
     if (permissions != null) result.permissions.addAll(permissions);
     return result;
   }
@@ -450,23 +457,21 @@ class GetRolePermissionsResponse extends $pb.GeneratedMessage {
 
   factory GetRolePermissionsResponse.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      GetRolePermissionsResponse()..mergeFromBuffer(data, registry);
   factory GetRolePermissionsResponse.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      GetRolePermissionsResponse()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'GetRolePermissionsResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
-    ..pc<Permission>(
-        1, _omitFieldNames ? '' : 'permissions', $pb.PbFieldType.PM,
-        subBuilder: Permission.create)
+      createEmptyInstance: GetRolePermissionsResponse.$_createMessage)
+    ..pPM<Permission>(1, _omitFieldNames ? '' : 'permissions',
+        subBuilder: Permission.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  GetRolePermissionsResponse clone() =>
-      GetRolePermissionsResponse()..mergeFromMessage(this);
+  GetRolePermissionsResponse clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   GetRolePermissionsResponse copyWith(
           void Function(GetRolePermissionsResponse) updates) =>
@@ -478,14 +483,18 @@ class GetRolePermissionsResponse extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetRolePermissionsResponse() / GetRolePermissionsResponse.new instead')
   static GetRolePermissionsResponse create() => GetRolePermissionsResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      GetRolePermissionsResponse._();
   @$core.override
-  GetRolePermissionsResponse createEmptyInstance() => create();
-  static $pb.PbList<GetRolePermissionsResponse> createRepeated() =>
-      $pb.PbList<GetRolePermissionsResponse>();
+  GetRolePermissionsResponse createEmptyInstance() =>
+      GetRolePermissionsResponse._();
   @$core.pragma('dart2js:noInline')
   static GetRolePermissionsResponse getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<GetRolePermissionsResponse>(create);
+      $pb.GeneratedMessage.$_defaultFor<GetRolePermissionsResponse>(
+          GetRolePermissionsResponse.$_createMessage);
   static GetRolePermissionsResponse? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -498,7 +507,7 @@ class UpdateRolePermissionsRequest extends $pb.GeneratedMessage {
     $core.String? roleId,
     $core.Iterable<Permission>? permissions,
   }) {
-    final result = create();
+    final result = UpdateRolePermissionsRequest._();
     if (roleId != null) result.roleId = roleId;
     if (permissions != null) result.permissions.addAll(permissions);
     return result;
@@ -508,24 +517,22 @@ class UpdateRolePermissionsRequest extends $pb.GeneratedMessage {
 
   factory UpdateRolePermissionsRequest.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      UpdateRolePermissionsRequest()..mergeFromBuffer(data, registry);
   factory UpdateRolePermissionsRequest.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      UpdateRolePermissionsRequest()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'UpdateRolePermissionsRequest',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: UpdateRolePermissionsRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'roleId')
-    ..pc<Permission>(
-        2, _omitFieldNames ? '' : 'permissions', $pb.PbFieldType.PM,
-        subBuilder: Permission.create)
+    ..pPM<Permission>(2, _omitFieldNames ? '' : 'permissions',
+        subBuilder: Permission.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  UpdateRolePermissionsRequest clone() =>
-      UpdateRolePermissionsRequest()..mergeFromMessage(this);
+  UpdateRolePermissionsRequest clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   UpdateRolePermissionsRequest copyWith(
           void Function(UpdateRolePermissionsRequest) updates) =>
@@ -537,15 +544,19 @@ class UpdateRolePermissionsRequest extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use UpdateRolePermissionsRequest() / UpdateRolePermissionsRequest.new instead')
   static UpdateRolePermissionsRequest create() =>
       UpdateRolePermissionsRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      UpdateRolePermissionsRequest._();
   @$core.override
-  UpdateRolePermissionsRequest createEmptyInstance() => create();
-  static $pb.PbList<UpdateRolePermissionsRequest> createRepeated() =>
-      $pb.PbList<UpdateRolePermissionsRequest>();
+  UpdateRolePermissionsRequest createEmptyInstance() =>
+      UpdateRolePermissionsRequest._();
   @$core.pragma('dart2js:noInline')
   static UpdateRolePermissionsRequest getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<UpdateRolePermissionsRequest>(create);
+      $pb.GeneratedMessage.$_defaultFor<UpdateRolePermissionsRequest>(
+          UpdateRolePermissionsRequest.$_createMessage);
   static UpdateRolePermissionsRequest? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -566,7 +577,7 @@ class UpdateRolePermissionsResponse extends $pb.GeneratedMessage {
   factory UpdateRolePermissionsResponse({
     $core.Iterable<Permission>? permissions,
   }) {
-    final result = create();
+    final result = UpdateRolePermissionsResponse._();
     if (permissions != null) result.permissions.addAll(permissions);
     return result;
   }
@@ -575,23 +586,21 @@ class UpdateRolePermissionsResponse extends $pb.GeneratedMessage {
 
   factory UpdateRolePermissionsResponse.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      UpdateRolePermissionsResponse()..mergeFromBuffer(data, registry);
   factory UpdateRolePermissionsResponse.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      UpdateRolePermissionsResponse()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'UpdateRolePermissionsResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
-    ..pc<Permission>(
-        1, _omitFieldNames ? '' : 'permissions', $pb.PbFieldType.PM,
-        subBuilder: Permission.create)
+      createEmptyInstance: UpdateRolePermissionsResponse.$_createMessage)
+    ..pPM<Permission>(1, _omitFieldNames ? '' : 'permissions',
+        subBuilder: Permission.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  UpdateRolePermissionsResponse clone() =>
-      UpdateRolePermissionsResponse()..mergeFromMessage(this);
+  UpdateRolePermissionsResponse clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   UpdateRolePermissionsResponse copyWith(
           void Function(UpdateRolePermissionsResponse) updates) =>
@@ -603,15 +612,19 @@ class UpdateRolePermissionsResponse extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use UpdateRolePermissionsResponse() / UpdateRolePermissionsResponse.new instead')
   static UpdateRolePermissionsResponse create() =>
       UpdateRolePermissionsResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      UpdateRolePermissionsResponse._();
   @$core.override
-  UpdateRolePermissionsResponse createEmptyInstance() => create();
-  static $pb.PbList<UpdateRolePermissionsResponse> createRepeated() =>
-      $pb.PbList<UpdateRolePermissionsResponse>();
+  UpdateRolePermissionsResponse createEmptyInstance() =>
+      UpdateRolePermissionsResponse._();
   @$core.pragma('dart2js:noInline')
   static UpdateRolePermissionsResponse getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<UpdateRolePermissionsResponse>(create);
+      $pb.GeneratedMessage.$_defaultFor<UpdateRolePermissionsResponse>(
+          UpdateRolePermissionsResponse.$_createMessage);
   static UpdateRolePermissionsResponse? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -623,7 +636,7 @@ class ListConditionFieldsRequest extends $pb.GeneratedMessage {
   factory ListConditionFieldsRequest({
     $core.String? resource,
   }) {
-    final result = create();
+    final result = ListConditionFieldsRequest._();
     if (resource != null) result.resource = resource;
     return result;
   }
@@ -632,21 +645,20 @@ class ListConditionFieldsRequest extends $pb.GeneratedMessage {
 
   factory ListConditionFieldsRequest.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      ListConditionFieldsRequest()..mergeFromBuffer(data, registry);
   factory ListConditionFieldsRequest.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      ListConditionFieldsRequest()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'ListConditionFieldsRequest',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: ListConditionFieldsRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'resource')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  ListConditionFieldsRequest clone() =>
-      ListConditionFieldsRequest()..mergeFromMessage(this);
+  ListConditionFieldsRequest clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   ListConditionFieldsRequest copyWith(
           void Function(ListConditionFieldsRequest) updates) =>
@@ -658,14 +670,18 @@ class ListConditionFieldsRequest extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListConditionFieldsRequest() / ListConditionFieldsRequest.new instead')
   static ListConditionFieldsRequest create() => ListConditionFieldsRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      ListConditionFieldsRequest._();
   @$core.override
-  ListConditionFieldsRequest createEmptyInstance() => create();
-  static $pb.PbList<ListConditionFieldsRequest> createRepeated() =>
-      $pb.PbList<ListConditionFieldsRequest>();
+  ListConditionFieldsRequest createEmptyInstance() =>
+      ListConditionFieldsRequest._();
   @$core.pragma('dart2js:noInline')
   static ListConditionFieldsRequest getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<ListConditionFieldsRequest>(create);
+      $pb.GeneratedMessage.$_defaultFor<ListConditionFieldsRequest>(
+          ListConditionFieldsRequest.$_createMessage);
   static ListConditionFieldsRequest? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -686,7 +702,7 @@ class ConditionField extends $pb.GeneratedMessage {
     $core.Iterable<$core.String>? ops,
     $core.Iterable<$core.String>? enum_4,
   }) {
-    final result = create();
+    final result = ConditionField._();
     if (field_1 != null) result.field_1 = field_1;
     if (type != null) result.type = type;
     if (ops != null) result.ops.addAll(ops);
@@ -698,15 +714,15 @@ class ConditionField extends $pb.GeneratedMessage {
 
   factory ConditionField.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      ConditionField()..mergeFromBuffer(data, registry);
   factory ConditionField.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      ConditionField()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'ConditionField',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: ConditionField.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'field')
     ..aOS(2, _omitFieldNames ? '' : 'type')
     ..pPS(3, _omitFieldNames ? '' : 'ops')
@@ -714,7 +730,7 @@ class ConditionField extends $pb.GeneratedMessage {
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  ConditionField clone() => ConditionField()..mergeFromMessage(this);
+  ConditionField clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   ConditionField copyWith(void Function(ConditionField) updates) =>
       super.copyWith((message) => updates(message as ConditionField))
@@ -724,14 +740,15 @@ class ConditionField extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ConditionField() / ConditionField.new instead')
   static ConditionField create() => ConditionField._();
+  static $pb.GeneratedMessage $_createMessage() => ConditionField._();
   @$core.override
-  ConditionField createEmptyInstance() => create();
-  static $pb.PbList<ConditionField> createRepeated() =>
-      $pb.PbList<ConditionField>();
+  ConditionField createEmptyInstance() => ConditionField._();
   @$core.pragma('dart2js:noInline')
-  static ConditionField getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<ConditionField>(create);
+  static ConditionField getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ConditionField>(
+          ConditionField.$_createMessage);
   static ConditionField? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -764,7 +781,7 @@ class ListConditionFieldsResponse extends $pb.GeneratedMessage {
   factory ListConditionFieldsResponse({
     $core.Iterable<ConditionField>? fields,
   }) {
-    final result = create();
+    final result = ListConditionFieldsResponse._();
     if (fields != null) result.fields.addAll(fields);
     return result;
   }
@@ -773,22 +790,21 @@ class ListConditionFieldsResponse extends $pb.GeneratedMessage {
 
   factory ListConditionFieldsResponse.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      ListConditionFieldsResponse()..mergeFromBuffer(data, registry);
   factory ListConditionFieldsResponse.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      ListConditionFieldsResponse()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'ListConditionFieldsResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
-    ..pc<ConditionField>(1, _omitFieldNames ? '' : 'fields', $pb.PbFieldType.PM,
-        subBuilder: ConditionField.create)
+      createEmptyInstance: ListConditionFieldsResponse.$_createMessage)
+    ..pPM<ConditionField>(1, _omitFieldNames ? '' : 'fields',
+        subBuilder: ConditionField.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  ListConditionFieldsResponse clone() =>
-      ListConditionFieldsResponse()..mergeFromMessage(this);
+  ListConditionFieldsResponse clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   ListConditionFieldsResponse copyWith(
           void Function(ListConditionFieldsResponse) updates) =>
@@ -800,15 +816,19 @@ class ListConditionFieldsResponse extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListConditionFieldsResponse() / ListConditionFieldsResponse.new instead')
   static ListConditionFieldsResponse create() =>
       ListConditionFieldsResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      ListConditionFieldsResponse._();
   @$core.override
-  ListConditionFieldsResponse createEmptyInstance() => create();
-  static $pb.PbList<ListConditionFieldsResponse> createRepeated() =>
-      $pb.PbList<ListConditionFieldsResponse>();
+  ListConditionFieldsResponse createEmptyInstance() =>
+      ListConditionFieldsResponse._();
   @$core.pragma('dart2js:noInline')
   static ListConditionFieldsResponse getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<ListConditionFieldsResponse>(create);
+      $pb.GeneratedMessage.$_defaultFor<ListConditionFieldsResponse>(
+          ListConditionFieldsResponse.$_createMessage);
   static ListConditionFieldsResponse? _defaultInstance;
 
   @$pb.TagNumber(1)

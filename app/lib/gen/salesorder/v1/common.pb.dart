@@ -8,7 +8,7 @@
 // ignore_for_file: constant_identifier_names
 // ignore_for_file: curly_braces_in_flow_control_structures
 // ignore_for_file: deprecated_member_use_from_same_package, library_prefixes
-// ignore_for_file: non_constant_identifier_names
+// ignore_for_file: non_constant_identifier_names, prefer_relative_imports
 
 import 'dart:core' as $core;
 
@@ -26,7 +26,7 @@ class Pagination extends $pb.GeneratedMessage {
     $core.int? pageSize,
     $fixnum.Int64? total,
   }) {
-    final result = create();
+    final result = Pagination._();
     if (page != null) result.page = page;
     if (pageSize != null) result.pageSize = pageSize;
     if (total != null) result.total = total;
@@ -37,22 +37,22 @@ class Pagination extends $pb.GeneratedMessage {
 
   factory Pagination.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      Pagination()..mergeFromBuffer(data, registry);
   factory Pagination.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      Pagination()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'Pagination',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
-    ..a<$core.int>(1, _omitFieldNames ? '' : 'page', $pb.PbFieldType.O3)
-    ..a<$core.int>(2, _omitFieldNames ? '' : 'pageSize', $pb.PbFieldType.O3)
+      createEmptyInstance: Pagination.$_createMessage)
+    ..aI(1, _omitFieldNames ? '' : 'page')
+    ..aI(2, _omitFieldNames ? '' : 'pageSize')
     ..aInt64(3, _omitFieldNames ? '' : 'total')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  Pagination clone() => Pagination()..mergeFromMessage(this);
+  Pagination clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   Pagination copyWith(void Function(Pagination) updates) =>
       super.copyWith((message) => updates(message as Pagination)) as Pagination;
@@ -61,13 +61,14 @@ class Pagination extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use Pagination() / Pagination.new instead')
   static Pagination create() => Pagination._();
+  static $pb.GeneratedMessage $_createMessage() => Pagination._();
   @$core.override
-  Pagination createEmptyInstance() => create();
-  static $pb.PbList<Pagination> createRepeated() => $pb.PbList<Pagination>();
+  Pagination createEmptyInstance() => Pagination._();
   @$core.pragma('dart2js:noInline')
   static Pagination getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<Pagination>(create);
+      $pb.GeneratedMessage.$_defaultFor<Pagination>(Pagination.$_createMessage);
   static Pagination? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -104,7 +105,7 @@ class TimestampRange extends $pb.GeneratedMessage {
     $fixnum.Int64? startUnix,
     $fixnum.Int64? endUnix,
   }) {
-    final result = create();
+    final result = TimestampRange._();
     if (startUnix != null) result.startUnix = startUnix;
     if (endUnix != null) result.endUnix = endUnix;
     return result;
@@ -114,21 +115,21 @@ class TimestampRange extends $pb.GeneratedMessage {
 
   factory TimestampRange.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      TimestampRange()..mergeFromBuffer(data, registry);
   factory TimestampRange.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      TimestampRange()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'TimestampRange',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: TimestampRange.$_createMessage)
     ..aInt64(1, _omitFieldNames ? '' : 'startUnix')
     ..aInt64(2, _omitFieldNames ? '' : 'endUnix')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  TimestampRange clone() => TimestampRange()..mergeFromMessage(this);
+  TimestampRange clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   TimestampRange copyWith(void Function(TimestampRange) updates) =>
       super.copyWith((message) => updates(message as TimestampRange))
@@ -138,14 +139,15 @@ class TimestampRange extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use TimestampRange() / TimestampRange.new instead')
   static TimestampRange create() => TimestampRange._();
+  static $pb.GeneratedMessage $_createMessage() => TimestampRange._();
   @$core.override
-  TimestampRange createEmptyInstance() => create();
-  static $pb.PbList<TimestampRange> createRepeated() =>
-      $pb.PbList<TimestampRange>();
+  TimestampRange createEmptyInstance() => TimestampRange._();
   @$core.pragma('dart2js:noInline')
-  static TimestampRange getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<TimestampRange>(create);
+  static TimestampRange getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<TimestampRange>(
+          TimestampRange.$_createMessage);
   static TimestampRange? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -175,7 +177,7 @@ class Money extends $pb.GeneratedMessage {
     $fixnum.Int64? amountMinor,
     $core.String? currency,
   }) {
-    final result = create();
+    final result = Money._();
     if (amountMinor != null) result.amountMinor = amountMinor;
     if (currency != null) result.currency = currency;
     return result;
@@ -185,21 +187,21 @@ class Money extends $pb.GeneratedMessage {
 
   factory Money.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      Money()..mergeFromBuffer(data, registry);
   factory Money.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      Money()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'Money',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: Money.$_createMessage)
     ..aInt64(1, _omitFieldNames ? '' : 'amountMinor')
     ..aOS(2, _omitFieldNames ? '' : 'currency')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  Money clone() => Money()..mergeFromMessage(this);
+  Money clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   Money copyWith(void Function(Money) updates) =>
       super.copyWith((message) => updates(message as Money)) as Money;
@@ -208,13 +210,14 @@ class Money extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use Money() / Money.new instead')
   static Money create() => Money._();
+  static $pb.GeneratedMessage $_createMessage() => Money._();
   @$core.override
-  Money createEmptyInstance() => create();
-  static $pb.PbList<Money> createRepeated() => $pb.PbList<Money>();
+  Money createEmptyInstance() => Money._();
   @$core.pragma('dart2js:noInline')
-  static Money getDefault() =>
-      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<Money>(create);
+  static Money getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<Money>(Money.$_createMessage);
   static Money? _defaultInstance;
 
   @$pb.TagNumber(1)

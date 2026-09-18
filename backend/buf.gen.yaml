@@ -13,10 +13,9 @@ plugins:
   # 註:connectrpc/es 已移除——最新 v1.6.1 生成 connect v1 風格 *_connect 檔,與
   # @connectrpc/connect v2 不相容且前端零引用(一律自 *_pb GenService 匯入);
   # 待 BSR 釋出 v2 插件後再加回並重生成。
-  # Dart 訊息:本地 protoc-gen-dart(dart pub global activate protoc_plugin),
-  # 對齊 connectrpc 1.0.0 之 protobuf <5 約束(BSR 最新版產出 protobuf 6 專用碼)。
-  # 註:buf 對 local plugin 不生成 import 檔(include_imports 無效);WKT 的 Dart 碼
-  # (google/protobuf/struct.*.dart)以 protoc 另行生成,步驟見 backend/Taskfile.yml proto:gen。
+  # Dart 訊息:本地 protoc-gen-dart(dart pub global activate protoc_plugin)。
+  # 2026-09-18 升至 connectrpc 2.0.0 / protobuf 6.x / protoc_plugin 25.x:
+  # WKT(struct 等)由 protobuf 套件自帶(well_known_types),勿再以 protoc 生成於 app/lib/gen;local plugin 不產 import。
   - local: protoc-gen-dart
     out: ../app/lib/gen
   # Dart Connect 用戶端

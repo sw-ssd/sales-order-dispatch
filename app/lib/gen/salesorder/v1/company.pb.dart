@@ -8,14 +8,14 @@
 // ignore_for_file: constant_identifier_names
 // ignore_for_file: curly_braces_in_flow_control_structures
 // ignore_for_file: deprecated_member_use_from_same_package, library_prefixes
-// ignore_for_file: non_constant_identifier_names
+// ignore_for_file: non_constant_identifier_names, prefer_relative_imports
 
 import 'dart:async' as $async;
 import 'dart:core' as $core;
 
 import 'package:protobuf/protobuf.dart' as $pb;
+import 'package:protobuf/well_known_types/google/protobuf/struct.pb.dart' as $0;
 
-import '../../google/protobuf/struct.pb.dart' as $0;
 import 'common.pb.dart' as $1;
 
 export 'package:protobuf/protobuf.dart' show GeneratedMessageGenericExtensions;
@@ -32,7 +32,7 @@ class Company extends $pb.GeneratedMessage {
     $core.Iterable<$core.String>? capabilities,
     $core.String? logoUrl,
   }) {
-    final result = create();
+    final result = Company._();
     if (id != null) result.id = id;
     if (name != null) result.name = name;
     if (taxId != null) result.taxId = taxId;
@@ -48,28 +48,28 @@ class Company extends $pb.GeneratedMessage {
 
   factory Company.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      Company()..mergeFromBuffer(data, registry);
   factory Company.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      Company()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'Company',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: Company.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'id')
     ..aOS(2, _omitFieldNames ? '' : 'name')
     ..aOS(3, _omitFieldNames ? '' : 'taxId')
     ..aOS(4, _omitFieldNames ? '' : 'identifier')
     ..aOS(5, _omitFieldNames ? '' : 'status')
     ..aOM<$0.Struct>(6, _omitFieldNames ? '' : 'publicInfo',
-        subBuilder: $0.Struct.create)
+        subBuilder: $0.Struct.$_createMessage)
     ..pPS(7, _omitFieldNames ? '' : 'capabilities')
     ..aOS(8, _omitFieldNames ? '' : 'logoUrl')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  Company clone() => Company()..mergeFromMessage(this);
+  Company clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   Company copyWith(void Function(Company) updates) =>
       super.copyWith((message) => updates(message as Company)) as Company;
@@ -78,13 +78,14 @@ class Company extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use Company() / Company.new instead')
   static Company create() => Company._();
+  static $pb.GeneratedMessage $_createMessage() => Company._();
   @$core.override
-  Company createEmptyInstance() => create();
-  static $pb.PbList<Company> createRepeated() => $pb.PbList<Company>();
+  Company createEmptyInstance() => Company._();
   @$core.pragma('dart2js:noInline')
-  static Company getDefault() =>
-      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<Company>(create);
+  static Company getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<Company>(Company.$_createMessage);
   static Company? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -163,7 +164,7 @@ class ListCompaniesRequest extends $pb.GeneratedMessage {
     $core.String? status,
     $core.String? keyword,
   }) {
-    final result = create();
+    final result = ListCompaniesRequest._();
     if (page != null) result.page = page;
     if (pageSize != null) result.pageSize = pageSize;
     if (status != null) result.status = status;
@@ -175,24 +176,23 @@ class ListCompaniesRequest extends $pb.GeneratedMessage {
 
   factory ListCompaniesRequest.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      ListCompaniesRequest()..mergeFromBuffer(data, registry);
   factory ListCompaniesRequest.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      ListCompaniesRequest()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'ListCompaniesRequest',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
-    ..a<$core.int>(1, _omitFieldNames ? '' : 'page', $pb.PbFieldType.O3)
-    ..a<$core.int>(2, _omitFieldNames ? '' : 'pageSize', $pb.PbFieldType.O3)
+      createEmptyInstance: ListCompaniesRequest.$_createMessage)
+    ..aI(1, _omitFieldNames ? '' : 'page')
+    ..aI(2, _omitFieldNames ? '' : 'pageSize')
     ..aOS(3, _omitFieldNames ? '' : 'status')
     ..aOS(4, _omitFieldNames ? '' : 'keyword')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  ListCompaniesRequest clone() =>
-      ListCompaniesRequest()..mergeFromMessage(this);
+  ListCompaniesRequest clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   ListCompaniesRequest copyWith(void Function(ListCompaniesRequest) updates) =>
       super.copyWith((message) => updates(message as ListCompaniesRequest))
@@ -202,14 +202,16 @@ class ListCompaniesRequest extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListCompaniesRequest() / ListCompaniesRequest.new instead')
   static ListCompaniesRequest create() => ListCompaniesRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ListCompaniesRequest._();
   @$core.override
-  ListCompaniesRequest createEmptyInstance() => create();
-  static $pb.PbList<ListCompaniesRequest> createRepeated() =>
-      $pb.PbList<ListCompaniesRequest>();
+  ListCompaniesRequest createEmptyInstance() => ListCompaniesRequest._();
   @$core.pragma('dart2js:noInline')
   static ListCompaniesRequest getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<ListCompaniesRequest>(create);
+      $pb.GeneratedMessage.$_defaultFor<ListCompaniesRequest>(
+          ListCompaniesRequest.$_createMessage);
   static ListCompaniesRequest? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -254,7 +256,7 @@ class ListCompaniesResponse extends $pb.GeneratedMessage {
     $core.Iterable<Company>? companies,
     $1.Pagination? pagination,
   }) {
-    final result = create();
+    final result = ListCompaniesResponse._();
     if (companies != null) result.companies.addAll(companies);
     if (pagination != null) result.pagination = pagination;
     return result;
@@ -264,24 +266,23 @@ class ListCompaniesResponse extends $pb.GeneratedMessage {
 
   factory ListCompaniesResponse.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      ListCompaniesResponse()..mergeFromBuffer(data, registry);
   factory ListCompaniesResponse.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      ListCompaniesResponse()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'ListCompaniesResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
-    ..pc<Company>(1, _omitFieldNames ? '' : 'companies', $pb.PbFieldType.PM,
-        subBuilder: Company.create)
+      createEmptyInstance: ListCompaniesResponse.$_createMessage)
+    ..pPM<Company>(1, _omitFieldNames ? '' : 'companies',
+        subBuilder: Company.$_createMessage)
     ..aOM<$1.Pagination>(2, _omitFieldNames ? '' : 'pagination',
-        subBuilder: $1.Pagination.create)
+        subBuilder: $1.Pagination.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  ListCompaniesResponse clone() =>
-      ListCompaniesResponse()..mergeFromMessage(this);
+  ListCompaniesResponse clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   ListCompaniesResponse copyWith(
           void Function(ListCompaniesResponse) updates) =>
@@ -292,14 +293,16 @@ class ListCompaniesResponse extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListCompaniesResponse() / ListCompaniesResponse.new instead')
   static ListCompaniesResponse create() => ListCompaniesResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ListCompaniesResponse._();
   @$core.override
-  ListCompaniesResponse createEmptyInstance() => create();
-  static $pb.PbList<ListCompaniesResponse> createRepeated() =>
-      $pb.PbList<ListCompaniesResponse>();
+  ListCompaniesResponse createEmptyInstance() => ListCompaniesResponse._();
   @$core.pragma('dart2js:noInline')
   static ListCompaniesResponse getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<ListCompaniesResponse>(create);
+      $pb.GeneratedMessage.$_defaultFor<ListCompaniesResponse>(
+          ListCompaniesResponse.$_createMessage);
   static ListCompaniesResponse? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -321,7 +324,7 @@ class GetCompanyRequest extends $pb.GeneratedMessage {
   factory GetCompanyRequest({
     $core.String? companyId,
   }) {
-    final result = create();
+    final result = GetCompanyRequest._();
     if (companyId != null) result.companyId = companyId;
     return result;
   }
@@ -330,20 +333,20 @@ class GetCompanyRequest extends $pb.GeneratedMessage {
 
   factory GetCompanyRequest.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      GetCompanyRequest()..mergeFromBuffer(data, registry);
   factory GetCompanyRequest.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      GetCompanyRequest()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'GetCompanyRequest',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: GetCompanyRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'companyId')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  GetCompanyRequest clone() => GetCompanyRequest()..mergeFromMessage(this);
+  GetCompanyRequest clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   GetCompanyRequest copyWith(void Function(GetCompanyRequest) updates) =>
       super.copyWith((message) => updates(message as GetCompanyRequest))
@@ -353,14 +356,15 @@ class GetCompanyRequest extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetCompanyRequest() / GetCompanyRequest.new instead')
   static GetCompanyRequest create() => GetCompanyRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetCompanyRequest._();
   @$core.override
-  GetCompanyRequest createEmptyInstance() => create();
-  static $pb.PbList<GetCompanyRequest> createRepeated() =>
-      $pb.PbList<GetCompanyRequest>();
+  GetCompanyRequest createEmptyInstance() => GetCompanyRequest._();
   @$core.pragma('dart2js:noInline')
-  static GetCompanyRequest getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<GetCompanyRequest>(create);
+  static GetCompanyRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetCompanyRequest>(
+          GetCompanyRequest.$_createMessage);
   static GetCompanyRequest? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -377,7 +381,7 @@ class GetCompanyResponse extends $pb.GeneratedMessage {
   factory GetCompanyResponse({
     Company? company,
   }) {
-    final result = create();
+    final result = GetCompanyResponse._();
     if (company != null) result.company = company;
     return result;
   }
@@ -386,21 +390,21 @@ class GetCompanyResponse extends $pb.GeneratedMessage {
 
   factory GetCompanyResponse.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      GetCompanyResponse()..mergeFromBuffer(data, registry);
   factory GetCompanyResponse.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      GetCompanyResponse()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'GetCompanyResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: GetCompanyResponse.$_createMessage)
     ..aOM<Company>(1, _omitFieldNames ? '' : 'company',
-        subBuilder: Company.create)
+        subBuilder: Company.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  GetCompanyResponse clone() => GetCompanyResponse()..mergeFromMessage(this);
+  GetCompanyResponse clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   GetCompanyResponse copyWith(void Function(GetCompanyResponse) updates) =>
       super.copyWith((message) => updates(message as GetCompanyResponse))
@@ -410,14 +414,15 @@ class GetCompanyResponse extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetCompanyResponse() / GetCompanyResponse.new instead')
   static GetCompanyResponse create() => GetCompanyResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetCompanyResponse._();
   @$core.override
-  GetCompanyResponse createEmptyInstance() => create();
-  static $pb.PbList<GetCompanyResponse> createRepeated() =>
-      $pb.PbList<GetCompanyResponse>();
+  GetCompanyResponse createEmptyInstance() => GetCompanyResponse._();
   @$core.pragma('dart2js:noInline')
   static GetCompanyResponse getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<GetCompanyResponse>(create);
+      $pb.GeneratedMessage.$_defaultFor<GetCompanyResponse>(
+          GetCompanyResponse.$_createMessage);
   static GetCompanyResponse? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -439,7 +444,7 @@ class CreateCompanyRequest extends $pb.GeneratedMessage {
     $core.String? identifier,
     $core.String? status,
   }) {
-    final result = create();
+    final result = CreateCompanyRequest._();
     if (name != null) result.name = name;
     if (taxId != null) result.taxId = taxId;
     if (identifier != null) result.identifier = identifier;
@@ -451,15 +456,15 @@ class CreateCompanyRequest extends $pb.GeneratedMessage {
 
   factory CreateCompanyRequest.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      CreateCompanyRequest()..mergeFromBuffer(data, registry);
   factory CreateCompanyRequest.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      CreateCompanyRequest()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'CreateCompanyRequest',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: CreateCompanyRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'name')
     ..aOS(2, _omitFieldNames ? '' : 'taxId')
     ..aOS(3, _omitFieldNames ? '' : 'identifier')
@@ -467,8 +472,7 @@ class CreateCompanyRequest extends $pb.GeneratedMessage {
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  CreateCompanyRequest clone() =>
-      CreateCompanyRequest()..mergeFromMessage(this);
+  CreateCompanyRequest clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   CreateCompanyRequest copyWith(void Function(CreateCompanyRequest) updates) =>
       super.copyWith((message) => updates(message as CreateCompanyRequest))
@@ -478,14 +482,16 @@ class CreateCompanyRequest extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use CreateCompanyRequest() / CreateCompanyRequest.new instead')
   static CreateCompanyRequest create() => CreateCompanyRequest._();
+  static $pb.GeneratedMessage $_createMessage() => CreateCompanyRequest._();
   @$core.override
-  CreateCompanyRequest createEmptyInstance() => create();
-  static $pb.PbList<CreateCompanyRequest> createRepeated() =>
-      $pb.PbList<CreateCompanyRequest>();
+  CreateCompanyRequest createEmptyInstance() => CreateCompanyRequest._();
   @$core.pragma('dart2js:noInline')
   static CreateCompanyRequest getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<CreateCompanyRequest>(create);
+      $pb.GeneratedMessage.$_defaultFor<CreateCompanyRequest>(
+          CreateCompanyRequest.$_createMessage);
   static CreateCompanyRequest? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -529,7 +535,7 @@ class CreateCompanyResponse extends $pb.GeneratedMessage {
   factory CreateCompanyResponse({
     Company? company,
   }) {
-    final result = create();
+    final result = CreateCompanyResponse._();
     if (company != null) result.company = company;
     return result;
   }
@@ -538,22 +544,21 @@ class CreateCompanyResponse extends $pb.GeneratedMessage {
 
   factory CreateCompanyResponse.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      CreateCompanyResponse()..mergeFromBuffer(data, registry);
   factory CreateCompanyResponse.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      CreateCompanyResponse()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'CreateCompanyResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: CreateCompanyResponse.$_createMessage)
     ..aOM<Company>(1, _omitFieldNames ? '' : 'company',
-        subBuilder: Company.create)
+        subBuilder: Company.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  CreateCompanyResponse clone() =>
-      CreateCompanyResponse()..mergeFromMessage(this);
+  CreateCompanyResponse clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   CreateCompanyResponse copyWith(
           void Function(CreateCompanyResponse) updates) =>
@@ -564,14 +569,16 @@ class CreateCompanyResponse extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use CreateCompanyResponse() / CreateCompanyResponse.new instead')
   static CreateCompanyResponse create() => CreateCompanyResponse._();
+  static $pb.GeneratedMessage $_createMessage() => CreateCompanyResponse._();
   @$core.override
-  CreateCompanyResponse createEmptyInstance() => create();
-  static $pb.PbList<CreateCompanyResponse> createRepeated() =>
-      $pb.PbList<CreateCompanyResponse>();
+  CreateCompanyResponse createEmptyInstance() => CreateCompanyResponse._();
   @$core.pragma('dart2js:noInline')
   static CreateCompanyResponse getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<CreateCompanyResponse>(create);
+      $pb.GeneratedMessage.$_defaultFor<CreateCompanyResponse>(
+          CreateCompanyResponse.$_createMessage);
   static CreateCompanyResponse? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -594,7 +601,7 @@ class UpdateCompanyRequest extends $pb.GeneratedMessage {
     $core.String? status,
     $core.String? identifier,
   }) {
-    final result = create();
+    final result = UpdateCompanyRequest._();
     if (companyId != null) result.companyId = companyId;
     if (name != null) result.name = name;
     if (taxId != null) result.taxId = taxId;
@@ -607,15 +614,15 @@ class UpdateCompanyRequest extends $pb.GeneratedMessage {
 
   factory UpdateCompanyRequest.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      UpdateCompanyRequest()..mergeFromBuffer(data, registry);
   factory UpdateCompanyRequest.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      UpdateCompanyRequest()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'UpdateCompanyRequest',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: UpdateCompanyRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'companyId')
     ..aOS(2, _omitFieldNames ? '' : 'name')
     ..aOS(3, _omitFieldNames ? '' : 'taxId')
@@ -624,8 +631,7 @@ class UpdateCompanyRequest extends $pb.GeneratedMessage {
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  UpdateCompanyRequest clone() =>
-      UpdateCompanyRequest()..mergeFromMessage(this);
+  UpdateCompanyRequest clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   UpdateCompanyRequest copyWith(void Function(UpdateCompanyRequest) updates) =>
       super.copyWith((message) => updates(message as UpdateCompanyRequest))
@@ -635,14 +641,16 @@ class UpdateCompanyRequest extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use UpdateCompanyRequest() / UpdateCompanyRequest.new instead')
   static UpdateCompanyRequest create() => UpdateCompanyRequest._();
+  static $pb.GeneratedMessage $_createMessage() => UpdateCompanyRequest._();
   @$core.override
-  UpdateCompanyRequest createEmptyInstance() => create();
-  static $pb.PbList<UpdateCompanyRequest> createRepeated() =>
-      $pb.PbList<UpdateCompanyRequest>();
+  UpdateCompanyRequest createEmptyInstance() => UpdateCompanyRequest._();
   @$core.pragma('dart2js:noInline')
   static UpdateCompanyRequest getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<UpdateCompanyRequest>(create);
+      $pb.GeneratedMessage.$_defaultFor<UpdateCompanyRequest>(
+          UpdateCompanyRequest.$_createMessage);
   static UpdateCompanyRequest? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -696,7 +704,7 @@ class UpdateCompanyResponse extends $pb.GeneratedMessage {
   factory UpdateCompanyResponse({
     Company? company,
   }) {
-    final result = create();
+    final result = UpdateCompanyResponse._();
     if (company != null) result.company = company;
     return result;
   }
@@ -705,22 +713,21 @@ class UpdateCompanyResponse extends $pb.GeneratedMessage {
 
   factory UpdateCompanyResponse.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      UpdateCompanyResponse()..mergeFromBuffer(data, registry);
   factory UpdateCompanyResponse.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      UpdateCompanyResponse()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'UpdateCompanyResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: UpdateCompanyResponse.$_createMessage)
     ..aOM<Company>(1, _omitFieldNames ? '' : 'company',
-        subBuilder: Company.create)
+        subBuilder: Company.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  UpdateCompanyResponse clone() =>
-      UpdateCompanyResponse()..mergeFromMessage(this);
+  UpdateCompanyResponse clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   UpdateCompanyResponse copyWith(
           void Function(UpdateCompanyResponse) updates) =>
@@ -731,14 +738,16 @@ class UpdateCompanyResponse extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use UpdateCompanyResponse() / UpdateCompanyResponse.new instead')
   static UpdateCompanyResponse create() => UpdateCompanyResponse._();
+  static $pb.GeneratedMessage $_createMessage() => UpdateCompanyResponse._();
   @$core.override
-  UpdateCompanyResponse createEmptyInstance() => create();
-  static $pb.PbList<UpdateCompanyResponse> createRepeated() =>
-      $pb.PbList<UpdateCompanyResponse>();
+  UpdateCompanyResponse createEmptyInstance() => UpdateCompanyResponse._();
   @$core.pragma('dart2js:noInline')
   static UpdateCompanyResponse getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<UpdateCompanyResponse>(create);
+      $pb.GeneratedMessage.$_defaultFor<UpdateCompanyResponse>(
+          UpdateCompanyResponse.$_createMessage);
   static UpdateCompanyResponse? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -757,7 +766,7 @@ class DeleteCompanyRequest extends $pb.GeneratedMessage {
   factory DeleteCompanyRequest({
     $core.String? companyId,
   }) {
-    final result = create();
+    final result = DeleteCompanyRequest._();
     if (companyId != null) result.companyId = companyId;
     return result;
   }
@@ -766,21 +775,20 @@ class DeleteCompanyRequest extends $pb.GeneratedMessage {
 
   factory DeleteCompanyRequest.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      DeleteCompanyRequest()..mergeFromBuffer(data, registry);
   factory DeleteCompanyRequest.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      DeleteCompanyRequest()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'DeleteCompanyRequest',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: DeleteCompanyRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'companyId')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  DeleteCompanyRequest clone() =>
-      DeleteCompanyRequest()..mergeFromMessage(this);
+  DeleteCompanyRequest clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   DeleteCompanyRequest copyWith(void Function(DeleteCompanyRequest) updates) =>
       super.copyWith((message) => updates(message as DeleteCompanyRequest))
@@ -790,14 +798,16 @@ class DeleteCompanyRequest extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use DeleteCompanyRequest() / DeleteCompanyRequest.new instead')
   static DeleteCompanyRequest create() => DeleteCompanyRequest._();
+  static $pb.GeneratedMessage $_createMessage() => DeleteCompanyRequest._();
   @$core.override
-  DeleteCompanyRequest createEmptyInstance() => create();
-  static $pb.PbList<DeleteCompanyRequest> createRepeated() =>
-      $pb.PbList<DeleteCompanyRequest>();
+  DeleteCompanyRequest createEmptyInstance() => DeleteCompanyRequest._();
   @$core.pragma('dart2js:noInline')
   static DeleteCompanyRequest getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<DeleteCompanyRequest>(create);
+      $pb.GeneratedMessage.$_defaultFor<DeleteCompanyRequest>(
+          DeleteCompanyRequest.$_createMessage);
   static DeleteCompanyRequest? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -811,26 +821,25 @@ class DeleteCompanyRequest extends $pb.GeneratedMessage {
 }
 
 class DeleteCompanyResponse extends $pb.GeneratedMessage {
-  factory DeleteCompanyResponse() => create();
+  factory DeleteCompanyResponse() => DeleteCompanyResponse._();
 
   DeleteCompanyResponse._();
 
   factory DeleteCompanyResponse.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      DeleteCompanyResponse()..mergeFromBuffer(data, registry);
   factory DeleteCompanyResponse.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      DeleteCompanyResponse()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'DeleteCompanyResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: DeleteCompanyResponse.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  DeleteCompanyResponse clone() =>
-      DeleteCompanyResponse()..mergeFromMessage(this);
+  DeleteCompanyResponse clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   DeleteCompanyResponse copyWith(
           void Function(DeleteCompanyResponse) updates) =>
@@ -841,14 +850,16 @@ class DeleteCompanyResponse extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use DeleteCompanyResponse() / DeleteCompanyResponse.new instead')
   static DeleteCompanyResponse create() => DeleteCompanyResponse._();
+  static $pb.GeneratedMessage $_createMessage() => DeleteCompanyResponse._();
   @$core.override
-  DeleteCompanyResponse createEmptyInstance() => create();
-  static $pb.PbList<DeleteCompanyResponse> createRepeated() =>
-      $pb.PbList<DeleteCompanyResponse>();
+  DeleteCompanyResponse createEmptyInstance() => DeleteCompanyResponse._();
   @$core.pragma('dart2js:noInline')
   static DeleteCompanyResponse getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<DeleteCompanyResponse>(create);
+      $pb.GeneratedMessage.$_defaultFor<DeleteCompanyResponse>(
+          DeleteCompanyResponse.$_createMessage);
   static DeleteCompanyResponse? _defaultInstance;
 }
 
@@ -860,7 +871,7 @@ class Department extends $pb.GeneratedMessage {
     $core.String? companyName,
     $core.String? name,
   }) {
-    final result = create();
+    final result = Department._();
     if (id != null) result.id = id;
     if (companyId != null) result.companyId = companyId;
     if (companyName != null) result.companyName = companyName;
@@ -872,15 +883,15 @@ class Department extends $pb.GeneratedMessage {
 
   factory Department.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      Department()..mergeFromBuffer(data, registry);
   factory Department.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      Department()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'Department',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: Department.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'id')
     ..aOS(2, _omitFieldNames ? '' : 'companyId')
     ..aOS(3, _omitFieldNames ? '' : 'companyName')
@@ -888,7 +899,7 @@ class Department extends $pb.GeneratedMessage {
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  Department clone() => Department()..mergeFromMessage(this);
+  Department clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   Department copyWith(void Function(Department) updates) =>
       super.copyWith((message) => updates(message as Department)) as Department;
@@ -897,13 +908,14 @@ class Department extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use Department() / Department.new instead')
   static Department create() => Department._();
+  static $pb.GeneratedMessage $_createMessage() => Department._();
   @$core.override
-  Department createEmptyInstance() => create();
-  static $pb.PbList<Department> createRepeated() => $pb.PbList<Department>();
+  Department createEmptyInstance() => Department._();
   @$core.pragma('dart2js:noInline')
   static Department getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<Department>(create);
+      $pb.GeneratedMessage.$_defaultFor<Department>(Department.$_createMessage);
   static Department? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -949,7 +961,7 @@ class ListDepartmentsRequest extends $pb.GeneratedMessage {
     $core.int? pageSize,
     $core.String? companyId,
   }) {
-    final result = create();
+    final result = ListDepartmentsRequest._();
     if (page != null) result.page = page;
     if (pageSize != null) result.pageSize = pageSize;
     if (companyId != null) result.companyId = companyId;
@@ -960,23 +972,22 @@ class ListDepartmentsRequest extends $pb.GeneratedMessage {
 
   factory ListDepartmentsRequest.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      ListDepartmentsRequest()..mergeFromBuffer(data, registry);
   factory ListDepartmentsRequest.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      ListDepartmentsRequest()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'ListDepartmentsRequest',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
-    ..a<$core.int>(1, _omitFieldNames ? '' : 'page', $pb.PbFieldType.O3)
-    ..a<$core.int>(2, _omitFieldNames ? '' : 'pageSize', $pb.PbFieldType.O3)
+      createEmptyInstance: ListDepartmentsRequest.$_createMessage)
+    ..aI(1, _omitFieldNames ? '' : 'page')
+    ..aI(2, _omitFieldNames ? '' : 'pageSize')
     ..aOS(3, _omitFieldNames ? '' : 'companyId')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  ListDepartmentsRequest clone() =>
-      ListDepartmentsRequest()..mergeFromMessage(this);
+  ListDepartmentsRequest clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   ListDepartmentsRequest copyWith(
           void Function(ListDepartmentsRequest) updates) =>
@@ -987,14 +998,16 @@ class ListDepartmentsRequest extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListDepartmentsRequest() / ListDepartmentsRequest.new instead')
   static ListDepartmentsRequest create() => ListDepartmentsRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ListDepartmentsRequest._();
   @$core.override
-  ListDepartmentsRequest createEmptyInstance() => create();
-  static $pb.PbList<ListDepartmentsRequest> createRepeated() =>
-      $pb.PbList<ListDepartmentsRequest>();
+  ListDepartmentsRequest createEmptyInstance() => ListDepartmentsRequest._();
   @$core.pragma('dart2js:noInline')
   static ListDepartmentsRequest getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<ListDepartmentsRequest>(create);
+      $pb.GeneratedMessage.$_defaultFor<ListDepartmentsRequest>(
+          ListDepartmentsRequest.$_createMessage);
   static ListDepartmentsRequest? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -1030,7 +1043,7 @@ class ListDepartmentsResponse extends $pb.GeneratedMessage {
     $core.Iterable<Department>? departments,
     $1.Pagination? pagination,
   }) {
-    final result = create();
+    final result = ListDepartmentsResponse._();
     if (departments != null) result.departments.addAll(departments);
     if (pagination != null) result.pagination = pagination;
     return result;
@@ -1040,25 +1053,23 @@ class ListDepartmentsResponse extends $pb.GeneratedMessage {
 
   factory ListDepartmentsResponse.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      ListDepartmentsResponse()..mergeFromBuffer(data, registry);
   factory ListDepartmentsResponse.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      ListDepartmentsResponse()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'ListDepartmentsResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
-    ..pc<Department>(
-        1, _omitFieldNames ? '' : 'departments', $pb.PbFieldType.PM,
-        subBuilder: Department.create)
+      createEmptyInstance: ListDepartmentsResponse.$_createMessage)
+    ..pPM<Department>(1, _omitFieldNames ? '' : 'departments',
+        subBuilder: Department.$_createMessage)
     ..aOM<$1.Pagination>(2, _omitFieldNames ? '' : 'pagination',
-        subBuilder: $1.Pagination.create)
+        subBuilder: $1.Pagination.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  ListDepartmentsResponse clone() =>
-      ListDepartmentsResponse()..mergeFromMessage(this);
+  ListDepartmentsResponse clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   ListDepartmentsResponse copyWith(
           void Function(ListDepartmentsResponse) updates) =>
@@ -1069,14 +1080,16 @@ class ListDepartmentsResponse extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListDepartmentsResponse() / ListDepartmentsResponse.new instead')
   static ListDepartmentsResponse create() => ListDepartmentsResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ListDepartmentsResponse._();
   @$core.override
-  ListDepartmentsResponse createEmptyInstance() => create();
-  static $pb.PbList<ListDepartmentsResponse> createRepeated() =>
-      $pb.PbList<ListDepartmentsResponse>();
+  ListDepartmentsResponse createEmptyInstance() => ListDepartmentsResponse._();
   @$core.pragma('dart2js:noInline')
   static ListDepartmentsResponse getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<ListDepartmentsResponse>(create);
+      $pb.GeneratedMessage.$_defaultFor<ListDepartmentsResponse>(
+          ListDepartmentsResponse.$_createMessage);
   static ListDepartmentsResponse? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -1098,7 +1111,7 @@ class GetDepartmentRequest extends $pb.GeneratedMessage {
   factory GetDepartmentRequest({
     $core.String? departmentId,
   }) {
-    final result = create();
+    final result = GetDepartmentRequest._();
     if (departmentId != null) result.departmentId = departmentId;
     return result;
   }
@@ -1107,21 +1120,20 @@ class GetDepartmentRequest extends $pb.GeneratedMessage {
 
   factory GetDepartmentRequest.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      GetDepartmentRequest()..mergeFromBuffer(data, registry);
   factory GetDepartmentRequest.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      GetDepartmentRequest()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'GetDepartmentRequest',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: GetDepartmentRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'departmentId')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  GetDepartmentRequest clone() =>
-      GetDepartmentRequest()..mergeFromMessage(this);
+  GetDepartmentRequest clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   GetDepartmentRequest copyWith(void Function(GetDepartmentRequest) updates) =>
       super.copyWith((message) => updates(message as GetDepartmentRequest))
@@ -1131,14 +1143,16 @@ class GetDepartmentRequest extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetDepartmentRequest() / GetDepartmentRequest.new instead')
   static GetDepartmentRequest create() => GetDepartmentRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetDepartmentRequest._();
   @$core.override
-  GetDepartmentRequest createEmptyInstance() => create();
-  static $pb.PbList<GetDepartmentRequest> createRepeated() =>
-      $pb.PbList<GetDepartmentRequest>();
+  GetDepartmentRequest createEmptyInstance() => GetDepartmentRequest._();
   @$core.pragma('dart2js:noInline')
   static GetDepartmentRequest getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<GetDepartmentRequest>(create);
+      $pb.GeneratedMessage.$_defaultFor<GetDepartmentRequest>(
+          GetDepartmentRequest.$_createMessage);
   static GetDepartmentRequest? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -1155,7 +1169,7 @@ class GetDepartmentResponse extends $pb.GeneratedMessage {
   factory GetDepartmentResponse({
     Department? department,
   }) {
-    final result = create();
+    final result = GetDepartmentResponse._();
     if (department != null) result.department = department;
     return result;
   }
@@ -1164,22 +1178,21 @@ class GetDepartmentResponse extends $pb.GeneratedMessage {
 
   factory GetDepartmentResponse.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      GetDepartmentResponse()..mergeFromBuffer(data, registry);
   factory GetDepartmentResponse.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      GetDepartmentResponse()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'GetDepartmentResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: GetDepartmentResponse.$_createMessage)
     ..aOM<Department>(1, _omitFieldNames ? '' : 'department',
-        subBuilder: Department.create)
+        subBuilder: Department.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  GetDepartmentResponse clone() =>
-      GetDepartmentResponse()..mergeFromMessage(this);
+  GetDepartmentResponse clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   GetDepartmentResponse copyWith(
           void Function(GetDepartmentResponse) updates) =>
@@ -1190,14 +1203,16 @@ class GetDepartmentResponse extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetDepartmentResponse() / GetDepartmentResponse.new instead')
   static GetDepartmentResponse create() => GetDepartmentResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetDepartmentResponse._();
   @$core.override
-  GetDepartmentResponse createEmptyInstance() => create();
-  static $pb.PbList<GetDepartmentResponse> createRepeated() =>
-      $pb.PbList<GetDepartmentResponse>();
+  GetDepartmentResponse createEmptyInstance() => GetDepartmentResponse._();
   @$core.pragma('dart2js:noInline')
   static GetDepartmentResponse getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<GetDepartmentResponse>(create);
+      $pb.GeneratedMessage.$_defaultFor<GetDepartmentResponse>(
+          GetDepartmentResponse.$_createMessage);
   static GetDepartmentResponse? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -1217,7 +1232,7 @@ class CreateDepartmentRequest extends $pb.GeneratedMessage {
     $core.String? companyId,
     $core.String? name,
   }) {
-    final result = create();
+    final result = CreateDepartmentRequest._();
     if (companyId != null) result.companyId = companyId;
     if (name != null) result.name = name;
     return result;
@@ -1227,22 +1242,21 @@ class CreateDepartmentRequest extends $pb.GeneratedMessage {
 
   factory CreateDepartmentRequest.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      CreateDepartmentRequest()..mergeFromBuffer(data, registry);
   factory CreateDepartmentRequest.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      CreateDepartmentRequest()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'CreateDepartmentRequest',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: CreateDepartmentRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'companyId')
     ..aOS(2, _omitFieldNames ? '' : 'name')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  CreateDepartmentRequest clone() =>
-      CreateDepartmentRequest()..mergeFromMessage(this);
+  CreateDepartmentRequest clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   CreateDepartmentRequest copyWith(
           void Function(CreateDepartmentRequest) updates) =>
@@ -1253,14 +1267,16 @@ class CreateDepartmentRequest extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use CreateDepartmentRequest() / CreateDepartmentRequest.new instead')
   static CreateDepartmentRequest create() => CreateDepartmentRequest._();
+  static $pb.GeneratedMessage $_createMessage() => CreateDepartmentRequest._();
   @$core.override
-  CreateDepartmentRequest createEmptyInstance() => create();
-  static $pb.PbList<CreateDepartmentRequest> createRepeated() =>
-      $pb.PbList<CreateDepartmentRequest>();
+  CreateDepartmentRequest createEmptyInstance() => CreateDepartmentRequest._();
   @$core.pragma('dart2js:noInline')
   static CreateDepartmentRequest getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<CreateDepartmentRequest>(create);
+      $pb.GeneratedMessage.$_defaultFor<CreateDepartmentRequest>(
+          CreateDepartmentRequest.$_createMessage);
   static CreateDepartmentRequest? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -1286,7 +1302,7 @@ class CreateDepartmentResponse extends $pb.GeneratedMessage {
   factory CreateDepartmentResponse({
     Department? department,
   }) {
-    final result = create();
+    final result = CreateDepartmentResponse._();
     if (department != null) result.department = department;
     return result;
   }
@@ -1295,22 +1311,21 @@ class CreateDepartmentResponse extends $pb.GeneratedMessage {
 
   factory CreateDepartmentResponse.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      CreateDepartmentResponse()..mergeFromBuffer(data, registry);
   factory CreateDepartmentResponse.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      CreateDepartmentResponse()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'CreateDepartmentResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: CreateDepartmentResponse.$_createMessage)
     ..aOM<Department>(1, _omitFieldNames ? '' : 'department',
-        subBuilder: Department.create)
+        subBuilder: Department.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  CreateDepartmentResponse clone() =>
-      CreateDepartmentResponse()..mergeFromMessage(this);
+  CreateDepartmentResponse clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   CreateDepartmentResponse copyWith(
           void Function(CreateDepartmentResponse) updates) =>
@@ -1321,14 +1336,17 @@ class CreateDepartmentResponse extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use CreateDepartmentResponse() / CreateDepartmentResponse.new instead')
   static CreateDepartmentResponse create() => CreateDepartmentResponse._();
+  static $pb.GeneratedMessage $_createMessage() => CreateDepartmentResponse._();
   @$core.override
-  CreateDepartmentResponse createEmptyInstance() => create();
-  static $pb.PbList<CreateDepartmentResponse> createRepeated() =>
-      $pb.PbList<CreateDepartmentResponse>();
+  CreateDepartmentResponse createEmptyInstance() =>
+      CreateDepartmentResponse._();
   @$core.pragma('dart2js:noInline')
   static CreateDepartmentResponse getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<CreateDepartmentResponse>(create);
+      $pb.GeneratedMessage.$_defaultFor<CreateDepartmentResponse>(
+          CreateDepartmentResponse.$_createMessage);
   static CreateDepartmentResponse? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -1348,7 +1366,7 @@ class UpdateDepartmentRequest extends $pb.GeneratedMessage {
     $core.String? departmentId,
     $core.String? name,
   }) {
-    final result = create();
+    final result = UpdateDepartmentRequest._();
     if (departmentId != null) result.departmentId = departmentId;
     if (name != null) result.name = name;
     return result;
@@ -1358,22 +1376,21 @@ class UpdateDepartmentRequest extends $pb.GeneratedMessage {
 
   factory UpdateDepartmentRequest.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      UpdateDepartmentRequest()..mergeFromBuffer(data, registry);
   factory UpdateDepartmentRequest.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      UpdateDepartmentRequest()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'UpdateDepartmentRequest',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: UpdateDepartmentRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'departmentId')
     ..aOS(2, _omitFieldNames ? '' : 'name')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  UpdateDepartmentRequest clone() =>
-      UpdateDepartmentRequest()..mergeFromMessage(this);
+  UpdateDepartmentRequest clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   UpdateDepartmentRequest copyWith(
           void Function(UpdateDepartmentRequest) updates) =>
@@ -1384,14 +1401,16 @@ class UpdateDepartmentRequest extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use UpdateDepartmentRequest() / UpdateDepartmentRequest.new instead')
   static UpdateDepartmentRequest create() => UpdateDepartmentRequest._();
+  static $pb.GeneratedMessage $_createMessage() => UpdateDepartmentRequest._();
   @$core.override
-  UpdateDepartmentRequest createEmptyInstance() => create();
-  static $pb.PbList<UpdateDepartmentRequest> createRepeated() =>
-      $pb.PbList<UpdateDepartmentRequest>();
+  UpdateDepartmentRequest createEmptyInstance() => UpdateDepartmentRequest._();
   @$core.pragma('dart2js:noInline')
   static UpdateDepartmentRequest getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<UpdateDepartmentRequest>(create);
+      $pb.GeneratedMessage.$_defaultFor<UpdateDepartmentRequest>(
+          UpdateDepartmentRequest.$_createMessage);
   static UpdateDepartmentRequest? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -1417,7 +1436,7 @@ class UpdateDepartmentResponse extends $pb.GeneratedMessage {
   factory UpdateDepartmentResponse({
     Department? department,
   }) {
-    final result = create();
+    final result = UpdateDepartmentResponse._();
     if (department != null) result.department = department;
     return result;
   }
@@ -1426,22 +1445,21 @@ class UpdateDepartmentResponse extends $pb.GeneratedMessage {
 
   factory UpdateDepartmentResponse.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      UpdateDepartmentResponse()..mergeFromBuffer(data, registry);
   factory UpdateDepartmentResponse.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      UpdateDepartmentResponse()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'UpdateDepartmentResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: UpdateDepartmentResponse.$_createMessage)
     ..aOM<Department>(1, _omitFieldNames ? '' : 'department',
-        subBuilder: Department.create)
+        subBuilder: Department.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  UpdateDepartmentResponse clone() =>
-      UpdateDepartmentResponse()..mergeFromMessage(this);
+  UpdateDepartmentResponse clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   UpdateDepartmentResponse copyWith(
           void Function(UpdateDepartmentResponse) updates) =>
@@ -1452,14 +1470,17 @@ class UpdateDepartmentResponse extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use UpdateDepartmentResponse() / UpdateDepartmentResponse.new instead')
   static UpdateDepartmentResponse create() => UpdateDepartmentResponse._();
+  static $pb.GeneratedMessage $_createMessage() => UpdateDepartmentResponse._();
   @$core.override
-  UpdateDepartmentResponse createEmptyInstance() => create();
-  static $pb.PbList<UpdateDepartmentResponse> createRepeated() =>
-      $pb.PbList<UpdateDepartmentResponse>();
+  UpdateDepartmentResponse createEmptyInstance() =>
+      UpdateDepartmentResponse._();
   @$core.pragma('dart2js:noInline')
   static UpdateDepartmentResponse getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<UpdateDepartmentResponse>(create);
+      $pb.GeneratedMessage.$_defaultFor<UpdateDepartmentResponse>(
+          UpdateDepartmentResponse.$_createMessage);
   static UpdateDepartmentResponse? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -1478,7 +1499,7 @@ class DeleteDepartmentRequest extends $pb.GeneratedMessage {
   factory DeleteDepartmentRequest({
     $core.String? departmentId,
   }) {
-    final result = create();
+    final result = DeleteDepartmentRequest._();
     if (departmentId != null) result.departmentId = departmentId;
     return result;
   }
@@ -1487,21 +1508,20 @@ class DeleteDepartmentRequest extends $pb.GeneratedMessage {
 
   factory DeleteDepartmentRequest.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      DeleteDepartmentRequest()..mergeFromBuffer(data, registry);
   factory DeleteDepartmentRequest.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      DeleteDepartmentRequest()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'DeleteDepartmentRequest',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: DeleteDepartmentRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'departmentId')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  DeleteDepartmentRequest clone() =>
-      DeleteDepartmentRequest()..mergeFromMessage(this);
+  DeleteDepartmentRequest clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   DeleteDepartmentRequest copyWith(
           void Function(DeleteDepartmentRequest) updates) =>
@@ -1512,14 +1532,16 @@ class DeleteDepartmentRequest extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use DeleteDepartmentRequest() / DeleteDepartmentRequest.new instead')
   static DeleteDepartmentRequest create() => DeleteDepartmentRequest._();
+  static $pb.GeneratedMessage $_createMessage() => DeleteDepartmentRequest._();
   @$core.override
-  DeleteDepartmentRequest createEmptyInstance() => create();
-  static $pb.PbList<DeleteDepartmentRequest> createRepeated() =>
-      $pb.PbList<DeleteDepartmentRequest>();
+  DeleteDepartmentRequest createEmptyInstance() => DeleteDepartmentRequest._();
   @$core.pragma('dart2js:noInline')
   static DeleteDepartmentRequest getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<DeleteDepartmentRequest>(create);
+      $pb.GeneratedMessage.$_defaultFor<DeleteDepartmentRequest>(
+          DeleteDepartmentRequest.$_createMessage);
   static DeleteDepartmentRequest? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -1533,26 +1555,25 @@ class DeleteDepartmentRequest extends $pb.GeneratedMessage {
 }
 
 class DeleteDepartmentResponse extends $pb.GeneratedMessage {
-  factory DeleteDepartmentResponse() => create();
+  factory DeleteDepartmentResponse() => DeleteDepartmentResponse._();
 
   DeleteDepartmentResponse._();
 
   factory DeleteDepartmentResponse.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      DeleteDepartmentResponse()..mergeFromBuffer(data, registry);
   factory DeleteDepartmentResponse.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      DeleteDepartmentResponse()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'DeleteDepartmentResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: DeleteDepartmentResponse.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  DeleteDepartmentResponse clone() =>
-      DeleteDepartmentResponse()..mergeFromMessage(this);
+  DeleteDepartmentResponse clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   DeleteDepartmentResponse copyWith(
           void Function(DeleteDepartmentResponse) updates) =>
@@ -1563,14 +1584,17 @@ class DeleteDepartmentResponse extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use DeleteDepartmentResponse() / DeleteDepartmentResponse.new instead')
   static DeleteDepartmentResponse create() => DeleteDepartmentResponse._();
+  static $pb.GeneratedMessage $_createMessage() => DeleteDepartmentResponse._();
   @$core.override
-  DeleteDepartmentResponse createEmptyInstance() => create();
-  static $pb.PbList<DeleteDepartmentResponse> createRepeated() =>
-      $pb.PbList<DeleteDepartmentResponse>();
+  DeleteDepartmentResponse createEmptyInstance() =>
+      DeleteDepartmentResponse._();
   @$core.pragma('dart2js:noInline')
   static DeleteDepartmentResponse getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<DeleteDepartmentResponse>(create);
+      $pb.GeneratedMessage.$_defaultFor<DeleteDepartmentResponse>(
+          DeleteDepartmentResponse.$_createMessage);
   static DeleteDepartmentResponse? _defaultInstance;
 }
 

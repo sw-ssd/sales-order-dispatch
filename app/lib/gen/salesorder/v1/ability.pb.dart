@@ -8,14 +8,13 @@
 // ignore_for_file: constant_identifier_names
 // ignore_for_file: curly_braces_in_flow_control_structures
 // ignore_for_file: deprecated_member_use_from_same_package, library_prefixes
-// ignore_for_file: non_constant_identifier_names
+// ignore_for_file: non_constant_identifier_names, prefer_relative_imports
 
 import 'dart:async' as $async;
 import 'dart:core' as $core;
 
 import 'package:protobuf/protobuf.dart' as $pb;
-
-import '../../google/protobuf/struct.pb.dart' as $0;
+import 'package:protobuf/well_known_types/google/protobuf/struct.pb.dart' as $0;
 
 export 'package:protobuf/protobuf.dart' show GeneratedMessageGenericExtensions;
 
@@ -27,7 +26,7 @@ class AbilityRule extends $pb.GeneratedMessage {
     $0.Struct? conditions,
     $core.bool? inverted,
   }) {
-    final result = create();
+    final result = AbilityRule._();
     if (action != null) result.action = action;
     if (subject != null) result.subject = subject;
     if (conditions != null) result.conditions = conditions;
@@ -39,24 +38,24 @@ class AbilityRule extends $pb.GeneratedMessage {
 
   factory AbilityRule.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      AbilityRule()..mergeFromBuffer(data, registry);
   factory AbilityRule.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      AbilityRule()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'AbilityRule',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: AbilityRule.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'action')
     ..aOS(2, _omitFieldNames ? '' : 'subject')
     ..aOM<$0.Struct>(3, _omitFieldNames ? '' : 'conditions',
-        subBuilder: $0.Struct.create)
+        subBuilder: $0.Struct.$_createMessage)
     ..aOB(4, _omitFieldNames ? '' : 'inverted')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  AbilityRule clone() => AbilityRule()..mergeFromMessage(this);
+  AbilityRule clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   AbilityRule copyWith(void Function(AbilityRule) updates) =>
       super.copyWith((message) => updates(message as AbilityRule))
@@ -66,13 +65,15 @@ class AbilityRule extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use AbilityRule() / AbilityRule.new instead')
   static AbilityRule create() => AbilityRule._();
+  static $pb.GeneratedMessage $_createMessage() => AbilityRule._();
   @$core.override
-  AbilityRule createEmptyInstance() => create();
-  static $pb.PbList<AbilityRule> createRepeated() => $pb.PbList<AbilityRule>();
+  AbilityRule createEmptyInstance() => AbilityRule._();
   @$core.pragma('dart2js:noInline')
-  static AbilityRule getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<AbilityRule>(create);
+  static AbilityRule getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<AbilityRule>(
+          AbilityRule.$_createMessage);
   static AbilityRule? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -116,25 +117,25 @@ class AbilityRule extends $pb.GeneratedMessage {
 
 /// GetAbilityRequest:取得目前身分的能力規則。
 class GetAbilityRequest extends $pb.GeneratedMessage {
-  factory GetAbilityRequest() => create();
+  factory GetAbilityRequest() => GetAbilityRequest._();
 
   GetAbilityRequest._();
 
   factory GetAbilityRequest.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      GetAbilityRequest()..mergeFromBuffer(data, registry);
   factory GetAbilityRequest.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      GetAbilityRequest()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'GetAbilityRequest',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: GetAbilityRequest.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  GetAbilityRequest clone() => GetAbilityRequest()..mergeFromMessage(this);
+  GetAbilityRequest clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   GetAbilityRequest copyWith(void Function(GetAbilityRequest) updates) =>
       super.copyWith((message) => updates(message as GetAbilityRequest))
@@ -144,14 +145,15 @@ class GetAbilityRequest extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetAbilityRequest() / GetAbilityRequest.new instead')
   static GetAbilityRequest create() => GetAbilityRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetAbilityRequest._();
   @$core.override
-  GetAbilityRequest createEmptyInstance() => create();
-  static $pb.PbList<GetAbilityRequest> createRepeated() =>
-      $pb.PbList<GetAbilityRequest>();
+  GetAbilityRequest createEmptyInstance() => GetAbilityRequest._();
   @$core.pragma('dart2js:noInline')
-  static GetAbilityRequest getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<GetAbilityRequest>(create);
+  static GetAbilityRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<GetAbilityRequest>(
+          GetAbilityRequest.$_createMessage);
   static GetAbilityRequest? _defaultInstance;
 }
 
@@ -160,7 +162,7 @@ class GetAbilityResponse extends $pb.GeneratedMessage {
   factory GetAbilityResponse({
     $core.Iterable<AbilityRule>? rules,
   }) {
-    final result = create();
+    final result = GetAbilityResponse._();
     if (rules != null) result.rules.addAll(rules);
     return result;
   }
@@ -169,21 +171,21 @@ class GetAbilityResponse extends $pb.GeneratedMessage {
 
   factory GetAbilityResponse.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      GetAbilityResponse()..mergeFromBuffer(data, registry);
   factory GetAbilityResponse.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      GetAbilityResponse()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'GetAbilityResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
-      createEmptyInstance: create)
-    ..pc<AbilityRule>(1, _omitFieldNames ? '' : 'rules', $pb.PbFieldType.PM,
-        subBuilder: AbilityRule.create)
+      createEmptyInstance: GetAbilityResponse.$_createMessage)
+    ..pPM<AbilityRule>(1, _omitFieldNames ? '' : 'rules',
+        subBuilder: AbilityRule.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  GetAbilityResponse clone() => GetAbilityResponse()..mergeFromMessage(this);
+  GetAbilityResponse clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   GetAbilityResponse copyWith(void Function(GetAbilityResponse) updates) =>
       super.copyWith((message) => updates(message as GetAbilityResponse))
@@ -193,14 +195,15 @@ class GetAbilityResponse extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use GetAbilityResponse() / GetAbilityResponse.new instead')
   static GetAbilityResponse create() => GetAbilityResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetAbilityResponse._();
   @$core.override
-  GetAbilityResponse createEmptyInstance() => create();
-  static $pb.PbList<GetAbilityResponse> createRepeated() =>
-      $pb.PbList<GetAbilityResponse>();
+  GetAbilityResponse createEmptyInstance() => GetAbilityResponse._();
   @$core.pragma('dart2js:noInline')
   static GetAbilityResponse getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<GetAbilityResponse>(create);
+      $pb.GeneratedMessage.$_defaultFor<GetAbilityResponse>(
+          GetAbilityResponse.$_createMessage);
   static GetAbilityResponse? _defaultInstance;
 
   @$pb.TagNumber(1)

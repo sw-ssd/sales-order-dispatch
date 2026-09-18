@@ -8,7 +8,7 @@
 // ignore_for_file: constant_identifier_names
 // ignore_for_file: curly_braces_in_flow_control_structures
 // ignore_for_file: deprecated_member_use_from_same_package, library_prefixes
-// ignore_for_file: non_constant_identifier_names
+// ignore_for_file: non_constant_identifier_names, prefer_relative_imports
 
 import 'dart:async' as $async;
 import 'dart:core' as $core;
@@ -36,7 +36,7 @@ class AuditLog extends $pb.GeneratedMessage {
     $core.String? userAgent,
     $core.String? createdAt,
   }) {
-    final result = create();
+    final result = AuditLog._();
     if (id != null) result.id = id;
     if (companyId != null) result.companyId = companyId;
     if (departmentId != null) result.departmentId = departmentId;
@@ -57,15 +57,15 @@ class AuditLog extends $pb.GeneratedMessage {
 
   factory AuditLog.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      AuditLog()..mergeFromBuffer(data, registry);
   factory AuditLog.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      AuditLog()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'AuditLog',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'audit.v1'),
-      createEmptyInstance: create)
+      createEmptyInstance: AuditLog.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'id')
     ..aOS(2, _omitFieldNames ? '' : 'companyId')
     ..aOS(3, _omitFieldNames ? '' : 'departmentId')
@@ -82,7 +82,7 @@ class AuditLog extends $pb.GeneratedMessage {
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  AuditLog clone() => AuditLog()..mergeFromMessage(this);
+  AuditLog clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   AuditLog copyWith(void Function(AuditLog) updates) =>
       super.copyWith((message) => updates(message as AuditLog)) as AuditLog;
@@ -91,13 +91,14 @@ class AuditLog extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use AuditLog() / AuditLog.new instead')
   static AuditLog create() => AuditLog._();
+  static $pb.GeneratedMessage $_createMessage() => AuditLog._();
   @$core.override
-  AuditLog createEmptyInstance() => create();
-  static $pb.PbList<AuditLog> createRepeated() => $pb.PbList<AuditLog>();
+  AuditLog createEmptyInstance() => AuditLog._();
   @$core.pragma('dart2js:noInline')
-  static AuditLog getDefault() =>
-      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<AuditLog>(create);
+  static AuditLog getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<AuditLog>(AuditLog.$_createMessage);
   static AuditLog? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -230,7 +231,7 @@ class ListAuditLogsRequest extends $pb.GeneratedMessage {
     $core.String? resourceId,
     $core.String? userId,
   }) {
-    final result = create();
+    final result = ListAuditLogsRequest._();
     if (page != null) result.page = page;
     if (pageSize != null) result.pageSize = pageSize;
     if (from != null) result.from = from;
@@ -247,17 +248,17 @@ class ListAuditLogsRequest extends $pb.GeneratedMessage {
 
   factory ListAuditLogsRequest.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      ListAuditLogsRequest()..mergeFromBuffer(data, registry);
   factory ListAuditLogsRequest.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      ListAuditLogsRequest()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'ListAuditLogsRequest',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'audit.v1'),
-      createEmptyInstance: create)
-    ..a<$core.int>(1, _omitFieldNames ? '' : 'page', $pb.PbFieldType.O3)
-    ..a<$core.int>(2, _omitFieldNames ? '' : 'pageSize', $pb.PbFieldType.O3)
+      createEmptyInstance: ListAuditLogsRequest.$_createMessage)
+    ..aI(1, _omitFieldNames ? '' : 'page')
+    ..aI(2, _omitFieldNames ? '' : 'pageSize')
     ..aOS(3, _omitFieldNames ? '' : 'from')
     ..aOS(4, _omitFieldNames ? '' : 'to')
     ..aOS(5, _omitFieldNames ? '' : 'companyId')
@@ -268,8 +269,7 @@ class ListAuditLogsRequest extends $pb.GeneratedMessage {
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  ListAuditLogsRequest clone() =>
-      ListAuditLogsRequest()..mergeFromMessage(this);
+  ListAuditLogsRequest clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   ListAuditLogsRequest copyWith(void Function(ListAuditLogsRequest) updates) =>
       super.copyWith((message) => updates(message as ListAuditLogsRequest))
@@ -279,14 +279,16 @@ class ListAuditLogsRequest extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListAuditLogsRequest() / ListAuditLogsRequest.new instead')
   static ListAuditLogsRequest create() => ListAuditLogsRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ListAuditLogsRequest._();
   @$core.override
-  ListAuditLogsRequest createEmptyInstance() => create();
-  static $pb.PbList<ListAuditLogsRequest> createRepeated() =>
-      $pb.PbList<ListAuditLogsRequest>();
+  ListAuditLogsRequest createEmptyInstance() => ListAuditLogsRequest._();
   @$core.pragma('dart2js:noInline')
   static ListAuditLogsRequest getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<ListAuditLogsRequest>(create);
+      $pb.GeneratedMessage.$_defaultFor<ListAuditLogsRequest>(
+          ListAuditLogsRequest.$_createMessage);
   static ListAuditLogsRequest? _defaultInstance;
 
   @$pb.TagNumber(1)
@@ -376,7 +378,7 @@ class ListAuditLogsResponse extends $pb.GeneratedMessage {
     $core.Iterable<AuditLog>? items,
     $0.Pagination? pagination,
   }) {
-    final result = create();
+    final result = ListAuditLogsResponse._();
     if (items != null) result.items.addAll(items);
     if (pagination != null) result.pagination = pagination;
     return result;
@@ -386,24 +388,23 @@ class ListAuditLogsResponse extends $pb.GeneratedMessage {
 
   factory ListAuditLogsResponse.fromBuffer($core.List<$core.int> data,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromBuffer(data, registry);
+      ListAuditLogsResponse()..mergeFromBuffer(data, registry);
   factory ListAuditLogsResponse.fromJson($core.String json,
           [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
-      create()..mergeFromJson(json, registry);
+      ListAuditLogsResponse()..mergeFromJson(json, registry);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(
       _omitMessageNames ? '' : 'ListAuditLogsResponse',
       package: const $pb.PackageName(_omitMessageNames ? '' : 'audit.v1'),
-      createEmptyInstance: create)
-    ..pc<AuditLog>(1, _omitFieldNames ? '' : 'items', $pb.PbFieldType.PM,
-        subBuilder: AuditLog.create)
+      createEmptyInstance: ListAuditLogsResponse.$_createMessage)
+    ..pPM<AuditLog>(1, _omitFieldNames ? '' : 'items',
+        subBuilder: AuditLog.$_createMessage)
     ..aOM<$0.Pagination>(2, _omitFieldNames ? '' : 'pagination',
-        subBuilder: $0.Pagination.create)
+        subBuilder: $0.Pagination.$_createMessage)
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
-  ListAuditLogsResponse clone() =>
-      ListAuditLogsResponse()..mergeFromMessage(this);
+  ListAuditLogsResponse clone() => deepCopy();
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
   ListAuditLogsResponse copyWith(
           void Function(ListAuditLogsResponse) updates) =>
@@ -414,14 +415,16 @@ class ListAuditLogsResponse extends $pb.GeneratedMessage {
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListAuditLogsResponse() / ListAuditLogsResponse.new instead')
   static ListAuditLogsResponse create() => ListAuditLogsResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ListAuditLogsResponse._();
   @$core.override
-  ListAuditLogsResponse createEmptyInstance() => create();
-  static $pb.PbList<ListAuditLogsResponse> createRepeated() =>
-      $pb.PbList<ListAuditLogsResponse>();
+  ListAuditLogsResponse createEmptyInstance() => ListAuditLogsResponse._();
   @$core.pragma('dart2js:noInline')
   static ListAuditLogsResponse getDefault() => _defaultInstance ??=
-      $pb.GeneratedMessage.$_defaultFor<ListAuditLogsResponse>(create);
+      $pb.GeneratedMessage.$_defaultFor<ListAuditLogsResponse>(
+          ListAuditLogsResponse.$_createMessage);
   static ListAuditLogsResponse? _defaultInstance;
 
   @$pb.TagNumber(1)
