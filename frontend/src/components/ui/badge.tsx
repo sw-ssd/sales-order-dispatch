@@ -19,7 +19,7 @@ export const badgeVariants = cva(
         outline: "border border-border text-foreground",
         success: "bg-success/15 text-success",
         warning: "bg-warning/15 text-warning",
-        info: "bg-primary/10 text-primary",
+        info: "bg-info/15 text-info",
       },
     },
     defaultVariants: {

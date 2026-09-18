@@ -28,7 +28,7 @@ export const buttonVariants = cva(
           "border-success bg-success text-success-foreground hover:bg-success/90 active:bg-success",
         warning:
           "border-warning bg-warning text-warning-foreground hover:bg-warning/90 active:bg-warning",
-        info: "border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 active:bg-primary/10",
+        info: "border-info/30 bg-info/15 text-info hover:bg-info/20 active:bg-info/15",
       },
       size: {
         xs: "h-6 px-2 text-xs",
