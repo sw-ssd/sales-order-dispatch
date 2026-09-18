@@ -61,6 +61,13 @@ var protectedRPC = map[string]rpcAuth{
 	"/salesorder.v1.DepartmentService/CreateDepartment": {"department", "write"},
 	"/salesorder.v1.DepartmentService/UpdateDepartment": {"department", "write"},
 	"/salesorder.v1.DepartmentService/DeleteDepartment": {"department", "write"},
+	"/salesorder.v1.UserService/ListUsers":              {"user", "read"},
+	"/salesorder.v1.UserService/GetUser":                {"user", "read"},
+	"/salesorder.v1.UserService/CreateUser":             {"user", "write"},
+	"/salesorder.v1.UserService/UpdateUser":             {"user", "write"},
+	"/salesorder.v1.UserService/AssignRole":             {"user", "write"},
+	"/salesorder.v1.UserService/Deactivate":             {"user", "write"},
+	"/salesorder.v1.UserService/ForceLogout":            {"user", "write"},
 }
 
 // SetOpenFGA 注入 OpenFGA 授權引擎(啟動組裝時;nil 則跳過 middleware 檢查)。
