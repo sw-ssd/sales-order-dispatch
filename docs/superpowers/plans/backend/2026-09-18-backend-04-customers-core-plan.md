@@ -12,6 +12,8 @@
 
 **狀態基準：** 2026-09-18。`customers`/`customer_counters` 無 code；`company` 缺 `customer_code_prefix`。
 
+> **✅ 執行結果（2026-09-18）**：Task 1–5 全數完成並 commit（`development`）。交付：`company.customer_code_prefix` + `customers`/`customer_counters` schema + migration `00013`；`CustomerService` 6 RPC（List/Get/Create/Update/Delete/Restore）+ 取號 counter（D7 樂觀鎖、取號+建檔+稽核同交易）+ 字典/業務驗證 + `include_deleted`/關鍵字/排序白名單。Task 3（D22 帳號連動）留後續批（需 user 增欄位）。
+
 ---
 
 ## Global Constraints
