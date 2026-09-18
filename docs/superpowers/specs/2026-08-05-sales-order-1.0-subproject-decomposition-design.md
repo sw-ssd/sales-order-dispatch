@@ -4,7 +4,7 @@
 > 狀態：**草案，待使用者審閱**
 > 對應：
 > - `docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（v1.0.34）
-> - `docs/superpowers/specs/2026-07-19-sales-order-1.0-decisions.md`（D1–D28）
+> - `docs/superpowers/specs/2026-07-19-sales-order-1.0-decisions.md`（D1–D32）
 > - `docs/superpowers/specs/2026-08-04-app-flutter-stack-design.md`（D29）
 > - `docs/superpowers/plans/reference/2026-07-17-sales-order-1-0-tasks.md`（v2.9.0）
 >
