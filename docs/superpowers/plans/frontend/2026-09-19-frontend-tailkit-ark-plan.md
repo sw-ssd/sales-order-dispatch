@@ -99,7 +99,7 @@ cd frontend && pnpm add @ark-ui/solid@^5.39.2 && pnpm add -D @tailwindcss/forms 
 ```css
   --success: oklch(0.65 0.15 155);
   --success-foreground: oklch(0.985 0 0);
-  --warning: oklch(0.72 0.15 75);
+  --warning: oklch(0.75 0.15 95);
   --warning-foreground: oklch(0.205 0 0);
 ```
 
@@ -112,7 +112,7 @@ cd frontend && pnpm add @ark-ui/solid@^5.39.2 && pnpm add -D @tailwindcss/forms 
   --color-warning-foreground: var(--warning-foreground);
 ```
 
-在 `@theme` 內追加 Tailkit 的項目：`--default-font-family: "Inter";`、`--spacing-8xl: 90rem; --spacing-9xl: 105rem; --spacing-10xl: 120rem;`、`--animate-spin-slow: spin-slow 8s linear infinite;`（含對應 `@keyframes spin-slow`）。
+在 `@theme` 內追加 Tailkit 的項目：`--default-font-family: "Inter", ui-sans-serif, system-ui, sans-serif;`（**必須帶 fallback**：Tailwind preflight 的 `--theme(--default-font-family, <系統堆疊>)` 只在該鍵未定義時才用系統堆疊，一旦定義就整串被取代，bunny.net 被 CSP／離線阻擋時拉丁字會退成 serif）、`--spacing-8xl: 90rem; --spacing-9xl: 105rem; --spacing-10xl: 120rem;`、`--animate-spin-slow: spin-slow 8s linear infinite;`（含對應 `@keyframes spin-slow`）。
 
 - [ ] **Step 3: 字型載入 `index.html`**
 
