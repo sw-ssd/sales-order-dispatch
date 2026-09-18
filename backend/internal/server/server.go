@@ -4,31 +4,23 @@ package server
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 
-	"entgo.io/ent/dialect"
-	entsql "entgo.io/ent/dialect/sql"
 	"github.com/alexedwards/scs/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	_ "github.com/jackc/pgx/v5/stdlib" // pgx database/sql driver
 
 	"github.com/salesorder/sales-order-1.0/backend/config"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	domainauth "github.com/salesorder/sales-order-1.0/backend/internal/domain/auth"
-	"github.com/salesorder/sales-order-1.0/backend/internal/handlers"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
-	"github.com/salesorder/sales-order-1.0/backend/internal/services"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/cache"
+	"github.com/salesorder/sales-order-1.0/backend/third_party/database"
 )
 
 // Version 目前版本；正式版號由建置 ldflags 注入。
@@ -73,6 +65,15 @@ func (s *Server) Init() error {
 		}
 		if s.cfg.Auth.JWTSecret == config.DefaultJWTSecret {
 			return fmt.Errorf("config: ENV=production 且 JWT_SECRET 仍為預設值(dev-only),拒絕啟動")
+		}
+		// 設計 §3(D31):production fail-fast 需涵蓋 DB/Valkey 連線,
+		// 避免 auth/service 因 infra 不可用而靜默不掛載(見 domains.go mountAuth 開發降級)。
+		if err := database.Probe(context.Background(), s.cfg.Database.DatabaseURL); err != nil {
+			return fmt.Errorf("config: ENV=production 無法連線資料庫: %w", err)
+		}
+		vc := cache.NewClient(s.cfg.Cache.ValkeyAddr)
+		if err := cache.Ping(context.Background(), vc); err != nil {
+			return fmt.Errorf("config: ENV=production 無法連線 Valkey: %w", err)
 		}
 	}
 	return nil
@@ -154,84 +155,6 @@ func (s *Server) identityFor(ctx context.Context, entClient *ent.Client, userID 
 		DataScope:    auth.ScopeForRole(u.Role),
 	}
 	return id, scope, true
-}
-
-// mountAuth 組裝 auth domain：ent client + Valkey client → token/鎖定/一次性 store →
-// scs session → AuthService Connect handler 與 OIDC 公開端點。
-// 開發降級：DB / Valkey / Google discovery 不可用時略過掛載並 log（正式環境由 Init() fail-fast 保證）。
-func (s *Server) mountAuth() {
-	entClient, err := s.openEntClient()
-	if err != nil {
-		log.Printf("auth: 略過掛載（ent client: %v）", err)
-		return
-	}
-	valkeyClient := cache.NewClient(s.cfg.Cache.ValkeyAddr)
-	if err := cache.Ping(context.Background(), valkeyClient); err != nil {
-		log.Printf("auth: 略過掛載（Valkey: %v）", err)
-		return
-	}
-
-	kv := auth.NewRedisStore(valkeyClient)
-	tokens := auth.NewTokenManager(s.cfg.Auth.JWTSecret, kv, entClient)
-	lockout := auth.NewLoginLock(kv)
-	oneTime := auth.NewOneTimeStore(kv)
-	sessions := auth.WebSessionManager(auth.NewSessionStore(kv),
-		s.cfg.Auth.SessionLifetime, s.cfg.Auth.SessionSecure, s.cfg.Auth.SessionSameSite)
-
-	h := handlers.NewAuthHandler(handlers.AuthDeps{
-		Cfg:      s.cfg,
-		DB:       entClient,
-		Tokens:   tokens,
-		Lockout:  lockout,
-		OneTime:  oneTime,
-		Sessions: sessions,
-	})
-
-	// /api/v1 底下所有 Connect-RPC 共用一個 ServeMux:connect 產生的 handler 依
-	// r.URL.Path 全路徑分派,掛載時剝除 /api/v1 前綴(與 RegisterCompanyServices 慣例一致)。
-	// LoadAndSave + authzMiddleware 包在最外層:session 身分 → authz.Identity/RLS ctx(T14 Step 4)。
-	apiMux := http.NewServeMux()
-	authPath, authHandler := salesorderv1connect.NewAuthServiceHandler(h)
-	apiMux.Handle(authPath, authHandler)
-	handlers.RegisterRoleHandler(apiMux, entClient) // RoleService(T18)
-	// AbilityService(T9/D30):CASL 規則下發給前端 @casl/ability 初始化。
-	abilityPath, abilityHandler := salesorderv1connect.NewAbilityServiceHandler(domainauth.NewAbilityHandler(entClient, domainauth.Config{DeveloperAccountEnabled: s.cfg.API.DeveloperAccountEnabled}))
-	apiMux.Handle(abilityPath, abilityHandler)
-	services.RegisterCompanyServices(apiMux, entClient) // CompanyService/DepartmentService(T20)
-	s.router.Mount("/api/v1", http.StripPrefix("/api/v1", sessions.LoadAndSave(s.authzMiddleware(entClient, sessions, apiMux))))
-
-	// OIDC 公開端點：需 Google client id 與 discovery 可用
-	clientID := s.cfg.Auth.GoogleClientID
-	if clientID == "" {
-		log.Println("auth: GOOGLE_CLIENT_ID 未設定，略過 OIDC 路由")
-		return
-	}
-	verifier, err := auth.NewGoogleVerifier(context.Background(), clientID)
-	if err != nil {
-		log.Printf("auth: 略過 OIDC 路由（Google discovery: %v）", err)
-		return
-	}
-	oauthCfg := auth.NewGoogleOAuthConfig(clientID, s.cfg.Auth.GoogleClientSecret, s.cfg.Auth.GoogleRedirectURL)
-	h.SetOIDC(oauthCfg, auth.NewGoogleOAuthExchanger(oauthCfg), verifier)
-
-	s.router.Group(func(r chi.Router) {
-		r.Use(sessions.LoadAndSave)
-		r.Get("/api/v1/auth/google", h.GoogleLogin)
-		r.Get("/api/v1/auth/google/callback", h.GoogleCallback)
-	})
-}
-
-// openEntClient 開啟 PostgreSQL ent client（pgx driver）。
-func (s *Server) openEntClient() (*ent.Client, error) {
-	db, err := sql.Open("pgx", s.cfg.Database.DatabaseURL)
-	if err != nil {
-		return nil, err
-	}
-	if err := db.Ping(); err != nil {
-		return nil, err
-	}
-	drv := entsql.OpenDB(dialect.Postgres, db)
-	return ent.NewClient(ent.Driver(drv)), nil
 }
 
 func (s *Server) handleVersion(w http.ResponseWriter, _ *http.Request) {

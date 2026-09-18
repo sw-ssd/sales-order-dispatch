@@ -67,10 +67,12 @@ func TestInitRejectsInsecureJWTSecret(t *testing.T) {
 		}
 	})
 
-	t.Run("production + 自訂密鑰可啟動", func(t *testing.T) {
+	t.Run("production + 自訂密鑰但 infra 不可達被 DB/Valkey fail-fast 擋下", func(t *testing.T) {
+		// 單測環境無 PostgreSQL/Valkey;production 完整可啟動路徑由整合/驗收測試涵蓋。
+		// 此處驗證 secret/developer 檢查通過後,infra 不可達仍會拒絕啟動(設計 §3 D31)。
 		s := New(&config.Config{API: config.API{Env: "production"}, Auth: config.Auth{JWTSecret: "custom-secret"}})
-		if err := s.Init(); err != nil {
-			t.Fatalf("production + 自訂 JWT 密鑰應可啟動,got %v", err)
+		if err := s.Init(); err == nil {
+			t.Fatal("production 於無 infra 環境應被 DB/Valkey fail-fast 拒絕")
 		}
 	})
 

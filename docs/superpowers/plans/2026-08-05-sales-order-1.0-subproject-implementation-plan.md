@@ -439,7 +439,7 @@
 **Files:**
 - Create: `backend/internal/auth/casbin.go`
 - Create: `backend/internal/auth/rls.go`
-- Create: `backend/config/rbac_model.conf`
+- Create: `backend/internal/auth/rbac_model.conf`
 
 **Interfaces:**
 - Consumes: Task 9 (User schema)

@@ -14,7 +14,7 @@
 | Task | 內容 | 狀態 | 實際產物 |
 |---|---|---|---|
 | 1 | Company/Department/User Ent schema | 🟡 部分 | `ent/schema/{company,department,user}.go`（user 欄位精簡） |
-| 2 | Casbin model + enforcer | ✅ 完成 | `internal/auth/casbin.go`、`config/{rbac_model.conf,rbac_policy.csv}` |
+| 2 | Casbin model + enforcer | ✅ 完成 | `internal/auth/casbin.go`、`internal/auth/{rbac_model.conf,rbac_policy.csv}` |
 | 3 | RLS policies + 注入 | 🟡 部分 | `internal/auth/rls.go`、migration `00002_rls_policies.sql`（無 WrapDriver 注入） |
 | 4 | OAuth2 導向與 callback | ✅ 完成 | `internal/auth/oidc.go`、`handlers/auth_handler.go` |
 | 5 | 註冊完成與 guest 審核 | 🟡 部分 | `RegisterComplete` handler |
@@ -59,10 +59,10 @@
 
 **實際產物（已存在）：**
 - `backend/internal/auth/casbin.go` — `BuiltinRoles`（7 角色）、`Enforce` / `EnforceAny`
-- `backend/config/rbac_model.conf`、`backend/config/rbac_policy.csv`（go:embed 內嵌）
-- `backend/config/rbac.go`
+- `backend/internal/auth/rbac_model.conf`、`backend/internal/auth/rbac_policy.csv`（go:embed 內嵌）
+- `backend/internal/auth/rbac.go`
 
-**說明**：已實作進程級 enforcer（model + policy 來自 config go:embed 內嵌）。**與計畫差異**：未用 PG DB adapter 與 `SeedDefaultPolicies`（計畫要求），改以 string-adapter（註解明示「production 遷移至 casbin_rules 表後改為 DB adapter」）。
+**說明**：已實作進程級 enforcer（model + policy 來自 internal/auth go:embed 內嵌）。**與計畫差異**：未用 PG DB adapter 與 `SeedDefaultPolicies`（計畫要求），改以 string-adapter（註解明示「production 遷移至 casbin_rules 表後改為 DB adapter」）。
 
 - [x] **Step 1: 實作 Casbin model + 7 內建角色 policy** — `casbin.go`、`rbac_model.conf`、`rbac_policy.csv`
 - [x] **Step 2: 實作 enforcer（進程級、內嵌 policy）** — `casbinEnforcer()` / `Enforce` / `EnforceAny`

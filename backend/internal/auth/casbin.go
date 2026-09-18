@@ -1,5 +1,5 @@
 // Casbin RBAC 執行層(T14):角色 × 公司(domain)× 資源 × 動作 的授權判斷。
-// model 與 7 內建角色 policy 位於 config/rbac_model.conf 與 config/rbac_policy.csv
+// model 與 7 內建角色 policy 位於 internal/auth/rbac_model.conf 與 internal/auth/rbac_policy.csv
 // (go:embed 編譯期內嵌,測試與正式 binary 皆可直接使用)。
 // 設計書 §3.3:Casbin 僅負責角色/資源/動作授權;部門資料範圍由 RLS 承擔,故 policy dom 皆為 "*"。
 package auth
@@ -11,8 +11,6 @@ import (
 	"github.com/casbin/casbin/v2"
 	"github.com/casbin/casbin/v2/model"
 	stringadapter "github.com/casbin/casbin/v2/persist/string-adapter"
-
-	"github.com/salesorder/sales-order-1.0/backend/config"
 )
 
 // BuiltinRoles 內建 7 角色(設計書 §3.2 + §4.4),系統 seed 值。
@@ -28,12 +26,12 @@ var (
 // production 遷移至 casbin_rules 表後改為 DB adapter(設計書 3.3 / 8.2「API 權限設置」)。
 func casbinEnforcer() (*casbin.Enforcer, error) {
 	enforcerOnce.Do(func() {
-		m, err := model.NewModelFromString(config.RBACModel)
+		m, err := model.NewModelFromString(RBACModel)
 		if err != nil {
 			enforcerErr = fmt.Errorf("casbin: model 載入失敗: %w", err)
 			return
 		}
-		e, err := casbin.NewEnforcer(m, stringadapter.NewAdapter(config.RBACPolicy))
+		e, err := casbin.NewEnforcer(m, stringadapter.NewAdapter(RBACPolicy))
 		if err != nil {
 			enforcerErr = fmt.Errorf("casbin: enforcer 建立失敗: %w", err)
 			return
