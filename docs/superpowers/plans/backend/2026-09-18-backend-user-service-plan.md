@@ -310,6 +310,9 @@ git commit -m "docs(plans): 02 Task 3 UserService 完工狀態更新"
 | I8 | Important | 缺 D18 回滾測試、範圍矩陣不完整 | 新增 11 個測試(含稽核失敗回滾、權限提升負向) |
 | I9 | Important | 稽核未帶 ip_address / user_agent | `audit.Meta` + middleware 注入;`recordAudit` 寫入 |
 
-**已知殘留(非阻擋,已記錄)**:`isValidRole` 僅內建角色(自訂角色待 2.9.2);Deactivate 未刪 Valkey session(tv+1 已兜底);`syncUserRoleTuple` 失敗時業務已 commit(計畫已接受之取捨)。
+**殘留項處理(2026-09-18,commit `4b7a2d1`)**：
+1. **自訂角色**：新增 `canGrantRole`(DB-aware)——super/developer 可授予「既有自訂角色」(role 表 active);company_admin/dept_admin 維持固定上限(不得授予自訂角色,防權限提升);ListUsers 角色篩選支援自訂角色。✅
+2. **Deactivate 刪 Valkey session**：判定為 **by-design 不另刪**——scs 無法依 user 列舉 session;`users.token_version+1` 已透過 middleware 的 tv 比對(1.6.4)令在途 session 於下次請求失效,達相同隔離效果。⚠️ 文件註記。
+3. **`syncUserRoleTuple` post-commit 失敗**：改為**不誤報請求失敗**——業務已 commit(role/tv 已變),若回錯誤會致呼叫端重試二次 bump token_version;改記 log 並回成功,授權由 OpenFGA 下次 reconcile/provision 補齊(最終一致)。✅
 
 *審查修正日期:2026-09-18*
