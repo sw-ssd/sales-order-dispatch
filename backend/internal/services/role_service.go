@@ -149,6 +149,11 @@ func (s *RoleService) UpdateRolePermissions(ctx context.Context, req *connect.Re
 	if err != nil {
 		return nil, toConnectError(err)
 	}
+	// 交易前快照舊權限(全量取代語意,供 OpenFGA tuple 同步時刪除已移除的權限)。
+	oldPerms, err := s.loadPermissionModels(ctx, roleID)
+	if err != nil {
+		return nil, err
+	}
 	if r.IsSystem && !isSuper(id) {
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("內建角色權限僅 super 可修改"))
 	}
@@ -197,6 +202,11 @@ func (s *RoleService) UpdateRolePermissions(ctx context.Context, req *connect.Re
 		return nil, toConnectError(err)
 	}
 
+	// D32/Task8:role_permissions 異動同步至 OpenFGA tuples(引擎未注入時略過,向後相容)。
+	if err := s.syncRolePermissions(ctx, roleID, oldPerms, perms); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("OpenFGA tuple 同步失敗: %w", err))
+	}
+
 	out, err := s.loadPermissions(ctx, roleID)
 	if err != nil {
 		return nil, err
@@ -225,6 +235,110 @@ func (s *RoleService) ListConditionFields(ctx context.Context, req *connect.Requ
 		})
 	}
 	return connect.NewResponse(&v1.ListConditionFieldsResponse{Fields: fields}), nil
+}
+
+// loadPermissionModels 讀取角色全部 role_permissions(交易前快照,供 OpenFGA 同步)。
+func (s *RoleService) loadPermissionModels(ctx context.Context, roleID int) ([]permission, error) {
+	rows, err := s.db.RolePermission.Query().
+		Where(rolepermission.RoleID(roleID)).
+		Order(rolepermission.BySortOrder()).
+		All(ctx)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	out := make([]permission, 0, len(rows))
+	for _, rp := range rows {
+		conds := rp.Conditions
+		if conds == nil {
+			conds = map[string]any{}
+		}
+		out = append(out, permission{
+			resource:  rp.Resource,
+			action:    rp.Action,
+			conditions: conds,
+			inverted:   rp.Inverted,
+			sortOrder:  int(rp.SortOrder),
+		})
+	}
+	return out, nil
+}
+
+// permissionTupleKey 將 permission(resource, action)translate 成 OpenFGA tuple key。
+// 動作對映:read → can_read;其餘(create/update/delete/cancel 等) → can_write
+// (OpenFGA model 僅兩類能力,條件/狀態由 domain 狀態機處理,不進 CEL)。
+// 回傳 (user, relation, object);不支援的動作回 ok=false(略過不寫)。
+func permissionTupleKey(roleID int, p permission) (user, relation, object string, ok bool) {
+	relation, ok = permissionRelation(p.action)
+	if !ok {
+		return "", "", "", false
+	}
+	user = fmt.Sprintf("role:%d#assigned", roleID)
+	object = "ability:" + p.resource
+	return user, relation, object, true
+}
+
+// permissionRelation 對映權限動作 → OpenFGA relation(can_read/can_write;其餘動作略過)。
+func permissionRelation(action string) (string, bool) {
+	switch action {
+	case "read":
+		return "can_read", true
+	case "create", "update", "delete", "write", "cancel", "manage", "approve", "reject", "export":
+		return "can_write", true
+	default:
+		return "", false
+	}
+}
+
+// syncRolePermissions 將角色權限全量取代結果同步至 OpenFGA tuples(D32/Task8)。
+// 引擎未注入 ctx(nil)→ 略過(向後相容未接線期間)。
+// 已移除的權限對應 tuple 刪除;新增/保留的權限寫入。資料驅動:角色→能力由 tuples 承載,
+// 不需改 model;OpenFGA Check(role#assigned 授權使用者)據此判定。
+func (s *RoleService) syncRolePermissions(ctx context.Context, roleID int, oldPerms, newPerms []permission) error {
+	e := authz.EngineFrom(ctx)
+	if e == nil {
+		return nil
+	}
+	// 刪除已移除的權限 tuple。
+	oldKeys := map[string]bool{}
+	for _, p := range oldPerms {
+		if u, rel, obj, ok := permissionTupleKey(roleID, p); ok {
+			oldKeys[u+"\x00"+rel+"\x00"+obj] = true
+		}
+	}
+	newKeys := map[string]bool{}
+	for _, p := range newPerms {
+		if u, rel, obj, ok := permissionTupleKey(roleID, p); ok {
+			newKeys[u+"\x00"+rel+"\x00"+obj] = true
+		}
+	}
+	for k := range oldKeys {
+		if newKeys[k] {
+			continue
+		}
+		u, rel, obj := splitTupleKey(k)
+		if err := e.DeleteTuple(ctx, u, rel, obj); err != nil {
+			return err
+		}
+	}
+	for k := range newKeys {
+		if oldKeys[k] {
+			continue
+		}
+		u, rel, obj := splitTupleKey(k)
+		if err := e.WriteTuple(ctx, u, rel, obj); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// splitTupleKey 還原 syncRolePermissions 使用的 tuple key(user\x00relation\x00object)。
+func splitTupleKey(k string) (user, relation, object string) {
+	parts := strings.Split(k, "\x00")
+	if len(parts) != 3 {
+		return "", "", ""
+	}
+	return parts[0], parts[1], parts[2]
 }
 
 // loadPermissions 依 sort_order 升冪讀取角色功能權限並轉 proto。
