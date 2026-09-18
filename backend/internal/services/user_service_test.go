@@ -12,6 +12,7 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
+	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
@@ -34,6 +35,8 @@ func newUserTestServerWithDB(t *testing.T, id authz.Identity, db *ent.Client) sa
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := authz.WithIdentity(r.Context(), id)
 		ctx = authz.WithDB(ctx, db)
+		// 模擬 middleware 注入稽核來源資訊(I9)。
+		ctx = audit.WithMeta(ctx, audit.Meta{IP: "127.0.0.1", UserAgent: "test-agent"})
 		mux.ServeHTTP(w, r.WithContext(ctx))
 	})
 	ts := httptest.NewServer(handler)
@@ -61,6 +64,264 @@ func seedUserCompany(t *testing.T, db *ent.Client) (int, int, int) {
 }
 
 func uItoa(i int) string { return strconv.Itoa(i) }
+
+// --- 審查修復:授權下限與授予上限(C1/C2/I1/I2/I3/I5/I6)---
+
+// TestListUsersNonManagerDenied:非管理角色(staff)不得列舉使用者(C1)。
+func TestListUsersNonManagerDenied(t *testing.T) {
+	ctx := context.Background()
+	_, db := newUserTestServer(t, authz.Identity{})
+	coID, deptA, _ := seedUserCompany(t, db)
+	id := authz.Identity{UserID: "9", CompanyID: uItoa(coID), DepartmentID: uItoa(deptA), Role: "staff", Roles: []string{"staff", "customer"}}
+	client := newUserTestServerWithDB(t, id, db)
+	_, err := client.ListUsers(ctx, connect.NewRequest(&v1.ListUsersRequest{}))
+	if connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Fatalf("staff 列舉使用者應回 permission_denied,得到 %v", err)
+	}
+}
+
+// TestListUsersSuperDepartmentFilter:super 帶 department_id 時確實套用篩選(I3)。
+func TestListUsersSuperDepartmentFilter(t *testing.T) {
+	ctx := context.Background()
+	_, db := newUserTestServer(t, authz.Identity{})
+	coID, deptA, deptB := seedUserCompany(t, db)
+	if _, err := db.User.Create().SetCompanyID(coID).SetDepartmentID(deptA).SetEmail("fa@t.com").SetName("甲").SetRole("staff").SetPasswordHash("x").Save(ctx); err != nil {
+		t.Fatalf("user: %v", err)
+	}
+	if _, err := db.User.Create().SetCompanyID(coID).SetDepartmentID(deptB).SetEmail("fb@t.com").SetName("乙").SetRole("staff").SetPasswordHash("x").Save(ctx); err != nil {
+		t.Fatalf("user: %v", err)
+	}
+	id := authz.Identity{UserID: "1", Role: "super", Roles: []string{"super"}}
+	client := newUserTestServerWithDB(t, id, db)
+	resp, err := client.ListUsers(ctx, connect.NewRequest(&v1.ListUsersRequest{DepartmentId: uItoa(deptA)}))
+	if err != nil {
+		t.Fatalf("ListUsers: %v", err)
+	}
+	if len(resp.Msg.GetUsers()) != 1 || resp.Msg.GetUsers()[0].GetDepartmentId() != uItoa(deptA) {
+		t.Fatalf("期望僅部門甲 1 人,得到 %d 人", len(resp.Msg.GetUsers()))
+	}
+}
+
+// TestCreateUserCannotGrantSuperRole:company_admin 不得建立 super 帳號(C2)。
+func TestCreateUserCannotGrantSuperRole(t *testing.T) {
+	ctx := context.Background()
+	_, db := newUserTestServer(t, authz.Identity{})
+	coID, deptA, _ := seedUserCompany(t, db)
+	id := authz.Identity{UserID: "2", CompanyID: uItoa(coID), DepartmentID: uItoa(deptA), Role: "company_admin", Roles: []string{"company_admin", "dept_admin", "staff"}}
+	client := newUserTestServerWithDB(t, id, db)
+	_, err := client.CreateUser(ctx, connect.NewRequest(&v1.CreateUserRequest{
+		Name: "壞人", Email: "bad@t.com", CompanyId: uItoa(coID), Role: "super",
+	}))
+	if connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Fatalf("company_admin 建立 super 應回 permission_denied,得到 %v", err)
+	}
+	// 確認未落庫。
+	n, _ := db.User.Query().Count(ctx)
+	if n != 0 {
+		t.Errorf("拒絕後不應建立帳號,得到 %d 筆", n)
+	}
+}
+
+// TestAssignRoleCannotGrantSuper:company_admin 不得把任何人(含自己)升為 super(C2)。
+func TestAssignRoleCannotGrantSuper(t *testing.T) {
+	ctx := context.Background()
+	_, db := newUserTestServer(t, authz.Identity{})
+	coID, deptA, _ := seedUserCompany(t, db)
+	self, err := db.User.Create().SetCompanyID(coID).SetDepartmentID(deptA).SetEmail("ca@t.com").SetName("ca").SetRole("company_admin").SetPasswordHash("x").Save(ctx)
+	if err != nil {
+		t.Fatalf("user: %v", err)
+	}
+	id := authz.Identity{UserID: uItoa(self.ID), CompanyID: uItoa(coID), DepartmentID: uItoa(deptA), Role: "company_admin", Roles: []string{"company_admin", "dept_admin", "staff"}}
+	client := newUserTestServerWithDB(t, id, db)
+	_, err = client.AssignRole(ctx, connect.NewRequest(&v1.AssignRoleRequest{UserId: uItoa(self.ID), Role: "super"}))
+	if connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Fatalf("自我升為 super 應回 permission_denied,得到 %v", err)
+	}
+	fresh, _ := db.User.Get(ctx, self.ID)
+	if fresh.Role != "company_admin" {
+		t.Errorf("角色不應變更,得到 %s", fresh.Role)
+	}
+}
+
+// TestDeptAdminCannotGrantDeptAdmin:dept_admin 僅能授予 staff(規格 2.3.2)。
+func TestDeptAdminCannotGrantDeptAdmin(t *testing.T) {
+	ctx := context.Background()
+	_, db := newUserTestServer(t, authz.Identity{})
+	coID, deptA, _ := seedUserCompany(t, db)
+	target, err := db.User.Create().SetCompanyID(coID).SetDepartmentID(deptA).SetEmail("s2@t.com").SetName("s").SetRole("staff").SetPasswordHash("x").Save(ctx)
+	if err != nil {
+		t.Fatalf("user: %v", err)
+	}
+	id := authz.Identity{UserID: "5", CompanyID: uItoa(coID), DepartmentID: uItoa(deptA), Role: "dept_admin", Roles: []string{"dept_admin", "staff"}}
+	client := newUserTestServerWithDB(t, id, db)
+	_, err = client.AssignRole(ctx, connect.NewRequest(&v1.AssignRoleRequest{UserId: uItoa(target.ID), Role: "dept_admin"}))
+	if connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Fatalf("dept_admin 授予 dept_admin 應回 permission_denied,得到 %v", err)
+	}
+}
+
+// TestAssignRoleDoesNotReactivateInactive:AssignRole 不得將已停用帳號默默復活(I5)。
+func TestAssignRoleDoesNotReactivateInactive(t *testing.T) {
+	ctx := context.Background()
+	_, db := newUserTestServer(t, authz.Identity{})
+	coID, deptA, _ := seedUserCompany(t, db)
+	target, err := db.User.Create().SetCompanyID(coID).SetDepartmentID(deptA).SetEmail("in@t.com").SetName("i").SetRole("staff").SetStatus("inactive").SetPasswordHash("x").Save(ctx)
+	if err != nil {
+		t.Fatalf("user: %v", err)
+	}
+	id := authz.Identity{UserID: "2", CompanyID: uItoa(coID), Role: "company_admin", Roles: []string{"company_admin", "dept_admin", "staff"}}
+	client := newUserTestServerWithDB(t, id, db)
+	resp, err := client.AssignRole(ctx, connect.NewRequest(&v1.AssignRoleRequest{UserId: uItoa(target.ID), Role: "staff"}))
+	if err != nil {
+		t.Fatalf("AssignRole: %v", err)
+	}
+	if resp.Msg.GetUser().GetStatus() != "inactive" {
+		t.Errorf("已停用帳號不應被復活,得到 %s", resp.Msg.GetUser().GetStatus())
+	}
+}
+
+// TestAssignRoleAuditFailureRollsBack:稽核寫入失敗 → 業務異動回滾(D18 不變式)。
+func TestAssignRoleAuditFailureRollsBack(t *testing.T) {
+	ctx := context.Background()
+	_, db := newUserTestServer(t, authz.Identity{})
+	coID, deptA, _ := seedUserCompany(t, db)
+	target, err := db.User.Create().SetCompanyID(coID).SetDepartmentID(deptA).SetEmail("rb@t.com").SetName("rb").SetRole("staff").SetPasswordHash("x").Save(ctx)
+	if err != nil {
+		t.Fatalf("user: %v", err)
+	}
+	// 注入失敗:操作者 UserID 無法解析 → audit.Record 因缺操作者脈絡而失敗 → 交易須回滾。
+	id := authz.Identity{UserID: "not-a-number", CompanyID: uItoa(coID), Role: "company_admin", Roles: []string{"company_admin", "dept_admin", "staff"}}
+	client := newUserTestServerWithDB(t, id, db)
+	_, err = client.AssignRole(ctx, connect.NewRequest(&v1.AssignRoleRequest{UserId: uItoa(target.ID), Role: "dept_admin"}))
+	if connect.CodeOf(err) != connect.CodeInternal {
+		t.Fatalf("稽核失敗應回 internal,得到 %v", err)
+	}
+	fresh, gerr := db.User.Get(ctx, target.ID)
+	if gerr != nil {
+		t.Fatalf("get: %v", gerr)
+	}
+	if fresh.Role != "staff" || fresh.TokenVersion != 0 {
+		t.Errorf("交易應回滾:role=%s tv=%d", fresh.Role, fresh.TokenVersion)
+	}
+	n, _ := db.AuditLog.Query().Count(ctx)
+	if n != 0 {
+		t.Errorf("不應有稽核殘留,得到 %d", n)
+	}
+}
+
+// TestCreateUserRejectsForeignDepartment:department_id 須屬於目標公司(I6)。
+func TestCreateUserRejectsForeignDepartment(t *testing.T) {
+	ctx := context.Background()
+	_, db := newUserTestServer(t, authz.Identity{})
+	coID, _, _ := seedUserCompany(t, db)
+	// 另一家公司與其部門。
+	coB, err := db.Company.Create().SetName("公司B").SetIdentifier("co-b").Save(ctx)
+	if err != nil {
+		t.Fatalf("company: %v", err)
+	}
+	deptB, err := db.Department.Create().SetCompanyID(coB.ID).SetName("B部門").Save(ctx)
+	if err != nil {
+		t.Fatalf("dept: %v", err)
+	}
+	id := authz.Identity{UserID: "1", Role: "super", Roles: []string{"super"}}
+	client := newUserTestServerWithDB(t, id, db)
+	_, err = client.CreateUser(ctx, connect.NewRequest(&v1.CreateUserRequest{
+		Name: "x", Email: "x@t.com", CompanyId: uItoa(coID), DepartmentId: uItoa(deptB.ID), Role: "staff",
+	}))
+	if connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("跨公司部門應回 invalid_argument,得到 %v", err)
+	}
+}
+
+// TestCreateAndUpdateUserWriteAudit:CreateUser / UpdateUser 亦須寫稽核(I4;2.3.1)。
+func TestCreateAndUpdateUserWriteAudit(t *testing.T) {
+	ctx := context.Background()
+	_, db := newUserTestServer(t, authz.Identity{})
+	coID, deptA, _ := seedUserCompany(t, db)
+	id := authz.Identity{UserID: "1", Role: "super", Roles: []string{"super"}}
+	client := newUserTestServerWithDB(t, id, db)
+
+	resp, err := client.CreateUser(ctx, connect.NewRequest(&v1.CreateUserRequest{
+		Name: "新人", Email: "new@t.com", CompanyId: uItoa(coID), DepartmentId: uItoa(deptA), Role: "staff",
+	}))
+	if err != nil {
+		t.Fatalf("CreateUser: %v", err)
+	}
+	newID := resp.Msg.GetUser().GetId()
+
+	name := "改名"
+	if _, err := client.UpdateUser(ctx, connect.NewRequest(&v1.UpdateUserRequest{UserId: newID, Name: &name})); err != nil {
+		t.Fatalf("UpdateUser: %v", err)
+	}
+
+	audits, err := db.AuditLog.Query().All(ctx)
+	if err != nil {
+		t.Fatalf("audit: %v", err)
+	}
+	var created, updated bool
+	for _, a := range audits {
+		if a.Action == "create" && a.ResourceID == newID {
+			created = true
+		}
+		if a.Action == "update" && a.ResourceID == newID {
+			updated = true
+			if a.BeforeSnapshot["name"] != "新人" || a.AfterSnapshot["name"] != "改名" {
+				t.Errorf("update 快照不正確: before=%v after=%v", a.BeforeSnapshot, a.AfterSnapshot)
+			}
+		}
+	}
+	if !created || !updated {
+		t.Errorf("期望 create 與 update 稽核各一筆 (create=%v update=%v)", created, updated)
+	}
+}
+
+// TestAuditRecordsSourceMeta:稽核寫入應帶 middleware 注入的 IP / User-Agent(I9)。
+func TestAuditRecordsSourceMeta(t *testing.T) {
+	ctx := context.Background()
+	_, db := newUserTestServer(t, authz.Identity{})
+	coID, _, _ := seedUserCompany(t, db)
+	target, err := db.User.Create().SetCompanyID(coID).SetEmail("meta@t.com").SetName("m").SetRole("staff").SetPasswordHash("x").Save(ctx)
+	if err != nil {
+		t.Fatalf("user: %v", err)
+	}
+	id := authz.Identity{UserID: "2", CompanyID: uItoa(coID), Role: "company_admin", Roles: []string{"company_admin", "dept_admin", "staff"}}
+	client := newUserTestServerWithDB(t, id, db)
+	if _, err := client.Deactivate(ctx, connect.NewRequest(&v1.DeactivateRequest{UserId: uItoa(target.ID)})); err != nil {
+		t.Fatalf("Deactivate: %v", err)
+	}
+	a, err := db.AuditLog.Query().Only(ctx)
+	if err != nil {
+		t.Fatalf("audit: %v", err)
+	}
+	if a.IPAddress != "127.0.0.1" || a.UserAgent != "test-agent" {
+		t.Errorf("稽核缺來源資訊: ip=%q ua=%q", a.IPAddress, a.UserAgent)
+	}
+	// after_snapshot 應為變更後狀態(I2)。
+	if a.AfterSnapshot["status"] != "inactive" {
+		t.Errorf("after_snapshot 應為 inactive,得到 %v", a.AfterSnapshot)
+	}
+	if a.BeforeSnapshot["status"] != "active" {
+		t.Errorf("before_snapshot 應為 active,得到 %v", a.BeforeSnapshot)
+	}
+}
+
+// TestScopeFailClosedOnMissingCompany:身分缺 company_id 時不得放行(I1)。
+func TestScopeFailClosedOnMissingCompany(t *testing.T) {
+	ctx := context.Background()
+	_, db := newUserTestServer(t, authz.Identity{})
+	coID, _, _ := seedUserCompany(t, db)
+	target, err := db.User.Create().SetCompanyID(coID).SetEmail("o@t.com").SetName("o").SetRole("staff").SetPasswordHash("x").Save(ctx)
+	if err != nil {
+		t.Fatalf("user: %v", err)
+	}
+	// company_admin 但 CompanyID 為空(異常身分)→ 應 fail-closed。
+	id := authz.Identity{UserID: "2", Role: "company_admin", Roles: []string{"company_admin", "dept_admin", "staff"}}
+	client := newUserTestServerWithDB(t, id, db)
+	_, err = client.GetUser(ctx, connect.NewRequest(&v1.GetUserRequest{UserId: uItoa(target.ID)}))
+	if connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Fatalf("缺公司脈絡應回 permission_denied,得到 %v", err)
+	}
+}
 
 func TestAssignRoleBumpsTokenVersionAndAudit(t *testing.T) {
 	ctx := context.Background()

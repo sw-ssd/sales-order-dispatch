@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strconv"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/config"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
+	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	authzopenfga "github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
@@ -132,6 +134,15 @@ func (s *Server) Handler() http.Handler {
 	return s.router
 }
 
+// clientIP 由 RemoteAddr 取下 IP(去除 port;供稽核來源資訊,I9)。
+func clientIP(r *http.Request) string {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return host
+}
+
 // authzMiddleware 將 scs session 身分轉換為 authz.Identity + RLS scope 注入 ctx（T14 Step 4）。
 // 必須位於 sessions.LoadAndSave 之後（ctx 才帶 session 資料）。
 // 未登入 / 查無使用者 / developer 關閉 / session token_version 與 DB 不符時以零值身分通過,
@@ -142,6 +153,8 @@ func (s *Server) authzMiddleware(entClient *ent.Client, sessions *scs.SessionMan
 		ctx := r.Context()
 		ctx = authz.WithCASLEnabled(ctx, s.cfg.API.CASLEnforcementEnabled)
 		ctx = authz.WithDB(ctx, entClient)
+		// 稽核來源資訊(IP / User-Agent)每請求注入一次,供 service 層寫稽核(I9;03 2.6.2)。
+		ctx = audit.WithMeta(ctx, audit.Meta{IP: clientIP(r), UserAgent: r.UserAgent()})
 		if s.fga != nil {
 			ctx = authz.WithEngine(ctx, s.fga)
 		}

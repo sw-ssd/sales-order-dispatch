@@ -31,8 +31,8 @@ var validUserStatuses = map[string]bool{
 	string(user.StatusPending):  true,
 }
 
-// roleManagerRoles 為可管理使用者的角色(對齊 rolePolicy/細節 2.3:super/company_admin/dept_admin)。
-// staff/customer/guest 不管理使用者,僅能讀取自身可見範圍。
+// isUserManager 判斷身分是否為可管理使用者的角色(對齊 rolePolicy/細節 2.3:
+// super/company_admin/dept_admin)。staff/customer/guest 不管理使用者。
 func isUserManager(id authz.Identity) bool {
 	for _, r := range id.Roles {
 		if r == "super" || r == "company_admin" || r == "dept_admin" {
@@ -40,6 +40,32 @@ func isUserManager(id authz.Identity) bool {
 		}
 	}
 	return false
+}
+
+// isSuperIdentity 判斷身分是否含 super/developer(全域角色)。
+func isSuperIdentity(id authz.Identity) bool {
+	return slices.Contains(id.Roles, "super") || slices.Contains(id.Roles, "developer")
+}
+
+// grantableRoles 回傳操作者可授予的角色集合(授予上限;防止權限提升)。
+// super/developer 可授予全部內建角色;company_admin 限 company_admin/dept_admin/staff
+// (不得授予 super/developer;對齊 01-auth 1.4.4 的審核角色上限);
+// dept_admin 僅能授予 staff(規格 2.3.2);其餘角色不可授予任何角色。
+func grantableRoles(id authz.Identity) map[string]bool {
+	if isSuperIdentity(id) {
+		out := make(map[string]bool, len(auth.BuiltinRoles))
+		for _, r := range auth.BuiltinRoles {
+			out[r] = true
+		}
+		return out
+	}
+	if slices.Contains(id.Roles, "company_admin") {
+		return map[string]bool{"company_admin": true, "dept_admin": true, "staff": true}
+	}
+	if slices.Contains(id.Roles, "dept_admin") {
+		return map[string]bool{"staff": true}
+	}
+	return nil
 }
 
 // UserService 實作 salesorder.v1.UserService(使用者管理,02 計畫 Task 3)。
@@ -67,40 +93,68 @@ func (s *UserService) ListUsers(ctx context.Context, req *connect.Request[v1.Lis
 	if len(id.Roles) == 0 {
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
 	}
+	// 授權下限:非管理角色不得列舉使用者(C1;避免跨租戶使用者列舉)。
+	if !isUserManager(id) {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("無使用者查詢權限"))
+	}
 	page, pageSize := normalizePage(req.Msg.GetPage(), req.Msg.GetPageSize())
 
 	q := s.db.User.Query()
 
-	// 範圍強制注入(忽略請求自帶的超範圍參數)。
+	// 範圍強制注入(fail-closed:忽略請求自帶的超範圍參數)。
 	companyID := req.Msg.GetCompanyId()
 	deptID := req.Msg.GetDepartmentId()
-	if id.Role == "dept_admin" {
-		// dept_admin 限自己部門。
-		if id.DepartmentID != "" {
-			did, err := parseID(id.DepartmentID)
+	switch {
+	case isSuperIdentity(id):
+		// super/developer:全域;可依請求 company_id / department_id 篩選。
+		if companyID != "" {
+			cid, err := parseID(companyID)
 			if err != nil {
-				return nil, connect.NewError(connect.CodeInternal, err)
+				return nil, err
+			}
+			q = q.Where(user.HasCompanyWith(company.ID(cid)))
+		}
+		if deptID != "" {
+			did, err := parseID(deptID)
+			if err != nil {
+				return nil, err
 			}
 			q = q.Where(user.HasDepartmentWith(department.ID(did)))
 		}
-	} else if id.Role == "company_admin" {
-		// company_admin 限自己公司。
-		if id.CompanyID != "" {
-			cid, err := parseID(id.CompanyID)
+	case slices.Contains(id.Roles, "company_admin"):
+		// company_admin:強制限自己公司(缺公司脈絡 → fail-closed)。
+		if id.CompanyID == "" {
+			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("缺少公司範圍"))
+		}
+		cid, err := parseID(id.CompanyID)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, err)
+		}
+		q = q.Where(user.HasCompanyWith(company.ID(cid)))
+		// 可再依請求 department_id 縮小(限自己公司內)。
+		if deptID != "" {
+			did, err := parseID(deptID)
 			if err != nil {
-				return nil, connect.NewError(connect.CodeInternal, err)
+				return nil, err
 			}
-			q = q.Where(user.HasCompanyWith(company.ID(cid)))
+			q = q.Where(user.HasDepartmentWith(department.ID(did)))
 		}
-	} else if companyID != "" {
-		// super:可依請求 company_id 篩選。
-		if cid, err := parseID(companyID); err == nil {
-			q = q.Where(user.HasCompanyWith(company.ID(cid)))
+	default:
+		// dept_admin:強制限自己部門(缺部門脈絡 → fail-closed)。
+		if id.DepartmentID == "" {
+			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("缺少部門範圍"))
 		}
+		did, err := parseID(id.DepartmentID)
+		if err != nil {
+			return nil, connect.NewError(connect.CodeInternal, err)
+		}
+		q = q.Where(user.HasDepartmentWith(department.ID(did)))
 	}
-	_ = deptID // 其餘角色無部門強制注入(由 RLS 兜底)
 
 	if role := req.Msg.GetRole(); role != "" {
+		if !isValidRole(role) {
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("無效的角色 %q", role))
+		}
 		q = q.Where(user.Role(role))
 	}
 	if status := req.Msg.GetStatus(); status != "" {
@@ -108,9 +162,6 @@ func (s *UserService) ListUsers(ctx context.Context, req *connect.Request[v1.Lis
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("無效的 status %q", status))
 		}
 		q = q.Where(user.StatusEQ(user.Status(status)))
-	}
-	if role := req.Msg.GetRole(); role != "" && !isValidRole(role) {
-		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("無效的角色 %q", role))
 	}
 
 	total, err := q.Count(ctx)
@@ -182,8 +233,32 @@ func (s *UserService) CreateUser(ctx context.Context, req *connect.Request[v1.Cr
 	if !isValidRole(roleCode) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("無效的角色 %q", roleCode))
 	}
+	// 授予上限(C2):操作者不得建立高於自身可授予範圍的角色(防止權限提升)。
+	if !grantableRoles(id)[roleCode] {
+		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("無權限授予角色 %q", roleCode))
+	}
 
-	build := s.db.User.Create().
+	deptRef := 0
+	if req.Msg.GetDepartmentId() != "" {
+		did, err := parseID(req.Msg.GetDepartmentId())
+		if err != nil {
+			return nil, err
+		}
+		// 部門必須屬於目標公司(I6;避免跨公司資料擺放)。
+		if err := s.validateDepartmentInCompany(ctx, did, cid); err != nil {
+			return nil, err
+		}
+		deptRef = did
+	}
+
+	// 建帳號為關鍵操作:業務異動 + 稽核(D18)同一交易。
+	tx, err := s.db.Tx(ctx)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	build := tx.User.Create().
 		SetCompanyID(cid).
 		SetEmail(req.Msg.GetEmail()).
 		SetName(req.Msg.GetName()).
@@ -191,10 +266,8 @@ func (s *UserService) CreateUser(ctx context.Context, req *connect.Request[v1.Cr
 		SetStatus(user.StatusActive).
 		// 員工帳號走 OAuth 不存密碼:password_hash 以 OIDC sentinel 佔位(規格 4.1,密碼登入必失敗)。
 		SetPasswordHash(auth.OIDCPasswordSentinel)
-	if req.Msg.GetDepartmentId() != "" {
-		if did, err := parseID(req.Msg.GetDepartmentId()); err == nil {
-			build = build.SetDepartmentID(did)
-		}
+	if deptRef > 0 {
+		build = build.SetDepartmentID(deptRef)
 	}
 	if req.Msg.GetPhone() != "" {
 		build = build.SetPhone(req.Msg.GetPhone())
@@ -202,11 +275,39 @@ func (s *UserService) CreateUser(ctx context.Context, req *connect.Request[v1.Cr
 	if req.Msg.GetEmployeeNo() != "" {
 		build = build.SetEmployeeNo(req.Msg.GetEmployeeNo())
 	}
-	u, err := build.Save(ctx)
+	created, err := build.Save(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	u, err = s.db.User.Query().WithCompany().WithDepartment().Where(user.ID(u.ID)).Only(ctx)
+
+	actorID := 0
+	if pid, perr := parseID(id.UserID); perr == nil {
+		actorID = pid
+	}
+	var auditDept *int
+	if deptRef > 0 {
+		d := deptRef
+		auditDept = &d
+	}
+	meta := audit.MetaFrom(ctx)
+	if err := audit.Record(ctx, tx, audit.Entry{
+		Action:       "create",
+		ResourceType: "user",
+		ResourceID:   uItoaInt(created.ID),
+		CompanyID:    cid,
+		DepartmentID: auditDept,
+		UserID:       actorID,
+		After:        map[string]any{"name": created.Name, "email": created.Email, "role": created.Role, "status": string(created.Status)},
+		IPAddress:    meta.IP,
+		UserAgent:    meta.UserAgent,
+	}); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("稽核寫入失敗: %w", err))
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, toConnectError(err)
+	}
+
+	u, err := s.db.User.Query().WithCompany().WithDepartment().Where(user.ID(created.ID)).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -234,30 +335,66 @@ func (s *UserService) UpdateUser(ctx context.Context, req *connect.Request[v1.Up
 		return nil, err
 	}
 
-	update := s.db.User.UpdateOneID(userID)
+	// 更新為關鍵操作:業務異動 + 稽核(D18)同一交易。
+	tx, err := s.db.Tx(ctx)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	before := map[string]any{}
+	after := map[string]any{}
+	update := tx.User.UpdateOneID(userID)
 	if req.Msg.Name != nil {
 		update = update.SetName(req.Msg.GetName())
+		before["name"] = target.Name
+		after["name"] = req.Msg.GetName()
 	}
 	if req.Msg.Phone != nil {
 		update = update.SetPhone(req.Msg.GetPhone())
+		before["phone"] = target.Phone
+		after["phone"] = req.Msg.GetPhone()
 	}
 	if req.Msg.EmployeeNo != nil {
 		update = update.SetEmployeeNo(req.Msg.GetEmployeeNo())
+		before["employee_no"] = target.EmployeeNo
+		after["employee_no"] = req.Msg.GetEmployeeNo()
 	}
 	if req.Msg.Status != nil {
 		if !validUserStatuses[req.Msg.GetStatus()] {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("無效的 status %q", req.Msg.GetStatus()))
 		}
 		update = update.SetStatus(user.Status(req.Msg.GetStatus()))
+		before["status"] = string(target.Status)
+		after["status"] = req.Msg.GetStatus()
 	}
 	if req.Msg.DepartmentId != nil {
 		if req.Msg.GetDepartmentId() == "" {
 			update = update.ClearDepartment()
-		} else if did, err := parseID(req.Msg.GetDepartmentId()); err == nil {
+		} else {
+			did, err := parseID(req.Msg.GetDepartmentId())
+			if err != nil {
+				return nil, err
+			}
+			// 部門必須屬於目標使用者公司(I6)。
+			companyRef := target.Edges.Company
+			if companyRef == nil {
+				return nil, connect.NewError(connect.CodeInternal, errors.New("目標使用者缺少公司關聯"))
+			}
+			if err := s.validateDepartmentInCompany(ctx, did, companyRef.ID); err != nil {
+				return nil, err
+			}
 			update = update.SetDepartmentID(did)
+			after["department_id"] = did
 		}
 	}
 	if _, err := update.Save(ctx); err != nil {
+		return nil, toConnectError(err)
+	}
+	if err := s.recordAudit(ctx, tx, id, target, "update", before, after); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("稽核寫入失敗: %w", err))
+	}
+	if err := tx.Commit(); err != nil {
 		return nil, toConnectError(err)
 	}
 	u, err := s.db.User.Query().WithCompany().WithDepartment().Where(user.ID(userID)).Only(ctx)
@@ -294,6 +431,10 @@ func (s *UserService) AssignRole(ctx context.Context, req *connect.Request[v1.As
 	if roleCode == "guest" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("不可指派為 guest(待審核狀態)"))
 	}
+	// 授予上限(C2):不得指派高於自身可授予範圍的角色(防止權限提升,含自我升權)。
+	if !grantableRoles(id)[roleCode] {
+		return nil, connect.NewError(connect.CodePermissionDenied, fmt.Errorf("無權限授予角色 %q", roleCode))
+	}
 
 	// 角色指派(含 guest 審核)為關鍵操作:角色變更 + token_version+1(D5) + 稽核(D18)同一交易。
 	tx, err := s.db.Tx(ctx)
@@ -304,42 +445,35 @@ func (s *UserService) AssignRole(ctx context.Context, req *connect.Request[v1.As
 
 	update := tx.User.UpdateOneID(userID).
 		SetRole(roleCode).
-		SetStatus(user.StatusActive). // 審核/指派後轉 active
-		AddTokenVersion(1)            // 角色變更 → 在途舊 JWT/session 立即失效(D5)
+		AddTokenVersion(1) // 角色變更 → 在途舊 JWT/session 立即失效(D5)
+	// guest 審核:僅 pending 轉 active;已停用帳號不被默默復活(I5,
+	// 重新啟用應走 UpdateUser,規格 2.3.2)。
+	if target.Status == user.StatusPending {
+		update = update.SetStatus(user.StatusActive)
+	}
 	if req.Msg.GetDepartmentId() != "" {
-		if did, err := parseID(req.Msg.GetDepartmentId()); err == nil {
-			update = update.SetDepartmentID(did)
+		did, err := parseID(req.Msg.GetDepartmentId())
+		if err != nil {
+			return nil, err
 		}
+		companyRef := target.Edges.Company
+		if companyRef == nil {
+			return nil, connect.NewError(connect.CodeInternal, errors.New("目標使用者缺少公司關聯"))
+		}
+		if err := s.validateDepartmentInCompany(ctx, did, companyRef.ID); err != nil {
+			return nil, err
+		}
+		update = update.SetDepartmentID(did)
 	}
 	if _, err := update.Save(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
 
-	// 稽核(同一交易,D18)。操作者 company_id 取自目標所屬公司(或操作者身分)。
-	auditCompanyID := 0
-	if target.Edges.Company != nil {
-		auditCompanyID = target.Edges.Company.ID
-	}
-	actorID := 0
-	if pid, perr := parseID(id.UserID); perr == nil {
-		actorID = pid
-	}
-	deptID := target.Edges.Department
-	var auditDept *int
-	if deptID != nil {
-		d := deptID.ID
-		auditDept = &d
-	}
-	if err := audit.Record(ctx, tx, audit.Entry{
-		Action:       "role_change",
-		ResourceType: "user",
-		ResourceID:   uItoaInt(userID),
-		CompanyID:    auditCompanyID,
-		DepartmentID: auditDept,
-		UserID:       actorID,
-		Before:       map[string]any{"role": target.Role},
-		After:        map[string]any{"role": roleCode},
-	}); err != nil {
+	// 稽核(同一交易,D18)。
+	if err := s.recordAudit(ctx, tx, id, target, "role_change",
+		map[string]any{"role": target.Role},
+		map[string]any{"role": roleCode},
+	); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("稽核寫入失敗: %w", err))
 	}
 	if err := tx.Commit(); err != nil {
@@ -395,7 +529,10 @@ func (s *UserService) Deactivate(ctx context.Context, req *connect.Request[v1.De
 		Save(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := s.recordAudit(ctx, tx, id, target, "update", map[string]any{"status": string(target.Status), "action": "deactivate"}); err != nil {
+	if err := s.recordAudit(ctx, tx, id, target, "update",
+		map[string]any{"status": string(target.Status)},
+		map[string]any{"status": string(user.StatusInactive)},
+	); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("稽核寫入失敗: %w", err))
 	}
 	if err := tx.Commit(); err != nil {
@@ -439,7 +576,7 @@ func (s *UserService) ForceLogout(ctx context.Context, req *connect.Request[v1.F
 	if _, err := tx.User.UpdateOneID(userID).AddTokenVersion(1).Save(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := s.recordAudit(ctx, tx, id, target, "force_logout", nil); err != nil {
+	if err := s.recordAudit(ctx, tx, id, target, "force_logout", nil, nil); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("稽核寫入失敗: %w", err))
 	}
 	if err := tx.Commit(); err != nil {
@@ -449,7 +586,8 @@ func (s *UserService) ForceLogout(ctx context.Context, req *connect.Request[v1.F
 }
 
 // recordAudit 於交易內依操作者身分與目標使用者寫一筆稽核(統一入口,D18)。
-func (s *UserService) recordAudit(ctx context.Context, tx *ent.Tx, actor authz.Identity, target *ent.User, action string, after map[string]any) error {
+// before/after 為「已過濾敏感欄位」的變更前/後摘要(可空)。
+func (s *UserService) recordAudit(ctx context.Context, tx *ent.Tx, actor authz.Identity, target *ent.User, action string, before, after map[string]any) error {
 	companyID := 0
 	if target.Edges.Company != nil {
 		companyID = target.Edges.Company.ID
@@ -463,6 +601,8 @@ func (s *UserService) recordAudit(ctx context.Context, tx *ent.Tx, actor authz.I
 		d := target.Edges.Department.ID
 		deptID = &d
 	}
+	// 來源資訊(IP/User-Agent)由 middleware 每請求注入 ctx(I9;2.6.2)。
+	meta := audit.MetaFrom(ctx)
 	return audit.Record(ctx, tx, audit.Entry{
 		Action:       action,
 		ResourceType: "user",
@@ -470,7 +610,10 @@ func (s *UserService) recordAudit(ctx context.Context, tx *ent.Tx, actor authz.I
 		CompanyID:    companyID,
 		DepartmentID: deptID,
 		UserID:       actorID,
+		Before:       before,
 		After:        after,
+		IPAddress:    meta.IP,
+		UserAgent:    meta.UserAgent,
 	})
 }
 
@@ -513,18 +656,19 @@ func (s *UserService) loadUser(ctx context.Context, userID int) (*ent.User, erro
 // scopeForTarget 依操作者身分判斷目標使用者是否在管理範圍內。
 // super 全域;company_admin 同公司;dept_admin 同部門且目標為 staff(細節 2.3.2)。
 func (s *UserService) scopeForTarget(id authz.Identity, target *ent.User) error {
-	if slices.Contains(id.Roles, "super") || slices.Contains(id.Roles, "developer") {
+	if isSuperIdentity(id) {
 		return nil
 	}
-	// company_admin / dept_admin。
-	if id.CompanyID != "" {
-		opCid, err := parseID(id.CompanyID)
-		if err != nil {
-			return connect.NewError(connect.CodeInternal, err)
-		}
-		if target.Edges.Company == nil || target.Edges.Company.ID != opCid {
-			return connect.NewError(connect.CodePermissionDenied, errors.New("目標使用者不在操作者公司範圍"))
-		}
+	// 非 super:必須具備公司脈絡,否則 fail-closed(I1)。
+	if id.CompanyID == "" {
+		return connect.NewError(connect.CodePermissionDenied, errors.New("缺少公司範圍"))
+	}
+	opCid, err := parseID(id.CompanyID)
+	if err != nil {
+		return connect.NewError(connect.CodeInternal, err)
+	}
+	if target.Edges.Company == nil || target.Edges.Company.ID != opCid {
+		return connect.NewError(connect.CodePermissionDenied, errors.New("目標使用者不在操作者公司範圍"))
 	}
 	if slices.Contains(id.Roles, "dept_admin") && !slices.Contains(id.Roles, "company_admin") {
 		// dept_admin 僅能管理自己部門的 staff。
@@ -545,9 +689,24 @@ func (s *UserService) scopeForTarget(id authz.Identity, target *ent.User) error 
 	return nil
 }
 
-// isValidRole 判斷角色 code 是否為已知角色(內建 + 自訂)。
+// isValidRole 判斷角色 code 是否為已知角色(目前僅內建角色;自訂角色見 2.9.2 待接入)。
 func isValidRole(role string) bool {
 	return slices.Contains(auth.BuiltinRoles, role)
+}
+
+// validateDepartmentInCompany 驗證 department 存在且屬於指定公司(I6)。
+// 不符 → InvalidArgument(輸入驗證失敗),不允許跨公司資料擺放。
+func (s *UserService) validateDepartmentInCompany(ctx context.Context, deptID, companyID int) error {
+	ok, err := s.db.Department.Query().
+		Where(department.ID(deptID), department.HasCompanyWith(company.ID(companyID))).
+		Exist(ctx)
+	if err != nil {
+		return toConnectError(err)
+	}
+	if !ok {
+		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("部門 %d 不屬於公司 %d", deptID, companyID))
+	}
+	return nil
 }
 
 // uItoaInt 將 int 轉字串(稽核 ResourceID 用)。
