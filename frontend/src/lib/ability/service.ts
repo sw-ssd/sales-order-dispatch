@@ -2,7 +2,7 @@ import { queryOptions } from "@tanstack/solid-query";
 import { createClient } from "@connectrpc/connect";
 import { AbilityService } from "~/lib/proto/salesorder/v1/ability_pb";
 import { transport } from "~/lib/transport";
-import { createPermissions } from "./permissions";
+import { createPermissions, type Permission } from "./permissions";
 
 export type { Permission };
 export type AbilitySet = ReadonlySet<string>;
