@@ -14,7 +14,7 @@
 |---|---|---|---|
 | 1 | Company schema 擴充 + CompanyService CRUD + 唯一性 + 停用連鎖 | 🟡 部分 | `internal/services/company_service.go`（CRUD 完成；停用連鎖待） |
 | 2 | 部門管理 API | ✅ 完成 | `company_service.go`（Department CRUD）、`ent/schema/department.go` |
-| 3 | 使用者 CRUD + 角色指派 + 停用 + ForceLogout | ⬜ 未開始 | —（無 UserService、無 user.proto） |
+| 3 | 使用者 CRUD + 角色指派 + 停用 + ForceLogout | 🟡 部分 | `user_service.go`、`user.proto`；AssignRole/Deactivate/ForceLogout 含 D18 稽核 + tv+1；主帳號連鎖(D22)待 Phase 3 |
 | 4 | Logo/Branding/PublicInfo/公開發現端點 | 🟡 部分 | PublicInfo 欄位序列化已做；Logo 上傳/公開端點待 |
 | 5 | roles + role_permissions schema + RoleService CRUD | ✅ 完成 | `role_service.go`、migration `00003`、`role.proto` |
 | 6 | 功能權限矩陣 + GetAbility 表驅動 + RLS data_scope 注入 | 🟡 部分 | ability 表驅動已做；data_scope 注入待 |
@@ -58,15 +58,21 @@
 
 ## Task 3: 使用者 CRUD + 角色指派 + 停用 + ForceLogout 範圍銜接（細部 2.3.1–2.3.3）
 
-**實際狀態：⬜ 未開始**
+**實際狀態：🟡 部分完成（2026-09-18 UserService 已落地）**
 
-**說明**：**無 `UserService`**（知識圖譜搜尋 0 命中；`internal/services/` 僅 company/role 兩檔；proto 僅 5 檔，**無 user.proto**）。使用者管理 API、角色指派、停用、ForceLogout usecase 皆未實作。01 計畫 Task 12 的 ForceLogout 亦未落地。
+**實際產物（已存在）：**
+- `backend/proto/salesorder/v1/user.proto` + `internal/proto/salesorder/v1/user.{pb.go,connect.go}`（UserService 7 RPC）
+- `backend/internal/services/user_service.go` — ListUsers/GetUser/CreateUser/UpdateUser/AssignRole/Deactivate/ForceLogout
+- `backend/internal/server/server.go`（protectedRPC 加 7 條 user path）、`backend/internal/server/domains.go`（註冊掛載）
+- `backend/internal/audit/recorder.go` + `ent/schema/auditlog.go` + migration `00009`（稽核地基,D18）
 
-- [ ] **Step 1: 使用者 CRUD** — 建立 `UserService`（List/Create/Update/Delete、範圍）＋ user.proto
-- [ ] **Step 2: 角色指派 + 停用** — 角色異動、停用連鎖（主帳號連鎖子帳號，D22）
-- [ ] **Step 3: ForceLogout 範圍銜接** — 銜接 01 Task 12
+**說明**：UserService CRUD + 範圍控制（super 全域/company_admin 公司/dept_admin 部門 staff）+ AssignRole（含 guest 審核）+ Deactivate + ForceLogout 已實作；角色指派/停用/強登皆**同一交易寫稽核（D18）**並 `token_version+1`（D5），AssignRole 另同步 OpenFGA assigned tuple。
 
-**待辦摘要**：完整未開始（使用者管理為 02 最大缺口）。
+- [x] **Step 1: 使用者 CRUD** — `UserService`（List/Get/Create/Update、範圍）＋ user.proto 已實作
+- [x] **Step 2: 角色指派 + 停用** — AssignRole（含 guest 審核 / D18 稽核 / tv+1）、Deactivate（D18 稽核 / tv+1）已實作
+- [x] **Step 3: ForceLogout 範圍銜接** — ForceLogout（含不能對自己、D18 稽核 / tv+1）已實作
+
+**待辦摘要**：**主帳號連鎖子帳號（D22）未實作**——屬客戶帳號管理（一主多子）範疇，為 Phase 3/04 客戶主檔流程；本 Task 3 聚焦員工帳號管理。01 計畫 Task 7（首登強改密碼）與 01 Task 11（X-Api-Token）亦尚未落地（另列於 01 計畫）。
 
 ---
 
