@@ -121,8 +121,6 @@ func (s *UserService) ListUsers(ctx context.Context, req *connect.Request[v1.Lis
 	if !isUserManager(id) {
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("無使用者查詢權限"))
 	}
-	page, pageSize := normalizePage(req.Msg.GetPage(), req.Msg.GetPageSize())
-
 	q := s.db.User.Query()
 
 	// 範圍強制注入(fail-closed:忽略請求自帶的超範圍參數)。
@@ -186,27 +184,19 @@ func (s *UserService) ListUsers(ctx context.Context, req *connect.Request[v1.Lis
 		q = q.Where(user.StatusEQ(user.Status(status)))
 	}
 
-	total, err := q.Count(ctx)
+	list, pg, err := pageList(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), userListSource{q}, userToProto)
 	if err != nil {
-		return nil, toConnectError(err)
+		return nil, err
 	}
-	items, err := q.Clone().
-		WithCompany().WithDepartment().
-		Order(ent.Asc(user.FieldID)).
-		Offset((page - 1) * pageSize).Limit(pageSize).
-		All(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
-	}
+	return connect.NewResponse(&v1.ListUsersResponse{Users: list, Pagination: pg}), nil
+}
 
-	users := make([]*v1.User, 0, len(items))
-	for _, u := range items {
-		users = append(users, userToProto(u))
-	}
-	return connect.NewResponse(&v1.ListUsersResponse{
-		Users:      users,
-		Pagination: &v1.Pagination{Page: int32(page), PageSize: int32(pageSize), Total: int64(total)},
-	}), nil
+// userListSource 為 pageList 的 ent 查詢橋接(帶 Company/Department eager-load 供 proto 展開)。
+type userListSource struct{ q *ent.UserQuery }
+
+func (s userListSource) Count(ctx context.Context) (int, error) { return s.q.Count(ctx) }
+func (s userListSource) Page(ctx context.Context, off, lim int) ([]*ent.User, error) {
+	return s.q.Clone().WithCompany().WithDepartment().Order(ent.Asc(user.FieldID)).Offset(off).Limit(lim).All(ctx)
 }
 
 // GetUser 取得單一使用者(不含 password_hash)。

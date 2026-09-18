@@ -19,7 +19,6 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	metadictv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/metadict/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/metadict/v1/metadictv1connect"
-	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 )
 
 // validMetadictTypes 為字典 type 合法值(細部 2.5.4 / Global Constraints)。
@@ -121,7 +120,6 @@ func (s *MetadictService) ListMetadicts(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, err
 	}
-	page, pageSize := normalizePage(req.Msg.GetPage(), req.Msg.GetPageSize())
 	q := s.db.Metadict.Query()
 
 	switch {
@@ -155,25 +153,19 @@ func (s *MetadictService) ListMetadicts(ctx context.Context, req *connect.Reques
 		q = q.Where(metadict.TypeEQ(t))
 	}
 
-	total, err := q.Count(ctx)
+	list, pg, err := pageList(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), metadictListSource{q}, metadictToProto)
 	if err != nil {
-		return nil, toConnectError(err)
+		return nil, err
 	}
-	items, err := q.Clone().
-		Order(ent.Asc(metadict.FieldSortOrder), ent.Asc(metadict.FieldCode)).
-		Offset((page - 1) * pageSize).Limit(pageSize).
-		All(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
-	}
-	out := make([]*metadictv1.Metadict, 0, len(items))
-	for _, m := range items {
-		out = append(out, metadictToProto(m))
-	}
-	return connect.NewResponse(&metadictv1.ListMetadictsResponse{
-		Items:      out,
-		Pagination: &v1.Pagination{Page: int32(page), PageSize: int32(pageSize), Total: int64(total)},
-	}), nil
+	return connect.NewResponse(&metadictv1.ListMetadictsResponse{Items: list, Pagination: pg}), nil
+}
+
+// metadictListSource 為 pageList 的 ent 查詢橋接。
+type metadictListSource struct{ q *ent.MetadictQuery }
+
+func (s metadictListSource) Count(ctx context.Context) (int, error) { return s.q.Count(ctx) }
+func (s metadictListSource) Page(ctx context.Context, off, lim int) ([]*ent.Metadict, error) {
+	return s.q.Clone().Order(ent.Asc(metadict.FieldSortOrder), ent.Asc(metadict.FieldCode)).Offset(off).Limit(lim).All(ctx)
 }
 
 // GetMetadict 取得單一字典(限可見範圍)。
