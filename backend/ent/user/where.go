@@ -3,6 +3,8 @@
 package user
 
 import (
+	"time"
+
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/salesorder/sales-order-1.0/backend/ent/predicate"
@@ -96,6 +98,16 @@ func TokenVersion(v int) predicate.User {
 // PasswordHash applies equality check predicate on the "password_hash" field. It's identical to PasswordHashEQ.
 func PasswordHash(v string) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldPasswordHash, v))
+}
+
+// MustChangePassword applies equality check predicate on the "must_change_password" field. It's identical to MustChangePasswordEQ.
+func MustChangePassword(v bool) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldMustChangePassword, v))
+}
+
+// TempPasswordExpiresAt applies equality check predicate on the "temp_password_expires_at" field. It's identical to TempPasswordExpiresAtEQ.
+func TempPasswordExpiresAt(v time.Time) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldTempPasswordExpiresAt, v))
 }
 
 // EmailEQ applies the EQ predicate on the "email" field.
@@ -651,6 +663,66 @@ func PasswordHashEqualFold(v string) predicate.User {
 // PasswordHashContainsFold applies the ContainsFold predicate on the "password_hash" field.
 func PasswordHashContainsFold(v string) predicate.User {
 	return predicate.User(sql.FieldContainsFold(FieldPasswordHash, v))
+}
+
+// MustChangePasswordEQ applies the EQ predicate on the "must_change_password" field.
+func MustChangePasswordEQ(v bool) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldMustChangePassword, v))
+}
+
+// MustChangePasswordNEQ applies the NEQ predicate on the "must_change_password" field.
+func MustChangePasswordNEQ(v bool) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldMustChangePassword, v))
+}
+
+// TempPasswordExpiresAtEQ applies the EQ predicate on the "temp_password_expires_at" field.
+func TempPasswordExpiresAtEQ(v time.Time) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldTempPasswordExpiresAt, v))
+}
+
+// TempPasswordExpiresAtNEQ applies the NEQ predicate on the "temp_password_expires_at" field.
+func TempPasswordExpiresAtNEQ(v time.Time) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldTempPasswordExpiresAt, v))
+}
+
+// TempPasswordExpiresAtIn applies the In predicate on the "temp_password_expires_at" field.
+func TempPasswordExpiresAtIn(vs ...time.Time) predicate.User {
+	return predicate.User(sql.FieldIn(FieldTempPasswordExpiresAt, vs...))
+}
+
+// TempPasswordExpiresAtNotIn applies the NotIn predicate on the "temp_password_expires_at" field.
+func TempPasswordExpiresAtNotIn(vs ...time.Time) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldTempPasswordExpiresAt, vs...))
+}
+
+// TempPasswordExpiresAtGT applies the GT predicate on the "temp_password_expires_at" field.
+func TempPasswordExpiresAtGT(v time.Time) predicate.User {
+	return predicate.User(sql.FieldGT(FieldTempPasswordExpiresAt, v))
+}
+
+// TempPasswordExpiresAtGTE applies the GTE predicate on the "temp_password_expires_at" field.
+func TempPasswordExpiresAtGTE(v time.Time) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldTempPasswordExpiresAt, v))
+}
+
+// TempPasswordExpiresAtLT applies the LT predicate on the "temp_password_expires_at" field.
+func TempPasswordExpiresAtLT(v time.Time) predicate.User {
+	return predicate.User(sql.FieldLT(FieldTempPasswordExpiresAt, v))
+}
+
+// TempPasswordExpiresAtLTE applies the LTE predicate on the "temp_password_expires_at" field.
+func TempPasswordExpiresAtLTE(v time.Time) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldTempPasswordExpiresAt, v))
+}
+
+// TempPasswordExpiresAtIsNil applies the IsNil predicate on the "temp_password_expires_at" field.
+func TempPasswordExpiresAtIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldTempPasswordExpiresAt))
+}
+
+// TempPasswordExpiresAtNotNil applies the NotNil predicate on the "temp_password_expires_at" field.
+func TempPasswordExpiresAtNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldTempPasswordExpiresAt))
 }
 
 // HasCompany applies the HasEdge predicate on the "company" edge.

@@ -34,6 +34,10 @@ const (
 	FieldTokenVersion = "token_version"
 	// FieldPasswordHash holds the string denoting the password_hash field in the database.
 	FieldPasswordHash = "password_hash"
+	// FieldMustChangePassword holds the string denoting the must_change_password field in the database.
+	FieldMustChangePassword = "must_change_password"
+	// FieldTempPasswordExpiresAt holds the string denoting the temp_password_expires_at field in the database.
+	FieldTempPasswordExpiresAt = "temp_password_expires_at"
 	// EdgeCompany holds the string denoting the company edge name in mutations.
 	EdgeCompany = "company"
 	// EdgeDepartment holds the string denoting the department edge name in mutations.
@@ -69,6 +73,8 @@ var Columns = []string{
 	FieldAccountName,
 	FieldTokenVersion,
 	FieldPasswordHash,
+	FieldMustChangePassword,
+	FieldTempPasswordExpiresAt,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "users"
@@ -106,6 +112,8 @@ var (
 	DefaultTokenVersion int
 	// PasswordHashValidator is a validator for the "password_hash" field. It is called by the builders before save.
 	PasswordHashValidator func(string) error
+	// DefaultMustChangePassword holds the default value on creation for the "must_change_password" field.
+	DefaultMustChangePassword bool
 )
 
 // Status defines the type for the "status" enum field.
@@ -191,6 +199,16 @@ func ByTokenVersion(opts ...sql.OrderTermOption) OrderOption {
 // ByPasswordHash orders the results by the password_hash field.
 func ByPasswordHash(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldPasswordHash, opts...).ToFunc()
+}
+
+// ByMustChangePassword orders the results by the must_change_password field.
+func ByMustChangePassword(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMustChangePassword, opts...).ToFunc()
+}
+
+// ByTempPasswordExpiresAt orders the results by the temp_password_expires_at field.
+func ByTempPasswordExpiresAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTempPasswordExpiresAt, opts...).ToFunc()
 }
 
 // ByCompanyField orders the results by company field.

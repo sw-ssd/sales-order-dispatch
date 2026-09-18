@@ -37,6 +37,11 @@ func (User) Fields() []ent.Field {
 		field.String("password_hash").
 			NotEmpty().
 			Sensitive(),
+		field.Bool("must_change_password").
+			Default(false), // A3 首登強改(1.5.2):true 時僅 ChangePassword 可用
+		field.Time("temp_password_expires_at").
+			Optional().
+			Nillable(), // A3 臨時密碼效期(now+24h, 1.5.2)
 	}
 }
 

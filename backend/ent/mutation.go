@@ -4723,28 +4723,30 @@ func (m *RolePermissionMutation) ResetEdge(name string) error {
 // UserMutation represents an operation that mutates the User nodes in the graph.
 type UserMutation struct {
 	config
-	op                Op
-	typ               string
-	id                *int
-	email             *string
-	name              *string
-	status            *user.Status
-	role              *string
-	phone             *string
-	employee_no       *string
-	is_customer       *bool
-	account_name      *string
-	token_version     *int
-	addtoken_version  *int
-	password_hash     *string
-	clearedFields     map[string]struct{}
-	company           *int
-	clearedcompany    bool
-	department        *int
-	cleareddepartment bool
-	done              bool
-	oldValue          func(context.Context) (*User, error)
-	predicates        []predicate.User
+	op                       Op
+	typ                      string
+	id                       *int
+	email                    *string
+	name                     *string
+	status                   *user.Status
+	role                     *string
+	phone                    *string
+	employee_no              *string
+	is_customer              *bool
+	account_name             *string
+	token_version            *int
+	addtoken_version         *int
+	password_hash            *string
+	must_change_password     *bool
+	temp_password_expires_at *time.Time
+	clearedFields            map[string]struct{}
+	company                  *int
+	clearedcompany           bool
+	department               *int
+	cleareddepartment        bool
+	done                     bool
+	oldValue                 func(context.Context) (*User, error)
+	predicates               []predicate.User
 }
 
 var _ ent.Mutation = (*UserMutation)(nil)
@@ -5264,6 +5266,91 @@ func (m *UserMutation) ResetPasswordHash() {
 	m.password_hash = nil
 }
 
+// SetMustChangePassword sets the "must_change_password" field.
+func (m *UserMutation) SetMustChangePassword(b bool) {
+	m.must_change_password = &b
+}
+
+// MustChangePassword returns the value of the "must_change_password" field in the mutation.
+func (m *UserMutation) MustChangePassword() (r bool, exists bool) {
+	v := m.must_change_password
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMustChangePassword returns the old "must_change_password" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldMustChangePassword(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMustChangePassword is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMustChangePassword requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMustChangePassword: %w", err)
+	}
+	return oldValue.MustChangePassword, nil
+}
+
+// ResetMustChangePassword resets all changes to the "must_change_password" field.
+func (m *UserMutation) ResetMustChangePassword() {
+	m.must_change_password = nil
+}
+
+// SetTempPasswordExpiresAt sets the "temp_password_expires_at" field.
+func (m *UserMutation) SetTempPasswordExpiresAt(t time.Time) {
+	m.temp_password_expires_at = &t
+}
+
+// TempPasswordExpiresAt returns the value of the "temp_password_expires_at" field in the mutation.
+func (m *UserMutation) TempPasswordExpiresAt() (r time.Time, exists bool) {
+	v := m.temp_password_expires_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTempPasswordExpiresAt returns the old "temp_password_expires_at" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldTempPasswordExpiresAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTempPasswordExpiresAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTempPasswordExpiresAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTempPasswordExpiresAt: %w", err)
+	}
+	return oldValue.TempPasswordExpiresAt, nil
+}
+
+// ClearTempPasswordExpiresAt clears the value of the "temp_password_expires_at" field.
+func (m *UserMutation) ClearTempPasswordExpiresAt() {
+	m.temp_password_expires_at = nil
+	m.clearedFields[user.FieldTempPasswordExpiresAt] = struct{}{}
+}
+
+// TempPasswordExpiresAtCleared returns if the "temp_password_expires_at" field was cleared in this mutation.
+func (m *UserMutation) TempPasswordExpiresAtCleared() bool {
+	_, ok := m.clearedFields[user.FieldTempPasswordExpiresAt]
+	return ok
+}
+
+// ResetTempPasswordExpiresAt resets all changes to the "temp_password_expires_at" field.
+func (m *UserMutation) ResetTempPasswordExpiresAt() {
+	m.temp_password_expires_at = nil
+	delete(m.clearedFields, user.FieldTempPasswordExpiresAt)
+}
+
 // SetCompanyID sets the "company" edge to the Company entity by id.
 func (m *UserMutation) SetCompanyID(id int) {
 	m.company = &id
@@ -5376,7 +5463,7 @@ func (m *UserMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 12)
 	if m.email != nil {
 		fields = append(fields, user.FieldEmail)
 	}
@@ -5407,6 +5494,12 @@ func (m *UserMutation) Fields() []string {
 	if m.password_hash != nil {
 		fields = append(fields, user.FieldPasswordHash)
 	}
+	if m.must_change_password != nil {
+		fields = append(fields, user.FieldMustChangePassword)
+	}
+	if m.temp_password_expires_at != nil {
+		fields = append(fields, user.FieldTempPasswordExpiresAt)
+	}
 	return fields
 }
 
@@ -5435,6 +5528,10 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.TokenVersion()
 	case user.FieldPasswordHash:
 		return m.PasswordHash()
+	case user.FieldMustChangePassword:
+		return m.MustChangePassword()
+	case user.FieldTempPasswordExpiresAt:
+		return m.TempPasswordExpiresAt()
 	}
 	return nil, false
 }
@@ -5464,6 +5561,10 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldTokenVersion(ctx)
 	case user.FieldPasswordHash:
 		return m.OldPasswordHash(ctx)
+	case user.FieldMustChangePassword:
+		return m.OldMustChangePassword(ctx)
+	case user.FieldTempPasswordExpiresAt:
+		return m.OldTempPasswordExpiresAt(ctx)
 	}
 	return nil, fmt.Errorf("unknown User field %s", name)
 }
@@ -5543,6 +5644,20 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetPasswordHash(v)
 		return nil
+	case user.FieldMustChangePassword:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMustChangePassword(v)
+		return nil
+	case user.FieldTempPasswordExpiresAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTempPasswordExpiresAt(v)
+		return nil
 	}
 	return fmt.Errorf("unknown User field %s", name)
 }
@@ -5597,6 +5712,9 @@ func (m *UserMutation) ClearedFields() []string {
 	if m.FieldCleared(user.FieldAccountName) {
 		fields = append(fields, user.FieldAccountName)
 	}
+	if m.FieldCleared(user.FieldTempPasswordExpiresAt) {
+		fields = append(fields, user.FieldTempPasswordExpiresAt)
+	}
 	return fields
 }
 
@@ -5619,6 +5737,9 @@ func (m *UserMutation) ClearField(name string) error {
 		return nil
 	case user.FieldAccountName:
 		m.ClearAccountName()
+		return nil
+	case user.FieldTempPasswordExpiresAt:
+		m.ClearTempPasswordExpiresAt()
 		return nil
 	}
 	return fmt.Errorf("unknown User nullable field %s", name)
@@ -5657,6 +5778,12 @@ func (m *UserMutation) ResetField(name string) error {
 		return nil
 	case user.FieldPasswordHash:
 		m.ResetPasswordHash()
+		return nil
+	case user.FieldMustChangePassword:
+		m.ResetMustChangePassword()
+		return nil
+	case user.FieldTempPasswordExpiresAt:
+		m.ResetTempPasswordExpiresAt()
 		return nil
 	}
 	return fmt.Errorf("unknown User field %s", name)

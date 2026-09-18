@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -129,6 +130,34 @@ func (_c *UserCreate) SetPasswordHash(v string) *UserCreate {
 	return _c
 }
 
+// SetMustChangePassword sets the "must_change_password" field.
+func (_c *UserCreate) SetMustChangePassword(v bool) *UserCreate {
+	_c.mutation.SetMustChangePassword(v)
+	return _c
+}
+
+// SetNillableMustChangePassword sets the "must_change_password" field if the given value is not nil.
+func (_c *UserCreate) SetNillableMustChangePassword(v *bool) *UserCreate {
+	if v != nil {
+		_c.SetMustChangePassword(*v)
+	}
+	return _c
+}
+
+// SetTempPasswordExpiresAt sets the "temp_password_expires_at" field.
+func (_c *UserCreate) SetTempPasswordExpiresAt(v time.Time) *UserCreate {
+	_c.mutation.SetTempPasswordExpiresAt(v)
+	return _c
+}
+
+// SetNillableTempPasswordExpiresAt sets the "temp_password_expires_at" field if the given value is not nil.
+func (_c *UserCreate) SetNillableTempPasswordExpiresAt(v *time.Time) *UserCreate {
+	if v != nil {
+		_c.SetTempPasswordExpiresAt(*v)
+	}
+	return _c
+}
+
 // SetCompanyID sets the "company" edge to the Company entity by ID.
 func (_c *UserCreate) SetCompanyID(id int) *UserCreate {
 	_c.mutation.SetCompanyID(id)
@@ -206,6 +235,10 @@ func (_c *UserCreate) defaults() {
 		v := user.DefaultTokenVersion
 		_c.mutation.SetTokenVersion(v)
 	}
+	if _, ok := _c.mutation.MustChangePassword(); !ok {
+		v := user.DefaultMustChangePassword
+		_c.mutation.SetMustChangePassword(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -255,6 +288,9 @@ func (_c *UserCreate) check() error {
 		if err := user.PasswordHashValidator(v); err != nil {
 			return &ValidationError{Name: "password_hash", err: fmt.Errorf(`ent: validator failed for field "User.password_hash": %w`, err)}
 		}
+	}
+	if _, ok := _c.mutation.MustChangePassword(); !ok {
+		return &ValidationError{Name: "must_change_password", err: errors.New(`ent: missing required field "User.must_change_password"`)}
 	}
 	if len(_c.mutation.CompanyIDs()) == 0 {
 		return &ValidationError{Name: "company", err: errors.New(`ent: missing required edge "User.company"`)}
@@ -324,6 +360,14 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.PasswordHash(); ok {
 		_spec.SetField(user.FieldPasswordHash, field.TypeString, value)
 		_node.PasswordHash = value
+	}
+	if value, ok := _c.mutation.MustChangePassword(); ok {
+		_spec.SetField(user.FieldMustChangePassword, field.TypeBool, value)
+		_node.MustChangePassword = value
+	}
+	if value, ok := _c.mutation.TempPasswordExpiresAt(); ok {
+		_spec.SetField(user.FieldTempPasswordExpiresAt, field.TypeTime, value)
+		_node.TempPasswordExpiresAt = &value
 	}
 	if nodes := _c.mutation.CompanyIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

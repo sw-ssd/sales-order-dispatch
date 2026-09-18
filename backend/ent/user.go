@@ -5,6 +5,7 @@ package ent
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
@@ -38,6 +39,10 @@ type User struct {
 	TokenVersion int `json:"token_version,omitempty"`
 	// PasswordHash holds the value of the "password_hash" field.
 	PasswordHash string `json:"-"`
+	// MustChangePassword holds the value of the "must_change_password" field.
+	MustChangePassword bool `json:"must_change_password,omitempty"`
+	// TempPasswordExpiresAt holds the value of the "temp_password_expires_at" field.
+	TempPasswordExpiresAt *time.Time `json:"temp_password_expires_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the UserQuery when eager-loading is set.
 	Edges            UserEdges `json:"edges"`
@@ -84,12 +89,14 @@ func (*User) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case user.FieldIsCustomer:
+		case user.FieldIsCustomer, user.FieldMustChangePassword:
 			values[i] = new(sql.NullBool)
 		case user.FieldID, user.FieldTokenVersion:
 			values[i] = new(sql.NullInt64)
 		case user.FieldEmail, user.FieldName, user.FieldStatus, user.FieldRole, user.FieldPhone, user.FieldEmployeeNo, user.FieldAccountName, user.FieldPasswordHash:
 			values[i] = new(sql.NullString)
+		case user.FieldTempPasswordExpiresAt:
+			values[i] = new(sql.NullTime)
 		case user.ForeignKeys[0]: // company_users
 			values[i] = new(sql.NullInt64)
 		case user.ForeignKeys[1]: // department_users
@@ -174,6 +181,19 @@ func (_m *User) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field password_hash", values[i])
 			} else if value.Valid {
 				_m.PasswordHash = value.String
+			}
+		case user.FieldMustChangePassword:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field must_change_password", values[i])
+			} else if value.Valid {
+				_m.MustChangePassword = value.Bool
+			}
+		case user.FieldTempPasswordExpiresAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field temp_password_expires_at", values[i])
+			} else if value.Valid {
+				_m.TempPasswordExpiresAt = new(time.Time)
+				*_m.TempPasswordExpiresAt = value.Time
 			}
 		case user.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -263,6 +283,14 @@ func (_m *User) String() string {
 	builder.WriteString(fmt.Sprintf("%v", _m.TokenVersion))
 	builder.WriteString(", ")
 	builder.WriteString("password_hash=<sensitive>")
+	builder.WriteString(", ")
+	builder.WriteString("must_change_password=")
+	builder.WriteString(fmt.Sprintf("%v", _m.MustChangePassword))
+	builder.WriteString(", ")
+	if v := _m.TempPasswordExpiresAt; v != nil {
+		builder.WriteString("temp_password_expires_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteByte(')')
 	return builder.String()
 }

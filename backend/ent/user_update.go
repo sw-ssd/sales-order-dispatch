@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -194,6 +195,40 @@ func (_u *UserUpdate) SetNillablePasswordHash(v *string) *UserUpdate {
 	return _u
 }
 
+// SetMustChangePassword sets the "must_change_password" field.
+func (_u *UserUpdate) SetMustChangePassword(v bool) *UserUpdate {
+	_u.mutation.SetMustChangePassword(v)
+	return _u
+}
+
+// SetNillableMustChangePassword sets the "must_change_password" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableMustChangePassword(v *bool) *UserUpdate {
+	if v != nil {
+		_u.SetMustChangePassword(*v)
+	}
+	return _u
+}
+
+// SetTempPasswordExpiresAt sets the "temp_password_expires_at" field.
+func (_u *UserUpdate) SetTempPasswordExpiresAt(v time.Time) *UserUpdate {
+	_u.mutation.SetTempPasswordExpiresAt(v)
+	return _u
+}
+
+// SetNillableTempPasswordExpiresAt sets the "temp_password_expires_at" field if the given value is not nil.
+func (_u *UserUpdate) SetNillableTempPasswordExpiresAt(v *time.Time) *UserUpdate {
+	if v != nil {
+		_u.SetTempPasswordExpiresAt(*v)
+	}
+	return _u
+}
+
+// ClearTempPasswordExpiresAt clears the value of the "temp_password_expires_at" field.
+func (_u *UserUpdate) ClearTempPasswordExpiresAt() *UserUpdate {
+	_u.mutation.ClearTempPasswordExpiresAt()
+	return _u
+}
+
 // SetCompanyID sets the "company" edge to the Company entity by ID.
 func (_u *UserUpdate) SetCompanyID(id int) *UserUpdate {
 	_u.mutation.SetCompanyID(id)
@@ -354,6 +389,15 @@ func (_u *UserUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.PasswordHash(); ok {
 		_spec.SetField(user.FieldPasswordHash, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.MustChangePassword(); ok {
+		_spec.SetField(user.FieldMustChangePassword, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.TempPasswordExpiresAt(); ok {
+		_spec.SetField(user.FieldTempPasswordExpiresAt, field.TypeTime, value)
+	}
+	if _u.mutation.TempPasswordExpiresAtCleared() {
+		_spec.ClearField(user.FieldTempPasswordExpiresAt, field.TypeTime)
 	}
 	if _u.mutation.CompanyCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -598,6 +642,40 @@ func (_u *UserUpdateOne) SetNillablePasswordHash(v *string) *UserUpdateOne {
 	return _u
 }
 
+// SetMustChangePassword sets the "must_change_password" field.
+func (_u *UserUpdateOne) SetMustChangePassword(v bool) *UserUpdateOne {
+	_u.mutation.SetMustChangePassword(v)
+	return _u
+}
+
+// SetNillableMustChangePassword sets the "must_change_password" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableMustChangePassword(v *bool) *UserUpdateOne {
+	if v != nil {
+		_u.SetMustChangePassword(*v)
+	}
+	return _u
+}
+
+// SetTempPasswordExpiresAt sets the "temp_password_expires_at" field.
+func (_u *UserUpdateOne) SetTempPasswordExpiresAt(v time.Time) *UserUpdateOne {
+	_u.mutation.SetTempPasswordExpiresAt(v)
+	return _u
+}
+
+// SetNillableTempPasswordExpiresAt sets the "temp_password_expires_at" field if the given value is not nil.
+func (_u *UserUpdateOne) SetNillableTempPasswordExpiresAt(v *time.Time) *UserUpdateOne {
+	if v != nil {
+		_u.SetTempPasswordExpiresAt(*v)
+	}
+	return _u
+}
+
+// ClearTempPasswordExpiresAt clears the value of the "temp_password_expires_at" field.
+func (_u *UserUpdateOne) ClearTempPasswordExpiresAt() *UserUpdateOne {
+	_u.mutation.ClearTempPasswordExpiresAt()
+	return _u
+}
+
 // SetCompanyID sets the "company" edge to the Company entity by ID.
 func (_u *UserUpdateOne) SetCompanyID(id int) *UserUpdateOne {
 	_u.mutation.SetCompanyID(id)
@@ -788,6 +866,15 @@ func (_u *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) {
 	}
 	if value, ok := _u.mutation.PasswordHash(); ok {
 		_spec.SetField(user.FieldPasswordHash, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.MustChangePassword(); ok {
+		_spec.SetField(user.FieldMustChangePassword, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.TempPasswordExpiresAt(); ok {
+		_spec.SetField(user.FieldTempPasswordExpiresAt, field.TypeTime, value)
+	}
+	if _u.mutation.TempPasswordExpiresAtCleared() {
+		_spec.ClearField(user.FieldTempPasswordExpiresAt, field.TypeTime)
 	}
 	if _u.mutation.CompanyCleared() {
 		edge := &sqlgraph.EdgeSpec{
