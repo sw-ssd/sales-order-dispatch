@@ -35,22 +35,24 @@
 - 掛載:`backend/internal/server/domains.go`(RegisterXxxServices)
 
 ## Task 1: schema + migration + ent gen(TDD)
-- [ ] 四 schema + `go generate ./ent` 編譯;migration 00016 四表、部分唯一索引、RLS、稽核欄位
-- [ ] `task check` → commit
+- [x] 四 schema + `go generate ./ent` 編譯;migration 00016 四表、部分唯一索引、RLS、稽核欄位
+- [x] `task check` → commit
 
 ## Task 2: proto + buf 三端重產(TDD)
-- [ ] masters.proto 四 service(各 `ListXXX/GetOne/CreateXXX/UpdateXXX/DeleteXXX/RestoreXXX`)
-- [ ] buf generate(Go/TS/Dart);後端 build 通過
-- [ ] `task check` → commit
+- [x] masters.proto 四 service(各 `ListXXX/CreateXXX/UpdateXXX/DeleteXXX/RestoreXXX`;細節計畫 3.4 無 Get RPC)
+- [x] buf generate(Go/TS/Dart);後端 build 通過
+- [x] `task check` → commit
 
 ## Task 3: 服務實作 + 掛載(TDD)
-- [ ] 共用部門級 scope helper + 各 service 五法+restore;稽核同事務;`domains.go` 掛載
-- [ ] `task check` → commit
+- [x] 共用部門級 scope helper + 各 service 五法+restore;稽核同事務;`domains.go` 掛載
+- [x] `task check` → commit
 
 ## Task 4: 測試 + 文件對齊(TDD)
-- [ ] 每 entity:CRUD、跨部門 not_found、同碼 already_exists、軟刪除/復原、include_deleted、稽核
-- [ ] 04 計畫 §3.4.1–3.4.4 驗收打勾;README 對齊
-- [ ] `task check` 全綠 → commit
+- [x] 測試:CRUD、跨部門 not_found、軟刪除/復原、include_deleted、processing_spec 旗標驗證+attributes
+- [x] 04 計畫 §3.4.1–3.4.4 驗收打勾
+- [x] `task check` 全綠 → commit
+
+> 註:`(department_id, code)` 同碼 already_exists 與軟刪除後 code 重用為 Postgres 部分唯一索引(migration)層保證,sqlite enttest 無此索引,故未以單元測試覆蓋(與 customers 同慣例)。
 
 ## 已知缺口 / 後續
 - **combos(組合包)**:Phase-2(預先定義主檔 + combo_items BOM 炸開換算 + 雙軌包裝規格)。
