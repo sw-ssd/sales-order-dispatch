@@ -34,7 +34,7 @@
 
 ---
 
-## 2. 已定案決策摘要（D1–D32，詳見決策記錄）
+## 2. 已定案決策摘要（D1–D33，詳見決策記錄）
 
 | # | 決策 | 一句話 |
 |---|---|---|
@@ -66,6 +66,9 @@
 | D26 | 偏好送貨日 | `preferred_delivery_days`（一~六核取）；非勾選日下單自動順延 |
 | D27 | 稽核保留 3 個月可設定 | 管理頁可設 1 / 3 / 6 / 12 個月或永久 |
 | D28 | 店家以主帳號自助管理子帳號 | self 範圍 + 主帳號不可自停 + 後台逃生門（含移交業務子帳號） |
+| D33 | OpenFGA 閘門分層 | business domain（customers/主檔）暫不納入 middleware `protectedRPC`，由服務層 role+scope 授權；納入列「權限統一」獨立批次（需先補 role_permissions 資源 seed，避免 fail-closed 停擺） |
+
+> 註：D29–D32 條目詳見決策記錄本節；本摘要表依需逐步補入。
 
 其他定案重點（P0/P1，詳見決策記錄）：
 - 角色：`super` / `company_admin` / `dept_admin` / `staff`（兼會計）/ `customer` / `guest` / `developer`

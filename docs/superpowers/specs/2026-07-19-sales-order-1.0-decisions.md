@@ -258,6 +258,15 @@
      - **RLS 暫緩啟用**：`00007` 已定義政策但**未 ENABLE/FORCE**。原因：OpenFGA 與業務共用同一 PostgreSQL datastore，`FORCE` 會致 OpenFGA 自有表遭套用（無政策 → 全拒、OpenFGA 崩潰）；非 FORCE 對表 owner 連線不生效；services 無每請求交易套用點。待 repository/每請求交易層 + 資料庫角色分離後另立任務。
      - **既有 DB migration**：`00008_forward_fix.sql` 以 `DO $$` 冪等補 `role_permissions.role_id → roles(id)` FK 與 `users.token_version`（全新 DB no-op）。
 
+### D33：OpenFGA 閘門分層 — business domain 暫不納入 middleware `protectedRPC`
+
+- **選擇**：`warehouse` / `route` / `processing_spec` / `product_category`（04 Task 3.4 部門級主檔）**暫不納入** middleware 的 OpenFGA 閘門（`backend/internal/server/server.go` 的 `protectedRPC`）。這些 business RPC 的授權由**服務層 role＋scope**（`masterScope`：dept_admin/staff 限本部門、company_admin 公司、super 全域、customer 一律 `permission_denied`）承擔；未來由 DB RLS（D3）兜底。**與既有 `CustomerService`（customers/addresses/contacts）同構**。
+- **納入閘門列為「權限統一」獨立批次**，要件（一次涵蓋**全部** business domain，避免半套）：① `role_permissions` 補齊 business 資源 seed → ② `authz.Provision` 產生 `role:<rid>#assigned can_read|can_write ability:<res>` tuples → ③ `protectedRPC` 收錄對應路徑 → ④ 整合測試（含 fail-closed 驗證）。**觸發時機**：D3 RLS 接線、或前端改以 ability 統一控管 business 畫面時。
+- **理由**：① OpenFGA 閘門為 **fail-closed** — `protectedRPC` 收錄但 `role_permissions` 缺該資源時，除 `super`/`developer` 逃生門外全員 `permission_denied`，功能直接停擺；② 僅將部分 business 域納入會造成兩套授權語意並存（半套）；③ `ability:<res>` 粒度粗（僅 can_read/can_write），仍須服務層二次判部門範圍，邊際價值低。
+- **已考慮 alternative**：立即納入 `protectedRPC` — 拒絕（需同步 `role_permissions` seed 才能避免 fail-closed，且必須一次性涵蓋所有 business 域，成本與風險不成比例）；完全廢除閘門僅靠服務層 — 拒絕（管理面 role/company/department/user 的資源級能力仍宜由 OpenFGA 單一來源承擔）。
+- **與 D32 之關係**：D32 述「middleware 對受保護 RPC 做 Check」為機制描述；本決定**界定受保護 RPC 的範圍**（管理面納入、business 面分階段），為 D32 的補充而非修訂。
+- **修訂來源**：2026-09-19 04 Task 3.4 複審 Minor 2。
+
 ## Risks / Trade-offs
 
 - [Risk] RLS 與 Ent 整合複雜（connection hook 注入 session variables，每個查詢路徑都要正確設定） → Mitigation: 統一 connection hook + 整合測試驗證各 `data_scope` 等級（執行計畫 Task 1.3 驗收即含跨角色隔離測試）。

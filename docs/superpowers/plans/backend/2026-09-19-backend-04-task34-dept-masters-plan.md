@@ -55,6 +55,7 @@
 > 註:`(department_id, code)` 同碼 already_exists 與軟刪除後 code 重用為 Postgres 部分唯一索引(migration)層保證,sqlite enttest 無此索引,故未以單元測試覆蓋(與 customers 同慣例)。
 
 ## 已知缺口 / 後續
+- **OpenFGA 閘門**:本波四主檔暫不納入 `protectedRPC`(**依決策 D33**);納入要件與觸發時機見 D33。
 - **combos(組合包)**:Phase-2(預先定義主檔 + combo_items BOM 炸開換算 + 雙軌包裝規格)。
 - **RLS 接線(ApplyRLS)**:D3 仍為獨立設計任務,本波維持「僅定義不 ENABLE」。
 - **3.3 商品 / 3.5 客戶專屬**:下一波(依賴 3.4 之 warehouse/category/processing_spec 驗證)。
