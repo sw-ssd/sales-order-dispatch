@@ -19,6 +19,7 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/config"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
+	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
@@ -285,9 +286,21 @@ func (s *Server) identityFor(ctx context.Context, entClient *ent.Client, userID 
 		UserID:       id.UserID,
 		CompanyID:    companyID,
 		DepartmentID: deptID,
-		DataScope:    auth.ScopeForRole(u.Role),
+		DataScope:    dataScopeForUser(ctx, entClient, u.Role),
 	}
 	return id, scope, true
+}
+
+// dataScopeForUser 取得使用者的 RLS 資料範圍(審查複審):
+// 優先讀 roles.data_scope(表為權威來源,支援自訂角色);查無角色列時回退內建對映
+// (auth.ScopeForRole)。自訂角色若走硬編碼對映會回空字串→RLSStatements 不注入 data_scope,
+// 導致 RLS 啟用後範圍錯置(data_scope=department 的自訂角色反被視為全公司)。
+// 皆無法取得 → 空字串(不注入,fail-closed 由 RLS policy 承擔)。
+func dataScopeForUser(ctx context.Context, entClient *ent.Client, roleCode string) auth.DataScope {
+	if r, err := entClient.Role.Query().Where(role.CodeEQ(roleCode)).Only(ctx); err == nil && r.DataScope != "" {
+		return auth.DataScope(r.DataScope)
+	}
+	return auth.ScopeForRole(roleCode)
 }
 
 func (s *Server) handleVersion(w http.ResponseWriter, _ *http.Request) {

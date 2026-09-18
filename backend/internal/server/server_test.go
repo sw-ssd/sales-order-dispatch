@@ -25,6 +25,32 @@ import (
 	ofga "github.com/salesorder/sales-order-1.0/backend/third_party/openfga"
 )
 
+// TestDataScopeForUserCustomRole 複審:自訂角色的 RLS data_scope 應取自 roles 表,
+// 不得因硬編碼對映回空字串而導致範圍錯置。
+func TestDataScopeForUserCustomRole(t *testing.T) {
+	db := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared&_fk=1")
+	t.Cleanup(func() { _ = db.Close() })
+	ctx := context.Background()
+
+	// 自訂角色(data_scope=department)。
+	if _, err := db.Role.Create().SetCode("ops_manager").SetName("營運主管").SetDataScope("department").SetIsSystem(false).SetIsActive(true).Save(ctx); err != nil {
+		t.Fatalf("role: %v", err)
+	}
+	if got := dataScopeForUser(ctx, db, "ops_manager"); got != auth.DataScopeDepartment {
+		t.Errorf("自訂角色應得 department,得到 %q", got)
+	}
+
+	// 內建角色無列時回退內建對映。
+	if got := dataScopeForUser(ctx, db, "company_admin"); got != auth.DataScopeCompany {
+		t.Errorf("回退應得 company,得到 %q", got)
+	}
+
+	// 未知角色 → 空(不注入, fail-closed)。
+	if got := dataScopeForUser(ctx, db, "nonexistent_role"); got != "" {
+		t.Errorf("未知角色應得空,得到 %q", got)
+	}
+}
+
 func TestVersionEndpoint(t *testing.T) {
 	s := New(config.New())
 	s.InitDomains()
