@@ -16,7 +16,6 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
-	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
@@ -257,18 +256,7 @@ func (s *CompanyService) UpdateCompany(ctx context.Context, req *connect.Request
 	if changed {
 		act := authz.IdentityFrom(ctx)
 		actor, _ := parseID(act.UserID)
-		meta := audit.MetaFrom(ctx)
-		if err := audit.Record(ctx, tx, audit.Entry{
-			Action:       "update",
-			ResourceType: "company",
-			ResourceID:   strconv.Itoa(id),
-			CompanyID:    id,
-			UserID:       actor,
-			Before:       before,
-			After:        after,
-			IPAddress:    meta.IP,
-			UserAgent:    meta.UserAgent,
-		}); err != nil {
+		if err := recordAuditBA(ctx, tx, "company", "update", id, id, nil, actor, before, after); err != nil {
 			return nil, toConnectError(err)
 		}
 	}

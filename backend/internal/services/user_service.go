@@ -18,7 +18,6 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
-	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
@@ -316,18 +315,7 @@ func (s *UserService) CreateUser(ctx context.Context, req *connect.Request[v1.Cr
 		d := deptRef
 		auditDept = &d
 	}
-	meta := audit.MetaFrom(ctx)
-	if err := audit.Record(ctx, tx, audit.Entry{
-		Action:       "create",
-		ResourceType: "user",
-		ResourceID:   uItoaInt(created.ID),
-		CompanyID:    cid,
-		DepartmentID: auditDept,
-		UserID:       actorID,
-		After:        map[string]any{"name": created.Name, "email": created.Email, "role": created.Role, "status": string(created.Status)},
-		IPAddress:    meta.IP,
-		UserAgent:    meta.UserAgent,
-	}); err != nil {
+	if err := recordAudit(ctx, tx, "user", "create", created.ID, cid, auditDept, actorID, map[string]any{"name": created.Name, "email": created.Email, "role": created.Role, "status": string(created.Status)}); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("稽核寫入失敗: %w", err))
 	}
 	if err := tx.Commit(); err != nil {
@@ -636,19 +624,7 @@ func (s *UserService) recordAudit(ctx context.Context, tx *ent.Tx, actor authz.I
 		deptID = &d
 	}
 	// 來源資訊(IP/User-Agent)由 middleware 每請求注入 ctx(I9;2.6.2)。
-	meta := audit.MetaFrom(ctx)
-	return audit.Record(ctx, tx, audit.Entry{
-		Action:       action,
-		ResourceType: "user",
-		ResourceID:   uItoaInt(target.ID),
-		CompanyID:    companyID,
-		DepartmentID: deptID,
-		UserID:       actorID,
-		Before:       before,
-		After:        after,
-		IPAddress:    meta.IP,
-		UserAgent:    meta.UserAgent,
-	})
+	return recordAuditBA(ctx, tx, "user", action, target.ID, companyID, deptID, actorID, before, after)
 }
 
 // syncUserRoleTuple 同步使用者的 OpenFGA assigned tuple(角色異動):
@@ -741,11 +717,6 @@ func (s *UserService) validateDepartmentInCompany(ctx context.Context, deptID, c
 		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("部門 %d 不屬於公司 %d", deptID, companyID))
 	}
 	return nil
-}
-
-// uItoaInt 將 int 轉字串(稽核 ResourceID 用)。
-func uItoaInt(i int) string {
-	return strconv.Itoa(i)
 }
 
 // userToProto 將 ent.User 轉為 proto User(不含 password_hash)。

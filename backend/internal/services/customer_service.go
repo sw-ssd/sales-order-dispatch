@@ -21,7 +21,6 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/customercounter"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
-	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
@@ -418,19 +417,7 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *connect.Reque
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := audit.Record(ctx, tx, audit.Entry{
-		Action:       "create",
-		ResourceType: "customer",
-		ResourceID:   strconv.FormatInt(int64(created.ID), 10),
-		CompanyID:    cid,
-		DepartmentID: created.DepartmentID,
-		UserID:       actor,
-		After: map[string]any{
-			"customer_code": created.CustomerCode, "name": created.Name,
-		},
-		IPAddress: audit.MetaFrom(ctx).IP,
-		UserAgent: audit.MetaFrom(ctx).UserAgent,
-	}); err != nil {
+	if err := recordAudit(ctx, tx, "customer", "create", created.ID, cid, created.DepartmentID, actor, map[string]any{"customer_code": created.CustomerCode, "name": created.Name}); err != nil {
 		return nil, toConnectError(err)
 	}
 
@@ -608,18 +595,7 @@ func (s *CustomerService) UpdateCustomer(ctx context.Context, req *connect.Reque
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	rec := audit.Entry{
-		Action:       "update",
-		ResourceType: "customer",
-		ResourceID:   strconv.FormatInt(int64(custID), 10),
-		CompanyID:    cid,
-		DepartmentID: cur.DepartmentID,
-		UserID:       actor,
-		After:        map[string]any{"name": updated.Name},
-		IPAddress:    audit.MetaFrom(ctx).IP,
-		UserAgent:    audit.MetaFrom(ctx).UserAgent,
-	}
-	if err := audit.Record(ctx, tx, rec); err != nil {
+	if err := recordAudit(ctx, tx, "customer", "update", custID, cid, cur.DepartmentID, actor, map[string]any{"name": updated.Name}); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -656,17 +632,7 @@ func (s *CustomerService) DeleteCustomer(ctx context.Context, req *connect.Reque
 	if err := tx.Customer.UpdateOneID(custID).SetDeletedAt(time.Now().UTC()).SetUpdatedBy(parseActor(id)).Exec(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := audit.Record(ctx, tx, audit.Entry{
-		Action:       "delete",
-		ResourceType: "customer",
-		ResourceID:   strconv.FormatInt(int64(custID), 10),
-		CompanyID:    cid,
-		DepartmentID: cur.DepartmentID,
-		UserID:       parseActor(id),
-		Before:       map[string]any{"customer_code": cur.CustomerCode, "name": cur.Name},
-		IPAddress:    audit.MetaFrom(ctx).IP,
-		UserAgent:    audit.MetaFrom(ctx).UserAgent,
-	}); err != nil {
+	if err := recordAudit(ctx, tx, "customer", "delete", custID, cid, cur.DepartmentID, parseActor(id), map[string]any{"customer_code": cur.CustomerCode, "name": cur.Name}); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -708,17 +674,7 @@ func (s *CustomerService) RestoreCustomer(ctx context.Context, req *connect.Requ
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := audit.Record(ctx, tx, audit.Entry{
-		Action:       "update",
-		ResourceType: "customer",
-		ResourceID:   strconv.FormatInt(int64(custID), 10),
-		CompanyID:    cid,
-		DepartmentID: cur.DepartmentID,
-		UserID:       parseActor(id),
-		After:        map[string]any{"restored": true, "customer_code": restored.CustomerCode},
-		IPAddress:    audit.MetaFrom(ctx).IP,
-		UserAgent:    audit.MetaFrom(ctx).UserAgent,
-	}); err != nil {
+	if err := recordAudit(ctx, tx, "customer", "update", custID, cid, cur.DepartmentID, parseActor(id), map[string]any{"restored": true, "customer_code": restored.CustomerCode}); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -789,18 +745,7 @@ func buildCustomerAccount(ctx context.Context, tx *ent.Tx, s accountSpec) (*ent.
 
 // auditUserCreate 在交易內寫一筆「客戶帳號建檔」稽核(與客戶主檔建檔同回滾,D18)。
 func auditUserCreate(ctx context.Context, tx *ent.Tx, actor, cid int, did *int, uid int, email, name string) error {
-	meta := audit.MetaFrom(ctx)
-	return audit.Record(ctx, tx, audit.Entry{
-		Action:       "create",
-		ResourceType: "user",
-		ResourceID:   strconv.Itoa(uid),
-		CompanyID:    cid,
-		DepartmentID: did,
-		UserID:       actor,
-		After:        map[string]any{"email": email, "name": name, "account_type": "customer"},
-		IPAddress:    meta.IP,
-		UserAgent:    meta.UserAgent,
-	})
+	return recordAudit(ctx, tx, "user", "create", uid, cid, did, actor, map[string]any{"email": email, "name": name, "account_type": "customer"})
 }
 
 // accountManageURL 組出 D22 帳號管理深層連結 https://<domain>/customer_account_manage(規格 §9.4)。

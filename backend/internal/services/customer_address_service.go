@@ -15,7 +15,6 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customer"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customeraddress"
-	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
 )
 
@@ -188,17 +187,7 @@ func (s *CustomerService) AddAddress(ctx context.Context, req *connect.Request[c
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := audit.Record(ctx, tx, audit.Entry{
-		Action:       "create",
-		ResourceType: "customer_address",
-		ResourceID:   strconv.FormatInt(int64(created.ID), 10),
-		CompanyID:    companyID,
-		DepartmentID: c.DepartmentID,
-		UserID:       actor,
-		After:        map[string]any{"customer_id": custID, "type": typ},
-		IPAddress:    audit.MetaFrom(ctx).IP,
-		UserAgent:    audit.MetaFrom(ctx).UserAgent,
-	}); err != nil {
+	if err := recordAudit(ctx, tx, "customer_address", "create", created.ID, companyID, c.DepartmentID, actor, map[string]any{"customer_id": custID, "type": typ}); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -298,17 +287,7 @@ func (s *CustomerService) UpdateAddress(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := audit.Record(ctx, tx, audit.Entry{
-		Action:       "update",
-		ResourceType: "customer_address",
-		ResourceID:   strconv.FormatInt(int64(addrID), 10),
-		CompanyID:    cur.CompanyID,
-		DepartmentID: cur.DepartmentID,
-		UserID:       actor,
-		After:        map[string]any{"customer_id": cur.CustomerID},
-		IPAddress:    audit.MetaFrom(ctx).IP,
-		UserAgent:    audit.MetaFrom(ctx).UserAgent,
-	}); err != nil {
+	if err := recordAudit(ctx, tx, "customer_address", "update", addrID, cur.CompanyID, cur.DepartmentID, actor, map[string]any{"customer_id": cur.CustomerID}); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -345,17 +324,7 @@ func (s *CustomerService) DeleteAddress(ctx context.Context, req *connect.Reques
 	if err := tx.CustomerAddress.UpdateOneID(addrID).SetDeletedAt(time.Now().UTC()).SetUpdatedBy(actor).Exec(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := audit.Record(ctx, tx, audit.Entry{
-		Action:       "delete",
-		ResourceType: "customer_address",
-		ResourceID:   strconv.FormatInt(int64(addrID), 10),
-		CompanyID:    cur.CompanyID,
-		DepartmentID: cur.DepartmentID,
-		UserID:       actor,
-		Before:       map[string]any{"customer_id": cur.CustomerID, "type": string(cur.Type)},
-		IPAddress:    audit.MetaFrom(ctx).IP,
-		UserAgent:    audit.MetaFrom(ctx).UserAgent,
-	}); err != nil {
+	if err := recordAudit(ctx, tx, "customer_address", "delete", addrID, cur.CompanyID, cur.DepartmentID, actor, map[string]any{"customer_id": cur.CustomerID, "type": string(cur.Type)}); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {

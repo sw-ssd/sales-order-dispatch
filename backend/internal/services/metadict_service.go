@@ -16,7 +16,6 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
-	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	metadictv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/metadict/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/metadict/v1/metadictv1connect"
@@ -259,20 +258,7 @@ func (s *MetadictService) CreateMetadict(ctx context.Context, req *connect.Reque
 
 	actorID := actorIDFrom(id)
 	cid := companyIDFrom(id)
-	if err := audit.Record(ctx, tx, audit.Entry{
-		Action:       "create",
-		ResourceType: "metadict",
-		ResourceID:   strconv.FormatInt(int64(created.ID), 10),
-		CompanyID:    cid,
-		DepartmentID: created.DepartmentID,
-		UserID:       actorID,
-		After: map[string]any{
-			"type": created.Type, "code": created.Code, "display_name": created.DisplayName,
-			"department_id": created.DepartmentID, "is_active": created.IsActive,
-		},
-		IPAddress: audit.MetaFrom(ctx).IP,
-		UserAgent: audit.MetaFrom(ctx).UserAgent,
-	}); err != nil {
+	if err := recordAudit(ctx, tx, "metadict", "create", created.ID, cid, created.DepartmentID, actorID, map[string]any{"type": created.Type, "code": created.Code, "display_name": created.DisplayName, "department_id": created.DepartmentID, "is_active": created.IsActive}); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -323,22 +309,7 @@ func (s *MetadictService) UpdateMetadict(ctx context.Context, req *connect.Reque
 		return nil, toConnectError(err)
 	}
 
-	if err := audit.Record(ctx, tx, audit.Entry{
-		Action:       "update",
-		ResourceType: "metadict",
-		ResourceID:   strconv.FormatInt(int64(mid), 10),
-		CompanyID:    companyIDFrom(id),
-		DepartmentID: metadictActorDeptID(m),
-		UserID:       actorIDFrom(id),
-		Before: map[string]any{
-			"display_name": m.DisplayName, "sort_order": m.SortOrder, "is_active": m.IsActive,
-		},
-		After: map[string]any{
-			"display_name": updated.DisplayName, "sort_order": updated.SortOrder, "is_active": updated.IsActive,
-		},
-		IPAddress: audit.MetaFrom(ctx).IP,
-		UserAgent: audit.MetaFrom(ctx).UserAgent,
-	}); err != nil {
+	if err := recordAuditBA(ctx, tx, "metadict", "update", mid, companyIDFrom(id), metadictActorDeptID(m), actorIDFrom(id), map[string]any{"display_name": m.DisplayName, "sort_order": m.SortOrder, "is_active": m.IsActive}, map[string]any{"display_name": updated.DisplayName, "sort_order": updated.SortOrder, "is_active": updated.IsActive}); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -377,19 +348,7 @@ func (s *MetadictService) DeleteMetadict(ctx context.Context, req *connect.Reque
 	if err := tx.Metadict.UpdateOneID(mid).SetDeletedAt(time.Now().UTC()).Exec(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := audit.Record(ctx, tx, audit.Entry{
-		Action:       "delete",
-		ResourceType: "metadict",
-		ResourceID:   strconv.FormatInt(int64(mid), 10),
-		CompanyID:    companyIDFrom(id),
-		DepartmentID: metadictActorDeptID(m),
-		UserID:       actorIDFrom(id),
-		Before: map[string]any{
-			"type": m.Type, "code": m.Code, "display_name": m.DisplayName,
-		},
-		IPAddress: audit.MetaFrom(ctx).IP,
-		UserAgent: audit.MetaFrom(ctx).UserAgent,
-	}); err != nil {
+	if err := recordAuditBA(ctx, tx, "metadict", "delete", mid, companyIDFrom(id), metadictActorDeptID(m), actorIDFrom(id), map[string]any{"type": m.Type, "code": m.Code, "display_name": m.DisplayName}, nil); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {

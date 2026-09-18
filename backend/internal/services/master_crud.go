@@ -69,23 +69,28 @@ func pageList[M any, P any](ctx context.Context, page, pageSize int32, src listS
 	return out, &v1.Pagination{Page: int32(p), PageSize: int32(ps), Total: int64(total)}, nil
 }
 
-// recordAudit 寫一筆部門級主檔稽核(共用;D18 同事務)。
+// recordAudit 寫一筆稽核(共用;D18 同事務)。
 // action 為 create/update/delete;payload 依 action 語意放 after 或 before 內容。
 func recordAudit(ctx context.Context, tx *ent.Tx, resource, action string, id, cid int, did *int, actor int, payload map[string]any) error {
-	e := audit.Entry{
+	before, after := map[string]any(nil), payload
+	if action == "delete" {
+		before, after = payload, nil
+	}
+	return recordAuditBA(ctx, tx, resource, action, id, cid, did, actor, before, after)
+}
+
+// recordAuditBA 寫一筆含 before+after 快照的稽核(供需完整前後對照者;D18 同事務)。
+func recordAuditBA(ctx context.Context, tx *ent.Tx, resource, action string, id, cid int, did *int, actor int, before, after map[string]any) error {
+	return audit.Record(ctx, tx, audit.Entry{
 		Action:       action,
 		ResourceType: resource,
 		ResourceID:   strconv.Itoa(id),
 		CompanyID:    cid,
 		DepartmentID: did,
 		UserID:       actor,
+		Before:       before,
+		After:        after,
 		IPAddress:    audit.MetaFrom(ctx).IP,
 		UserAgent:    audit.MetaFrom(ctx).UserAgent,
-	}
-	if action == "delete" {
-		e.Before = payload
-	} else {
-		e.After = payload
-	}
-	return audit.Record(ctx, tx, e)
+	})
 }
