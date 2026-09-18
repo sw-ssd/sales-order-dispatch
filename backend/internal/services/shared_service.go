@@ -1,4 +1,4 @@
-// 部門級主檔(04 計畫 3.4)共用 CRUD 流程:身分/驗證/分頁/稽核。
+// 服務層共用 helper(全 domain):身分/驗證/分頁/稽核。
 // 因 ent 為每實體生成不同具體型別(無法共用 Go interface),採「共用流程 + per-entity 小橋接」模式:
 // 此檔載 type-agnostic 的流程,各 service 以 listSource[M] 等小橋接明示 ent 型別。
 package services

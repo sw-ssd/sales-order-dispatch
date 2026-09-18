@@ -59,32 +59,6 @@ func hasRole(id authz.Identity, role string) bool {
 	return slices.Contains(id.Roles, role)
 }
 
-// customerScope 依身分推導可見/操作範圍,回傳(companyID, departmentID *int)。
-// 超範圍/無權 → 回 permission_denied。
-func customerScope(id authz.Identity) (int, *int, error) {
-	switch {
-	case isSuperIdentity(id), hasRole(id, "company_admin"):
-		cid, err := parseID(id.CompanyID)
-		if err != nil {
-			return 0, nil, connect.NewError(connect.CodePermissionDenied, errors.New("缺少公司範圍"))
-		}
-		return cid, nil, nil
-	case hasRole(id, "dept_admin"), hasRole(id, "staff"):
-		cid, err := parseID(id.CompanyID)
-		if err != nil {
-			return 0, nil, connect.NewError(connect.CodePermissionDenied, errors.New("缺少公司範圍"))
-		}
-		did, err := parseID(id.DepartmentID)
-		if err != nil {
-			return 0, nil, connect.NewError(connect.CodePermissionDenied, errors.New("缺少部門範圍"))
-		}
-		return cid, &did, nil
-	default:
-		// customer 主帳號 / guest 一律拒絕。
-		return 0, nil, connect.NewError(connect.CodePermissionDenied, errors.New("無客戶主檔權限"))
-	}
-}
-
 // customerScopeQuery 依範圍對查詢加入 company/department where。
 func customerScopeQuery(q *ent.CustomerQuery, cid int, did *int) *ent.CustomerQuery {
 	if did != nil {
@@ -232,7 +206,7 @@ func (s *CustomerService) ListCustomers(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := customerScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +264,7 @@ func (s *CustomerService) GetCustomer(ctx context.Context, req *connect.Request[
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := customerScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -313,7 +287,7 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *connect.Reque
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := customerScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -491,7 +465,7 @@ func (s *CustomerService) UpdateCustomer(ctx context.Context, req *connect.Reque
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := customerScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -610,7 +584,7 @@ func (s *CustomerService) DeleteCustomer(ctx context.Context, req *connect.Reque
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := customerScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -647,7 +621,7 @@ func (s *CustomerService) RestoreCustomer(ctx context.Context, req *connect.Requ
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := customerScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}

@@ -313,3 +313,28 @@ func strPtr(s string) *string { return &s }
 func nowPtr() time.Time {
 	return time.Now().UTC()
 }
+
+// TestListMetadictsPagination 複審 Minor 4:分頁 meta(Total/PageSize)與跨頁切分正確(走 pageList)。
+func TestListMetadictsPagination(t *testing.T) {
+	ctx := context.Background()
+	id := authz.Identity{UserID: "1", Role: "super", Roles: []string{"super"}}
+	client, db := newMetadictTestServer(t, id)
+	seedMetadictSystem(t, db, "payment_method", "P1", "現金")
+	seedMetadictSystem(t, db, "payment_method", "P2", "匯款")
+	seedMetadictSystem(t, db, "payment_method", "P3", "信用卡")
+
+	p1, err := client.ListMetadicts(ctx, connect.NewRequest(&metadictv1.ListMetadictsRequest{Page: 1, PageSize: 2}))
+	if err != nil {
+		t.Fatalf("ListMetadicts: %v", err)
+	}
+	if got := p1.Msg.GetPagination(); got.GetTotal() != 3 || got.GetPageSize() != 2 || len(p1.Msg.GetItems()) != 2 {
+		t.Fatalf("第1頁分頁應 total=3 size=2 items=2,got total=%d size=%d items=%d", got.GetTotal(), got.GetPageSize(), len(p1.Msg.GetItems()))
+	}
+	p2, err := client.ListMetadicts(ctx, connect.NewRequest(&metadictv1.ListMetadictsRequest{Page: 2, PageSize: 2}))
+	if err != nil {
+		t.Fatalf("ListMetadicts p2: %v", err)
+	}
+	if len(p2.Msg.GetItems()) != 1 {
+		t.Fatalf("第2頁應剩 1 筆,got %d", len(p2.Msg.GetItems()))
+	}
+}

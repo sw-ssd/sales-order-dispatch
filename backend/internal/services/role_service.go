@@ -137,7 +137,10 @@ func (s *RoleService) GetRolePermissions(ctx context.Context, req *connect.Reque
 // 限制:super / developer 可改任意角色;company_admin 僅可改自訂角色,
 // 且規則條件若含 company_id 必須等於自身公司(限自己公司)。
 func (s *RoleService) UpdateRolePermissions(ctx context.Context, req *connect.Request[v1.UpdateRolePermissionsRequest]) (*connect.Response[v1.UpdateRolePermissionsResponse], error) {
-	id := authz.IdentityFrom(ctx)
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
 	if err := requireRole(ctx, "update"); err != nil {
 		return nil, err
 	}

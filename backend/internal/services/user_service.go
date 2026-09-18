@@ -396,7 +396,7 @@ func (s *UserService) UpdateUser(ctx context.Context, req *connect.Request[v1.Up
 	if _, err := update.Save(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := s.recordAudit(ctx, tx, id, target, "update", before, after); err != nil {
+	if err := s.recordUserAudit(ctx, tx, id, target, "update", before, after); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("稽核寫入失敗: %w", err))
 	}
 	if err := tx.Commit(); err != nil {
@@ -479,7 +479,7 @@ func (s *UserService) AssignRole(ctx context.Context, req *connect.Request[v1.As
 	}
 
 	// 稽核(同一交易,D18)。
-	if err := s.recordAudit(ctx, tx, id, target, "role_change",
+	if err := s.recordUserAudit(ctx, tx, id, target, "role_change",
 		map[string]any{"role": target.Role},
 		map[string]any{"role": roleCode},
 	); err != nil {
@@ -541,7 +541,7 @@ func (s *UserService) Deactivate(ctx context.Context, req *connect.Request[v1.De
 		Save(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := s.recordAudit(ctx, tx, id, target, "update",
+	if err := s.recordUserAudit(ctx, tx, id, target, "update",
 		map[string]any{"status": string(target.Status)},
 		map[string]any{"status": string(user.StatusInactive)},
 	); err != nil {
@@ -588,7 +588,7 @@ func (s *UserService) ForceLogout(ctx context.Context, req *connect.Request[v1.F
 	if _, err := tx.User.UpdateOneID(userID).AddTokenVersion(1).Save(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := s.recordAudit(ctx, tx, id, target, "force_logout", nil, nil); err != nil {
+	if err := s.recordUserAudit(ctx, tx, id, target, "force_logout", nil, nil); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("稽核寫入失敗: %w", err))
 	}
 	if err := tx.Commit(); err != nil {
@@ -597,9 +597,9 @@ func (s *UserService) ForceLogout(ctx context.Context, req *connect.Request[v1.F
 	return connect.NewResponse(&v1.ForceLogoutResponse{}), nil
 }
 
-// recordAudit 於交易內依操作者身分與目標使用者寫一筆稽核(統一入口,D18)。
+// recordUserAudit 於交易內依操作者身分與目標使用者寫一筆稽核(統一入口,D18)。
 // before/after 為「已過濾敏感欄位」的變更前/後摘要(可空)。
-func (s *UserService) recordAudit(ctx context.Context, tx *ent.Tx, actor authz.Identity, target *ent.User, action string, before, after map[string]any) error {
+func (s *UserService) recordUserAudit(ctx context.Context, tx *ent.Tx, actor authz.Identity, target *ent.User, action string, before, after map[string]any) error {
 	companyID := 0
 	if target.Edges.Company != nil {
 		companyID = target.Edges.Company.ID

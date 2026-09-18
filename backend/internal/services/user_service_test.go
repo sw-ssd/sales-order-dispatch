@@ -610,3 +610,34 @@ func TestUpdateUserScope(t *testing.T) {
 		}
 	})
 }
+
+// TestListUsersPagination 複審 Minor 4:分頁 meta(Total/PageSize)與跨頁切分正確(走 pageList)。
+func TestListUsersPagination(t *testing.T) {
+	ctx := context.Background()
+	db := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared&_fk=1")
+	t.Cleanup(func() { _ = db.Close() })
+	coID, deptA, _ := seedUserCompany(t, db)
+	for i, n := range []string{"甲", "乙", "丙"} {
+		if _, err := db.User.Create().SetCompanyID(coID).SetDepartmentID(deptA).
+			SetEmail("u" + uItoa(i+1) + "@t.com").SetName(n).SetRole("staff").SetPasswordHash("x").Save(ctx); err != nil {
+			t.Fatalf("seed user: %v", err)
+		}
+	}
+	id := authz.Identity{UserID: "2", CompanyID: uItoa(coID), Role: "company_admin", Roles: []string{"company_admin", "dept_admin", "staff"}}
+	client := newUserTestServerWithDB(t, id, db)
+
+	p1, err := client.ListUsers(ctx, connect.NewRequest(&v1.ListUsersRequest{Page: 1, PageSize: 2}))
+	if err != nil {
+		t.Fatalf("ListUsers: %v", err)
+	}
+	if got := p1.Msg.GetPagination(); got.GetTotal() != 3 || got.GetPageSize() != 2 || len(p1.Msg.GetUsers()) != 2 {
+		t.Fatalf("第1頁分頁應 total=3 size=2 users=2,got total=%d size=%d users=%d", got.GetTotal(), got.GetPageSize(), len(p1.Msg.GetUsers()))
+	}
+	p2, err := client.ListUsers(ctx, connect.NewRequest(&v1.ListUsersRequest{Page: 2, PageSize: 2}))
+	if err != nil {
+		t.Fatalf("ListUsers p2: %v", err)
+	}
+	if len(p2.Msg.GetUsers()) != 1 {
+		t.Fatalf("第2頁應剩 1 筆,got %d", len(p2.Msg.GetUsers()))
+	}
+}

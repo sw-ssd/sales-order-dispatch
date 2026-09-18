@@ -77,7 +77,7 @@ func (s *CustomerService) ListAddresses(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := customerScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (s *CustomerService) AddAddress(ctx context.Context, req *connect.Request[c
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := customerScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +202,7 @@ func (s *CustomerService) UpdateAddress(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := customerScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -302,7 +302,7 @@ func (s *CustomerService) DeleteAddress(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := customerScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}

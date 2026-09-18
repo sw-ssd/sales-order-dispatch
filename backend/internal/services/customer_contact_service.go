@@ -58,7 +58,7 @@ func (s *CustomerService) ListContacts(ctx context.Context, req *connect.Request
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := customerScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func (s *CustomerService) AddContact(ctx context.Context, req *connect.Request[c
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := customerScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +172,7 @@ func (s *CustomerService) UpdateContact(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := customerScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +249,7 @@ func (s *CustomerService) DeleteContact(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := customerScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
