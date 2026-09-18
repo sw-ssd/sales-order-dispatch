@@ -33,7 +33,7 @@
   - Create `backend/migrations/`(對應 migration,依 Phase 0 migrate 流程)
 - **介面**(Ent 實體):
   - `sales_orders`:`id`(UUID)、`company_id`、`department_id`、`order_no`(公司內唯一)、`customer_id`、`source`(訂單來源碼,對應 metadicts 系統級「訂單來源」,如 `W` / `A`)、`status`(enum:`pending` / `processing` / `completed` / `cancelled` / `voided`,預設 `pending`)、`expected_delivery_date`(date)、`sales_rep_id`(負責業務)、`note`、`dispatched_at` / `dispatched_by`(nullable)、`route_id` / `delivery_sequence`(nullable,看板位置)、`version`(整數樂觀鎖,D14 看板拖放用)、`created_by`、`created_at` / `updated_at` / `deleted_at`。
-  - `sales_order_items`:`id`、`sales_order_id`(FK)、`company_id` / `department_id`(冗餘以利 RLS)、`product_id`(FK,nullable — 見 4.2.2 手打品名)、`display_name`(名稱快照:別名或手打名稱;軟刪除商品後歷史訂單仍可顯示,D10)、`qty`(numeric)、`unit`(文字,下單時選用單位)、`base_qty`(numeric,換算基本單位後數量,4.2.1)、`cutting_spec_id`(nullable)、`special_cut_note`、`warehouse_id`(nullable)、`sort_order`、`created_at` / `updated_at` / `deleted_at`。
+  - `sales_order_items`:`id`、`sales_order_id`(FK)、`company_id` / `department_id`(冗餘以利 RLS)、`product_id`(FK,nullable — 見 4.2.2 手打品名)、`display_name`(名稱快照:別名或手打名稱;軟刪除商品後歷史訂單仍可顯示,D10)、`qty`(numeric)、`unit`(文字,下單時選用單位)、`base_qty`(numeric,換算基本單位後數量,4.2.1)、`processing_spec_id`(nullable)、`special_cut_note`、`warehouse_id`(nullable)、`sort_order`、`created_at` / `updated_at` / `deleted_at`。
   - `sales_order_events`:`id`、`sales_order_id`(FK)、`company_id`、`event_type`(enum:`create` / `edit` / `dispatch` / `dispatch_cancel` / `cancel` / `complete` / `void`)、`actor_id`、`reason`(nullable,僅 dispatch_cancel / void 必填語意)、`payload`(JSON,異動摘要,如狀態前後值)、`created_at`。**無** `updated_at` / `deleted_at`(僅追加)。
   - 索引:`sales_orders` 部分唯一 `(company_id, order_no) WHERE deleted_at IS NULL`;`(company_id, department_id, status, expected_delivery_date)` 複合索引供列表與看板;`sales_order_events` 索引 `(sales_order_id, created_at)`。
 - **實作邏輯**:
@@ -108,7 +108,7 @@
 - **介面**(Connect-RPC,package `v1`,Service `salesorder.v1.SalesOrderService`):
   - `ListOrders(ListOrdersRequest{page, page_size, status?, customer_id?, expected_delivery_date_range?, source?, keyword?}) → ListOrdersResponse{orders[], total}` — 預設排除 `deleted_at`;客戶帳號 data_scope self 自動限縮為自己。
   - `GetOrder(GetOrderRequest{id}) → GetOrderResponse{order, items[]}`。
-  - `CreateOrder(CreateOrderRequest{customer_id, source, expected_delivery_date, note?, sales_rep_id?, items[]{product_id?, manual_name?, display_name, qty, unit, cutting_spec_id?, special_cut_note?, warehouse_id?}, save_alias[]?}) → CreateOrderResponse{order}` — 下單組裝邏輯見 4.2.1–4.2.5。
+  - `CreateOrder(CreateOrderRequest{customer_id, source, expected_delivery_date, note?, sales_rep_id?, items[]{product_id?, manual_name?, display_name, qty, unit, processing_spec_id?, special_cut_note?, warehouse_id?}, save_alias[]?}) → CreateOrderResponse{order}` — 下單組裝邏輯見 4.2.1–4.2.5。
   - `UpdateOrder(UpdateOrderRequest{id, version, expected_delivery_date?, note?, items[]?}) → UpdateOrderResponse{order}` — 僅 pending;攜帶 `version` 樂觀鎖。
   - `CancelOrder(CancelOrderRequest{id, reason?}) → CancelOrderResponse{order}`。
   - `CompleteOrder(CompleteOrderRequest{id}) → CompleteOrderResponse{order}`。

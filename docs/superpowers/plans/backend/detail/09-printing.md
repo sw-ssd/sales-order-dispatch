@@ -46,11 +46,11 @@ decisions: D3(RLS 最後防線)、D4(Connect-RPC)、D12(全系統無金額)、D1
 
 - **目標**: 建立每個店家一張 A4 的對點單模板,依車次 → 店家分組,不顯示價格(D15)。`相依: 5.3.1`(共用模板目錄與 view model 慣例)
 - **檔案**: Create `backend/internal/print/templates/delivery_note.html`
-- **介面**: Go html/template 模板;輸入 view model 含:車次、出貨日期、店家資訊(`customer_code`、店名、地址、聯絡人、電話)、訂單明細列表(品名、數量、單位、分切規格、品項備註),以及頁尾簽收欄(客戶簽名、收貨日期留白)。view model 不含價格欄位。
+- **介面**: Go html/template 模板;輸入 view model 含:車次、出貨日期、店家資訊(`customer_code`、店名、地址、聯絡人、電話)、訂單明細列表(品名、數量、單位、處理規格、品項備註),以及頁尾簽收欄(客戶簽名、收貨日期留白)。view model 不含價格欄位。
 - **實作邏輯**:
   1. 一次列印可涵蓋同車次多店家,每店強制換頁(page-break-after),確保每店獨立一張 A4 可撕交客戶核對。
   2. 店家順序依 `delivery_sequence` 升冪;頁首呈現車次、出貨日期、店名與 `customer_code`。
-  3. 明細僅列品名、數量、單位;有分切規格者併列規格名稱,方便現場對點加工品。
+  3. 明細僅列品名、數量、單位;有處理規格者併列規格名稱,方便現場對點加工品。
   4. 頁尾保留簽收區:客戶簽名欄與收貨日期欄固定為空白,供現場手寫。
   5. 模板無價格/金額欄位;view model 建構處不帶價格。
 - **錯誤處理**: 同 5.3.1,渲染層不回 Connect code;店家不存在由組合層回 `not_found`。
@@ -69,7 +69,7 @@ decisions: D3(RLS 最後防線)、D4(Connect-RPC)、D12(全系統無金額)、D1
   1. 一份文件對應單一車次 + 單一倉別 + 單一出貨日期;倉別由 `sales_order_items.warehouse_id` 決定。
   2. 品項排序:先商品分類(依分類 `sort_order` 或名稱),再品名筆畫/字序;同商品跨店家合併為一列。
   3. 彙總數量以基本單位呈現,加總各明細 `base_qty`(§6.4),不混用下單單位,避免倉庫誤讀。
-  4. 有分切規格或 `special_cut_note` 的品項加註「需加工」提示,引導揀貨人員轉交加工室(與 5.3.4 銜接)。
+  4. 有處理規格或 `special_cut_note` 的品項加註「需加工」提示,引導揀貨人員轉交加工室(與 5.3.4 銜接)。
   5. 每列保留空白揀貨核對欄,供實揀打勾或手寫實揀量。
 - **錯誤處理**: 倉別不存在由組合層回 `not_found`;渲染層不回 Connect code。
 - **驗收**:
@@ -82,18 +82,18 @@ decisions: D3(RLS 最後防線)、D4(Connect-RPC)、D12(全系統無金額)、D1
 
 - **目標**: 建立分「加工室揀 / 配送揀」兩區塊的加工單模板,顯示原始數量,「加工後數量」欄列印空白供手寫回填,1.0 不回寫系統(D15)。`相依: 5.3.1`
 - **檔案**: Create `backend/internal/print/templates/processing_list.html`
-- **介面**: Go html/template 模板;輸入 view model 含:車次、出貨日期,以及兩個區塊列表——「加工室揀」區塊(倉別、品名、原始數量、基本單位、分切規格)、「配送揀」區塊(店家、品名、原始數量、單位、特殊分切備註);兩區塊每列皆含「加工後數量」欄,模板固定渲染為空白儲存格。
+- **介面**: Go html/template 模板;輸入 view model 含:車次、出貨日期,以及兩個區塊列表——「加工室揀」區塊(倉別、品名、原始數量、基本單位、處理規格)、「配送揀」區塊(店家、品名、原始數量、單位、特殊分切備註);兩區塊每列皆含「加工後數量」欄,模板固定渲染為空白儲存格。
 - **實作邏輯**:
-  1. 資料範圍:僅納入有 `cutting_spec_id` 或 `special_cut_note` 的訂單明細;無加工需求的明細不出現。
+  1. 資料範圍:僅納入有 `processing_spec_id` 或 `special_cut_note` 的訂單明細;無加工需求的明細不出現。
   2. 區塊順序固定:先「加工室揀」後「配送揀」(§7.2),跨頁時區塊標題重複。
-  3. 「加工室揀」區塊:依倉別 → 品名排序,顯示需從倉庫領至加工室的原料原始數量(基本單位)與分切規格。
+  3. 「加工室揀」區塊:依倉別 → 品名排序,顯示需從倉庫領至加工室的原料原始數量(基本單位)與處理規格。
   4. 「配送揀」區塊:依店家 `delivery_sequence` → 品名排序,顯示加工完成後隨車配送至各店的原始數量與下單單位。
   5. 「加工後數量」欄位兩區塊皆固定空白——模板層不輸出任何數值,由加工人員現場手寫回填;系統不提供回填 API(1.0 不回寫)。
 - **錯誤處理**: 渲染層不回 Connect code;無加工品項時由組合層標記空表(5.4.3 不產生 PDF)。
 - **驗收**:
   - [ ] 僅含需加工的品項。
   - [ ] 「加工室揀」區塊在前、「配送揀」區塊在後。
-  - [ ] 原始數量與分切規格正確顯示。
+  - [ ] 原始數量與處理規格正確顯示。
   - [ ] 「加工後數量」欄於所有列皆列印為空白。
 
 ---
@@ -124,11 +124,11 @@ decisions: D3(RLS 最後防線)、D4(Connect-RPC)、D12(全系統無金額)、D1
 - **檔案**: Create `backend/internal/print/service.go`
 - **介面**: 內部 service 方法,輸入:單據類型(`dispatch_summary` / `delivery_note` / `picking_list` / `processing_list`)、`route_id`、`target_date`,以及依類型而定的選擇器(對點單可指定 `customer_id` 單印一店;揀貨單可指定 `warehouse_id` 單印一倉);輸出:對應 view model 與「是否空表」標記。供 5.5 的 Preview / Print RPC 呼叫,非獨立端點。
 - **實作邏輯**:
-  1. 依 `department_id`(RLS 注入)+ `route_id` + `target_date`(對應 `sales_orders.expected_delivery_date`)查詢訂單與明細,聯結 customers、routes、warehouses、product_categories、cutting_specs 補齊顯示名稱。
+  1. 依 `department_id`(RLS 注入)+ `route_id` + `target_date`(對應 `sales_orders.expected_delivery_date`)查詢訂單與明細,聯結 customers、routes、warehouses、product_categories、processing_specs 補齊顯示名稱。
   2. 單車總表:依 `delivery_sequence` 排店家,品項以原始下單數量與單位列出。
-  3. 對點單:依車次 → 店家分組;指定 `customer_id` 時僅取該店;明細含分切規格。
+  3. 對點單:依車次 → 店家分組;指定 `customer_id` 時僅取該店;明細含處理規格。
   4. 揀貨單:依車次 → 倉別 → 商品分類 → 品名排序;同商品跨店合併,數量加總 `base_qty` 以基本單位呈現。
-  5. 加工單:僅取有 `cutting_spec_id` 或 `special_cut_note` 的明細,分「加工室揀」(倉別 → 品名)與「配送揀」(配送順序 → 品名)兩集合。
+  5. 加工單:僅取有 `processing_spec_id` 或 `special_cut_note` 的明細,分「加工室揀」(倉別 → 品名)與「配送揀」(配送順序 → 品名)兩集合。
   6. 邊界規則:查無任何符合明細時回傳空集合標記,由 5.4.3 決定不產生 PDF;軟刪除的主檔(如已刪商品)仍顯示歷史名稱編號(D10)。
   7. 狀態過濾不在此層:預覽不限狀態、正式列印限 `processing` 的判斷由 5.5.3 執行,本層只負責資料成形。
 - **錯誤處理**: `route_id` / `customer_id` / `warehouse_id` 不存在或不屬當前部門 → `not_found`(RLS 下查不到視同不存在);缺必要參數或類型與選擇器組合不合法 → `invalid_argument`。

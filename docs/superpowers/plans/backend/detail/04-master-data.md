@@ -182,20 +182,21 @@
 
 ## 3. Task 3.3:商品主檔 API
 
-### 子功能 3.3.1: products schema(單位換算、倉別、分切規格關聯)
+### 子功能 3.3.1: products schema(單位換算、倉別、處理規格關聯)
 
-- **目標**: 定義 `products`、`product_units`、`product_cutting_specs` 三實體,承載商品主檔、多組單位換算率與分切規格關聯。
+- **目標**: 定義 `products`、`product_units`、`product_processing_specs` 三實體,承載商品主檔、多組單位換算率與處理規格關聯。
 - **檔案**: Create `backend/internal/domain/products/schema.go`(三個 Ent schema)
 - **介面**: Ent 實體:
   - `Product`:`id`、`company_id`、`department_id`、`code`(部門內唯一)、`name`、`category_id`(指向 product_categories,可 NULL)、`inventory_warehouse_id`(產品分庫)、`picking_warehouse_id`(揀貨倉別)、`description`、`is_active`、`deleted_at` 與稽核欄位。
-  - `ProductUnit`:`id`、`product_id`、`unit_code`(對應 metadicts `type = unit` 的字典值)、`conversion_rate`(十進位,換算為基本單位的比率)、`is_base`(布林)、`sort_order`。
-  - `ProductCuttingSpec`:`id`、`product_id`、`cutting_spec_id`(關聯表,不得以陣列欄位儲存,規格 master-data)。
+  - `ProductUnit`:`id`、`product_id`、`unit_code`(對應 metadicts `type = unit` 的字典值)、`conversion_rate`(十進位,換算為基本單位的比率)、`is_base`(布林)、`sort_order`、`size_desc`(可選,單位規格描述,如「1盒=3kg」)。
+  - `ProductProcessingSpec`:`id`、`product_id`、`processing_spec_id`(關聯表,不得以陣列欄位儲存;`attributes` 為可選 JSONB 配對層指令,覆寫規格層)— 規格即 3.4.3 的 `processing_specs`。
 - **實作邏輯**:
   1. `products.code` 建部分唯一索引 `(department_id, code) WHERE deleted_at IS NULL`(部門內唯一,軟刪除可重建)。
   2. `product_units` 建部分唯一索引 `(product_id) WHERE is_base = true`(每商品至多一個基本單位;服務層保證「恰好一個」,見 3.3.2/3.3.3),另建 `(product_id, unit_code)` 唯一索引(同商品同單位僅一筆)。
   3. `conversion_rate` 採十進位型別(不用浮點),精度足以表達如 0.6 的換算率。
-  4. `product_cutting_specs` 建 `(product_id, cutting_spec_id)` 唯一索引。
+  4. `product_processing_specs` 建 `(product_id, processing_spec_id)` 唯一索引(一商品多規格、一規格多商品,多對多;可選 `attributes` 供配對層覆寫指令)。
   5. 倉別與分類引用不設跨表硬外鍵以外的額外約束,同部門合法性於 3.3.2 寫入路徑驗證。
+  6. **單位與換算約定(2026-09-19 定稿)**:單位一律走 `product_units`(`conversion_rate` 到基本單位 + `size_desc`)。當「基本單位是重量(如斤)、報價/訂單單位是盒(如 1 盒=3kg=5 斤)」:盒為商品的一種單位,`conversion_rate = 盒對基本單位之比率`(例 1 盒=5 斤),訂單 `base_qty = qty × rate`;盒的規格描述記於該單位列 `size_desc`。處理規格(3.4.3)**不自行換算**,其內部數量/輸出單位僅存於 `attributes`(顯示用,不參與 base 換算,因切/包有損耗且輸出單位與原料基本單位不成固定比率)。
 - **錯誤處理**: schema 定義,無執行期錯誤。
 - **驗收**:
   - [ ] 三表建立,索引如上;同部門同 `code` 未刪除商品不可並存,軟刪除後可重建同碼。
@@ -203,13 +204,13 @@
 
 ### 子功能 3.3.2: 商品 CRUD + 軟刪除 + 分類關聯
 
-- **目標**: 提供商品新增、查詢、修改、軟刪除與復原,寫入時連同單位設定與分切規格關聯一併落庫。`相依: 3.3.1`
+- **目標**: 提供商品新增、查詢、修改、軟刪除與復原,寫入時連同單位設定與處理規格關聯一併落庫。`相依: 3.3.1`
 - **檔案**: Create `backend/internal/domain/products/service.go`、`backend/internal/domain/products/repo.go`
-- **介面**: Connect-RPC `ProductService`:`ListProducts`(keyword、category_id 篩選、分頁 meta、include_deleted)/ `GetProduct`(含單位清單與分切規格清單)/ `CreateProduct` / `UpdateProduct` / `DeleteProduct` / `RestoreProduct`。Create / Update 的 Request 訊息形狀含 `units[]`(`unit_code`、`conversion_rate`、`is_base`、`sort_order`)與 `cutting_spec_ids[]`,採整組替換語意。
+- **介面**: Connect-RPC `ProductService`:`ListProducts`(keyword、category_id 篩選、分頁 meta、include_deleted)/ `GetProduct`(含單位清單與處理規格清單)/ `CreateProduct` / `UpdateProduct` / `DeleteProduct` / `RestoreProduct`。Create / Update 的 Request 訊息形狀含 `units[]`(`unit_code`、`conversion_rate`、`is_base`、`sort_order`、`size_desc?`)與 `processing_specs[]`(`processing_spec_id`、`attributes?`),採整組替換語意。
 - **實作邏輯**:
   1. 身分、角色(dept_admin / staff 限本部門)與 RLS 檢查同 3.1.2 步驟 1。
-  2. Create / Update 的交易邊界 = 商品主列 + `product_units` 整組替換 + `product_cutting_specs` 整組替換 + 稽核,同一交易(D18)。
-  3. 寫入前驗證:`code` 必填且符合部門命名習慣(長度上限);`category_id`、`inventory_warehouse_id`、`picking_warehouse_id` 若提供,須為同部門、未軟刪除的主檔(分類見 3.4.4,倉別見 3.4.1);`cutting_spec_ids` 每個須為同部門未刪除分切規格(見 3.4.3)。
+  2. Create / Update 的交易邊界 = 商品主列 + `product_units` 整組替換 + `product_processing_specs` 整組替換 + 稽核,同一交易(D18)。
+  3. 寫入前驗證:`code` 必填且符合部門命名習慣(長度上限);`category_id`、`inventory_warehouse_id`、`picking_warehouse_id` 若提供,須為同部門、未軟刪除的主檔(分類見 3.4.4,倉別見 3.4.1);`processing_specs[]` 每個 `processing_spec_id` 須為同部門未刪除的處理規格(見 3.4.3),`attributes` 為可選配對層 JSONB 指令。
   4. 單位組驗證(細節見 3.3.3):恰一個 `is_base = true`;基本單位 `conversion_rate` 恆為 1;其餘 `conversion_rate > 0`;`unit_code` 皆存在於 metadicts `unit` 字典(系統預設 + 本部門擴充聯集)。
   5. List:預設排除軟刪除;`keyword` 對 `code`、`name` 模糊比對;`category_id` 精確篩選。
   6. Delete:軟刪除 + 稽核;不連動刪除單位與關聯列(保留供歷史查詢),但新單據選品僅列未刪除商品。
@@ -217,7 +218,7 @@
 - **錯誤處理**:
   - 同 3.1.2 的身分 / 範圍 / 不存在對應碼。
   - 同部門同 `code` 未刪除商品已存在:`already_exists`;復原時撞碼同。
-  - 倉別 / 分類 / 分切規格跨部門或已刪除:`invalid_argument`。
+  - 倉別 / 分類 / 處理規格跨部門或已刪除:`invalid_argument`。
   - 單位組非法(無基本單位、多個基本單位、換算率非正數、單位字典不存在):`invalid_argument`。
 - **驗收**:
   - [ ] 商品可設定多組單位換算率並隨 GetProduct 讀回。
@@ -279,19 +280,24 @@
   - [ ] 部門各自維護車次,跨部門不可見不可選。
   - [ ] 軟刪除車次不再出現於新單據選項,歷史訂單車次名稱仍顯示。
 
-### 子功能 3.4.3: cutting_specs CRUD
+### 子功能 3.4.3: processing_specs CRUD（加工/處理規格,泛化自 cutting_specs）
 
-- **目標**: 各部門獨立維護分切規格,記錄其加工 / 配送揀貨歸屬,供商品關聯(3.3.1)與訂單明細選用。
-- **檔案**: Create `backend/internal/domain/cuttingspecs/`
-- **介面**: Connect-RPC `CuttingSpecService`(五法同上)。Ent 實體 `CuttingSpec`:`id`、`company_id`、`department_id`、`code`、`name`、`applies_to`(列舉:加工單歸屬 / 配送揀貨歸屬,決定該規格出現在加工單或揀貨單)、`sort_order`、`is_active`、`deleted_at` 與稽核欄位。
+- **目標**: 各部門獨立維護「加工/處理規格」,為**商品無關、普適多商品**的處理要求(切、修、醃、包裝…),供商品關聯(3.3.1)與訂單明細選用。2026-09-19 定稿:正名 `cutting_specs → processing_specs`(捨「分切」單一語意)。
+- **檔案**: Create `backend/internal/domain/processingspecs/`
+- **介面**: Connect-RPC `ProcessingSpecService`(五法同上)。Ent 實體 `ProcessingSpec`:`id`、`company_id`、`department_id`、`code`、`name`、`kind`(開放集,如 cutting / trimming / marinating / packaging / other,對應 metadicts `type = processing_kind` 字典值,部門可自擴)、`applies_to_processing`(bool)、`applies_to_picking`(bool,可與 processing 同時 true)、`attributes`(JSONB,自由結構指令,後端不解析、列印模板渲染)、`sort_order`、`is_active`、`deleted_at` 與稽核欄位。
 - **實作邏輯**:
   1. 同 3.4.1 步驟 1–4;`code` 部門內部分唯一。
-  2. `applies_to` 必填且僅接受列舉值;此歸屬供列印單據(見 `09-printing.md`)決定規格顯示於加工單或揀貨單。
-  3. 被商品關聯(`product_cutting_specs`)中的分切規格軟刪除時不強制清除關聯列;商品編輯時關聯清單過濾已刪除規格,新關聯不得引用已刪除規格。
-- **錯誤處理**: 同 3.4.1;`applies_to` 非法值 `invalid_argument`。
+  2. `kind` 於 metadicts(`type = processing_kind`)存在時驗證;未對應字典時以現值儲存(開放集,避免封閉 enum)。
+  3. `applies_to_processing` / `applies_to_picking` 為多值旗標,至少其一為 true(皆 false → `invalid_argument`);此歸屬供列印(見 `09-printing.md`)輔助分流,但**主要分流以明細是否需處理為準**(有 `processing_spec_id` 或 `special_cut_note` → 需加工)。
+  4. `attributes` 為不透明的結構化指令;建議慣例鍵 `output_unit` / `output_qty_per_portion`,由列印模板渲染,後端不驗證、不參與 base 換算。
+  5. 被商品關聯(`product_processing_specs`)中的規格軟刪除時不強制清除關聯列;商品編輯時關聯清單過濾已刪除規格,新關聯不得引用已刪除規格。
+  6. **案例 2(combos 組合包)記為 Phase-2**:多商品組合成單一販售單位(預先定義的 `combos` 主檔 + `combo_items` 組件 BOM),後端需將 combo 炸開成組件數量各自轉 base 單位聚合揀貨/加工量(接 3.3.3 換算);combo 的包裝規格以「多對多關聯 processing_specs ＋ 專屬 `packaging_spec_id`」雙軌並存。Phase-2 才實作,本波不建。
+- **錯誤處理**: 同 3.4.1;都為 false 旗標 → `invalid_argument`。
 - **驗收**:
-  - [ ] 分切規格帶加工 / 揀貨歸屬並可供商品多選關聯。
+  - [ ] 處理規格帶兩旗標(可同時 true)與 `attributes`,可供商品多對多關聯(案例 1:一商品多規格)。
+  - [ ] `kind` 開放集(metadicts 背書),部門可新增 `processing_kind` 字值不需改碼。
   - [ ] 軟刪除規格不可再被新關聯引用,既有商品查詢之規格清單自動排除。
+  - [ ](Phase-2)組合包炸組件換算、雙軌包裝規格,文件註記、未實作。
 
 ### 子功能 3.4.4: product_categories CRUD
 
