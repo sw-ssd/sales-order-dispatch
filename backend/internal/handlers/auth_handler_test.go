@@ -16,6 +16,7 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/config"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
+	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
@@ -535,6 +536,47 @@ func TestResetCustomerPasswordScopeDenied(t *testing.T) {
 	adminClient := newIdentifiedAuthClientWithDB(t, db, authz.Identity{UserID: "2", CompanyID: strconv.Itoa(cidA), Role: "company_admin", Roles: []string{"company_admin"}})
 	if _, err := adminClient.ResetCustomerPassword(ctx, connect.NewRequest(&v1.ResetCustomerPasswordRequest{UserId: strconv.Itoa(targetB)})); connect.CodeOf(err) != connect.CodePermissionDenied {
 		t.Fatalf("跨公司 company_admin 重置應 permission_denied,got %v", err)
+	}
+}
+
+// TestCompanyDeactivationBlocksLogin A2(2.1.3):停用公司客戶登入 → permission_denied,不核發憑證;
+// 恢復 active 後可正常登入。
+func TestCompanyDeactivationBlocksLogin(t *testing.T) {
+	e := newTestEnv(t)
+	ctx := context.Background()
+	co, err := e.db.Company.Create().SetName("停用測試公司").SetIdentifier("T-co-login").Save(ctx)
+	if err != nil {
+		t.Fatalf("company: %v", err)
+	}
+	hash, _ := auth.HashPassword("pw-123456")
+	if _, err := e.db.User.Create().SetCompanyID(co.ID).SetEmail("custacct@t.com").SetName("店家").SetRole("customer").SetIsCustomer(true).
+		SetAccountName("ACC01").SetPasswordHash(hash).Save(ctx); err != nil {
+		t.Fatalf("cust user: %v", err)
+	}
+
+	login := func() *connect.Response[v1.LoginResponse] {
+		r, err := e.rpc.Login(ctx, connect.NewRequest(&v1.LoginRequest{CustomerCode: "ACC01", Password: "pw-123456"}))
+		if err != nil {
+			t.Fatalf("Login: %v", err)
+		}
+		return r
+	}
+
+	// 公司 active:可登入。
+	if r := login(); r.Msg.GetAccessToken() == "" {
+		t.Fatal("公司 active 時應核發 access token")
+	}
+
+	// 停用公司 → permission_denied。
+	e.db.Company.UpdateOneID(co.ID).SetStatus(company.StatusInactive).SaveX(ctx)
+	if _, err := e.rpc.Login(ctx, connect.NewRequest(&v1.LoginRequest{CustomerCode: "ACC01", Password: "pw-123456"})); connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Fatalf("停用公司登入應 permission_denied,got %v", err)
+	}
+
+	// 恢復 active → 可登入。
+	e.db.Company.UpdateOneID(co.ID).SetStatus(company.StatusActive).SaveX(ctx)
+	if r := login(); r.Msg.GetAccessToken() == "" {
+		t.Fatal("恢復 active 後應可登入並核發 token")
 	}
 }
 

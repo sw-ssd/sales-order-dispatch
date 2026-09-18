@@ -85,13 +85,17 @@ func (h *AuthHandler) Login(ctx context.Context, req *connect.Request[v1.LoginRe
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("帳號已鎖定,請 30 分鐘後再試"))
 	}
 
-	u, err := h.deps.DB.User.Query().Where(user.AccountNameEQ(customerCode), user.IsCustomerEQ(true)).Only(ctx)
+	u, err := h.deps.DB.User.Query().Where(user.AccountNameEQ(customerCode), user.IsCustomerEQ(true)).WithCompany().Only(ctx)
 	if err != nil {
 		if !ent.IsNotFound(err) {
 			return nil, internal(err)
 		}
 		h.recordFailure(ctx, customerCode)
 		return nil, invalidCredentials()
+	}
+	// A2 公司停用連鎖(2.1.3):公司非 active → permission_denied,不核發憑證、不計失敗。
+	if u.Edges.Company != nil && u.Edges.Company.Status != company.StatusActive {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("公司已停用,無法登入"))
 	}
 	if u.Status != user.StatusActive {
 		h.recordFailure(ctx, customerCode)
