@@ -66,6 +66,7 @@ func NewEvaluator(rules []Rule, id Identity) *Evaluator {
 }
 
 const disabledRule = "\x00disabled"
+
 // Rules 回傳展開後的規則快照(供 Translate 使用)。
 func (e *Evaluator) Rules() []Rule {
 	return e.rules

@@ -11,9 +11,9 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
+	authzopenfga "github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
 	domainauth "github.com/salesorder/sales-order-1.0/backend/internal/domain/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/handlers"
-	authzopenfga "github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/internal/services"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/cache"

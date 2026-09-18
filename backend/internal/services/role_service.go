@@ -253,8 +253,8 @@ func (s *RoleService) loadPermissionModels(ctx context.Context, roleID int) ([]p
 			conds = map[string]any{}
 		}
 		out = append(out, permission{
-			resource:  rp.Resource,
-			action:    rp.Action,
+			resource:   rp.Resource,
+			action:     rp.Action,
 			conditions: conds,
 			inverted:   rp.Inverted,
 			sortOrder:  int(rp.SortOrder),

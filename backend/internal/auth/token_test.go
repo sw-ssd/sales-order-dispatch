@@ -185,6 +185,7 @@ func TestRefreshInvalidToken(t *testing.T) {
 		t.Fatalf("空 refresh 應 ErrInvalidRefresh,got %v", err)
 	}
 }
+
 // TestRotateRefreshConcurrentReplay P1-4 驗收:並發重放同一 refresh token 時,讀-刪-寫
 // 以原子原語完成,恰一個請求消耗成功,其餘必回 ErrRefreshRevoked(第二次重放必拒)。
 func TestRotateRefreshConcurrentReplay(t *testing.T) {

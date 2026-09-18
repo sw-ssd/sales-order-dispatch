@@ -14,6 +14,7 @@ import (
 	"github.com/alexedwards/scs/v2/memstore"
 	_ "github.com/mattn/go-sqlite3" // sqlite in-memory 測試驅動
 
+	"connectrpc.com/connect"
 	"github.com/salesorder/sales-order-1.0/backend/config"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
@@ -22,7 +23,6 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	authzopenfga "github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
 	ofga "github.com/salesorder/sales-order-1.0/backend/third_party/openfga"
-	"connectrpc.com/connect"
 )
 
 func TestVersionEndpoint(t *testing.T) {

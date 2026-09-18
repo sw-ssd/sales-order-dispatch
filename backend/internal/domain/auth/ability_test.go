@@ -2,7 +2,6 @@ package auth_test
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -11,87 +10,30 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
+	authzopenfga "github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
 	auth "github.com/salesorder/sales-order-1.0/backend/internal/domain/auth"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
+	ofga "github.com/salesorder/sales-order-1.0/backend/third_party/openfga"
 )
 
-// newTestHandler 建立 enttest sqlite 記憶體 client 與 GetAbility handler。
-// DSN 以測試名區隔,避免同 package 多測試共享同一 in-memory db。
+// newTestHandler 建立 enttest sqlite client 與 GetAbility handler。
 func newTestHandler(t *testing.T, developerEnabled bool) (*auth.AbilityHandler, *ent.Client, context.Context) {
 	t.Helper()
-	dsn := "file:" + strings.ReplaceAll(t.Name(), "/", "_") + "?mode=memory&cache=shared&_fk=1"
+	dsn := "file:" + t.Name() + "?mode=memory&cache=shared&_fk=1"
 	client := enttest.Open(t, "sqlite3", dsn)
 	t.Cleanup(func() { _ = client.Close() })
 	return auth.NewAbilityHandler(client, auth.Config{DeveloperAccountEnabled: developerEnabled}), client, context.Background()
 }
 
-func TestGetAbilityWithConditions(t *testing.T) {
-	h, client, ctx := newTestHandler(t, true)
-	role := client.Role.Create().SetCode("staff").SetName("門市").SetDataScope("department").SetIsSystem(true).SaveX(ctx)
-	client.RolePermission.Create().SetRoleID(role.ID).SetResource("sales_order").SetAction("cancel").
-		SetConditions(map[string]any{"status": "pending"}).SaveX(ctx)
-	client.RolePermission.Create().SetRoleID(role.ID).SetResource("sales_order").SetAction("read").
-		SetConditions(map[string]any{"department_id": "${user.department_id}"}).SetSortOrder(1).SaveX(ctx)
-
-	resp, err := h.GetAbility(
-		authz.WithIdentity(ctx, authz.Identity{UserID: "u1", CompanyID: "c1", DepartmentID: "d1", Roles: []string{"staff"}}),
-		connect.NewRequest(&v1.GetAbilityRequest{}),
-	)
+// newEngine 起 OpenFGA 記憶體引擎(測試用)。
+func newEngine(t *testing.T) *authzopenfga.Engine {
+	t.Helper()
+	ofgaClient, err := ofga.NewMemory(context.Background(), "ability-test-store")
 	if err != nil {
-		t.Fatalf("GetAbility: %v", err)
+		t.Fatalf("NewMemory: %v", err)
 	}
-	rules := resp.Msg.GetRules()
-	if len(rules) != 2 {
-		t.Fatalf("rules = %d, want 2", len(rules))
-	}
-
-	if rules[0].GetAction() != "cancel" || rules[0].GetSubject() != "sales_order" {
-		t.Fatalf("rules[0] = %s:%s, want cancel:sales_order", rules[0].GetAction(), rules[0].GetSubject())
-	}
-	if rules[0].GetInverted() {
-		t.Fatal("rules[0].inverted = true, want false")
-	}
-	// $eq 亦輸出 {op: value} 物件形(同欄位多運算子可合併)。
-	status := rules[0].GetConditions().GetFields()["status"].GetStructValue().GetFields()
-	if got := status["$eq"].GetStringValue(); got != "pending" {
-		t.Fatalf("rules[0].conditions.status.$eq = %q, want pending", got)
-	}
-
-	if rules[1].GetAction() != "read" {
-		t.Fatalf("rules[1].action = %q, want read", rules[1].GetAction())
-	}
-	// 佔位符已以身分展開為具體值($eq 物件形)。
-	dept := rules[1].GetConditions().GetFields()["department_id"].GetStructValue().GetFields()
-	if got := dept["$eq"].GetStringValue(); got != "d1" {
-		t.Fatalf("rules[1].conditions.department_id.$eq = %q, want d1(佔位符展開)", got)
-	}
-}
-
-func TestGetAbilityMultipleOperatorsSameField(t *testing.T) {
-	// P2-1 驗收:同欄位多運算子(含 $eq)合併為單一 {op: value} 物件,而非 $eq 覆蓋其他運算子。
-	h, client, ctx := newTestHandler(t, true)
-	role := client.Role.Create().SetCode("staff").SetName("門市").SetDataScope("department").SetIsSystem(true).SaveX(ctx)
-	client.RolePermission.Create().SetRoleID(role.ID).SetResource("sales_order").SetAction("cancel").
-		SetConditions(map[string]any{"status": map[string]any{"$eq": "pending", "$ne": "voided"}}).SaveX(ctx)
-
-	resp, err := h.GetAbility(
-		authz.WithIdentity(ctx, authz.Identity{UserID: "u1", CompanyID: "c1", DepartmentID: "d1", Roles: []string{"staff"}}),
-		connect.NewRequest(&v1.GetAbilityRequest{}),
-	)
-	if err != nil {
-		t.Fatalf("GetAbility: %v", err)
-	}
-	rules := resp.Msg.GetRules()
-	if len(rules) != 1 {
-		t.Fatalf("rules = %d, want 1", len(rules))
-	}
-	status := rules[0].GetConditions().GetFields()["status"].GetStructValue().GetFields()
-	if got := status["$eq"].GetStringValue(); got != "pending" {
-		t.Fatalf("conditions.status.$eq = %q, want pending", got)
-	}
-	if got := status["$ne"].GetStringValue(); got != "voided" {
-		t.Fatalf("conditions.status.$ne = %q, want voided($eq 不得覆蓋)", got)
-	}
+	t.Cleanup(ofgaClient.Close)
+	return authzopenfga.New(ofgaClient)
 }
 
 func TestGetAbilityDeveloper(t *testing.T) {
@@ -105,17 +47,11 @@ func TestGetAbilityDeveloper(t *testing.T) {
 			t.Fatalf("GetAbility: %v", err)
 		}
 		rules := resp.Msg.GetRules()
-		if len(rules) != 1 {
-			t.Fatalf("rules = %d, want 1", len(rules))
-		}
-		if rules[0].GetAction() != "manage" || rules[0].GetSubject() != "all" {
-			t.Fatalf("rules[0] = %s:%s, want manage:all", rules[0].GetAction(), rules[0].GetSubject())
-		}
-		if rules[0].GetConditions() != nil || rules[0].GetInverted() {
-			t.Fatalf("developer 規則應無條件且非 inverted: %+v", rules[0])
+		if len(rules) != 1 || rules[0].GetAction() != "manage" || rules[0].GetSubject() != "all" {
+			t.Fatalf("developer 開關啟用應回 manage:all,got %#v", rules)
 		}
 	})
-	t.Run("開關關閉視同一般身分", func(t *testing.T) {
+	t.Run("開關關閉視同一般身分(無能力)", func(t *testing.T) {
 		h, _, ctx := newTestHandler(t, false)
 		resp, err := h.GetAbility(
 			authz.WithIdentity(ctx, authz.Identity{Role: "developer", Roles: []string{"developer"}}),
@@ -125,70 +61,70 @@ func TestGetAbilityDeveloper(t *testing.T) {
 			t.Fatalf("GetAbility: %v", err)
 		}
 		if rules := resp.Msg.GetRules(); len(rules) != 0 {
-			t.Fatalf("rules = %d, want 0(開關關閉不特權)", len(rules))
+			t.Fatalf("開發逃生門關閉時 rules = %d, want 0", len(rules))
 		}
 	})
 }
 
-func TestGetAbilityGuest(t *testing.T) {
-	h, client, ctx := newTestHandler(t, true)
-	// 即使系統內有 staff 角色規則,guest 身分不應取得任何規則。
-	role := client.Role.Create().SetCode("staff").SetName("門市").SetDataScope("department").SetIsSystem(true).SaveX(ctx)
-	client.RolePermission.Create().SetRoleID(role.ID).SetResource("sales_order").SetAction("read").SaveX(ctx)
-
-	resp, err := h.GetAbility(
-		authz.WithIdentity(ctx, authz.Identity{Roles: []string{"guest"}}),
-		connect.NewRequest(&v1.GetAbilityRequest{}),
-	)
-	if err != nil {
-		t.Fatalf("GetAbility: %v", err)
+func TestGetAbilityOpenFGADriven(t *testing.T) {
+	h, _, baseCtx := newTestHandler(t, true)
+	ctx := context.Background()
+	e := newEngine(t)
+	// 授予 user:u1 對 sales_order / customer 的 can_read,及 sales_order 的 can_write。
+	if err := e.WriteTuple(ctx, "user:u1", "can_read", "ability:sales_order"); err != nil {
+		t.Fatalf("WriteTuple(read sales_order): %v", err)
 	}
-	if rules := resp.Msg.GetRules(); len(rules) != 0 {
-		t.Fatalf("guest rules = %d, want 0", len(rules))
+	if err := e.WriteTuple(ctx, "user:u1", "can_read", "ability:customer"); err != nil {
+		t.Fatalf("WriteTuple(read customer): %v", err)
 	}
-}
+	if err := e.WriteTuple(ctx, "user:u1", "can_write", "ability:sales_order"); err != nil {
+		t.Fatalf("WriteTuple(write sales_order): %v", err)
+	}
 
-func TestGetAbilityPlaceholderFailClosedAndInverted(t *testing.T) {
-	h, client, ctx := newTestHandler(t, true)
-	role := client.Role.Create().SetCode("staff").SetName("門市").SetDataScope("department").SetIsSystem(true).SaveX(ctx)
-	// 佔位符對應身分值為空 → 規則停用,不下發。
-	client.RolePermission.Create().SetRoleID(role.ID).SetResource("sales_order").SetAction("read").
-		SetConditions(map[string]any{"department_id": "${user.department_id}"}).SetSortOrder(1).SaveX(ctx)
-	// inverted 規則應原樣下發;非 $eq 運算子輸出 {op: value} 形。
-	client.RolePermission.Create().SetRoleID(role.ID).SetResource("sales_order").SetAction("cancel").
-		SetConditions(map[string]any{"status": map[string]any{"$ne": "closed"}}).SetInverted(true).SetSortOrder(2).SaveX(ctx)
-
-	resp, err := h.GetAbility(
-		authz.WithIdentity(ctx, authz.Identity{UserID: "u1", CompanyID: "c1", Roles: []string{"staff"}}), // DepartmentID 空
-		connect.NewRequest(&v1.GetAbilityRequest{}),
-	)
+	c := authz.WithEngine(authz.WithIdentity(baseCtx, authz.Identity{UserID: "u1", Roles: []string{"staff"}}), e)
+	resp, err := h.GetAbility(c, connect.NewRequest(&v1.GetAbilityRequest{}))
 	if err != nil {
 		t.Fatalf("GetAbility: %v", err)
 	}
 	rules := resp.Msg.GetRules()
-	if len(rules) != 1 {
-		t.Fatalf("rules = %d, want 1(展開失敗規則不下發)", len(rules))
+	got := map[string]string{}
+	for _, r := range rules {
+		got[r.GetAction()+"\x00"+r.GetSubject()] = ""
 	}
-	if rules[0].GetAction() != "cancel" || !rules[0].GetInverted() {
-		t.Fatalf("rules[0] = %+v, want cancel + inverted", rules[0])
+	for _, want := range []string{"read\x00sales_order", "read\x00customer", "write\x00sales_order"} {
+		if _, ok := got[want]; !ok {
+			t.Errorf("缺少能力 %q,got %#v", want, rules)
+		}
 	}
-	status := rules[0].GetConditions().GetFields()["status"].GetStructValue().GetFields()
-	if got := status["$ne"].GetStringValue(); got != "closed" {
-		t.Fatalf("conditions.status.$ne = %q, want closed", got)
+	// 未授予 → 不出現。
+	if _, ok := got["write\x00customer"]; ok {
+		t.Error("未授予 customer write 不應出現")
 	}
 }
 
-func TestGetAbilityNoIdentity(t *testing.T) {
-	h, client, ctx := newTestHandler(t, true)
-	role := client.Role.Create().SetCode("staff").SetName("門市").SetDataScope("department").SetIsSystem(true).SaveX(ctx)
-	client.RolePermission.Create().SetRoleID(role.ID).SetResource("sales_order").SetAction("read").SaveX(ctx)
+func TestGetAbilityNoEngineFailClosed(t *testing.T) {
+	h, _, ctx := newTestHandler(t, true)
+	// 未注入 engine → 空(除 developer 逃生門外)。
+	resp, err := h.GetAbility(
+		authz.WithIdentity(ctx, authz.Identity{UserID: "u1", Roles: []string{"staff"}}),
+		connect.NewRequest(&v1.GetAbilityRequest{}),
+	)
+	if err != nil {
+		t.Fatalf("GetAbility: %v", err)
+	}
+	if rules := resp.Msg.GetRules(); len(rules) != 0 {
+		t.Fatalf("無 engine 應回空,rules = %#v", rules)
+	}
+}
 
+func TestGetAbilityUnauthenticated(t *testing.T) {
+	h, _, ctx := newTestHandler(t, true)
+	// 未登入(無身分)→ 空。
 	resp, err := h.GetAbility(ctx, connect.NewRequest(&v1.GetAbilityRequest{}))
 	if err != nil {
 		t.Fatalf("GetAbility: %v", err)
 	}
-	// 未注入身分 → 零值 Roles → fail-closed 空規則。
 	if rules := resp.Msg.GetRules(); len(rules) != 0 {
-		t.Fatalf("rules = %d, want 0(未注入身分)", len(rules))
+		t.Fatalf("未登入應回空,rules = %#v", rules)
 	}
 }

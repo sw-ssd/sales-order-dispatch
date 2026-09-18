@@ -65,6 +65,7 @@ func (r *FieldRegistry) Instance(subject string, entity any) map[string]any {
 	}
 	return sd.ToInstance(entity)
 }
+
 // ConditionFieldInfo 為 UI 條件建構器的欄位描述。
 type ConditionFieldInfo struct {
 	Field string
@@ -90,6 +91,14 @@ func (r *FieldRegistry) ConditionFields(subject string) []ConditionFieldInfo {
 		out = append(out, ConditionFieldInfo{Field: n, Type: fd.Type, Ops: fd.Ops, Enum: fd.Enum})
 	}
 	return out
+}
+
+// opAllowed 判斷運算子是否為欄位允許集(無白名單 = 全允許)。
+func opAllowed(fd FieldDef, op Op) bool {
+	if len(fd.Ops) == 0 {
+		return true
+	}
+	return slices.Contains(fd.Ops, op)
 }
 
 // ValidateRuleConditions 驗證寫入的規則條件:欄位/運算子白名單 + enum 值合法。

@@ -10,11 +10,11 @@ import (
 	"net/http"
 	"strconv"
 
+	"connectrpc.com/connect"
 	"github.com/alexedwards/scs/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"connectrpc.com/connect"
 
 	"github.com/salesorder/sales-order-1.0/backend/config"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
@@ -47,20 +47,20 @@ type rpcAuth struct {
 // protectedRPC 對映受保護 RPC path → OpenFGA (resource, action)。
 // path 為 Connect-RPC 全路徑(剝除 /api/v1 前綴後)。未登入/無權 → Unauthenticated/PermissionDenied。
 var protectedRPC = map[string]rpcAuth{
-"/salesorder.v1.RoleService/ListRoles":            {"role", "read"},
-	"/salesorder.v1.RoleService/GetRolePermissions":    {"role", "read"},
-	"/salesorder.v1.RoleService/UpdateRolePermissions": {"role", "write"},
-	"/salesorder.v1.RoleService/ListConditionFields":   {"role", "read"},
-	"/salesorder.v1.CompanyService/ListCompanies":      {"company", "read"},
-	"/salesorder.v1.CompanyService/GetCompany":         {"company", "read"},
-	"/salesorder.v1.CompanyService/CreateCompany":      {"company", "write"},
-	"/salesorder.v1.CompanyService/UpdateCompany":      {"company", "write"},
-	"/salesorder.v1.CompanyService/DeleteCompany":      {"company", "write"},
-	"/salesorder.v1.DepartmentService/ListDepartments":    {"department", "read"},
-	"/salesorder.v1.DepartmentService/GetDepartment":     {"department", "read"},
-	"/salesorder.v1.DepartmentService/CreateDepartment":  {"department", "write"},
-	"/salesorder.v1.DepartmentService/UpdateDepartment":  {"department", "write"},
-	"/salesorder.v1.DepartmentService/DeleteDepartment":  {"department", "write"},
+	"/salesorder.v1.RoleService/ListRoles":              {"role", "read"},
+	"/salesorder.v1.RoleService/GetRolePermissions":     {"role", "read"},
+	"/salesorder.v1.RoleService/UpdateRolePermissions":  {"role", "write"},
+	"/salesorder.v1.RoleService/ListConditionFields":    {"role", "read"},
+	"/salesorder.v1.CompanyService/ListCompanies":       {"company", "read"},
+	"/salesorder.v1.CompanyService/GetCompany":          {"company", "read"},
+	"/salesorder.v1.CompanyService/CreateCompany":       {"company", "write"},
+	"/salesorder.v1.CompanyService/UpdateCompany":       {"company", "write"},
+	"/salesorder.v1.CompanyService/DeleteCompany":       {"company", "write"},
+	"/salesorder.v1.DepartmentService/ListDepartments":  {"department", "read"},
+	"/salesorder.v1.DepartmentService/GetDepartment":    {"department", "read"},
+	"/salesorder.v1.DepartmentService/CreateDepartment": {"department", "write"},
+	"/salesorder.v1.DepartmentService/UpdateDepartment": {"department", "write"},
+	"/salesorder.v1.DepartmentService/DeleteDepartment": {"department", "write"},
 }
 
 // SetOpenFGA 注入 OpenFGA 授權引擎(啟動組裝時;nil 則跳過 middleware 檢查)。
