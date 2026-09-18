@@ -7,10 +7,10 @@
 - `2026-08-05-sales-order-1.0-subproject-implementation-plan.md`（根層）：主計畫。50 Tasks 分 5 Waves，涵蓋 Backend / Web / App 三子專案
 - `backend/`：後端分域實作計畫（01~09）
 - `backend/detail/`：後端細部功能文件。`00-index.md` 為共通規則；01~10 對應各分域（10 = fleet 執行層 D32）
-- `app/`：App 技術棧選型計畫
+- `app/`：App 技術棧與認證基礎計畫
+- `frontend/`：Web 中台計畫（2026-09-18 新增，反映 auth/users/ability 現況）
 - `reference/`：原計畫（v2.9.0）。各計畫以「原計畫 Task x.y」引用
 - `archive/`：歷史／完成／作廢文件
-- 尚無前端專屬計畫；Web 端工作目前散見於主計畫與 backend 計畫
 
 > 註：`cross-cutting/` 原含 casl-integration，已於 2026-09-18 歸檔（見 archive）。
 
@@ -46,7 +46,8 @@ graph TD
 | 08-dispatch | `backend/2026-08-17-backend-08-dispatch-plan.md` | 派車看板 | ⬜ 未開始 | 領域無 code |
 | 09-printing | `backend/2026-08-17-backend-09-printing-plan.md` | 列印與 PDF | ⬜ 未開始 | 領域無 code |
 | fleet-execution（D32） | `backend/detail/10-fleet-execution.md` | Fleetbase 物流執行層 | ⬜ 未開始 | 細部文件；授權 OpenFGA/RLS 待定 |
-| app-flutter-stack | `app/2026-08-04-app-flutter-stack.md` | App 技術棧（D29） | ⬜ 未開始 | 0/52 |
+| app-flutter-stack | `app/2026-08-04-app-flutter-stack.md` | App 技術棧與認證基礎（D29） | 🟡 部分 | 骨架/auto_route/auth 已做；solidart/disco/fquery/Sembast 未落地 |
+| frontend | `frontend/2026-09-18-frontend-auth-users-plan.md` | Web 中台 auth/users/ability | 🟡 部分 | auth/ability 已實作；業務頁面待 domain |
 | 原計畫 | `reference/2026-07-17-sales-order-1-0-tasks.md` | v2.9.0 執行計畫 | 📦 參考 | 各計畫以「原計畫 Task x.y」引用 |
 
 ### 📦 archive（2026-09-18 歸檔）
