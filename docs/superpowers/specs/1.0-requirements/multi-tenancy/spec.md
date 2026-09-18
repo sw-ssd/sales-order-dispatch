@@ -7,7 +7,7 @@
 
 ### Requirement: 兩層租戶架構與資料歸屬
 
-系統 SHALL 採用「公司（Company）→ 部門（Department）」兩層租戶架構，Department MUST 隸屬於唯一一個 Company。所有業務資料（客戶、商品、訂單、派車、單據等）MUST 帶有 `company_id` 與 `department_id` 以標示所屬租戶；資料可見範圍 SHALL 依使用者角色的資料範圍等級決定：`super` 可跨公司存取全部資料，`company_admin` 可跨部門存取但僅限自己所屬公司，其他角色僅限自己所屬部門。（RLS 與 Casbin 的機制細節屬 authorization capability，不在此規範。）
+系統 SHALL 採用「公司（Company）→ 部門（Department）」兩層租戶架構，Department MUST 隸屬於唯一一個 Company。所有業務資料（客戶、商品、訂單、派車、單據等）MUST 帶有 `company_id` 與 `department_id` 以標示所屬租戶；資料可見範圍 SHALL 依使用者角色的資料範圍等級決定：`super` 可跨公司存取全部資料，`company_admin` 可跨部門存取但僅限自己所屬公司，其他角色僅限自己所屬部門。（RLS（與原 Casbin）的機制細節屬 authorization capability，不在此規範；授權機制已由 D32 修訂為 OpenFGA + RLS，見 authorization spec 檔頭註記。）
 
 #### Scenario: 依角色決定資料可見範圍
 

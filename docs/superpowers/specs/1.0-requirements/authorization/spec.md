@@ -2,8 +2,10 @@
 
 > 來源：原 OpenSpec delta spec（OpenSpec 工作流已停用，2026-08-03 遷移至 docs/）。
 
+> ⚠️ **D32 覆寫（2026-09-17）**：授權模型已改為 **OpenFGA + RLS**（移除 Casbin 與 CASL），前端 UI 權限由 OpenFGA `Check` / `list-objects` 驅動。本文件仍描述原「Casbin + CASL 三層」目標；OpenFGA 尚未開工。改寫為 OpenFGA 版本待決策落地後進行（見決策記錄 D32）。
 
-Casbin RBAC with domain（後端授權）+ PostgreSQL RLS（資料範圍）+ CASL.js（前端能力）的三層權限機制，涵蓋角色定義、policy 管理、權限設置頁面與開發者繞過。
+
+Casbin RBAC with domain（後端授權）+ PostgreSQL RLS（資料範圍）+ CASL.js（前端能力）的三層權限機制，涵蓋角色定義、policy 管理、權限設置頁面與開發者繞過。（⚠️ 此三層已由 D32 修訂為 OpenFGA + RLS，見上方註記。）
 
 ## Requirements
 
