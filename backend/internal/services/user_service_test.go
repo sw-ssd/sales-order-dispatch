@@ -130,6 +130,85 @@ func TestAssignRoleGuestDeniedNoManager(t *testing.T) {
 	}
 }
 
+func TestDeactivateBumpsTokenVersionAndAudit(t *testing.T) {
+	ctx := context.Background()
+	_, db := newUserTestServer(t, authz.Identity{})
+	coID, _, _ := seedUserCompany(t, db)
+	target, err := db.User.Create().SetCompanyID(coID).SetEmail("d@t.com").SetName("d").SetRole("staff").SetPasswordHash("x").Save(ctx)
+	if err != nil {
+		t.Fatalf("user: %v", err)
+	}
+	id := authz.Identity{UserID: "2", CompanyID: uItoa(coID), Role: "company_admin", Roles: []string{"company_admin", "dept_admin", "staff"}}
+	client := newUserTestServerWithDB(t, id, db)
+
+	if _, err := client.Deactivate(ctx, connect.NewRequest(&v1.DeactivateRequest{UserId: uItoa(target.ID)})); err != nil {
+		t.Fatalf("Deactivate: %v", err)
+	}
+	fresh, err := db.User.Get(ctx, target.ID)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if fresh.Status != "inactive" {
+		t.Errorf("期望 inactive,得到 %s", fresh.Status)
+	}
+	if fresh.TokenVersion != 1 {
+		t.Errorf("期望 token_version=1,得到 %d", fresh.TokenVersion)
+	}
+	// 稽核存在。
+	n, err := db.AuditLog.Query().Count(ctx)
+	if err != nil {
+		t.Fatalf("audit: %v", err)
+	}
+	if n < 1 {
+		t.Errorf("期望稽核紀錄,得到 %d", n)
+	}
+}
+
+func TestForceLogoutBumpsAndBlocksSelf(t *testing.T) {
+	ctx := context.Background()
+	_, db := newUserTestServer(t, authz.Identity{})
+	coID, _, _ := seedUserCompany(t, db)
+	target, err := db.User.Create().SetCompanyID(coID).SetEmail("f@t.com").SetName("f").SetRole("staff").SetPasswordHash("x").Save(ctx)
+	if err != nil {
+		t.Fatalf("user: %v", err)
+	}
+	id := authz.Identity{UserID: "2", CompanyID: uItoa(coID), Role: "company_admin", Roles: []string{"company_admin", "dept_admin", "staff"}}
+	client := newUserTestServerWithDB(t, id, db)
+
+	if _, err := client.ForceLogout(ctx, connect.NewRequest(&v1.ForceLogoutRequest{UserId: uItoa(target.ID)})); err != nil {
+		t.Fatalf("ForceLogout: %v", err)
+	}
+	fresh, _ := db.User.Get(ctx, target.ID)
+	if fresh.TokenVersion != 1 {
+		t.Errorf("期望 token_version=1,得到 %d", fresh.TokenVersion)
+	}
+
+	// 對自己 → invalid_argument。
+	// 操作者 id=2,目標 id=2(無此列但身份成立)。
+	_, err = client.ForceLogout(ctx, connect.NewRequest(&v1.ForceLogoutRequest{UserId: "2"}))
+	if connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("對自己期望 invalid_argument,得到 %v", err)
+	}
+}
+
+func TestDeactivateOutOfScopeDenied(t *testing.T) {
+	ctx := context.Background()
+	_, db := newUserTestServer(t, authz.Identity{})
+	coID, deptA, deptB := seedUserCompany(t, db)
+	// 部門乙的 staff。
+	other, err := db.User.Create().SetCompanyID(coID).SetDepartmentID(deptB).SetEmail("ob@t.com").SetName("ob").SetRole("staff").SetPasswordHash("x").Save(ctx)
+	if err != nil {
+		t.Fatalf("user: %v", err)
+	}
+	// dept_admin(部門甲)想停用部門乙帳號。
+	id := authz.Identity{UserID: "2", CompanyID: uItoa(coID), DepartmentID: uItoa(deptA), Role: "dept_admin", Roles: []string{"dept_admin", "staff"}}
+	client := newUserTestServerWithDB(t, id, db)
+	_, err = client.Deactivate(ctx, connect.NewRequest(&v1.DeactivateRequest{UserId: uItoa(other.ID)}))
+	if connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Fatalf("期望 permission_denied,得到 %v", err)
+	}
+}
+
 func TestListUsersScope(t *testing.T) {
 	ctx := context.Background()
 

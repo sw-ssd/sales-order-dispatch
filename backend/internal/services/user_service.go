@@ -382,11 +382,23 @@ func (s *UserService) Deactivate(ctx context.Context, req *connect.Request[v1.De
 	if target.Status == user.StatusInactive {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("帳號已為 inactive"))
 	}
-	// token_version+1 使在途 JWT/session 失效(1.6.4 比對),Deactivate 本身不需 session 刪除(由 tv 兜底)。
-	if _, err := s.db.User.UpdateOneID(userID).
+	// 停用為關鍵操作:status 異動 + token_version+1(D5) + 稽核(D18)同一交易。
+	tx, err := s.db.Tx(ctx)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if _, err := tx.User.UpdateOneID(userID).
 		SetStatus(user.StatusInactive).
 		AddTokenVersion(1).
 		Save(ctx); err != nil {
+		return nil, toConnectError(err)
+	}
+	if err := s.recordAudit(ctx, tx, id, target, "update", map[string]any{"status": string(target.Status), "action": "deactivate"}); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("稽核寫入失敗: %w", err))
+	}
+	if err := tx.Commit(); err != nil {
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&v1.DeactivateResponse{}), nil
@@ -417,10 +429,49 @@ func (s *UserService) ForceLogout(ctx context.Context, req *connect.Request[v1.F
 	if err := s.scopeForTarget(id, target); err != nil {
 		return nil, err
 	}
-	if _, err := s.db.User.UpdateOneID(userID).AddTokenVersion(1).Save(ctx); err != nil {
+	// 強制登出為關鍵操作:token_version+1 + 稽核(D18)同一交易。
+	tx, err := s.db.Tx(ctx)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if _, err := tx.User.UpdateOneID(userID).AddTokenVersion(1).Save(ctx); err != nil {
+		return nil, toConnectError(err)
+	}
+	if err := s.recordAudit(ctx, tx, id, target, "force_logout", nil); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("稽核寫入失敗: %w", err))
+	}
+	if err := tx.Commit(); err != nil {
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&v1.ForceLogoutResponse{}), nil
+}
+
+// recordAudit 於交易內依操作者身分與目標使用者寫一筆稽核(統一入口,D18)。
+func (s *UserService) recordAudit(ctx context.Context, tx *ent.Tx, actor authz.Identity, target *ent.User, action string, after map[string]any) error {
+	companyID := 0
+	if target.Edges.Company != nil {
+		companyID = target.Edges.Company.ID
+	}
+	actorID := 0
+	if pid, err := parseID(actor.UserID); err == nil {
+		actorID = pid
+	}
+	var deptID *int
+	if target.Edges.Department != nil {
+		d := target.Edges.Department.ID
+		deptID = &d
+	}
+	return audit.Record(ctx, tx, audit.Entry{
+		Action:       action,
+		ResourceType: "user",
+		ResourceID:   uItoaInt(target.ID),
+		CompanyID:    companyID,
+		DepartmentID: deptID,
+		UserID:       actorID,
+		After:        after,
+	})
 }
 
 // syncUserRoleTuple 同步使用者的 OpenFGA assigned tuple(角色異動):
