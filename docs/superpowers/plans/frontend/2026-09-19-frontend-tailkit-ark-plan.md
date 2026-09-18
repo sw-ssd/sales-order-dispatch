@@ -252,6 +252,10 @@ T2 的回報指出：`--warning: oklch(0.75 0.15 95)` 當文字用對比不足�
 
 `@theme inline` 需補 `--color-info: var(--info);`（`--color-success`/`--color-warning` 已存在）。驗收：`bg-warning/15 text-warning` 在淺色的對比 ≥ 4.5:1（用 chrome-headless-shell 量 computed 值或以 WCAG 公式核算，把數字寫進報告）。
 
+- [ ] **Step 0b: 回改 `info` variant（T2 的權宜）**
+
+T2 在 `--info` 尚不存在時借用 primary：`frontend/src/components/ui/button.tsx:34`（`border-primary/30 bg-primary/10 text-primary hover:bg-primary/15`）與 `frontend/src/components/ui/badge.tsx:26`（`bg-primary/10 text-primary`）。token 落地後改為映射表指定的 `bg-info/15`、`text-info`（hover 用 `bg-info/20`）。這 2 檔屬本 task 可改範圍。
+
 - [ ] **Step 1: 取 Tailkit 結構**
 
 ```
