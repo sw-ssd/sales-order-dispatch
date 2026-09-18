@@ -113,3 +113,40 @@ type sqlResult struct{}
 
 func (sqlResult) LastInsertId() (int64, error) { return 0, nil }
 func (sqlResult) RowsAffected() (int64, error) { return 0, nil }
+
+// TestRLSStatementsAllScopes D32/Task7 驗收:對四個 data_scope 驗證 RLSStatements
+// 產出對應的 SET LOCAL app.current_* 且皆含資料範圍(current_data_scope 兩命名別名)。
+func TestRLSStatementsAllScopes(t *testing.T) {
+	cases := []struct {
+		name  string
+		scope RLSScope
+	}{
+		{"all", RLSScope{UserID: "u9", CompanyID: "c9", DepartmentID: "d9", DataScope: DataScopeAll}},
+		{"company", RLSScope{UserID: "u9", CompanyID: "c9", DataScope: DataScopeCompany}},
+		{"department", RLSScope{UserID: "u9", CompanyID: "c9", DepartmentID: "d9", DataScope: DataScopeDepartment}},
+		{"self", RLSScope{UserID: "u9", DataScope: DataScopeSelf}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := RLSStatements(tc.scope)
+			for _, s := range got {
+				if len(s) < 10 || s[:10] != "SET LOCAL " {
+					t.Fatalf("語句格式錯誤: %q", s)
+				}
+			}
+			foundCurrent := false
+			foundAlias := false
+			for _, s := range got {
+				if s == "SET LOCAL app.current_data_scope = '"+string(tc.scope.DataScope)+"'" {
+					foundCurrent = true
+				}
+				if s == "SET LOCAL app.data_scope = '"+string(tc.scope.DataScope)+"'" {
+					foundAlias = true
+				}
+			}
+			if !foundCurrent || !foundAlias {
+				t.Fatalf("%s 資料範圍語句缺失,got %#v", tc.name, got)
+			}
+		})
+	}
+}
