@@ -62,6 +62,74 @@ func seedUserCompany(t *testing.T, db *ent.Client) (int, int, int) {
 
 func uItoa(i int) string { return strconv.Itoa(i) }
 
+func TestAssignRoleBumpsTokenVersionAndAudit(t *testing.T) {
+	ctx := context.Background()
+	_, db := newUserTestServer(t, authz.Identity{})
+	coID, deptA, _ := seedUserCompany(t, db)
+	// 目標使用者(guest, pending)。
+	target, err := db.User.Create().SetCompanyID(coID).SetDepartmentID(deptA).SetEmail("g@t.com").SetName("guest").SetRole("guest").SetStatus("pending").SetPasswordHash("x").Save(ctx)
+	if err != nil {
+		t.Fatalf("user: %v", err)
+	}
+	// 操作者 company_admin(同公司)。
+	id := authz.Identity{UserID: "2", CompanyID: uItoa(coID), Role: "company_admin", Roles: []string{"company_admin", "dept_admin", "staff"}}
+	client := newUserTestServerWithDB(t, id, db)
+
+	resp, err := client.AssignRole(ctx, connect.NewRequest(&v1.AssignRoleRequest{
+		UserId: uItoa(target.ID), Role: "staff", DepartmentId: uItoa(deptA),
+	}))
+	if err != nil {
+		t.Fatalf("AssignRole: %v", err)
+	}
+	if resp.Msg.GetUser().GetStatus() != "active" {
+		t.Errorf("期望 active,得到 %s", resp.Msg.GetUser().GetStatus())
+	}
+	if resp.Msg.GetUser().GetRole() != "staff" {
+		t.Errorf("期望 role staff,得到 %s", resp.Msg.GetUser().GetRole())
+	}
+
+	// token_version 遞增(由 0 → 1)。
+	fresh, err := db.User.Get(ctx, target.ID)
+	if err != nil {
+		t.Fatalf("get user: %v", err)
+	}
+	if fresh.TokenVersion != 1 {
+		t.Errorf("期望 token_version=1,得到 %d", fresh.TokenVersion)
+	}
+
+	// 稽核存在(action=role_change)。
+	audits, err := db.AuditLog.Query().All(ctx)
+	if err != nil {
+		t.Fatalf("audit: %v", err)
+	}
+	found := false
+	for _, a := range audits {
+		if a.Action == "role_change" && a.ResourceID == uItoa(target.ID) {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("期望存在 role_change 稽核紀錄,得到 %d 筆", len(audits))
+	}
+}
+
+func TestAssignRoleGuestDeniedNoManager(t *testing.T) {
+	ctx := context.Background()
+	_, db := newUserTestServer(t, authz.Identity{})
+	coID, deptA, _ := seedUserCompany(t, db)
+	target, err := db.User.Create().SetCompanyID(coID).SetDepartmentID(deptA).SetEmail("g2@t.com").SetName("g").SetRole("guest").SetStatus("pending").SetPasswordHash("x").Save(ctx)
+	if err != nil {
+		t.Fatalf("user: %v", err)
+	}
+	// staff 非管理者 → permission_denied。
+	id := authz.Identity{UserID: "3", CompanyID: uItoa(coID), DepartmentID: uItoa(deptA), Role: "staff", Roles: []string{"staff", "customer"}}
+	client := newUserTestServerWithDB(t, id, db)
+	_, err = client.AssignRole(ctx, connect.NewRequest(&v1.AssignRoleRequest{UserId: uItoa(target.ID), Role: "staff"}))
+	if connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Fatalf("期望 permission_denied,得到 %v", err)
+	}
+}
+
 func TestListUsersScope(t *testing.T) {
 	ctx := context.Background()
 

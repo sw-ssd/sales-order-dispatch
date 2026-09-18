@@ -15,7 +15,9 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
+	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
+	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
@@ -293,9 +295,17 @@ func (s *UserService) AssignRole(ctx context.Context, req *connect.Request[v1.As
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("不可指派為 guest(待審核狀態)"))
 	}
 
-	update := s.db.User.UpdateOneID(userID).
+	// 角色指派(含 guest 審核)為關鍵操作:角色變更 + token_version+1(D5) + 稽核(D18)同一交易。
+	tx, err := s.db.Tx(ctx)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	update := tx.User.UpdateOneID(userID).
 		SetRole(roleCode).
-		SetStatus(user.StatusActive) // 審核/指派後轉 active
+		SetStatus(user.StatusActive). // 審核/指派後轉 active
+		AddTokenVersion(1)            // 角色變更 → 在途舊 JWT/session 立即失效(D5)
 	if req.Msg.GetDepartmentId() != "" {
 		if did, err := parseID(req.Msg.GetDepartmentId()); err == nil {
 			update = update.SetDepartmentID(did)
@@ -304,6 +314,44 @@ func (s *UserService) AssignRole(ctx context.Context, req *connect.Request[v1.As
 	if _, err := update.Save(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
+
+	// 稽核(同一交易,D18)。操作者 company_id 取自目標所屬公司(或操作者身分)。
+	auditCompanyID := 0
+	if target.Edges.Company != nil {
+		auditCompanyID = target.Edges.Company.ID
+	}
+	actorID := 0
+	if pid, perr := parseID(id.UserID); perr == nil {
+		actorID = pid
+	}
+	deptID := target.Edges.Department
+	var auditDept *int
+	if deptID != nil {
+		d := deptID.ID
+		auditDept = &d
+	}
+	if err := audit.Record(ctx, tx, audit.Entry{
+		Action:       "role_change",
+		ResourceType: "user",
+		ResourceID:   uItoaInt(userID),
+		CompanyID:    auditCompanyID,
+		DepartmentID: auditDept,
+		UserID:       actorID,
+		Before:       map[string]any{"role": target.Role},
+		After:        map[string]any{"role": roleCode},
+	}); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("稽核寫入失敗: %w", err))
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, toConnectError(err)
+	}
+
+	// 同步 OpenFGA assigned tuple(引擎未注入時略過,OpenFGA 停用/開發降級時由 rolePolicy 承擔)。
+	// 對齊 role_service.syncRolePermissions:OpenFGA 與業務非同交易,commit 後執行。
+	if err := s.syncUserRoleTuple(ctx, target, roleCode); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("OpenFGA tuple 同步失敗: %w", err))
+	}
+
 	u, err := s.db.User.Query().WithCompany().WithDepartment().Where(user.ID(userID)).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
@@ -375,6 +423,33 @@ func (s *UserService) ForceLogout(ctx context.Context, req *connect.Request[v1.F
 	return connect.NewResponse(&v1.ForceLogoutResponse{}), nil
 }
 
+// syncUserRoleTuple 同步使用者的 OpenFGA assigned tuple(角色異動):
+// 刪除舊 role 的 assigned、寫入新 role 的 assigned(對齊 provision 的 user→role 格式)。
+// 引擎未注入(引擎 = EngineFrom ctx)或引擎/角色查詢不可用時靜默略過(OpenFGA 停用/降級)。
+func (s *UserService) syncUserRoleTuple(ctx context.Context, target *ent.User, newRoleCode string) error {
+	e := authz.EngineFrom(ctx)
+	if e == nil {
+		return nil
+	}
+	userObj := fmt.Sprintf("user:%d", target.ID)
+
+	// 刪除舊角色 assigned(若存在)。
+	if target.Role != "" && target.Role != newRoleCode {
+		if oldRole, err := s.db.Role.Query().Where(role.CodeEQ(target.Role)).Only(ctx); err == nil {
+			if derr := e.DeleteTuple(ctx, userObj, "assigned", fmt.Sprintf("role:%d", oldRole.ID)); derr != nil {
+				return derr
+			}
+		}
+	}
+	// 寫入新角色 assigned(若角色存在)。
+	if nr, err := s.db.Role.Query().Where(role.CodeEQ(newRoleCode)).Only(ctx); err == nil {
+		if werr := e.WriteTuple(ctx, userObj, "assigned", fmt.Sprintf("role:%d", nr.ID)); werr != nil {
+			return werr
+		}
+	}
+	return nil
+}
+
 // loadUser 載入單一使用者(含 company/department edge,供範圍判定)。
 func (s *UserService) loadUser(ctx context.Context, userID int) (*ent.User, error) {
 	u, err := s.db.User.Query().WithCompany().WithDepartment().Where(user.ID(userID)).Only(ctx)
@@ -422,6 +497,11 @@ func (s *UserService) scopeForTarget(id authz.Identity, target *ent.User) error 
 // isValidRole 判斷角色 code 是否為已知角色(內建 + 自訂)。
 func isValidRole(role string) bool {
 	return slices.Contains(auth.BuiltinRoles, role)
+}
+
+// uItoaInt 將 int 轉字串(稽核 ResourceID 用)。
+func uItoaInt(i int) string {
+	return strconv.Itoa(i)
 }
 
 // userToProto 將 ent.User 轉為 proto User(不含 password_hash)。
