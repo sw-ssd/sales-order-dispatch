@@ -469,6 +469,104 @@ func TestAuthorizeRPCWriteDenied(t *testing.T) {
 	}
 }
 
+// TestBearerToken 驗證 Authorization header 取 Bearer token 的前綴解析(大小寫不敏感)。
+func TestBearerToken(t *testing.T) {
+	cases := []struct {
+		header string
+		want   string
+	}{
+		{"Bearer abc.def", "abc.def"},
+		{"bearer abc", "abc"},
+		{"BEARER xyz", "xyz"},
+		{"Basic abc", ""},
+		{"Bearer", ""},
+		{"", ""},
+	}
+	for _, tc := range cases {
+		r := httptest.NewRequest(http.MethodGet, "/x", nil)
+		if tc.header != "" {
+			r.Header.Set("Authorization", tc.header)
+		}
+		if got := bearerToken(r); got != tc.want {
+			t.Errorf("bearerToken(%q) = %q, want %q", tc.header, got, tc.want)
+		}
+	}
+}
+
+// TestAuthzMiddlewareBearerJWT A2/01 Task 11 缺口驗收:App Bearer JWT 路徑的逐請求授權。
+// active 公司 + 合法 JWT → 注入身分;停用公司 + 非 developer → unauthenticated(401);
+// developer 豁免;非法 JWT → 不注入身分(401 落點)。
+func TestAuthzMiddlewareBearerJWT(t *testing.T) {
+	ctx := context.Background()
+	db := openIdentityDB(t, "file:identity-bearer?mode=memory&cache=shared&_fk=1")
+	co := db.Company.Create().SetName("測試公司").SetIdentifier("TB-1").SetStatus(company.StatusActive).SaveX(ctx)
+	u := db.User.Create().
+		SetEmail("bearer@example.com").SetName("測試").SetStatus(user.StatusActive).
+		SetRole("staff").SetPasswordHash("x").SetCompanyID(co.ID).SaveX(ctx)
+
+	s := &Server{cfg: &config.Config{API: config.API{DeveloperAccountEnabled: true}}}
+	s.tokens = auth.NewTokenManager("test-secret", auth.NewMemoryStore(), db)
+	sessions := auth.WebSessionManager(memstore.New(), 30*24*time.Hour, false, "lax")
+
+	token, err := s.tokens.IssueAccess(ctx, auth.TokenSubject{UserID: u.ID, CompanyID: co.ID, Role: u.Role})
+	if err != nil {
+		t.Fatalf("issue access: %v", err)
+	}
+
+	var gotID authz.Identity
+	probe := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotID = authz.IdentityFrom(r.Context())
+		w.WriteHeader(http.StatusNoContent)
+	})
+	mw := sessions.LoadAndSave(s.authzMiddleware(db, sessions, probe))
+	bearerReq := func(tok string) *http.Request {
+		r := httptest.NewRequest(http.MethodGet, "/probe", nil)
+		r.Header.Set("Authorization", "Bearer "+tok)
+		return r
+	}
+
+	// active 公司 + 合法 JWT → 身分注入(含公司 active)。
+	rec := httptest.NewRecorder()
+	mw.ServeHTTP(rec, bearerReq(token))
+	if rec.Code != http.StatusNoContent || gotID.UserID != strconv.Itoa(u.ID) {
+		t.Fatalf("active 公司 + 合法 JWT 應注入身分,code=%d id=%+v", rec.Code, gotID)
+	}
+
+	// 停用公司 + 非 developer → A2 阻斷 unauthenticated。
+	db.Company.UpdateOneID(co.ID).SetStatus(company.StatusSuspended).SaveX(ctx)
+	rec = httptest.NewRecorder()
+	mw.ServeHTTP(rec, bearerReq(token))
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("停用公司 + JWT 應 unauthenticated(401),got %d body=%s", rec.Code, rec.Body.String())
+	}
+	// 恢復 active。
+	db.Company.UpdateOneID(co.ID).SetStatus(company.StatusActive).SaveX(ctx)
+
+	// developer 豁免:停用公司下 developer JWT 仍放行。
+	dev := db.User.Create().
+		SetEmail("dev@example.com").SetName("開發").SetStatus(user.StatusActive).
+		SetRole("developer").SetPasswordHash("x").SetCompanyID(co.ID).SaveX(ctx)
+	devToken, err := s.tokens.IssueAccess(ctx, auth.TokenSubject{UserID: dev.ID, CompanyID: co.ID, Role: "developer"})
+	if err != nil {
+		t.Fatalf("issue dev: %v", err)
+	}
+	db.Company.UpdateOneID(co.ID).SetStatus(company.StatusSuspended).SaveX(ctx)
+	gotID = authz.Identity{}
+	rec = httptest.NewRecorder()
+	mw.ServeHTTP(rec, bearerReq(devToken))
+	if rec.Code != http.StatusNoContent || gotID.Role != "developer" {
+		t.Fatalf("developer 停用公司應豁免並注入身分,code=%d id=%+v", rec.Code, gotID)
+	}
+
+	// 非法 JWT → 不注入身分(零值)。
+	gotID = authz.Identity{}
+	rec = httptest.NewRecorder()
+	mw.ServeHTTP(rec, bearerReq("invalid.token.sig"))
+	if gotID.UserID != "" {
+		t.Fatalf("非法 JWT 不應注入身分,got %+v", gotID)
+	}
+}
+
 // TestAuthorizeRPCFallbackSemantics 驗證 OPENFGA_ENABLED 開關的兩種結局:
 // 停用 → 回退放行(由服務層授權承擔);啟用卻無引擎 → fail-closed(Internal)。
 func TestAuthorizeRPCFallbackSemantics(t *testing.T) {

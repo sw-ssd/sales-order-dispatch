@@ -47,6 +47,7 @@ func (s *Server) mountAuth() {
 
 	kv := auth.NewRedisStore(valkeyClient)
 	tokens := auth.NewTokenManager(s.cfg.Auth.JWTSecret, kv, entClient)
+	s.tokens = tokens // 供 authzMiddleware Bearer JWT 路徑逐請求驗證(01 1.6/A2)
 	lockout := auth.NewLoginLock(kv)
 	oneTime := auth.NewOneTimeStore(kv)
 	sessions := auth.WebSessionManager(auth.NewSessionStore(kv),

@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/alexedwards/scs/v2"
@@ -39,6 +40,7 @@ type Server struct {
 	cfg    *config.Config
 	router *chi.Mux
 	fga    *authzopenfga.Engine // 可選:OpenFGA 授權引擎(設入後 middleware 對受保護 RPC 做 Check,D32)
+	tokens *auth.TokenManager   // JWT access/refresh 管理(01 1.6;App Bearer 路徑逐請求驗證)
 }
 
 // rpcAuth 為受保護 RPC path 的 OpenFGA 對映(resource, action)。
@@ -137,6 +139,17 @@ func (s *Server) Handler() http.Handler {
 	return s.router
 }
 
+// bearerToken 由 Authorization header 取出 Bearer token(大小寫不敏感的前綴比對)。
+// 無 Bearer 前綴或空白 → 空字串(表示無 JWT 憑證)。
+func bearerToken(r *http.Request) string {
+	h := r.Header.Get("Authorization")
+	const prefix = "Bearer "
+	if len(h) > len(prefix) && strings.EqualFold(h[:len(prefix)], prefix) {
+		return strings.TrimSpace(h[len(prefix):])
+	}
+	return ""
+}
+
 // clientIP 由 RemoteAddr 取下 IP(去除 port;供稽核來源資訊,I9)。
 func clientIP(r *http.Request) string {
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
@@ -164,6 +177,7 @@ func (s *Server) authzMiddleware(entClient *ent.Client, sessions *scs.SessionMan
 
 		userID := auth.SessionUserID(ctx, sessions)
 		if userID > 0 {
+			// Web session 路徑：身分由 scs session 提供。
 			sessionTV := auth.SessionTokenVersion(ctx, sessions)
 			if id, scope, ok := s.identityFor(ctx, entClient, userID, sessionTV); ok {
 				ctx = authz.WithIdentity(ctx, id)
@@ -171,6 +185,17 @@ func (s *Server) authzMiddleware(entClient *ent.Client, sessions *scs.SessionMan
 			} else if sessionTV >= 0 {
 				// session 已記錄 tv 卻身分失效（token_version 變更 / 帳號停用等）→ 銷毀 session 強制登出。
 				_ = sessions.Destroy(ctx)
+			}
+		} else if tok := bearerToken(r); tok != "" && s.tokens != nil {
+			// App/API Bearer JWT 路徑（01 1.6/A2 缺口）：無 cookie session 時改驗 access JWT。
+			// VerifyAccess 做簽章/exp/tv 比對；identityFor 再載入使用者並判定帳號與公司 active。
+			// 失敗時不注入身分(零值) → authorizeRPC 對受保護 RPC 回 unauthenticated。
+			claims, err := s.tokens.VerifyAccess(ctx, tok)
+			if err == nil {
+				if id, scope, ok := s.identityFor(ctx, entClient, claims.UserID, claims.TokenVersion); ok {
+					ctx = authz.WithIdentity(ctx, id)
+					ctx = auth.WithRLS(ctx, scope)
+				}
 			}
 		}
 		// A2 公司停用連鎖(2.1.3):所屬公司非 active(非 developer)→ unauthenticated。
