@@ -12,7 +12,7 @@
 
 | Task | 內容 | 狀態 | 實際產物 |
 |---|---|---|---|
-| 1 | Company schema 擴充 + CompanyService CRUD + 唯一性 + 停用連鎖 | 🟡 部分 | `internal/services/company_service.go`（CRUD 完成；停用連鎖待） |
+| 1 | Company schema 擴充 + CompanyService CRUD + 唯一性 + 停用連鎖 | ✅ 完成（2026-09-18, A2）| `internal/services/company_service.go`（CRUD + status 變更稽核 D18）＋ `server.go` identityFor/middleware 阻斷（2.1.3）|
 | 2 | 部門管理 API | ✅ 完成 | `company_service.go`（Department CRUD）、`ent/schema/department.go` |
 | 3 | 使用者 CRUD + 角色指派 + 停用 + ForceLogout | 🟡 部分 | `user_service.go`、`user.proto`；AssignRole/Deactivate/ForceLogout 含 D18 稽核 + tv+1；主帳號連鎖(D22)待 Phase 3 |
 | 4 | Logo/Branding/PublicInfo/公開發現端點 | 🟡 部分 | PublicInfo 欄位序列化已做；Logo 上傳/公開端點待 |
@@ -35,9 +35,9 @@
 
 - [x] **Step 1: Company CRUD** — 5 個 RPC 全數實作
 - [x] **Step 2: proto CompanyService** — company.proto / company.pb.go
-- [ ] **Step 3: 停用連鎖（2.1.3）** — 停用公司連鎖部門/使用者；登入端點檢查被停用公司
+- [x] **Step 3: 停用連鎖（2.1.3）** — 停用公司 → middleware 逐請求阻擋（unauthenticated, 保留 session）+ 登入端點 `permission_denied` + developer 豁免（2026-09-18, A2 完成）
 
-**待辦摘要**：停用連鎖與登入端點檢查。
+**待辦摘要**：停用連鎖與登入端點檢查已完成（A2）。
 
 ---
 

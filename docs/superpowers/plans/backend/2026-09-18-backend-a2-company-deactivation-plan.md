@@ -17,6 +17,8 @@ RLS 接線（D3 每請求交易的 `ApplyRLS` 啟用）為獨立設計任務，�
 
 **狀態基準：** 2026-09-18。`identityFor` 已查 `u.Status==active` 但**未查公司 status**；Login 未載入公司；`CompanyService.Update` 未寫稽核。
 
+> **✅ 執行結果（2026-09-18）**：Task 1–3 全數完成並 commit（`development`）。交付：`RLSScope.CompanyActive` + middleware 逐請求阻擋（`unauthenticated`,不解銷 session,開發者豁免,恢復 active 可續用）；Login 停用公司 `permission_denied`；`CompanyService.Update` status 變更寫稽核（D18）。RLS D3 接線（`ApplyRLS` 啟用）為獨立設計任務,未在此波。
+
 ---
 
 ## Global Constraints

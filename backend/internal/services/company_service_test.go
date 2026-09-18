@@ -10,16 +10,39 @@ import (
 	_ "github.com/mattn/go-sqlite3" // sqlite in-memory 測試驅動
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
+	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 )
 
+// TestUpdateCompanyStatusWritesAudit A2(2.1.3)+D18:公司 status 變更(停用/啟用)與稽核同一交易。
+func TestUpdateCompanyStatusWritesAudit(t *testing.T) {
+	ctx := context.Background()
+	cc, _, db := newTestServerWithIdentity(t, authz.Identity{UserID: "1", CompanyID: "1", Role: "super", Roles: []string{"super"}})
+	co := db.Company.Create().SetName("公司A").SetIdentifier("AUD-1").SaveX(ctx)
+
+	if _, err := cc.UpdateCompany(ctx, connect.NewRequest(&v1.UpdateCompanyRequest{CompanyId: uItoa(co.ID), Status: strPtr("inactive")})); err != nil {
+		t.Fatalf("UpdateCompany status: %v", err)
+	}
+	got := db.Company.GetX(ctx, co.ID)
+	if got.Status != company.StatusInactive {
+		t.Fatalf("公司 status 應為 inactive,得到 %q", got.Status)
+	}
+	audits, _ := db.AuditLog.Query().Order(ent.Desc("id")).All(ctx)
+	if len(audits) != 1 {
+		t.Fatalf("status 變更應寫 1 筆稽核,得到 %d", len(audits))
+	}
+	if string(audits[0].Action) != "update" || audits[0].ResourceType != "company" {
+		t.Fatalf("稽核應為 update/company,得到 %s/%s", audits[0].Action, audits[0].ResourceType)
+	}
+}
+
 // newTestServer 以 super 身分建立測試 server(既有 CRUD 測試沿用;super 全權)。
 func newTestServer(t *testing.T) (salesorderv1connect.CompanyServiceClient, salesorderv1connect.DepartmentServiceClient) {
 	t.Helper()
-	super := authz.Identity{UserID: "u0", CompanyID: "c1", Role: "super", Roles: []string{"super"}}
+	super := authz.Identity{UserID: "1", CompanyID: "c1", Role: "super", Roles: []string{"super"}}
 	cc, dc, _ := newTestServerWithIdentity(t, super)
 	return cc, dc
 }
@@ -336,9 +359,9 @@ func TestCompanyServiceAuthorization(t *testing.T) {
 
 	t.Run("guest/staff/dept_admin 一律 PermissionDenied", func(t *testing.T) {
 		for _, id := range []authz.Identity{
-			{UserID: "u3", CompanyID: "c1", Role: "guest", Roles: []string{"guest"}},
-			{UserID: "u4", CompanyID: "c1", Role: "staff", Roles: []string{"staff"}},
-			{UserID: "u5", CompanyID: "c1", Role: "dept_admin", Roles: []string{"dept_admin"}},
+			{UserID: "3", CompanyID: "c1", Role: "guest", Roles: []string{"guest"}},
+			{UserID: "4", CompanyID: "c1", Role: "staff", Roles: []string{"staff"}},
+			{UserID: "5", CompanyID: "c1", Role: "dept_admin", Roles: []string{"dept_admin"}},
 		} {
 			cc, _, _ := newTestServerWithIdentity(t, id)
 			_, err := cc.ListCompanies(ctx, connect.NewRequest(&v1.ListCompaniesRequest{}))
@@ -349,7 +372,7 @@ func TestCompanyServiceAuthorization(t *testing.T) {
 	})
 
 	t.Run("company_admin 可 read/update 但不可 create/delete 公司", func(t *testing.T) {
-		cc, _, db := newTestServerWithIdentity(t, authz.Identity{UserID: "u2", CompanyID: "c1", Role: "company_admin", Roles: []string{"company_admin"}})
+		cc, _, db := newTestServerWithIdentity(t, authz.Identity{UserID: "2", CompanyID: "c1", Role: "company_admin", Roles: []string{"company_admin"}})
 		co := db.Company.Create().SetName("公司A").SetIdentifier("A-1").SaveX(ctx)
 
 		list, err := cc.ListCompanies(ctx, connect.NewRequest(&v1.ListCompaniesRequest{}))
@@ -374,7 +397,7 @@ func TestCompanyServiceAuthorization(t *testing.T) {
 	})
 
 	t.Run("super 可完整 CRUD 公司", func(t *testing.T) {
-		cc, _, db := newTestServerWithIdentity(t, authz.Identity{UserID: "u0", CompanyID: "c1", Role: "super", Roles: []string{"super"}})
+		cc, _, db := newTestServerWithIdentity(t, authz.Identity{UserID: "1", CompanyID: "c1", Role: "super", Roles: []string{"super"}})
 		co := db.Company.Create().SetName("公司A").SetIdentifier("A-1").SaveX(ctx)
 
 		created, err := cc.CreateCompany(ctx, connect.NewRequest(&v1.CreateCompanyRequest{Name: "公司B", Identifier: "B-1"}))
@@ -408,8 +431,8 @@ func TestDepartmentServiceAuthorization(t *testing.T) {
 
 	t.Run("staff/guest 一律 PermissionDenied", func(t *testing.T) {
 		for _, id := range []authz.Identity{
-			{UserID: "u3", CompanyID: "c1", Role: "staff", Roles: []string{"staff"}},
-			{UserID: "u4", CompanyID: "c1", Role: "guest", Roles: []string{"guest"}},
+			{UserID: "3", CompanyID: "c1", Role: "staff", Roles: []string{"staff"}},
+			{UserID: "4", CompanyID: "c1", Role: "guest", Roles: []string{"guest"}},
 		} {
 			_, dc, _ := newTestServerWithIdentity(t, id)
 			_, err := dc.ListDepartments(ctx, connect.NewRequest(&v1.ListDepartmentsRequest{}))
@@ -420,7 +443,7 @@ func TestDepartmentServiceAuthorization(t *testing.T) {
 	})
 
 	t.Run("dept_admin 可 read 但不可 write 部門", func(t *testing.T) {
-		_, dc, db := newTestServerWithIdentity(t, authz.Identity{UserID: "u5", CompanyID: "c1", Role: "dept_admin", Roles: []string{"dept_admin"}})
+		_, dc, db := newTestServerWithIdentity(t, authz.Identity{UserID: "5", CompanyID: "c1", Role: "dept_admin", Roles: []string{"dept_admin"}})
 		co := db.Company.Create().SetName("公司A").SetIdentifier("A-1").SaveX(ctx)
 		dep := db.Department.Create().SetName("門市一").SetCompanyID(co.ID).SaveX(ctx)
 
@@ -446,7 +469,7 @@ func TestDepartmentServiceAuthorization(t *testing.T) {
 	})
 
 	t.Run("company_admin 可 read/write 部門", func(t *testing.T) {
-		_, dc, db := newTestServerWithIdentity(t, authz.Identity{UserID: "u2", CompanyID: "c1", Role: "company_admin", Roles: []string{"company_admin"}})
+		_, dc, db := newTestServerWithIdentity(t, authz.Identity{UserID: "2", CompanyID: "c1", Role: "company_admin", Roles: []string{"company_admin"}})
 		co := db.Company.Create().SetName("公司A").SetIdentifier("A-1").SaveX(ctx)
 		dep := db.Department.Create().SetName("門市一").SetCompanyID(co.ID).SaveX(ctx)
 

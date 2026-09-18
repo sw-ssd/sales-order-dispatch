@@ -16,6 +16,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
+	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
@@ -207,25 +208,71 @@ func (s *CompanyService) UpdateCompany(ctx context.Context, req *connect.Request
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("identifier 建立後不可修改"))
 	}
 
-	build := s.db.Company.UpdateOneID(id)
+	exists, err := s.db.Company.Query().Where(company.ID(id)).Only(ctx)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	// 業務異動 + 稽核(D18)同一交易,公司停用連鎖之 status 變更尤須留痕。
+	tx, err := s.db.Tx(ctx)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	build := tx.Company.UpdateOneID(id)
+	changed := false
+	before := map[string]any{"name": exists.Name, "tax_id": exists.TaxID, "status": string(exists.Status)}
+	after := map[string]any{"name": exists.Name, "tax_id": exists.TaxID, "status": string(exists.Status)}
 	if msg.Name != nil {
 		if strings.TrimSpace(msg.GetName()) == "" {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("公司名稱不可為空"))
 		}
-		build = build.SetName(strings.TrimSpace(msg.GetName()))
+		n := strings.TrimSpace(msg.GetName())
+		build = build.SetName(n)
+		after["name"] = n
+		changed = true
 	}
 	if msg.TaxId != nil {
-		build = build.SetTaxID(strings.TrimSpace(msg.GetTaxId()))
+		t := strings.TrimSpace(msg.GetTaxId())
+		build = build.SetTaxID(t)
+		after["tax_id"] = t
+		changed = true
 	}
 	if msg.Status != nil {
 		if !validCompanyStatuses[*msg.Status] {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("無效的公司狀態 %q(允許: active / inactive / suspended)", *msg.Status))
 		}
-		build = build.SetStatus(company.Status(*msg.Status))
+		st := company.Status(*msg.Status)
+		if st != exists.Status {
+			build = build.SetStatus(st)
+			after["status"] = string(st)
+			changed = true
+		}
 	}
 
 	updated, err := build.Save(ctx)
 	if err != nil {
+		return nil, toConnectError(err)
+	}
+	if changed {
+		act := authz.IdentityFrom(ctx)
+		actor, _ := parseID(act.UserID)
+		meta := audit.MetaFrom(ctx)
+		if err := audit.Record(ctx, tx, audit.Entry{
+			Action:       "update",
+			ResourceType: "company",
+			ResourceID:   strconv.Itoa(id),
+			CompanyID:    id,
+			UserID:       actor,
+			Before:       before,
+			After:        after,
+			IPAddress:    meta.IP,
+			UserAgent:    meta.UserAgent,
+		}); err != nil {
+			return nil, toConnectError(err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
 		return nil, toConnectError(err)
 	}
 	p, err := companyToProto(updated)
