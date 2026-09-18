@@ -463,3 +463,89 @@ func TestChangePasswordTooShort(t *testing.T) {
 		t.Fatalf("新密碼過短應 invalid_argument,got %v", err)
 	}
 }
+
+// seedCustomerUser 建立客戶帳號,回傳其 id / company id。
+func seedCustomerUser(t *testing.T, db *ent.Client, cid int, email, name string, customer bool) int {
+	t.Helper()
+	u, err := db.User.Create().SetCompanyID(cid).SetEmail(email).SetName(name).SetRole("customer").SetIsCustomer(customer).
+		SetPasswordHash("x").Save(context.Background())
+	if err != nil {
+		t.Fatalf("seed customer: %v", err)
+	}
+	return u.ID
+}
+
+// seedCompanyNamed 建立指定 identifier 的公司,回傳其 id。
+func seedCompanyNamed(t *testing.T, db *ent.Client, ident string) int {
+	t.Helper()
+	co, err := db.Company.Create().SetName("公司-" + ident).SetIdentifier(ident).Save(context.Background())
+	if err != nil {
+		t.Fatalf("seed company named: %v", err)
+	}
+	return co.ID
+}
+
+// TestResetCustomerPasswordSuccess A3 1.5.4:super 重置客戶 → 回傳 ≥12 臨時密碼、舊 hash 替換、
+// must_change=true、效期 24h、token_version+1、稽核存在。
+func TestResetCustomerPasswordSuccess(t *testing.T) {
+	ctx := context.Background()
+	db := openAuthDB(t)
+	cid := seedAuthCompany(t, db)
+	target := seedCustomerUser(t, db, cid, "cust@t.com", "客戶", true)
+	client := newIdentifiedAuthClientWithDB(t, db, authz.Identity{UserID: "1", CompanyID: strconv.Itoa(cid), Role: "super", Roles: []string{"super"}})
+	resp, err := client.ResetCustomerPassword(ctx, connect.NewRequest(&v1.ResetCustomerPasswordRequest{UserId: strconv.Itoa(target)}))
+	if err != nil {
+		t.Fatalf("ResetCustomerPassword: %v", err)
+	}
+	if len(resp.Msg.GetTempPassword()) < 12 {
+		t.Fatalf("臨時密碼應 ≥ 12 字元,得到 %d", len(resp.Msg.GetTempPassword()))
+	}
+	got := db.User.GetX(ctx, target)
+	if !auth.VerifyPassword(got.PasswordHash, resp.Msg.GetTempPassword()) {
+		t.Fatal("回傳的臨時密碼應可驗證")
+	}
+	if !got.MustChangePassword {
+		t.Fatal("must_change_password 應為 true")
+	}
+	if got.TempPasswordExpiresAt == nil {
+		t.Fatal("temp_password_expires_at 應已設定")
+	}
+	if got.TokenVersion != 1 {
+		t.Fatalf("token_version 應 +1 為 1,得到 %d", got.TokenVersion)
+	}
+	if n, _ := db.AuditLog.Query().Count(ctx); n != 1 {
+		t.Fatalf("重置應寫 1 筆稽核,得到 %d", n)
+	}
+}
+
+// TestResetCustomerPasswordScopeDenied:staff 與跨公司 company_admin 皆被拒。
+func TestResetCustomerPasswordScopeDenied(t *testing.T) {
+	ctx := context.Background()
+	db := openAuthDB(t)
+	cidA := seedCompanyNamed(t, db, "co-a")
+	cidB := seedCompanyNamed(t, db, "co-b")
+	targetB := seedCustomerUser(t, db, cidB, "custb@t.com", "客戶B", true)
+
+	// staff → permission_denied
+	staffClient := newIdentifiedAuthClientWithDB(t, db, authz.Identity{UserID: "9", CompanyID: strconv.Itoa(cidA), Role: "staff", Roles: []string{"staff"}})
+	if _, err := staffClient.ResetCustomerPassword(ctx, connect.NewRequest(&v1.ResetCustomerPasswordRequest{UserId: strconv.Itoa(targetB)})); connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Fatalf("staff 重置應 permission_denied,got %v", err)
+	}
+	// company_admin(cidA) 重置 cidB 客戶 → permission_denied
+	adminClient := newIdentifiedAuthClientWithDB(t, db, authz.Identity{UserID: "2", CompanyID: strconv.Itoa(cidA), Role: "company_admin", Roles: []string{"company_admin"}})
+	if _, err := adminClient.ResetCustomerPassword(ctx, connect.NewRequest(&v1.ResetCustomerPasswordRequest{UserId: strconv.Itoa(targetB)})); connect.CodeOf(err) != connect.CodePermissionDenied {
+		t.Fatalf("跨公司 company_admin 重置應 permission_denied,got %v", err)
+	}
+}
+
+// TestResetCustomerPasswordNonCustomer:目標非客戶帳號 → invalid_argument。
+func TestResetCustomerPasswordNonCustomer(t *testing.T) {
+	ctx := context.Background()
+	db := openAuthDB(t)
+	cid := seedAuthCompany(t, db)
+	emp := seedCustomerUser(t, db, cid, "emp@t.com", "員工", false)
+	client := newIdentifiedAuthClientWithDB(t, db, authz.Identity{UserID: "1", CompanyID: strconv.Itoa(cid), Role: "super", Roles: []string{"super"}})
+	if _, err := client.ResetCustomerPassword(ctx, connect.NewRequest(&v1.ResetCustomerPasswordRequest{UserId: strconv.Itoa(emp)})); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("目標非客戶應 invalid_argument,got %v", err)
+	}
+}
