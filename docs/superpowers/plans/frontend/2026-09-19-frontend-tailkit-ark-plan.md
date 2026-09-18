@@ -73,11 +73,13 @@
 **Interfaces:**
 - Produces: `@tailwindcss/forms`、`@tailwindcss/typography` 可用；`--success`、`--warning` token 可用；`dark` variant 語意對齊 Tailkit。
 
-- [ ] **Step 1: 安裝 Tailwind 外掛**
+- [ ] **Step 1: 安裝 Ark 依賴與 Tailwind 外掛**
 
 ```bash
-cd frontend && pnpm add -D @tailwindcss/forms @tailwindcss/typography
+cd frontend && pnpm add @ark-ui/solid@^5.39.2 && pnpm add -D @tailwindcss/forms @tailwindcss/typography
 ```
+
+驗證：`pnpm ls @ark-ui/solid solid-js` 顯示 5.39.2 與 1.9.x，無 peer 警告。（`@ark-ui/solid` 是 T5–T7 的前置；`@kobalte/core` 仍在，Task 10 才移除。）
 
 - [ ] **Step 2: 改 `src/index.css`**
 
