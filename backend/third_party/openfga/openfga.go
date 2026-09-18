@@ -113,7 +113,7 @@ func (c *Client) EnsureDefaultModel(ctx context.Context) error {
 		return fmt.Errorf("openfga: list models: %w", err)
 	}
 	if len(list.GetAuthorizationModels()) > 0 {
-		// 最新 model id 為清單首筆(依時間遞減)。
+		// 取現有 model 之一記錄(Check/ListObjects 未傳 AuthorizationModelId,OpenFGA 自用最新)。
 		c.ModelID = list.GetAuthorizationModels()[0].GetId()
 		return nil
 	}
@@ -179,11 +179,9 @@ func (c *Client) DeleteTuple(ctx context.Context, user, relation, object string)
 	return err
 }
 
-// ListRoleTuples 列舉 role userset(user=role:<rid>#assigned)的既有 tuples,供 reconcile
-// 刪除已移除的 role→ability 權限。OpenFGA Read 於僅給 user 時要求 object type;
-// 此處以全量讀取(空 filter)再於客戶端過濾,確保取得該 role 的全部 role→ability tuples。
-func (c *Client) ListRoleTuples(ctx context.Context, roleID int) ([][3]string, error) {
-	userset := fmt.Sprintf("role:%d#assigned", roleID)
+// ListTuples 列舉 store 全部 tuples(分頁全量),供 reconcile 差異比對。
+// OpenFGA Read 於僅給 user 時要求 object type,故此處以空 filter 全量讀取。
+func (c *Client) ListTuples(ctx context.Context) ([][3]string, error) {
 	var out [][3]string
 	token := ""
 	for {
@@ -192,11 +190,11 @@ func (c *Client) ListRoleTuples(ctx context.Context, roleID int) ([][3]string, e
 			ContinuationToken: token,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("openfga: read role tuples: %w", err)
+			return nil, fmt.Errorf("openfga: read tuples: %w", err)
 		}
 		for _, t := range resp.GetTuples() {
 			k := t.GetKey()
-			if k == nil || k.GetUser() != userset {
+			if k == nil {
 				continue
 			}
 			out = append(out, [3]string{k.GetUser(), k.GetRelation(), k.GetObject()})

@@ -120,10 +120,11 @@ func (s *Server) mountOpenFGA(db *ent.Client) {
 		log.Printf("openfga: 略過授權引擎掛載(engine: %v),回退既有 RLS/Casbin 授權", err)
 		return
 	}
-	s.SetOpenFGA(authzopenfga.New(client))
+	engine := authzopenfga.New(client)
+	s.SetOpenFGA(engine)
 	// 供給 OpenFGA 授權資料(role_permissions→role ability;users→role assigned),
 	// 使 middleware Check 得以判定(修復零 tuple → 全員 deny)。production 供給失敗即終止。
-	if err := authz.Provision(context.Background(), authzopenfga.New(client), db); err != nil {
+	if err := authz.Provision(context.Background(), engine, db); err != nil {
 		if s.cfg.API.Env == "production" {
 			log.Fatalf("config: OpenFGA 授權資料供給失敗,拒絕啟動: %v", err)
 		}

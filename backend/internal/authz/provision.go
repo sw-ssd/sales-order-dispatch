@@ -28,82 +28,118 @@ func permissionRelation(action string) (string, bool) {
 	}
 }
 
-// Provision 於啟動時將 DB 授權資料全量同步至 OpenFGA(D32)。
-// 分兩段:role_permissions → role→ability tuples;users → user→role assignment tuples。
-func Provision(ctx context.Context, e *openfga.Engine, db *ent.Client) error {
-	if err := ProvisionRoleAbilities(ctx, e, db); err != nil {
-		return err
+// managedTuple 判斷 tuple 是否屬本 reconcile 管理範圍(role→ability 與 user→role),
+// 避免誤刪非本模組寫入的其他 tuple。
+func managedTuple(user, relation, object string) bool {
+	// role→ability: user="role:<rid>#assigned"、relation=can_read/can_write、object="ability:<res>"。
+	if relation == "can_read" || relation == "can_write" {
+		return len(user) > 5 && user[:5] == "role:" && len(object) > 8 && object[:8] == "ability:"
 	}
-	return ProvisionUserRoles(ctx, e, db)
+	// user→role assignment: user="user:<uid>"、relation="assigned"、object="role:<rid>"。
+	if relation == "assigned" {
+		return len(user) > 5 && user[:5] == "user:" && len(object) > 5 && object[:5] == "role:"
+	}
+	return false
 }
 
-// ProvisionRoleAbilities 將全部 role_permissions(非 inverted)translate 成 role→ability tuples。
-// 依 role 分組:先刪除既有 role→ability tuples 再寫入目前集合(reconcile,使「移除的權限」亦
-// 反映到 OpenFGA)。
-func ProvisionRoleAbilities(ctx context.Context, e *openfga.Engine, db *ent.Client) error {
-	rows, err := db.RolePermission.Query().All(ctx)
+// Provision 將 DB 授權資料全量 reconcile 至 OpenFGA(D32):讀取 store 現有 tuples,
+// 計算期望集合(role_permissions→role ability;active users→role assigned),
+// 刪除「管理範圍內但不在期望集合」的舊 tuples(使移除權限/角色變更不殘留),再補寫缺漏。
+func Provision(ctx context.Context, e *openfga.Engine, db *ent.Client) error {
+	desired, err := desiredTuples(ctx, db)
 	if err != nil {
-		return fmt.Errorf("authz: 載入 role_permissions: %w", err)
+		return err
 	}
-	byRole := map[int][]*ent.RolePermission{}
-	for _, rp := range rows {
-		byRole[rp.RoleID] = append(byRole[rp.RoleID], rp)
+	existing, err := e.ListTuples(ctx)
+	if err != nil {
+		return fmt.Errorf("authz: 列舉既有 tuples: %w", err)
 	}
-	for roleID, perms := range byRole {
-		if err := deleteRoleAbilities(ctx, e, roleID); err != nil {
-			return err
+	// 刪除管理範圍內、但已不在期望集合的 tuples(避免殘留授權)。
+	for _, t := range existing {
+		if !managedTuple(t[0], t[1], t[2]) {
+			continue
 		}
-		for _, p := range perms {
-			if p.Inverted {
-				continue // inverted(拒絕)不得轉為 allow tuple
-			}
-			rel, ok := permissionRelation(p.Action)
-			if !ok {
-				continue
-			}
-			userset := fmt.Sprintf("role:%d#assigned", roleID)
-			if err := e.WriteTuple(ctx, userset, rel, "ability:"+p.Resource); err != nil {
-				return fmt.Errorf("authz: 寫入 role=%d ability=%s: %w", roleID, p.Resource, err)
-			}
+		key := tupleKey(t[0], t[1], t[2])
+		if desired[key] {
+			continue
+		}
+		if err := e.DeleteTuple(ctx, t[0], t[1], t[2]); err != nil {
+			return fmt.Errorf("authz: 刪除殘留 tuple %v: %w", t, err)
+		}
+	}
+	// 補寫缺漏(期望集合中尚不存在的 tuples,以現存集合去重)。
+	have := map[string]bool{}
+	for _, t := range existing {
+		have[tupleKey(t[0], t[1], t[2])] = true
+	}
+	for key := range desired {
+		if have[key] {
+			continue
+		}
+		u, rel, obj := splitTupleKey(key)
+		if err := e.WriteTuple(ctx, u, rel, obj); err != nil {
+			return fmt.Errorf("authz: 寫入 tuple %v: %w", key, err)
 		}
 	}
 	return nil
 }
 
-// ProvisionUserRoles 將全部 active 使用者的 role code translate 成 user→role assignment tuples
-// (role:<rid>#assigned@user:<uid>)。model 中 role 型別的 assigned 為 user userset,故 tuple 為
-// user=<uid> assigned role:<rid>。僅在 role code 對應角色存在時寫入;未知角色略過(不誤授權)。
-func ProvisionUserRoles(ctx context.Context, e *openfga.Engine, db *ent.Client) error {
+// desiredTuples 由 DB 計算期望的 OpenFGA tuple 集合(key=user\x00relation\x00object)。
+func desiredTuples(ctx context.Context, db *ent.Client) (map[string]bool, error) {
+	out := map[string]bool{}
+
+	// role_permissions(非 inverted、支援動作)→ role→ability。
+	perms, err := db.RolePermission.Query().All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("authz: 載入 role_permissions: %w", err)
+	}
+	for _, p := range perms {
+		if p.Inverted {
+			continue // inverted(拒絕)不得轉為 allow tuple
+		}
+		rel, ok := permissionRelation(p.Action)
+		if !ok {
+			continue
+		}
+		userset := fmt.Sprintf("role:%d#assigned", p.RoleID)
+		out[tupleKey(userset, rel, "ability:"+p.Resource)] = true
+	}
+
+	// active users(role code 對應既有角色)→ user→role assignment。
 	users, err := db.User.Query().Where(user.StatusEQ(user.StatusActive)).All(ctx)
 	if err != nil {
-		return fmt.Errorf("authz: 載入 users: %w", err)
+		return nil, fmt.Errorf("authz: 載入 users: %w", err)
 	}
 	for _, u := range users {
 		r, err := db.Role.Query().Where(role.CodeEQ(u.Role)).Only(ctx)
 		if err != nil {
-			// 角色不存在 → 略過。
-			continue
+			continue // 角色不存在 → 略過(不誤授權)
 		}
-		uid := fmt.Sprintf("%d", u.ID)
-		rid := fmt.Sprintf("%d", r.ID)
-		if err := e.WriteTuple(ctx, "user:"+uid, "assigned", "role:"+rid); err != nil {
-			return fmt.Errorf("authz: 指派 user=%d role=%s: %w", u.ID, rid, err)
-		}
+		out[tupleKey(fmt.Sprintf("user:%d", u.ID), "assigned", fmt.Sprintf("role:%d", r.ID))] = true
 	}
-	return nil
+	return out, nil
 }
 
-// deleteRoleAbilities 刪除特定 role 的既有 role→ability tuples(role:<rid>#assigned can_* ability:*)。
-// 依 role userset 列舉既有 tuples 逐一刪除(reconcile 前置)。
-func deleteRoleAbilities(ctx context.Context, e *openfga.Engine, roleID int) error {
-	tuples, err := e.ListRoleTuples(ctx, roleID)
-	if err != nil {
-		return fmt.Errorf("authz: 列舉 role=%d tuples: %w", roleID, err)
-	}
-	for _, t := range tuples {
-		if err := e.DeleteTuple(ctx, t[0], t[1], t[2]); err != nil {
-			return fmt.Errorf("authz: 刪除 role=%d tuple %v: %w", roleID, t, err)
+// tupleKey 以 \x00 串接 (user, relation, object) 作為集合鍵。
+func tupleKey(user, relation, object string) string {
+	return user + "\x00" + relation + "\x00" + object
+}
+
+// splitTupleKey 還原 tupleKey 的三元組。
+func splitTupleKey(k string) (user, relation, object string) {
+	parts := []string{}
+	cur := ""
+	for i := 0; i < len(k); i++ {
+		if k[i] == 0 {
+			parts = append(parts, cur)
+			cur = ""
+			continue
 		}
+		cur += string(k[i])
 	}
-	return nil
+	parts = append(parts, cur)
+	if len(parts) != 3 {
+		return "", "", ""
+	}
+	return parts[0], parts[1], parts[2]
 }

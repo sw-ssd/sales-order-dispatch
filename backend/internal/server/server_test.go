@@ -89,9 +89,13 @@ func TestInitRejectsInsecureJWTSecret(t *testing.T) {
 }
 
 // newIdentityTestEnv 建立測試用 Server(DeveloperAccountEnabled=true 避免 developer 防護
-// 干擾)與 scs session manager。
+// 干擾;OpenFGA.Enabled=true 讓 authorizeRPC 走 OpenFGA 檢查而非停用回退)
+// 與 scs session manager。
 func newIdentityTestEnv() (*Server, *scs.SessionManager) {
-	s := &Server{cfg: &config.Config{API: config.API{DeveloperAccountEnabled: true}}}
+	s := &Server{cfg: &config.Config{
+		API:     config.API{DeveloperAccountEnabled: true},
+		OpenFGA: config.OpenFGA{Enabled: true},
+	}}
 	sessions := auth.WebSessionManager(memstore.New(), 30*24*time.Hour, false, "lax")
 	return s, sessions
 }
@@ -325,4 +329,25 @@ func TestAuthorizeRPCWriteDenied(t *testing.T) {
 	if err := s.authorizeRPC(c, rpcAuth{resource: "role", action: "read"}); err != nil {
 		t.Fatalf("read 已授予應放行,got %v", err)
 	}
+}
+
+// TestAuthorizeRPCFallbackSemantics 驗證 OPENFGA_ENABLED 開關的兩種結局:
+// 停用 → 回退放行(由服務層授權承擔);啟用卻無引擎 → fail-closed(Internal)。
+func TestAuthorizeRPCFallbackSemantics(t *testing.T) {
+	ctx := context.Background()
+	c := authz.WithIdentity(ctx, authz.Identity{UserID: "7", Roles: []string{"staff"}})
+
+	t.Run("OpenFGA 停用 → 回退放行", func(t *testing.T) {
+		s := &Server{cfg: &config.Config{API: config.API{DeveloperAccountEnabled: true}, OpenFGA: config.OpenFGA{Enabled: false}}}
+		if err := s.authorizeRPC(c, rpcAuth{resource: "role", action: "read"}); err != nil {
+			t.Fatalf("停用 OpenFGA 應回退放行,got %v", err)
+		}
+	})
+	t.Run("OpenFGA 啟用但無引擎 → fail-closed", func(t *testing.T) {
+		s := &Server{cfg: &config.Config{API: config.API{DeveloperAccountEnabled: true}, OpenFGA: config.OpenFGA{Enabled: true}}}
+		err := s.authorizeRPC(c, rpcAuth{resource: "role", action: "read"})
+		if connect.CodeOf(err) != connect.CodeInternal {
+			t.Fatalf("啟用但無引擎應 fail-closed(internal),got %v", err)
+		}
+	})
 }

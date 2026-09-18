@@ -127,8 +127,8 @@ func (s *Server) Handler() http.Handler {
 
 // authzMiddleware 將 scs session 身分轉換為 authz.Identity + RLS scope 注入 ctx（T14 Step 4）。
 // 必須位於 sessions.LoadAndSave 之後（ctx 才帶 session 資料）。
-// 未登入 / 查無使用者 / developer 關閉 / session token_version 與 DB 不符時以零值身分通過
-// （fail-closed：CASL 規則載入全略過 → denied，Casbin 由各服務層以 EnforceAny 判斷）。
+// 未登入 / 查無使用者 / developer 關閉 / session token_version 與 DB 不符時以零值身分通過,
+// 受保護 RPC 再由 authorizeRPC 以 OpenFGA Check 判定（未登入→Unauthenticated）。
 // token_version 不符代表改密碼 / 停用 / 強制登出已 bump——一併銷毀 session 使該請求即時登出。
 func (s *Server) authzMiddleware(entClient *ent.Client, sessions *scs.SessionManager, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -162,8 +162,9 @@ func (s *Server) authzMiddleware(entClient *ent.Client, sessions *scs.SessionMan
 }
 
 // authorizeRPC 對受保護 RPC path 執行 OpenFGA Check 授權閘門:
-// 未登入 → Unauthenticated;無權 → PermissionDenied。
-// 未注入 engine 或 developer 逃生門(開關啟用) → 放行(向後相容未接線期間)。
+// 未登入 → Unauthenticated;無權 → PermissionDenied;developer 逃生門(開關啟用)跳過。
+// OpenFGA 停用(OPENFGA_ENABLED=false) → 回退(放行,授權由各服務層檢查承擔);
+// OpenFGA 啟用卻無引擎 → 視為接線失敗,fail-closed(拒絕),避免授權被靜默繞過。
 func (s *Server) authorizeRPC(ctx context.Context, rpc rpcAuth) error {
 	id := authz.IdentityFrom(ctx)
 	if len(id.Roles) == 0 {
@@ -171,6 +172,10 @@ func (s *Server) authorizeRPC(ctx context.Context, rpc rpcAuth) error {
 	}
 	// developer 逃生門:僅在開關啟用時(身分成立)跳過 OpenFGA 檢查。
 	if id.Role == "developer" && s.cfg.API.DeveloperAccountEnabled {
+		return nil
+	}
+	if !s.cfg.OpenFGA.Enabled {
+		// 刻意停用 OpenFGA → 回退語意(config.OpenFGA.Enabled 註解):放行,由服務層授權承擔。
 		return nil
 	}
 	e := authz.EngineFrom(ctx)
