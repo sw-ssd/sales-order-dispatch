@@ -42,7 +42,7 @@ func (RolePermission) Edges() []ent.Edge {
 
 // Indexes of the RolePermission.
 // 唯一鍵以四欄組表達 (role_id, resource, action, conditions);
-// production migration 以 COALESCE(md5(conditions::text), '') 表達同義約束。
+// production migration 以 COALESCE(md5(conditions::text), 空字串字面值) 表達同義約束。
 func (RolePermission) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("role_id", "resource", "action", "conditions").
