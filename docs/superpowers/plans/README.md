@@ -39,7 +39,7 @@ graph TD
 | 01-auth | `backend/2026-08-17-backend-01-auth-plan.md` | 認證授權地基 | 🟡 部分 | OIDC/登入/JWT-session/Casbin/RLS/ability/role 權限、middleware（authzMiddleware/protectedRPC）、developer 逃生門（SeedDeveloper）、audit 地基（audit.Recorder DB）已實作；RLS 接線（D3 最後防線）與 OpenFGA 待定 |
 | 02-tenancy-users | `backend/2026-08-17-backend-02-tenancy-users-plan.md` | 多租戶與使用者 | 🟡 部分 | Company/Department/Role CRUD 已實作；UserService 7 支 RPC 已落地（含稽核＋`dataScopeForUser`）；公司停用連鎖(2.1.3)已落地（2026-09-18, A2）；主帳號連鎖(D22)待 |
 | 03-metadicts-audit | `backend/2026-08-17-backend-03-metadicts-audit-plan.md` | 字典檔與稽核 | ✅ 完成 | metadicts（6 RPC + 合併查詢 + ListOptions）與稽核查詢 API（AuditService.List, D27 時間窗）全落地（2026-09-18）；audit.Recorder DB（00009/00010）已由 02 提前落地 |
-| 04-master-data | `backend/2026-08-17-backend-04-master-data-plan.md` | 主檔與檔案資產 | 🟡 部分 | customers 核心（3.1.1–3.1.3: schema + 取號 counter D7 + CRUD/軟刪除/復原 + 字典/業務驗證）已落地（2026-09-18）；地址/商品/部門級主檔/檔案/QR 待 |
+| 04-master-data | `backend/2026-08-17-backend-04-master-data-plan.md` | 主檔與檔案資產 | 🟡 部分 | customers 核心（3.1.1–3.1.3）已落地；D22 建檔連動主/業務子帳號＋臨時密碼交付（3.1.4）已落地（2026-09-18）；3.1.5 完整驗證待補、地址/商品/部門級主檔/檔案/QR 待 |
 | 05-sales-orders | `backend/2026-08-17-backend-05-sales-orders-plan.md` | 銷售訂單 | ⬜ 未開始 | 領域無 code |
 | 06-returns | `backend/2026-08-17-backend-06-returns-plan.md` | 退貨 | ⬜ 未開始 | 領域無 code |
 | 07-notifications | `backend/2026-08-17-backend-07-notifications-plan.md` | 通知與 FCM | ⬜ 未開始 | 領域無 code |

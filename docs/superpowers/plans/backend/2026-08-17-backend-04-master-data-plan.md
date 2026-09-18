@@ -16,7 +16,7 @@
 |---|---|---|
 | 1 | customers schema 與 CRUD（細部 3.1.1–3.1.2） | ✅ 完成（2026-09-18）|
 | 2 | customer_counters 同事務取號（細部 3.1.3，D7） | ✅ 完成（2026-09-18）|
-| 3 | 建檔連動主帳號 + 業務子帳號 + 偏好欄位（細部 3.1.4–3.1.5，D22） | ⬜ 未開始（需 user 增 is_primary/customer_id/system_generated）|
+| 3 | 建檔連動主帳號 + 業務子帳號 + 偏好欄位（細部 3.1.4–3.1.5，D22） | 🟡 部分（3.1.4 建檔連動已落地 2026-09-18；3.1.5 完整驗證待補，依賴 07-promo_tags）|
 | 4 | 地址簿與聯絡人（細部 3.2.1–3.2.2） | ⬜ 未開始 |
 | 5 | 商品三實體與單位換算（細部 3.3.1–3.3.3） | ⬜ 未開始 |
 | 6 | 倉別/車次/分切規格/分類 CRUD（細部 3.4.1–3.4.4） | ⬜ 未開始 |
@@ -47,6 +47,8 @@
 
 ### Task 3: 建檔連動主帳號 + 業務子帳號 + 偏好欄位（細部 3.1.4–3.1.5，D22）
 建立客戶自動附帶「業務子帳號」（專供所屬業務）；主帳號管理；`preferred_delivery_days` 偏好欄位；重用 `issueTempPassword`。
+> ✅ 3.1.4（D22 建檔連動主/業務子帳號＋臨時密碼交付）已落地（2026-09-18）：users 增 `customer_id/is_primary/system_generated`（migration 00014）；`CreateCustomer` 同交易建兩帳號＋24h 臨時密碼＋`must_change_password`；`CreateCustomerResponse` 回傳交付欄位與 `account_manage_url`；`default_sales_rep_id` 改必填。執行計畫見 `2026-09-18-backend-04-customers-d22-plan.md`。
+> 🟡 3.1.5（偏好欄位）部分：儲存/預設（D26 全 false ×6、D24 陣列）已於核心批落地；「長度==6 拒絕」與 `promo_tag_ids` 對同部門 `promo_tags` 交叉驗證待補（依賴 07-notifications 的 promo_tags 表）。
 
 ### Task 4: 地址簿與聯絡人（細部 3.2.1–3.2.2）
 地址簿（多筆、預設）、聯絡人（稱呼/職稱/Email/電話）CRUD。
