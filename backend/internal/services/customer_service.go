@@ -230,9 +230,9 @@ func nextCustomerCode(ctx context.Context, tx *ent.Tx, cid int, prefix string) (
 
 // ListCustomers 分頁查詢,支持關鍵字(名稱/編號/統編)模糊比對與 include_deleted、排序白名單。
 func (s *CustomerService) ListCustomers(ctx context.Context, req *connect.Request[customersv1.ListCustomersRequest]) (*connect.Response[customersv1.ListCustomersResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	cid, did, err := customerScope(id)
 	if err != nil {
@@ -289,9 +289,9 @@ func customerSortField(sort string) (string, error) {
 
 // GetCustomer 以 id 取單筆(限可見範圍;已刪除/不存在 → not_found)。
 func (s *CustomerService) GetCustomer(ctx context.Context, req *connect.Request[customersv1.GetCustomerRequest]) (*connect.Response[customersv1.GetCustomerResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	cid, did, err := customerScope(id)
 	if err != nil {
@@ -312,9 +312,9 @@ func (s *CustomerService) GetCustomer(ctx context.Context, req *connect.Request[
 
 // CreateCustomer 建立客戶:取號 + 驗證字典/業務 + 建檔 + 稽核同一交易(D18)。
 func (s *CustomerService) CreateCustomer(ctx context.Context, req *connect.Request[customersv1.CreateCustomerRequest]) (*connect.Response[customersv1.CreateCustomerResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	cid, did, err := customerScope(id)
 	if err != nil {
@@ -502,9 +502,9 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *connect.Reque
 
 // UpdateCustomer 欄位式更新(customer_code 不可改;update 請求無 code 欄位,天然拒絕)。
 func (s *CustomerService) UpdateCustomer(ctx context.Context, req *connect.Request[customersv1.UpdateCustomerRequest]) (*connect.Response[customersv1.UpdateCustomerResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	cid, did, err := customerScope(id)
 	if err != nil {
@@ -632,9 +632,9 @@ func (s *CustomerService) UpdateCustomer(ctx context.Context, req *connect.Reque
 
 // DeleteCustomer 軟刪除(設定 deleted_at + 稽核,同一交易)。
 func (s *CustomerService) DeleteCustomer(ctx context.Context, req *connect.Request[customersv1.DeleteCustomerRequest]) (*connect.Response[customersv1.DeleteCustomerResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	cid, did, err := customerScope(id)
 	if err != nil {
@@ -679,9 +679,9 @@ func (s *CustomerService) DeleteCustomer(ctx context.Context, req *connect.Reque
 
 // RestoreCustomer 復原(清 deleted_at + 稽核;若未刪除則冪等回傳)。
 func (s *CustomerService) RestoreCustomer(ctx context.Context, req *connect.Request[customersv1.RestoreCustomerRequest]) (*connect.Response[customersv1.RestoreCustomerResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	cid, did, err := customerScope(id)
 	if err != nil {

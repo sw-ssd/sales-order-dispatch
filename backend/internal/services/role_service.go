@@ -49,9 +49,9 @@ func RegisterRoleServices(mux *http.ServeMux, db *ent.Client) {
 // requireRole 檢查 ctx 身分具備 role 資源的指定動作(Casbin EnforceAny,T14)。
 // 未登入 → Unauthenticated;無權 → PermissionDenied。
 func requireRole(ctx context.Context, action string) error {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return err
 	}
 	ok, err := auth.EnforceAny(id.Roles, "role", action, id.CompanyID)
 	if err != nil {

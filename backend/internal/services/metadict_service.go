@@ -118,9 +118,9 @@ func metadictActorDeptID(m *ent.Metadict) *int {
 
 // ListMetadicts 分頁查詢(系統預設 + 當前部門擴充合併;super 可指定部門檢視)。
 func (s *MetadictService) ListMetadicts(ctx context.Context, req *connect.Request[metadictv1.ListMetadictsRequest]) (*connect.Response[metadictv1.ListMetadictsResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	page, pageSize := normalizePage(req.Msg.GetPage(), req.Msg.GetPageSize())
 	q := s.db.Metadict.Query()
@@ -179,9 +179,9 @@ func (s *MetadictService) ListMetadicts(ctx context.Context, req *connect.Reques
 
 // GetMetadict 取得單一字典(限可見範圍)。
 func (s *MetadictService) GetMetadict(ctx context.Context, req *connect.Request[metadictv1.GetMetadictRequest]) (*connect.Response[metadictv1.GetMetadictResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	mid, err := parseID(req.Msg.GetId())
 	if err != nil {
@@ -201,9 +201,9 @@ func (s *MetadictService) GetMetadict(ctx context.Context, req *connect.Request[
 
 // CreateMetadict 建立字典:super 建系統級(department NULL);dept_admin/staff 自動帶當前部門,不接受請求帶 department_id。
 func (s *MetadictService) CreateMetadict(ctx context.Context, req *connect.Request[metadictv1.CreateMetadictRequest]) (*connect.Response[metadictv1.CreateMetadictResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	typ := strings.TrimSpace(req.Msg.GetType())
 	code := strings.TrimSpace(req.Msg.GetCode())
@@ -283,9 +283,9 @@ func (s *MetadictService) CreateMetadict(ctx context.Context, req *connect.Reque
 
 // UpdateMetadict 更新 display_name / sort_order / is_active(不含 type / code;order_source 不可異動)。
 func (s *MetadictService) UpdateMetadict(ctx context.Context, req *connect.Request[metadictv1.UpdateMetadictRequest]) (*connect.Response[metadictv1.UpdateMetadictResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	mid, err := parseID(req.Msg.GetId())
 	if err != nil {
@@ -349,9 +349,9 @@ func (s *MetadictService) UpdateMetadict(ctx context.Context, req *connect.Reque
 
 // DeleteMetadict 軟刪除(設定 deleted_at;order_source 不可刪;復原不在 1.0 API 範圍)。
 func (s *MetadictService) DeleteMetadict(ctx context.Context, req *connect.Request[metadictv1.DeleteMetadictRequest]) (*connect.Response[metadictv1.DeleteMetadictResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	mid, err := parseID(req.Msg.GetId())
 	if err != nil {
@@ -400,9 +400,9 @@ func (s *MetadictService) DeleteMetadict(ctx context.Context, req *connect.Reque
 
 // ListOptions 表單下拉選項:僅可選用啟用值(系統預設 + 當前部門擴充;客戶端僅系統預設)。
 func (s *MetadictService) ListOptions(ctx context.Context, req *connect.Request[metadictv1.ListOptionsRequest]) (*connect.Response[metadictv1.ListOptionsResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	typ := strings.TrimSpace(req.Msg.GetType())
 	if !validMetadictTypes[typ] {

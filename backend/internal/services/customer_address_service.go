@@ -16,7 +16,6 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/customer"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customeraddress"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
-	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
 )
 
@@ -75,9 +74,9 @@ func addressToProto(a *ent.CustomerAddress) *customersv1.CustomerAddress {
 
 // ListAddresses 列客戶地址(限可見範圍;預設排除已刪除)。
 func (s *CustomerService) ListAddresses(ctx context.Context, req *connect.Request[customersv1.ListAddressesRequest]) (*connect.Response[customersv1.ListAddressesResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	cid, did, err := customerScope(id)
 	if err != nil {
@@ -108,9 +107,9 @@ func (s *CustomerService) ListAddresses(ctx context.Context, req *connect.Reques
 
 // AddAddress 新增地址:複寫客戶租戶;同類型首筆自動為預設;設為預設時先清同類型其餘預設(同一交易)。
 func (s *CustomerService) AddAddress(ctx context.Context, req *connect.Request[customersv1.AddAddressRequest]) (*connect.Response[customersv1.AddAddressResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	cid, did, err := customerScope(id)
 	if err != nil {
@@ -210,9 +209,9 @@ func (s *CustomerService) AddAddress(ctx context.Context, req *connect.Request[c
 
 // UpdateAddress 欄位式更新地址;設為預設時同一交易先清同類型其餘預設。
 func (s *CustomerService) UpdateAddress(ctx context.Context, req *connect.Request[customersv1.UpdateAddressRequest]) (*connect.Response[customersv1.UpdateAddressResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	cid, did, err := customerScope(id)
 	if err != nil {
@@ -320,9 +319,9 @@ func (s *CustomerService) UpdateAddress(ctx context.Context, req *connect.Reques
 
 // DeleteAddress 軟刪除地址 + 稽核(同一交易);刪除預設不自動遞補。
 func (s *CustomerService) DeleteAddress(ctx context.Context, req *connect.Request[customersv1.DeleteAddressRequest]) (*connect.Response[customersv1.DeleteAddressResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	cid, did, err := customerScope(id)
 	if err != nil {

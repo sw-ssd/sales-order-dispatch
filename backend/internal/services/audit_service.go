@@ -57,9 +57,9 @@ func isCompanyAdmin(id authz.Identity) bool {
 
 // ListAuditLogs 分頁查詢稽核紀錄,條件皆為 AND;時間降冪(最新在前)。
 func (s *AuditService) ListAuditLogs(ctx context.Context, req *connect.Request[auditv1.ListAuditLogsRequest]) (*connect.Response[auditv1.ListAuditLogsResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	page, pageSize := normalizePage(req.Msg.GetPage(), req.Msg.GetPageSize())
 	q := s.db.AuditLog.Query()

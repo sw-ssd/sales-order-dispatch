@@ -81,9 +81,9 @@ func RegisterCompanyServices(mux *http.ServeMux, db *ent.Client) {
 // requireScope 檢查 ctx 身分具備 resource 資源的指定動作(Casbin EnforceAny,T14)。
 // 未登入 → Unauthenticated;無權 → PermissionDenied。
 func requireScope(ctx context.Context, resource, action string) error {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return err
 	}
 	ok, err := auth.EnforceAny(id.Roles, resource, action, id.CompanyID)
 	if err != nil {

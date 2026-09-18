@@ -66,7 +66,7 @@ func warehouseToProto(w *ent.Warehouse) *mastersv1.Warehouse {
 	return p
 }
 
-// warehouseListSource 為 masterPage 的 ent 查詢橋接。
+// warehouseListSource 為 pageList 的 ent 查詢橋接。
 type warehouseListSource struct{ q *ent.WarehouseQuery }
 
 func (s warehouseListSource) Count(ctx context.Context) (int, error) { return s.q.Count(ctx) }
@@ -76,11 +76,11 @@ func (s warehouseListSource) Page(ctx context.Context, off, lim int) ([]*ent.War
 
 // ListWarehouses 分頁列出本部門(或公司)倉別;keyword 對 code/name 模糊比對;可 include_deleted。
 func (s *WarehouseService) ListWarehouses(ctx context.Context, req *connect.Request[mastersv1.ListWarehousesRequest]) (*connect.Response[mastersv1.ListWarehousesResponse], error) {
-	id, err := masterRequireAuth(ctx)
+	id, err := requireAuth(ctx)
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := masterScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func (s *WarehouseService) ListWarehouses(ctx context.Context, req *connect.Requ
 	if kw := strings.TrimSpace(req.Msg.GetKeyword()); kw != "" {
 		q = q.Where(warehouse.Or(warehouse.CodeContainsFold(kw), warehouse.NameContainsFold(kw)))
 	}
-	list, pg, err := masterPage(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), warehouseListSource{q}, warehouseToProto)
+	list, pg, err := pageList(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), warehouseListSource{q}, warehouseToProto)
 	if err != nil {
 		return nil, err
 	}
@@ -100,15 +100,15 @@ func (s *WarehouseService) ListWarehouses(ctx context.Context, req *connect.Requ
 
 // CreateWarehouse 建立倉別:租戶注入 + code 部門唯一 + 稽核(同一交易)。
 func (s *WarehouseService) CreateWarehouse(ctx context.Context, req *connect.Request[mastersv1.CreateWarehouseRequest]) (*connect.Response[mastersv1.CreateWarehouseResponse], error) {
-	id, err := masterRequireAuth(ctx)
+	id, err := requireAuth(ctx)
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := masterScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
-	code, name, err := masterCodeName(req.Msg.GetCode(), req.Msg.GetName())
+	code, name, err := codeName(req.Msg.GetCode(), req.Msg.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +131,7 @@ func (s *WarehouseService) CreateWarehouse(ctx context.Context, req *connect.Req
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := recordMasterAudit(ctx, tx, "warehouse", "create", created.ID, cid, created.DepartmentID, actor, map[string]any{"code": created.Code, "name": created.Name}); err != nil {
+	if err := recordAudit(ctx, tx, "warehouse", "create", created.ID, cid, created.DepartmentID, actor, map[string]any{"code": created.Code, "name": created.Name}); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -142,11 +142,11 @@ func (s *WarehouseService) CreateWarehouse(ctx context.Context, req *connect.Req
 
 // UpdateWarehouse 欄位式更新(code 可改,部門唯一重驗)。
 func (s *WarehouseService) UpdateWarehouse(ctx context.Context, req *connect.Request[mastersv1.UpdateWarehouseRequest]) (*connect.Response[mastersv1.UpdateWarehouseResponse], error) {
-	id, err := masterRequireAuth(ctx)
+	id, err := requireAuth(ctx)
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := masterScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -164,14 +164,14 @@ func (s *WarehouseService) UpdateWarehouse(ctx context.Context, req *connect.Req
 	defer func() { _ = tx.Rollback() }()
 	upd := tx.Warehouse.UpdateOneID(wid)
 	if req.Msg.Code != nil {
-		c, err := masterTrimNonEmpty(*req.Msg.Code, "code 不可為空")
+		c, err := trimNonEmpty(*req.Msg.Code, "code 不可為空")
 		if err != nil {
 			return nil, err
 		}
 		upd = upd.SetCode(c)
 	}
 	if req.Msg.Name != nil {
-		n, err := masterTrimNonEmpty(*req.Msg.Name, "name 不可為空")
+		n, err := trimNonEmpty(*req.Msg.Name, "name 不可為空")
 		if err != nil {
 			return nil, err
 		}
@@ -188,7 +188,7 @@ func (s *WarehouseService) UpdateWarehouse(ctx context.Context, req *connect.Req
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := recordMasterAudit(ctx, tx, "warehouse", "update", wid, cid, updated.DepartmentID, actor, map[string]any{"name": updated.Name}); err != nil {
+	if err := recordAudit(ctx, tx, "warehouse", "update", wid, cid, updated.DepartmentID, actor, map[string]any{"name": updated.Name}); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -199,11 +199,11 @@ func (s *WarehouseService) UpdateWarehouse(ctx context.Context, req *connect.Req
 
 // DeleteWarehouse 軟刪除 + 稽核(同一交易)。
 func (s *WarehouseService) DeleteWarehouse(ctx context.Context, req *connect.Request[mastersv1.DeleteWarehouseRequest]) (*connect.Response[mastersv1.DeleteWarehouseResponse], error) {
-	id, err := masterRequireAuth(ctx)
+	id, err := requireAuth(ctx)
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := masterScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +224,7 @@ func (s *WarehouseService) DeleteWarehouse(ctx context.Context, req *connect.Req
 	if err := tx.Warehouse.UpdateOneID(wid).SetDeletedAt(time.Now().UTC()).SetUpdatedBy(actor).Exec(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := recordMasterAudit(ctx, tx, "warehouse", "delete", wid, cid, cur.DepartmentID, actor, map[string]any{"code": cur.Code, "name": cur.Name}); err != nil {
+	if err := recordAudit(ctx, tx, "warehouse", "delete", wid, cid, cur.DepartmentID, actor, map[string]any{"code": cur.Code, "name": cur.Name}); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -235,11 +235,11 @@ func (s *WarehouseService) DeleteWarehouse(ctx context.Context, req *connect.Req
 
 // RestoreWarehouse 復原(清 deleted_at + 稽核;已刪除才動作,冪等)。
 func (s *WarehouseService) RestoreWarehouse(ctx context.Context, req *connect.Request[mastersv1.RestoreWarehouseRequest]) (*connect.Response[mastersv1.RestoreWarehouseResponse], error) {
-	id, err := masterRequireAuth(ctx)
+	id, err := requireAuth(ctx)
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := masterScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +264,7 @@ func (s *WarehouseService) RestoreWarehouse(ctx context.Context, req *connect.Re
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := recordMasterAudit(ctx, tx, "warehouse", "update", wid, cid, restored.DepartmentID, actor, map[string]any{"restored": true, "code": restored.Code}); err != nil {
+	if err := recordAudit(ctx, tx, "warehouse", "update", wid, cid, restored.DepartmentID, actor, map[string]any{"restored": true, "code": restored.Code}); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {

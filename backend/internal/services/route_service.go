@@ -69,11 +69,11 @@ func (s routeListSource) Page(ctx context.Context, off, lim int) ([]*ent.Route, 
 }
 
 func (s *RouteService) ListRoutes(ctx context.Context, req *connect.Request[mastersv1.ListRoutesRequest]) (*connect.Response[mastersv1.ListRoutesResponse], error) {
-	id, err := masterRequireAuth(ctx)
+	id, err := requireAuth(ctx)
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := masterScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func (s *RouteService) ListRoutes(ctx context.Context, req *connect.Request[mast
 	if kw := strings.TrimSpace(req.Msg.GetKeyword()); kw != "" {
 		q = q.Where(route.Or(route.CodeContainsFold(kw), route.NameContainsFold(kw)))
 	}
-	list, pg, err := masterPage(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), routeListSource{q}, routeToProto)
+	list, pg, err := pageList(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), routeListSource{q}, routeToProto)
 	if err != nil {
 		return nil, err
 	}
@@ -92,15 +92,15 @@ func (s *RouteService) ListRoutes(ctx context.Context, req *connect.Request[mast
 }
 
 func (s *RouteService) CreateRoute(ctx context.Context, req *connect.Request[mastersv1.CreateRouteRequest]) (*connect.Response[mastersv1.CreateRouteResponse], error) {
-	id, err := masterRequireAuth(ctx)
+	id, err := requireAuth(ctx)
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := masterScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
-	code, name, err := masterCodeName(req.Msg.GetCode(), req.Msg.GetName())
+	code, name, err := codeName(req.Msg.GetCode(), req.Msg.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func (s *RouteService) CreateRoute(ctx context.Context, req *connect.Request[mas
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := recordMasterAudit(ctx, tx, "route", "create", created.ID, cid, created.DepartmentID, actor, map[string]any{"code": created.Code, "name": created.Name}); err != nil {
+	if err := recordAudit(ctx, tx, "route", "create", created.ID, cid, created.DepartmentID, actor, map[string]any{"code": created.Code, "name": created.Name}); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -134,11 +134,11 @@ func (s *RouteService) CreateRoute(ctx context.Context, req *connect.Request[mas
 }
 
 func (s *RouteService) UpdateRoute(ctx context.Context, req *connect.Request[mastersv1.UpdateRouteRequest]) (*connect.Response[mastersv1.UpdateRouteResponse], error) {
-	id, err := masterRequireAuth(ctx)
+	id, err := requireAuth(ctx)
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := masterScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -156,14 +156,14 @@ func (s *RouteService) UpdateRoute(ctx context.Context, req *connect.Request[mas
 	defer func() { _ = tx.Rollback() }()
 	upd := tx.Route.UpdateOneID(rid)
 	if req.Msg.Code != nil {
-		c, err := masterTrimNonEmpty(*req.Msg.Code, "code 不可為空")
+		c, err := trimNonEmpty(*req.Msg.Code, "code 不可為空")
 		if err != nil {
 			return nil, err
 		}
 		upd = upd.SetCode(c)
 	}
 	if req.Msg.Name != nil {
-		n, err := masterTrimNonEmpty(*req.Msg.Name, "name 不可為空")
+		n, err := trimNonEmpty(*req.Msg.Name, "name 不可為空")
 		if err != nil {
 			return nil, err
 		}
@@ -183,7 +183,7 @@ func (s *RouteService) UpdateRoute(ctx context.Context, req *connect.Request[mas
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := recordMasterAudit(ctx, tx, "route", "update", rid, cid, updated.DepartmentID, actor, map[string]any{"name": updated.Name}); err != nil {
+	if err := recordAudit(ctx, tx, "route", "update", rid, cid, updated.DepartmentID, actor, map[string]any{"name": updated.Name}); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -193,11 +193,11 @@ func (s *RouteService) UpdateRoute(ctx context.Context, req *connect.Request[mas
 }
 
 func (s *RouteService) DeleteRoute(ctx context.Context, req *connect.Request[mastersv1.DeleteRouteRequest]) (*connect.Response[mastersv1.DeleteRouteResponse], error) {
-	id, err := masterRequireAuth(ctx)
+	id, err := requireAuth(ctx)
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := masterScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +218,7 @@ func (s *RouteService) DeleteRoute(ctx context.Context, req *connect.Request[mas
 	if err := tx.Route.UpdateOneID(rid).SetDeletedAt(time.Now().UTC()).SetUpdatedBy(actor).Exec(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := recordMasterAudit(ctx, tx, "route", "delete", rid, cid, cur.DepartmentID, actor, map[string]any{"code": cur.Code, "name": cur.Name}); err != nil {
+	if err := recordAudit(ctx, tx, "route", "delete", rid, cid, cur.DepartmentID, actor, map[string]any{"code": cur.Code, "name": cur.Name}); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -228,11 +228,11 @@ func (s *RouteService) DeleteRoute(ctx context.Context, req *connect.Request[mas
 }
 
 func (s *RouteService) RestoreRoute(ctx context.Context, req *connect.Request[mastersv1.RestoreRouteRequest]) (*connect.Response[mastersv1.RestoreRouteResponse], error) {
-	id, err := masterRequireAuth(ctx)
+	id, err := requireAuth(ctx)
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := masterScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +257,7 @@ func (s *RouteService) RestoreRoute(ctx context.Context, req *connect.Request[ma
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := recordMasterAudit(ctx, tx, "route", "update", rid, cid, restored.DepartmentID, actor, map[string]any{"restored": true, "code": restored.Code}); err != nil {
+	if err := recordAudit(ctx, tx, "route", "update", rid, cid, restored.DepartmentID, actor, map[string]any{"restored": true, "code": restored.Code}); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {

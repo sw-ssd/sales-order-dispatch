@@ -70,11 +70,11 @@ func (s catListSource) Page(ctx context.Context, off, lim int) ([]*ent.ProductCa
 }
 
 func (s *ProductCategoryService) ListProductCategories(ctx context.Context, req *connect.Request[mastersv1.ListProductCategoriesRequest]) (*connect.Response[mastersv1.ListProductCategoriesResponse], error) {
-	id, err := masterRequireAuth(ctx)
+	id, err := requireAuth(ctx)
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := masterScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (s *ProductCategoryService) ListProductCategories(ctx context.Context, req 
 	if kw := strings.TrimSpace(req.Msg.GetKeyword()); kw != "" {
 		q = q.Where(productcategory.Or(productcategory.CodeContainsFold(kw), productcategory.NameContainsFold(kw)))
 	}
-	list, pg, err := masterPage(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), catListSource{q}, catToProto)
+	list, pg, err := pageList(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), catListSource{q}, catToProto)
 	if err != nil {
 		return nil, err
 	}
@@ -93,15 +93,15 @@ func (s *ProductCategoryService) ListProductCategories(ctx context.Context, req 
 }
 
 func (s *ProductCategoryService) CreateProductCategory(ctx context.Context, req *connect.Request[mastersv1.CreateProductCategoryRequest]) (*connect.Response[mastersv1.CreateProductCategoryResponse], error) {
-	id, err := masterRequireAuth(ctx)
+	id, err := requireAuth(ctx)
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := masterScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
-	code, name, err := masterCodeName(req.Msg.GetCode(), req.Msg.GetName())
+	code, name, err := codeName(req.Msg.GetCode(), req.Msg.GetName())
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func (s *ProductCategoryService) CreateProductCategory(ctx context.Context, req 
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := recordMasterAudit(ctx, tx, "product_category", "create", created.ID, cid, created.DepartmentID, actor, map[string]any{"code": created.Code, "name": created.Name}); err != nil {
+	if err := recordAudit(ctx, tx, "product_category", "create", created.ID, cid, created.DepartmentID, actor, map[string]any{"code": created.Code, "name": created.Name}); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -132,11 +132,11 @@ func (s *ProductCategoryService) CreateProductCategory(ctx context.Context, req 
 }
 
 func (s *ProductCategoryService) UpdateProductCategory(ctx context.Context, req *connect.Request[mastersv1.UpdateProductCategoryRequest]) (*connect.Response[mastersv1.UpdateProductCategoryResponse], error) {
-	id, err := masterRequireAuth(ctx)
+	id, err := requireAuth(ctx)
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := masterScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -154,14 +154,14 @@ func (s *ProductCategoryService) UpdateProductCategory(ctx context.Context, req 
 	defer func() { _ = tx.Rollback() }()
 	upd := tx.ProductCategory.UpdateOneID(catID)
 	if req.Msg.Code != nil {
-		c, err := masterTrimNonEmpty(*req.Msg.Code, "code 不可為空")
+		c, err := trimNonEmpty(*req.Msg.Code, "code 不可為空")
 		if err != nil {
 			return nil, err
 		}
 		upd = upd.SetCode(c)
 	}
 	if req.Msg.Name != nil {
-		n, err := masterTrimNonEmpty(*req.Msg.Name, "name 不可為空")
+		n, err := trimNonEmpty(*req.Msg.Name, "name 不可為空")
 		if err != nil {
 			return nil, err
 		}
@@ -178,7 +178,7 @@ func (s *ProductCategoryService) UpdateProductCategory(ctx context.Context, req 
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := recordMasterAudit(ctx, tx, "product_category", "update", catID, cid, updated.DepartmentID, actor, map[string]any{"name": updated.Name}); err != nil {
+	if err := recordAudit(ctx, tx, "product_category", "update", catID, cid, updated.DepartmentID, actor, map[string]any{"name": updated.Name}); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -188,11 +188,11 @@ func (s *ProductCategoryService) UpdateProductCategory(ctx context.Context, req 
 }
 
 func (s *ProductCategoryService) DeleteProductCategory(ctx context.Context, req *connect.Request[mastersv1.DeleteProductCategoryRequest]) (*connect.Response[mastersv1.DeleteProductCategoryResponse], error) {
-	id, err := masterRequireAuth(ctx)
+	id, err := requireAuth(ctx)
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := masterScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +213,7 @@ func (s *ProductCategoryService) DeleteProductCategory(ctx context.Context, req 
 	if err := tx.ProductCategory.UpdateOneID(catID).SetDeletedAt(time.Now().UTC()).SetUpdatedBy(actor).Exec(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := recordMasterAudit(ctx, tx, "product_category", "delete", catID, cid, cur.DepartmentID, actor, map[string]any{"code": cur.Code, "name": cur.Name}); err != nil {
+	if err := recordAudit(ctx, tx, "product_category", "delete", catID, cid, cur.DepartmentID, actor, map[string]any{"code": cur.Code, "name": cur.Name}); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -223,11 +223,11 @@ func (s *ProductCategoryService) DeleteProductCategory(ctx context.Context, req 
 }
 
 func (s *ProductCategoryService) RestoreProductCategory(ctx context.Context, req *connect.Request[mastersv1.RestoreProductCategoryRequest]) (*connect.Response[mastersv1.RestoreProductCategoryResponse], error) {
-	id, err := masterRequireAuth(ctx)
+	id, err := requireAuth(ctx)
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := masterScope(id)
+	cid, did, err := deptScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +252,7 @@ func (s *ProductCategoryService) RestoreProductCategory(ctx context.Context, req
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := recordMasterAudit(ctx, tx, "product_category", "update", catID, cid, restored.DepartmentID, actor, map[string]any{"restored": true, "code": restored.Code}); err != nil {
+	if err := recordAudit(ctx, tx, "product_category", "update", catID, cid, restored.DepartmentID, actor, map[string]any{"restored": true, "code": restored.Code}); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := tx.Commit(); err != nil {

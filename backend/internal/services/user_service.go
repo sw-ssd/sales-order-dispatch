@@ -114,9 +114,9 @@ func RegisterUserServices(mux *http.ServeMux, db *ent.Client) {
 
 // ListUsers 分頁列出使用者,依操作者範圍強制注入 filter。
 func (s *UserService) ListUsers(ctx context.Context, req *connect.Request[v1.ListUsersRequest]) (*connect.Response[v1.ListUsersResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	// 授權下限:非管理角色不得列舉使用者(C1;避免跨租戶使用者列舉)。
 	if !isUserManager(id) {
@@ -212,9 +212,9 @@ func (s *UserService) ListUsers(ctx context.Context, req *connect.Request[v1.Lis
 
 // GetUser 取得單一使用者(不含 password_hash)。
 func (s *UserService) GetUser(ctx context.Context, req *connect.Request[v1.GetUserRequest]) (*connect.Response[v1.GetUserResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	userID, err := parseID(req.Msg.GetUserId())
 	if err != nil {
@@ -232,9 +232,9 @@ func (s *UserService) GetUser(ctx context.Context, req *connect.Request[v1.GetUs
 
 // CreateUser 建立員工帳號(super/company_admin/dept_admin;password_hash 依 OAuth 首登填補)。
 func (s *UserService) CreateUser(ctx context.Context, req *connect.Request[v1.CreateUserRequest]) (*connect.Response[v1.CreateUserResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	if !isUserManager(id) {
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("無使用者管理權限"))
@@ -343,9 +343,9 @@ func (s *UserService) CreateUser(ctx context.Context, req *connect.Request[v1.Cr
 
 // UpdateUser 更新使用者欄位(僅更新出現的 optional 欄位)。
 func (s *UserService) UpdateUser(ctx context.Context, req *connect.Request[v1.UpdateUserRequest]) (*connect.Response[v1.UpdateUserResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	if !isUserManager(id) {
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("無使用者管理權限"))
@@ -433,9 +433,9 @@ func (s *UserService) UpdateUser(ctx context.Context, req *connect.Request[v1.Up
 
 // AssignRole 指派人角色(含 guest 審核:status pending → active)。範圍內可用。
 func (s *UserService) AssignRole(ctx context.Context, req *connect.Request[v1.AssignRoleRequest]) (*connect.Response[v1.AssignRoleResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	if !isUserManager(id) {
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("無使用者管理權限"))
@@ -529,9 +529,9 @@ func (s *UserService) AssignRole(ctx context.Context, req *connect.Request[v1.As
 
 // Deactivate 停用帳號(status → inactive, token_version+1)。
 func (s *UserService) Deactivate(ctx context.Context, req *connect.Request[v1.DeactivateRequest]) (*connect.Response[v1.DeactivateResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	if !isUserManager(id) {
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("無使用者管理權限"))
@@ -577,9 +577,9 @@ func (s *UserService) Deactivate(ctx context.Context, req *connect.Request[v1.De
 
 // ForceLogout 強制登出(token_version+1,使在途憑證失效)。不可對自己呼叫。
 func (s *UserService) ForceLogout(ctx context.Context, req *connect.Request[v1.ForceLogoutRequest]) (*connect.Response[v1.ForceLogoutResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	if !isUserManager(id) {
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("無使用者管理權限"))

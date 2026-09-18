@@ -16,7 +16,6 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customercontact"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
-	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
 )
 
@@ -56,9 +55,9 @@ func contactToProto(c *ent.CustomerContact) *customersv1.CustomerContact {
 
 // ListContacts 列客戶聯絡人(限可見範圍;預設排除已刪除)。
 func (s *CustomerService) ListContacts(ctx context.Context, req *connect.Request[customersv1.ListContactsRequest]) (*connect.Response[customersv1.ListContactsResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	cid, did, err := customerScope(id)
 	if err != nil {
@@ -88,9 +87,9 @@ func (s *CustomerService) ListContacts(ctx context.Context, req *connect.Request
 
 // AddContact 新增聯絡人:複寫客戶租戶;首筆自動為預設;設為預設時先清其餘預設(同一交易)。
 func (s *CustomerService) AddContact(ctx context.Context, req *connect.Request[customersv1.AddContactRequest]) (*connect.Response[customersv1.AddContactResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	cid, did, err := customerScope(id)
 	if err != nil {
@@ -180,9 +179,9 @@ func (s *CustomerService) AddContact(ctx context.Context, req *connect.Request[c
 
 // UpdateContact 欄位式更新聯絡人;設為預設時同一交易先清其餘預設。
 func (s *CustomerService) UpdateContact(ctx context.Context, req *connect.Request[customersv1.UpdateContactRequest]) (*connect.Response[customersv1.UpdateContactResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	cid, did, err := customerScope(id)
 	if err != nil {
@@ -267,9 +266,9 @@ func (s *CustomerService) UpdateContact(ctx context.Context, req *connect.Reques
 
 // DeleteContact 軟刪除聯絡人 + 稽核(同一交易);刪除預設不自動遞補。
 func (s *CustomerService) DeleteContact(ctx context.Context, req *connect.Request[customersv1.DeleteContactRequest]) (*connect.Response[customersv1.DeleteContactResponse], error) {
-	id := authz.IdentityFrom(ctx)
-	if len(id.Roles) == 0 {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
 	}
 	cid, did, err := customerScope(id)
 	if err != nil {
