@@ -18,6 +18,8 @@ type Tx struct {
 	Company *CompanyClient
 	// Department is the client for interacting with the Department builders.
 	Department *DepartmentClient
+	// Metadict is the client for interacting with the Metadict builders.
+	Metadict *MetadictClient
 	// Role is the client for interacting with the Role builders.
 	Role *RoleClient
 	// RolePermission is the client for interacting with the RolePermission builders.
@@ -158,6 +160,7 @@ func (tx *Tx) init() {
 	tx.AuditLog = NewAuditLogClient(tx.config)
 	tx.Company = NewCompanyClient(tx.config)
 	tx.Department = NewDepartmentClient(tx.config)
+	tx.Metadict = NewMetadictClient(tx.config)
 	tx.Role = NewRoleClient(tx.config)
 	tx.RolePermission = NewRolePermissionClient(tx.config)
 	tx.User = NewUserClient(tx.config)

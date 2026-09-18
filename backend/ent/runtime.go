@@ -8,6 +8,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/auditlog"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
+	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/ent/rolepermission"
 	"github.com/salesorder/sales-order-1.0/backend/ent/schema"
@@ -40,6 +41,38 @@ func init() {
 	departmentDescName := departmentFields[0].Descriptor()
 	// department.NameValidator is a validator for the "name" field. It is called by the builders before save.
 	department.NameValidator = departmentDescName.Validators[0].(func(string) error)
+	metadictFields := schema.Metadict{}.Fields()
+	_ = metadictFields
+	// metadictDescType is the schema descriptor for type field.
+	metadictDescType := metadictFields[0].Descriptor()
+	// metadict.TypeValidator is a validator for the "type" field. It is called by the builders before save.
+	metadict.TypeValidator = metadictDescType.Validators[0].(func(string) error)
+	// metadictDescCode is the schema descriptor for code field.
+	metadictDescCode := metadictFields[1].Descriptor()
+	// metadict.CodeValidator is a validator for the "code" field. It is called by the builders before save.
+	metadict.CodeValidator = metadictDescCode.Validators[0].(func(string) error)
+	// metadictDescDisplayName is the schema descriptor for display_name field.
+	metadictDescDisplayName := metadictFields[2].Descriptor()
+	// metadict.DisplayNameValidator is a validator for the "display_name" field. It is called by the builders before save.
+	metadict.DisplayNameValidator = metadictDescDisplayName.Validators[0].(func(string) error)
+	// metadictDescSortOrder is the schema descriptor for sort_order field.
+	metadictDescSortOrder := metadictFields[4].Descriptor()
+	// metadict.DefaultSortOrder holds the default value on creation for the sort_order field.
+	metadict.DefaultSortOrder = metadictDescSortOrder.Default.(int)
+	// metadictDescIsActive is the schema descriptor for is_active field.
+	metadictDescIsActive := metadictFields[5].Descriptor()
+	// metadict.DefaultIsActive holds the default value on creation for the is_active field.
+	metadict.DefaultIsActive = metadictDescIsActive.Default.(bool)
+	// metadictDescCreatedAt is the schema descriptor for created_at field.
+	metadictDescCreatedAt := metadictFields[7].Descriptor()
+	// metadict.DefaultCreatedAt holds the default value on creation for the created_at field.
+	metadict.DefaultCreatedAt = metadictDescCreatedAt.Default.(func() time.Time)
+	// metadictDescUpdatedAt is the schema descriptor for updated_at field.
+	metadictDescUpdatedAt := metadictFields[8].Descriptor()
+	// metadict.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	metadict.DefaultUpdatedAt = metadictDescUpdatedAt.Default.(func() time.Time)
+	// metadict.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	metadict.UpdateDefaultUpdatedAt = metadictDescUpdatedAt.UpdateDefault.(func() time.Time)
 	roleFields := schema.Role{}.Fields()
 	_ = roleFields
 	// roleDescCode is the schema descriptor for code field.

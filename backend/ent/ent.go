@@ -15,6 +15,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/auditlog"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
+	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/ent/rolepermission"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
@@ -81,6 +82,7 @@ func checkColumn(t, c string) error {
 			auditlog.Table:       auditlog.ValidColumn,
 			company.Table:        company.ValidColumn,
 			department.Table:     department.ValidColumn,
+			metadict.Table:       metadict.ValidColumn,
 			role.Table:           role.ValidColumn,
 			rolepermission.Table: rolepermission.ValidColumn,
 			user.Table:           user.ValidColumn,

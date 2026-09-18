@@ -15,6 +15,9 @@ type Company func(*sql.Selector)
 // Department is the predicate function for department builders.
 type Department func(*sql.Selector)
 
+// Metadict is the predicate function for metadict builders.
+type Metadict func(*sql.Selector)
+
 // Role is the predicate function for role builders.
 type Role func(*sql.Selector)
 

@@ -18,6 +18,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/auditlog"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
+	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/ent/rolepermission"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
@@ -34,6 +35,8 @@ type Client struct {
 	Company *CompanyClient
 	// Department is the client for interacting with the Department builders.
 	Department *DepartmentClient
+	// Metadict is the client for interacting with the Metadict builders.
+	Metadict *MetadictClient
 	// Role is the client for interacting with the Role builders.
 	Role *RoleClient
 	// RolePermission is the client for interacting with the RolePermission builders.
@@ -54,6 +57,7 @@ func (c *Client) init() {
 	c.AuditLog = NewAuditLogClient(c.config)
 	c.Company = NewCompanyClient(c.config)
 	c.Department = NewDepartmentClient(c.config)
+	c.Metadict = NewMetadictClient(c.config)
 	c.Role = NewRoleClient(c.config)
 	c.RolePermission = NewRolePermissionClient(c.config)
 	c.User = NewUserClient(c.config)
@@ -152,6 +156,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		AuditLog:       NewAuditLogClient(cfg),
 		Company:        NewCompanyClient(cfg),
 		Department:     NewDepartmentClient(cfg),
+		Metadict:       NewMetadictClient(cfg),
 		Role:           NewRoleClient(cfg),
 		RolePermission: NewRolePermissionClient(cfg),
 		User:           NewUserClient(cfg),
@@ -177,6 +182,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		AuditLog:       NewAuditLogClient(cfg),
 		Company:        NewCompanyClient(cfg),
 		Department:     NewDepartmentClient(cfg),
+		Metadict:       NewMetadictClient(cfg),
 		Role:           NewRoleClient(cfg),
 		RolePermission: NewRolePermissionClient(cfg),
 		User:           NewUserClient(cfg),
@@ -209,7 +215,8 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.AuditLog, c.Company, c.Department, c.Role, c.RolePermission, c.User,
+		c.AuditLog, c.Company, c.Department, c.Metadict, c.Role, c.RolePermission,
+		c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -219,7 +226,8 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.AuditLog, c.Company, c.Department, c.Role, c.RolePermission, c.User,
+		c.AuditLog, c.Company, c.Department, c.Metadict, c.Role, c.RolePermission,
+		c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -234,6 +242,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Company.mutate(ctx, m)
 	case *DepartmentMutation:
 		return c.Department.mutate(ctx, m)
+	case *MetadictMutation:
+		return c.Metadict.mutate(ctx, m)
 	case *RoleMutation:
 		return c.Role.mutate(ctx, m)
 	case *RolePermissionMutation:
@@ -708,6 +718,139 @@ func (c *DepartmentClient) mutate(ctx context.Context, m *DepartmentMutation) (V
 	}
 }
 
+// MetadictClient is a client for the Metadict schema.
+type MetadictClient struct {
+	config
+}
+
+// NewMetadictClient returns a client for the Metadict from the given config.
+func NewMetadictClient(c config) *MetadictClient {
+	return &MetadictClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `metadict.Hooks(f(g(h())))`.
+func (c *MetadictClient) Use(hooks ...Hook) {
+	c.hooks.Metadict = append(c.hooks.Metadict, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `metadict.Intercept(f(g(h())))`.
+func (c *MetadictClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Metadict = append(c.inters.Metadict, interceptors...)
+}
+
+// Create returns a builder for creating a Metadict entity.
+func (c *MetadictClient) Create() *MetadictCreate {
+	mutation := newMetadictMutation(c.config, OpCreate)
+	return &MetadictCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Metadict entities.
+func (c *MetadictClient) CreateBulk(builders ...*MetadictCreate) *MetadictCreateBulk {
+	return &MetadictCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *MetadictClient) MapCreateBulk(slice any, setFunc func(*MetadictCreate, int)) *MetadictCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &MetadictCreateBulk{err: fmt.Errorf("calling to MetadictClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*MetadictCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &MetadictCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Metadict.
+func (c *MetadictClient) Update() *MetadictUpdate {
+	mutation := newMetadictMutation(c.config, OpUpdate)
+	return &MetadictUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *MetadictClient) UpdateOne(_m *Metadict) *MetadictUpdateOne {
+	mutation := newMetadictMutation(c.config, OpUpdateOne, withMetadict(_m))
+	return &MetadictUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *MetadictClient) UpdateOneID(id int) *MetadictUpdateOne {
+	mutation := newMetadictMutation(c.config, OpUpdateOne, withMetadictID(id))
+	return &MetadictUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Metadict.
+func (c *MetadictClient) Delete() *MetadictDelete {
+	mutation := newMetadictMutation(c.config, OpDelete)
+	return &MetadictDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *MetadictClient) DeleteOne(_m *Metadict) *MetadictDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *MetadictClient) DeleteOneID(id int) *MetadictDeleteOne {
+	builder := c.Delete().Where(metadict.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &MetadictDeleteOne{builder}
+}
+
+// Query returns a query builder for Metadict.
+func (c *MetadictClient) Query() *MetadictQuery {
+	return &MetadictQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeMetadict},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Metadict entity by its id.
+func (c *MetadictClient) Get(ctx context.Context, id int) (*Metadict, error) {
+	return c.Query().Where(metadict.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *MetadictClient) GetX(ctx context.Context, id int) *Metadict {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *MetadictClient) Hooks() []Hook {
+	return c.hooks.Metadict
+}
+
+// Interceptors returns the client interceptors.
+func (c *MetadictClient) Interceptors() []Interceptor {
+	return c.inters.Metadict
+}
+
+func (c *MetadictClient) mutate(ctx context.Context, m *MetadictMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&MetadictCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&MetadictUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&MetadictUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&MetadictDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Metadict mutation op: %q", m.Op())
+	}
+}
+
 // RoleClient is a client for the Role schema.
 type RoleClient struct {
 	config
@@ -1158,9 +1301,10 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		AuditLog, Company, Department, Role, RolePermission, User []ent.Hook
+		AuditLog, Company, Department, Metadict, Role, RolePermission, User []ent.Hook
 	}
 	inters struct {
-		AuditLog, Company, Department, Role, RolePermission, User []ent.Interceptor
+		AuditLog, Company, Department, Metadict, Role, RolePermission,
+		User []ent.Interceptor
 	}
 )
