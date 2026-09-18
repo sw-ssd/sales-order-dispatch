@@ -26,3 +26,7 @@
 - UI components live in `src/components/ui/`.
 - Reactive hooks live in `src/hooks/` and are imported locally:
   `import { createClipboard } from "@/hooks/create-clipboard";`
+
+## 4. Code Search / Index via codebase-memory-mcp
+
+All code indexing and querying in this project **must go through codebase-memory-mcp first** (see root `docs/AGENTS.md` §4.0): locate definitions/implementations/callers, trace call paths, analyze blast radius, and traverse across projects via the codebase-memory knowledge graph; fall back to grep/direct file reads only when insufficient. Confirm index coverage of a target file before modifying existing code.

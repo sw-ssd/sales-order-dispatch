@@ -22,3 +22,7 @@
 - `task app:analyze`:靜態分析(0 issues 才提交;deprecation 警告即修)。
 - `task app:test`:全部測試;新增可觀測行為才加測試,不寫 plumbing 測試。
 - 不引入新相依套件,除非現有套件明確無法滿足(pubspec.yaml 異動需在 commit message 說明理由)。
+
+## 4. 程式碼索引與查詢（codebase-memory-mcp）
+
+本專案**程式碼索引與查詢皆需先經過 codebase-memory-mcp**（見根目錄 `docs/AGENTS.md` §4.0)：找定義／實作／呼叫端、追蹤呼叫路徑、影響範圍分析、跨專案跳轉等一律先以 codebase-memory 知識圖譜查詢，不足處再以 grep／直接讀檔補足；改動既有程式碼前先確認目標檔的索引覆蓋狀態。

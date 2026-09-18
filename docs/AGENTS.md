@@ -203,6 +203,16 @@ task screenshots:ios
 
 ## 4. 程式碼組織與主要慣例
 
+### 4.0 程式碼索引與查詢（codebase-memory-mcp）
+
+進行**任何**程式碼索引或程式碼查詢（找定義、找實作、找呼叫端／被呼叫端、跨專案跳轉、影響範圍分析、結構探索）時，**一律先經過 codebase-memory-mcp**，以其作為程式碼知識圖譜的權威來源，取代直覺式廣域 grep。具體做法：
+
+- 查定義／實作／關係：先以 codebase-memory 的圖形查詢（搜尋節點、查關係、追蹤呼叫路徑）定位，不足處再以 grep 補足。
+- 改動涉及既有程式碼時，先確認目標檔在 codebase-memory 索引中的覆蓋狀態（coverage）；對未完整索引（parse_partial／skipped）的檔，以 grep 與直接讀檔為準。
+- 索引的建置／更新／狀態亦經 codebase-memory-mcp 執行（index_status / index_repository / …）。
+
+> **定案：專案程式碼索引與查詢皆需先經過 codebase-memory-mcp。**
+
 ### 4.1 sales-order-backend
 
 採用網域分層（DDD 風格），每個 `internal/domain/<domain>` 通常包含：
@@ -387,6 +397,7 @@ cd ios && bundle exec fastlane ios beta
 6. **新增環境變數後**，是否已更新對應的 `.env.example`、Valibot 綱目或 envied 類別？
 7. **新增使用者可見文字時**，請維持繁體中文（App UI 多為硬編碼）。
 8. **若更動了本文件提及的架構、指令或流程，請同步更新本文件與對應子專案的 `AGENTS.md`。**
+9. **進行程式碼索引／查詢前**，是否已先經過 codebase-memory-mcp（見 §4.0）？
 
 ---
 

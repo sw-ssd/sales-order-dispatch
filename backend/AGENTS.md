@@ -56,3 +56,7 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
 - 提交前必跑 `task check`(fmt + vet + lint + test);`task vuln` 掃弱點。
 - migration 操作:`task migrate:up` / `migrate:status` / `migrate:down`;seed:`task seed`。
 - 開發:`task dev`(air hot reload);infra(postgres/valkey/gotenberg)由根目錄 `task infra:start` 起。
+
+## 7. 程式碼索引與查詢（codebase-memory-mcp）
+
+本專案**程式碼索引與查詢皆需先經過 codebase-memory-mcp**（見根目錄 `docs/AGENTS.md` §4.0）：找定義／實作／呼叫端、追蹤呼叫路徑、影響範圍分析、跨專案跳轉等一律先以 codebase-memory 知識圖譜查詢，不足處再以 grep／直接讀檔補足；改動既有程式碼前先確認目標檔的索引覆蓋狀態。
