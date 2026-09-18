@@ -233,4 +233,15 @@
 
 ---
 
-*最後更新：2026-09-18（metadicts 執行計畫）*
+## 複審登錄（requesting-code-review, 2026-09-18）
+
+- ✅ **已修 #1**：`ListOptions` 原用 `metadictScope(super)`（identity → 洩漏各部門私有選項），已改為 super **僅系統預設**（與 `ListMetadicts` 預設一致）；補測試 `TestListOptionsSuperSystemOnly`。
+- ✅ **已修 #3**：`CreateMetadict` 加 `code` 長度上限（`maxMetadictCodeLen = 64` → `invalid_argument`）。
+- ⬜ **#2 待辦**：D18「稽核寫入失敗 → 業務回滾」尚未有測試（sqlite 強制稽核失敗注入較難）；建議以 ent hook 或後續整合測試（Postgres）補。
+- ⬜ **#4 待辦**：`ListMetadictsRequest.include_inactive` 宣告但 List 恆含停用（未使用）→ 死欄位，建議移除或明定語意。
+- ⬜ **#5 待辦**：`GetMetadict` 冗餘 `Only`＋`Exist` 兩次查詢（可合併為範圍條件查詢）。
+- **#6 記錄**：系統級字典被軟刪除後重跑 migration 會 re-seed（允許共存），為可接受行為。
+
+---
+
+*最後更新：2026-09-18（metadicts 執行計畫；含複審修正）*

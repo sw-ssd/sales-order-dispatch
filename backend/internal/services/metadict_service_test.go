@@ -243,6 +243,29 @@ func TestListOptionsExcludesInactiveAndDeletedAndKeyword(t *testing.T) {
 	}
 }
 
+// TestListOptionsSuperSystemOnly:super 的 ListOptions 僅回系統預設,不混入部門私有值
+// (與 ListMetadicts 預設一致;複審 #1 修正)。
+func TestListOptionsSuperSystemOnly(t *testing.T) {
+	ctx := context.Background()
+	_, db := newMetadictTestServer(t, authz.Identity{})
+	coID, deptA, _ := seedUserCompany(t, db)
+	seedMetadictSystem(t, db, "unit", "KG", "公斤")
+	seedMetadictDept(t, db, deptA, "unit", "PP", "塑膠A")
+	id := authz.Identity{UserID: "1", CompanyID: uItoa(coID), Role: "super", Roles: []string{"super"}}
+	client, _ := newMetadictTestServer(t, id)
+	resp, err := client.ListOptions(ctx, connect.NewRequest(&metadictv1.ListOptionsRequest{Type: "unit"}))
+	if err != nil {
+		t.Fatalf("ListOptions: %v", err)
+	}
+	codes := map[string]bool{}
+	for _, o := range resp.Msg.GetOptions() {
+		codes[o.GetCode()] = true
+	}
+	if !codes["KG"] || codes["PP"] {
+		t.Fatalf("super ListOptions 應僅含系統預設 KG,得到 %v", codes)
+	}
+}
+
 // TestListOptionsCustomerSystemOnly:客戶身分僅見系統預設選項,不揭露部門擴充。
 func TestListOptionsCustomerSystemOnly(t *testing.T) {
 	ctx := context.Background()

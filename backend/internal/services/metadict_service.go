@@ -32,6 +32,9 @@ var validMetadictTypes = map[string]bool{
 // systemFixedTypes 為系統級固定、API 不可異動的 type(order_source,供 05 取號)。
 var systemFixedTypes = map[string]bool{"order_source": true}
 
+// maxMetadictCodeLen 為字典 code 長度上限(細部 2.5.2:過長 → invalid_argument)。
+const maxMetadictCodeLen = 64
+
 // MetadictService 實作 metadict.v1.MetadictService(字典 CRUD + ListOptions)。
 // 範圍:super/developer 全域(系統級+可按部門檢視);dept_admin/staff 僅系統預設+自己部門;customer/guest 僅系統預設(選項)。
 type MetadictService struct {
@@ -217,6 +220,9 @@ func (s *MetadictService) CreateMetadict(ctx context.Context, req *connect.Reque
 	}
 	if code == "" || name == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("code 與 display_name 必填"))
+	}
+	if len(code) > maxMetadictCodeLen {
+		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("code 過長(上限 %d 字元)", maxMetadictCodeLen))
 	}
 	if systemFixedTypes[typ] {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("%s 為系統固定值,不可異動", typ))
@@ -411,11 +417,17 @@ func (s *MetadictService) ListOptions(ctx context.Context, req *connect.Request[
 	}
 	q := s.db.Metadict.Query().
 		Where(metadict.TypeEQ(typ), metadict.IsActiveEQ(true), metadict.DeletedAtIsNil())
-	scope, err := metadictScope(id)
-	if err != nil {
-		return nil, err
+	// 可見範圍:super 僅系統預設(與 ListMetadicts 預設一致,避免下拉混入各部門私有值);
+	// 其餘依身分(系統+當前部門 / 僅系統)。
+	if isSuperIdentity(id) {
+		q = q.Where(metadict.DepartmentIDIsNil())
+	} else {
+		scope, err := metadictScope(id)
+		if err != nil {
+			return nil, err
+		}
+		q = scope(q)
 	}
-	q = scope(q)
 	if kw := strings.TrimSpace(req.Msg.GetKeyword()); kw != "" {
 		q = q.Where(metadict.Or(
 			metadict.DisplayNameContains(kw),
