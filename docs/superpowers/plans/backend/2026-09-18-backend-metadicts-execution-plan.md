@@ -237,7 +237,7 @@
 
 - ✅ **已修 #1**：`ListOptions` 原用 `metadictScope(super)`（identity → 洩漏各部門私有選項），已改為 super **僅系統預設**（與 `ListMetadicts` 預設一致）；補測試 `TestListOptionsSuperSystemOnly`。
 - ✅ **已修 #3**：`CreateMetadict` 加 `code` 長度上限（`maxMetadictCodeLen = 64` → `invalid_argument`）。
-- ⬜ **#2 待辦**：D18「稽核寫入失敗 → 業務回滾」尚未有測試（sqlite 強制稽核失敗注入較難）；建議以 ent hook 或後續整合測試（Postgres）補。
+- ✅ **已修 #2**：新增 `TestCreateMetadictRollsBackWhenAuditFails`——以缺公司脈絡身分令 `audit.Record` 回錯,驗證同交易業務異動回滾(metadicts 0 列)。(UserService 域既有 `TestAssignRoleAuditFailureRollsBack` 同型;今補 metadict 域。)
 - ✅ **已修 #5**：`GetMetadict` 合併為單次查詢（scope 條件併入首查，範圍外一律 `not_found`）。
 - **#6 註記（非缺陷）**：系統級字典被軟刪後**同一支 migration 再執行**會 re-seed（goose 版本化正常不會重跑;down/up 或全新 DB 才觸發;部分唯一索引允許已刪+現行共存）。無需動作。
 - ✅ **已修 #4（選 A）**：移除 `ListMetadictsRequest.include_inactive`（proto 加 `reserved 4` 防重用;重產 Go + 前端 TS）。List 維持「管理視角·恆含停用」;ListOptions 提供「僅啟用」選項,分工清楚。

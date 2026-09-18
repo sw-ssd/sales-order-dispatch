@@ -286,6 +286,28 @@ func TestListOptionsCustomerSystemOnly(t *testing.T) {
 	}
 }
 
+// TestCreateMetadictRollsBackWhenAuditFails D18(複審 #2):稽核寫入失敗(缺公司脈絡 →
+// audit.Record 回錯)時,同交易業務異動須一併回滾(不得「業務成功、稽核缺漏」)。
+func TestCreateMetadictRollsBackWhenAuditFails(t *testing.T) {
+	ctx := context.Background()
+	// 身分缺 CompanyID → companyIDFrom 回 0 → audit.Record 以「缺租戶脈絡」回錯。
+	id := authz.Identity{UserID: "1", Role: "super", Roles: []string{"super"}}
+	client, db := newMetadictTestServer(t, id)
+	if _, err := client.CreateMetadict(ctx, connect.NewRequest(&metadictv1.CreateMetadictRequest{
+		Type: "unit", Code: "ROLL", DisplayName: "回滾", IsActive: true,
+	})); err == nil {
+		t.Fatal("稽核寫入失敗時 CreateMetadict 應回錯誤")
+	}
+	// 業務異動應已回滾:metadicts 無任何列。
+	n, err := db.Metadict.Query().Count(ctx)
+	if err != nil {
+		t.Fatalf("count: %v", err)
+	}
+	if n != 0 {
+		t.Fatalf("稽核失敗應回滾業務異動,得到 %d 列", n)
+	}
+}
+
 func strPtr(s string) *string { return &s }
 
 func nowPtr() time.Time {
