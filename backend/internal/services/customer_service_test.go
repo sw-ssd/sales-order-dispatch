@@ -14,6 +14,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
+	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1/customersv1connect"
@@ -236,6 +237,37 @@ func TestUpdateKeepsCodeAndDeleteRestore(t *testing.T) {
 	}
 }
 
+// TestCreateCustomerAccountFailureRollsBack:D22 建帳號任一環節失敗 → 客戶主檔與計數器皆回滾(D18 同交易)。
+// 手法:預先占用即將生成的主帳號 email,使主帳號插入撞唯一值而失敗。
+func TestCreateCustomerAccountFailureRollsBack(t *testing.T) {
+	ctx := context.Background()
+	_, db := newCustomerTestServer(t, authz.Identity{})
+	coID, deptID := seedCustomerCompany(t, db, "TM", true)
+	repID := seedCustomerRep(t, db, coID, deptID)
+	// 佔位:第一個客戶將取號 TM000001,主帳號 email 固定為 customer.TM000001@system.local。
+	if _, err := db.User.Create().SetCompanyID(coID).SetDepartmentID(deptID).
+		SetEmail("customer.TM000001@system.local").SetName("既有").SetRole("staff").SetPasswordHash("x").Save(ctx); err != nil {
+		t.Fatalf("seed 佔位帳號: %v", err)
+	}
+	client, _ := newCustomerTestServer(t, deptAdminID(coID, deptID))
+
+	if _, err := client.CreateCustomer(ctx, connect.NewRequest(&customersv1.CreateCustomerRequest{Name: "王", DefaultSalesRepId: uItoa(repID)})); err == nil {
+		t.Fatal("主帳號 email 衝突時 CreateCustomer 應失敗")
+	}
+	// 客戶不應存在、計數器不得遞增、不得產生孤兒帳號。
+	if n, _ := db.Customer.Query().Count(ctx); n != 0 {
+		t.Fatalf("建帳失敗時不應有客戶列,得到 %d", n)
+	}
+	cnt, err := db.CustomerCounter.Query().Only(ctx)
+	if err != nil || cnt.NextSeq != 1 {
+		t.Fatalf("建帳失敗時計數器應回滾為 1,得到 %+v (err=%v)", cnt, err)
+	}
+	// 基準使用者數 = 業務 rep(1) + 佔位帳號(1) = 2;失敗後不得增加。
+	if n, _ := db.User.Query().Count(ctx); n != 2 {
+		t.Fatalf("建帳失敗時不應產生孤兒帳號,使用者數應仍為 2,得到 %d", n)
+	}
+}
+
 // assertD22Accounts 驗證 D22 建檔連動:回應交付欄位 + DB 中主/業務子帳號正確。
 func assertD22Accounts(t *testing.T, db *ent.Client, ctx context.Context, resp *connect.Response[customersv1.CreateCustomerResponse], customerName string) {
 	t.Helper()
@@ -284,6 +316,17 @@ func assertD22Accounts(t *testing.T, db *ent.Client, ctx context.Context, resp *
 	}
 	if !primary.TempPasswordExpiresAt.After(time.Now()) || primary.TempPasswordExpiresAt.After(time.Now().Add(25*time.Hour)) {
 		t.Fatalf("主帳號臨時密碼應約 24h 效期,得到 %v", primary.TempPasswordExpiresAt)
+	}
+	// 核心契約:交付的臨時密碼明文須能對上儲存的雜湊(可登入)。
+	if !auth.VerifyPassword(primary.PasswordHash, resp.Msg.GetPrimaryTempPassword()) {
+		t.Fatal("主帳號回傳之臨時密碼無法對上其雜湊(交付憑證不可用)")
+	}
+	if !auth.VerifyPassword(sub.PasswordHash, resp.Msg.GetSalesRepTempPassword()) {
+		t.Fatal("業務子帳號回傳之臨時密碼無法對上其雜湊(交付憑證不可用)")
+	}
+	// 兩帳號臨時密碼各自獨立(不可互相登入)。
+	if auth.VerifyPassword(sub.PasswordHash, resp.Msg.GetPrimaryTempPassword()) {
+		t.Fatal("主帳號臨時密碼不應能對上業務子帳號雜湊")
 	}
 }
 

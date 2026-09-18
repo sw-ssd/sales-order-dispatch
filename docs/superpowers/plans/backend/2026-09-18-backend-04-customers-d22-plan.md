@@ -64,3 +64,10 @@
 - **註記 #1（防禦性、可接受）**：規格 3.1.4 步驟 4「帳號名稱於客戶內唯一」未以 DB 唯一索引強制——新建客戶恰一次建立兩帳號且名稱由客戶名稱推導（理論不可能重複），`account_name` 亦非唯一欄位；採服務層保證，不另建索引。
 - **註記 #2**：「每客戶恰一 `is_primary=true`」由 migration `00014` 部分唯一索引 `(customer_id) WHERE is_primary=true AND customer_id IS NOT NULL` 兜底（Postgres）；ent/sqlite 測試不建該索引，由服務層正確寫入（測試內驗證）。
 - 已知 gap：App Dart `lib/gen` 未同步（本機無 `protoc-gen-dart`）；buf 重產對不相關前端 proto 的版本註解 churn 已還原，僅保留本任務 `customer_pb.*`；A2「App JWT 路徑停用阻斷」併入 01 Task 11 未作。
+
+### 複審 recheck（requesting-code-review, 2026-09-18 第二輪）
+
+- ✅ **已修 A（Important）**：D22 核心契約「交付的臨時密碼須可登入」原測試僅驗非空/相異，未驗明文能對上儲存雜湊。`assertD22Accounts` 加 `auth.VerifyPassword(hash, 回傳明文)` 驗主/子兩帳號，並加「兩帳號密碼不可互相登入」負向斷言。
+- ✅ **已修 B（Important）**：補 `TestCreateCustomerAccountFailureRollsBack`——預占主帳號 email 使建帳碰撞失敗，驗客戶列=0、計數器回滾為 1、無孤兒帳號（D18 同交易回滾，規格 3.1.4 驗收項）。
+- **Minor 待觀察**：`customerTempPasswordTTL`（services）與 `tempPasswordTTL`（handlers）同值 24h 之常數分置兩套件（可接受，均為規格 1.5.2）。
+- **Minor 待辦（依賴後續）**：`is_primary/system_generated` 尚未經 UserService proto 下發店面清單灰化（01/02 帳號管理範圍）。
