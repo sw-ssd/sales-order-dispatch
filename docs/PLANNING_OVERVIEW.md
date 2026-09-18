@@ -1,8 +1,8 @@
 # 多公司訂出貨系統 1.0 — 規劃整合總覽
 
 > 本文件整合所有先前規劃文件（原 `openspec/` 工作流已於 2026-08-03 停用並移除，內容遷移至 `docs/superpowers/specs/`），是後續**新增需求**與**開始實作**的單一入口。
-> 整合日期：2026-08-03（最後一次規劃活動：2026-07-22）
-> 核心狀態：**全新 monorepo 重建、規劃定稿、尚未實作**（0/79 Task 已開始，未部署）
+> 整合日期：2026-08-03；**現況對齊更新：2026-09-18**（backend 01~09 計畫已重建為反映現況，見 `docs/superpowers/plans/README.md`）
+> 核心狀態：**全新 monorepo 重建；backend 已開工（01-auth / 02-tenancy-users 部分完成，其餘領域未開始），未部署**
 > 版本凍結：規格書 **v1.0.34** 已凍結為實作基準（2026-08-03 起；需求變更須升版）
 
 ---
@@ -13,11 +13,14 @@
 
 | 文件 | 角色 | 狀態 |
 |---|---|---|
-| `docs/superpowers/specs/2026-07-19-sales-order-1.0-decisions.md` | **決策記錄（D1–D28）**：每項決策的選擇 / 理由 / 已考慮 alternative / 風險 | ✅ 已定稿（2026-08-03 遷入） |
+| `docs/superpowers/specs/2026-07-19-sales-order-1.0-decisions.md` | **決策記錄（D1–D32）**：每項決策的選擇 / 理由 / 已考慮 alternative / 風險（D29–D32 於 2026-08~09 定案） | ✅ 已定稿 |
 | `docs/superpowers/specs/1.0-requirements/`（12 份） | 需求層規格（Requirement + Scenario）；各領域可驗證行為基準 | ✅ 已定稿（2026-08-03 遷入） |
 | `docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（v1.0.34，52KB） | 客戶版完整規格（18 章）；**細節欄位與流程的唯一權威** | ✅ 已定稿 |
 | `docs/需求備忘_2026-08-03.txt` | 2026-08-03 新增需求（不存金額 / 無 Email / 客戶多帳號 / 促銷推播 / 退貨 / 偏好送貨日 / 稽核保留） | ✅ 已對應至規格書 v1.0.34 |
-| `docs/superpowers/plans/reference/2026-07-17-sales-order-1-0-tasks.md`（v2.9.0，51KB） | 執行計畫；每個 Task 的 Goal / Files / Steps / Acceptance Criteria 以此為準 | ✅ 已收斂為單一計畫 |
+| `docs/superpowers/plans/README.md` | **計畫總索引**（現況對齊版）：backend 01~09、app、reference、archive 之狀態總表（2026-09-18 重建） | ✅ 現況對齊 |
+| `docs/superpowers/plans/backend/` | backend 分域執行計畫 01~09（2026-09-18 重建為反映現況）；`detail/` 含細部功能文件 01~10（10 = fleet D32） | ✅ 現況對齊 |
+| `docs/superpowers/plans/archive/` | 歸檔：go8（完成）、casl（作廢）、consolidation（完成）、vibecheck（歷史）、`docs/archive/docs.zip`（備份） | 📦 歸檔 |
+| `docs/design/2026-09-18-pixso-版面美化-進度存檔.md` | Pixso 版面美化進度存檔 | ✅ 已產生 |
 | `docs/superpowers/plans/archive/2026-08-03-sales-order-1.0-vibecheck-plan.md` | vibe-check 重整建置計畫（22 節：問題/目標/流程圖/功能/架構/成本/時程/檢查點/風險假設） | ✅ 已產生 |
 | `docs/superpowers/reports/2026-08-03-sales-order-1.0-prd.html` | 互動式 PRD（9 分頁 + 6 張內嵌看板 + 續航快照），單一自包含檔案 | ✅ 已產生 |
 | `docs/superpowers/specs/2026-07-18-app-ai-assist-1.1-design.md`（v0.2.0） | 1.1 AI 輔助備忘（拍照建客戶、語音下單），**獨立迭代不影響 1.0** | ✅ 方向定案 |
@@ -31,7 +34,7 @@
 
 ---
 
-## 2. 已定案決策摘要（D1–D28，詳見決策記錄）
+## 2. 已定案決策摘要（D1–D32，詳見決策記錄）
 
 | # | 決策 | 一句話 |
 |---|---|---|

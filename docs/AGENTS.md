@@ -2,7 +2,7 @@
 
 > 本文件位於專案根目錄，統整 `sales-order-backend`、`sales-order-frontend`、`sales-order-app` 三個子專案。各子專案另有更詳細的 `AGENTS.md`，修改前請一併參閱。
 >
-> **1.0 重建計畫**：本文件描述現行三倉系統；「多公司訂出貨系統 1.0」（全新 monorepo 重建、規劃定稿、尚未實作）的規劃文件整合於 `docs/PLANNING_OVERVIEW.md`，決策層為 `docs/superpowers/specs/2026-07-19-sales-order-1.0-decisions.md`，規劃細節請先讀 `docs/PLANNING_OVERVIEW.md`。
+> **1.0 重建計畫**：本文件描述現行三倉系統；「多公司訂出貨系統 1.0」（全新 monorepo 重建，backend 已開工：01-auth / 02-tenancy-users 部分完成）的規劃文件整合於 `docs/PLANNING_OVERVIEW.md`，決策層為 `docs/superpowers/specs/2026-07-19-sales-order-1.0-decisions.md`（D1–D32），計畫現況見 `docs/superpowers/plans/README.md`，規劃細節請先讀 `docs/PLANNING_OVERVIEW.md`。
 > - `sales-order-app/AGENTS.md`：Flutter App 詳細指引
 > - `sales-order-backend/AGENTS.md`：Go 後台詳細指引
 > - `sales-order-frontend/AGENTS.md`：SolidJS 前端詳細指引
