@@ -702,7 +702,9 @@ cd frontend && pnpm remove @kobalte/core
 用 `grep` 工具（本 harness 封鎖 shell grep）：
 - `kobalte`（path：`frontend/src; frontend/package.json; pnpm-lock.yaml`）→ 0 命中
 - `Nikala`（path：`frontend`）→ 0 命中
-- `secondary-`、`orange-`、`emerald-`（path：`frontend/src`）→ 0 命中（確認色階字面值沒有殘留）
+- **Tailkit 色階字面值**：搜 class 形式的色階前綴（path：`frontend/src`）→ 0 命中：
+  `(bg|text|border|ring|divide|placeholder|from|to|via|shadow)-(secondary|orange|emerald|zinc|slate)-`
+  （**不要**用裸字 `secondary-`：`src/index.css` 的 `--color-secondary`／`--secondary-foreground` 等 token 名稱是合法的，會誤命中。）
 
 - [ ] **Step 4: 全套驗收**
 
