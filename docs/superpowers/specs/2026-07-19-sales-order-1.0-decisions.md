@@ -253,6 +253,10 @@
 - **修訂（2026-09-18）**：
   1. **彈性角色＝資料驅動**：D9 自訂角色可彈性建立；`role → 權限` 的對映以 **tuples（資料）** 承載，由 `role_permissions` 異動時 translate 成 OpenFGA tuples（`<role_code> → 資源 can_read/can_write 關係`）。**model 固定一組資源型別與 relations，不隨角色增減；新增自訂角色不動 model**。
   2. **條件採兩層分工（取代「屬性/狀態條件以 OpenFGA condition 表達」之字面）**：OpenFGA 僅負責**關係性 / 角色 / 租戶範圍**授權（userset member/admin、資源歸屬、`role_permissions` 之身分層級）;對**物件可變狀態**的條件（如「僅能 cancel pending 訂單」）由 **domain 狀態機 / use-case 層**執行（D13），避免把資料模型洩漏進授權層、避免狀態規則於兩處重複漂移。前端 UI 權限仍由 OpenFGA `Check`/list-objects 驅動。
+  3. **實作收尾（2026-09-18，D32 複查修正）**：
+     - **單一 ACL 來源**：7 內建角色的 `role_permissions` 由 `auth.BuiltinRolePermissions()`（單一來源 `rolePolicy`+`roleInheritance`）冪等 seed（`cmd/seed`），DB 成為唯一持久來源，OpenFGA provision 得以產出 role→ability tuples（解除「OPENFGA_ENABLED=true 時全員 deny」死局）；`super`/`developer`（`"*":{"*"}` 全資源）展開為固定業務資源 × read/write，`authorizeRPC` 對 **super 亦加逃生門**（防新增資源即鎖死 super）。
+     - **RLS 暫緩啟用**：`00007` 已定義政策但**未 ENABLE/FORCE**。原因：OpenFGA 與業務共用同一 PostgreSQL datastore，`FORCE` 會致 OpenFGA 自有表遭套用（無政策 → 全拒、OpenFGA 崩潰）；非 FORCE 對表 owner 連線不生效；services 無每請求交易套用點。待 repository/每請求交易層 + 資料庫角色分離後另立任務。
+     - **既有 DB migration**：`00008_forward_fix.sql` 以 `DO $$` 冪等補 `role_permissions.role_id → roles(id)` FK 與 `users.token_version`（全新 DB no-op）。
 
 ## Risks / Trade-offs
 
