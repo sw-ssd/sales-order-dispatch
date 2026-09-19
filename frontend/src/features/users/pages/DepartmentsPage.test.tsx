@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@solidjs/testing-lib
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type * as ConnectRpc from "@connectrpc/connect";
+import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 
 // 部門／公司 API 以 spy 取代：DepartmentsPage 在模組層建立兩個 connect client，
 // 因此以 createClient 的替身同時攔截（ConnectError/Code 保持真實，錯誤訊息對照才有效）。
@@ -44,9 +45,25 @@ const EXISTING_DEPARTMENT = {
   companyName: "既有公司",
 };
 
+/** 每個測試一份全新的 `QueryClient`：快取不跨測試殘留。 */
+function newClient() {
+  // retry 關閉——測試裡的失敗都是刻意安排的，退避重試只會讓呼叫次數與時間變得不確定
+  // （retry 謂詞本身由 `lib/query-client.test.ts` 守著）。
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+}
+
+/** 在 provider 內掛載頁面（部門清單與公司下拉一律經 query client 取得）。 */
+function mountPage(client: QueryClient = newClient()) {
+  render(() => (
+    <QueryClientProvider client={client}>
+      <DepartmentsPage />
+    </QueryClientProvider>
+  ));
+}
+
 /** 渲染頁面並等列表載入完成（modal 的測試都要先有列表可點）。 */
 async function renderPage() {
-  render(() => <DepartmentsPage />);
+  mountPage();
   await waitFor(() => expect(screen.getByText("業務部")).toBeTruthy());
 }
 
@@ -359,5 +376,208 @@ describe("<DepartmentsPage> 部門 modal 表單", () => {
     // 等非同步工作排空，確認第二次提交是真的沒送出（而不是還沒輪到）。
     await settle();
     expect(createDepartmentSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("<DepartmentsPage> 部門清單與公司下拉查詢", () => {
+  const SECOND_PAGE_DEPARTMENT = {
+    id: "d-2",
+    name: "第二頁部門",
+    companyId: "c-1",
+    companyName: "既有公司",
+  };
+  /** 公司下拉的真實規模：每頁 50 筆、共 120 家 = 3 頁（第 3 頁 21 筆）。 */
+  const companyAt = (n: number) => ({ id: `c-${n}`, name: `公司 ${n}` });
+
+  /** 45 筆 = 3 頁；第 2 頁回另一筆部門，用來證明真的換了資料而不是沿用快取。 */
+  function mockDepartmentPages() {
+    listDepartmentsSpy.mockImplementation((req: { page: number }) =>
+      Promise.resolve(
+        req.page === 2
+          ? { departments: [SECOND_PAGE_DEPARTMENT], pagination: { total: 45 } }
+          : { departments: [EXISTING_DEPARTMENT], pagination: { total: 45 } }
+      )
+    );
+  }
+
+  /** 部門篩選表單（頁面上另有公司搜尋表單，且 modal 內也有一個「所屬公司」下拉 → 以 id 收斂）。 */
+  function departmentFilterForm(): HTMLFormElement {
+    const form = document.getElementById("department-company-filter")?.closest("form");
+    if (!form) throw new Error("找不到部門篩選表單");
+    return form;
+  }
+
+  /** 公司下拉目前渲染出的選項 id（排除「全部公司」的空值選項）。 */
+  function companyOptionIds(): string[] {
+    const select = document.getElementById("department-company-filter");
+    if (!select) throw new Error("找不到公司下拉");
+    return Array.from(select.querySelectorAll("option"))
+      .map((option) => option.value)
+      .filter((value) => value !== "");
+  }
+
+  it("首屏：以 page 1、pageSize 20 與未設定的 companyId 查詢部門", async () => {
+    await renderPage();
+
+    expect(listDepartmentsSpy).toHaveBeenCalledTimes(1);
+    expect(listDepartmentsSpy).toHaveBeenCalledWith({
+      page: 1,
+      pageSize: 20,
+      companyId: undefined,
+    });
+  });
+
+  it("換到第 2 頁：以 page 2 重新查詢，且新資料到達前舊列仍在（不閃空）", async () => {
+    const secondPage = Promise.withResolvers<unknown>();
+    listDepartmentsSpy.mockResolvedValueOnce({
+      departments: [EXISTING_DEPARTMENT],
+      pagination: { total: 45 },
+    });
+    listDepartmentsSpy.mockReturnValueOnce(secondPage.promise);
+    await renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "第 2 頁" }));
+
+    await waitFor(() => expect(listDepartmentsSpy).toHaveBeenCalledTimes(2));
+    expect(listDepartmentsSpy).toHaveBeenLastCalledWith({
+      page: 2,
+      pageSize: 20,
+      companyId: undefined,
+    });
+
+    // 第 2 頁還在飛：placeholderData 讓舊頁資料留在畫面上，不退回載入列。
+    expect(screen.getByText("業務部")).toBeTruthy();
+    expect(screen.queryByText("載入中…")).toBeNull();
+
+    secondPage.resolve({ departments: [SECOND_PAGE_DEPARTMENT], pagination: { total: 45 } });
+
+    await waitFor(() => expect(screen.getByText("第二頁部門")).toBeTruthy());
+    expect(screen.queryByText("業務部")).toBeNull();
+  });
+
+  it("所屬公司篩選送出：草稿不查詢、送出後帶入參數並回到第 1 頁（只查一次）", async () => {
+    mockDepartmentPages();
+    await renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "第 2 頁" }));
+    await waitFor(() => expect(listDepartmentsSpy).toHaveBeenCalledTimes(2));
+
+    const form = departmentFilterForm();
+    const select = within(form).getByLabelText("所屬公司");
+    fireEvent.change(select, { target: { value: "c-1" } });
+    // 草稿只存在頁面 signal 裡，未送出不得查詢。
+    expect(listDepartmentsSpy).toHaveBeenCalledTimes(2);
+
+    fireEvent.submit(form);
+
+    await waitFor(() =>
+      expect(listDepartmentsSpy).toHaveBeenLastCalledWith({
+        page: 1,
+        pageSize: 20,
+        companyId: "c-1",
+      })
+    );
+    // 套用篩選與回第 1 頁是同一次更新 → 只觸發一次查詢。
+    await settle();
+    expect(listDepartmentsSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it("超頁退回：回傳的 total 讓目前頁碼超界時夾回合法頁碼，且請求次數有界", async () => {
+    // 第 2 頁的結果只剩 1 頁（例：該頁的資料被刪光），目前頁碼因此超界。
+    listDepartmentsSpy.mockImplementation((req: { page: number }) =>
+      Promise.resolve(
+        req.page === 2
+          ? { departments: [SECOND_PAGE_DEPARTMENT], pagination: { total: 1 } }
+          : { departments: [EXISTING_DEPARTMENT], pagination: { total: 21 } }
+      )
+    );
+    await renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "第 2 頁" }));
+
+    // 夾回第 1 頁 → 只重取一次（第 3 次呼叫），且不再繼續長。
+    await waitFor(() => expect(listDepartmentsSpy).toHaveBeenCalledTimes(3));
+    expect(listDepartmentsSpy).toHaveBeenLastCalledWith({
+      page: 1,
+      pageSize: 20,
+      companyId: undefined,
+    });
+    await settle();
+    expect(listDepartmentsSpy).toHaveBeenCalledTimes(3);
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "第 1 頁" }).getAttribute("aria-current")).toBe(
+        "page"
+      )
+    );
+  });
+
+  it("公司下拉：首屏載入一頁 50 筆，「載入更多」累積後續頁且選項不重複", async () => {
+    // 120 家＝3 頁（50/50/21）；第 2 頁刻意回一筆與第 1 頁重複的公司（c-50），
+    // 用來釘住累積時的去重（改寫前的手寫累積版就會去重）。
+    listCompaniesSpy.mockImplementation((req: { page: number }) =>
+      Promise.resolve({
+        companies:
+          req.page === 3
+            ? Array.from({ length: 21 }, (_, i) => companyAt(100 + i))
+            : req.page === 2
+              ? [companyAt(50), ...Array.from({ length: 49 }, (_, i) => companyAt(51 + i))]
+              : Array.from({ length: 50 }, (_, i) => companyAt(1 + i)),
+        pagination: { total: 120 },
+      })
+    );
+    await renderPage();
+
+    expect(listCompaniesSpy).toHaveBeenCalledTimes(1);
+    expect(listCompaniesSpy).toHaveBeenCalledWith({
+      page: 1,
+      pageSize: 50,
+      keyword: undefined,
+    });
+    const firstPageIds = Array.from({ length: 50 }, (_, i) => `c-${i + 1}`);
+    expect(companyOptionIds()).toEqual(firstPageIds);
+
+    const loadMore = screen.getByRole("button", { name: "載入更多" }) as HTMLButtonElement;
+    fireEvent.click(loadMore);
+
+    await waitFor(() => expect(listCompaniesSpy).toHaveBeenCalledTimes(2));
+    expect(listCompaniesSpy).toHaveBeenLastCalledWith({
+      page: 2,
+      pageSize: 50,
+      keyword: undefined,
+    });
+
+    // 累積：選項單調增加、第 1 頁仍在最前面，且不重複（第 2 頁的 c-50 不新增第二個選項）。
+    await waitFor(() => expect(companyOptionIds().length).toBeGreaterThan(50));
+    expect(companyOptionIds().length).toBe(99);
+    expect(companyOptionIds().slice(0, 50)).toEqual(firstPageIds);
+    expect(new Set(companyOptionIds()).size).toBe(companyOptionIds().length);
+
+    fireEvent.click(loadMore);
+
+    await waitFor(() => expect(companyOptionIds().length).toBe(120));
+    expect(new Set(companyOptionIds()).size).toBe(120);
+    expect(document.body.textContent).toContain("已載入 120 家,共 120 家");
+
+    // 全部載完 → 「載入更多」停用（不再有下一頁）。
+    await waitFor(() => expect(loadMore.disabled).toBe(true));
+  });
+
+  it("編輯不在已載入分頁內的公司：補載後 modal 的所屬公司仍能選中它", async () => {
+    // 部門頁的下拉同時是 modal 的選項來源：該部門的公司若不在已載入分頁內，
+    // modal 的 <select> 不能顯示成別的選項（補載的那筆必須出現在選項裡）。
+    listDepartmentsSpy.mockResolvedValue({
+      departments: [{ id: "d-9", name: "外部部門", companyId: "c-9", companyName: "未載入公司" }],
+      pagination: { total: 1 },
+    });
+    getCompanySpy.mockResolvedValue({ company: { id: "c-9", name: "未載入公司" } });
+    mountPage();
+    await waitFor(() => expect(screen.getByText("外部部門")).toBeTruthy());
+
+    fireEvent.click(screen.getByRole("button", { name: "編輯" }));
+
+    const dialog = await waitFor(() => screen.getByRole("dialog"));
+    const select = within(dialog).getByLabelText(/所屬公司/) as HTMLSelectElement;
+    await waitFor(() => expect(select.value).toBe("c-9"));
+    expect(getCompanySpy).toHaveBeenCalledWith({ companyId: "c-9" });
   });
 });

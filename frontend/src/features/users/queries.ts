@@ -1,6 +1,15 @@
 import { createClient } from "@connectrpc/connect";
-import { queryOptions } from "@tanstack/solid-query";
-import { CompanyService } from "~/lib/proto/salesorder/v1/company_pb";
+import {
+  infiniteQueryOptions,
+  queryOptions,
+  type InfiniteData,
+  type QueryKey,
+} from "@tanstack/solid-query";
+import {
+  CompanyService,
+  DepartmentService,
+  type ListCompaniesResponse,
+} from "~/lib/proto/salesorder/v1/company_pb";
 import { transport } from "~/lib/transport";
 
 /**
@@ -17,9 +26,13 @@ import { transport } from "~/lib/transport";
  *   頁面**不得**再留一份 signal 快取（兩份真相）。
  * - 篩選條件在頁面是 signal「草稿」，**只在 submit 時**進 query key；`page` 由頁面持有
  *   （3B 起改由 table 的 pagination state 持有，query key 一律取自該狀態）。
+ * - **累積式下拉**（部門頁的「所屬公司」）用 `infiniteQueryOptions`＋`createInfiniteQuery`：
+ *   key 為 `["companies", "options", { … }]`（仍以 `["companies"]` 為失效前綴），
+ *   `getNextPageParam` 由「已載入頁數 × 每頁筆數 vs 總筆數」決定；頁面把各頁攤平後去重。
  *
  * 頁面用法：
  *   const query = createQuery(() => companiesQueryOptions({ page: page(), pageSize: PAGE_SIZE, … }));
+ *   const options = createInfiniteQuery(() => companyDropdownQueryOptions({ keyword }));
  */
 
 /** 清單每頁筆數（三張清單共用同一個值）。 */
@@ -55,5 +68,73 @@ export const companiesQueryOptions = (params: CompanyListParams) =>
         pageSize: params.pageSize,
         keyword: params.keyword,
         status: params.status,
+      }),
+  });
+
+/** 累積式公司下拉（部門頁「所屬公司」）每頁筆數：比清單的 20 筆大，減少「載入更多」次數。 */
+export const COMPANY_DROPDOWN_PAGE_SIZE = 50;
+
+/** 公司下拉查詢參數（全部參數都進 queryKey）。 */
+export interface CompanyDropdownParams {
+  keyword?: string;
+}
+
+/**
+ * 公司下拉查詢選項（累積式）；`createInfiniteQuery(() => companyDropdownQueryOptions(params))`。
+ *
+ * `getNextPageParam` 以「已載入筆數 vs 總筆數」判斷是否還有下一頁（等同改寫前「載入更多」的
+ * 停用條件 `已載入 >= 總筆數`）；回 `undefined` 即 `hasNextPage === false`。
+ */
+export const companyDropdownQueryOptions = (params: CompanyDropdownParams) =>
+  infiniteQueryOptions<
+    ListCompaniesResponse,
+    Error,
+    InfiniteData<ListCompaniesResponse>,
+    QueryKey,
+    number
+  >({
+    queryKey: [
+      "companies",
+      "options",
+      { pageSize: COMPANY_DROPDOWN_PAGE_SIZE, keyword: params.keyword },
+    ],
+    initialPageParam: 1,
+    placeholderData: (prev) => prev,
+    queryFn: ({ pageParam }) =>
+      companyClient.listCompanies({
+        page: pageParam,
+        pageSize: COMPANY_DROPDOWN_PAGE_SIZE,
+        keyword: params.keyword,
+      }),
+    getNextPageParam: (lastPage, allPages) =>
+      allPages.reduce((loaded, page) => loaded + page.companies.length, 0) <
+      Number(lastPage.pagination?.total ?? 0)
+        ? allPages.length + 1
+        : undefined,
+  });
+
+/** 部門服務 client：清單查詢與 modal 的建立／更新／刪除共用同一個實例。 */
+export const departmentClient = createClient(DepartmentService, transport);
+
+/** 部門清單查詢參數（全部參數都進 queryKey）。 */
+export interface DepartmentListParams {
+  page: number;
+  pageSize: number;
+  companyId?: string;
+}
+
+/** 部門清單查詢選項；`createQuery(() => departmentsQueryOptions(params))`。 */
+export const departmentsQueryOptions = (params: DepartmentListParams) =>
+  queryOptions({
+    queryKey: [
+      "departments",
+      { page: params.page, pageSize: params.pageSize, companyId: params.companyId },
+    ],
+    placeholderData: (prev) => prev,
+    queryFn: () =>
+      departmentClient.listDepartments({
+        page: params.page,
+        pageSize: params.pageSize,
+        companyId: params.companyId,
       }),
   });
