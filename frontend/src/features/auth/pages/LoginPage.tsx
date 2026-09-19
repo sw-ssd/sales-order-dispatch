@@ -15,8 +15,9 @@ import {
 } from "~/components/ui";
 import { createSignal, Show, type JSX } from "solid-js";
 import { AuthService } from "~/lib/proto/salesorder/v1/auth_pb";
+import { fieldValidators, firstMessage } from "../../form-helpers";
 import GoogleLoginButton from "../components/GoogleLoginButton";
-import { fieldValidators, loginSchema } from "../schemas";
+import { loginSchema } from "../schemas";
 
 const authClient = createClient(
   AuthService,
@@ -40,15 +41,6 @@ function errorMessage(err: unknown): string {
     return `登入失敗:${err.message}`;
   }
   return "無法連線到伺服器,請確認後端服務已啟動";
-}
-
-/**
- * 欄位錯誤訊息只取第一則；`meta.errors` 的型別是 `unknown[]`，
- * 而 validator（`fieldValidators`）回傳的必定是字串，非字串一律不顯示。
- */
-function firstMessage(errors: unknown[]): string | undefined {
-  const [first] = errors;
-  return typeof first === "string" ? first : undefined;
 }
 
 /**
@@ -85,6 +77,9 @@ export default function LoginPage() {
 
   const handleStoreSubmit: JSX.EventHandler<HTMLFormElement, SubmitEvent> = (event) => {
     event.preventDefault();
+    // 提交中不重送：form-core 的 `handleSubmit` 只在第一次嘗試（`submissionAttempts <= 1`）
+    // 擋下，進行中的第二次提交仍會送 API（改寫前的 `submitting` 判斷留下的守門）。
+    if (isSubmitting()) return;
     // 客戶端驗證失敗時 `onSubmit` 不會被呼叫，舊的伺服器錯誤 banner 必須在這裡先清掉。
     setServerError(undefined);
     void form.handleSubmit();

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { fieldValidators, loginSchema } from "./schemas";
+import { fieldValidators } from "../form-helpers";
+import { loginSchema } from "./schemas";
 
 const customerCode = fieldValidators(loginSchema.entries.customerCode);
 const password = fieldValidators(loginSchema.entries.password);

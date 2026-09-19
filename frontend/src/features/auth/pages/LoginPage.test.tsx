@@ -36,6 +36,17 @@ function fillCredentials(customerCode: string, password: string) {
   fireEvent.input(screen.getByLabelText("密碼"), { target: { value: password } });
 }
 
+/**
+ * 等表單的非同步工作排空。`isSubmitting` 要等到 `handleSubmit` 的驗證鏈跑完才會轉回 false，
+ * 而錯誤訊息在那之前就出現了；不等它，下一次提交會被頁面的「提交中不重送」守門擋掉
+ * （真實使用者的節奏是等按鈕重新可用後才再按一次，這裡把同一件事顯式化）。
+ */
+async function settle() {
+  const flushed = Promise.withResolvers<void>();
+  setTimeout(flushed.resolve, 0);
+  await flushed.promise;
+}
+
 beforeEach(() => {
   loginSpy.mockReset();
   navigateSpy.mockReset();
@@ -88,6 +99,7 @@ describe("<LoginPage> 店家分頁表單", () => {
 
     fireEvent.submit(form);
     await waitFor(() => expect(screen.getByText("請輸入客戶編號")).toBeTruthy());
+    await settle();
 
     fillCredentials("S-001", "pw-12345");
     fireEvent.submit(form);
@@ -122,6 +134,7 @@ describe("<LoginPage> 店家分頁表單", () => {
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toContain("客戶編號或密碼錯誤")
     );
+    await settle();
 
     // 清空密碼後再提交：客戶端驗證先擋下（`onSubmit` 不會被呼叫），舊 banner 不該與欄位訊息並存。
     fireEvent.input(screen.getByLabelText("密碼"), { target: { value: "" } });
@@ -151,6 +164,8 @@ describe("<LoginPage> 店家分頁表單", () => {
 
     login.resolve();
     await waitFor(() => expect(submitButton.disabled).toBe(false));
+    // 等非同步工作排空，確認第二次提交是真的沒送出（而不是還沒輪到）。
+    await settle();
     expect(loginSpy).toHaveBeenCalledTimes(1);
   });
 });

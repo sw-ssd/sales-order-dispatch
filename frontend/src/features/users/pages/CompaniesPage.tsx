@@ -1,5 +1,6 @@
 import { Code, ConnectError, createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
+import { createForm } from "@tanstack/solid-form";
 import {
   Badge,
   Button,
@@ -13,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
   Field,
+  FieldError,
   FieldLabel,
   Input,
   Table,
@@ -22,14 +24,22 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui";
-import { createSignal, For, onMount, Show } from "solid-js";
+import { createSignal, For, onMount, Show, type JSX } from "solid-js";
 import {
   CompanyService,
   type Company,
 } from "~/lib/proto/salesorder/v1/company_pb";
+import { fieldValidators, firstMessage } from "../../form-helpers";
 import { ListPagination } from "../components/ListPagination";
+import { companySchema } from "../schemas";
 
 const PAGE_SIZE = 20;
+
+/**
+ * 新增模式的欄位預設值。`form.reset(values)` 會把傳入的 values 併成新的 `defaultValues`
+ * （編輯模式帶入該筆公司），所以每次開啟都要顯式帶一份新的複本，不能只靠 `form.reset()`。
+ */
+const EMPTY_COMPANY_VALUES = { name: "", identifier: "", taxId: "", status: "active" };
 
 const companyClient = createClient(
   CompanyService,
@@ -82,6 +92,10 @@ function errorMessage(err: unknown): string {
  * 公司主檔 CRUD 頁(/users/companies)。
  * 版型照 Tailkit（Page Headings + In Card 表格）：標題區塊帶下框線、篩選列為卡片色帶、
  * 表格與分頁收在同一張 `Card` 內。頁面本身不帶內距——內距由 AppShell 內容區（`p-4 lg:p-6`）負責。
+ *
+ * modal 的欄位值、欄位驗證與提交狀態由 `createForm` 持有：驗證時機為 `onBlur` + `onSubmit`
+ * （輸入過程不標紅），客戶端錯誤落在該欄下方；伺服器錯誤不對應特定欄位，由提交流程設進
+ * 表單層 banner。篩選列（關鍵字／狀態）仍是獨立的查詢表單，不受 modal 的 form 管轄。
  */
 export default function CompaniesPage() {
   const [companies, setCompanies] = createSignal<Company[]>([]);
@@ -101,14 +115,45 @@ export default function CompaniesPage() {
   // 表單對話框狀態
   const [dialogOpen, setDialogOpen] = createSignal(false);
   const [editing, setEditing] = createSignal<Company | null>(null);
-  const [saving, setSaving] = createSignal(false);
-  const [formError, setFormError] = createSignal<string | null>(null);
+  // 伺服器錯誤不是驗證狀態（不對應任何欄位），由提交流程設定，落在表單層 banner。
+  const [serverError, setServerError] = createSignal<string | undefined>();
 
-  // 表單欄位
-  const [name, setName] = createSignal("");
-  const [taxId, setTaxId] = createSignal("");
-  const [identifier, setIdentifier] = createSignal("");
-  const [status, setStatus] = createSignal("active");
+  // 欄位值、欄位錯誤與提交狀態由 `createForm` 持有；驗證時機為 `onBlur` + `onSubmit`
+  // （輸入過程不標紅），客戶端錯誤落在該欄下方。
+  const nameValidators = fieldValidators(companySchema.entries.name);
+  const identifierValidators = fieldValidators(companySchema.entries.identifier);
+
+  const form = createForm(() => ({
+    defaultValues: { ...EMPTY_COMPANY_VALUES },
+    onSubmit: async ({ value }) => {
+      const current = editing();
+      const name = value.name.trim();
+      const taxId = value.taxId.trim();
+      try {
+        if (current) {
+          await companyClient.updateCompany({
+            companyId: current.id,
+            name,
+            taxId,
+            status: value.status,
+          });
+        } else {
+          await companyClient.createCompany({
+            name,
+            taxId,
+            identifier: value.identifier.trim(),
+            status: value.status,
+          });
+        }
+        setDialogOpen(false);
+        await load();
+      } catch (err) {
+        setServerError(errorMessage(err));
+      }
+    },
+  }));
+
+  const isSubmitting = form.useSelector((state) => state.isSubmitting);
 
   const load = async () => {
     setLoading(true);
@@ -137,65 +182,35 @@ export default function CompaniesPage() {
   };
   onMount(load);
 
-  const openCreate = () => {
-    setEditing(null);
-    setName("");
-    setTaxId("");
-    setIdentifier("");
-    setStatus("active");
-    setFormError(null);
+  /**
+   * 開啟 modal（新增傳 `null`）。表單欄位值、欄位錯誤與 touched 由 `form.reset(values)` 重設；
+   * `serverError` 是元件層 signal、**不受 `form.reset()` 影響**，必須在這裡顯式清掉，
+   * 否則重開會重現上一次的伺服器錯誤 banner（規格 R1）。
+   */
+  const openDialog = (company: Company | null) => {
+    setEditing(company);
+    setServerError(undefined);
+    form.reset(
+      company
+        ? {
+            name: company.name,
+            identifier: company.identifier,
+            taxId: company.taxId,
+            status: company.status || "active",
+          }
+        : { ...EMPTY_COMPANY_VALUES }
+    );
     setDialogOpen(true);
   };
 
-  const openEdit = (c: Company) => {
-    setEditing(c);
-    setName(c.name);
-    setTaxId(c.taxId);
-    setIdentifier(c.identifier);
-    setStatus(c.status || "active");
-    setFormError(null);
-    setDialogOpen(true);
-  };
-
-  const submit = async (e: SubmitEvent) => {
+  const submit: JSX.EventHandler<HTMLFormElement, SubmitEvent> = (e) => {
     e.preventDefault();
-    if (saving()) return;
-    const trimmedName = name().trim();
-    const trimmedIdentifier = identifier().trim();
-    if (!trimmedName) {
-      setFormError("請輸入公司名稱");
-      return;
-    }
-    const current = editing();
-    if (!current && !trimmedIdentifier) {
-      setFormError("請輸入識別碼(identifier)");
-      return;
-    }
-    setSaving(true);
-    setFormError(null);
-    try {
-      if (current) {
-        await companyClient.updateCompany({
-          companyId: current.id,
-          name: trimmedName,
-          taxId: taxId().trim(),
-          status: status(),
-        });
-      } else {
-        await companyClient.createCompany({
-          name: trimmedName,
-          taxId: taxId().trim(),
-          identifier: trimmedIdentifier,
-          status: status(),
-        });
-      }
-      setDialogOpen(false);
-      await load();
-    } catch (err) {
-      setFormError(errorMessage(err));
-    } finally {
-      setSaving(false);
-    }
+    // 提交中不重送（改寫前是 `if (saving()) return`）：form-core 的 `handleSubmit`
+    // 只在第一次嘗試（`submissionAttempts <= 1`）擋下，進行中的第二次提交仍會送 API。
+    if (isSubmitting()) return;
+    // 客戶端驗證失敗時 `onSubmit` 不會被呼叫，舊的伺服器錯誤 banner 必須在這裡先清掉。
+    setServerError(undefined);
+    void form.handleSubmit();
   };
 
   const remove = async (c: Company) => {
@@ -215,7 +230,7 @@ export default function CompaniesPage() {
           <h1 class="text-2xl font-bold text-foreground">公司管理</h1>
           <p class="mt-1 text-sm text-muted-foreground">多租戶公司主檔(共 {total()} 筆)</p>
         </div>
-        <Button type="button" onClick={openCreate}>
+        <Button type="button" onClick={() => openDialog(null)}>
           新增公司
         </Button>
       </header>
@@ -307,7 +322,7 @@ export default function CompaniesPage() {
                   <TableCell class="text-right">
                     <button
                       type="button"
-                      onClick={() => openEdit(c)}
+                      onClick={() => openDialog(c)}
                       class="font-medium text-primary hover:underline"
                     >
                       編輯
@@ -343,63 +358,92 @@ export default function CompaniesPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <form class="space-y-4" onSubmit={submit}>
-            <Field>
-              <FieldLabel for="company-name">公司名稱 *</FieldLabel>
-              <Input
-                id="company-name"
-                required
-                value={name()}
-                onInput={(e) => setName(e.currentTarget.value)}
-              />
-            </Field>
-            <Field>
-              <FieldLabel for="company-identifier">識別碼(identifier) *</FieldLabel>
-              <Input
-                id="company-identifier"
-                required
-                disabled={!!editing()}
-                value={identifier()}
-                onInput={(e) => setIdentifier(e.currentTarget.value)}
-                placeholder="建立後不可修改"
-              />
-            </Field>
-            <Field>
-              <FieldLabel for="company-tax-id">統一編號</FieldLabel>
-              <Input
-                id="company-tax-id"
-                value={taxId()}
-                onInput={(e) => setTaxId(e.currentTarget.value)}
-              />
-            </Field>
-            <Field>
-              <FieldLabel for="company-status">狀態</FieldLabel>
-              <select
-                id="company-status"
-                value={status()}
-                onChange={(e) => setStatus(e.currentTarget.value)}
-                class={SELECT_CLASS}
-              >
-                <option value="active">啟用</option>
-                <option value="inactive">停用</option>
-                <option value="suspended">暫停</option>
-              </select>
-            </Field>
+          {/*
+            `novalidate`：必填規則已由 valibot 鏡射，原生驗證會用瀏覽器泡泡擋下 submit
+            並讓自訂的繁中欄位錯誤沒有機會顯示；`required` 保留作為必填的語意標記。
+          */}
+          <form class="space-y-4" novalidate onSubmit={submit}>
+            <form.Field name="name" validators={nameValidators}>
+              {(field) => (
+                <Field invalid={!field().state.meta.isValid}>
+                  <FieldLabel for="company-name">公司名稱 *</FieldLabel>
+                  <Input
+                    id="company-name"
+                    required
+                    value={field().state.value}
+                    onBlur={field().handleBlur}
+                    onInput={(e) => field().handleChange(e.currentTarget.value)}
+                  />
+                  <FieldError>{firstMessage(field().state.meta.errors)}</FieldError>
+                </Field>
+              )}
+            </form.Field>
 
-            <Show when={formError()}>
-              <p
-                class="rounded-lg bg-destructive/15 px-3 py-2 text-sm font-medium text-destructive"
-                role="alert"
-              >
-                {formError()}
-              </p>
+            <form.Field name="identifier" validators={identifierValidators}>
+              {(field) => (
+                <Field invalid={!field().state.meta.isValid}>
+                  <FieldLabel for="company-identifier">識別碼(identifier) *</FieldLabel>
+                  <Input
+                    id="company-identifier"
+                    required
+                    disabled={!!editing()}
+                    value={field().state.value}
+                    onBlur={field().handleBlur}
+                    onInput={(e) => field().handleChange(e.currentTarget.value)}
+                    placeholder="建立後不可修改"
+                  />
+                  <FieldError>{firstMessage(field().state.meta.errors)}</FieldError>
+                </Field>
+              )}
+            </form.Field>
+
+            <form.Field name="taxId">
+              {(field) => (
+                <Field>
+                  <FieldLabel for="company-tax-id">統一編號</FieldLabel>
+                  <Input
+                    id="company-tax-id"
+                    value={field().state.value}
+                    onInput={(e) => field().handleChange(e.currentTarget.value)}
+                  />
+                </Field>
+              )}
+            </form.Field>
+
+            <form.Field name="status">
+              {(field) => (
+                <Field>
+                  <FieldLabel for="company-status">狀態</FieldLabel>
+                  <select
+                    id="company-status"
+                    value={field().state.value}
+                    onChange={(e) => field().handleChange(e.currentTarget.value)}
+                    class={SELECT_CLASS}
+                  >
+                    <option value="active">啟用</option>
+                    <option value="inactive">停用</option>
+                    <option value="suspended">暫停</option>
+                  </select>
+                </Field>
+              )}
+            </form.Field>
+
+            <Show when={serverError()}>
+              {(message) => (
+                <p
+                  class="rounded-lg bg-destructive/15 px-3 py-2 text-sm font-medium text-destructive"
+                  role="alert"
+                >
+                  {message()}
+                </p>
+              )}
             </Show>
 
             <DialogFooter>
               <DialogClose class={buttonVariants({ variant: "outline" })}>
                 取消
               </DialogClose>
-              <Button type="submit" loading={saving()}>
+              <Button type="submit" loading={isSubmitting()}>
                 儲存
               </Button>
             </DialogFooter>
