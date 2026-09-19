@@ -8,6 +8,8 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
+  /* 原生 UI（捲軸、表單控制項、游標）跟著主題走：內容區與側欄都是 overflow-y-auto，深色下捲軸要是深色的。 */
+  color-scheme: light;
   --background: oklch(1 0 0);
   --foreground: oklch(0.1450 0 0);
   --card: oklch(1 0 0);
@@ -74,6 +76,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: oklch(0.1450 0 0);
   --foreground: oklch(0.9850 0 0);
   --card: oklch(0.2050 0 0);

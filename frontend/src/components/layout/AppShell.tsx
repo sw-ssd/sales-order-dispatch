@@ -100,6 +100,14 @@ function ShellChrome(props: ParentProps) {
           <Splitter.ResizeTrigger
             id="sidebar:content"
             aria-label="調整側邊欄寬度"
+            /**
+             * Ark 直接把 `orientation="horizontal"` 映射成 `aria-orientation="horizontal"`，但那指的是
+             * **面板排列方向**；依 APG「Window Splitter」，畫面上這條上下向、左右拖曳的分隔線，
+             * accessible name 該是 `vertical`（鍵盤也是 Left/Right）。Ark 的 ResizeTrigger 是
+             * `mergeProps(getResizeTriggerProps(), restProps)`——使用者給的屬性優先，所以顯式覆寫即可，
+             * 不影響 `data-orientation` 與內部的鍵盤運算。
+             */
+            aria-orientation="vertical"
             class={RESIZE_TRIGGER}
           />
           <Splitter.Panel id="content">
