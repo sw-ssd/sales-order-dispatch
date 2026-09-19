@@ -14,6 +14,8 @@ includes:
 vars:
   PODMAN_SOCK:
     sh: podman machine inspect | jq -r '.[0].ConnectionInfo.PodmanSocket.Path'
+  # compose 專案網路名 = <專案目錄名>_default(docker-compose.dev.yml 由 podman socket 起)
+  FGA_NET: "{{base .ROOT_DIR}}_default"
 
 tasks:
   infra:start:
@@ -23,3 +25,23 @@ tasks:
   infra:stop:
     desc: 停止開發環境容器
     cmd: DOCKER_HOST="unix://{{.PODMAN_SOCK}}" docker-compose -f docker-compose.dev.yml down
+
+  fga:start:
+    desc: 起獨立 OpenFGA v1.20.0(供 MCP 唯讀檢視;與後端內嵌引擎共用同一顆 Postgres 的 store)
+    cmds:
+      # 依序：infra → 遷移(含 OpenFGA schema,記在專屬版本表 openfga_goose_db_version)
+      - task: infra:start
+      - task: backend:migrate:up
+      # 容器只跑 `run`,**不可**跑 `openfga migrate`(官方 CLI 用預設 goose_db_version,
+      # 會與業務 schema 的版本表互踩;schema 已由 backend 的 migrate up 建好)。
+      - podman rm -f openfga-dev >/dev/null 2>&1 || true
+      - |
+        podman run -d --name openfga-dev --network {{.FGA_NET}} -p 8080:8080 \
+          openfga/openfga:v1.20.0 run \
+          --datastore-engine postgres \
+          --datastore-uri 'postgres://postgres:postgres@postgres:5432/salesorder?sslmode=disable'
+      - 'sleep 3 && curl -sf http://127.0.0.1:8080/stores >/dev/null && echo "openfga-dev 已就緒(:8080)"'
+
+  fga:stop:
+    desc: 停掉獨立 OpenFGA(不影響 infra 與後端)
+    cmd: podman rm -f openfga-dev
