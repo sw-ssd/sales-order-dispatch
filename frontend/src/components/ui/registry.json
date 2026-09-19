@@ -135,7 +135,7 @@
       "path": "src/components/ui/pagination.tsx",
       "kind": "composite",
       "ark": ["pagination"],
-      "deps": ["class-variance-authority", "lucide-solid", "~/lib/cn"],
+      "deps": ["@ark-ui/solid", "class-variance-authority", "lucide-solid", "~/lib/cn"],
       "tokens": [
         "--card",
         "--border",
