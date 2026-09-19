@@ -255,6 +255,11 @@ export default function CompaniesPage() {
     // 白名單欄位一律從「升冪」起算。v9 的「第一個方向」預設是**依資料推測**（非字串欄位從
     // 降冪起、空資料時更是直接降冪），與 D1 的可預期行為不符，故明確關掉。
     sortDescFirst: false,
+    // 本專案是**單欄排序**契約（只有一欄的 id/desc 會進請求）。v9 預設把 shift+click 當成
+    // 「加入多欄排序」→ 第二欄被 append 進 sorting state，但三頁只送 `sorting()[0]`，於是
+    // 第二欄會出現假的 `aria-sort` 與方向指示器（請求卻不變）。關掉多欄事件後，shift+click
+    // 退化成一般的單欄取代排序，顯示與請求一致。
+    enableMultiSort: false,
     get state() {
       return { pagination: pagination(), sorting: sorting() };
     },

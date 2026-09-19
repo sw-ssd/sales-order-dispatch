@@ -868,6 +868,14 @@ describe("<DepartmentsPage> 表頭排序（伺服器端）", () => {
     return within(headerCell(label)).getByRole("button", { name: label }) as HTMLButtonElement;
   }
 
+  /** 帶方向語意的表頭（`aria-sort` 非 none）：ARIA 下一張表最多只能有一個排序列。 */
+  function sortedHeaderCells(): HTMLTableCellElement[] {
+    return screen.getAllByRole("columnheader").filter((cell) => {
+      const value = cell.getAttribute("aria-sort");
+      return value !== null && value !== "none";
+    }) as HTMLTableCellElement[];
+  }
+
   /** 清單請求的完整 payload（排序波次後 query key 一律帶 sort/desc）。 */
   const payload = (page: number, sort: string, desc: boolean) => ({
     page,
@@ -993,5 +1001,60 @@ describe("<DepartmentsPage> 表頭排序（伺服器端）", () => {
     expect(listDepartmentsSpy).toHaveBeenLastCalledWith(payload(2, "name", false));
     await waitFor(() => expect(screen.getByText("部門 21")).toBeTruthy());
     expect(headerCell("部門名稱").getAttribute("aria-sort")).toBe("ascending");
+  });
+
+  it("shift+click 第二欄：多欄排序已停用，只有一個排序列（aria-sort 與請求一致、未排欄位不得出現箭頭）", async () => {
+    await renderPage1();
+
+    fireEvent.click(sortButton("部門名稱"));
+    await waitFor(() => expect(listDepartmentsSpy).toHaveBeenCalledTimes(2));
+
+    // v9 預設把 shift+click 當成「加入多欄排序」（第二欄 append 進 sorting state），但三頁只送
+    // `sorting()[0]` → 第二欄會出現假的 aria-sort 與箭頭，而請求完全不變。`enableMultiSort: false`
+    // 讓它退化成一般的單欄取代排序（請求與顯示一致）。
+    fireEvent.click(sortButton("ID"), { shiftKey: true });
+
+    // ① 只有一組排序，且只發一次請求：新欄從 desc:false 起算。
+    await waitFor(() => expect(listDepartmentsSpy).toHaveBeenCalledTimes(3));
+    expect(listDepartmentsSpy).toHaveBeenLastCalledWith(payload(1, "id", false));
+    await settle();
+    expect(listDepartmentsSpy).toHaveBeenCalledTimes(3);
+
+    // ② 只有一個表頭帶方向語意（舊欄回 none）。
+    expect(sortedHeaderCells()).toHaveLength(1);
+    expect(headerCell("ID").getAttribute("aria-sort")).toBe("ascending");
+    expect(headerCell("部門名稱").getAttribute("aria-sort")).toBe("none");
+
+    // ③ 未排的那一欄沒有方向指示器。
+    expect(sortButton("ID").textContent).toContain("▲");
+    expect(sortButton("部門名稱").textContent).not.toContain("▲");
+    expect(sortButton("部門名稱").textContent).not.toContain("▼");
+  });
+
+  it("第三次點同一欄＝取消排序：請求回 sort 空字串、aria-sort 回 none、指示器消失，且回第 1 頁", async () => {
+    await renderPage1();
+
+    fireEvent.click(sortButton("部門名稱"));
+    await waitFor(() => expect(listDepartmentsSpy).toHaveBeenCalledTimes(2));
+    fireEvent.click(sortButton("部門名稱"));
+    await waitFor(() => expect(listDepartmentsSpy).toHaveBeenCalledTimes(3));
+    expect(listDepartmentsSpy).toHaveBeenLastCalledWith(payload(1, "name", true));
+
+    // 先離開第 1 頁，才能驗「取消排序也回第 1 頁」（否則斷言的 page:1 沒有鑑別力）。
+    fireEvent.click(screen.getByRole("button", { name: "第 2 頁" }));
+    await waitFor(() => expect(listDepartmentsSpy).toHaveBeenCalledTimes(4));
+
+    fireEvent.click(sortButton("部門名稱"));
+
+    // D1：`sort` 空 → 服務預設排序（`desc` 被忽略，前端一律送 false）。
+    await waitFor(() => expect(listDepartmentsSpy).toHaveBeenCalledTimes(5));
+    expect(listDepartmentsSpy).toHaveBeenLastCalledWith(payload(1, "", false));
+    await settle();
+    expect(listDepartmentsSpy).toHaveBeenCalledTimes(5);
+
+    expect(headerCell("部門名稱").getAttribute("aria-sort")).toBe("none");
+    expect(sortedHeaderCells()).toHaveLength(0);
+    expect(sortButton("部門名稱").textContent).not.toContain("▲");
+    expect(sortButton("部門名稱").textContent).not.toContain("▼");
   });
 });
