@@ -1,217 +1,62 @@
-import {
-  createSignal,
-  createEffect,
-  splitProps,
-  type Component,
-  type JSX,
-} from "solid-js";
-import { createScrollPosition } from "@/hooks/create-scroll-position";
-import { createElementSize } from "@/hooks/create-resize-observer";
+import { ScrollArea as ArkScrollArea } from "@ark-ui/solid";
+import { Show, splitProps, type Component, type JSX } from "solid-js";
 import { cn } from "@/lib/cn";
 
+/**
+ * 捲動容器：量測、拖曳、鍵盤與滾輪行為全部交給 Ark UI 的 ScrollArea，
+ * 內部結構為 `Root > Viewport > Content`，加上依 `orientation` 掛載的 `Scrollbar/Thumb` 與 `Corner`。
+ *
+ * 對外維持單一入口（`class` + `children`）。高度一律由呼叫端以 `max-h-*`/`h-*` 下在 Root 上：
+ * Root 用 `flex flex-col` 把高度交給 `Viewport`（Ark 為它設 `overflow: auto`）。
+ * Viewport 不能改用 Ark 範例的 `h-full`：`height: 100%` 在 `max-h` 父層下會量到比可見區更高的高度
+ * （Edge 實測 viewport 472px / 可見 378px），尾端內容會被 Root 的 `overflow-hidden` 裁掉而捲不到。
+ *
+ * 樣式一律走語意 token；捲軸的顯隱交給 Ark 的 `data-hover`/`data-scrolling`（指標在 Root 內就會標記），
+ * 深色模式交由 token 翻轉，不寫顏色相關的深色變體。
+ */
 export interface ScrollAreaProps extends JSX.HTMLAttributes<HTMLDivElement> {
+  /** 要顯示哪一（幾）向的捲軸，預設 `vertical` */
   orientation?: "vertical" | "horizontal" | "both";
-  scrollHideDelay?: number;
   class?: string;
   children?: JSX.Element;
 }
 
 export const ScrollArea: Component<ScrollAreaProps> = (props) => {
-  const [local, rest] = splitProps(props, [
-    "orientation",
-    "scrollHideDelay",
-    "class",
-    "children",
-  ]);
+  const [local, rest] = splitProps(props, ["orientation", "class", "children"]);
+  const showsVertical = () => (local.orientation ?? "vertical") !== "horizontal";
+  const showsHorizontal = () => (local.orientation ?? "vertical") !== "vertical";
 
-  const orientation = () => local.orientation || "vertical";
-  let viewportRef: HTMLDivElement | undefined;
-  let verticalTrackRef: HTMLDivElement | undefined;
-  let horizontalTrackRef: HTMLDivElement | undefined;
-
-  const scrollPos = createScrollPosition({
-    target: () => viewportRef,
-  });
-
-  const viewportSize = createElementSize(() => viewportRef);
-
-  const [thumbHeight, setThumbHeight] = createSignal(0);
-  const [thumbTop, setThumbTop] = createSignal(0);
-  const [thumbWidth, setThumbWidth] = createSignal(0);
-  const [thumbLeft, setThumbLeft] = createSignal(0);
-  const [isDragging, setIsDragging] = createSignal(false);
-
-  const updateThumbMetrics = () => {
-    if (!viewportRef) return;
-
-    const scrollHeight = viewportRef.scrollHeight;
-    const clientHeight = viewportRef.clientHeight;
-    const scrollWidth = viewportRef.scrollWidth;
-    const clientWidth = viewportRef.clientWidth;
-
-    const trackHeight = verticalTrackRef ? verticalTrackRef.clientHeight - 4 : clientHeight - 4;
-    const trackWidth = horizontalTrackRef ? horizontalTrackRef.clientWidth - 4 : clientWidth - 4;
-
-    if (scrollHeight > clientHeight && clientHeight > 0) {
-      const vRatio = clientHeight / scrollHeight;
-      const calculatedHeight = Math.max(vRatio * trackHeight, 20);
-      const maxTop = trackHeight - calculatedHeight;
-      const topPct = scrollPos.y() / (scrollHeight - clientHeight);
-      setThumbHeight(calculatedHeight);
-      setThumbTop(topPct * maxTop);
-    } else {
-      setThumbHeight(0);
-    }
-
-    if (scrollWidth > clientWidth && clientWidth > 0) {
-      const hRatio = clientWidth / scrollWidth;
-      const calculatedWidth = Math.max(hRatio * trackWidth, 20);
-      const maxLeft = trackWidth - calculatedWidth;
-      const leftPct = scrollPos.x() / (scrollWidth - clientWidth);
-      setThumbWidth(calculatedWidth);
-      setThumbLeft(leftPct * maxLeft);
-    } else {
-      setThumbWidth(0);
-    }
-  };
-
-  createEffect(() => {
-    viewportSize.width();
-    viewportSize.height();
-    scrollPos.x();
-    scrollPos.y();
-    updateThumbMetrics();
-  });
-
-  const handleVerticalThumbPointerDown = (e: PointerEvent) => {
-    if (!viewportRef || !verticalTrackRef) return;
-    e.preventDefault();
-    e.stopPropagation();
-
-    setIsDragging(true);
-    const startY = e.clientY;
-    const startScrollTop = viewportRef.scrollTop;
-    const scrollHeight = viewportRef.scrollHeight;
-    const clientHeight = viewportRef.clientHeight;
-    const trackHeight = verticalTrackRef.clientHeight - 4;
-
-    const maxScrollTop = scrollHeight - clientHeight;
-    const maxThumbTop = trackHeight - thumbHeight();
-    const ratio = maxThumbTop > 0 ? maxScrollTop / maxThumbTop : 0;
-
-    const onPointerMove = (moveEvent: PointerEvent) => {
-      const deltaY = moveEvent.clientY - startY;
-      viewportRef!.scrollTop = Math.max(0, Math.min(maxScrollTop, startScrollTop + deltaY * ratio));
-    };
-
-    const onPointerUp = () => {
-      setIsDragging(false);
-      window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerup", onPointerUp);
-    };
-
-    window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", onPointerUp);
-  };
-
-  const handleHorizontalThumbPointerDown = (e: PointerEvent) => {
-    if (!viewportRef || !horizontalTrackRef) return;
-    e.preventDefault();
-    e.stopPropagation();
-
-    setIsDragging(true);
-    const startX = e.clientX;
-    const startScrollLeft = viewportRef.scrollLeft;
-    const scrollWidth = viewportRef.scrollWidth;
-    const clientWidth = viewportRef.clientWidth;
-    const trackWidth = horizontalTrackRef.clientWidth - 4;
-
-    const maxScrollLeft = scrollWidth - clientWidth;
-    const maxThumbLeft = trackWidth - thumbWidth();
-    const ratio = maxThumbLeft > 0 ? maxScrollLeft / maxThumbLeft : 0;
-
-    const onPointerMove = (moveEvent: PointerEvent) => {
-      const deltaX = moveEvent.clientX - startX;
-      viewportRef!.scrollLeft = Math.max(0, Math.min(maxScrollLeft, startScrollLeft + deltaX * ratio));
-    };
-
-    const onPointerUp = () => {
-      setIsDragging(false);
-      window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerup", onPointerUp);
-    };
-
-    window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", onPointerUp);
-  };
-
-  const handleWheel = (e: WheelEvent) => {
-    if (orientation() === "horizontal" && viewportRef) {
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-        e.preventDefault();
-        viewportRef.scrollLeft += e.deltaY;
-      }
-    }
-  };
+  const scrollbarClass =
+    "pointer-events-none select-none p-0.5 opacity-0 transition-opacity duration-300 data-[hover]:pointer-events-auto data-[scrolling]:pointer-events-auto data-[hover]:opacity-100 data-[scrolling]:opacity-100";
 
   return (
-    <div
-      class={cn("relative overflow-hidden group/scroll-area", local.class)}
-      onWheel={handleWheel}
+    <ArkScrollArea.Root
+      class={cn("relative flex flex-col overflow-hidden", local.class)}
       {...rest}
     >
-      <div
-        ref={viewportRef}
-        class="h-full w-full overflow-auto scrollbar-none rounded-[inherit]"
-        style={{
-          "scrollbar-width": "none",
-          "-ms-overflow-style": "none",
-        }}
-      >
-        {local.children}
-      </div>
+      <ArkScrollArea.Viewport class="min-h-0 w-full flex-1 rounded-[inherit] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <ArkScrollArea.Content>{local.children}</ArkScrollArea.Content>
+      </ArkScrollArea.Viewport>
 
-      {(orientation() === "vertical" || orientation() === "both") && thumbHeight() > 0 && (
-        <div
-          ref={verticalTrackRef}
-          class={cn(
-            "absolute right-0 top-0 bottom-0 w-2.5 p-0.5 select-none transition-opacity duration-300 pointer-events-none",
-            scrollPos.isScrolling() || isDragging()
-              ? "opacity-100"
-              : "opacity-0 group-hover/scroll-area:opacity-100"
-          )}
+      <Show when={showsVertical()}>
+        <ArkScrollArea.Scrollbar
+          orientation="vertical"
+          class={cn("hidden w-2.5 data-[overflow-y]:flex", scrollbarClass)}
         >
-          <div
-            class="w-1.5 rounded-lg bg-border hover:bg-muted-foreground/50 transition-colors cursor-pointer pointer-events-auto"
-            style={{
-              height: `${thumbHeight()}px`,
-              transform: `translateY(${thumbTop()}px)`,
-            }}
-            onPointerDown={handleVerticalThumbPointerDown}
-          />
-        </div>
-      )}
+          <ArkScrollArea.Thumb class="w-1.5 rounded-lg bg-border hover:bg-muted-foreground/50" />
+        </ArkScrollArea.Scrollbar>
+      </Show>
 
-      {(orientation() === "horizontal" || orientation() === "both") && thumbWidth() > 0 && (
-        <div
-          ref={horizontalTrackRef}
-          class={cn(
-            "absolute bottom-0 left-0 right-0 h-2.5 p-0.5 select-none transition-opacity duration-300 pointer-events-none",
-            scrollPos.isScrolling() || isDragging()
-              ? "opacity-100"
-              : "opacity-0 group-hover/scroll-area:opacity-100"
-          )}
+      <Show when={showsHorizontal()}>
+        <ArkScrollArea.Scrollbar
+          orientation="horizontal"
+          class={cn("hidden h-2.5 data-[overflow-x]:flex", scrollbarClass)}
         >
-          <div
-            class="h-1.5 rounded-lg bg-border hover:bg-muted-foreground/50 transition-colors cursor-pointer pointer-events-auto"
-            style={{
-              width: `${thumbWidth()}px`,
-              transform: `translateX(${thumbLeft()}px)`,
-            }}
-            onPointerDown={handleHorizontalThumbPointerDown}
-          />
-        </div>
-      )}
-    </div>
+          <ArkScrollArea.Thumb class="h-1.5 rounded-lg bg-border hover:bg-muted-foreground/50" />
+        </ArkScrollArea.Scrollbar>
+      </Show>
+
+      <ArkScrollArea.Corner />
+    </ArkScrollArea.Root>
   );
 };

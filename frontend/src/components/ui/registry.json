@@ -160,7 +160,7 @@
       "kind": "primitive",
       "ark": ["scroll-area"],
       "deps": ["@ark-ui/solid", "~/lib/cn"],
-      "tokens": ["--border", "--muted-foreground"],
+      "tokens": ["--border", "--muted-foreground", "--ring"],
       "variants": ["orientation:vertical|horizontal|both"],
       "state": "stable",
       "docs": "src/components/ui/scroll-area.md"

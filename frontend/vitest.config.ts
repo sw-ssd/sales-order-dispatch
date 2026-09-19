@@ -14,6 +14,8 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
+    // 補 jsdom 缺的瀏覽器 API（Ark scroll-area 需要的 observer），見 src/test-setup.ts。
+    setupFiles: ["src/test-setup.ts"],
     // @solidjs/testing-library 依全域 afterEach 自動 cleanup,避免測試間 DOM 殘留。
     globals: true,
   },
