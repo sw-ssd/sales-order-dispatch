@@ -631,3 +631,186 @@ describe("<DepartmentsPage> 部門清單與公司下拉查詢", () => {
     await waitFor(() => expect(companyOptionIds()).toEqual(["c-1"]));
   });
 });
+
+describe("<DepartmentsPage> 表格（TanStack Table，manual 分頁）", () => {
+  const PAGE_SIZE = 20;
+
+  /** 第 n 筆部門（n 從 1 起算）：名稱帶序號，用來辨識畫面拿到的是哪一頁的資料。 */
+  function department(n: number) {
+    return {
+      id: `d-${n}`,
+      name: `部門 ${n}`,
+      companyId: "c-1",
+      companyName: "既有公司",
+    };
+  }
+
+  /** `thead` 的欄位表頭。 */
+  const headerCells = () => [
+    ...document.querySelectorAll("thead th"),
+  ] as HTMLTableCellElement[];
+
+  /** `tbody` 的列（含載入列與空狀態列）。 */
+  const tableRows = () => [
+    ...document.querySelectorAll("tbody tr"),
+  ] as HTMLTableRowElement[];
+
+  /** 伺服器端分頁的替身：每頁回 `PAGE_SIZE` 筆（最後一頁可能更少），`total` 固定。 */
+  function mockPages(total: number) {
+    listDepartmentsSpy.mockImplementation((req: { page: number }) =>
+      Promise.resolve({
+        departments: Array.from(
+          { length: Math.max(0, Math.min(PAGE_SIZE, total - (req.page - 1) * PAGE_SIZE)) },
+          (_, i) => department((req.page - 1) * PAGE_SIZE + i + 1)
+        ),
+        pagination: { total },
+      })
+    );
+  }
+
+  /** 掛載頁面並等第 1 頁的資料上畫面。 */
+  async function renderPage1() {
+    mockPages(45);
+    mountPage();
+    await waitFor(() => expect(screen.getByText("部門 1")).toBeTruthy());
+  }
+
+  it("表頭與 columns 一致：四欄（部門名稱/所屬公司/ID/操作），資料列的格子數相同", async () => {
+    await renderPage1();
+
+    const headers = headerCells();
+    expect(headers.map((h) => h.textContent?.trim())).toEqual([
+      "部門名稱",
+      "所屬公司",
+      "ID",
+      "操作",
+    ]);
+    expect(tableRows()[0].querySelectorAll("td")).toHaveLength(headers.length);
+  });
+
+  it("列數等於資料數（順序照查詢結果）", async () => {
+    listDepartmentsSpy.mockResolvedValue({
+      departments: [department(1), department(2), department(3)],
+      pagination: { total: 3 },
+    });
+    mountPage();
+    await waitFor(() => expect(screen.getByText("部門 3")).toBeTruthy());
+
+    const rows = tableRows();
+    expect(rows).toHaveLength(3);
+    expect(rows.map((r) => r.querySelector("td")?.textContent)).toEqual([
+      "部門 1",
+      "部門 2",
+      "部門 3",
+    ]);
+  });
+
+  it("載入列與空狀態列的 colspan 由欄位數推導（兩者都等於表頭欄位數）", async () => {
+    const pending = Promise.withResolvers<unknown>();
+    listDepartmentsSpy.mockReturnValue(pending.promise);
+    mountPage();
+
+    const columnCount = headerCells().length;
+    expect(columnCount).toBe(4);
+
+    const loadingRow = (await waitFor(() => screen.getByText("載入中…"))).closest("tr");
+    expect(loadingRow?.querySelector("td")?.getAttribute("colspan")).toBe(String(columnCount));
+    expect(loadingRow?.querySelectorAll("td")).toHaveLength(1);
+
+    pending.resolve({ departments: [], pagination: { total: 0 } });
+
+    const emptyRow = (await waitFor(() => screen.getByText("尚無部門資料"))).closest("tr");
+    expect(emptyRow?.querySelector("td")?.getAttribute("colspan")).toBe(String(columnCount));
+  });
+
+  it("分頁 UI 的頁碼與總數取自查詢結果（rowCount 決定頁數、頁碼來自 table）", async () => {
+    await renderPage1();
+
+    expect(screen.getByText(/第 1–20 筆,共 45 筆/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "第 1 頁" }).getAttribute("aria-current")).toBe(
+      "page"
+    );
+    expect(screen.getByRole("button", { name: "第 2 頁" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "第 3 頁" })).toBeTruthy();
+    // 45 筆 / 20 = 3 頁：不得出現第 4 頁（頁數來自後端的 total，不是當前頁的列數）。
+    expect(screen.queryByRole("button", { name: "第 4 頁" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "第 3 頁" }));
+    await waitFor(() => expect(screen.getByText("部門 41")).toBeTruthy());
+
+    expect(screen.getByText(/第 41–45 筆,共 45 筆/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "第 3 頁" }).getAttribute("aria-current")).toBe(
+      "page"
+    );
+  });
+
+  it("點「下一頁」：以 page 2 查詢，且第 2 頁只渲染它自己的列（伺服器已分頁，table 不再切一次）", async () => {
+    await renderPage1();
+
+    fireEvent.click(screen.getByRole("button", { name: "下一頁" }));
+
+    await waitFor(() =>
+      expect(listDepartmentsSpy).toHaveBeenLastCalledWith({
+        page: 2,
+        pageSize: 20,
+        companyId: undefined,
+      })
+    );
+    await waitFor(() => expect(screen.getByText("部門 21")).toBeTruthy());
+
+    // 第 2 頁回 20 筆 → 全部渲染（若 table 又依 pageIndex 切一次，這裡會是 0 列）；
+    // 頁碼也不得被 table 的 autoResetPageIndex 打回第 1 頁。
+    expect(tableRows()).toHaveLength(20);
+    expect(screen.getByRole("button", { name: "第 2 頁" }).getAttribute("aria-current")).toBe(
+      "page"
+    );
+  });
+
+  it("clamp 守衛：換頁失敗（沒有屬於當前查詢的資料）時不得改寫頁碼，也不得多發請求", async () => {
+    const failure = Promise.withResolvers<unknown>();
+    listDepartmentsSpy.mockResolvedValueOnce({
+      departments: [department(1)],
+      pagination: { total: 45 },
+    });
+    listDepartmentsSpy.mockReturnValueOnce(failure.promise);
+    mountPage();
+    await waitFor(() => expect(screen.getByText("部門 1")).toBeTruthy());
+
+    fireEvent.click(screen.getByRole("button", { name: "第 2 頁" }));
+    await waitFor(() => expect(listDepartmentsSpy).toHaveBeenCalledTimes(2));
+    failure.reject(new ConnectError("伺服器暫時無法使用", Code.Internal));
+
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toBe("伺服器暫時無法使用"));
+
+    // 錯誤沒有 placeholder 可保留 → `query.data` 為 undefined，`total()` 會算成 0；
+    // 若據以夾頁碼就會多打一次 page 1 的請求（移除守衛時本斷言變紅）。
+    await settle();
+    expect(listDepartmentsSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("編輯成功後重取的資料會換到畫面上（row model 不得黏住舊列）", async () => {
+    updateDepartmentSpy.mockResolvedValue({});
+    listDepartmentsSpy.mockResolvedValueOnce({
+      departments: [department(1)],
+      pagination: { total: 1 },
+    });
+    mountPage();
+    await waitFor(() => expect(screen.getByText("部門 1")).toBeTruthy());
+
+    // 重取回同一頁但內容已變（名稱改了）：table 的 row model 必須跟著換。
+    listDepartmentsSpy.mockResolvedValueOnce({
+      departments: [{ ...department(1), name: "部門 1（改名後）" }],
+      pagination: { total: 1 },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "編輯" }));
+    const dialog = await waitFor(() => screen.getByRole("dialog"));
+    fireEvent.input(within(dialog).getByLabelText(/部門名稱/), {
+      target: { value: "部門 1（改名後）" },
+    });
+    fireEvent.submit(dialog.querySelector("form")!);
+
+    await waitFor(() => expect(screen.getByText("部門 1（改名後）")).toBeTruthy());
+    expect(screen.queryByText("部門 1")).toBeNull();
+  });
+});

@@ -3,6 +3,14 @@ import { Code, ConnectError } from "@connectrpc/connect";
 import { createForm } from "@tanstack/solid-form";
 import { createInfiniteQuery, createQuery, useQueryClient } from "@tanstack/solid-query";
 import {
+  createColumnHelper,
+  createTable,
+  flexRender,
+  rowPaginationFeature,
+  tableFeatures,
+  type PaginationState,
+} from "@tanstack/solid-table";
+import {
   Button,
   buttonVariants,
   Card,
@@ -44,6 +52,24 @@ import { departmentSchema } from "../schemas";
  * 不能只靠 `form.reset()`，也不能只帶部分欄位（未帶到的欄位值會變 `undefined`）。
  */
 const EMPTY_DEPARTMENT_VALUES = { name: "", company: "" };
+
+/**
+ * 部門表格的 table 功能集：目前只有分頁（排序波次再加入 `rowSortingFeature`）。
+ * features 必須是穩定的靜態值——每個元件都自己 `tableFeatures({...})` 會多一份無用的定義。
+ */
+const DEPARTMENT_TABLE_FEATURES = tableFeatures({ rowPaginationFeature });
+
+/**
+ * 欄位定義工具：features 已綁定，`accessor` 的值型別因此跟著功能集推導。
+ * v9 的 table 是 headless 的——欄位定義只描述資料與渲染內容，實際的 `<th>`/`<td>`
+ * 仍由 `~/components/ui` 的 `TableHead`/`TableCell` 負責（`ui/table.tsx` 未動）。
+ */
+const departmentColumnHelper = createColumnHelper<typeof DEPARTMENT_TABLE_FEATURES, Department>();
+
+/**
+ * 沒有資料時的穩定空陣列：`data` 每次回傳新陣列會讓 table 的 row model 反覆重算。
+ */
+const NO_DEPARTMENTS: Department[] = [];
 
 /**
  * 原生 select 的視覺（ui/ 沒有 select 元件）。`pr-10` 與顏色覆蓋的理由同 `CompaniesPage.tsx`。
@@ -110,14 +136,20 @@ function errorMessage(err: unknown): string {
  * 清單資料（列資料／總筆數／載入與錯誤狀態）一律來自 `../queries.ts` 的
  * `departmentsQueryOptions`＋`createQuery`；公司下拉（篩選與 modal 的 `<select>` 共用同一份選項）
  * 來自 `companyDropdownQueryOptions`＋`createInfiniteQuery`（累積式：「載入更多」＝`fetchNextPage`）。
- * 頁面持有的只有「查詢輸入」（篩選草稿、已套用篩選、頁碼、公司關鍵字），不再另存結果快取。
+ * 頁面持有的只有「查詢輸入」（篩選草稿、已套用篩選、公司關鍵字、table 的 pagination state），
+ * 不再另存結果快取，也不再持有頁碼 signal（頁碼的唯一真相＝table 的 pagination state）。
  */
 export default function DepartmentsPage() {
   // 篩選草稿：輸入過程只動這顆 signal，不進 query key（D5：不得每按一鍵就查詢）。
   const [companyFilter, setCompanyFilter] = createSignal("");
-  // 已套用的篩選＋頁碼是 query key 的來源：只有送出篩選與換頁會動它們。
+  // 已套用的篩選是 query key 的來源：只有送出篩選會動它。
   const [filter, setFilter] = createSignal("");
-  const [page, setPage] = createSignal(1);
+  // 頁碼與每頁筆數的唯一真相＝table 的 pagination state（改寫前的 `page` signal 已移除）。
+  // 受控寫法：本頁持有這份 state、table 經 `onPaginationChange` 寫它，全頁沒有第二份頁碼。
+  const [pagination, setPagination] = createSignal<PaginationState>({
+    pageIndex: 0,
+    pageSize: PAGE_SIZE,
+  });
   // 公司下拉：關鍵字草稿與已套用的關鍵字各一顆（送出「搜尋公司」才進 key）。
   const [companyKeyword, setCompanyKeyword] = createSignal("");
   const [companySearch, setCompanySearch] = createSignal("");
@@ -128,16 +160,90 @@ export default function DepartmentsPage() {
 
   const client = useQueryClient();
 
-  // 部門清單唯一的資料來源：列資料、總筆數、載入與錯誤狀態全部由 query 狀態推導。
+  /**
+   * 四個欄位（部門名稱／所屬公司／ID／操作）。
+   * 定義在元件內是因為操作欄要關到 `openEdit`／`remove`；Solid 的元件只執行一次，
+   * 這個陣列因此是穩定的（table 要求 `columns` 穩定，換身分會重建整條 column 管線）。
+   */
+  const columns = departmentColumnHelper.columns([
+    departmentColumnHelper.accessor("name", {
+      header: "部門名稱",
+      cell: (info) => <span class="font-medium text-foreground">{info.getValue()}</span>,
+    }),
+    departmentColumnHelper.accessor("companyName", {
+      header: "所屬公司",
+      cell: (info) => <span class="text-muted-foreground">{info.getValue() || "—"}</span>,
+    }),
+    departmentColumnHelper.accessor("id", {
+      header: "ID",
+      cell: (info) => <span class="text-muted-foreground">{info.getValue()}</span>,
+    }),
+    departmentColumnHelper.display({
+      id: "actions",
+      // 表頭用內層 span 靠右：這樣就不必為單一欄位鋪 column meta 的樣式管線。
+      header: () => <span class="block text-right">操作</span>,
+      cell: (info) => (
+        <div class="text-right">
+          <button
+            type="button"
+            onClick={() => void openEdit(info.row.original)}
+            class="font-medium text-primary hover:underline"
+          >
+            編輯
+          </button>
+          <button
+            type="button"
+            onClick={() => void remove(info.row.original)}
+            class="ml-3 font-medium text-destructive hover:underline"
+          >
+            刪除
+          </button>
+        </div>
+      ),
+    }),
+  ]);
+
+  // 部門清單唯一的資料來源：列資料、總筆數、載入與錯誤狀態全部由 query 狀態推導，
+  // 頁面不再另存 departments/total/loading/error signal（避免兩份真相）。
+  // 頁碼與每頁筆數取自 `pagination`（= table 的 pagination state，見下方 `state`／
+  // `onPaginationChange` 接線；`pageIndex` 0-based，query key 用 1-based）。
   const query = createQuery(() =>
     departmentsQueryOptions({
-      page: page(),
-      pageSize: PAGE_SIZE,
+      page: pagination().pageIndex + 1,
+      pageSize: pagination().pageSize,
       companyId: filter() || undefined,
     })
   );
 
   const total = () => Number(query.data?.pagination?.total ?? 0);
+
+  /**
+   * table 實例。分頁一律手動（`manualPagination: true`）：
+   * - 資料永遠只有當前頁 → table 不得再依 `pageIndex` 切一次（否則第 2 頁會變 0 列）；
+   * - 資料變更時也不得把頁碼打回第 1 頁（v9 的 `autoResetPageIndex` 預設會，manual 模式使
+   *   它 `?? !manualPagination` 為 false → 不重置）。
+   * 頁數來自後端的 `total`（`rowCount`），查詢結果與輸入都以 getter 暴露以維持反應性。
+   *
+   * 順序說明：state → query → table 是 v9 的必然順序——`createTable` 建構時就會把 options
+   * （含 getter）解析一次，所以 `data` 來源（query）必須先存在；而 query 的頁碼又來自 table
+   * 持有的 pagination state。兩者都以 `pagination` 這一個 signal 為唯一真相（table 由
+   * `state`／`onPaginationChange` 綁定它，是全頁唯一的寫入者），因此不構成兩份頁碼。
+   */
+  const table = createTable({
+    features: DEPARTMENT_TABLE_FEATURES,
+    columns,
+    get data() {
+      return query.data?.departments ?? NO_DEPARTMENTS;
+    },
+    get rowCount() {
+      return total();
+    },
+    manualPagination: true,
+    get state() {
+      return { pagination: pagination() };
+    },
+    onPaginationChange: setPagination,
+  });
 
   // 公司下拉（累積式）：各頁由 `fetchNextPage` 依序疊上，「載入更多」不再自己累積 signal。
   const companyOptions = createInfiniteQuery(() =>
@@ -167,22 +273,24 @@ export default function DepartmentsPage() {
 
   /**
    * 超頁退回：回傳的 total 讓目前頁碼超界時（例：該頁資料被刪光），把頁碼夾到合法值。
-   * `page` 是 query key 的一部分 → `setPage` 自己就會觸發重取，不必也不能再手動重載；
+   * `page` 是 query key 的一部分 → `setPageIndex` 自己就會觸發重取，不必也不能再手動重載；
    * 夾到的頁碼必定 ≤ maxPage < 原頁碼（嚴格遞減、下界 1），所以重取次數有界。
    *
-   * `isPlaceholderData` 期間的 `data` 屬於前一個 key（placeholderData 保留的舊結果），
-   * 據以退回會把剛切過去的頁碼彈回來，故必須排除；這不會漏掉退回——新資料一到，
-   * `data` 與 `isPlaceholderData` 都變動，這個 effect 會再跑一次。
-   *
-   * 誠實標註：這個守衛目前是**防禦性**的（UI 上不可達）——頁碼唯一的來源是以同一份 total
-   * 產生的分頁 UI，而 placeholder 保留的正是剛離開那一頁的 total，`page > maxPage` 在
-   * placeholder 期間不會成立，故寫不出可觀察差異的測試（複審實測：移除守衛專案測試仍全綠）。
-   * 3B 把 `page` 移交 table 的 pagination state 後可達性會上升，屆時必須保留並補測試。
+   * 兩個守衛的理由不同：
+   * - `!query.data`：首次載入／錯誤時沒有資料，`total()` 會算成 0；據以夾取會把使用者的頁碼
+   *   靜默改寫並多打一次請求（「沒有資料」不等於「這一頁不存在」）。**這一半有牙**：
+   *   換頁失敗的測試移除它就會變紅。
+   * - `query.isPlaceholderData`：placeholder 期間的 `data` 屬於前一個 key（`placeholderData`
+   *   保留的舊結果）。**誠實標註：這半邊在現行 UI 下不可達**——能寫入頁碼的來源只有分頁 UI／
+   *   Ark 的 clamp（都以同一份 `total()` 為依據）、`submitFilter`（回第 1 頁）與本 effect 自己
+   *   （夾到 ≤ maxPage），「page > maxPage(placeholder 的 total)」構造不出來。移交 table 之後
+   *   可達性沒有上升（manual 模式下 table 不自己動頁碼，本頁也沒有會改頁碼的 `setPageSize`）；
+   *   本波實測：移除這一邊全部測試仍綠。保留它是防禦性寫法，不是現在的行為斷言。
    */
   createEffect(() => {
     if (query.isPlaceholderData || !query.data) return;
-    const maxPage = Math.max(1, Math.ceil(total() / PAGE_SIZE));
-    if (page() > maxPage) setPage(maxPage);
+    const maxPage = Math.max(1, Math.ceil(total() / pagination().pageSize));
+    if (pagination().pageIndex + 1 > maxPage) table.setPageIndex(maxPage - 1);
   });
 
   // 表單對話框狀態
@@ -210,14 +318,14 @@ export default function DepartmentsPage() {
   const companyValidators = fieldValidators(departmentSchema.entries.company);
 
   /**
-   * 送出篩選：把草稿套進 query key 並回第 1 頁。兩個 signal 必須放在同一個 `batch` 內——
+   * 送出篩選：把草稿套進 query key 並回第 1 頁。兩個寫入必須放在同一個 `batch` 內——
    * 分開寫會先以「舊頁碼＋新篩選」查一次、再以「第 1 頁＋新篩選」查一次（兩次 RPC）。
    */
   const submitFilter: JSX.EventHandler<HTMLFormElement, SubmitEvent> = (e) => {
     e.preventDefault();
     batch(() => {
       setFilter(companyFilter());
-      setPage(1);
+      table.setPageIndex(0);
     });
   };
 
@@ -394,17 +502,27 @@ export default function DepartmentsPage() {
 
         <Table>
           <TableHeader>
-            <TableRow class="hover:bg-transparent">
-              <TableHead>部門名稱</TableHead>
-              <TableHead>所屬公司</TableHead>
-              <TableHead>ID</TableHead>
-              <TableHead class="text-right">操作</TableHead>
-            </TableRow>
+            <For each={table.getHeaderGroups()}>
+              {(headerGroup) => (
+                <TableRow class="hover:bg-transparent">
+                  <For each={headerGroup.headers}>
+                    {(header) => (
+                      <TableHead>
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                      </TableHead>
+                    )}
+                  </For>
+                </TableRow>
+              )}
+            </For>
           </TableHeader>
           <TableBody>
             <Show when={query.isPending}>
               <TableRow class="hover:bg-transparent">
-                <TableCell colspan={4} class="py-8 text-center text-muted-foreground">
+                <TableCell
+                  colspan={table.getAllLeafColumns().length}
+                  class="py-8 text-center text-muted-foreground"
+                >
                   載入中…
                 </TableCell>
               </TableRow>
@@ -414,46 +532,47 @@ export default function DepartmentsPage() {
               （`data` 為 undefined、`isPlaceholderData` 為 false），只憑「非 pending 且 0 列」
               會把它當成空清單，與 `placeholderData` 「不閃空」的意圖相反。
             */}
-            <Show when={!query.isPending && !query.isError && (query.data?.departments.length ?? 0) === 0}>
+            <Show
+              when={
+                !query.isPending &&
+                !query.isError &&
+                (query.data?.departments.length ?? 0) === 0
+              }
+            >
               <TableRow class="hover:bg-transparent">
-                <TableCell colspan={4} class="py-8 text-center text-muted-foreground">
+                <TableCell
+                  colspan={table.getAllLeafColumns().length}
+                  class="py-8 text-center text-muted-foreground"
+                >
                   尚無部門資料
                 </TableCell>
               </TableRow>
             </Show>
-            <For each={query.data?.departments ?? []}>
-              {(d) => (
+            <For each={table.getRowModel().rows}>
+              {(row) => (
                 <TableRow>
-                  <TableCell class="font-medium text-foreground">{d.name}</TableCell>
-                  <TableCell class="text-muted-foreground">{d.companyName || "—"}</TableCell>
-                  <TableCell class="text-muted-foreground">{d.id}</TableCell>
-                  <TableCell class="text-right">
-                    <button
-                      type="button"
-                      onClick={() => openEdit(d)}
-                      class="font-medium text-primary hover:underline"
-                    >
-                      編輯
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => remove(d)}
-                      class="ml-3 font-medium text-destructive hover:underline"
-                    >
-                      刪除
-                    </button>
-                  </TableCell>
+                  <For each={row.getAllCells()}>
+                    {(cell) => (
+                      <TableCell>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    )}
+                  </For>
                 </TableRow>
               )}
             </For>
           </TableBody>
         </Table>
 
+        {/*
+          Ark 只負責渲染：頁碼與總數都取自 table 實例（`pageIndex` 0-based → `page` 1-based），
+          使用者換頁也只回寫 table 的 pagination state。
+        */}
         <ListPagination
-          total={total()}
-          pageSize={PAGE_SIZE}
-          page={page()}
-          onPageChange={setPage}
+          total={table.getRowCount()}
+          pageSize={table.atoms.pagination.get().pageSize}
+          page={table.atoms.pagination.get().pageIndex + 1}
+          onPageChange={(page) => table.setPageIndex(page - 1)}
         />
       </Card>
 
