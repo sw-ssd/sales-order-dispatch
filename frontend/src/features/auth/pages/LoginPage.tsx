@@ -1,5 +1,6 @@
 import { Code, ConnectError, createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
+import { createForm } from "@tanstack/solid-form";
 import { useNavigate } from "@tanstack/solid-router";
 import {
   Button,
@@ -15,6 +16,7 @@ import {
 import { createSignal, Show, type JSX } from "solid-js";
 import { AuthService } from "~/lib/proto/salesorder/v1/auth_pb";
 import GoogleLoginButton from "../components/GoogleLoginButton";
+import { fieldValidators, loginSchema } from "../schemas";
 
 const authClient = createClient(
   AuthService,
@@ -41,34 +43,50 @@ function errorMessage(err: unknown): string {
 }
 
 /**
+ * 欄位錯誤訊息只取第一則；`meta.errors` 的型別是 `unknown[]`，
+ * 而 validator（`fieldValidators`）回傳的必定是字串，非字串一律不顯示。
+ */
+function firstMessage(errors: unknown[]): string | undefined {
+  const [first] = errors;
+  return typeof first === "string" ? first : undefined;
+}
+
+/**
  * 登入頁(/login)：Tailkit Boxed Sign In 版面(a-p-sign-in-01)——
  * 頁底 `bg-muted`、置中單欄卡片、頁首標題＋副標。
  * 卡片內沿用 T6 的 Tabs;顏色一律語意 token(不含 Tailkit 的色階字面值與深色變體)。
+ *
+ * 「店家」表單的欄位值、欄位驗證與提交狀態由 `createForm` 持有：
+ * 驗證時機為 `onBlur` + `onSubmit`（輸入過程不標紅），客戶端錯誤落在該欄下方；
+ * 伺服器錯誤（登入失敗）不對應特定欄位，由提交流程設進表單層 banner。
  */
 export default function LoginPage() {
   const navigate = useNavigate();
   const [tab, setTab] = createSignal<LoginTab>("employee");
-  const [customerCode, setCustomerCode] = createSignal("");
-  const [password, setPassword] = createSignal("");
-  const [submitting, setSubmitting] = createSignal(false);
-  const [error, setError] = createSignal<string | null>(null);
+  // 伺服器錯誤不是驗證狀態（不對應任何欄位），由提交流程設定，落在表單層 banner。
+  const [serverError, setServerError] = createSignal<string | undefined>();
 
-  const handleStoreSubmit: JSX.EventHandler<HTMLFormElement, SubmitEvent> = async (event) => {
+  const customerCodeValidators = fieldValidators(loginSchema.entries.customerCode);
+  const passwordValidators = fieldValidators(loginSchema.entries.password);
+
+  const form = createForm(() => ({
+    defaultValues: { customerCode: "", password: "" },
+    onSubmit: async ({ value }) => {
+      setServerError(undefined);
+      try {
+        await authClient.login(value);
+        navigate({ to: "/", replace: true });
+      } catch (err) {
+        setServerError(errorMessage(err));
+      }
+    },
+  }));
+
+  const isSubmitting = form.useSelector((state) => state.isSubmitting);
+
+  const handleStoreSubmit: JSX.EventHandler<HTMLFormElement, SubmitEvent> = (event) => {
     event.preventDefault();
-    if (submitting()) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      await authClient.login({
-        customerCode: customerCode(),
-        password: password(),
-      });
-      navigate({ to: "/", replace: true });
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setSubmitting(false);
-    }
+    void form.handleSubmit();
   };
 
   return (
@@ -102,36 +120,53 @@ export default function LoginPage() {
               </TabsContent>
 
               <TabsContent value="store" class="mt-5">
-                <form class="space-y-6" onSubmit={handleStoreSubmit}>
-                  <Field>
-                    <FieldLabel for="customer_code">客戶編號</FieldLabel>
-                    <Input
-                      id="customer_code"
-                      name="customer_code"
-                      required
-                      autocomplete="username"
-                      value={customerCode()}
-                      onInput={(e) => setCustomerCode(e.currentTarget.value)}
-                    />
-                  </Field>
-                  <Field>
-                    <FieldLabel for="password">密碼</FieldLabel>
-                    <Input
-                      id="password"
-                      name="password"
-                      type="password"
-                      required
-                      autocomplete="current-password"
-                      value={password()}
-                      onInput={(e) => setPassword(e.currentTarget.value)}
-                    />
-                  </Field>
+                {/*
+                  `novalidate`：必填規則已由 valibot 鏡射，原生驗證會用瀏覽器泡泡擋下 submit
+                  並讓自訂的繁中欄位錯誤沒有機會顯示；`required` 保留作為必填的語意標記。
+                */}
+                <form class="space-y-6" novalidate onSubmit={handleStoreSubmit}>
+                  <form.Field name="customerCode" validators={customerCodeValidators}>
+                    {(field) => (
+                      <Field invalid={!field().state.meta.isValid}>
+                        <FieldLabel for="customer_code">客戶編號</FieldLabel>
+                        <Input
+                          id="customer_code"
+                          name="customer_code"
+                          required
+                          autocomplete="username"
+                          value={field().state.value}
+                          onBlur={field().handleBlur}
+                          onInput={(e) => field().handleChange(e.currentTarget.value)}
+                        />
+                        <FieldError>{firstMessage(field().state.meta.errors)}</FieldError>
+                      </Field>
+                    )}
+                  </form.Field>
 
-                  <Show when={error()}>
+                  <form.Field name="password" validators={passwordValidators}>
+                    {(field) => (
+                      <Field invalid={!field().state.meta.isValid}>
+                        <FieldLabel for="password">密碼</FieldLabel>
+                        <Input
+                          id="password"
+                          name="password"
+                          type="password"
+                          required
+                          autocomplete="current-password"
+                          value={field().state.value}
+                          onBlur={field().handleBlur}
+                          onInput={(e) => field().handleChange(e.currentTarget.value)}
+                        />
+                        <FieldError>{firstMessage(field().state.meta.errors)}</FieldError>
+                      </Field>
+                    )}
+                  </form.Field>
+
+                  <Show when={serverError()}>
                     {(message) => <FieldError>{message()}</FieldError>}
                   </Show>
 
-                  <Button type="submit" class="w-full" loading={submitting()}>
+                  <Button type="submit" class="w-full" loading={isSubmitting()}>
                     登入
                   </Button>
                 </form>
