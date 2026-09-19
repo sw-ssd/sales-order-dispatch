@@ -29,15 +29,17 @@ import {
   CompanyService,
   type Company,
 } from "~/lib/proto/salesorder/v1/company_pb";
-import { fieldValidators, firstMessage } from "../../form-helpers";
+import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import { ListPagination } from "../components/ListPagination";
 import { companySchema } from "../schemas";
 
 const PAGE_SIZE = 20;
 
 /**
- * 新增模式的欄位預設值。`form.reset(values)` 會把傳入的 values 併成新的 `defaultValues`
- * （編輯模式帶入該筆公司），所以每次開啟都要顯式帶一份新的複本，不能只靠 `form.reset()`。
+ * 新增模式的欄位預設值。`form.reset(values)` 會把傳入的 values **整份取代** `defaultValues`
+ * （form-core 1.33.5 `FormApi.js`：`if (values && !opts?.keepDefaultValues) this.options = { ...this.options, defaultValues: values }`），
+ * 所以每次開啟都要顯式帶完整 values（編輯模式帶入該筆公司；新增模式帶一份新複本），
+ * 不能只靠 `form.reset()`，也不能只帶部分欄位（未帶到的欄位值會變 `undefined`）。
  */
 const EMPTY_COMPANY_VALUES = { name: "", identifier: "", taxId: "", status: "active" };
 
@@ -124,15 +126,9 @@ export default function CompaniesPage() {
   const identifierValidators = fieldValidators(companySchema.entries.identifier);
 
   const form = createForm(() => ({
+    // `canSubmitWhenInvalid` 的理由（F3）見 form-helpers.ts 的 `appFormOptions`。
+    ...appFormOptions,
     defaultValues: { ...EMPTY_COMPANY_VALUES },
-    // form-core 的 `_handleSubmit`（FormApi.js:509-518）在「canSubmit 為 false 且
-    // 這是第一次送出（submissionAttempts <= 1）」時直接 return：不只跳過 validateAllFields，
-    // 也不會有任何欄位錯誤產生。modal 開啟時 Ark 會自動聚焦第一欄，使用者按「儲存」時
-    // mousedown 讓該欄 blur（touched + invalid）→ canSubmit 變 false → 這次送出完全不驗證，
-    // 其他空的必填欄位（identifier；部門的所屬公司）不會標紅，要再按一次才會出現（F3）。
-    // `canSubmitWhenInvalid: true`（FormApi.d.ts:142 的官方選項）讓 canSubmit 恆為 true，
-    // 送出永遠走完整驗證；本頁的送出鈕不是以 canSubmit 停用（守門用 isSubmitting），不受影響。
-    canSubmitWhenInvalid: true,
     onSubmit: async ({ value }) => {
       const current = editing();
       const name = value.name.trim();
@@ -418,6 +414,7 @@ export default function CompaniesPage() {
               )}
             </form.Field>
 
+            {/* status 未掛 validators → `meta.isValid` 恆真、永不 invalid，故不接那組 controlA11y（不是缺漏）。 */}
             <form.Field name="status">
               {(field) => (
                 <Field>

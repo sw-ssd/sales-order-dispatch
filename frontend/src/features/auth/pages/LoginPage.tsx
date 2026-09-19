@@ -15,7 +15,7 @@ import {
 } from "~/components/ui";
 import { createSignal, Show, type JSX } from "solid-js";
 import { AuthService } from "~/lib/proto/salesorder/v1/auth_pb";
-import { fieldValidators, firstMessage } from "../../form-helpers";
+import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import GoogleLoginButton from "../components/GoogleLoginButton";
 import { loginSchema } from "../schemas";
 
@@ -62,16 +62,9 @@ export default function LoginPage() {
   const passwordValidators = fieldValidators(loginSchema.entries.password);
 
   const form = createForm(() => ({
+    // `canSubmitWhenInvalid` 的理由（F3）見 form-helpers.ts 的 `appFormOptions`。
+    ...appFormOptions,
     defaultValues: { customerCode: "", password: "" },
-    // 同 CompaniesPage／DepartmentsPage：form-core 的 `_handleSubmit`（FormApi.js:509-518）在
-    // 「canSubmit 為 false 且這是第一次送出（submissionAttempts <= 1）」時直接 return，
-    // 跳過 validateAllFields。任一欄被互動後 blur 標紅（touched + invalid）就讓 canSubmit 變
-    // false，於是那一次送出一個欄位都不驗證：先讓「客戶編號」blur 成 invalid 再按第一次
-    // 「登入」，密碼欄不會標紅，要按第二次才會（F3 同根因）。
-    // `canSubmitWhenInvalid: true`（FormApi.d.ts:142 的官方選項）讓 canSubmit 恆為 true，
-    // 送出永遠走完整驗證；本頁的送出鈕不是以 canSubmit 停用（守門用 isSubmitting），不受影響；
-    // 無效表單仍由送出前的 `isFieldsValid` 檢查擋下（FormApi.js:527-540），不會真的打 API。
-    canSubmitWhenInvalid: true,
     onSubmit: async ({ value }) => {
       try {
         await authClient.login(value);
@@ -106,7 +99,12 @@ export default function LoginPage() {
           <div class="p-5 md:px-12 md:py-10">
             <Tabs
               value={tab()}
-              onValueChange={(value) => setTab(value as LoginTab)}
+              // 切分頁會卸載 TabsContent（欄位錯誤隨 panel 消失），但 `serverError` 是元件層 signal
+              // 不會跟著清 → 這裡一併清掉，同頁兩種錯誤的壽命才一致（欄位值由 createForm 保留）。
+              onValueChange={(value) => {
+                setServerError(undefined);
+                setTab(value as LoginTab);
+              }}
             >
               <TabsList class="h-auto w-full">
                 <TabsTrigger value="employee" class="flex-1 py-2">

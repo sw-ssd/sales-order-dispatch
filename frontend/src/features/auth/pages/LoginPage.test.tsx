@@ -161,6 +161,31 @@ describe("<LoginPage> 店家分頁表單", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  it("切換分頁清掉伺服器錯誤 banner，而已輸入的欄位值保留", async () => {
+    loginSpy.mockRejectedValue(new ConnectError("invalid credentials", Code.Unauthenticated));
+    const form = await openStoreForm();
+
+    fillCredentials("S-001", "bad-password");
+    fireEvent.submit(form);
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toContain("客戶編號或密碼錯誤")
+    );
+    await settle();
+
+    // 切走再切回：欄位錯誤隨 panel 卸載消失，banner 是元件層 signal 不隨之消失，
+    // 同一頁的兩種錯誤壽命必須一致 → banner 也要清掉。
+    fireEvent.click(screen.getByRole("tab", { name: "員工" }));
+    await waitFor(() => expect(screen.queryByLabelText("客戶編號")).toBeNull());
+
+    fireEvent.click(screen.getByRole("tab", { name: "店家" }));
+    await waitFor(() => expect(screen.getByLabelText("客戶編號")).toBeTruthy());
+
+    expect(screen.queryByRole("alert")).toBeNull();
+    // 欄位值由 createForm 持有（不隨 panel 卸載消失），切回來應該還在。
+    expect((screen.getByLabelText("客戶編號") as HTMLInputElement).value).toBe("S-001");
+    expect((screen.getByLabelText("密碼") as HTMLInputElement).value).toBe("bad-password");
+  });
+
   it("提交中由表單的 isSubmitting 驅動按鈕載入狀態，且再次提交不會重複送 API", async () => {
     const login = Promise.withResolvers<void>();
     loginSpy.mockReturnValue(login.promise);

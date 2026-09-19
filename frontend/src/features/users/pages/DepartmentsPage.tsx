@@ -31,7 +31,7 @@ import {
   type Company,
   type Department,
 } from "~/lib/proto/salesorder/v1/company_pb";
-import { fieldValidators, firstMessage } from "../../form-helpers";
+import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import { ListPagination } from "../components/ListPagination";
 import { departmentSchema } from "../schemas";
 
@@ -202,12 +202,9 @@ export default function DepartmentsPage() {
   });
 
   const form = createForm(() => ({
+    // `canSubmitWhenInvalid` 的理由（F3）見 form-helpers.ts 的 `appFormOptions`。
+    ...appFormOptions,
     defaultValues: { ...EMPTY_DEPARTMENT_VALUES },
-    // 同 CompaniesPage：`canSubmitWhenInvalid: true` 讓 `_handleSubmit` 不會在
-    // 「第一次送出且 canSubmit 為 false」時短路（FormApi.js:509-518）而跳過 validateAllFields。
-    // 這裡的觸發路徑是「modal 自動聚焦部門名稱 → 按儲存使其 blur → canSubmit 變 false」，
-    // 少了這個選項，「所屬公司」空的錯誤要按第二次才會出現（F3）。
-    canSubmitWhenInvalid: true,
     onSubmit: async ({ value }) => {
       const current = editing();
       // 名稱照舊 trim 後才送出；`company` 是公司 id，更新時不帶（改寫前就沒有更新公司）。
