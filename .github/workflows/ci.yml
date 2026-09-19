@@ -66,6 +66,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm -C frontend typecheck
       - run: pnpm -C frontend lint
+      # 前端回歸守門：表格/表單/元件庫的契約測試都在這裡（先前 CI 未跑測試）
+      - run: pnpm -C frontend test
       - run: pnpm -C frontend build
 
   flutter:
