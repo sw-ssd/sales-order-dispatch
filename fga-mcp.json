@@ -1,0 +1,9 @@
+{
+  "default_server": "dev",
+  "defaults": { "writeable": false },
+  "servers": {
+    "dev": {
+      "api_url": "http://127.0.0.1:8080"
+    }
+  }
+}
