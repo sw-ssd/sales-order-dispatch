@@ -35,7 +35,7 @@ describe("Dialog", () => {
     expect(screen.getByRole("dialog")).toBeTruthy();
     expect(screen.getByText("新增公司")).toBeTruthy();
     expect(screen.getByText("建立新的公司主檔")).toBeTruthy();
-    expect(screen.getByText("Close")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "關閉" })).toBeTruthy();
   });
 
   it("點關閉鈕回報 onOpenChange(false)", async () => {
@@ -50,7 +50,7 @@ describe("Dialog", () => {
     render(() => <Harness showCloseButton={false} />);
     // 先確認對話框確實開著，否則「沒有關閉鈕」也可能只是因為整個對話框沒渲染。
     expect(screen.getByRole("dialog")).toBeTruthy();
-    expect(screen.queryByText("Close")).toBeNull();
+    expect(screen.queryByRole("button", { name: "關閉" })).toBeNull();
   });
 
   it("按 Escape 回報 onOpenChange(false)", async () => {

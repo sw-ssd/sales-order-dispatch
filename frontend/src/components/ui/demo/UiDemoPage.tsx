@@ -622,7 +622,7 @@ export default function UiDemoPage() {
           </Section>
 
           {/* --- Spinner --- */}
-          <Section title="Spinner" hint="role=status；預設 aria-label 是英文 Loading，繁中請傳 label。">
+          <Section title="Spinner" hint="role=status；預設 aria-label 為「載入中」，可用 label 覆寫。">
             <Row label="size">
               <Spinner size="sm" label="載入中" />
               <Spinner label="載入中" />

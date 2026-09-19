@@ -90,7 +90,7 @@ export const DialogContent: Component<DialogContentProps> = (props) => {
               >
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
-              <span class="sr-only">Close</span>
+              <span class="sr-only">關閉</span>
             </ArkDialog.CloseTrigger>
           </Show>
         </ArkDialog.Content>

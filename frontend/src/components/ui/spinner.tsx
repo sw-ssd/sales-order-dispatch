@@ -21,19 +21,19 @@ export const spinnerVariants = cva(
 export interface SpinnerProps
   extends Omit<JSX.HTMLAttributes<HTMLSpanElement>, "role">,
     VariantProps<typeof spinnerVariants> {
-  /** Accessible text announced while the spinner is active. */
+  /** 讀屏念出的文字（`aria-label`），預設「載入中」。 */
   label?: string;
   class?: string;
 }
 
-/** A compact, accessible loading indicator for async UI states. */
+/** 非同步載入狀態的簡潔指示器。 */
 export const Spinner: Component<SpinnerProps> = (props) => {
   const [local, rest] = splitProps(props, ["size", "label", "class"]);
 
   return (
     <span
       role="status"
-      aria-label={local.label || "Loading"}
+      aria-label={local.label || "載入中"}
       class={cn(spinnerVariants({ size: local.size }), local.class)}
       {...rest}
     />
