@@ -48,6 +48,15 @@ function stubMatchMedia(initialMatches: boolean) {
 /** 側邊欄的桌面根層：`data-state|data-collapsible|data-variant|data-side` 的公開樣式契約。 */
 const sidebarRoot = () => document.querySelector<HTMLElement>("[data-variant]")!;
 
+/**
+ * 近似瀏覽器的 tab 順序：jsdom 量不到 `offsetParent`，所以用「`tabIndex >= 0` 且不在
+ * `[hidden]`／`[inert]` 子樹」過濾——這正是瀏覽器決定 Tab 順序的兩條規則。
+ */
+const tabbableLinkNames = () =>
+  [...document.querySelectorAll("a")]
+    .filter((link) => link.tabIndex >= 0 && !link.closest("[hidden], [inert]"))
+    .map((link) => link.textContent);
+
 const toggleButton = () => screen.getByRole("button", { name: "切換側邊欄" });
 
 /** 一個最小但完整的側邊欄：收合鈕 + 側欄 + 一個導覽連結。 */
@@ -55,6 +64,43 @@ const SidebarApp = () => (
   <SidebarProvider>
     <SidebarTrigger />
     <Sidebar>
+      <SidebarContent>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton as="a" href="/users/companies">
+              <span>客戶總表</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarContent>
+    </Sidebar>
+  </SidebarProvider>
+);
+
+/** 行動版用的組合：多一顆 Rail，用來確認它在抽屜裡不會被渲染出來。 */
+const MobileApp = () => (
+  <SidebarProvider>
+    <SidebarTrigger />
+    <Sidebar>
+      <SidebarContent>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton as="a" href="/users/companies">
+              <span>客戶總表</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarContent>
+      <SidebarRail />
+    </Sidebar>
+  </SidebarProvider>
+);
+
+/** `collapsible="offcanvas"`：收合時寬度歸零，內容必須一起離開 tab 順序。 */
+const OffcanvasApp = () => (
+  <SidebarProvider>
+    <SidebarTrigger />
+    <Sidebar collapsible="offcanvas">
       <SidebarContent>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -109,13 +155,16 @@ describe("Sidebar", () => {
     expect(sidebarRoot().getAttribute("data-collapsible")).toBe("icon");
   });
 
-  it("行動版抽屜關閉時導覽連結不在無障礙樹／tab 順序，Esc 可關閉", async () => {
+  it("行動版抽屜關閉時導覽連結不在無障礙樹／tab 順序，關閉鈕與 Esc 都能關", async () => {
     stubMatchMedia(true);
-    render(SidebarApp);
+    render(MobileApp);
 
     // 關閉：Ark 的 Presence 把 Positioner/Content 標成 hidden，連結因此不可 Tab。
     expect(screen.queryByRole("link", { name: "客戶總表" })).toBeNull();
     expect(screen.queryByRole("dialog")).toBeNull();
+    expect(tabbableLinkNames()).not.toContain("客戶總表");
+    // 抽屜裡的 Rail 沒有可拖的內緣（也會改到桌面偏好），因此不渲染：只剩 SidebarTrigger 一顆。
+    expect(document.querySelectorAll('[aria-label="切換側邊欄"]')).toHaveLength(1);
 
     fireEvent.click(toggleButton());
 
@@ -123,10 +172,35 @@ describe("Sidebar", () => {
     expect(link).toBeTruthy();
     // dialog 的無障礙名稱來自 Drawer.Title（沒有 Title 就會是未命名的 dialog）。
     expect(screen.getByRole("dialog", { name: "導覽選單" })).toBeTruthy();
+    expect(tabbableLinkNames()).toContain("客戶總表");
+
+    // 抽屜內建關閉鈕（Ark CloseTrigger 自己不帶名稱，名稱由元件給）。
+    fireEvent.click(screen.getByRole("button", { name: "關閉導覽選單" }));
+    await waitFor(() => expect(screen.queryByRole("link", { name: "客戶總表" })).toBeNull());
+
+    fireEvent.click(toggleButton());
+    await screen.findByRole("link", { name: "客戶總表" });
 
     fireEvent.keyDown(document.body, { key: "Escape" });
 
     await waitFor(() => expect(screen.queryByRole("link", { name: "客戶總表" })).toBeNull());
+    expect(tabbableLinkNames()).not.toContain("客戶總表");
+  });
+
+  it("collapsible=offcanvas 收合後內容離開無障礙樹與 tab 順序，但仍留在 DOM", async () => {
+    render(OffcanvasApp);
+
+    expect(sidebarRoot().hasAttribute("inert")).toBe(false);
+    expect(tabbableLinkNames()).toContain("客戶總表");
+
+    fireEvent.click(toggleButton());
+
+    await waitFor(() => expect(sidebarRoot().getAttribute("data-state")).toBe("collapsed"));
+    // 寬度歸零用 CSS；能不能 Tab 由 `inert` 決定（用 `hidden` 會砍掉收合的過場動畫）。
+    expect(sidebarRoot().hasAttribute("inert")).toBe(true);
+    expect(tabbableLinkNames()).not.toContain("客戶總表");
+    // 仍然留在 DOM，動畫與狀態才不會被重建。
+    expect(screen.getByText("客戶總表")).toBeTruthy();
   });
 
   it("收合成 icon rail 時標籤改用 Ark tooltip，展開時不掛 tooltip", async () => {

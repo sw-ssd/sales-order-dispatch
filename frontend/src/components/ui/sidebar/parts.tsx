@@ -1,5 +1,5 @@
 import { Collapsible, Drawer, Tooltip } from "@ark-ui/solid";
-import { ChevronRight, PanelLeft } from "lucide-solid";
+import { ChevronRight, PanelLeft, X } from "lucide-solid";
 import {
   Show,
   splitProps,
@@ -291,7 +291,10 @@ export interface SidebarProps extends Omit<JSX.HTMLAttributes<HTMLDivElement>, "
   side?: SidebarSide;
   /** 桌面外觀變體（預設 sidebar）。 */
   variant?: SidebarVariant;
-  /** 收合方式（預設 icon）：icon = 收成圖示列、offcanvas = 整個收起、none = 不可收合。 */
+  /**
+   * 收合方式（預設 icon）：icon = 收成圖示列（標籤轉 tooltip）、offcanvas = 寬度歸零整個收起
+   * （同時 `inert`，內容離開無障礙樹與 tab 順序）、none = 不可收合。
+   */
   collapsible?: SidebarCollapsible;
   /** 行動版抽屜的標題（同時是 `role="dialog"` 的無障礙名稱，預設「導覽選單」）。 */
   mobileTitle?: string;
@@ -301,9 +304,11 @@ export interface SidebarProps extends Omit<JSX.HTMLAttributes<HTMLDivElement>, "
 /**
  * 側邊欄根層，三種渲染分支：
  * - `collapsible="none"`：單純一欄，不隨狀態改變寬度。
- * - 行動寬度：Ark `drawer`（off-canvas、Esc 關閉、焦點鎖定、關閉時內容 `hidden`）。
+ * - 行動寬度：Ark `drawer`（off-canvas、Esc 關閉、焦點鎖定、關閉時內容 `hidden`；內含
+ *   `CloseTrigger` 關閉鈕）。
  * - 桌面：帶 `data-state|data-collapsible|data-variant|data-side` 與 `--sidebar-width*` 的
- *   `div`，寬度隨 `state` 在 `--sidebar-width` 與 `--sidebar-width-icon` 之間切換。
+ *   `div`，寬度隨 `state` 在 `--sidebar-width` 與 `--sidebar-width-icon` 之間切換；
+ *   `collapsible="offcanvas"` 收合時寬度歸零並 `inert`。
  */
 export const Sidebar: ParentComponent<SidebarProps> = (props) => {
   const context = useSidebar();
@@ -362,12 +367,19 @@ export const Sidebar: ParentComponent<SidebarProps> = (props) => {
         <Drawer.Content
           data-side={side()}
           style={SIDEBAR_WIDTH_VARS}
-          class="flex h-full w-[var(--sidebar-width-mobile)] flex-col overflow-hidden bg-sidebar text-sidebar-foreground outline-hidden"
+          class="relative flex h-full w-[var(--sidebar-width-mobile)] flex-col overflow-hidden bg-sidebar text-sidebar-foreground outline-hidden"
         >
           {/* Ark 把 `Content` 標成 `role="dialog"` 並指向 Title／Description；
               兩者不渲染就會留下指不到元素的 aria-labelledby／aria-describedby。 */}
           <Drawer.Title class="sr-only">{local.mobileTitle ?? "導覽選單"}</Drawer.Title>
           <Drawer.Description class="sr-only">行動寬度下的導覽抽屜</Drawer.Description>
+          {/* Ark 的 CloseTrigger 不帶無障礙名稱，名稱由這裡給。 */}
+          <Drawer.CloseTrigger
+            aria-label="關閉導覽選單"
+            class="absolute end-1 top-1 inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-sidebar-foreground outline-hidden transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-3 focus-visible:ring-sidebar-ring [&_svg]:size-4"
+          >
+            <X />
+          </Drawer.CloseTrigger>
           {inner()}
         </Drawer.Content>
       </Drawer.Positioner>
@@ -381,6 +393,10 @@ export const Sidebar: ParentComponent<SidebarProps> = (props) => {
       data-variant={variant()}
       data-side={side()}
       style={SIDEBAR_WIDTH_VARS}
+      /* offcanvas 收合只把寬度歸零，內容仍在 DOM；`inert` 讓它同時離開無障礙樹與 tab 順序，
+         而 `hidden` 會連過場動畫一起砍掉。以 `attr:` 設「屬性」而非 property：SSR 產出的是屬性，
+         jsdom（測試）也只認屬性；Solid 的 JSX 型別沒宣告 `attr:`，故在此轉型。 */
+      {...({ "attr:inert": offcanvasCollapsed() || undefined } as JSX.HTMLAttributes<HTMLDivElement>)}
       class={cn(
         "group/sidebar sticky top-0 flex h-dvh w-[var(--sidebar-width)] shrink-0 flex-col border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-linear",
         side() === "right" ? "border-l" : "border-r",
@@ -449,23 +465,27 @@ export interface SidebarRailProps
  * 側邊欄內緣的細長熱區（solid-ui 的 `Rail`）。行為是**純 toggle 按鈕**：Task 6 的 AppShell
  * 才持有 Ark `splitter`，而 `Splitter.ResizeTrigger` 不能脫離 `Splitter.Root` 使用，因此這裡
  * 不冒充拖曳把手。滑鼠可點，但不進 tab 順序（鍵盤請用 `SidebarTrigger` 或 `mod+B`）。
+ *
+ * 行動版（抽屜）不渲染：那裡沒有可拖的內緣，而 toggle 只會改到桌面偏好（抽屜照樣開著）。
  */
 export const SidebarRail: Component<SidebarRailProps> = (props) => {
   const context = useSidebar();
   const [local, rest] = splitProps(props, ["class"]);
 
   return (
-    <button
-      type="button"
-      aria-label="切換側邊欄"
-      tabindex="-1"
-      onClick={() => context.toggleSidebar()}
-      class={cn(
-        "absolute inset-y-0 z-20 w-4 cursor-pointer bg-transparent transition-colors hover:bg-sidebar-accent focus-visible:ring-3 focus-visible:ring-sidebar-ring group-data-[side=left]/sidebar:end-0 group-data-[side=right]/sidebar:start-0",
-        local.class,
-      )}
-      {...rest}
-    />
+    <Show when={!context.isMobile()}>
+      <button
+        type="button"
+        aria-label="切換側邊欄"
+        tabindex="-1"
+        onClick={() => context.toggleSidebar()}
+        class={cn(
+          "absolute inset-y-0 z-20 w-4 cursor-pointer bg-transparent transition-colors hover:bg-sidebar-accent focus-visible:ring-3 focus-visible:ring-sidebar-ring group-data-[side=left]/sidebar:end-0 group-data-[side=right]/sidebar:start-0",
+          local.class,
+        )}
+        {...rest}
+      />
+    </Show>
   );
 };
 
