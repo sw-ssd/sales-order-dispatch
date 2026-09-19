@@ -17,7 +17,7 @@ export interface LabelProps
 }
 
 /**
- * Nikala UI Label component for form controls built for SolidJS with Tailwind CSS v4 styling.
+ * 表單欄位標籤：靜態 `<label>`，用語意 token，供 `Field` 與 Ark `Checkbox` 搭配使用。
  */
 export const Label: Component<LabelProps> = (props) => {
   /* Use splitProps to preserve SolidJS signal reactivity */
