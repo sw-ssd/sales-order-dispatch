@@ -9,7 +9,7 @@ import * as v from "valibot";
  * 任一欄被互動後 blur 標紅（touched + invalid）就會讓 `canSubmit` 變 false，於是那一次送出
  * 一個欄位都不驗證（modal 重開後只標紅第一欄，其餘空的必填欄要再按一次才會出現）。
  * 設了它，送出永遠走完整驗證；無效表單仍由送出前的 `isFieldsValid` 檢查擋下
- * （`FormApi.js:524-537`），不會真的打 API。
+ * （`FormApi.js:524-539`），不會真的打 API。
  *
  * 三個頁面的送出鈕都不是以 `canSubmit` 停用（守門用 `isSubmitting`），故無其他行為改變。
  */

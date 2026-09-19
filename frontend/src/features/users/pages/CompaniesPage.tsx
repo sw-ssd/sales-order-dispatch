@@ -414,7 +414,8 @@ export default function CompaniesPage() {
               )}
             </form.Field>
 
-            {/* status 未掛 validators → `meta.isValid` 恆真、永不 invalid，故不接那組 controlA11y（不是缺漏）。 */}
+            {/* status 無 validators → `meta.isValid` 恆真、永不 invalid，故此欄不需要
+                `aria-invalid`／`aria-describedby` 接線（與 DepartmentsPage 的 select 情境不同，不是缺漏）。 */}
             <form.Field name="status">
               {(field) => (
                 <Field>
