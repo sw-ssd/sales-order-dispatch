@@ -593,10 +593,14 @@ cd frontend && pnpm exec vitest run src/components/ui/checkbox.test.tsx
 
 - [ ] **Step 6: 驗證**：`pnpm typecheck && pnpm lint && pnpm test && pnpm build`
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 7: 刪除死碼 hook**
+
+T6 已把 `tabs.tsx` 的用法移除，本 task 移除 `checkbox.tsx` 之後 `hooks/create-controllable-signal.ts` 即無人引用 → 刪除該檔，並用 `grep` 工具確認 `create-controllable-signal` 於 `frontend/src` 0 命中。若仍有引用 → 停下來回報，不要保留。
+
+- [ ] **Step 8: Commit**
 
 ```bash
-git add frontend/src/components/ui/checkbox.tsx frontend/src/components/ui/checkbox.test.tsx frontend/src/features/users/components/PermissionMatrix.tsx
+git add frontend/src/components/ui/checkbox.tsx frontend/src/components/ui/checkbox.test.tsx frontend/src/features/users/components/PermissionMatrix.tsx frontend/src/hooks/create-controllable-signal.ts
 git commit -m "refactor(frontend): checkbox 改用 Ark 行為 + Tailkit Form Elements 結構"
 ```
 
