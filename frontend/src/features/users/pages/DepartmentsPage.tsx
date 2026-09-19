@@ -66,6 +66,13 @@ const SELECT_CLASS =
  * 原生 select（`ui/` 沒有 select 元件，用 `SELECT_CLASS` 手寫視覺）。
  * `Input` 接手的 Ark `Field` 關聯（`aria-invalid`／`aria-describedby`）只服務 `<input>`，
  * 所以這裡比照它的做法補上同一組屬性；`Field` 之外使用時完全不影響。
+ *
+ * 這段 `controlA11y` 與 `ui/input.tsx` 的實作逐字相同 —— 複製是**有期限的**：`ui/**` 在本階段凍結，
+ * 且 Ark `Field.Select` 的錯誤走 `aria-errormessage`（`aria-describedby` 為 null），與本專案
+ * `aria-describedby` 的既有語意不一致。收斂時機 = Phase 1 遺留的同一批 housekeeping
+ * （`ui/input.tsx` 的 `aria-describedby` 改走 Ark `getInputProps()`，見
+ * `.superpowers/sdd/2026-09-19-frontend-ui-library-phase1-plan/deferred-minors.md`）：
+ * 該批處理時，這裡要一併改為共用的 `ui` 層 select（或同步改採 `aria-errormessage`）。
  */
 const SelectControl: Component<JSX.SelectHTMLAttributes<HTMLSelectElement>> = (props) => {
   const field = useFieldContext();
