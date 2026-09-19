@@ -14,12 +14,15 @@
   --card-foreground: oklch(0.1450 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.1450 0 0);
-  --primary: oklch(0.65 0.18 70);
+  /* 品牌主色：L 0.65→0.53（AA 4.5:1）。Edge CDP 實測 —— bg-primary + 白字 3.20→5.22、
+     text-primary 於 bg-card 3.34→5.45、於 bg-primary/10 底 2.99→4.71。 */
+  --primary: oklch(0.53 0.18 70);
   --primary-foreground: oklch(0.9850 0 0);
   --secondary: oklch(0.9700 0 0);
   --secondary-foreground: oklch(0.1450 0 0);
   --muted: oklch(0.9700 0 0);
-  --muted-foreground: oklch(0.5560 0 0);
+  /* 次要文字：L 0.556→0.53，使 bg-muted 上的灰字達到 AA 4.5:1 */
+  --muted-foreground: oklch(0.53 0 0);
   --accent: oklch(0.9700 0 0);
   --accent-foreground: oklch(0.1450 0 0);
   --destructive: oklch(0.505 0.213 27.5);
@@ -39,7 +42,7 @@
   --chart-5: oklch(0.45 0.14 75);
   --sidebar: oklch(0.9850 0 0);
   --sidebar-foreground: oklch(0.1450 0 0);
-  --sidebar-primary: oklch(0.65 0.18 70);
+  --sidebar-primary: oklch(0.53 0.18 70);
   --sidebar-primary-foreground: oklch(0.9850 0 0);
   --sidebar-accent: oklch(0.9700 0 0);
   --sidebar-accent-foreground: oklch(0.1450 0 0);

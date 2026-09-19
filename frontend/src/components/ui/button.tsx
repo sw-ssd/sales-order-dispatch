@@ -15,7 +15,8 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "border-primary bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary",
+          // hover 用 /95 而非 /90：白字疊在 90% 主色上只有 4.36:1，未達 AA（95% 為 4.75:1）。
+          "border-primary bg-primary text-primary-foreground hover:bg-primary/95 active:bg-primary",
         destructive:
           "border-destructive bg-destructive text-destructive-foreground hover:bg-destructive/90 active:bg-destructive",
         outline:
