@@ -1,12 +1,17 @@
 //go:build integration
 
-// 三張清單(公司/部門/角色)的「逐頁掃描 == 全量」真 PostgreSQL 整合測試(F1 迴歸)。
+// 四張清單(公司/部門/角色/客戶)的「逐頁掃描 == 全量」真 PostgreSQL 整合測試(F1 / P1-A 迴歸)。
 //
 // F1(T15 波驗收,2026-09-19):排序鍵非唯一時 `ORDER BY <field>` 沒有次序鍵,PostgreSQL
 // 對同值群(ties)的順序在不同 LIMIT/OFFSET 下不保證一致(小 LIMIT 走 bounded top-N
 // heap sort、大 OFFSET 走完整 quicksort),於是同一列可能在兩頁出現、另一列完全不出現 ——
 // 使用者逐頁翻完只看到 71/83 筆相異資料。修法:每個 listSource 在排序鍵後追加
 // `ent.Asc(<entity>.FieldID)` 作為次序鍵。
+//
+// P1-A(Phase 3 波複審,2026-09-20):同一缺陷類別在客戶清單(`customerListSource.Page`,
+// `customer_service.go`)仍存在 —— 其排序白名單 `name`/`customer_code`/`created_at` 中
+// `name` 與 `created_at` 皆非唯一。客戶端點的白名單只有升冪(proto 的 ListCustomersRequest
+// 無 `desc` 欄位),故客戶清單只掃升冪與預設排序。
 //
 // 為何 sqlite(enttest)不足以守住:sqlite 的 sorter 對相同查詢給出穩定的 tie 順序,
 // LIMIT/OFFSET 只是同一結果的切片,故本缺陷在 sqlite 上無法重現(已實測:96 筆 tie 資料、
@@ -24,6 +29,7 @@ import (
 	"slices"
 	"strconv"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
 	"entgo.io/ent/dialect"
@@ -32,9 +38,12 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
+	"github.com/salesorder/sales-order-1.0/backend/ent/customer"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
+	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
+	"github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1/customersv1connect"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
@@ -51,13 +60,13 @@ const (
 // listScanner 以指定排序取回「某一頁」的 id 序列(逐頁掃描與全量掃描共用同一個呼叫點)。
 type listScanner func(t *testing.T, sortField string, desc bool, page, pageSize int32) []string
 
-// TestIntegrationListPageScanMatchesFullScan F1 迴歸:對三張清單的每個白名單排序欄位
-// (含升/降冪與預設排序)以多筆同值(NULl/重複 tax_id、同名、同 status,遠多於一頁)的資料,
-// 逐頁掃描的結果必須與全量一致:
+// TestIntegrationListPageScanMatchesFullScan F1/P1-A 迴歸:對四張清單的每個白名單排序欄位
+// (含升/降冪與預設排序;客戶端點僅升冪)以多筆同值(NULl/重複 tax_id、同名、同 status、
+// 同 created_at,遠多於一頁)的資料,逐頁掃描的結果必須與全量一致:
 //
 //	筆數 == 全量筆數、id 集合 == 全量 id 集合、且無任何重複 id。
 //
-// 拿掉三個 listSource 的 id 次序鍵 → 本測試必須紅(消去實驗見 f1-fix-report.md)。
+// 拿掉四個 listSource 的 id 次序鍵 → 本測試必須紅(消去實驗見 f1-fix-report.md / p1a-report.md)。
 func TestIntegrationListPageScanMatchesFullScan(t *testing.T) {
 	// fixture 筆數與 id 集合都以「全新空庫」為前提(DB 真值即全量),覆寫模式下 skip。
 	testsupport.RequiresContainer(t)
@@ -67,8 +76,9 @@ func TestIntegrationListPageScanMatchesFullScan(t *testing.T) {
 	co := seedListScanCompanies(t, ctx, db)
 	seedListScanDepartments(t, ctx, db, co)
 	seedListScanRoles(t, ctx, db)
+	seedListScanCustomers(t, ctx, db, co.ID)
 
-	cc, dc, rc := newListScanServer(t, db)
+	cc, dc, rc, cuc := newListScanServer(t, db, co.ID)
 
 	companyScan := func(t *testing.T, sortField string, desc bool, page, pageSize int32) []string {
 		t.Helper()
@@ -113,32 +123,63 @@ func TestIntegrationListPageScanMatchesFullScan(t *testing.T) {
 		return ids
 	}
 
+	// 客戶端點無 desc(白名單僅升冪),request 不帶 desc,故 desc 參數在此僅為與其他清單共用
+	// listScanner 簽章而存在。
+	customerScan := func(t *testing.T, sortField string, _ bool, page, pageSize int32) []string {
+		t.Helper()
+		res, err := cuc.ListCustomers(ctx, connect.NewRequest(&customersv1.ListCustomersRequest{
+			Page: page, PageSize: pageSize, Sort: sortField,
+		}))
+		if err != nil {
+			t.Fatalf("ListCustomers(page=%d sort=%q): %v", page, sortField, err)
+		}
+		ids := make([]string, 0, len(res.Msg.GetCustomers()))
+		for _, c := range res.Msg.GetCustomers() {
+			ids = append(ids, c.GetId())
+		}
+		return ids
+	}
+
 	// 白名單欄位(空字串 = 服務預設排序)皆須涵蓋,含升/降冪。
 	all := map[string][]string{
 		"公司": allIDs(t, func() ([]int, error) { return db.Company.Query().Select(company.FieldID).Ints(ctx) }),
 		"部門": allIDs(t, func() ([]int, error) { return db.Department.Query().Select(department.FieldID).Ints(ctx) }),
 		"角色": allIDs(t, func() ([]int, error) { return db.Role.Query().Select(role.FieldID).Ints(ctx) }),
+		// 客戶的可見範圍為身分所屬公司(全部 fixture 客戶皆屬該公司)。
+		"客戶": allIDs(t, func() ([]int, error) {
+			return db.Customer.Query().Where(customer.CompanyIDEQ(co.ID)).Select(customer.FieldID).Ints(ctx)
+		}),
 	}
 	for _, tc := range []struct {
 		entity string
 		field  string
 		scan   listScanner
+		// ascOnly 表示該端點的白名單只有升冪(客戶端點的 request 無 desc 欄位)。
+		ascOnly bool
 	}{
-		{"公司", "", companyScan},
-		{"公司", "name", companyScan},
-		{"公司", "identifier", companyScan},
-		{"公司", "tax_id", companyScan},
-		{"公司", "status", companyScan},
-		{"公司", "id", companyScan},
-		{"部門", "", departmentScan},
-		{"部門", "name", departmentScan},
-		{"部門", "id", departmentScan},
-		{"角色", "", roleScan},
-		{"角色", "code", roleScan},
-		{"角色", "name", roleScan},
-		{"角色", "id", roleScan},
+		{"公司", "", companyScan, false},
+		{"公司", "name", companyScan, false},
+		{"公司", "identifier", companyScan, false},
+		{"公司", "tax_id", companyScan, false},
+		{"公司", "status", companyScan, false},
+		{"公司", "id", companyScan, false},
+		{"部門", "", departmentScan, false},
+		{"部門", "name", departmentScan, false},
+		{"部門", "id", departmentScan, false},
+		{"角色", "", roleScan, false},
+		{"角色", "code", roleScan, false},
+		{"角色", "name", roleScan, false},
+		{"角色", "id", roleScan, false},
+		{"客戶", "", customerScan, true},
+		{"客戶", "name", customerScan, true},
+		{"客戶", "customer_code", customerScan, true},
+		{"客戶", "created_at", customerScan, true},
 	} {
-		for _, desc := range []bool{false, true} {
+		descs := []bool{false, true}
+		if tc.ascOnly {
+			descs = []bool{false}
+		}
+		for _, desc := range descs {
 			t.Run(fmt.Sprintf("%s/sort=%q/desc=%v", tc.entity, tc.field, desc), func(t *testing.T) {
 				paged := scanPages(t, tc.scan, tc.field, desc)
 				assertScanMatchesFull(t, tc.entity, tc.field, desc, paged, all[tc.entity])
@@ -239,14 +280,17 @@ func openPGEntClient(t *testing.T, dsn string) *ent.Client {
 	return client
 }
 
-// newListScanServer 以 super 身分(全權,涵蓋三個 requireScope/requireRole 門檻)把公司 +
-// 部門 + 角色 handler 掛在單一 mux 上(與 sqlite 版 newTestServer 同構,只換 DB)。
-func newListScanServer(t *testing.T, db *ent.Client) (salesorderv1connect.CompanyServiceClient, salesorderv1connect.DepartmentServiceClient, salesorderv1connect.RoleServiceClient) {
+// newListScanServer 以 super 身分(全權,涵蓋 requireScope/requireRole 門檻與 deptScope 的
+// 公司範圍)把公司 + 部門 + 角色 + 客戶 handler 掛在單一 mux 上(與 sqlite 版 newTestServer
+// 同構,只換 DB)。companyID 為客戶 fixture 所屬公司:客戶端點以 deptScope 解析身分的
+// CompanyID 作為可見範圍,故須為數字(其餘清單只用 requireScope,不看此欄位)。
+func newListScanServer(t *testing.T, db *ent.Client, companyID int) (salesorderv1connect.CompanyServiceClient, salesorderv1connect.DepartmentServiceClient, salesorderv1connect.RoleServiceClient, customersv1connect.CustomerServiceClient) {
 	t.Helper()
-	super := authz.Identity{UserID: "1", CompanyID: "c1", Role: "super", Roles: []string{"super"}}
+	super := authz.Identity{UserID: "1", CompanyID: strconv.Itoa(companyID), Role: "super", Roles: []string{"super"}}
 	mux := http.NewServeMux()
 	RegisterCompanyServices(mux, db)
 	RegisterRoleServices(mux, db)
+	RegisterCustomerServices(mux, db, "http://localhost:3000")
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := authz.WithIdentity(r.Context(), super)
 		ctx = authz.WithCASLEnabled(ctx, true)
@@ -258,7 +302,8 @@ func newListScanServer(t *testing.T, db *ent.Client) (salesorderv1connect.Compan
 
 	return salesorderv1connect.NewCompanyServiceClient(http.DefaultClient, ts.URL),
 		salesorderv1connect.NewDepartmentServiceClient(http.DefaultClient, ts.URL),
-		salesorderv1connect.NewRoleServiceClient(http.DefaultClient, ts.URL)
+		salesorderv1connect.NewRoleServiceClient(http.DefaultClient, ts.URL),
+		customersv1connect.NewCustomerServiceClient(http.DefaultClient, ts.URL)
 }
 
 // seedListScanCompanies 建立 listScanRows 家公司並回傳第一家(供部門掛載)。
@@ -317,5 +362,25 @@ func seedListScanRoles(t *testing.T, ctx context.Context, db *ent.Client) {
 	}
 	if _, err := db.Role.CreateBulk(builders...).Save(ctx); err != nil {
 		t.Fatalf("建立角色 fixture: %v", err)
+	}
+}
+
+// seedListScanCustomers 在指定公司下建立 listScanRows 個客戶(P1-A 迴歸):name 每 24 筆同名、
+// created_at 每 24 筆同一時間戳(兩者皆非唯一,同值群遠大於 listScanPageSize);customer_code
+// 於同公司內唯一(生產端由取號 + migration 00013 的部分唯一索引保證),故為對照組 ——
+// 排序鍵唯一時逐頁掃描本就不會重複/遺漏,消去實驗中會維持綠。
+func seedListScanCustomers(t *testing.T, ctx context.Context, db *ent.Client, companyID int) {
+	t.Helper()
+	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	builders := make([]*ent.CustomerCreate, 0, listScanRows)
+	for i := range listScanRows {
+		builders = append(builders, db.Customer.Create().
+			SetCompanyID(companyID).
+			SetCustomerCode(fmt.Sprintf("C-%03d", i)).
+			SetName(fmt.Sprintf("客戶%02d", i/24)).
+			SetCreatedAt(base.AddDate(0, 0, i/24)))
+	}
+	if _, err := db.Customer.CreateBulk(builders...).Save(ctx); err != nil {
+		t.Fatalf("建立客戶 fixture: %v", err)
 	}
 }

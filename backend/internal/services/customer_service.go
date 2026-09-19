@@ -241,7 +241,10 @@ type customerListSource struct {
 
 func (s customerListSource) Count(ctx context.Context) (int, error) { return s.q.Count(ctx) }
 func (s customerListSource) Page(ctx context.Context, off, lim int) ([]*ent.Customer, error) {
-	return s.q.Clone().Order(ent.Asc(s.field)).Offset(off).Limit(lim).All(ctx)
+	// P1-A(與 F1 同型):排序鍵非唯一時 PostgreSQL 對同值群(ties)的順序不保證一致,逐頁
+	// LIMIT/OFFSET 會重複與遺漏資料,故一律以 id 為次序鍵收斂成全序(name/customer_code/
+	// created_at 三者中 name 與 created_at 皆非唯一;field 為唯一鍵時多一組等價鍵,結果不變)。
+	return s.q.Clone().Order(ent.Asc(s.field), ent.Asc(customer.FieldID)).Offset(off).Limit(lim).All(ctx)
 }
 
 // customerSortField 將排序參數對應到白名單欄位;預設 name。

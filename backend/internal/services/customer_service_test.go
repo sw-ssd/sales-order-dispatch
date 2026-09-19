@@ -4,7 +4,9 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -399,5 +401,66 @@ func TestCustomerScopeCrossDept(t *testing.T) {
 	client, _ := newCustomerTestServer(t, deptAdminID(coID, deptA))
 	if _, err := client.GetCustomer(ctx, connect.NewRequest(&customersv1.GetCustomerRequest{Id: uItoa(other.ID)})); connect.CodeOf(err) != connect.CodeNotFound {
 		t.Fatalf("跨部門 Get 應 not_found,got %v", err)
+	}
+}
+
+// TestListCustomersSortWhitelist:客戶清單排序白名單的映射與預設(sort 空 → name 升冪)。
+//
+// sqlite 層的回歸鎖:跨頁重複/遺漏是同值群次序不穩定的**執行計畫層級**缺陷,sqlite 上看不到
+// (見 list_pagination_integration_test.go 的說明),故本測試只釘住「每個白名單值用到正確的
+// 欄位」與「sort 空 = name」。fixture 三筆的 id / name(碼位) / customer_code / created_at
+// 升冪序列兩兩互異 → 服務若忽略 sort 或把某欄映射到別的欄位,期望序列立即不符。
+func TestListCustomersSortWhitelist(t *testing.T) {
+	ctx := t.Context()
+	_, db := newCustomerTestServer(t, authz.Identity{})
+	coID, deptID := seedCustomerCompany(t, db, "TS", true)
+	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	// 插入序 甲→乙→丙(id 升冪 = 甲乙丙);name 碼位序 丙 < 乙 < 甲;sorted by code = 丙甲乙;
+	// created_at 升冪 = 乙丙甲。
+	for i, s := range []struct {
+		name string
+		code string
+		day  int
+	}{
+		{"甲客戶", "B-01", 3},
+		{"乙客戶", "C-01", 1},
+		{"丙客戶", "A-01", 2},
+	} {
+		if _, err := db.Customer.Create().SetCompanyID(coID).SetDepartmentID(deptID).
+			SetName(s.name).SetCustomerCode(s.code).
+			SetCreatedAt(base.AddDate(0, 0, s.day-1)).Save(ctx); err != nil {
+			t.Fatalf("建立第 %d 筆客戶 fixture: %v", i, err)
+		}
+	}
+	client, _ := newCustomerTestServer(t, authz.Identity{UserID: "1", CompanyID: uItoa(coID), Role: "super", Roles: []string{"super"}})
+
+	for _, tc := range []struct {
+		sort string
+		want []string
+	}{
+		{"", []string{"丙客戶", "乙客戶", "甲客戶"}}, // 預設排序 == name 升冪
+		{"name", []string{"丙客戶", "乙客戶", "甲客戶"}},
+		{"customer_code", []string{"丙客戶", "甲客戶", "乙客戶"}},
+		{"created_at", []string{"乙客戶", "丙客戶", "甲客戶"}},
+	} {
+		res, err := client.ListCustomers(ctx, connect.NewRequest(&customersv1.ListCustomersRequest{Sort: tc.sort}))
+		if err != nil {
+			t.Fatalf("sort=%q: %v", tc.sort, err)
+		}
+		got := make([]string, 0, len(res.Msg.GetCustomers()))
+		for _, c := range res.Msg.GetCustomers() {
+			got = append(got, c.GetName())
+		}
+		if !slices.Equal(got, tc.want) {
+			t.Errorf("sort=%q:got %v,want %v", tc.sort, got, tc.want)
+		}
+	}
+
+	_, err := client.ListCustomers(ctx, connect.NewRequest(&customersv1.ListCustomersRequest{Sort: "bogus"}))
+	if connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("非法 sort 應 InvalidArgument,got %v", err)
+	}
+	if msg := err.Error(); !strings.Contains(msg, "name/customer_code/created_at") {
+		t.Errorf("錯誤訊息應逐字列出白名單,got %q", msg)
 	}
 }
