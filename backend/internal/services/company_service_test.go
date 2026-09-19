@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"slices"
+	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -190,6 +192,83 @@ func TestCompanyCRUD(t *testing.T) {
 	_, err = cc.GetCompany(ctx, connect.NewRequest(&v1.GetCompanyRequest{CompanyId: companyID}))
 	if connect.CodeOf(err) != connect.CodeNotFound {
 		t.Fatalf("刪除後應回 NotFound,got %v", err)
+	}
+}
+
+// seedCompanySortFixtures 建立三家公司(插入順序 丙→甲→乙,id 依序 1/2/3):
+// 名稱碼位升冪(丙乙甲)、稅號/識別碼升冪(甲乙丙)與 id 升冪(丙甲乙)互不相同,
+// 確保各欄位排序確實生效(值全同則無法區分)。
+func seedCompanySortFixtures(t *testing.T, ctx context.Context, cc salesorderv1connect.CompanyServiceClient) {
+	t.Helper()
+	for _, f := range []struct{ name, identifier, taxID, status string }{
+		{"丙公司", "co-c", "33333333", "active"},
+		{"甲公司", "co-a", "11111111", "suspended"},
+		{"乙公司", "co-b", "22222222", "inactive"},
+	} {
+		if _, err := cc.CreateCompany(ctx, connect.NewRequest(&v1.CreateCompanyRequest{
+			Name:       f.name,
+			Identifier: f.identifier,
+			TaxId:      f.taxID,
+			Status:     f.status,
+		})); err != nil {
+			t.Fatalf("seed CreateCompany(%s): %v", f.name, err)
+		}
+	}
+}
+
+// listCompanyNames 以指定排序取回公司名稱序列(sort 空 = 服務預設排序)。
+func listCompanyNames(t *testing.T, ctx context.Context, cc salesorderv1connect.CompanyServiceClient, sort string, desc bool) []string {
+	t.Helper()
+	res, err := cc.ListCompanies(ctx, connect.NewRequest(&v1.ListCompaniesRequest{
+		Page: 1, PageSize: 10, Sort: sort, Desc: desc,
+	}))
+	if err != nil {
+		t.Fatalf("ListCompanies(sort=%q desc=%v): %v", sort, desc, err)
+	}
+	names := make([]string, 0, len(res.Msg.GetCompanies()))
+	for _, c := range res.Msg.GetCompanies() {
+		names = append(names, c.GetName())
+	}
+	return names
+}
+
+// TestListCompaniesSort D1/P3:公司清單 sort 白名單(name/identifier/tax_id/status/id)與
+// desc 方向;sort 空 → 預設 id 降冪(現行行為)且忽略 desc;非法值 → InvalidArgument 並列出白名單。
+func TestListCompaniesSort(t *testing.T) {
+	ctx := t.Context()
+	cc, _ := newTestServer(t)
+	seedCompanySortFixtures(t, ctx, cc)
+
+	for _, tc := range []struct {
+		name string
+		sort string
+		desc bool
+		want []string
+	}{
+		{"sort 空 → 預設 id 降冪", "", false, []string{"乙公司", "甲公司", "丙公司"}},
+		{"sort 空且 desc=true → 仍為預設排序(忽略 desc)", "", true, []string{"乙公司", "甲公司", "丙公司"}},
+		{"sort=name → 名稱升冪(sqlite 依碼位:丙 U+4E19 < 乙 U+4E59 < 甲 U+7532)", "name", false, []string{"丙公司", "乙公司", "甲公司"}},
+		{"sort=name+desc → 名稱降冪", "name", true, []string{"甲公司", "乙公司", "丙公司"}},
+		{"sort=identifier → 識別碼升冪", "identifier", false, []string{"甲公司", "乙公司", "丙公司"}},
+		{"sort=tax_id → 稅號升冪", "tax_id", false, []string{"甲公司", "乙公司", "丙公司"}},
+		{"sort=status → 狀態升冪", "status", false, []string{"丙公司", "乙公司", "甲公司"}},
+		{"sort=id → id 升冪", "id", false, []string{"丙公司", "甲公司", "乙公司"}},
+		{"sort=id+desc → id 降冪", "id", true, []string{"乙公司", "甲公司", "丙公司"}},
+	} {
+		if got := listCompanyNames(t, ctx, cc, tc.sort, tc.desc); !slices.Equal(got, tc.want) {
+			t.Errorf("%s:got %v,want %v", tc.name, got, tc.want)
+		}
+	}
+
+	// 非法值 → InvalidArgument,且訊息須列出白名單欄位。
+	_, err := cc.ListCompanies(ctx, connect.NewRequest(&v1.ListCompaniesRequest{Sort: "bogus"}))
+	if connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("非法 sort 應回 InvalidArgument,got %v", err)
+	}
+	for _, w := range []string{"name", "identifier", "tax_id", "status", "id"} {
+		if !strings.Contains(err.Error(), w) {
+			t.Errorf("錯誤訊息 %q 應列出白名單欄位 %q", err.Error(), w)
+		}
 	}
 }
 

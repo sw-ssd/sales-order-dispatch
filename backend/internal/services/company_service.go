@@ -105,19 +105,54 @@ func (s *CompanyService) ListCompanies(ctx context.Context, req *connect.Request
 		q = q.Where(company.Or(company.NameContainsFold(keyword), company.IdentifierContainsFold(keyword)))
 	}
 
-	list, pg, err := pageListE(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), companyListSource{q}, companyToProto)
+	field, desc, err := companySortField(req.Msg.GetSort(), req.Msg.GetDesc())
+	if err != nil {
+		return nil, err
+	}
+
+	list, pg, err := pageListE(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), companyListSource{q, field, desc}, companyToProto)
 	if err != nil {
 		return nil, err
 	}
 	return connect.NewResponse(&v1.ListCompaniesResponse{Companies: list, Pagination: pg}), nil
 }
 
-// companyListSource 為 pageListE 的 ent 查詢橋接。
-type companyListSource struct{ q *ent.CompanyQuery }
+// companyListSource 為 pageListE 的 ent 查詢橋接(排序白名單已先解析為 field/desc)。
+type companyListSource struct {
+	q     *ent.CompanyQuery
+	field string
+	desc  bool
+}
 
 func (s companyListSource) Count(ctx context.Context) (int, error) { return s.q.Count(ctx) }
 func (s companyListSource) Page(ctx context.Context, off, lim int) ([]*ent.Company, error) {
-	return s.q.Clone().Order(ent.Desc(company.FieldID)).Offset(off).Limit(lim).All(ctx)
+	order := ent.Asc(s.field)
+	if s.desc {
+		order = ent.Desc(s.field)
+	}
+	return s.q.Clone().Order(order).Offset(off).Limit(lim).All(ctx)
+}
+
+// companySortField 解析排序參數,回傳 ent 欄位與是否降冪(比照 customerSortField 的白名單樣板)。
+// sort 空 → 預設 id 降冪(現行行為)並忽略 desc;其餘欄位預設升冪,desc=true 轉降冪。
+func companySortField(sort string, desc bool) (string, bool, error) {
+	switch sort {
+	case "":
+		return company.FieldID, true, nil
+	case "name":
+		return company.FieldName, desc, nil
+	case "identifier":
+		return company.FieldIdentifier, desc, nil
+	case "tax_id":
+		return company.FieldTaxID, desc, nil
+	case "status":
+		return company.FieldStatus, desc, nil
+	case "id":
+		return company.FieldID, desc, nil
+	default:
+		return "", false, connect.NewError(connect.CodeInvalidArgument,
+			fmt.Errorf("排序欄位 %q 不在白名單(name/identifier/tax_id/status/id)", sort))
+	}
 }
 
 // GetCompany 取得單一公司。
