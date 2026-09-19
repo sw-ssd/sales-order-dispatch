@@ -329,7 +329,7 @@ git commit -m "refactor(frontend): AppShell 換用新 sidebar 與 splitter"
 
 **Files:** 改 `ui/demo/UiDemoPage.tsx`；新增各元件 `.md` 與 `ui/sidebar/README.md`；改 `ui/registry.json`
 
-- [ ] **Step 1: demo 頁**：逐元件展示所有變體與狀態（button 各 variant/size、badge、card、input/label/field（含錯誤態）、table、pagination、spinner、dialog、tabs、checkbox、scroll-area、sidebar 三種 variant × 兩種 side × 三種 collapsible）；含深色預覽切換按鈕（切換 `document.documentElement.classList` 的 `dark`）。
+- [ ] **Step 1: demo 頁**：逐元件展示所有變體與狀態（button 各 variant/size、badge、card、input/label/field（含錯誤態）、table、pagination、spinner、dialog、tabs、checkbox、scroll-area、sidebar 三種 variant × 兩種 side × 三種 collapsible）；深色預覽**必須用 Task 6 的 `ThemeSwitcher`**（自帶 class 切換會變成第二套主題機制，禁止）。
 
 - [ ] **Step 2: README**：每個元件一份，含用途、API 表、Ark 對應、a11y 要點、範例（**不重複程式碼的長篇說明**）。
 
