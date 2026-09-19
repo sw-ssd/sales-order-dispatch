@@ -3,6 +3,7 @@
 package migrate
 
 import (
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/dialect/sql/schema"
 	"entgo.io/ent/schema/field"
 )
@@ -35,17 +36,28 @@ var (
 		{Name: "name", Type: field.TypeString},
 		{Name: "tax_id", Type: field.TypeString, Nullable: true},
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"active", "inactive", "suspended"}, Default: "active"},
-		{Name: "identifier", Type: field.TypeString, Unique: true},
+		{Name: "identifier", Type: field.TypeString},
 		{Name: "public_info", Type: field.TypeJSON, Nullable: true},
 		{Name: "capabilities", Type: field.TypeJSON, Nullable: true},
 		{Name: "logo_url", Type: field.TypeString, Nullable: true},
 		{Name: "customer_code_prefix", Type: field.TypeString, Nullable: true},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
 	}
 	// CompaniesTable holds the schema information for the "companies" table.
 	CompaniesTable = &schema.Table{
 		Name:       "companies",
 		Columns:    CompaniesColumns,
 		PrimaryKey: []*schema.Column{CompaniesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "company_identifier",
+				Unique:  true,
+				Columns: []*schema.Column{CompaniesColumns[4]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "deleted_at IS NULL",
+				},
+			},
+		},
 	}
 	// CustomersColumns holds the columns for the "customers" table.
 	CustomersColumns = []*schema.Column{

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"connectrpc.com/connect"
 
@@ -94,7 +95,7 @@ func (s *CompanyService) ListCompanies(ctx context.Context, req *connect.Request
 	if err := requireScope(ctx, "company", "read"); err != nil {
 		return nil, err
 	}
-	q := s.db.Company.Query()
+	q := s.db.Company.Query().Where(company.DeletedAtIsNil())
 	if status := strings.TrimSpace(req.Msg.GetStatus()); status != "" {
 		if !validCompanyStatuses[status] {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("無效的公司狀態 %q(允許: active / inactive / suspended)", status))
@@ -167,7 +168,8 @@ func (s *CompanyService) GetCompany(ctx context.Context, req *connect.Request[v1
 	if err != nil {
 		return nil, err
 	}
-	c, err := s.db.Company.Get(ctx, id)
+	// 軟刪除(P2-A):已刪除的公司對所有查詢與異動皆不存在。
+	c, err := s.db.Company.Query().Where(company.ID(id), company.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -194,9 +196,21 @@ func (s *CompanyService) CreateCompany(ctx context.Context, req *connect.Request
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("無效的公司狀態 %q(允許: active / inactive / suspended)", status))
 	}
 
+	// 識別碼僅在「未刪除」的公司之間唯一(部分唯一索引 companies_identifier_active_unique,
+	// migration 00019),軟刪除後可重用。DB 約束是後盾,但自行判別才回得出語意明確的
+	// AlreadyExists:約束錯誤一律映射為 FailedPrecondition 且不含 DB 原文(P2-A)。
+	identifier := strings.TrimSpace(msg.GetIdentifier())
+	used, err := s.db.Company.Query().Where(company.IdentifierEQ(identifier), company.DeletedAtIsNil()).Exist(ctx)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	if used {
+		return nil, connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("識別碼(identifier) %q 已被使用,請換一個", identifier))
+	}
+
 	build := s.db.Company.Create().
 		SetName(strings.TrimSpace(msg.GetName())).
-		SetIdentifier(strings.TrimSpace(msg.GetIdentifier()))
+		SetIdentifier(identifier)
 	if taxID := strings.TrimSpace(msg.GetTaxId()); taxID != "" {
 		build = build.SetTaxID(taxID)
 	}
@@ -230,7 +244,7 @@ func (s *CompanyService) UpdateCompany(ctx context.Context, req *connect.Request
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("identifier 建立後不可修改"))
 	}
 
-	exists, err := s.db.Company.Query().Where(company.ID(id)).Only(ctx)
+	exists, err := s.db.Company.Query().Where(company.ID(id), company.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -293,7 +307,12 @@ func (s *CompanyService) UpdateCompany(ctx context.Context, req *connect.Request
 	return connect.NewResponse(&v1.UpdateCompanyResponse{Company: p}), nil
 }
 
-// DeleteCompany 刪除公司。公司仍有部門/使用者時回 FailedPrecondition。
+// DeleteCompany 軟刪除公司(P2-A):標記 deleted_at 而非刪列,同一交易寫 action=delete 稽核。
+// 公司仍有部門/使用者時回 FailedPrecondition;已刪除或不存在 → NotFound。
+//
+// 為何軟刪除:audit_logs.company_id 是租戶欄(NOT NULL + FK→companies),硬刪除只要該公司
+// 有任何稽核列即違反 FK(失敗又被舊映射誤報為 AlreadyExists)。列保留後稽核永遠有主可依,
+// 且被刪公司的識別碼可由部分唯一索引釋出給新公司。
 func (s *CompanyService) DeleteCompany(ctx context.Context, req *connect.Request[v1.DeleteCompanyRequest]) (*connect.Response[v1.DeleteCompanyResponse], error) {
 	if err := requireScope(ctx, "company", "delete"); err != nil {
 		return nil, err
@@ -302,12 +321,9 @@ func (s *CompanyService) DeleteCompany(ctx context.Context, req *connect.Request
 	if err != nil {
 		return nil, err
 	}
-	exists, err := s.db.Company.Query().Where(company.ID(id)).Exist(ctx)
+	cur, err := s.db.Company.Query().Where(company.ID(id), company.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
-	}
-	if !exists {
-		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("公司 %d 不存在", id))
 	}
 	hasDepartments, err := s.db.Department.Query().Where(department.HasCompanyWith(company.ID(id))).Exist(ctx)
 	if err != nil {
@@ -323,7 +339,22 @@ func (s *CompanyService) DeleteCompany(ctx context.Context, req *connect.Request
 	if hasUsers {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("公司仍有使用者,無法刪除"))
 	}
-	if err := s.db.Company.DeleteOneID(id).Exec(ctx); err != nil {
+
+	tx, err := s.db.Tx(ctx)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	actor, _ := parseID(authz.IdentityFrom(ctx).UserID)
+	if err := tx.Company.UpdateOneID(id).SetDeletedAt(time.Now().UTC()).Exec(ctx); err != nil {
+		return nil, toConnectError(err)
+	}
+	if err := recordAuditBA(ctx, tx, "company", "delete", id, id, nil, actor,
+		map[string]any{"name": cur.Name, "identifier": cur.Identifier, "status": string(cur.Status)}, nil); err != nil {
+		return nil, toConnectError(err)
+	}
+	if err := tx.Commit(); err != nil {
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&v1.DeleteCompanyResponse{}), nil
@@ -340,7 +371,7 @@ func (s *DepartmentService) ListDepartments(ctx context.Context, req *connect.Re
 		if err != nil {
 			return nil, err
 		}
-		q = q.Where(department.HasCompanyWith(company.ID(cid)))
+		q = q.Where(department.HasCompanyWith(company.ID(cid), company.DeletedAtIsNil()))
 	}
 
 	field, desc, err := departmentSortField(req.Msg.GetSort(), req.Msg.GetDesc())
@@ -420,7 +451,7 @@ func (s *DepartmentService) CreateDepartment(ctx context.Context, req *connect.R
 	if strings.TrimSpace(msg.GetName()) == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("部門名稱不可為空"))
 	}
-	exists, err := s.db.Company.Query().Where(company.ID(companyID)).Exist(ctx)
+	exists, err := s.db.Company.Query().Where(company.ID(companyID), company.DeletedAtIsNil()).Exist(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -511,6 +542,12 @@ func parseID(s string) (int, error) {
 }
 
 // toConnectError 將 ent 錯誤映射為 Connect 錯誤碼。
+//
+// 約束錯誤(ent.IsConstraintError)涵蓋唯一鍵衝突與 FK 阻擋,其 Error() 挾帶驅動層原文
+// (SQLSTATE、約束名、欄位名…),一律不外洩給客戶端:改以 FailedPrecondition + 繁中可行動
+// 訊息表示「資料現況不允許此操作」(P2-A 的原始缺陷正是 FK 阻擋被當成識別碼重複回
+// AlreadyExists 並附上整句 SQL)。需要 AlreadyExists 語意者由呼叫端自行判別(如
+// CreateCompany 以 DeletedAtIsNil 前置查詢判斷識別碼重複),語意明確且訊息不含 DB 細節。
 func toConnectError(err error) error {
 	if err == nil {
 		return nil
@@ -521,8 +558,8 @@ func toConnectError(err error) error {
 	case ent.IsValidationError(err):
 		return connect.NewError(connect.CodeInvalidArgument, err)
 	case ent.IsConstraintError(err):
-		// 唯一值衝突(identifier 重複)或 FK 阻擋(仍有參照)。
-		return connect.NewError(connect.CodeAlreadyExists, err)
+		return connect.NewError(connect.CodeFailedPrecondition,
+			errors.New("資料違反資料庫約束,無法完成此操作(請確認識別碼是否已被使用、參照對象是否仍存在)"))
 	case ent.IsNotSingular(err):
 		return connect.NewError(connect.CodeInternal, err)
 	default:

@@ -30,6 +30,8 @@ const (
 	FieldLogoURL = "logo_url"
 	// FieldCustomerCodePrefix holds the string denoting the customer_code_prefix field in the database.
 	FieldCustomerCodePrefix = "customer_code_prefix"
+	// FieldDeletedAt holds the string denoting the deleted_at field in the database.
+	FieldDeletedAt = "deleted_at"
 	// EdgeDepartments holds the string denoting the departments edge name in mutations.
 	EdgeDepartments = "departments"
 	// EdgeUsers holds the string denoting the users edge name in mutations.
@@ -63,6 +65,7 @@ var Columns = []string{
 	FieldCapabilities,
 	FieldLogoURL,
 	FieldCustomerCodePrefix,
+	FieldDeletedAt,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -145,6 +148,11 @@ func ByLogoURL(opts ...sql.OrderTermOption) OrderOption {
 // ByCustomerCodePrefix orders the results by the customer_code_prefix field.
 func ByCustomerCodePrefix(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCustomerCodePrefix, opts...).ToFunc()
+}
+
+// ByDeletedAt orders the results by the deleted_at field.
+func ByDeletedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDeletedAt, opts...).ToFunc()
 }
 
 // ByDepartmentsCount orders the results by departments count.

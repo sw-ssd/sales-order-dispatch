@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -159,6 +160,26 @@ func (_u *CompanyUpdate) SetNillableCustomerCodePrefix(v *string) *CompanyUpdate
 // ClearCustomerCodePrefix clears the value of the "customer_code_prefix" field.
 func (_u *CompanyUpdate) ClearCustomerCodePrefix() *CompanyUpdate {
 	_u.mutation.ClearCustomerCodePrefix()
+	return _u
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (_u *CompanyUpdate) SetDeletedAt(v time.Time) *CompanyUpdate {
+	_u.mutation.SetDeletedAt(v)
+	return _u
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (_u *CompanyUpdate) SetNillableDeletedAt(v *time.Time) *CompanyUpdate {
+	if v != nil {
+		_u.SetDeletedAt(*v)
+	}
+	return _u
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (_u *CompanyUpdate) ClearDeletedAt() *CompanyUpdate {
+	_u.mutation.ClearDeletedAt()
 	return _u
 }
 
@@ -341,6 +362,12 @@ func (_u *CompanyUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.CustomerCodePrefixCleared() {
 		_spec.ClearField(company.FieldCustomerCodePrefix, field.TypeString)
+	}
+	if value, ok := _u.mutation.DeletedAt(); ok {
+		_spec.SetField(company.FieldDeletedAt, field.TypeTime, value)
+	}
+	if _u.mutation.DeletedAtCleared() {
+		_spec.ClearField(company.FieldDeletedAt, field.TypeTime)
 	}
 	if _u.mutation.DepartmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -584,6 +611,26 @@ func (_u *CompanyUpdateOne) ClearCustomerCodePrefix() *CompanyUpdateOne {
 	return _u
 }
 
+// SetDeletedAt sets the "deleted_at" field.
+func (_u *CompanyUpdateOne) SetDeletedAt(v time.Time) *CompanyUpdateOne {
+	_u.mutation.SetDeletedAt(v)
+	return _u
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (_u *CompanyUpdateOne) SetNillableDeletedAt(v *time.Time) *CompanyUpdateOne {
+	if v != nil {
+		_u.SetDeletedAt(*v)
+	}
+	return _u
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (_u *CompanyUpdateOne) ClearDeletedAt() *CompanyUpdateOne {
+	_u.mutation.ClearDeletedAt()
+	return _u
+}
+
 // AddDepartmentIDs adds the "departments" edge to the Department entity by IDs.
 func (_u *CompanyUpdateOne) AddDepartmentIDs(ids ...int) *CompanyUpdateOne {
 	_u.mutation.AddDepartmentIDs(ids...)
@@ -793,6 +840,12 @@ func (_u *CompanyUpdateOne) sqlSave(ctx context.Context) (_node *Company, err er
 	}
 	if _u.mutation.CustomerCodePrefixCleared() {
 		_spec.ClearField(company.FieldCustomerCodePrefix, field.TypeString)
+	}
+	if value, ok := _u.mutation.DeletedAt(); ok {
+		_spec.SetField(company.FieldDeletedAt, field.TypeTime, value)
+	}
+	if _u.mutation.DeletedAtCleared() {
+		_spec.ClearField(company.FieldDeletedAt, field.TypeTime)
 	}
 	if _u.mutation.DepartmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{

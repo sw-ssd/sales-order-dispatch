@@ -3,6 +3,8 @@
 package company
 
 import (
+	"time"
+
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/salesorder/sales-order-1.0/backend/ent/predicate"
@@ -76,6 +78,11 @@ func LogoURL(v string) predicate.Company {
 // CustomerCodePrefix applies equality check predicate on the "customer_code_prefix" field. It's identical to CustomerCodePrefixEQ.
 func CustomerCodePrefix(v string) predicate.Company {
 	return predicate.Company(sql.FieldEQ(FieldCustomerCodePrefix, v))
+}
+
+// DeletedAt applies equality check predicate on the "deleted_at" field. It's identical to DeletedAtEQ.
+func DeletedAt(v time.Time) predicate.Company {
+	return predicate.Company(sql.FieldEQ(FieldDeletedAt, v))
 }
 
 // NameEQ applies the EQ predicate on the "name" field.
@@ -471,6 +478,56 @@ func CustomerCodePrefixEqualFold(v string) predicate.Company {
 // CustomerCodePrefixContainsFold applies the ContainsFold predicate on the "customer_code_prefix" field.
 func CustomerCodePrefixContainsFold(v string) predicate.Company {
 	return predicate.Company(sql.FieldContainsFold(FieldCustomerCodePrefix, v))
+}
+
+// DeletedAtEQ applies the EQ predicate on the "deleted_at" field.
+func DeletedAtEQ(v time.Time) predicate.Company {
+	return predicate.Company(sql.FieldEQ(FieldDeletedAt, v))
+}
+
+// DeletedAtNEQ applies the NEQ predicate on the "deleted_at" field.
+func DeletedAtNEQ(v time.Time) predicate.Company {
+	return predicate.Company(sql.FieldNEQ(FieldDeletedAt, v))
+}
+
+// DeletedAtIn applies the In predicate on the "deleted_at" field.
+func DeletedAtIn(vs ...time.Time) predicate.Company {
+	return predicate.Company(sql.FieldIn(FieldDeletedAt, vs...))
+}
+
+// DeletedAtNotIn applies the NotIn predicate on the "deleted_at" field.
+func DeletedAtNotIn(vs ...time.Time) predicate.Company {
+	return predicate.Company(sql.FieldNotIn(FieldDeletedAt, vs...))
+}
+
+// DeletedAtGT applies the GT predicate on the "deleted_at" field.
+func DeletedAtGT(v time.Time) predicate.Company {
+	return predicate.Company(sql.FieldGT(FieldDeletedAt, v))
+}
+
+// DeletedAtGTE applies the GTE predicate on the "deleted_at" field.
+func DeletedAtGTE(v time.Time) predicate.Company {
+	return predicate.Company(sql.FieldGTE(FieldDeletedAt, v))
+}
+
+// DeletedAtLT applies the LT predicate on the "deleted_at" field.
+func DeletedAtLT(v time.Time) predicate.Company {
+	return predicate.Company(sql.FieldLT(FieldDeletedAt, v))
+}
+
+// DeletedAtLTE applies the LTE predicate on the "deleted_at" field.
+func DeletedAtLTE(v time.Time) predicate.Company {
+	return predicate.Company(sql.FieldLTE(FieldDeletedAt, v))
+}
+
+// DeletedAtIsNil applies the IsNil predicate on the "deleted_at" field.
+func DeletedAtIsNil() predicate.Company {
+	return predicate.Company(sql.FieldIsNull(FieldDeletedAt))
+}
+
+// DeletedAtNotNil applies the NotNil predicate on the "deleted_at" field.
+func DeletedAtNotNil() predicate.Company {
+	return predicate.Company(sql.FieldNotNull(FieldDeletedAt))
 }
 
 // HasDepartments applies the HasEdge predicate on the "departments" edge.

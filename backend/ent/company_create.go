@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -97,6 +98,20 @@ func (_c *CompanyCreate) SetCustomerCodePrefix(v string) *CompanyCreate {
 func (_c *CompanyCreate) SetNillableCustomerCodePrefix(v *string) *CompanyCreate {
 	if v != nil {
 		_c.SetCustomerCodePrefix(*v)
+	}
+	return _c
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (_c *CompanyCreate) SetDeletedAt(v time.Time) *CompanyCreate {
+	_c.mutation.SetDeletedAt(v)
+	return _c
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (_c *CompanyCreate) SetNillableDeletedAt(v *time.Time) *CompanyCreate {
+	if v != nil {
+		_c.SetDeletedAt(*v)
 	}
 	return _c
 }
@@ -255,6 +270,10 @@ func (_c *CompanyCreate) createSpec() (*Company, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.CustomerCodePrefix(); ok {
 		_spec.SetField(company.FieldCustomerCodePrefix, field.TypeString, value)
 		_node.CustomerCodePrefix = value
+	}
+	if value, ok := _c.mutation.DeletedAt(); ok {
+		_spec.SetField(company.FieldDeletedAt, field.TypeTime, value)
+		_node.DeletedAt = &value
 	}
 	if nodes := _c.mutation.DepartmentsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

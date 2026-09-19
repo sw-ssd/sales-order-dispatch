@@ -1162,6 +1162,7 @@ type CompanyMutation struct {
 	appendcapabilities   []string
 	logo_url             *string
 	customer_code_prefix *string
+	deleted_at           *time.Time
 	clearedFields        map[string]struct{}
 	departments          map[int]struct{}
 	removeddepartments   map[int]struct{}
@@ -1641,6 +1642,55 @@ func (m *CompanyMutation) ResetCustomerCodePrefix() {
 	delete(m.clearedFields, company.FieldCustomerCodePrefix)
 }
 
+// SetDeletedAt sets the "deleted_at" field.
+func (m *CompanyMutation) SetDeletedAt(t time.Time) {
+	m.deleted_at = &t
+}
+
+// DeletedAt returns the value of the "deleted_at" field in the mutation.
+func (m *CompanyMutation) DeletedAt() (r time.Time, exists bool) {
+	v := m.deleted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeletedAt returns the old "deleted_at" field's value of the Company entity.
+// If the Company object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CompanyMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
+	}
+	return oldValue.DeletedAt, nil
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (m *CompanyMutation) ClearDeletedAt() {
+	m.deleted_at = nil
+	m.clearedFields[company.FieldDeletedAt] = struct{}{}
+}
+
+// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
+func (m *CompanyMutation) DeletedAtCleared() bool {
+	_, ok := m.clearedFields[company.FieldDeletedAt]
+	return ok
+}
+
+// ResetDeletedAt resets all changes to the "deleted_at" field.
+func (m *CompanyMutation) ResetDeletedAt() {
+	m.deleted_at = nil
+	delete(m.clearedFields, company.FieldDeletedAt)
+}
+
 // AddDepartmentIDs adds the "departments" edge to the Department entity by ids.
 func (m *CompanyMutation) AddDepartmentIDs(ids ...int) {
 	if m.departments == nil {
@@ -1783,7 +1833,7 @@ func (m *CompanyMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CompanyMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 9)
 	if m.name != nil {
 		fields = append(fields, company.FieldName)
 	}
@@ -1807,6 +1857,9 @@ func (m *CompanyMutation) Fields() []string {
 	}
 	if m.customer_code_prefix != nil {
 		fields = append(fields, company.FieldCustomerCodePrefix)
+	}
+	if m.deleted_at != nil {
+		fields = append(fields, company.FieldDeletedAt)
 	}
 	return fields
 }
@@ -1832,6 +1885,8 @@ func (m *CompanyMutation) Field(name string) (ent.Value, bool) {
 		return m.LogoURL()
 	case company.FieldCustomerCodePrefix:
 		return m.CustomerCodePrefix()
+	case company.FieldDeletedAt:
+		return m.DeletedAt()
 	}
 	return nil, false
 }
@@ -1857,6 +1912,8 @@ func (m *CompanyMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldLogoURL(ctx)
 	case company.FieldCustomerCodePrefix:
 		return m.OldCustomerCodePrefix(ctx)
+	case company.FieldDeletedAt:
+		return m.OldDeletedAt(ctx)
 	}
 	return nil, fmt.Errorf("unknown Company field %s", name)
 }
@@ -1922,6 +1979,13 @@ func (m *CompanyMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetCustomerCodePrefix(v)
 		return nil
+	case company.FieldDeletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeletedAt(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Company field %s", name)
 }
@@ -1967,6 +2031,9 @@ func (m *CompanyMutation) ClearedFields() []string {
 	if m.FieldCleared(company.FieldCustomerCodePrefix) {
 		fields = append(fields, company.FieldCustomerCodePrefix)
 	}
+	if m.FieldCleared(company.FieldDeletedAt) {
+		fields = append(fields, company.FieldDeletedAt)
+	}
 	return fields
 }
 
@@ -1995,6 +2062,9 @@ func (m *CompanyMutation) ClearField(name string) error {
 		return nil
 	case company.FieldCustomerCodePrefix:
 		m.ClearCustomerCodePrefix()
+		return nil
+	case company.FieldDeletedAt:
+		m.ClearDeletedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown Company nullable field %s", name)
@@ -2027,6 +2097,9 @@ func (m *CompanyMutation) ResetField(name string) error {
 		return nil
 	case company.FieldCustomerCodePrefix:
 		m.ResetCustomerCodePrefix()
+		return nil
+	case company.FieldDeletedAt:
+		m.ResetDeletedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown Company field %s", name)

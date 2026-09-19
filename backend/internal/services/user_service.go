@@ -134,7 +134,7 @@ func (s *UserService) ListUsers(ctx context.Context, req *connect.Request[v1.Lis
 			if err != nil {
 				return nil, err
 			}
-			q = q.Where(user.HasCompanyWith(company.ID(cid)))
+			q = q.Where(user.HasCompanyWith(company.ID(cid), company.DeletedAtIsNil()))
 		}
 		if deptID != "" {
 			did, err := parseID(deptID)
@@ -152,7 +152,7 @@ func (s *UserService) ListUsers(ctx context.Context, req *connect.Request[v1.Lis
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
-		q = q.Where(user.HasCompanyWith(company.ID(cid)))
+		q = q.Where(user.HasCompanyWith(company.ID(cid), company.DeletedAtIsNil()))
 		// 可再依請求 department_id 縮小(限自己公司內)。
 		if deptID != "" {
 			did, err := parseID(deptID)
@@ -698,7 +698,7 @@ func isValidRole(role string) bool {
 // 不符 → InvalidArgument(輸入驗證失敗),不允許跨公司資料擺放。
 func (s *UserService) validateDepartmentInCompany(ctx context.Context, deptID, companyID int) error {
 	ok, err := s.db.Department.Query().
-		Where(department.ID(deptID), department.HasCompanyWith(company.ID(companyID))).
+		Where(department.ID(deptID), department.HasCompanyWith(company.ID(companyID), company.DeletedAtIsNil())).
 		Exist(ctx)
 	if err != nil {
 		return toConnectError(err)

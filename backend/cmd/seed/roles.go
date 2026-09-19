@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
+	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/ent/rolepermission"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
@@ -76,9 +77,9 @@ func SeedDeveloper(ctx context.Context, client *ent.Client, env string, companyI
 	return err
 }
 
-// firstCompanyID 回傳任一家公司 ID;無公司時回傳 0(developer 錨點缺失略過)。
+// firstCompanyID 回傳任一家**未刪除**公司 ID;無公司時回傳 0(developer 錨點缺失略過)。
 func firstCompanyID(ctx context.Context, client *ent.Client) int {
-	c, err := client.Company.Query().First(ctx)
+	c, err := client.Company.Query().Where(company.DeletedAtIsNil()).First(ctx)
 	if err != nil {
 		return 0
 	}

@@ -180,7 +180,8 @@ func (h *AuthHandler) RegisterComplete(ctx context.Context, req *connect.Request
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("公司 ID 格式錯誤"))
 	}
-	co, err := h.deps.DB.Company.Get(ctx, companyID)
+	// 軟刪除(P2-A):已刪除的公司不得再作為註冊/登入的租戶。
+	co, err := h.deps.DB.Company.Query().Where(company.ID(companyID), company.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("公司不存在"))
@@ -492,11 +493,15 @@ func (h *AuthHandler) authenticateBearer(ctx context.Context, authorization stri
 }
 
 // resolveCompanyByHD 依 Google Workspace 網域(hd)對應 companies.identifier 解析所屬公司。
+// 已軟刪除(P2-A)或非 active 的公司不可解析:被刪公司的識別碼可被新公司重用,若不過濾
+// deleted_at 就會解析到舊的幽靈公司。
 func (h *AuthHandler) resolveCompanyByHD(ctx context.Context, hd string) (*ent.Company, error) {
 	if hd == "" {
 		return nil, nil
 	}
-	co, err := h.deps.DB.Company.Query().Where(company.IdentifierEQ(hd), company.StatusEQ(company.StatusActive)).Only(ctx)
+	co, err := h.deps.DB.Company.Query().
+		Where(company.IdentifierEQ(hd), company.StatusEQ(company.StatusActive), company.DeletedAtIsNil()).
+		Only(ctx)
 	if ent.IsNotFound(err) {
 		return nil, nil
 	}
