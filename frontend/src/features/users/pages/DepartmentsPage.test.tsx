@@ -945,6 +945,27 @@ describe("<DepartmentsPage> 表頭排序（伺服器端）", () => {
     expect(sortButton("部門名稱")).toBe(button);
   });
 
+  it("方向指示器：升冪顯示 ▲、降冪顯示 ▼、未排序兩者皆無（同一顆表頭按鈕上更新）", async () => {
+    await renderPage1();
+
+    const button = sortButton("部門名稱");
+    // 未排序：兩個方向都不出現（顯示任一箭頭都是誤導）。
+    expect(button.textContent).not.toContain("▲");
+    expect(button.textContent).not.toContain("▼");
+
+    fireEvent.click(button);
+    await waitFor(() => expect(headerCell("部門名稱").getAttribute("aria-sort")).toBe("ascending"));
+    await waitFor(() => expect(button.textContent).toContain("▲"));
+    expect(button.textContent).not.toContain("▼");
+
+    fireEvent.click(sortButton("部門名稱"));
+    await waitFor(() =>
+      expect(headerCell("部門名稱").getAttribute("aria-sort")).toBe("descending")
+    );
+    await waitFor(() => expect(button.textContent).toContain("▼"));
+    expect(button.textContent).not.toContain("▲");
+  });
+
   it("可排序欄位僅限白名單：所屬公司與操作欄沒有排序控制項，也不帶 aria-sort", async () => {
     await renderPage1();
 

@@ -638,6 +638,25 @@ describe("<RolesPage> 表頭排序（伺服器端）", () => {
     expect(sortButton("名稱")).toBe(button);
   });
 
+  it("方向指示器：升冪顯示 ▲、降冪顯示 ▼、未排序兩者皆無（同一顆表頭按鈕上更新）", async () => {
+    await renderPage1();
+
+    const button = sortButton("名稱");
+    // 未排序：兩個方向都不出現（顯示任一箭頭都是誤導）。
+    expect(button.textContent).not.toContain("▲");
+    expect(button.textContent).not.toContain("▼");
+
+    fireEvent.click(button);
+    await waitFor(() => expect(headerCell("名稱").getAttribute("aria-sort")).toBe("ascending"));
+    await waitFor(() => expect(button.textContent).toContain("▲"));
+    expect(button.textContent).not.toContain("▼");
+
+    fireEvent.click(sortButton("名稱"));
+    await waitFor(() => expect(headerCell("名稱").getAttribute("aria-sort")).toBe("descending"));
+    await waitFor(() => expect(button.textContent).toContain("▼"));
+    expect(button.textContent).not.toContain("▲");
+  });
+
   it("可排序欄位僅限白名單：系統角色、狀態與操作欄沒有排序控制項，也不帶 aria-sort", async () => {
     await renderPage1();
 

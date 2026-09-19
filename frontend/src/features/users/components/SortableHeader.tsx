@@ -1,4 +1,4 @@
-import type { Component, JSX } from "solid-js";
+import { createRoot, onCleanup, type Component, type JSX } from "solid-js";
 
 /**
  * 可排序表頭的控制項（三張清單共用：公司／部門／角色）。
@@ -70,8 +70,13 @@ export const SortableHeader: Component<SortableHeaderProps> = (props) => {
 
 /** 建立該頁專用的表頭控制項產生器（快取生命週期＝一個頁面實例）。 */
 export function createSortableHeaders() {
+  const nodes = new Map<string, JSX.Element>();
+  /** 每個節點各自 owner 的釋放函式；頁面卸載時一次收乾淨（不隨 children 效果被清）。 */
+  const disposers: (() => void)[] = [];
+  onCleanup(() => disposers.forEach((dispose) => dispose()));
+
   /**
-   * 每個欄位只建一次的表頭控制項。
+   * 每個欄位只建一次的表頭控制項，且建在**自己的 owner（`createRoot`）**下。
    *
    * 為什麼要快取**節點**：`TableHead` 把 children 當 getter 插入，而 children 來自
    * `flexRender(columnDef.header, ctx)` → `createComponent(...)`；getter 每次求值都會建一個
@@ -80,12 +85,22 @@ export function createSortableHeaders() {
    * D11 的「排序變更後焦點不亂跳」即失效）。實測：回傳同一個節點時，Solid 的
    * `insertExpression` 因值相同直接沿用，DOM 不動、焦點留在同一顆按鈕上。
    *
+   * 為什麼要**獨立 owner**：那個插 children 的效果會重跑（table state 一變就重跑），而 Solid
+   * 在重跑前會 `cleanNode` 掉該效果自己擁有的子節點。若節點直接建在該效果底下，快取讓它
+   * 不再重建，於是它內部的響應式綁定（方向圖示）一旦被清掉就**永遠不再更新**——節點還在、
+   * 指示器卻凍結（F2）。建在自己的 root 下，它就只隨頁面卸載而釋放。
+   *
    * 快取必須是**每個頁面實例一份**（不可放模組層）：否則測試的反覆掛載會共用上一輪的節點。
    */
-  const nodes = new Map<string, JSX.Element>();
-
   return (column: SortableColumn, label: string): JSX.Element => {
-    const node = nodes.get(column.id) ?? <SortableHeader column={column} label={label} />;
+    const cached = nodes.get(column.id);
+    if (cached !== undefined) return cached;
+
+    const [node, dispose] = createRoot((dispose) => [
+      <SortableHeader column={column} label={label} />,
+      dispose,
+    ] as const);
+    disposers.push(dispose);
     nodes.set(column.id, node);
     return node;
   };
