@@ -36,6 +36,7 @@
         "--destructive-foreground",
         "--card",
         "--foreground",
+        "--muted",
         "--secondary",
         "--accent",
         "--accent-foreground",
@@ -65,8 +66,7 @@
         "--card-foreground",
         "--border",
         "--muted",
-        "--muted-foreground",
-        "--foreground"
+        "--muted-foreground"
       ],
       "variants": [],
       "state": "stable",
@@ -78,7 +78,7 @@
       "kind": "primitive",
       "ark": ["checkbox"],
       "deps": ["@ark-ui/solid", "~/lib/cn"],
-      "tokens": ["--primary", "--primary-foreground", "--border", "--ring"],
+      "tokens": ["--primary", "--primary-foreground", "--ring"],
       "variants": ["state:checked|unchecked|disabled"],
       "state": "stable",
       "docs": "src/components/ui/checkbox.md"
@@ -108,7 +108,7 @@
       "ark": ["field"],
       "deps": ["@ark-ui/solid", "~/lib/cn"],
       "tokens": ["--foreground", "--muted-foreground", "--destructive"],
-      "variants": ["state:default|invalid|required|disabled"],
+      "variants": ["state:default|invalid"],
       "state": "stable",
       "docs": "src/components/ui/field.md"
     },
