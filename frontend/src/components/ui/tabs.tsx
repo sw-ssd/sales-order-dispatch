@@ -1,204 +1,130 @@
-import {
-  createContext,
-  useContext,
-  splitProps,
-  Show,
-  type Component,
-  type JSX,
-  type Accessor,
-} from "solid-js";
-import { createControllableSignal } from "@/hooks/create-controllable-signal";
+import { splitProps, type Component } from "solid-js";
+import { Tabs as ArkTabs } from "@ark-ui/solid";
 import { cn } from "@/lib/cn";
 
-interface TabsContextValue {
-  value: Accessor<string | undefined>;
-  setValue: (value: string) => void;
-  orientation: Accessor<"horizontal" | "vertical">;
-}
-
-const TabsContext = createContext<TabsContextValue>();
-
+/**
+ * 分頁根層：選取狀態、鍵盤操作、ARIA 關聯一律交給 Ark UI，
+ * 只把回呼收斂為純值，避免 Ark 的 `details` 物件外洩到呼叫端。
+ *
+ * 結構取自 Tailkit（a-c-tabs-11 In Card Alternate）：膠囊在淺底容器內，
+ * 選中膠囊改寫為 `bg-card shadow-xs`、未選中改寫為 `text-muted-foreground`；
+ * Tailkit 的色階字面值與深色模式專用的顏色變體一律刪除，交由 index.css 的語意 token 翻轉。
+ *
+ * 一律 `lazyMount` + `unmountOnExit`：維持「未選中的 panel 不在 DOM」的既有語意，
+ * 因此這兩個 prop 不開放呼叫端覆寫。
+ */
 export interface TabsProps
-  extends Omit<JSX.HTMLAttributes<HTMLDivElement>, "onChange"> {
-  /** Controlled active tab value */
+  extends Omit<ArkTabs.RootProps, "onValueChange" | "lazyMount" | "unmountOnExit"> {
+  /** 目前選中的分頁值（受控） */
   value?: string;
-  /** Uncontrolled default active tab value */
+  /** 非受控的初始分頁值 */
   defaultValue?: string;
-  /** Callback fired when active tab changes */
-  onChange?: (value: string) => void;
-  /** Layout orientation of tab triggers and content */
+  /** 選取變更回呼 */
+  onValueChange?: (value: string) => void;
+  /** 版面方向（預設 horizontal） */
   orientation?: "horizontal" | "vertical";
   class?: string;
 }
 
-/**
- * Root Tabs container component managing active tab context state and orientation.
- */
 export const Tabs: Component<TabsProps> = (props) => {
   const [local, rest] = splitProps(props, [
     "value",
     "defaultValue",
-    "onChange",
+    "onValueChange",
     "orientation",
     "class",
     "children",
   ]);
 
-  const [currentValue, setCurrentValue] = createControllableSignal<string>({
-    value: () => local.value,
-    defaultValue: local.defaultValue,
-    onChange: (val) => local.onChange?.(val),
-  });
-
-  const orientation = () => local.orientation || "horizontal";
-
-  const contextValue: TabsContextValue = {
-    value: currentValue,
-    setValue: (val: string) => setCurrentValue(val),
-    orientation,
-  };
-
   return (
-    <TabsContext.Provider value={contextValue}>
-      <div
-        data-orientation={orientation()}
-        class={cn(
-          "w-full",
-          orientation() === "vertical" ? "flex flex-row gap-4" : "flex flex-col gap-2",
-          local.class
-        )}
-        {...rest}
-      >
-        {local.children}
-      </div>
-    </TabsContext.Provider>
+    <ArkTabs.Root
+      value={local.value}
+      defaultValue={local.defaultValue}
+      orientation={local.orientation}
+      onValueChange={(details) => local.onValueChange?.(details.value)}
+      lazyMount
+      unmountOnExit
+      class={cn(
+        "flex w-full flex-col gap-2 data-[orientation=vertical]:flex-row data-[orientation=vertical]:gap-4",
+        local.class
+      )}
+      {...rest}
+    >
+      {local.children}
+    </ArkTabs.Root>
   );
 };
 
-export interface TabsListProps extends JSX.HTMLAttributes<HTMLDivElement> {
+export interface TabsListProps extends ArkTabs.ListProps {
   class?: string;
 }
 
-/**
- * Container wrapper for Tab triggers.
- */
+/** 分頁列：Tailkit 的膠囊容器改寫為 `bg-muted`。 */
 export const TabsList: Component<TabsListProps> = (props) => {
   const [local, rest] = splitProps(props, ["class", "children"]);
-  const context = useContext(TabsContext);
-
-  const isVertical = () => context?.orientation() === "vertical";
 
   return (
-    <div
-      role="tablist"
-      aria-orientation={context?.orientation() || "horizontal"}
+    <ArkTabs.List
       class={cn(
-        "inline-flex rounded-lg bg-muted p-1 text-muted-foreground",
-        isVertical()
-          ? "flex-col h-auto w-auto items-stretch justify-start"
-          : "h-9 items-center justify-center",
+        "inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground",
+        "data-[orientation=vertical]:h-auto data-[orientation=vertical]:w-auto data-[orientation=vertical]:flex-col data-[orientation=vertical]:items-stretch",
         local.class
       )}
       {...rest}
     >
       {local.children}
-    </div>
+    </ArkTabs.List>
   );
 };
 
-export interface TabsTriggerProps
-  extends Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, "onChange"> {
-  /** Unique value identifier for this tab */
+export interface TabsTriggerProps extends ArkTabs.TriggerProps {
+  /** 對應的 TabsContent 值 */
   value: string;
   class?: string;
 }
 
-/**
- * Tab button trigger to activate a specific tab panel.
- */
+/** 分頁按鈕：ARIA 角色與選取狀態、鍵盤操作皆由 Ark 提供，樣式靠 `data-selected`、`data-orientation` 變體。 */
 export const TabsTrigger: Component<TabsTriggerProps> = (props) => {
-  const [local, rest] = splitProps(props, [
-    "value",
-    "disabled",
-    "class",
-    "children",
-    "onClick",
-  ]);
-  const context = useContext(TabsContext);
-
-  if (!context) {
-    throw new Error("TabsTrigger must be used within a Tabs component");
-  }
-
-  const isSelected = () => context.value() === local.value;
-  const isVertical = () => context.orientation() === "vertical";
-
-  const handleClick = (
-    e: MouseEvent & { currentTarget: HTMLButtonElement; target: Element }
-  ) => {
-    if (local.disabled) return;
-    context.setValue(local.value);
-    if (typeof local.onClick === "function") {
-      local.onClick(e);
-    }
-  };
+  const [local, rest] = splitProps(props, ["class", "children"]);
 
   return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={isSelected()}
-      data-state={isSelected() ? "active" : "inactive"}
-      data-orientation={context.orientation()}
-      disabled={local.disabled}
-      onClick={handleClick}
+    <ArkTabs.Trigger
       class={cn(
-        "inline-flex items-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-accent data-[state=active]:border data-[state=active]:border-border data-[state=active]:text-foreground data-[state=active]:shadow-sm cursor-pointer",
-        isVertical() ? "justify-start py-1.5" : "justify-center",
+        "inline-flex cursor-pointer items-center justify-center gap-2 rounded-md px-3 py-1 text-sm font-medium whitespace-nowrap transition-colors",
+        "ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "disabled:pointer-events-none disabled:opacity-50",
+        "hover:bg-card/50 hover:text-foreground",
+        "data-selected:bg-card data-selected:text-foreground data-selected:shadow-xs",
+        "data-[orientation=vertical]:justify-start",
         local.class
       )}
       {...rest}
     >
       {local.children}
-    </button>
+    </ArkTabs.Trigger>
   );
 };
 
-export interface TabsContentProps extends JSX.HTMLAttributes<HTMLDivElement> {
-  /** Value matching the corresponding tab trigger */
+export interface TabsContentProps extends ArkTabs.ContentProps {
+  /** 對應的 TabsTrigger 值 */
   value: string;
   class?: string;
 }
 
-/**
- * Content panel revealed when the associated tab is active.
- */
+/** 分頁內容：未選中時由 Ark 直接卸載（Root 的 lazyMount + unmountOnExit）。 */
 export const TabsContent: Component<TabsContentProps> = (props) => {
-  const [local, rest] = splitProps(props, ["value", "class", "children"]);
-  const context = useContext(TabsContext);
-
-  if (!context) {
-    throw new Error("TabsContent must be used within a Tabs component");
-  }
-
-  const isSelected = () => context.value() === local.value;
-  const isVertical = () => context.orientation() === "vertical";
+  const [local, rest] = splitProps(props, ["class", "children"]);
 
   return (
-    <Show when={isSelected()}>
-      <div
-        role="tabpanel"
-        data-state={isSelected() ? "active" : "inactive"}
-        data-orientation={context.orientation()}
-        class={cn(
-          "ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-          isVertical() ? "flex-1 mt-0" : "mt-2",
-          local.class
-        )}
-        {...rest}
-      >
-        {local.children}
-      </div>
-    </Show>
+    <ArkTabs.Content
+      class={cn(
+        "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "data-[orientation=vertical]:mt-0 data-[orientation=vertical]:flex-1",
+        local.class
+      )}
+      {...rest}
+    >
+      {local.children}
+    </ArkTabs.Content>
   );
 };

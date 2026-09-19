@@ -70,7 +70,7 @@ export default function LoginPage() {
         <Tabs
           class="mt-6"
           value={tab()}
-          onChange={(value) => setTab(value as LoginTab)}
+          onValueChange={(value) => setTab(value as LoginTab)}
         >
           <TabsList class="h-auto w-full">
             <TabsTrigger value="employee" class="flex-1 py-2">
