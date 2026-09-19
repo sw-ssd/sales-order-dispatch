@@ -2,16 +2,18 @@ import { Code, ConnectError, createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 import { useNavigate } from "@tanstack/solid-router";
 import {
+  Button,
+  Field,
+  FieldError,
+  FieldLabel,
+  Input,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "~/components/ui/tabs";
+} from "~/components/ui";
 import { createSignal, Show, type JSX } from "solid-js";
 import { AuthService } from "~/lib/proto/salesorder/v1/auth_pb";
-import { Button } from "~/components/ui/button";
-import { Field, FieldError, FieldLabel } from "~/components/ui/field";
-import { Input } from "~/components/ui/input";
 import GoogleLoginButton from "../components/GoogleLoginButton";
 
 const authClient = createClient(

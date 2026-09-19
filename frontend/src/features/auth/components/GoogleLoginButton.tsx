@@ -1,4 +1,4 @@
-import { Button } from "~/components/ui/button";
+import { Button } from "~/components/ui";
 
 /** Google 登入鈕:外觀照 Tailkit(a-p-sign-in-01)的次要登入鈕,改用 `Button` 的 outline 變體。 */
 export default function GoogleLoginButton() {

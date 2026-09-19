@@ -1,6 +1,9 @@
 import { Code, ConnectError, createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 import {
+  Button,
+  buttonVariants,
+  Card,
   Dialog,
   DialogClose,
   DialogContent,
@@ -8,19 +11,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "~/components/ui/dialog";
-import { Button, buttonVariants } from "~/components/ui/button";
-import { Card } from "~/components/ui/card";
-import { Field, FieldLabel } from "~/components/ui/field";
-import { Input } from "~/components/ui/input";
-import {
+  Field,
+  FieldLabel,
+  Input,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "~/components/ui/table";
+} from "~/components/ui";
 import { createSignal, For, onMount, Show } from "solid-js";
 import {
   CompanyService,

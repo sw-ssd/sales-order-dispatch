@@ -1,5 +1,5 @@
 import { Show } from "solid-js";
-import { Pagination, PaginationSummary } from "~/components/ui/pagination";
+import { Pagination, PaginationSummary } from "~/components/ui";
 
 interface ListPaginationProps {
   /** 總筆數(後端 pagination.total) */

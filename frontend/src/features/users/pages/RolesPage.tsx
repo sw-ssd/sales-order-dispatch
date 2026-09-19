@@ -6,8 +6,7 @@ import {
   type Permission,
   type Role,
 } from "~/lib/proto/salesorder/v1/role_pb";
-import { Button } from "~/components/ui/button";
-import { Card } from "~/components/ui/card";
+import { Button, Card } from "~/components/ui";
 import { cn } from "~/lib/cn";
 import { queryClient } from "~/lib/query-client";
 import { PermissionMatrix } from "../components/PermissionMatrix";

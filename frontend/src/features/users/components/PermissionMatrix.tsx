@@ -1,4 +1,4 @@
-import { Checkbox } from "~/components/ui/checkbox";
+import { Checkbox } from "~/components/ui";
 import { create } from "@bufbuild/protobuf";
 import { For, Show } from "solid-js";
 import {
