@@ -1,3 +1,4 @@
+import { useFieldContext } from "@ark-ui/solid/field";
 import { splitProps, type Component, type JSX } from "solid-js";
 import { cn } from "@/lib/cn";
 
@@ -19,10 +20,29 @@ export interface InputProps extends JSX.InputHTMLAttributes<HTMLInputElement> {
  * 2. 外掛在 `:focus` 加上 1px 藍色 ring 與同色邊框 → 以 `focus-visible:` 的
  *    `border-primary` + `ring-3 ring-primary/50` 覆蓋。
  * 3. 外掛把 placeholder 固定成外掛自帶的灰階 → 以 `placeholder:text-muted-foreground` 覆蓋。
+ *
+ * 放在 `Field` 內時，額外接手 Ark 控制項的 a11y 關聯（`aria-invalid`／`aria-describedby`），
+ * 等同 Ark `Field.Input` 的 `getControlProps()`；`Field` 之外則完全不影響。
  */
 export const Input: Component<InputProps> = (props) => {
   // Use splitProps to preserve SolidJS reactivity for destructured props
   const [local, rest] = splitProps(props, ["class", "type"]);
+  const field = useFieldContext();
+
+  const controlA11y = (): JSX.InputHTMLAttributes<HTMLInputElement> => {
+    const api = field?.();
+    if (!api) return {};
+    const describedBy = [
+      api.invalid ? api.ids.errorText : undefined,
+      api.ariaDescribedby,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    return {
+      "aria-invalid": api.invalid ? "true" : undefined,
+      "aria-describedby": describedBy || undefined,
+    };
+  };
 
   return (
     <input
@@ -31,6 +51,7 @@ export const Input: Component<InputProps> = (props) => {
         "block w-full rounded-lg border border-border bg-card px-3 py-2 text-base text-foreground transition-colors placeholder:text-muted-foreground file:mr-4 file:rounded-sm file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/50 focus-visible:outline-none aria-invalid:border-destructive aria-invalid:focus-visible:ring-destructive/50 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
         local.class
       )}
+      {...controlA11y()}
       {...rest}
     />
   );

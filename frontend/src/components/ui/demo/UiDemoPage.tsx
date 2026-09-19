@@ -15,7 +15,6 @@ const componentNames = [
   "dialog",
   "field",
   "input",
-  "label",
   "pagination",
   "scroll-area",
   "spinner",

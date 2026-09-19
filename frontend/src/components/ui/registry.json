@@ -117,7 +117,7 @@
       "path": "src/components/ui/input.tsx",
       "kind": "primitive",
       "ark": [],
-      "deps": ["~/lib/cn"],
+      "deps": ["@ark-ui/solid", "~/lib/cn"],
       "tokens": [
         "--card",
         "--border",
@@ -129,17 +129,6 @@
       "variants": [],
       "state": "stable",
       "docs": "src/components/ui/input.md"
-    },
-    {
-      "name": "label",
-      "path": "src/components/ui/label.tsx",
-      "kind": "primitive",
-      "ark": [],
-      "deps": ["class-variance-authority", "~/lib/cn"],
-      "tokens": ["--foreground"],
-      "variants": [],
-      "state": "stable",
-      "docs": "src/components/ui/label.md"
     },
     {
       "name": "pagination",

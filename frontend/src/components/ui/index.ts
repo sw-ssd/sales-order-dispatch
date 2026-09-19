@@ -11,7 +11,6 @@ export * from "./checkbox";
 export * from "./dialog";
 export * from "./field";
 export * from "./input";
-export * from "./label";
 export * from "./pagination";
 export * from "./scroll-area";
 export * from "./spinner";
