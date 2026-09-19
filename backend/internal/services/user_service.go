@@ -241,6 +241,15 @@ func (s *UserService) CreateUser(ctx context.Context, req *connect.Request[v1.Cr
 			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("僅能建所屬公司帳號"))
 		}
 	}
+	// 軟刪除的公司(P2-A)不得再收新帳號:它是唯一以請求指定 company_id 的掛載路徑,
+	// 不擋就會把活帳號掛進已刪除的租戶(該公司之後仍能通過登入/身分解析)。
+	exists, err := s.db.Company.Query().Where(company.ID(cid), company.DeletedAtIsNil()).Exist(ctx)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	if !exists {
+		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("公司 %d 不存在", cid))
+	}
 	roleCode := req.Msg.GetRole()
 	if strings.TrimSpace(roleCode) == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("role 必填"))

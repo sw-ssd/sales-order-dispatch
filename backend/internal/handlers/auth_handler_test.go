@@ -580,6 +580,39 @@ func TestCompanyDeactivationBlocksLogin(t *testing.T) {
 	}
 }
 
+// TestSoftDeletedCompanyBlocksLogin P2-A 後續:公司被軟刪除(狀態仍 active)→ 客戶登入 permission_denied,
+// 不核發憑證(復原才可再登入)。修復前登入只看 status,已刪租戶可繼續換發 token。
+func TestSoftDeletedCompanyBlocksLogin(t *testing.T) {
+	e := newTestEnv(t)
+	ctx := context.Background()
+	co, err := e.db.Company.Create().SetName("已刪測試公司").SetIdentifier("T-co-softdel").Save(ctx)
+	if err != nil {
+		t.Fatalf("company: %v", err)
+	}
+	hash, _ := auth.HashPassword("pw-123456")
+	if _, err := e.db.User.Create().SetCompanyID(co.ID).SetEmail("softdel@t.com").SetName("店家").SetRole("customer").SetIsCustomer(true).
+		SetAccountName("ACC02").SetPasswordHash(hash).Save(ctx); err != nil {
+		t.Fatalf("cust user: %v", err)
+	}
+	login := func() error {
+		_, err := e.rpc.Login(ctx, connect.NewRequest(&v1.LoginRequest{CustomerCode: "ACC02", Password: "pw-123456"}))
+		return err
+	}
+	// 前置:未刪除前可登入(證明後面的拒絕來自 deleted_at,不是別的失效原因)。
+	if err := login(); err != nil {
+		t.Fatalf("軟刪除前應可登入,got %v", err)
+	}
+	e.db.Company.UpdateOneID(co.ID).SetDeletedAt(time.Now().UTC()).SaveX(ctx)
+	if got := connect.CodeOf(login()); got != connect.CodePermissionDenied {
+		t.Fatalf("已刪除公司登入應 permission_denied,got %v", got)
+	}
+	// 復原 → 可再登入。
+	e.db.Company.UpdateOneID(co.ID).ClearDeletedAt().SaveX(ctx)
+	if err := login(); err != nil {
+		t.Fatalf("復原後應可登入,got %v", err)
+	}
+}
+
 // TestResetCustomerPasswordNonCustomer:目標非客戶帳號 → invalid_argument。
 func TestResetCustomerPasswordNonCustomer(t *testing.T) {
 	ctx := context.Background()

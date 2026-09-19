@@ -328,8 +328,8 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *connect.Reque
 	if err != nil {
 		return nil, err
 	}
-	// 公司前綴(customer_code 取號必要)。
-	co, err := s.db.Company.Get(ctx, cid)
+	// 公司前綴(customer_code 取號必要)。軟刪除的公司(P2-A)視同不存在:不得在其下建客戶。
+	co, err := s.db.Company.Query().Where(company.ID(cid), company.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}

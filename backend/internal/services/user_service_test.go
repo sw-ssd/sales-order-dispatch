@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
 	_ "github.com/mattn/go-sqlite3" // sqlite in-memory 測試驅動
@@ -119,6 +120,28 @@ func TestCreateUserCannotGrantSuperRole(t *testing.T) {
 	n, _ := db.User.Query().Count(ctx)
 	if n != 0 {
 		t.Errorf("拒絕後不應建立帳號,得到 %d 筆", n)
+	}
+}
+
+// TestCreateUserSoftDeletedCompany:P2-A 後續——super 以請求指定已軟刪除的公司 → not_found、不落庫。
+// CreateUser 是唯一以「請求」指定 company_id 的掛載路徑;不擋就會把活帳號掛進已刪租戶
+// (該帳號之後仍能通過登入與身分解析,因為那些路徑讀的是「使用者的公司」)。
+func TestCreateUserSoftDeletedCompany(t *testing.T) {
+	ctx := context.Background()
+	_, db := newUserTestServer(t, authz.Identity{})
+	coID, _, _ := seedUserCompany(t, db)
+	db.Company.UpdateOneID(coID).SetDeletedAt(time.Now().UTC()).SaveX(ctx)
+
+	id := authz.Identity{UserID: "1", Role: "super", Roles: []string{"super"}}
+	client := newUserTestServerWithDB(t, id, db)
+	_, err := client.CreateUser(ctx, connect.NewRequest(&v1.CreateUserRequest{
+		Name: "幽靈", Email: "ghost@t.com", CompanyId: uItoa(coID), Role: "staff",
+	}))
+	if connect.CodeOf(err) != connect.CodeNotFound {
+		t.Fatalf("已刪除公司下建帳號應回 not_found,得到 %v", err)
+	}
+	if n, _ := db.User.Query().Count(ctx); n != 0 {
+		t.Fatalf("已刪除公司下不得建帳號,得到 %d 筆", n)
 	}
 }
 

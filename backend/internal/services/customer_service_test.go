@@ -146,6 +146,25 @@ func TestCreateCustomerRequiresSalesRep(t *testing.T) {
 	}
 }
 
+// TestCreateCustomerSoftDeletedCompany:P2-A 後續——身分所指公司在建檔前被軟刪除 → not_found,
+// 不建客戶列。修復前 Company.Get 不看 deleted_at,客戶會落入已刪除的租戶。
+func TestCreateCustomerSoftDeletedCompany(t *testing.T) {
+	ctx := context.Background()
+	_, db := newCustomerTestServer(t, authz.Identity{})
+	coID, deptID := seedCustomerCompany(t, db, "TS", true)
+	repID := seedCustomerRep(t, db, coID, deptID)
+	client, _ := newCustomerTestServer(t, deptAdminID(coID, deptID))
+
+	db.Company.UpdateOneID(coID).SetDeletedAt(time.Now().UTC()).SaveX(ctx)
+
+	if _, err := client.CreateCustomer(ctx, connect.NewRequest(&customersv1.CreateCustomerRequest{Name: "王", DefaultSalesRepId: uItoa(repID)})); connect.CodeOf(err) != connect.CodeNotFound {
+		t.Fatalf("已刪除公司下建客戶應 not_found,got %v", err)
+	}
+	if n, _ := db.Customer.Query().Count(ctx); n != 0 {
+		t.Fatalf("已刪除公司下不得建客戶,得到 %d 列", n)
+	}
+}
+
 // TestCreateCustomerAsCustomerDenied:客戶主帳號呼叫一律 permission_denied。
 func TestCreateCustomerAsCustomerDenied(t *testing.T) {
 	ctx := context.Background()

@@ -94,7 +94,8 @@ func (h *AuthHandler) Login(ctx context.Context, req *connect.Request[v1.LoginRe
 		return nil, invalidCredentials()
 	}
 	// A2 公司停用連鎖(2.1.3):公司非 active → permission_denied,不核發憑證、不計失敗。
-	if u.Edges.Company != nil && u.Edges.Company.Status != company.StatusActive {
+	// 軟刪除的公司(P2-A)一併視同停用:已刪租戶不得再換發憑證。
+	if u.Edges.Company != nil && (u.Edges.Company.Status != company.StatusActive || u.Edges.Company.DeletedAt != nil) {
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("公司已停用,無法登入"))
 	}
 	if u.Status != user.StatusActive {
