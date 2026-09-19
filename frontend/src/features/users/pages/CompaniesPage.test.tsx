@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@solidjs/testing-lib
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type * as ConnectRpc from "@connectrpc/connect";
+import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 
 // 公司 API 以 spy 取代：CompaniesPage 在模組層建立 connect client，
 // 因此以 createClient 的替身攔截（ConnectError/Code 保持真實，錯誤訊息對照才有效）。
@@ -34,9 +35,25 @@ const EXISTING_COMPANY = {
   status: "active",
 };
 
+/** 每個測試一份全新的 `QueryClient`：快取不跨測試殘留。 */
+function newClient() {
+  // retry 關閉——測試裡的失敗都是刻意安排的，退避重試只會讓呼叫次數與時間變得不確定
+  // （retry 謂詞本身由 `lib/query-client.test.ts` 守著）。
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+}
+
+/** 在 provider 內掛載頁面（頁面的清單資料一律經 query client 取得）。 */
+function mountPage(client: QueryClient = newClient()) {
+  render(() => (
+    <QueryClientProvider client={client}>
+      <CompaniesPage />
+    </QueryClientProvider>
+  ));
+}
+
 /** 渲染頁面並等列表載入完成（modal 的測試都要先有列表可點）。 */
 async function renderPage() {
-  render(() => <CompaniesPage />);
+  mountPage();
   await waitFor(() => expect(screen.getByText("既有公司")).toBeTruthy());
 }
 
@@ -349,5 +366,165 @@ describe("<CompaniesPage> 公司 modal 表單", () => {
     // 等非同步工作排空，確認第二次提交是真的沒送出（而不是還沒輪到）。
     await settle();
     expect(createCompanySpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("<CompaniesPage> 公司清單查詢", () => {
+  const SECOND_PAGE_COMPANY = {
+    id: "c-2",
+    name: "第二頁公司",
+    identifier: "C-002",
+    taxId: "",
+    status: "inactive",
+  };
+
+  /** 45 筆 = 3 頁；第 2 頁回另一家公司，用來證明真的換了資料而不是沿用快取。 */
+  function mockCompanyPages() {
+    listCompaniesSpy.mockImplementation((req: { page: number }) =>
+      Promise.resolve(
+        req.page === 2
+          ? { companies: [SECOND_PAGE_COMPANY], pagination: { total: 45 } }
+          : { companies: [EXISTING_COMPANY], pagination: { total: 45 } }
+      )
+    );
+  }
+
+  /** 篩選表單（頁面上唯一的 form；modal 未開時）。 */
+  function filterForm(): HTMLFormElement {
+    const form = screen.getByLabelText("關鍵字").closest("form");
+    if (!form) throw new Error("找不到篩選表單");
+    return form;
+  }
+
+  it("首屏：以 page 1 與未設定的 keyword/status 查詢", async () => {
+    await renderPage();
+
+    expect(listCompaniesSpy).toHaveBeenCalledTimes(1);
+    expect(listCompaniesSpy).toHaveBeenCalledWith({
+      page: 1,
+      pageSize: 20,
+      status: undefined,
+      keyword: undefined,
+    });
+  });
+
+  it("換到第 2 頁：以 page 2 重新查詢，且新資料到達前舊列仍在（不閃空）", async () => {
+    const secondPage = Promise.withResolvers<unknown>();
+    listCompaniesSpy.mockResolvedValueOnce({
+      companies: [EXISTING_COMPANY],
+      pagination: { total: 45 },
+    });
+    listCompaniesSpy.mockReturnValueOnce(secondPage.promise);
+    await renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "第 2 頁" }));
+
+    await waitFor(() => expect(listCompaniesSpy).toHaveBeenCalledTimes(2));
+    expect(listCompaniesSpy).toHaveBeenLastCalledWith({
+      page: 2,
+      pageSize: 20,
+      status: undefined,
+      keyword: undefined,
+    });
+
+    // 第 2 頁還在飛：placeholderData 讓舊頁資料留在畫面上，不退回載入列。
+    expect(screen.getByText("既有公司")).toBeTruthy();
+    expect(screen.queryByText("載入中…")).toBeNull();
+
+    secondPage.resolve({ companies: [SECOND_PAGE_COMPANY], pagination: { total: 45 } });
+
+    await waitFor(() => expect(screen.getByText("第二頁公司")).toBeTruthy());
+    expect(screen.queryByText("既有公司")).toBeNull();
+  });
+
+  it("篩選送出：草稿不查詢、送出後帶入參數並回到第 1 頁（只查一次）", async () => {
+    mockCompanyPages();
+    await renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "第 2 頁" }));
+    await waitFor(() => expect(listCompaniesSpy).toHaveBeenCalledTimes(2));
+
+    const form = filterForm();
+    // modal 的欄位在關閉時仍掛在 DOM 裡，查詢一律收斂到篩選表單內。
+    fireEvent.input(within(form).getByLabelText("關鍵字"), { target: { value: "宏" } });
+    fireEvent.change(within(form).getByLabelText("狀態"), { target: { value: "active" } });
+    // 草稿只存在頁面 signal 裡，輸入過程不得查詢。
+    expect(listCompaniesSpy).toHaveBeenCalledTimes(2);
+
+    fireEvent.submit(form);
+
+    await waitFor(() =>
+      expect(listCompaniesSpy).toHaveBeenLastCalledWith({
+        page: 1,
+        pageSize: 20,
+        keyword: "宏",
+        status: "active",
+      })
+    );
+    // 套用篩選與回第 1 頁是同一次更新 → 只觸發一次查詢。
+    await settle();
+    expect(listCompaniesSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it("超頁退回：回傳的 total 讓目前頁碼超界時夾回合法頁碼，且請求次數有界", async () => {
+    // 第 2 頁的結果只剩 1 頁（例：該頁的資料被刪光），目前頁碼因此超界。
+    listCompaniesSpy.mockImplementation((req: { page: number }) =>
+      Promise.resolve(
+        req.page === 2
+          ? { companies: [SECOND_PAGE_COMPANY], pagination: { total: 1 } }
+          : { companies: [EXISTING_COMPANY], pagination: { total: 21 } }
+      )
+    );
+    await renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "第 2 頁" }));
+
+    // 夾回第 1 頁 → 只重取一次（第 3 次呼叫），且不再繼續長。
+    await waitFor(() => expect(listCompaniesSpy).toHaveBeenCalledTimes(3));
+    expect(listCompaniesSpy).toHaveBeenLastCalledWith({
+      page: 1,
+      pageSize: 20,
+      status: undefined,
+      keyword: undefined,
+    });
+    await settle();
+    expect(listCompaniesSpy).toHaveBeenCalledTimes(3);
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "第 1 頁" }).getAttribute("aria-current")).toBe(
+        "page"
+      )
+    );
+  });
+
+  it("建立／編輯／刪除成功後清單被重新取得", async () => {
+    createCompanySpy.mockResolvedValue({});
+    updateCompanySpy.mockResolvedValue({});
+    deleteCompanySpy.mockResolvedValue({});
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    await renderPage();
+    expect(listCompaniesSpy).toHaveBeenCalledTimes(1);
+
+    const creating = await openDialog("新增公司");
+    fillCompany(creating, { name: "新公司", identifier: "C-002" });
+    fireEvent.submit(creating.form);
+    await waitFor(() => expect(listCompaniesSpy).toHaveBeenCalledTimes(2));
+
+    const editing = await openDialog("編輯");
+    fillCompany(editing, { name: "改名後" });
+    fireEvent.submit(editing.form);
+    await waitFor(() => expect(listCompaniesSpy).toHaveBeenCalledTimes(3));
+
+    fireEvent.click(screen.getByRole("button", { name: "刪除" }));
+    await waitFor(() => expect(listCompaniesSpy).toHaveBeenCalledTimes(4));
+  });
+
+  it("清單載入失敗：錯誤由 query 狀態驅動，顯示在頁面層 banner", async () => {
+    listCompaniesSpy.mockRejectedValue(new ConnectError("查詢被拒", Code.PermissionDenied));
+
+    mountPage();
+
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("查詢被拒"));
+    expect(screen.queryByText("載入中…")).toBeNull();
+    expect(listCompaniesSpy).toHaveBeenCalledTimes(1);
   });
 });

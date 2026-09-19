@@ -1,5 +1,6 @@
-import { Code, ConnectError, createClient } from "@connectrpc/connect";
+import { Code, ConnectError } from "@connectrpc/connect";
 import { createForm } from "@tanstack/solid-form";
+import { createQuery, useQueryClient } from "@tanstack/solid-query";
 import {
   Badge,
   Button,
@@ -23,17 +24,12 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui";
-import { createSignal, For, onMount, Show, type JSX } from "solid-js";
-import {
-  CompanyService,
-  type Company,
-} from "~/lib/proto/salesorder/v1/company_pb";
-import { transport } from "~/lib/transport";
+import { batch, createEffect, createSignal, For, Show, type JSX } from "solid-js";
+import type { Company } from "~/lib/proto/salesorder/v1/company_pb";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import { ListPagination } from "../components/ListPagination";
+import { companiesQueryOptions, companyClient, PAGE_SIZE } from "../queries";
 import { companySchema } from "../schemas";
-
-const PAGE_SIZE = 20;
 
 /**
  * 新增模式的欄位預設值。`form.reset(values)` 會把傳入的 values **整份取代** `defaultValues`
@@ -42,8 +38,6 @@ const PAGE_SIZE = 20;
  * 不能只靠 `form.reset()`，也不能只帶部分欄位（未帶到的欄位值會變 `undefined`）。
  */
 const EMPTY_COMPANY_VALUES = { name: "", identifier: "", taxId: "", status: "active" };
-
-const companyClient = createClient(CompanyService, transport);
 
 const STATUS_LABELS: Record<string, string> = {
   active: "啟用",
@@ -92,30 +86,65 @@ function errorMessage(err: unknown): string {
  * 版型照 Tailkit（Page Headings + In Card 表格）：標題區塊帶下框線、篩選列為卡片色帶、
  * 表格與分頁收在同一張 `Card` 內。頁面本身不帶內距——內距由 AppShell 內容區（`p-4 lg:p-6`）負責。
  *
+ * 清單資料（列資料／總筆數／載入與錯誤狀態）一律來自 `../queries.ts` 的
+ * `companiesQueryOptions`＋`createQuery`：頁面持有的只有「查詢輸入」（篩選草稿、已套用篩選、
+ * 頁碼），不再另存一份結果快取。mutation 成功後以 `invalidateQueries(["companies"])` 前綴失效。
+ *
  * modal 的欄位值、欄位驗證與提交狀態由 `createForm` 持有：驗證時機為 `onBlur` + `onSubmit`
  * （輸入過程不標紅），客戶端錯誤落在該欄下方；伺服器錯誤不對應特定欄位，由提交流程設進
  * 表單層 banner。篩選列（關鍵字／狀態）仍是獨立的查詢表單，不受 modal 的 form 管轄。
  */
 export default function CompaniesPage() {
-  const [companies, setCompanies] = createSignal<Company[]>([]);
-  const [total, setTotal] = createSignal(0);
-  const [loading, setLoading] = createSignal(true);
-  const [error, setError] = createSignal<string | null>(null);
-
+  // 篩選草稿：輸入過程只動這兩個 signal，不進 query key（D5：不得每按一鍵就查詢）。
   const [keyword, setKeyword] = createSignal("");
   const [statusFilter, setStatusFilter] = createSignal("");
+  // 已套用的篩選＋頁碼是 query key 的來源：只有送出篩選與換頁會動它們。
+  const [filter, setFilter] = createSignal({ keyword: "", status: "" });
   const [page, setPage] = createSignal(1);
 
-  const goToPage = (p: number) => {
-    setPage(p);
-    load();
-  };
+  const client = useQueryClient();
+
+  // 清單唯一的資料來源：列資料、總筆數、載入與錯誤狀態全部由 query 狀態推導，
+  // 頁面不再另存 companies/total/loading/error signal（避免兩份真相）。
+  const query = createQuery(() =>
+    companiesQueryOptions({
+      page: page(),
+      pageSize: PAGE_SIZE,
+      keyword: filter().keyword || undefined,
+      status: filter().status || undefined,
+    })
+  );
+
+  const total = () => Number(query.data?.pagination?.total ?? 0);
+
+  /**
+   * 超頁退回：回傳的 total 讓目前頁碼超界時（例：該頁資料被刪光），把頁碼夾到合法值。
+   * `page` 是 query key 的一部分 → `setPage` 自己就會觸發重取，不必也不能再手動重載；
+   * 夾到的頁碼必定 ≤ maxPage < 原頁碼（嚴格遞減、下界 1），所以重取次數有界。
+   *
+   * `isPlaceholderData` 期間的 `data` 屬於前一個 key（placeholderData 保留的舊結果），
+   * 據以退回會把剛切過去的頁碼彈回來，故必須排除；這不會漏掉退回——新資料一到，
+   * `data` 與 `isPlaceholderData` 都變動，這個 effect 會再跑一次。
+   */
+  createEffect(() => {
+    if (query.isPlaceholderData || !query.data) return;
+    const maxPage = Math.max(1, Math.ceil(total() / PAGE_SIZE));
+    if (page() > maxPage) setPage(maxPage);
+  });
 
   // 表單對話框狀態
   const [dialogOpen, setDialogOpen] = createSignal(false);
   const [editing, setEditing] = createSignal<Company | null>(null);
   // 伺服器錯誤不是驗證狀態（不對應任何欄位），由提交流程設定，落在表單層 banner。
   const [serverError, setServerError] = createSignal<string | undefined>();
+  // 刪除失敗不屬於任何 query（不是清單資料），單獨保留一顆區域 signal；
+  // 清單載入失敗一律由 `query.error` 驅動（banner 顯示處直接組兩者）。
+  const [deleteError, setDeleteError] = createSignal<string | null>(null);
+
+  // 清單重新查詢時清掉上一次刪除留下的錯誤 banner（與改寫前 `load()` 開頭 `setError(null)` 等價）。
+  createEffect(() => {
+    if (query.isFetching) setDeleteError(null);
+  });
 
   // 欄位值、欄位錯誤與提交狀態由 `createForm` 持有；驗證時機為 `onBlur` + `onSubmit`
   // （輸入過程不標紅），客戶端錯誤落在該欄下方。
@@ -147,7 +176,8 @@ export default function CompaniesPage() {
           });
         }
         setDialogOpen(false);
-        await load();
+        // 清單資料已變更 → 前綴失效（清單 query 立即重取，不需手動 reload）。
+        await client.invalidateQueries({ queryKey: ["companies"] });
       } catch (err) {
         setServerError(errorMessage(err));
       }
@@ -156,32 +186,17 @@ export default function CompaniesPage() {
 
   const isSubmitting = form.useSelector((state) => state.isSubmitting);
 
-  const load = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await companyClient.listCompanies({
-        page: page(),
-        pageSize: PAGE_SIZE,
-        status: statusFilter() || undefined,
-        keyword: keyword() || undefined,
-      });
-      setCompanies(res.companies);
-      const t = Number(res.pagination?.total ?? 0);
-      setTotal(t);
-      // 刪除/篩選後若目前頁碼超出總頁數,退回最後一頁並重新載入
-      const maxPage = Math.max(1, Math.ceil(t / PAGE_SIZE));
-      if (page() > maxPage) {
-        setPage(maxPage);
-        return load();
-      }
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setLoading(false);
-    }
+  /**
+   * 送出篩選：把草稿套進 query key 並回第 1 頁。兩個 signal 必須放在同一個 `batch` 內——
+   * 分開寫會先以「舊頁碼＋新篩選」查一次、再以「第 1 頁＋新篩選」查一次（兩次 RPC）。
+   */
+  const submitFilter: JSX.EventHandler<HTMLFormElement, SubmitEvent> = (e) => {
+    e.preventDefault();
+    batch(() => {
+      setFilter({ keyword: keyword(), status: statusFilter() });
+      setPage(1);
+    });
   };
-  onMount(load);
 
   /**
    * 開啟 modal（新增傳 `null`）。表單欄位值、欄位錯誤與 touched 由 `form.reset(values)` 重設；
@@ -216,11 +231,13 @@ export default function CompaniesPage() {
 
   const remove = async (c: Company) => {
     if (!window.confirm(`確定刪除公司「${c.name}」?`)) return;
+    setDeleteError(null);
     try {
       await companyClient.deleteCompany({ companyId: c.id });
-      await load();
+      // 刪除後清單重取；若刪到當前頁超界，超頁退回的 effect 會把頁碼夾回合法值。
+      await client.invalidateQueries({ queryKey: ["companies"] });
     } catch (err) {
-      setError(errorMessage(err));
+      setDeleteError(errorMessage(err));
     }
   };
 
@@ -236,23 +253,21 @@ export default function CompaniesPage() {
         </Button>
       </header>
 
-      <Show when={error()}>
-        <p
-          class="mb-4 rounded-lg bg-destructive/15 px-3 py-2 text-sm font-medium text-destructive"
-          role="alert"
-        >
-          {error()}
-        </p>
+      <Show when={query.error ? errorMessage(query.error) : deleteError()}>
+        {(message) => (
+          <p
+            class="mb-4 rounded-lg bg-destructive/15 px-3 py-2 text-sm font-medium text-destructive"
+            role="alert"
+          >
+            {message()}
+          </p>
+        )}
       </Show>
 
       <Card>
         <form
           class="flex flex-wrap items-end gap-3 border-b border-border bg-muted px-3 py-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            setPage(1); // 查詢變更時回到第一頁
-            load();
-          }}
+          onSubmit={submitFilter}
         >
           <Field class="w-full sm:w-64">
             <FieldLabel for="company-keyword">關鍵字</FieldLabel>
@@ -294,21 +309,21 @@ export default function CompaniesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            <Show when={loading()}>
+            <Show when={query.isPending}>
               <TableRow class="hover:bg-transparent">
                 <TableCell colspan={6} class="py-8 text-center text-muted-foreground">
                   載入中…
                 </TableCell>
               </TableRow>
             </Show>
-            <Show when={!loading() && companies().length === 0}>
+            <Show when={!query.isPending && (query.data?.companies.length ?? 0) === 0}>
               <TableRow class="hover:bg-transparent">
                 <TableCell colspan={6} class="py-8 text-center text-muted-foreground">
                   尚無公司資料
                 </TableCell>
               </TableRow>
             </Show>
-            <For each={companies()}>
+            <For each={query.data?.companies ?? []}>
               {(c) => (
                 <TableRow>
                   <TableCell class="font-medium text-foreground">{c.name}</TableCell>
@@ -346,7 +361,7 @@ export default function CompaniesPage() {
           total={total()}
           pageSize={PAGE_SIZE}
           page={page()}
-          onPageChange={goToPage}
+          onPageChange={setPage}
         />
       </Card>
 
