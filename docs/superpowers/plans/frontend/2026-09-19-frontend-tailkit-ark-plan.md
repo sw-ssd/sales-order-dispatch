@@ -674,11 +674,10 @@ tailkit_code("a-p-sign-in-01,a-p-errors-01", tech="html")
 cd frontend && pnpm typecheck && pnpm lint && pnpm test && pnpm build
 ```
 
-- [ ] **Step 4: 靜態佐證 + 交付人工目視清單（禁止啟動瀏覽器）**
+- [ ] **Step 4: 視覺比對（允許開瀏覽器，收尾必須乾淨）**
 
-本機的 playwright/Chrome 會崩潰（見共用約束「禁止啟動本地瀏覽器」）→ 不得開瀏覽器截圖。改為：
-1. 靜態佐證：讀 `frontend/dist/assets/*.css` 確認頁面用到的 class 都有生成；`pnpm build` 輸出。
-2. 交付「供人類目視的檢查清單」寫進報告：5 頁 × {桌面/手機} × {淺色/深色} 各要點（哪個元素、預期外觀、容易出錯處），讓使用者自己開 dev server 對照。
+5 頁 × {桌面, 手機} × {淺色, 深色} 對照，記錄任何非預期差異。做法：dev server 用 `hub` 起，截圖／computed-style 用 playwright MCP 或 `chrome-headless-shell`。
+**收尾衛生（強制）**：任務結束前 `pkill -f chrome-headless-shell` 並確認 `pgrep -f chrome-headless-shell | wc -l` 為 0、刪掉你建的暫存 profile、不留暫存檔在 repo。若瀏覽器反覆崩潰（本機 Chrome 153 有此紀錄），降級為靜態佐證並在報告明寫未做像素級驗證，不要硬撐重試。
 
 - [ ] **Step 5: Commit**
 
@@ -722,12 +721,15 @@ cd frontend && pnpm typecheck && pnpm lint && pnpm test && pnpm build
 
 Expected: 全綠、**0 warning**。
 
-- [ ] **Step 5: 靜態驗收 + 人工目視清單（禁止啟動瀏覽器）**
+- [ ] **Step 5: 瀏覽器實測（允許，收尾必須乾淨）**
 
-不得啟動任何瀏覽器（見共用約束）。改為：
-1. 靜態檢查：`grep` 工具確認改動後的元件與頁面沒有殘留舊 class／色階；`pnpm build` 產物含預期的 token 與 utility。
-2. 產出一份**人工驗收清單**（給使用者）：`/login`（兩 tab 切換、鍵盤方向鍵、店家登入送出錯誤路徑）、公司／部門（modal 開關、Escape、點 backdrop、表單驗證、CRUD 後表格更新）、角色權限（checkbox 勾選與 disabled、儲存）、shell（側邊欄選中態、佔位項不可點、手機寬度收合）、深色模式（以 devtools 對 `document.documentElement` 加 `.dark`）。每項寫明操作步驟與預期結果。
-3. 明列「因瀏覽器不可用而未做的像素級驗證」，不得假裝驗過。
+1. `/login`：兩 tab 切換（含鍵盤 ArrowLeft/ArrowRight）、Google 按鈕、店家登入表單送出錯誤路徑
+2. 公司／部門：modal 開關、Escape、點 backdrop、表單驗證、CRUD 成功後表格更新
+3. 角色權限：矩陣 checkbox 勾選、disabled 格、儲存
+4. shell：側邊欄選中態、佔位項不可點、手機寬度收合
+5. 深色模式：以上全部再看一次（`document.documentElement.classList.add('dark')`）
+
+**收尾衛生（強制）**：`pkill -f chrome-headless-shell` 後確認 `pgrep -f chrome-headless-shell | wc -l` 為 0、刪除暫存 profile、不留暫存檔。若瀏覽器反覆崩潰（本機 Chrome 153 有此紀錄），改做靜態佐證並明列未驗項，不要硬撐。
 
 - [ ] **Step 6: impeccable detector**
 
@@ -747,8 +749,8 @@ git commit -m "chore(frontend): 移除 Kobalte 與 Nikala 痕跡，文件改以 
 | spec 驗收 | 步驟 |
 |---|---|
 | 1. typecheck/lint/test/build 全綠且 lint 0 warning | Task 10 Step 4（各 task 各自也跑） |
-| 2. dev server 目視 5 個互動面 | Task 10 Step 5（**改為人工驗收清單**：本機瀏覽器會崩潰，見共用約束） |
-| 3. 改動前後視覺比對 | Task 9 Step 4（**改為靜態佐證 + 人工清單**） |
+| 2. dev server 目視 5 個互動面 | Task 10 Step 5（允許開瀏覽器；崩潰時可降級為靜態佐證並明列未驗項） |
+| 3. 改動前後視覺比對 | Task 9 Step 4（同上；收尾衛生強制） |
 | 4. `kobalte`/`Nikala`/色階字面值歸零 | Task 10 Step 3 |
 | 5. impeccable detector | Task 10 Step 6 |
 
