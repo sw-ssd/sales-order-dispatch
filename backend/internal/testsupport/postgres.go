@@ -5,7 +5,9 @@
 //
 // 容器執行環境的 env(DOCKER_HOST 指向本機 podman machine socket、podman 下停用 ryuk)
 // 由 `task test:integration` 固化,測試碼不寫死;若環境已提供現成 PostgreSQL,設
-// INTEGRATION_TEST_DSN 即可跳過容器(沿用既有 internal/authz/openfga 整合測試的 gating 名)。
+// INTEGRATION_TEST_DSN 即可跳過容器(沿用既有 internal/authz/openfga 整合測試的 gating 名),
+// 但該模式共用同一個既有的庫、**不保證** per-test 隔離:需要全新空庫的測試須先呼叫
+// RequiresContainer(覆寫模式下 skip)。
 // 兩者皆不可用時 skip(附可行動訊息),不得讓測試因環境而紅。
 package testsupport
 
@@ -39,9 +41,11 @@ const (
 
 // Postgres 回傳一台**全新空** PostgreSQL(名為 salesorder)的連線字串:優先沿用
 // INTEGRATION_TEST_DSN,未設定時起 postgres:16 容器並於測試結束終止。
-// 每次呼叫都是獨立 server/資料庫;容器執行環境不可用 → skip。
+// 容器模式下每次呼叫都是獨立 server/資料庫;容器執行環境不可用 → skip。
 //
-// 注意:覆寫模式下測試會直接對該 DSN 跑遷移,請指向專用的拋棄式資料庫。
+// 注意:覆寫模式回傳的是**同一個** INTEGRATION_TEST_DSN,不保證每次呼叫都是全新庫;
+// 需要 per-test 隔離的測試(假設缺表/缺版號/索引不存在…)必須自行先呼叫 RequiresContainer。
+// 覆寫模式下測試會直接對該 DSN 跑遷移,請指向專用的拋棄式資料庫。
 func Postgres(t *testing.T) string {
 	t.Helper()
 	if dsn := os.Getenv(dsnEnv); dsn != "" {
@@ -51,6 +55,16 @@ func Postgres(t *testing.T) string {
 		return dsn
 	}
 	return startContainer(t, postgresDB)
+}
+
+// RequiresContainer 宣告本測試需要 per-test 隔離(自己的容器、自己的全新空庫):覆寫模式
+// (INTEGRATION_TEST_DSN)回傳的是同一個既有的庫,無法保證 → skip(附可行動訊息)。
+// 容器模式(未設該變數)下不做任何事 —— 隔離來自 Postgres/PostgresNamed 起的容器。
+func RequiresContainer(t *testing.T) {
+	t.Helper()
+	if os.Getenv(dsnEnv) != "" {
+		t.Skipf("%s 已設定:此模式共用同一個既有資料庫,無法保證本測試拿到全新空庫;本測試需要 per-test 隔離,請移除該變數並以 `task test:integration` 執行", dsnEnv)
+	}
 }
 
 // PostgresNamed 回傳一台**全新空** PostgreSQL(庫名為 name)的連線字串,與 Postgres 共用
@@ -78,7 +92,13 @@ func CreateDatabase(t *testing.T, adminDSN, name string) string {
 	}
 	defer func() { _ = db.Close() }()
 	// CREATE DATABASE 不接受參數佔位,故以 pgx 的識別字引號處理(不自行拼字串)。
-	if _, err := db.Exec("CREATE DATABASE " + pgx.Identifier{name}.Sanitize()); err != nil {
+	// 先 DROP ... WITH (FORCE)(PG13+)清掉同名舊庫,使同一顆 server 上重複以同一個庫名呼叫
+	// 仍是冪等:容器模式下每測試各起一顆容器不會踩到,覆寫模式/共用 server 會(否則 42P04)。
+	nameSQL := pgx.Identifier{name}.Sanitize()
+	if _, err := db.Exec("DROP DATABASE IF EXISTS " + nameSQL + " WITH (FORCE)"); err != nil {
+		t.Fatalf("清理既有資料庫 %s: %v", name, err)
+	}
+	if _, err := db.Exec("CREATE DATABASE " + nameSQL); err != nil {
 		t.Fatalf("建立資料庫 %s: %v", name, err)
 	}
 	u, err := url.Parse(adminDSN)

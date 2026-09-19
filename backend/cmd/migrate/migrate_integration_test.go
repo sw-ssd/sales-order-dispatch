@@ -13,6 +13,10 @@
 // 業務遷移走與 cmd/migrate 相同的 goose 路徑(同 dialect、同 migrations 目錄、同版本表),
 // OpenFGA 遷移直接呼叫 main 所用的 migrateOpenFGA,確保測的是實際程式碼而非複製品;
 // server 行為以 `go build` 出的 cmd/server 子行程驗證(log.Fatalf 的退出碼無法 in-process 觀察)。
+//
+// 除了「非預設庫名」與「不可連線 DSN」兩條,其餘都以「專屬容器 + 全新空庫」為前提
+// (缺表/缺版號/索引不存在…),故各自先呼叫 testsupport.RequiresContainer:在
+// INTEGRATION_TEST_DSN 覆寫模式(共用同一個既有的庫)下自動 skip,不會假失敗。
 package main
 
 import (
@@ -49,6 +53,7 @@ const (
 // TestIntegrationFreshDatabaseMigrateUp F1 迴歸:全新資料庫上 `migrate up` 必須成功。
 // 00005 若回到表層 UNIQUE 表達式,PostgreSQL 會拒絕該 DDL,goose 直接回錯(測試紅)。
 func TestIntegrationFreshDatabaseMigrateUp(t *testing.T) {
+	testsupport.RequiresContainer(t)
 	dsn := testsupport.Postgres(t)
 
 	if err := businessUp(t, dsn); err != nil {
@@ -104,6 +109,7 @@ func TestIntegrationFreshDatabaseMigrateUp(t *testing.T) {
 // TestIntegrationOpenFGAMigration F2 迴歸:OpenFGA schema 遷移、版本表獨立、可重複執行、
 // 可 bootstrap,且缺表時必須失敗(不得靜默降級)。
 func TestIntegrationOpenFGAMigration(t *testing.T) {
+	testsupport.RequiresContainer(t)
 	ctx := context.Background()
 
 	// 完整遷移庫:業務 schema + OpenFGA schema(順序同 cmd/migrate main)。
@@ -201,6 +207,7 @@ func TestIntegrationOpenFGAMigration(t *testing.T) {
 // 「既有庫」子測試模擬:庫已記錄 version 5(故 00005 永不重跑)但缺唯一索引 ——
 // 這正是 00018 存在的理由;索引已在的 fresh 庫重複 up 必須是 no-op。
 func TestIntegrationUniqueIndexForwardMigration(t *testing.T) {
+	testsupport.RequiresContainer(t)
 	t.Run("既有庫缺索引 → 00018 補回", func(t *testing.T) {
 		dsn := testsupport.Postgres(t)
 		db := openDB(t, dsn)
@@ -301,6 +308,7 @@ func TestIntegrationMigrateOnNonDefaultDatabaseName(t *testing.T) {
 // OPENFGA_ENABLED=false 則必須能啟動(文件化退路)。以真子行程驗證,涵蓋 domains.go 的
 // fail-fast 行為(單元測試無法觀察 log.Fatalf 的退出碼)。
 func TestIntegrationServerOpenFGAFailFast(t *testing.T) {
+	testsupport.RequiresContainer(t)
 	dsn := testsupport.Postgres(t)
 	if err := businessUp(t, dsn); err != nil {
 		t.Fatalf("業務 migrate up(不跑 OpenFGA 遷移): %v", err)
@@ -335,6 +343,7 @@ func TestIntegrationServerOpenFGAFailFast(t *testing.T) {
 // TestIntegrationOpenFGADisabledCreatesNoSchema F2 收尾:`OPENFGA_ENABLED=false` 時
 // cmd/migrate up 不得建立任何 OpenFGA 表(含專屬版本表);走 main.go 同一條呼叫路徑。
 func TestIntegrationOpenFGADisabledCreatesNoSchema(t *testing.T) {
+	testsupport.RequiresContainer(t)
 	dsn := testsupport.Postgres(t)
 	if err := businessUp(t, dsn); err != nil {
 		t.Fatalf("業務 migrate up: %v", err)
@@ -355,6 +364,7 @@ func TestIntegrationOpenFGADisabledCreatesNoSchema(t *testing.T) {
 // TestIntegrationOpenFGADatabaseURLPrecedence F2 收尾:OPENFGA_DATABASE_URL 有值時,
 // OpenFGA schema 只落在該庫,業務庫完全不動(同一顆 server 上的第二個庫,不另起容器)。
 func TestIntegrationOpenFGADatabaseURLPrecedence(t *testing.T) {
+	testsupport.RequiresContainer(t)
 	businessDSN := testsupport.Postgres(t)
 	if err := businessUp(t, businessDSN); err != nil {
 		t.Fatalf("業務 migrate up: %v", err)
