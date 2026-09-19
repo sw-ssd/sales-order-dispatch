@@ -20,6 +20,7 @@
 - **測試禁則**（沿用 v2）：不攔截 rAF、不 mock Ark 內部、不斷言 Ark 私有屬性、不留只斷言「沒被呼叫」的假綠；非同步用真實等待。
 - `pnpm lint` 必須 **0 warning**；四道 gate（typecheck/lint/test/build）全綠。
 - **瀏覽器**：視覺驗證用 Microsoft Edge（`--headless=new` + CDP）；**禁用** Chrome for Testing／`chrome-headless-shell`。收尾強制：`pkill -f "Microsoft Edge.*--headless"`、確認 0 殘留、`rm -rf /tmp/msedge-*`、不留暫存檔在 repo。
+- **任何新增、刪除、改名元件的 task，必須同步更新 `ui/index.ts`（barrel）與 `ui/registry.json`**；Task 7 做最終對齊檢查。（已知會觸發的：Task 2 刪 `label.tsx`、Task 4 改 `pagination` 型別、Task 5 新增 `sidebar`。）
 - 註解、文件、commit message 一律繁體中文。
 - Harness：shell `grep`/`rg`/`ls`/`find` 被封鎖（用內建工具）；不要 `git add -A`。
 
