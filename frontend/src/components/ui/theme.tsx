@@ -12,7 +12,7 @@ import {
   type ParentComponent,
 } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import { cn } from "~/lib/cn";
+import { cn } from "@/lib/cn";
 
 /**
  * 深色模式（Tailkit 的 class-based dark mode），**全 app 唯一的機制**：偏好三態 `light`／`dark`／

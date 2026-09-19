@@ -1,6 +1,6 @@
 import { render, screen } from "@solidjs/testing-library";
 import { describe, expect, it } from "vitest";
-import { Field, FieldError, FieldLabel } from "./field";
+import { Field, FieldDescription, FieldError, FieldLabel } from "./field";
 import { Input } from "./input";
 
 describe("Field", () => {
@@ -34,5 +34,10 @@ describe("Field", () => {
   it("Field 外的 FieldError（登入頁用法）仍可顯示錯誤文字", () => {
     render(() => <FieldError>帳號或密碼錯誤</FieldError>);
     expect(screen.getByText("帳號或密碼錯誤")).toBeTruthy();
+  });
+
+  it("Field 外的 FieldDescription（無 Ark context）仍可顯示說明文字", () => {
+    render(() => <FieldDescription>發票上的正式名稱</FieldDescription>);
+    expect(screen.getByText("發票上的正式名稱")).toBeTruthy();
   });
 });

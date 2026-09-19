@@ -9,7 +9,7 @@
 | --- | --- | --- |
 | `Field` | `ArkField.Root` | `invalid?: boolean`（見下）、`class`，其餘是 `JSX.HTMLAttributes<HTMLDivElement>` |
 | `FieldLabel` | `ArkField.Label` | `for`（直通，維持與頁面控件的 id 關聯）、`class` |
-| `FieldDescription` | `ArkField.HelperText` | `class`（內建 `block`，維持原本 `<p>` 的區塊版面） |
+| `FieldDescription` | `ArkField.HelperText` | `class`（內建 `block`，維持原本 `<p>` 的區塊版面）；**不在 `Field` 內**時退回獨立 `<span>`（與 `FieldError` 的 fallback 對稱） |
 | `FieldError` | `ArkField.ErrorText` | `class`；**不在 `Field` 內**時退回獨立 `<span role="alert">` |
 
 `invalid` 必須由呼叫端明傳：Solid 的 JSX 在編譯期就把子元件展開成 DOM，包裝層拿不到子元件型別，

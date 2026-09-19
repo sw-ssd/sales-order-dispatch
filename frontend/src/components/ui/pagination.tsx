@@ -281,13 +281,14 @@ const PaginationDefaultControls: Component = () => (
 export interface PaginationProps
   extends Omit<
     ArkPagination.RootProps,
-    "count" | "page" | "pageSize" | "onPageChange" | "translations" | "class"
+    "count" | "page" | "pageSize" | "defaultPage" | "defaultPageSize" | "onPageChange" |
+      "translations" | "class"
   > {
   /** 總筆數（後端 pagination.total） */
   count: number;
   /** 目前頁碼（1-based，受控） */
   page: number;
-  /** 每頁筆數 */
+  /** 每頁筆數（受控：`page`／`pageSize` 一律由呼叫端持有，Ark 的 `defaultPage`／`defaultPageSize` 已排除） */
   pageSize: number;
   /** 頁碼變更（回報新頁碼） */
   onPageChange: (page: number) => void;

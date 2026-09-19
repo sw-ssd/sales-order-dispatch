@@ -57,17 +57,29 @@ export interface FieldDescriptionProps
   class?: string;
 }
 
-/** 欄位說明文字：Ark `Field.HelperText`（`block` 維持原本 `<p>` 的區塊版面）。 */
+const descriptionClass = "block text-sm text-muted-foreground";
+
+/**
+ * 欄位說明文字：Ark `Field.HelperText`（`block` 維持原本 `<p>` 的區塊版面）。
+ * 沒有 Ark context（放在 `Field` 外）時退回獨立 `<span>`，與 `FieldError` 的 fallback 對稱。
+ */
 export const FieldDescription: Component<FieldDescriptionProps> = (props) => {
   const [local, rest] = splitProps(props, ["class", "children"]);
+  const field = useFieldContext();
 
   return (
-    <ArkField.HelperText
-      class={cn("block text-sm text-muted-foreground", local.class)}
-      {...rest}
+    <Show
+      when={field}
+      fallback={
+        <span class={cn(descriptionClass, local.class)} {...rest}>
+          {local.children}
+        </span>
+      }
     >
-      {local.children}
-    </ArkField.HelperText>
+      <ArkField.HelperText class={cn(descriptionClass, local.class)} {...rest}>
+        {local.children}
+      </ArkField.HelperText>
+    </Show>
   );
 };
 

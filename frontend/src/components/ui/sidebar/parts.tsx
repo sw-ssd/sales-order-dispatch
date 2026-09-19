@@ -17,7 +17,7 @@ import {
   useSidebar,
   useSidebarCollapsed,
 } from "./context";
-import { cn } from "~/lib/cn";
+import { cn } from "@/lib/cn";
 
 /**
  * 側邊欄各部件的解剖取自 solid-ui 的 sidebar，行為層換成 Ark UI：

@@ -95,7 +95,11 @@
 
 ## 7. 後續
 
-- **Phase 2 開頭的 housekeeping（來自 Phase 1 最終複審，皆 1–3 行）**：`PaginationProps` 收斂 `defaultPage`/`defaultPageSize`；`FieldDescription` 補 `Field` 外 fallback（目前會 TypeError）；`input.tsx` 的 `aria-describedby` 改走 Ark `getInputProps()`（可能指向不存在的元素）；`ui/**` 統一 `cn` alias（`theme.tsx`/`parts.tsx` 用 `~/lib/cn`，其餘 11 檔用 `@/lib/cn`）。
+- **Phase 2 開頭的 housekeeping（來自 Phase 1 最終複審，皆 1–3 行）—— 已完成（2026-09-19，BASE `1308b85`）**：
+  - `PaginationProps` 收斂 `defaultPage`／`defaultPageSize`：已加入 `Omit`（`page`／`pageSize` 必填受控的語意維持；全 repo 0 消費者）。
+  - `FieldDescription` 補 `Field` 外 fallback（原本 render 期 `TypeError: field is not a function`）：已照 `FieldError` 的 `Show` + fallback 寫法補上；`field.test.tsx` 新增修前 FAIL／修後 PASS 的迴歸測試。
+  - `ui/**` 統一 `cn` alias：`theme.tsx`／`parts.tsx` 由 `~/lib/cn` 改為多數慣例 `@/lib/cn`（`tsconfig` 與 `vite`／`vitest` 兩個 alias 皆可用）。
+  - **`input.tsx` 的 `aria-describedby` 改走 Ark `getInputProps()`：不採用 —— 已被本階段實測取代。** Ark 5.39.2 的 `getInputProps()`（公開 context 只暴露 `getInputProps`／`getTextareaProps`／`getSelectProps`，內部才是未公開的 `getControlProps`）把 helper text 放 `aria-describedby`、錯誤放 `aria-errormessage`；改走它會讓 §5 驗收①「`aria-describedby` **指向該錯誤元素**」失效（實測：臨時改動後 6 條測試轉紅，含三個表單的驗收① 與 F3 迴歸）。因此 `input.tsx` 現行手動組合（`api.invalid ? api.ids.errorText : undefined` ＋ `api.ariaDescribedby`）**就是**滿足驗收的實作，維持不動；`DepartmentsPage.tsx` 的 `SelectControl` 照抄同一段亦維持（兩者的「錯誤走 `aria-describedby`」是本專案的 a11y 契約，與 Ark Select 的 `aria-errormessage` 分歧是刻意的）。
 - **Phase 3**：TanStack Table 重寫三張表（`Table` 元件的 markup 保留、排序/篩選/分頁狀態交 TanStack）。
 - **Phase 4**：Pragmatic drag and drop 接入派車看板（待該畫面落地）。
 
