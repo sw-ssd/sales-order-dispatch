@@ -403,6 +403,8 @@ describe("<CompaniesPage> 公司清單查詢", () => {
     expect(listCompaniesSpy).toHaveBeenCalledWith({
       page: 1,
       pageSize: 20,
+      sort: "",
+      desc: false,
       status: undefined,
       keyword: undefined,
     });
@@ -423,6 +425,8 @@ describe("<CompaniesPage> 公司清單查詢", () => {
     expect(listCompaniesSpy).toHaveBeenLastCalledWith({
       page: 2,
       pageSize: 20,
+      sort: "",
+      desc: false,
       status: undefined,
       keyword: undefined,
     });
@@ -478,6 +482,8 @@ describe("<CompaniesPage> 公司清單查詢", () => {
       expect(listCompaniesSpy).toHaveBeenLastCalledWith({
         page: 1,
         pageSize: 20,
+        sort: "",
+        desc: false,
         keyword: "宏",
         status: "active",
       })
@@ -505,6 +511,8 @@ describe("<CompaniesPage> 公司清單查詢", () => {
     expect(listCompaniesSpy).toHaveBeenLastCalledWith({
       page: 1,
       pageSize: 20,
+      sort: "",
+      desc: false,
       status: undefined,
       keyword: undefined,
     });
@@ -674,6 +682,8 @@ describe("<CompaniesPage> 表格（TanStack Table，manual 分頁）", () => {
       expect(listCompaniesSpy).toHaveBeenLastCalledWith({
         page: 2,
         pageSize: 20,
+        sort: "",
+        desc: false,
         status: undefined,
         keyword: undefined,
       })
@@ -731,5 +741,164 @@ describe("<CompaniesPage> 表格（TanStack Table，manual 分頁）", () => {
 
     await waitFor(() => expect(screen.getByText("公司 1（改名後）")).toBeTruthy());
     expect(screen.queryByText("公司 1")).toBeNull();
+  });
+});
+
+describe("<CompaniesPage> 表頭排序（伺服器端）", () => {
+  const PAGE_SIZE = 20;
+
+  /** 第 n 筆公司（n 從 1 起算）：名稱帶序號，用來辨識畫面拿到的是哪一頁的資料。 */
+  function company(n: number) {
+    return {
+      id: `c-${n}`,
+      name: `公司 ${n}`,
+      identifier: `C-${n}`,
+      taxId: "",
+      status: "active",
+    };
+  }
+
+  /** 伺服器端分頁的替身（45 筆＝3 頁）；排序由後端負責，替身不回傳已排序的資料。 */
+  function mockPages(total = 45) {
+    listCompaniesSpy.mockImplementation((req: { page: number }) =>
+      Promise.resolve({
+        companies: Array.from(
+          { length: Math.max(0, Math.min(PAGE_SIZE, total - (req.page - 1) * PAGE_SIZE)) },
+          (_, i) => company((req.page - 1) * PAGE_SIZE + i + 1)
+        ),
+        pagination: { total },
+      })
+    );
+  }
+
+  /** 掛載頁面並等第 1 頁的資料上畫面。 */
+  async function renderPage1() {
+    mockPages();
+    mountPage();
+    await waitFor(() => expect(screen.getByText("公司 1")).toBeTruthy());
+  }
+
+  /** 表頭儲存格：以可及名稱定位（方向指示圖示 `aria-hidden`，不進名稱）。 */
+  function headerCell(label: string): HTMLTableCellElement {
+    return screen.getByRole("columnheader", { name: label }) as HTMLTableCellElement;
+  }
+
+  /** 表頭上的排序控制項（可及名稱＝欄位名，不含方向指示）。 */
+  function sortButton(label: string): HTMLButtonElement {
+    return within(headerCell(label)).getByRole("button", { name: label }) as HTMLButtonElement;
+  }
+
+  /** 清單請求的完整 payload（排序波次後 query key 一律帶 sort/desc）。 */
+  const payload = (page: number, sort: string, desc: boolean) => ({
+    page,
+    pageSize: PAGE_SIZE,
+    sort,
+    desc,
+    keyword: undefined,
+    status: undefined,
+  });
+
+  it("點 name 表頭：請求帶 sort:name、desc:false，且從第 2 頁回到第 1 頁（同一次更新只查一次）", async () => {
+    await renderPage1();
+
+    fireEvent.click(screen.getByRole("button", { name: "第 2 頁" }));
+    await waitFor(() => expect(listCompaniesSpy).toHaveBeenCalledTimes(2));
+
+    fireEvent.click(sortButton("名稱"));
+
+    await waitFor(() => expect(listCompaniesSpy).toHaveBeenCalledTimes(3));
+    expect(listCompaniesSpy).toHaveBeenLastCalledWith(payload(1, "name", false));
+    // 排序與回第 1 頁必須同批：分開寫會先以「舊頁碼＋新排序」多打一次。
+    await settle();
+    expect(listCompaniesSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it("再點同欄：desc 反轉為 true", async () => {
+    await renderPage1();
+
+    fireEvent.click(sortButton("名稱"));
+    await waitFor(() => expect(listCompaniesSpy).toHaveBeenCalledTimes(2));
+
+    fireEvent.click(sortButton("名稱"));
+
+    await waitFor(() => expect(listCompaniesSpy).toHaveBeenCalledTimes(3));
+    expect(listCompaniesSpy).toHaveBeenLastCalledWith(payload(1, "name", true));
+  });
+
+  it("點另一欄：改用新欄且 desc 從 false 起算", async () => {
+    await renderPage1();
+
+    fireEvent.click(sortButton("名稱"));
+    await waitFor(() => expect(listCompaniesSpy).toHaveBeenCalledTimes(2));
+
+    fireEvent.click(sortButton("ID"));
+
+    await waitFor(() => expect(listCompaniesSpy).toHaveBeenCalledTimes(3));
+    expect(listCompaniesSpy).toHaveBeenLastCalledWith(payload(1, "id", false));
+    expect(headerCell("名稱").getAttribute("aria-sort")).toBe("none");
+  });
+
+  it("統一編號送出後端白名單的 tax_id（欄位 id 與 accessor 名不同，不得直接送 taxId）", async () => {
+    await renderPage1();
+
+    fireEvent.click(sortButton("統一編號"));
+
+    await waitFor(() => expect(listCompaniesSpy).toHaveBeenCalledTimes(2));
+    expect(listCompaniesSpy).toHaveBeenLastCalledWith(payload(1, "tax_id", false));
+  });
+
+  it("aria-sort 掛在 <th> 且三態正確；控制項是可聚焦按鈕，排序後焦點不亂跳", async () => {
+    await renderPage1();
+
+    // 初始（未排序）：可排序欄位皆為 none，方向不掛在 td 或 button 上。
+    expect(headerCell("名稱").getAttribute("aria-sort")).toBe("none");
+    expect(headerCell("識別碼").getAttribute("aria-sort")).toBe("none");
+
+    const button = sortButton("名稱");
+    expect(button.tagName).toBe("BUTTON");
+    expect(button.getAttribute("type")).toBe("button");
+    expect(button.tabIndex).toBe(0);
+    button.focus();
+    expect(document.activeElement).toBe(button);
+
+    fireEvent.click(button);
+    await waitFor(() => expect(headerCell("名稱").getAttribute("aria-sort")).toBe("ascending"));
+    // 方向只掛在被排的那一欄。
+    expect(headerCell("識別碼").getAttribute("aria-sort")).toBe("none");
+
+    fireEvent.click(sortButton("名稱"));
+    await waitFor(() => expect(headerCell("名稱").getAttribute("aria-sort")).toBe("descending"));
+    // 排序變更不得重建表頭控制項：焦點留在同一顆按鈕上。
+    expect(document.activeElement).toBe(button);
+    expect(sortButton("名稱")).toBe(button);
+  });
+
+  it("可排序欄位僅限白名單：狀態與操作欄沒有排序控制項，也不帶 aria-sort", async () => {
+    await renderPage1();
+
+    for (const label of ["狀態", "操作"]) {
+      const cell = headerCell(label);
+      expect(cell.querySelector("button")).toBeNull();
+      // 不可排序的欄位不帶 `aria-sort`（`none` 只代表「可排序但未排」）。
+      expect(cell.getAttribute("aria-sort")).toBeNull();
+    }
+    for (const label of ["名稱", "識別碼", "統一編號", "ID"]) {
+      expect(sortButton(label).tagName).toBe("BUTTON");
+      expect(headerCell(label).getAttribute("aria-sort")).toBe("none");
+    }
+  });
+
+  it("換頁後排序保持：請求仍帶同一組 sort/desc", async () => {
+    await renderPage1();
+
+    fireEvent.click(sortButton("名稱"));
+    await waitFor(() => expect(listCompaniesSpy).toHaveBeenCalledTimes(2));
+
+    fireEvent.click(screen.getByRole("button", { name: "第 2 頁" }));
+
+    await waitFor(() => expect(listCompaniesSpy).toHaveBeenCalledTimes(3));
+    expect(listCompaniesSpy).toHaveBeenLastCalledWith(payload(2, "name", false));
+    await waitFor(() => expect(screen.getByText("公司 21")).toBeTruthy());
+    expect(headerCell("名稱").getAttribute("aria-sort")).toBe("ascending");
   });
 });

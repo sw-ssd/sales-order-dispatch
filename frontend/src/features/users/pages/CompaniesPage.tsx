@@ -6,8 +6,10 @@ import {
   createTable,
   flexRender,
   rowPaginationFeature,
+  rowSortingFeature,
   tableFeatures,
   type PaginationState,
+  type SortingState,
 } from "@tanstack/solid-table";
 import {
   Badge,
@@ -36,6 +38,7 @@ import { batch, createEffect, createSignal, For, Show, type JSX } from "solid-js
 import type { Company } from "~/lib/proto/salesorder/v1/company_pb";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import { ListPagination } from "../components/ListPagination";
+import { ariaSort, createSortableHeaders } from "../components/SortableHeader";
 import { companiesQueryOptions, companyClient, PAGE_SIZE } from "../queries";
 import { companySchema } from "../schemas";
 
@@ -48,10 +51,12 @@ import { companySchema } from "../schemas";
 const EMPTY_COMPANY_VALUES = { name: "", identifier: "", taxId: "", status: "active" };
 
 /**
- * 公司表格的 table 功能集：目前只有分頁（排序波次再加入 `rowSortingFeature`）。
+ * 公司表格的 table 功能集：分頁 ＋ 排序。
  * features 必須是穩定的靜態值——每個元件都自己 `tableFeatures({...})` 會多一份無用的定義。
+ * 排序仍走服務端（`manualSorting`，見下方 table）——`rowSortingFeature` 只提供 sorting state
+ * 與 `column.getToggleSortingHandler()` 這些表頭 API，不會在本地排資料。
  */
-const COMPANY_TABLE_FEATURES = tableFeatures({ rowPaginationFeature });
+const COMPANY_TABLE_FEATURES = tableFeatures({ rowPaginationFeature, rowSortingFeature });
 
 /**
  * 欄位定義工具：features 已綁定，`accessor` 的值型別因此跟著功能集推導。
@@ -132,6 +137,9 @@ export default function CompaniesPage() {
     pageIndex: 0,
     pageSize: PAGE_SIZE,
   });
+  // 排序狀態的唯一真相＝table 的 sorting state（受控）：空陣列＝未排序＝後端預設排序。
+  // `sort`／`desc` 皆由這裡推導（見下方 query），頁面不另存一組「已套用排序」。
+  const [sorting, setSorting] = createSignal<SortingState>([]);
 
   const client = useQueryClient();
 
@@ -139,21 +147,33 @@ export default function CompaniesPage() {
    * 六個欄位（名稱／識別碼／統一編號／狀態／ID／操作）。
    * 定義在元件內是因為操作欄要關到 `openDialog`／`remove`；Solid 的元件只執行一次，
    * 這個陣列因此是穩定的（table 要求 `columns` 穩定，換身分會重建整條 column 管線）。
+   *
+   * 可點表頭＝後端排序白名單的前端子集（`name`／`identifier`／`tax_id`／`id`）：欄位的 id
+   * 就是送給服務端的 `sort` 值，**其餘欄位一律 `enableSorting: false`**，避免前端產生白名單
+   * 以外的值（後端會以 `InvalidArgument` 拒絕）。
    */
+  // 表頭控制項產生器（每欄只建一次節點；理由見 createSortableHeaders 的註解）。
+  const sortableHeader = createSortableHeaders();
+
   const columns = companyColumnHelper.columns([
     companyColumnHelper.accessor("name", {
-      header: "名稱",
+      header: (ctx) => sortableHeader(ctx.column, "名稱"),
       cell: (info) => <span class="font-medium text-foreground">{info.getValue()}</span>,
     }),
     companyColumnHelper.accessor("identifier", {
-      header: "識別碼",
+      header: (ctx) => sortableHeader(ctx.column, "識別碼"),
       cell: (info) => <span class="text-muted-foreground">{info.getValue()}</span>,
     }),
+    // `id` 必須是後端白名單的欄位名（`tax_id` 為 snake_case）——sorting state 的 id 直接
+    // 就是送給服務端的 `sort` 值，所以欄位 id 與 accessor 名刻意不同（資料仍取 `taxId`）。
     companyColumnHelper.accessor("taxId", {
-      header: "統一編號",
+      id: "tax_id",
+      header: (ctx) => sortableHeader(ctx.column, "統一編號"),
       cell: (info) => <span class="text-muted-foreground">{info.getValue() || "—"}</span>,
     }),
+    // 狀態**可**由後端排（白名單含 `status`）但前端不開 UI：三值列舉的字典序排序價值低（D1）。
     companyColumnHelper.accessor("status", {
+      enableSorting: false,
       header: "狀態",
       cell: (info) => (
         <Badge variant={STATUS_VARIANTS[info.getValue()] ?? "secondary"}>
@@ -162,7 +182,7 @@ export default function CompaniesPage() {
       ),
     }),
     companyColumnHelper.accessor("id", {
-      header: "ID",
+      header: (ctx) => sortableHeader(ctx.column, "ID"),
       cell: (info) => <span class="text-muted-foreground">{info.getValue()}</span>,
     }),
     companyColumnHelper.display({
@@ -194,10 +214,13 @@ export default function CompaniesPage() {
   // 頁面不再另存 companies/total/loading/error signal（避免兩份真相）。
   // 頁碼與每頁筆數取自 `pagination`（= table 的 pagination state，見下方 `state`／
   // `onPaginationChange` 接線；`pageIndex` 0-based，query key 用 1-based）。
+  // 排序取自 `sorting`（= table 的 sorting state），映射見 D1：未排序送 `sort: ""`／`desc: false`。
   const query = createQuery(() =>
     companiesQueryOptions({
       page: pagination().pageIndex + 1,
       pageSize: pagination().pageSize,
+      sort: sorting()[0]?.id ?? "",
+      desc: sorting()[0]?.desc ?? false,
       keyword: filter().keyword || undefined,
       status: filter().status || undefined,
     })
@@ -227,10 +250,24 @@ export default function CompaniesPage() {
       return total();
     },
     manualPagination: true,
+    // 服務端排序（D1）：資料永遠只有當前頁與後端已排好的順序，table 不得再排一次。
+    manualSorting: true,
+    // 白名單欄位一律從「升冪」起算。v9 的「第一個方向」預設是**依資料推測**（非字串欄位從
+    // 降冪起、空資料時更是直接降冪），與 D1 的可預期行為不符，故明確關掉。
+    sortDescFirst: false,
     get state() {
-      return { pagination: pagination() };
+      return { pagination: pagination(), sorting: sorting() };
     },
     onPaginationChange: setPagination,
+    /**
+     * 排序變更必須與「回第 1 頁」同批（D1）：分開寫會先以「舊頁碼＋新排序」查一次、
+     * 再以「第 1 頁＋新排序」查一次（兩次 RPC）。state 的寫入者是 table，本頁只是受控方。
+     */
+    onSortingChange: (updater) =>
+      batch(() => {
+        setSorting((prev) => (typeof updater === "function" ? updater(prev) : updater));
+        table.setPageIndex(0);
+      }),
   });
 
   /**
@@ -427,7 +464,7 @@ export default function CompaniesPage() {
                 <TableRow class="hover:bg-transparent">
                   <For each={headerGroup.headers}>
                     {(header) => (
-                      <TableHead>
+                      <TableHead aria-sort={ariaSort(header.column)}>
                         {flexRender(header.column.columnDef.header, header.getContext())}
                       </TableHead>
                     )}

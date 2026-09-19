@@ -7,8 +7,10 @@ import {
   createTable,
   flexRender,
   rowPaginationFeature,
+  rowSortingFeature,
   tableFeatures,
   type PaginationState,
+  type SortingState,
 } from "@tanstack/solid-table";
 import {
   Button,
@@ -36,6 +38,7 @@ import { batch, createEffect, createSignal, For, Show, type Component, type JSX 
 import { type Company, type Department } from "~/lib/proto/salesorder/v1/company_pb";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import { ListPagination } from "../components/ListPagination";
+import { ariaSort, createSortableHeaders } from "../components/SortableHeader";
 import {
   companyClient,
   companyDropdownQueryOptions,
@@ -54,10 +57,10 @@ import { departmentSchema } from "../schemas";
 const EMPTY_DEPARTMENT_VALUES = { name: "", company: "" };
 
 /**
- * 部門表格的 table 功能集：目前只有分頁（排序波次再加入 `rowSortingFeature`）。
+ * 部門表格的 table 功能集：分頁 ＋ 排序（`manualSorting`，見下方 table）。
  * features 必須是穩定的靜態值——每個元件都自己 `tableFeatures({...})` 會多一份無用的定義。
  */
-const DEPARTMENT_TABLE_FEATURES = tableFeatures({ rowPaginationFeature });
+const DEPARTMENT_TABLE_FEATURES = tableFeatures({ rowPaginationFeature, rowSortingFeature });
 
 /**
  * 欄位定義工具：features 已綁定，`accessor` 的值型別因此跟著功能集推導。
@@ -150,6 +153,9 @@ export default function DepartmentsPage() {
     pageIndex: 0,
     pageSize: PAGE_SIZE,
   });
+  // 排序狀態的唯一真相＝table 的 sorting state（受控）：空陣列＝未排序＝後端預設排序。
+  // `sort`／`desc` 皆由這裡推導（見下方 query），頁面不另存一組「已套用排序」。
+  const [sorting, setSorting] = createSignal<SortingState>([]);
   // 公司下拉：關鍵字草稿與已套用的關鍵字各一顆（送出「搜尋公司」才進 key）。
   const [companyKeyword, setCompanyKeyword] = createSignal("");
   const [companySearch, setCompanySearch] = createSignal("");
@@ -165,17 +171,22 @@ export default function DepartmentsPage() {
    * 定義在元件內是因為操作欄要關到 `openEdit`／`remove`；Solid 的元件只執行一次，
    * 這個陣列因此是穩定的（table 要求 `columns` 穩定，換身分會重建整條 column 管線）。
    */
+  // 表頭控制項產生器（每欄只建一次節點；理由見 createSortableHeaders 的註解）。
+  const sortableHeader = createSortableHeaders();
+
   const columns = departmentColumnHelper.columns([
     departmentColumnHelper.accessor("name", {
-      header: "部門名稱",
+      header: (ctx) => sortableHeader(ctx.column, "部門名稱"),
       cell: (info) => <span class="font-medium text-foreground">{info.getValue()}</span>,
     }),
+    // 所屬公司不在後端白名單（只有 `name`／`id` 可排）→ 不開 UI。
     departmentColumnHelper.accessor("companyName", {
+      enableSorting: false,
       header: "所屬公司",
       cell: (info) => <span class="text-muted-foreground">{info.getValue() || "—"}</span>,
     }),
     departmentColumnHelper.accessor("id", {
-      header: "ID",
+      header: (ctx) => sortableHeader(ctx.column, "ID"),
       cell: (info) => <span class="text-muted-foreground">{info.getValue()}</span>,
     }),
     departmentColumnHelper.display({
@@ -211,6 +222,8 @@ export default function DepartmentsPage() {
     departmentsQueryOptions({
       page: pagination().pageIndex + 1,
       pageSize: pagination().pageSize,
+      sort: sorting()[0]?.id ?? "",
+      desc: sorting()[0]?.desc ?? false,
       companyId: filter() || undefined,
     })
   );
@@ -239,10 +252,23 @@ export default function DepartmentsPage() {
       return total();
     },
     manualPagination: true,
+    // 服務端排序（D1）：資料永遠只有當前頁與後端已排好的順序，table 不得再排一次。
+    manualSorting: true,
+    // 白名單欄位一律從「升冪」起算（v9 的第一方向預設依資料推測，空資料時會變降冪）。
+    sortDescFirst: false,
     get state() {
-      return { pagination: pagination() };
+      return { pagination: pagination(), sorting: sorting() };
     },
     onPaginationChange: setPagination,
+    /**
+     * 排序變更必須與「回第 1 頁」同批（D1）：分開寫會先以「舊頁碼＋新排序」查一次、
+     * 再以「第 1 頁＋新排序」查一次（兩次 RPC）。
+     */
+    onSortingChange: (updater) =>
+      batch(() => {
+        setSorting((prev) => (typeof updater === "function" ? updater(prev) : updater));
+        table.setPageIndex(0);
+      }),
   });
 
   // 公司下拉（累積式）：各頁由 `fetchNextPage` 依序疊上，「載入更多」不再自己累積 signal。
@@ -507,7 +533,7 @@ export default function DepartmentsPage() {
                 <TableRow class="hover:bg-transparent">
                   <For each={headerGroup.headers}>
                     {(header) => (
-                      <TableHead>
+                      <TableHead aria-sort={ariaSort(header.column)}>
                         {flexRender(header.column.columnDef.header, header.getContext())}
                       </TableHead>
                     )}

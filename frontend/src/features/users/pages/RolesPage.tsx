@@ -5,8 +5,10 @@ import {
   createTable,
   flexRender,
   rowPaginationFeature,
+  rowSortingFeature,
   tableFeatures,
   type PaginationState,
+  type SortingState,
 } from "@tanstack/solid-table";
 import { batch, createEffect, createSignal, For, Show } from "solid-js";
 import type { Permission, Role } from "~/lib/proto/salesorder/v1/role_pb";
@@ -23,13 +25,14 @@ import {
 } from "~/components/ui";
 import { PermissionMatrix } from "../components/PermissionMatrix";
 import { ListPagination } from "../components/ListPagination";
+import { ariaSort, createSortableHeaders } from "../components/SortableHeader";
 import { PAGE_SIZE, roleClient, rolesQueryOptions } from "../queries";
 
 /**
- * 角色表格的 table 功能集：目前只有分頁（排序波次再加入 `rowSortingFeature`）。
+ * 角色表格的 table 功能集：分頁 ＋ 排序（`manualSorting`，見下方 table）。
  * features 必須是穩定的靜態值——每個元件都自己 `tableFeatures({...})` 會多一份無用的定義。
  */
-const ROLE_TABLE_FEATURES = tableFeatures({ rowPaginationFeature });
+const ROLE_TABLE_FEATURES = tableFeatures({ rowPaginationFeature, rowSortingFeature });
 
 /**
  * 欄位定義工具：features 已綁定，`accessor` 的值型別因此跟著功能集推導。
@@ -83,6 +86,9 @@ export default function RolesPage() {
     pageIndex: 0,
     pageSize: PAGE_SIZE,
   });
+  // 排序狀態的唯一真相＝table 的 sorting state（受控）：空陣列＝未排序＝後端預設排序
+  // （本服務的預設是 `id ASC`）。`sort`／`desc` 皆由這裡推導（見下方 query）。
+  const [sorting, setSorting] = createSignal<SortingState>([]);
   const [selectedId, setSelectedId] = createSignal<string | null>(null);
   const [permissions, setPermissions] = createSignal<Permission[]>([]);
   const [loadingPerms, setLoadingPerms] = createSignal(false);
@@ -99,16 +105,21 @@ export default function RolesPage() {
    * 並以 `aria-pressed` 標示該列是否為目前已選取的角色。
    * 定義在元件內：列內按鈕要關到 `selectRole`/`selectedId`；Solid 元件只執行一次，陣列因此穩定。
    */
+  // 表頭控制項產生器（每欄只建一次節點；理由見 createSortableHeaders 的註解）。
+  const sortableHeader = createSortableHeaders();
+
   const columns = roleColumnHelper.columns([
     roleColumnHelper.accessor("code", {
-      header: "角色代碼",
+      header: (ctx) => sortableHeader(ctx.column, "角色代碼"),
       cell: (info) => <span class="font-medium text-foreground">{info.getValue()}</span>,
     }),
     roleColumnHelper.accessor("name", {
-      header: "名稱",
+      header: (ctx) => sortableHeader(ctx.column, "名稱"),
       cell: (info) => <span class="text-muted-foreground">{info.getValue()}</span>,
     }),
+    // 系統角色與狀態都不在後端白名單（只有 `code`／`name`／`id` 可排）→ 不開 UI。
     roleColumnHelper.accessor("isSystem", {
+      enableSorting: false,
       header: "系統角色",
       cell: (info) => (
         <Badge variant={info.getValue() ? "info" : "outline"}>
@@ -117,6 +128,7 @@ export default function RolesPage() {
       ),
     }),
     roleColumnHelper.accessor("isActive", {
+      enableSorting: false,
       header: "狀態",
       cell: (info) => (
         <Badge variant={info.getValue() ? "success" : "secondary"}>
@@ -125,7 +137,7 @@ export default function RolesPage() {
       ),
     }),
     roleColumnHelper.accessor("id", {
-      header: "ID",
+      header: (ctx) => sortableHeader(ctx.column, "ID"),
       cell: (info) => <span class="text-muted-foreground">{info.getValue()}</span>,
     }),
     roleColumnHelper.display({
@@ -163,6 +175,8 @@ export default function RolesPage() {
     rolesQueryOptions({
       page: pagination().pageIndex + 1,
       pageSize: pagination().pageSize,
+      sort: sorting()[0]?.id ?? "",
+      desc: sorting()[0]?.desc ?? false,
     })
   );
 
@@ -195,10 +209,26 @@ export default function RolesPage() {
       return total();
     },
     manualPagination: true,
+    // 服務端排序（D1）：資料永遠只有當前頁與後端已排好的順序，table 不得再排一次。
+    manualSorting: true,
+    // 白名單欄位一律從「升冪」起算（v9 的第一方向預設依資料推測，空資料時會變降冪）。
+    sortDescFirst: false,
     get state() {
-      return { pagination: pagination() };
+      return { pagination: pagination(), sorting: sorting() };
     },
     onPaginationChange: setPagination,
+    /**
+     * 排序變更：與分頁同一條規則——**任何排序變更都要回第 1 頁（D1）**，且新清單與舊選取
+     * 無關。三個寫入同批：分開寫會先以「舊頁碼＋新排序」查一次、再以「第 1 頁＋新排序」查
+     * 一次；少清選取則會讓 `selectedId` 指向不在新第 1 頁的角色——`selectedRole()` 找不到它
+     * （面板顯示「請選擇角色」），自動選取又被 `selectedId()` 的守衛擋下，面板從此不再載入矩陣。
+     */
+    onSortingChange: (updater) =>
+      batch(() => {
+        setSorting((prev) => (typeof updater === "function" ? updater(prev) : updater));
+        table.setPageIndex(0);
+        setSelectedId(null);
+      }),
   });
 
   /**
@@ -244,6 +274,7 @@ export default function RolesPage() {
   /**
    * 換頁（Ark 分頁 UI 的唯一入口）：清空選取（新頁的角色清單與舊頁無關）＋換頁碼，
    * 兩個寫入放在同一個 `batch`（兩者都是同一輪 flush 的輸入，同批寫入讓 effect 只看到最終狀態）。
+   * 排序變更走同一條規則（見 table 的 `onSortingChange`：回第 1 頁 ＋ 清空選取）。
    * 註：現行寫法即使沒有 batch 也不會把舊頁第一筆選回來——observer 已切到新 key
    * （`isPlaceholderData` 為 true），自動選取 effect 會被守衛擋下（複審實測 m8 全綠）。
    */
@@ -335,7 +366,7 @@ export default function RolesPage() {
                   <TableRow class="hover:bg-transparent">
                     <For each={headerGroup.headers}>
                       {(header) => (
-                        <TableHead>
+                        <TableHead aria-sort={ariaSort(header.column)}>
                           {flexRender(header.column.columnDef.header, header.getContext())}
                         </TableHead>
                       )}
