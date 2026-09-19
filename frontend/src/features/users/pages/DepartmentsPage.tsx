@@ -1,5 +1,7 @@
+import { useFieldContext } from "@ark-ui/solid/field";
 import { Code, ConnectError, createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
+import { createForm } from "@tanstack/solid-form";
 import {
   Button,
   buttonVariants,
@@ -12,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
   Field,
+  FieldError,
   FieldLabel,
   Input,
   Table,
@@ -21,17 +24,25 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui";
-import { createSignal, For, onMount, Show } from "solid-js";
+import { createSignal, For, onMount, Show, type Component, type JSX } from "solid-js";
 import {
   CompanyService,
   DepartmentService,
   type Company,
   type Department,
 } from "~/lib/proto/salesorder/v1/company_pb";
+import { fieldValidators, firstMessage } from "../../form-helpers";
 import { ListPagination } from "../components/ListPagination";
+import { departmentSchema } from "../schemas";
 
 const PAGE_SIZE = 20;
 const COMPANY_PAGE_SIZE = 50;
+
+/**
+ * 新增模式的欄位預設值。`form.reset(values)` 會把傳入的 values 併成新的 `defaultValues`
+ * （編輯模式帶入該筆部門），所以每次開啟都要顯式帶一份新的複本，不能只靠 `form.reset()`。
+ */
+const EMPTY_DEPARTMENT_VALUES = { name: "", company: "" };
 
 const departmentClient = createClient(
   DepartmentService,
@@ -47,6 +58,32 @@ const companyClient = createClient(
  */
 const SELECT_CLASS =
   "block w-full rounded-lg border border-border bg-card py-2 pr-10 pl-3 text-sm text-foreground focus:border-primary focus:ring-3 focus:ring-primary/50 focus:outline-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground";
+
+/**
+ * 原生 select（`ui/` 沒有 select 元件，用 `SELECT_CLASS` 手寫視覺）。
+ * `Input` 接手的 Ark `Field` 關聯（`aria-invalid`／`aria-describedby`）只服務 `<input>`，
+ * 所以這裡比照它的做法補上同一組屬性；`Field` 之外使用時完全不影響。
+ */
+const SelectControl: Component<JSX.SelectHTMLAttributes<HTMLSelectElement>> = (props) => {
+  const field = useFieldContext();
+
+  const controlA11y = (): JSX.SelectHTMLAttributes<HTMLSelectElement> => {
+    const api = field?.();
+    if (!api) return {};
+    const describedBy = [
+      api.invalid ? api.ids.errorText : undefined,
+      api.ariaDescribedby,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    return {
+      "aria-invalid": api.invalid ? "true" : undefined,
+      "aria-describedby": describedBy || undefined,
+    };
+  };
+
+  return <select class={SELECT_CLASS} {...controlA11y()} {...props} />;
+};
 
 function errorMessage(err: unknown): string {
   if (err instanceof ConnectError) {
@@ -94,12 +131,11 @@ export default function DepartmentsPage() {
   // 表單對話框狀態
   const [dialogOpen, setDialogOpen] = createSignal(false);
   const [editing, setEditing] = createSignal<Department | null>(null);
-  const [saving, setSaving] = createSignal(false);
-  const [formError, setFormError] = createSignal<string | null>(null);
+  // 伺服器回應的錯誤訊息（元件層 signal，不是驗證狀態，也不對應任何欄位）。
+  const [serverError, setServerError] = createSignal<string | undefined>();
 
-  // 表單欄位
-  const [name, setName] = createSignal("");
-  const [companyId, setCompanyId] = createSignal("");
+  const nameValidators = fieldValidators(departmentSchema.entries.name);
+  const companyValidators = fieldValidators(departmentSchema.entries.company);
 
   const loadCompanies = async (reset: boolean) => {
     const target = reset ? 1 : companyPage();
@@ -156,19 +192,49 @@ export default function DepartmentsPage() {
     await load();
   });
 
-  const openCreate = () => {
-    setEditing(null);
-    setName("");
-    setCompanyId(companyFilter() || companies()[0]?.id || "");
-    setFormError(null);
+  const form = createForm(() => ({
+    defaultValues: { ...EMPTY_DEPARTMENT_VALUES },
+    onSubmit: async ({ value }) => {
+      const current = editing();
+      // 名稱照舊 trim 後才送出；`company` 是公司 id，更新時不帶（改寫前就沒有更新公司）。
+      const name = value.name.trim();
+      try {
+        if (current) {
+          await departmentClient.updateDepartment({ departmentId: current.id, name });
+        } else {
+          await departmentClient.createDepartment({ companyId: value.company, name });
+        }
+        setDialogOpen(false);
+        await load();
+      } catch (err) {
+        setServerError(errorMessage(err));
+      }
+    },
+  }));
+
+  const isSubmitting = form.useSelector((state) => state.isSubmitting);
+
+  /**
+   * 開啟 modal（新增傳 `null`）。欄位值、欄位錯誤與 touched 由 `form.reset(values)` 重設；
+   * `serverError` 是元件層 signal、**不受 `form.reset()` 影響**，必須在這裡顯式清掉，
+   * 否則重開會重現上一次的伺服器錯誤 banner（規格 R1）。
+   */
+  const openDialog = (department: Department | null) => {
+    setEditing(department);
+    setServerError(undefined);
+    form.reset(
+      department
+        ? { name: department.name, company: department.companyId }
+        : {
+            ...EMPTY_DEPARTMENT_VALUES,
+            // 所屬公司沿用改寫前的挑選邏輯：目前篩選的公司，否則公司清單第一筆
+            company: companyFilter() || companies()[0]?.id || "",
+          }
+    );
     setDialogOpen(true);
   };
 
   const openEdit = async (d: Department) => {
-    setEditing(d);
-    setName(d.name);
-    setCompanyId(d.companyId);
-    setFormError(null);
     // 該部門的公司可能不在已載入的分頁內,先補載再開啟
     if (!companies().some((c) => c.id === d.companyId)) {
       try {
@@ -183,43 +249,17 @@ export default function DepartmentsPage() {
         // 找不到時仍可從下拉搜尋補上
       }
     }
-    setDialogOpen(true);
+    openDialog(d);
   };
 
-  const submit = async (e: SubmitEvent) => {
+  const submit: JSX.EventHandler<HTMLFormElement, SubmitEvent> = (e) => {
     e.preventDefault();
-    if (saving()) return;
-    const trimmedName = name().trim();
-    if (!trimmedName) {
-      setFormError("請輸入部門名稱");
-      return;
-    }
-    if (!companyId()) {
-      setFormError("請選擇所屬公司");
-      return;
-    }
-    setSaving(true);
-    setFormError(null);
-    try {
-      const current = editing();
-      if (current) {
-        await departmentClient.updateDepartment({
-          departmentId: current.id,
-          name: trimmedName,
-        });
-      } else {
-        await departmentClient.createDepartment({
-          companyId: companyId(),
-          name: trimmedName,
-        });
-      }
-      setDialogOpen(false);
-      await load();
-    } catch (err) {
-      setFormError(errorMessage(err));
-    } finally {
-      setSaving(false);
-    }
+    // 提交中不重送（改寫前是 `if (saving()) return`）：form-core 的 `handleSubmit`
+    // 只在第一次嘗試（`submissionAttempts <= 1`）擋下，進行中的第二次提交仍會送 API。
+    if (isSubmitting()) return;
+    // 客戶端驗證失敗時 `onSubmit` 不會被呼叫，舊的伺服器錯誤 banner 必須在這裡先清掉。
+    setServerError(undefined);
+    void form.handleSubmit();
   };
 
   const remove = async (d: Department) => {
@@ -241,7 +281,7 @@ export default function DepartmentsPage() {
             公司底下的業務單位(共 {total()} 筆)
           </p>
         </div>
-        <Button type="button" onClick={openCreate}>
+        <Button type="button" onClick={() => openDialog(null)}>
           新增部門
         </Button>
       </header>
@@ -389,49 +429,67 @@ export default function DepartmentsPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <form class="space-y-4" onSubmit={submit}>
-            <Field>
-              <FieldLabel for="department-name">部門名稱 *</FieldLabel>
-              <Input
-                id="department-name"
-                required
-                value={name()}
-                onInput={(e) => setName(e.currentTarget.value)}
-              />
-            </Field>
-            <Field>
-              <FieldLabel for="department-company">所屬公司 *</FieldLabel>
-              <select
-                id="department-company"
-                required
-                disabled={!!editing()}
-                value={companyId()}
-                onChange={(e) => setCompanyId(e.currentTarget.value)}
-                class={SELECT_CLASS}
-              >
-                <option value="" disabled>
-                  請選擇公司
-                </option>
-                <For each={companies()}>
-                  {(c) => <option value={c.id}>{c.name}</option>}
-                </For>
-              </select>
-            </Field>
+          {/*
+            `novalidate`：必填規則已由 valibot 鏡射，原生驗證會用瀏覽器泡泡擋下 submit
+            並讓自訂的繁中欄位錯誤沒有機會顯示；`required` 保留作為必填的語意標記。
+          */}
+          <form class="space-y-4" novalidate onSubmit={submit}>
+            <form.Field name="name" validators={nameValidators}>
+              {(field) => (
+                <Field invalid={!field().state.meta.isValid}>
+                  <FieldLabel for="department-name">部門名稱 *</FieldLabel>
+                  <Input
+                    id="department-name"
+                    required
+                    value={field().state.value}
+                    onBlur={field().handleBlur}
+                    onInput={(e) => field().handleChange(e.currentTarget.value)}
+                  />
+                  <FieldError>{firstMessage(field().state.meta.errors)}</FieldError>
+                </Field>
+              )}
+            </form.Field>
 
-            <Show when={formError()}>
-              <p
-                class="rounded-lg bg-destructive/15 px-3 py-2 text-sm font-medium text-destructive"
-                role="alert"
-              >
-                {formError()}
-              </p>
+            <form.Field name="company" validators={companyValidators}>
+              {(field) => (
+                <Field invalid={!field().state.meta.isValid}>
+                  <FieldLabel for="department-company">所屬公司 *</FieldLabel>
+                  <SelectControl
+                    id="department-company"
+                    required
+                    disabled={!!editing()}
+                    value={field().state.value}
+                    onBlur={field().handleBlur}
+                    onChange={(e) => field().handleChange(e.currentTarget.value)}
+                  >
+                    <option value="" disabled>
+                      請選擇公司
+                    </option>
+                    <For each={companies()}>
+                      {(c) => <option value={c.id}>{c.name}</option>}
+                    </For>
+                  </SelectControl>
+                  <FieldError>{firstMessage(field().state.meta.errors)}</FieldError>
+                </Field>
+              )}
+            </form.Field>
+
+            <Show when={serverError()}>
+              {(message) => (
+                <p
+                  class="rounded-lg bg-destructive/15 px-3 py-2 text-sm font-medium text-destructive"
+                  role="alert"
+                >
+                  {message()}
+                </p>
+              )}
             </Show>
 
             <DialogFooter>
               <DialogClose class={buttonVariants({ variant: "outline" })}>
                 取消
               </DialogClose>
-              <Button type="submit" loading={saving()}>
+              <Button type="submit" loading={isSubmitting()}>
                 儲存
               </Button>
             </DialogFooter>
