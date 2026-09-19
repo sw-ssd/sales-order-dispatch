@@ -189,6 +189,8 @@ type ListRolesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Page          int32                  `protobuf:"varint,1,opt,name=page,proto3" json:"page,omitempty"`                         // 1-based 頁碼
 	PageSize      int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"` // 每頁筆數
+	Sort          string                 `protobuf:"bytes,3,opt,name=sort,proto3" json:"sort,omitempty"`                          // 白名單:code | name | id(空 = 預設排序)
+	Desc          bool                   `protobuf:"varint,4,opt,name=desc,proto3" json:"desc,omitempty"`                         // 是否降冪(sort 空時忽略)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -235,6 +237,20 @@ func (x *ListRolesRequest) GetPageSize() int32 {
 		return x.PageSize
 	}
 	return 0
+}
+
+func (x *ListRolesRequest) GetSort() string {
+	if x != nil {
+		return x.Sort
+	}
+	return ""
+}
+
+func (x *ListRolesRequest) GetDesc() bool {
+	if x != nil {
+		return x.Desc
+	}
+	return false
 }
 
 // ListRolesResponse:角色清單。
@@ -659,10 +675,12 @@ const file_salesorder_v1_role_proto_rawDesc = "" +
 	"conditions\x12\x1a\n" +
 	"\binverted\x18\x04 \x01(\bR\binverted\x12\x1d\n" +
 	"\n" +
-	"sort_order\x18\x05 \x01(\x05R\tsortOrder\"C\n" +
+	"sort_order\x18\x05 \x01(\x05R\tsortOrder\"k\n" +
 	"\x10ListRolesRequest\x12\x12\n" +
 	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x1b\n" +
-	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\"y\n" +
+	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x12\n" +
+	"\x04sort\x18\x03 \x01(\tR\x04sort\x12\x12\n" +
+	"\x04desc\x18\x04 \x01(\bR\x04desc\"y\n" +
 	"\x11ListRolesResponse\x12)\n" +
 	"\x05roles\x18\x01 \x03(\v2\x13.salesorder.v1.RoleR\x05roles\x129\n" +
 	"\n" +

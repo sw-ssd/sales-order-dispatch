@@ -163,12 +163,16 @@ class ListCompaniesRequest extends $pb.GeneratedMessage {
     $core.int? pageSize,
     $core.String? status,
     $core.String? keyword,
+    $core.String? sort,
+    $core.bool? desc,
   }) {
     final result = ListCompaniesRequest._();
     if (page != null) result.page = page;
     if (pageSize != null) result.pageSize = pageSize;
     if (status != null) result.status = status;
     if (keyword != null) result.keyword = keyword;
+    if (sort != null) result.sort = sort;
+    if (desc != null) result.desc = desc;
     return result;
   }
 
@@ -189,6 +193,8 @@ class ListCompaniesRequest extends $pb.GeneratedMessage {
     ..aI(2, _omitFieldNames ? '' : 'pageSize')
     ..aOS(3, _omitFieldNames ? '' : 'status')
     ..aOS(4, _omitFieldNames ? '' : 'keyword')
+    ..aOS(5, _omitFieldNames ? '' : 'sort')
+    ..aOB(6, _omitFieldNames ? '' : 'desc')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -249,6 +255,24 @@ class ListCompaniesRequest extends $pb.GeneratedMessage {
   $core.bool hasKeyword() => $_has(3);
   @$pb.TagNumber(4)
   void clearKeyword() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get sort => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set sort($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasSort() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearSort() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.bool get desc => $_getBF(5);
+  @$pb.TagNumber(6)
+  set desc($core.bool value) => $_setBool(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasDesc() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearDesc() => $_clearField(6);
 }
 
 class ListCompaniesResponse extends $pb.GeneratedMessage {
@@ -960,11 +984,15 @@ class ListDepartmentsRequest extends $pb.GeneratedMessage {
     $core.int? page,
     $core.int? pageSize,
     $core.String? companyId,
+    $core.String? sort,
+    $core.bool? desc,
   }) {
     final result = ListDepartmentsRequest._();
     if (page != null) result.page = page;
     if (pageSize != null) result.pageSize = pageSize;
     if (companyId != null) result.companyId = companyId;
+    if (sort != null) result.sort = sort;
+    if (desc != null) result.desc = desc;
     return result;
   }
 
@@ -984,6 +1012,8 @@ class ListDepartmentsRequest extends $pb.GeneratedMessage {
     ..aI(1, _omitFieldNames ? '' : 'page')
     ..aI(2, _omitFieldNames ? '' : 'pageSize')
     ..aOS(3, _omitFieldNames ? '' : 'companyId')
+    ..aOS(4, _omitFieldNames ? '' : 'sort')
+    ..aOB(5, _omitFieldNames ? '' : 'desc')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1036,6 +1066,24 @@ class ListDepartmentsRequest extends $pb.GeneratedMessage {
   $core.bool hasCompanyId() => $_has(2);
   @$pb.TagNumber(3)
   void clearCompanyId() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get sort => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set sort($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasSort() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearSort() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.bool get desc => $_getBF(4);
+  @$pb.TagNumber(5)
+  set desc($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasDesc() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearDesc() => $_clearField(5);
 }
 
 class ListDepartmentsResponse extends $pb.GeneratedMessage {

@@ -129,6 +129,8 @@ type ListCompaniesRequest struct {
 	PageSize      int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"` // 每頁筆數
 	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`                      // 篩選:active | inactive | suspended(空 = 全部)
 	Keyword       string                 `protobuf:"bytes,4,opt,name=keyword,proto3" json:"keyword,omitempty"`                    // name / identifier 模糊搜尋(空 = 全部)
+	Sort          string                 `protobuf:"bytes,5,opt,name=sort,proto3" json:"sort,omitempty"`                          // 白名單:name | identifier | tax_id | status | id(空 = 預設排序)
+	Desc          bool                   `protobuf:"varint,6,opt,name=desc,proto3" json:"desc,omitempty"`                         // 是否降冪(sort 空時忽略)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -189,6 +191,20 @@ func (x *ListCompaniesRequest) GetKeyword() string {
 		return x.Keyword
 	}
 	return ""
+}
+
+func (x *ListCompaniesRequest) GetSort() string {
+	if x != nil {
+		return x.Sort
+	}
+	return ""
+}
+
+func (x *ListCompaniesRequest) GetDesc() bool {
+	if x != nil {
+		return x.Desc
+	}
+	return false
 }
 
 type ListCompaniesResponse struct {
@@ -718,6 +734,8 @@ type ListDepartmentsRequest struct {
 	Page          int32                  `protobuf:"varint,1,opt,name=page,proto3" json:"page,omitempty"`                           // 1-based 頁碼
 	PageSize      int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`   // 每頁筆數
 	CompanyId     string                 `protobuf:"bytes,3,opt,name=company_id,json=companyId,proto3" json:"company_id,omitempty"` // 篩選:僅列指定公司的部門(空 = 全部)
+	Sort          string                 `protobuf:"bytes,4,opt,name=sort,proto3" json:"sort,omitempty"`                            // 白名單:name | id(空 = 預設排序)
+	Desc          bool                   `protobuf:"varint,5,opt,name=desc,proto3" json:"desc,omitempty"`                           // 是否降冪(sort 空時忽略)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -771,6 +789,20 @@ func (x *ListDepartmentsRequest) GetCompanyId() string {
 		return x.CompanyId
 	}
 	return ""
+}
+
+func (x *ListDepartmentsRequest) GetSort() string {
+	if x != nil {
+		return x.Sort
+	}
+	return ""
+}
+
+func (x *ListDepartmentsRequest) GetDesc() bool {
+	if x != nil {
+		return x.Desc
+	}
+	return false
 }
 
 type ListDepartmentsResponse struct {
@@ -1201,12 +1233,14 @@ const file_salesorder_v1_company_proto_rawDesc = "" +
 	"\vpublic_info\x18\x06 \x01(\v2\x17.google.protobuf.StructR\n" +
 	"publicInfo\x12\"\n" +
 	"\fcapabilities\x18\a \x03(\tR\fcapabilities\x12\x19\n" +
-	"\blogo_url\x18\b \x01(\tR\alogoUrl\"y\n" +
+	"\blogo_url\x18\b \x01(\tR\alogoUrl\"\xa1\x01\n" +
 	"\x14ListCompaniesRequest\x12\x12\n" +
 	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x16\n" +
 	"\x06status\x18\x03 \x01(\tR\x06status\x12\x18\n" +
-	"\akeyword\x18\x04 \x01(\tR\akeyword\"\x88\x01\n" +
+	"\akeyword\x18\x04 \x01(\tR\akeyword\x12\x12\n" +
+	"\x04sort\x18\x05 \x01(\tR\x04sort\x12\x12\n" +
+	"\x04desc\x18\x06 \x01(\bR\x04desc\"\x88\x01\n" +
 	"\x15ListCompaniesResponse\x124\n" +
 	"\tcompanies\x18\x01 \x03(\v2\x16.salesorder.v1.CompanyR\tcompanies\x129\n" +
 	"\n" +
@@ -1250,12 +1284,14 @@ const file_salesorder_v1_company_proto_rawDesc = "" +
 	"\n" +
 	"company_id\x18\x02 \x01(\tR\tcompanyId\x12!\n" +
 	"\fcompany_name\x18\x03 \x01(\tR\vcompanyName\x12\x12\n" +
-	"\x04name\x18\x04 \x01(\tR\x04name\"h\n" +
+	"\x04name\x18\x04 \x01(\tR\x04name\"\x90\x01\n" +
 	"\x16ListDepartmentsRequest\x12\x12\n" +
 	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
 	"\n" +
-	"company_id\x18\x03 \x01(\tR\tcompanyId\"\x91\x01\n" +
+	"company_id\x18\x03 \x01(\tR\tcompanyId\x12\x12\n" +
+	"\x04sort\x18\x04 \x01(\tR\x04sort\x12\x12\n" +
+	"\x04desc\x18\x05 \x01(\bR\x04desc\"\x91\x01\n" +
 	"\x17ListDepartmentsResponse\x12;\n" +
 	"\vdepartments\x18\x01 \x03(\v2\x19.salesorder.v1.DepartmentR\vdepartments\x129\n" +
 	"\n" +

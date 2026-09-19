@@ -71,13 +71,15 @@ const ListRolesRequest$json = {
   '2': [
     {'1': 'page', '3': 1, '4': 1, '5': 5, '10': 'page'},
     {'1': 'page_size', '3': 2, '4': 1, '5': 5, '10': 'pageSize'},
+    {'1': 'sort', '3': 3, '4': 1, '5': 9, '10': 'sort'},
+    {'1': 'desc', '3': 4, '4': 1, '5': 8, '10': 'desc'},
   ],
 };
 
 /// Descriptor for `ListRolesRequest`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List listRolesRequestDescriptor = $convert.base64Decode(
     'ChBMaXN0Um9sZXNSZXF1ZXN0EhIKBHBhZ2UYASABKAVSBHBhZ2USGwoJcGFnZV9zaXplGAIgAS'
-    'gFUghwYWdlU2l6ZQ==');
+    'gFUghwYWdlU2l6ZRISCgRzb3J0GAMgASgJUgRzb3J0EhIKBGRlc2MYBCABKAhSBGRlc2M=');
 
 @$core.Deprecated('Use listRolesResponseDescriptor instead')
 const ListRolesResponse$json = {

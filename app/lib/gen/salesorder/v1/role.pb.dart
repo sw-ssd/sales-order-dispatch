@@ -248,10 +248,14 @@ class ListRolesRequest extends $pb.GeneratedMessage {
   factory ListRolesRequest({
     $core.int? page,
     $core.int? pageSize,
+    $core.String? sort,
+    $core.bool? desc,
   }) {
     final result = ListRolesRequest._();
     if (page != null) result.page = page;
     if (pageSize != null) result.pageSize = pageSize;
+    if (sort != null) result.sort = sort;
+    if (desc != null) result.desc = desc;
     return result;
   }
 
@@ -270,6 +274,8 @@ class ListRolesRequest extends $pb.GeneratedMessage {
       createEmptyInstance: ListRolesRequest.$_createMessage)
     ..aI(1, _omitFieldNames ? '' : 'page')
     ..aI(2, _omitFieldNames ? '' : 'pageSize')
+    ..aOS(3, _omitFieldNames ? '' : 'sort')
+    ..aOB(4, _omitFieldNames ? '' : 'desc')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -311,6 +317,24 @@ class ListRolesRequest extends $pb.GeneratedMessage {
   $core.bool hasPageSize() => $_has(1);
   @$pb.TagNumber(2)
   void clearPageSize() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get sort => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set sort($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasSort() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearSort() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.bool get desc => $_getBF(3);
+  @$pb.TagNumber(4)
+  set desc($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasDesc() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearDesc() => $_clearField(4);
 }
 
 /// ListRolesResponse:角色清單。

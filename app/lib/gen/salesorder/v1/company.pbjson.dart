@@ -58,6 +58,8 @@ const ListCompaniesRequest$json = {
     {'1': 'page_size', '3': 2, '4': 1, '5': 5, '10': 'pageSize'},
     {'1': 'status', '3': 3, '4': 1, '5': 9, '10': 'status'},
     {'1': 'keyword', '3': 4, '4': 1, '5': 9, '10': 'keyword'},
+    {'1': 'sort', '3': 5, '4': 1, '5': 9, '10': 'sort'},
+    {'1': 'desc', '3': 6, '4': 1, '5': 8, '10': 'desc'},
   ],
 };
 
@@ -65,7 +67,7 @@ const ListCompaniesRequest$json = {
 final $typed_data.Uint8List listCompaniesRequestDescriptor = $convert.base64Decode(
     'ChRMaXN0Q29tcGFuaWVzUmVxdWVzdBISCgRwYWdlGAEgASgFUgRwYWdlEhsKCXBhZ2Vfc2l6ZR'
     'gCIAEoBVIIcGFnZVNpemUSFgoGc3RhdHVzGAMgASgJUgZzdGF0dXMSGAoHa2V5d29yZBgEIAEo'
-    'CVIHa2V5d29yZA==');
+    'CVIHa2V5d29yZBISCgRzb3J0GAUgASgJUgRzb3J0EhIKBGRlc2MYBiABKAhSBGRlc2M=');
 
 @$core.Deprecated('Use listCompaniesResponseDescriptor instead')
 const ListCompaniesResponse$json = {
@@ -254,14 +256,16 @@ const ListDepartmentsRequest$json = {
     {'1': 'page', '3': 1, '4': 1, '5': 5, '10': 'page'},
     {'1': 'page_size', '3': 2, '4': 1, '5': 5, '10': 'pageSize'},
     {'1': 'company_id', '3': 3, '4': 1, '5': 9, '10': 'companyId'},
+    {'1': 'sort', '3': 4, '4': 1, '5': 9, '10': 'sort'},
+    {'1': 'desc', '3': 5, '4': 1, '5': 8, '10': 'desc'},
   ],
 };
 
 /// Descriptor for `ListDepartmentsRequest`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List listDepartmentsRequestDescriptor =
-    $convert.base64Decode(
-        'ChZMaXN0RGVwYXJ0bWVudHNSZXF1ZXN0EhIKBHBhZ2UYASABKAVSBHBhZ2USGwoJcGFnZV9zaX'
-        'plGAIgASgFUghwYWdlU2l6ZRIdCgpjb21wYW55X2lkGAMgASgJUgljb21wYW55SWQ=');
+final $typed_data.Uint8List listDepartmentsRequestDescriptor = $convert.base64Decode(
+    'ChZMaXN0RGVwYXJ0bWVudHNSZXF1ZXN0EhIKBHBhZ2UYASABKAVSBHBhZ2USGwoJcGFnZV9zaX'
+    'plGAIgASgFUghwYWdlU2l6ZRIdCgpjb21wYW55X2lkGAMgASgJUgljb21wYW55SWQSEgoEc29y'
+    'dBgEIAEoCVIEc29ydBISCgRkZXNjGAUgASgIUgRkZXNj');
 
 @$core.Deprecated('Use listDepartmentsResponseDescriptor instead')
 const ListDepartmentsResponse$json = {

@@ -32,6 +32,8 @@ message Permission {
 message ListRolesRequest {
   int32 page = 1;      // 1-based 頁碼
   int32 page_size = 2; // 每頁筆數
+  string sort = 3;     // 白名單:code | name | id(空 = 預設排序)
+  bool desc = 4;       // 是否降冪(sort 空時忽略)
 }
 
 // ListRolesResponse:角色清單。

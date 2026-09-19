@@ -131,6 +131,20 @@ export declare type ListRolesRequest = Message<"salesorder.v1.ListRolesRequest">
    * @generated from field: int32 page_size = 2;
    */
   pageSize: number;
+
+  /**
+   * 白名單:code | name | id(空 = 預設排序)
+   *
+   * @generated from field: string sort = 3;
+   */
+  sort: string;
+
+  /**
+   * 是否降冪(sort 空時忽略)
+   *
+   * @generated from field: bool desc = 4;
+   */
+  desc: boolean;
 };
 
 /**

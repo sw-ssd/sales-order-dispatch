@@ -39,6 +39,8 @@ message ListCompaniesRequest {
   int32 page_size = 2; // 每頁筆數
   string status = 3;   // 篩選:active | inactive | suspended(空 = 全部)
   string keyword = 4;  // name / identifier 模糊搜尋(空 = 全部)
+  string sort = 5;     // 白名單:name | identifier | tax_id | status | id(空 = 預設排序)
+  bool desc = 6;       // 是否降冪(sort 空時忽略)
 }
 
 message ListCompaniesResponse {
@@ -110,6 +112,8 @@ message ListDepartmentsRequest {
   int32 page = 1;      // 1-based 頁碼
   int32 page_size = 2; // 每頁筆數
   string company_id = 3; // 篩選:僅列指定公司的部門(空 = 全部)
+  string sort = 4;       // 白名單:name | id(空 = 預設排序)
+  bool desc = 5;         // 是否降冪(sort 空時忽略)
 }
 
 message ListDepartmentsResponse {

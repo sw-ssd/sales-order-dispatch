@@ -111,6 +111,20 @@ export declare type ListCompaniesRequest = Message<"salesorder.v1.ListCompaniesR
    * @generated from field: string keyword = 4;
    */
   keyword: string;
+
+  /**
+   * 白名單:name | identifier | tax_id | status | id(空 = 預設排序)
+   *
+   * @generated from field: string sort = 5;
+   */
+  sort: string;
+
+  /**
+   * 是否降冪(sort 空時忽略)
+   *
+   * @generated from field: bool desc = 6;
+   */
+  desc: boolean;
 };
 
 /**
@@ -382,6 +396,20 @@ export declare type ListDepartmentsRequest = Message<"salesorder.v1.ListDepartme
    * @generated from field: string company_id = 3;
    */
   companyId: string;
+
+  /**
+   * 白名單:name | id(空 = 預設排序)
+   *
+   * @generated from field: string sort = 4;
+   */
+  sort: string;
+
+  /**
+   * 是否降冪(sort 空時忽略)
+   *
+   * @generated from field: bool desc = 5;
+   */
+  desc: boolean;
 };
 
 /**
