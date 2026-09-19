@@ -7205,6 +7205,7 @@ type DepartmentMutation struct {
 	typ            string
 	id             *int
 	name           *string
+	deleted_at     *time.Time
 	clearedFields  map[string]struct{}
 	company        *int
 	clearedcompany bool
@@ -7350,6 +7351,55 @@ func (m *DepartmentMutation) ResetName() {
 	m.name = nil
 }
 
+// SetDeletedAt sets the "deleted_at" field.
+func (m *DepartmentMutation) SetDeletedAt(t time.Time) {
+	m.deleted_at = &t
+}
+
+// DeletedAt returns the value of the "deleted_at" field in the mutation.
+func (m *DepartmentMutation) DeletedAt() (r time.Time, exists bool) {
+	v := m.deleted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeletedAt returns the old "deleted_at" field's value of the Department entity.
+// If the Department object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DepartmentMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
+	}
+	return oldValue.DeletedAt, nil
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (m *DepartmentMutation) ClearDeletedAt() {
+	m.deleted_at = nil
+	m.clearedFields[department.FieldDeletedAt] = struct{}{}
+}
+
+// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
+func (m *DepartmentMutation) DeletedAtCleared() bool {
+	_, ok := m.clearedFields[department.FieldDeletedAt]
+	return ok
+}
+
+// ResetDeletedAt resets all changes to the "deleted_at" field.
+func (m *DepartmentMutation) ResetDeletedAt() {
+	m.deleted_at = nil
+	delete(m.clearedFields, department.FieldDeletedAt)
+}
+
 // SetCompanyID sets the "company" edge to the Company entity by id.
 func (m *DepartmentMutation) SetCompanyID(id int) {
 	m.company = &id
@@ -7477,9 +7527,12 @@ func (m *DepartmentMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *DepartmentMutation) Fields() []string {
-	fields := make([]string, 0, 1)
+	fields := make([]string, 0, 2)
 	if m.name != nil {
 		fields = append(fields, department.FieldName)
+	}
+	if m.deleted_at != nil {
+		fields = append(fields, department.FieldDeletedAt)
 	}
 	return fields
 }
@@ -7491,6 +7544,8 @@ func (m *DepartmentMutation) Field(name string) (ent.Value, bool) {
 	switch name {
 	case department.FieldName:
 		return m.Name()
+	case department.FieldDeletedAt:
+		return m.DeletedAt()
 	}
 	return nil, false
 }
@@ -7502,6 +7557,8 @@ func (m *DepartmentMutation) OldField(ctx context.Context, name string) (ent.Val
 	switch name {
 	case department.FieldName:
 		return m.OldName(ctx)
+	case department.FieldDeletedAt:
+		return m.OldDeletedAt(ctx)
 	}
 	return nil, fmt.Errorf("unknown Department field %s", name)
 }
@@ -7517,6 +7574,13 @@ func (m *DepartmentMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetName(v)
+		return nil
+	case department.FieldDeletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeletedAt(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Department field %s", name)
@@ -7547,7 +7611,11 @@ func (m *DepartmentMutation) AddField(name string, value ent.Value) error {
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
 func (m *DepartmentMutation) ClearedFields() []string {
-	return nil
+	var fields []string
+	if m.FieldCleared(department.FieldDeletedAt) {
+		fields = append(fields, department.FieldDeletedAt)
+	}
+	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
@@ -7560,6 +7628,11 @@ func (m *DepartmentMutation) FieldCleared(name string) bool {
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
 func (m *DepartmentMutation) ClearField(name string) error {
+	switch name {
+	case department.FieldDeletedAt:
+		m.ClearDeletedAt()
+		return nil
+	}
 	return fmt.Errorf("unknown Department nullable field %s", name)
 }
 
@@ -7569,6 +7642,9 @@ func (m *DepartmentMutation) ResetField(name string) error {
 	switch name {
 	case department.FieldName:
 		m.ResetName()
+		return nil
+	case department.FieldDeletedAt:
+		m.ResetDeletedAt()
 		return nil
 	}
 	return fmt.Errorf("unknown Department field %s", name)

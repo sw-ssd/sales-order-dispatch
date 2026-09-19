@@ -705,9 +705,15 @@ func isValidRole(role string) bool {
 
 // validateDepartmentInCompany 驗證 department 存在且屬於指定公司(I6)。
 // 不符 → InvalidArgument(輸入驗證失敗),不允許跨公司資料擺放。
+// 軟刪除(00020):已刪除的部門視同不存在 —— 這是唯一以請求指定 department_id 的掛載路徑
+// (CreateUser / UpdateUser / AssignRole),不擋就會把活帳號掛進已刪除的部門。
 func (s *UserService) validateDepartmentInCompany(ctx context.Context, deptID, companyID int) error {
 	ok, err := s.db.Department.Query().
-		Where(department.ID(deptID), department.HasCompanyWith(company.ID(companyID), company.DeletedAtIsNil())).
+		Where(
+			department.ID(deptID),
+			department.DeletedAtIsNil(),
+			department.HasCompanyWith(company.ID(companyID), company.DeletedAtIsNil()),
+		).
 		Exist(ctx)
 	if err != nil {
 		return toConnectError(err)

@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -24,6 +25,20 @@ type DepartmentCreate struct {
 // SetName sets the "name" field.
 func (_c *DepartmentCreate) SetName(v string) *DepartmentCreate {
 	_c.mutation.SetName(v)
+	return _c
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (_c *DepartmentCreate) SetDeletedAt(v time.Time) *DepartmentCreate {
+	_c.mutation.SetDeletedAt(v)
+	return _c
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (_c *DepartmentCreate) SetNillableDeletedAt(v *time.Time) *DepartmentCreate {
+	if v != nil {
+		_c.SetDeletedAt(*v)
+	}
 	return _c
 }
 
@@ -127,6 +142,10 @@ func (_c *DepartmentCreate) createSpec() (*Department, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Name(); ok {
 		_spec.SetField(department.FieldName, field.TypeString, value)
 		_node.Name = value
+	}
+	if value, ok := _c.mutation.DeletedAt(); ok {
+		_spec.SetField(department.FieldDeletedAt, field.TypeTime, value)
+		_node.DeletedAt = &value
 	}
 	if nodes := _c.mutation.CompanyIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

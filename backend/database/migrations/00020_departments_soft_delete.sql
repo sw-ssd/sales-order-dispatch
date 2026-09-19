@@ -1,0 +1,37 @@
+-- 部門軟刪除(比照公司 P2-A,2026-09-20):departments 加 deleted_at。
+--
+-- 背景(可達缺陷):DeleteDepartment 原以硬刪除刪列,而 audit_logs.department_id 是 FK
+-- (00009 建欄、00010 補 FK → departments)。使用者相關稽核一律以「目標使用者的部門」寫
+-- department_id(user_service.recordUserAudit),因此任何曾被稽核的部門成員都會留下一列
+-- 指向該部門的稽核。可達路徑:
+--   D 的成員 U 被做過任一次有稽核的操作(AssignRole / Deactivate / ForceLogout / UpdateUser…)
+--   → 把 U 移到別的部門(前置檢查「部門仍有使用者」於是通過)→ DeleteDepartment(D)
+--   → 硬刪除被 audit_logs_department_id_fkey 擋下;toConnectError 把約束錯誤映射成通用的
+--   「資料違反資料庫約束…(請確認識別碼是否已被使用…)」,與真正原因(稽核 FK)無關。
+-- 部門改軟刪除後,稽核列(以及倉別/路線/加工規格/產品分類/客戶等以 department_id 為 FK
+-- 的列)永遠有主可依,刪除不再被 FK 阻擋,也不再需要為稽核把 department_id 清成 NULL。
+--
+-- 唯一性:departments 目前**沒有任何** UNIQUE 約束(00005 只有 id / name / company_departments,
+-- 其餘 migration 只加 FK 與 RLS policy;ent schema 亦無 index),故不像公司 P2-A 需要把表層
+-- UNIQUE 換成部分唯一索引 —— 本檔只加欄位。若日後新增部門唯一鍵,必須比照 00019 以
+-- `WHERE deleted_at IS NULL` 的部分唯一索引表達,否則已刪除列會永久佔用該鍵。
+--
+-- 影響(呼叫端必須配合,已於同一波修改):
+--   1. 所有部門查詢/存在性檢查都必須排除軟刪除列(`deleted_at IS NULL`):
+--      ListDepartments(含 company_id 篩選)、GetDepartment、UpdateDepartment、DeleteDepartment。
+--   2. DeleteCompany 的「仍有部門」前置檢查必須忽略已軟刪除的部門,否則軟刪除的部門列會
+--      讓公司永遠刪不掉(軟刪除拿走了硬刪除的隱性保護)。
+--   3. validateDepartmentInCompany(user_service:CreateUser / UpdateUser / AssignRole)必須排除
+--      已軟刪除的部門,否則活帳號會被掛進已刪除的部門(唯一以請求指定 department_id 的掛載路徑)。
+--
+-- 冪等(比照 00008/00010/00019 的 IF EXISTS 模式):對既有 DB 補欄位、對全新 DB 亦同形,
+-- 重複套用為 no-op。Up/Down 對稱(加欄位 / 去欄位),兩者皆可重複套用。
+-- +goose Up
+-- +goose StatementBegin
+ALTER TABLE departments ADD COLUMN IF NOT EXISTS deleted_at timestamptz;
+-- +goose StatementEnd
+
+-- +goose Down
+-- +goose StatementBegin
+ALTER TABLE departments DROP COLUMN IF EXISTS deleted_at;
+-- +goose StatementEnd

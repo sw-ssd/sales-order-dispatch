@@ -241,7 +241,7 @@ func TestIntegrationCompanySoftDelete(t *testing.T) {
 		downDSN := testsupport.Postgres(t)
 		migrateBusinessUp(t, downDSN)
 		downDB := openRawDB(t, downDSN)
-		migrateBusinessDownOne(t, downDSN)
+		migrateBusinessDownTo(t, downDSN, "18")
 
 		if indexExists(t, downDB, "companies_identifier_active_unique") {
 			t.Fatal("Down 必須移除部分唯一索引")
@@ -348,8 +348,11 @@ func migrateBusinessUp(t *testing.T, dsn string) {
 	}
 }
 
-// migrateBusinessDownOne 以 cmd/migrate 相同路徑回退一個版本(`goose down` 語意)。
-func migrateBusinessDownOne(t *testing.T, dsn string) {
+// migrateBusinessDownTo 以 cmd/migrate 相同路徑回退至指定版本(`goose down-to` 語意:**該版本
+// 保留**、其後的遷移全部還原),以版本號釘住要驗的遷移 —— 用「回退最後一筆」會被後續新遷移搶走
+// 目標(00020 落地後 `goose down` 只還原 00020,00019 的 Down 便驗不到)。
+// 因此要驗 00019 的 Down 就回退至 "18",要驗 00020 的 Down 就回退至 "19"。
+func migrateBusinessDownTo(t *testing.T, dsn, version string) {
 	t.Helper()
 	db := openRawDB(t, dsn)
 	if err := goose.SetDialect("postgres"); err != nil {
@@ -357,8 +360,8 @@ func migrateBusinessDownOne(t *testing.T, dsn string) {
 	}
 	goose.SetTableName(p2aGooseTable)
 	goose.SetBaseFS(nil)
-	if err := goose.RunContext(t.Context(), "down", db, p2aMigrationsDir); err != nil {
-		t.Fatalf("goose down: %v(00019 的 Down 必須能對稱還原)", err)
+	if err := goose.RunContext(t.Context(), "down-to", db, p2aMigrationsDir, version); err != nil {
+		t.Fatalf("goose down-to %s: %v(該遷移的 Down 必須能對稱還原)", version, err)
 	}
 }
 
