@@ -296,7 +296,17 @@ git commit -m "feat(frontend): sidebar 多部件（solid-ui 解剖 + Ark 行為�
 
 ### Task 6: AppShell 換用新 sidebar 與 splitter
 
-**Files:** 改寫 `components/layout/AppShell.tsx`（必要時 `Sidebar.tsx`/`Topbar.tsx`）；改 `router/index.tsx`（僅 HomePage 內距）
+**Files:** 改寫 `components/layout/AppShell.tsx`（必要時 `Sidebar.tsx`/`Topbar.tsx`）；改 `router/index.tsx`（僅 HomePage 內距）；新增 `src/components/ui/theme.tsx` + `theme.test.tsx`；改 `index.html`（anti-FOUC 腳本）；同步 `ui/index.ts` 與 `ui/registry.json`
+
+- [ ] **Step 0: 深色模式機制（Tailkit class-based dark mode；2026-09-19 使用者指示）**
+
+現況：`index.css` 已有 `.dark` token 與 `@custom-variant dark (&:where(.dark, .dark *))`，但**沒有任何地方套用 `.dark`** → 深色模式在執行期不可達（過去都以注入 class 驗證）。本步驟讓它真的可達：
+
+1. 新增 `src/components/ui/theme.tsx`（或 `lib/theme.ts`，落在 `ui/**` 則遵守依賴規則）：狀態 `"light" | "dark" | "system"`、以 localStorage key `ui:theme` 持久化、跟隨 `prefers-color-scheme`、切換時對 `document.documentElement` 加/移除 `.dark`；讀取與寫入都要 try/catch（無 window／隱私模式）。
+2. `index.html`：在 `<head>` 的最前面加**anti-FOUC 內聯腳本**（同步讀 localStorage／系統偏好並設 `.dark`，早於任何 CSS 與 bundle；不得引用外部檔案）。
+3. shell（本 task 的 `AppShell`/`Topbar` 或 `SidebarFooter`）：放一個切換器（`light | dark | system` 三態；用 Ark `menu` 或 `toggle-group` 實作，圖示用既有 `lucide-solid`）。
+4. 測試（jsdom）：切到 dark → `document.documentElement` 有 `.dark` 且 localStorage 寫入；切到 system → 依 `matchMedia` stub 的結果決定；預設（無儲存值）為 `system`。
+5. **驗證方式改變**：本 task 之後的視覺驗證（含 Task 8）改用**真實切換器**，不再注入 class。
 
 - [ ] **Step 1: 以 `SidebarProvider` + `Sidebar` + `SidebarInset` 組裝**；側欄與內容之間用 Ark `splitter`（`Panel` + `ResizeTrigger`），保留 v2 的內距歸屬決定（shell 是唯一內距所有者）。
 
@@ -304,7 +314,7 @@ git commit -m "feat(frontend): sidebar 多部件（solid-ui 解剖 + Ark 行為�
 
 - [ ] **Step 3: 修 v2 的兩項 a11y**：`Sidebar` 品牌列不再是 `Link to="/"`（或移出 `<nav>`）→ 同一 nav 只有一個 `aria-current="page"`；行動版關閉時 `invisible`（若 Step 5 的 Ark drawer 已自然滿足，則以測試證明並在報告說明）。
 
-- [ ] **Step 4: 四道 gate + Edge 實測**（桌面/手機 × 淺/深色、拖曳調寬、`Cmd/Ctrl+B`、`/login` 與 `/403` 不套 shell）
+- [ ] **Step 4: 四道 gate + Edge 實測**（桌面/手機 × **以真實切換器切淺/深色**、拖曳調寬、`Cmd/Ctrl+B`、`/login` 與 `/403` 不套 shell；另確認重新整理後不閃色（anti-FOUC）與偏好記憶）
 
 - [ ] **Step 5: Commit**
 
@@ -345,8 +355,8 @@ git commit -m "docs(frontend): 元件庫 demo 頁、README 與 registry 補齊"
 - [ ] **Step 1: 四道 gate**：`pnpm typecheck && pnpm lint && pnpm test && pnpm build`（0 warning）
 
 - [ ] **Step 2: Edge 實測清單**（逐項記錄結果與截圖路徑）
-1. `/ui`：每元件所有變體渲染、深色切換
-2. shell：桌面收合/展開 + 重整後記憶、拖曳調寬、`Cmd/Ctrl+B`、行動 drawer（Esc、focus 回到觸發鈕、關閉後 Tab 不進導覽）
+1. `/ui`：每元件所有變體渲染、**以真實切換器切換淺/深色**（Task 6 的主題切換器）
+2. shell：桌面收合/展開 + 重整後記憶、拖曳調寬、`Cmd/Ctrl+B`、行動 drawer（Esc、focus 回到觸發鈕、關閉後 Tab 不進導覽）、**主題切換器的三態（light/dark/system）與重整後不閃色**
 3. 既有 5 頁：登入（兩 tab、表單錯誤關聯）、403、公司/部門（分頁換頁、modal 捲動、CRUD）、角色權限（checkbox、儲存）
 4. `aria-current` 唯一性（同一 nav）
 

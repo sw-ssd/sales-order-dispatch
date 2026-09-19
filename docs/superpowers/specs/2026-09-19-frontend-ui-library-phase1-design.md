@@ -26,6 +26,7 @@
 - 元件庫庫化：barrel export、`registry.json`、每元件文件、dev-only demo 路由
 - 四個靜態元件導入 Ark primitives（Ark 在內、對外 API 盡量維持）
 - sidebar 依 solid-ui 的 parts 解剖完整重做（Ark 拼裝），並修掉 v2 遺留的兩項 a11y 問題
+- **深色模式機制**（2026-09-19 使用者指示新增）：Tailkit 的 class-based dark mode 要真的可達 —— `ui/theme.tsx`（狀態 + 持久化 + 跟隨系統偏好）、`index.html` 的 anti-FOUC 腳本、shell 上的切換器，並以此取代「注入 class」的驗證方式
 - 既有 UI 元件與頁面在新 API 下維持全綠
 - 刪除因本階段改動而成為死碼的檔案：`ui/label.tsx`（唯一消費者 `field.tsx` 改用 Ark `Field.Label`）與 `hooks/create-pagination.ts`（頁碼改由 Ark 產生後僅剩切片職責，若確認無其他消費者即刪）
 
@@ -33,7 +34,6 @@
 - TanStack Form / Table（Phase 2/3）
 - Pragmatic drag and drop（Phase 4）
 - 後端、proto、Flutter `app/`
-- 主題切換器（`.dark` 在執行期仍不可達，屬另一條待辦）
 - 已登記的 0 消費者回歸（`table.tsx` 的 `caption-bottom`、`pagination` 的 `hideText`/`PaginationSummary` 字型）→ 若與本階段同檔可順手修，否則維持 deferred
 
 ## 2. 元件庫形狀（原位置庫化）
