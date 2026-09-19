@@ -8,6 +8,7 @@ export default defineConfig({
   plugins: [solid()],
   resolve: {
     alias: {
+      "@": path.resolve(import.meta.dirname, "src"),
       "~": path.resolve(import.meta.dirname, "src"),
     },
   },
