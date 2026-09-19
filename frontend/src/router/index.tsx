@@ -17,7 +17,7 @@ function HomePage() {
   return (
     <main class="p-8">
       <h1 class="text-2xl font-bold">多公司訂出貨系統</h1>
-      <p class="mt-2 text-gray-600">首頁佔位（Wave 1 骨架）</p>
+      <p class="mt-2 text-muted-foreground">首頁佔位（Wave 1 骨架）</p>
     </main>
   );
 }
