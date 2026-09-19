@@ -295,3 +295,212 @@ describe("<RolesPage> 角色清單查詢", () => {
     await waitFor(() => expect(getRolePermissionsSpy).toHaveBeenCalledTimes(2));
   });
 });
+
+describe("<RolesPage> 角色清單表格（TanStack Table，manual 分頁）", () => {
+  /** 第 n 個角色（n 從 1 起算）：代碼／名稱帶序號，用來辨識畫面拿到的是哪一頁的資料。 */
+  function role(n: number) {
+    return {
+      id: `r-${n}`,
+      code: `role_${n}`,
+      name: `角色 ${n}`,
+      dataScope: "all",
+      // 系統角色與停用各留一筆（第 1 筆＝內建啟用、第 2 筆＝自訂停用）：兩種列渲染都要對。
+      isSystem: n === 1,
+      isActive: n !== 2,
+    };
+  }
+
+  /** 角色清單表格（同頁另有權限矩陣那張表，故以可及名稱指名）。 */
+  const listTable = () => screen.getByRole("table", { name: "角色清單" });
+
+  /** `thead` 的欄位表頭。 */
+  const headerCells = () =>
+    [...listTable().querySelectorAll("thead th")] as HTMLTableCellElement[];
+
+  /** `tbody` 的列（含載入列與空狀態列）。 */
+  const tableRows = () =>
+    [...listTable().querySelectorAll("tbody tr")] as HTMLTableRowElement[];
+
+  /** 伺服器端分頁的替身：每頁回 `PAGE_SIZE` 筆（最後一頁可能更少），`total` 固定。 */
+  function mockPages(total: number) {
+    listRolesSpy.mockImplementation((req: { page: number }) =>
+      Promise.resolve({
+        roles: Array.from(
+          { length: Math.max(0, Math.min(PAGE_SIZE, total - (req.page - 1) * PAGE_SIZE)) },
+          (_, i) => role((req.page - 1) * PAGE_SIZE + i + 1)
+        ),
+        pagination: { total },
+      })
+    );
+  }
+
+  /**
+   * 掛載頁面並等第 1 頁的資料上畫面（以列的選取按鈕為準：名稱同時出現在 `<td>` 與其內層
+   * `<span>`，純文字查詢會撞名；按鈕的可及名稱反而唯一且正是使用者會操作的東西）。
+   */
+  async function renderPage1(total = 45) {
+    mockPages(total);
+    mountPage();
+    await waitFor(() => expect(selectButton("角色 1")).toBeTruthy());
+  }
+
+  /** 列的選取控制項：以可及名稱精確定位（名稱含角色名 → 每列的按鈕名稱唯一）。 */
+  function selectButton(name: string) {
+    return screen.getByRole("button", { name: `選取 ${name}` }) as HTMLButtonElement;
+  }
+
+  it("表頭與 columns 一致：六欄（角色代碼/名稱/系統角色/狀態/ID/操作），資料列的格子數相同", async () => {
+    await renderPage1();
+
+    const headers = headerCells();
+    expect(headers.map((h) => h.textContent?.trim())).toEqual([
+      "角色代碼",
+      "名稱",
+      "系統角色",
+      "狀態",
+      "ID",
+      "操作",
+    ]);
+
+    const firstRow = tableRows()[0];
+    expect(firstRow.querySelectorAll("td")).toHaveLength(headers.length);
+    const cells = [...firstRow.querySelectorAll("td")].map((td) => td.textContent?.trim());
+    // 角色 1：內建、啟用。
+    expect(cells.slice(0, 5)).toEqual(["role_1", "角色 1", "內建", "啟用", "r-1"]);
+
+    // 角色 2：自訂、停用（列渲染的兩種值都要正確）。
+    const cells2 = [...tableRows()[1].querySelectorAll("td")].map((td) =>
+      td.textContent?.trim()
+    );
+    expect(cells2.slice(0, 5)).toEqual(["role_2", "角色 2", "自訂", "停用", "r-2"]);
+  });
+
+  it("點列內「選取」按鈕：載入該角色的權限矩陣，且選取態跟著移到那一列", async () => {
+    await renderPage1(2);
+    // 首屏自動選取第一筆。
+    await waitFor(() => expect(selectedRoleHeading()?.textContent).toBe("角色 1"));
+    expect(selectButton("角色 1").getAttribute("aria-pressed")).toBe("true");
+
+    fireEvent.click(selectButton("角色 2"));
+
+    await waitFor(() => expect(getRolePermissionsSpy).toHaveBeenLastCalledWith({ roleId: "r-2" }));
+    expect(selectedRoleHeading()?.textContent).toBe("角色 2");
+    expect(selectButton("角色 2").getAttribute("aria-pressed")).toBe("true");
+    expect(selectButton("角色 1").getAttribute("aria-pressed")).toBe("false");
+    // 矩陣內容確實換成該角色的權限（r-2 只有「角色 檢視」）。
+    await waitFor(() => expect(granted("角色 檢視")).toBe(true));
+    expect(granted("角色 管理")).toBe(false);
+  });
+
+  it("鍵盤可達：「選取」是原生可聚焦按鈕且有名稱；整列本身不得可點", async () => {
+    await renderPage1();
+    await waitFor(() => expect(selectedRoleHeading()?.textContent).toBe("角色 1"));
+
+    const button = selectButton("角色 2");
+    expect(button.tagName).toBe("BUTTON");
+    expect(button.getAttribute("type")).toBe("button");
+    expect(button.disabled).toBe(false);
+    expect(button.tabIndex).toBe(0);
+    // 可聚焦：焦點真的停在這個控制項上（不是整列）。
+    button.focus();
+    expect(document.activeElement).toBe(button);
+
+    // 整列不可點：點第 2 列的非按鈕儲存格，選取不得改變、也不得多打一次 RPC。
+    const row = tableRows()[1];
+    expect(row.getAttribute("tabindex")).toBeNull();
+    expect(row.getAttribute("role")).toBeNull();
+    fireEvent.click(row.querySelectorAll("td")[1]);
+    await settle();
+    expect(selectedRoleHeading()?.textContent).toBe("角色 1");
+    expect(getRolePermissionsSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("換頁：清空舊選取（面板退回未選取）→ 新頁第一筆自動被選取並載入其矩陣", async () => {
+    const secondPage = Promise.withResolvers<unknown>();
+    listRolesSpy.mockReset();
+    listRolesSpy.mockResolvedValueOnce({
+      roles: [role(1), role(2)],
+      pagination: { total: 45 },
+    });
+    listRolesSpy.mockReturnValueOnce(secondPage.promise);
+    mountPage();
+    await waitFor(() => expect(selectedRoleHeading()?.textContent).toBe("角色 1"));
+
+    fireEvent.click(screen.getByRole("button", { name: "第 2 頁" }));
+
+    // 換頁立即清掉舊選取（新頁的角色清單與舊頁無關）。
+    await waitFor(() => expect(selectedRoleHeading()).toBeNull());
+    expect(screen.getByText("請選擇角色")).toBeTruthy();
+
+    secondPage.resolve({ roles: [role(21), role(22)], pagination: { total: 45 } });
+
+    // 新頁資料到達後自動選取該頁第一筆（與改寫前的 `loadRoles` 同義），列上也標示出選取態。
+    await waitFor(() => expect(selectedRoleHeading()?.textContent).toBe("角色 21"));
+    await waitFor(() => expect(getRolePermissionsSpy).toHaveBeenLastCalledWith({ roleId: "r-21" }));
+    expect(selectButton("角色 21").getAttribute("aria-pressed")).toBe("true");
+    expect(selectButton("角色 22").getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("分頁 UI 的頁碼與總數取自查詢結果（頁數由 rowCount 決定、頁碼來自 table）", async () => {
+    await renderPage1(45);
+
+    expect(screen.getByText(/第 1–20 筆,共 45 筆/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "第 1 頁" }).getAttribute("aria-current")).toBe(
+      "page"
+    );
+    expect(screen.getByRole("button", { name: "第 2 頁" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "第 3 頁" })).toBeTruthy();
+    // 45 筆 / 20 = 3 頁：不得出現第 4 頁（頁數來自後端的 total，不是當前頁的列數）。
+    expect(screen.queryByRole("button", { name: "第 4 頁" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "第 3 頁" }));
+
+    await waitFor(() => expect(listRolesSpy).toHaveBeenLastCalledWith({ page: 3, pageSize: PAGE_SIZE }));
+    await waitFor(() => expect(selectButton("角色 41")).toBeTruthy());
+    expect(screen.getByText(/第 41–45 筆,共 45 筆/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "第 3 頁" }).getAttribute("aria-current")).toBe(
+      "page"
+    );
+    // 第 3 頁只渲染它自己的 5 列（伺服器已分頁，table 不得再切一次）。
+    expect(tableRows()).toHaveLength(5);
+  });
+
+  it("clamp 守衛：換頁失敗（沒有屬於當前查詢的資料）時不得改寫頁碼，也不得多發請求", async () => {
+    const failure = Promise.withResolvers<unknown>();
+    listRolesSpy.mockReset();
+    listRolesSpy.mockResolvedValueOnce({ roles: [role(1)], pagination: { total: 45 } });
+    listRolesSpy.mockReturnValueOnce(failure.promise);
+    mountPage();
+    await waitFor(() => expect(selectButton("角色 1")).toBeTruthy());
+
+    fireEvent.click(screen.getByRole("button", { name: "第 2 頁" }));
+    await waitFor(() => expect(listRolesSpy).toHaveBeenCalledTimes(2));
+    failure.reject(new ConnectError("伺服器暫時無法使用", Code.Internal));
+
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toBe("伺服器暫時無法使用"));
+
+    // 錯誤狀態沒有 placeholder 可保留（`placeholderData` 只在 status==="pending" 且
+    // data===undefined 時套用）→ `total()` 會算成 0；若據以夾頁碼就會把頁碼改寫成第 1 頁
+    // 並多打一次請求（移除 effect 的 `!query.data` 守衛時本斷言變紅）。
+    await settle();
+    expect(listRolesSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("載入列與空狀態列的 colspan 由欄位數推導（兩者都等於表頭欄位數）", async () => {
+    const pending = Promise.withResolvers<unknown>();
+    listRolesSpy.mockReturnValue(pending.promise);
+    mountPage();
+
+    const columnCount = headerCells().length;
+    expect(columnCount).toBe(6);
+
+    const loadingRow = (await waitFor(() => screen.getByText("載入中…"))).closest("tr");
+    expect(loadingRow?.querySelector("td")?.getAttribute("colspan")).toBe(String(columnCount));
+    expect(loadingRow?.querySelectorAll("td")).toHaveLength(1);
+
+    pending.resolve({ roles: [], pagination: { total: 0 } });
+
+    const emptyRow = (await waitFor(() => screen.getByText("尚無角色"))).closest("tr");
+    expect(emptyRow?.querySelector("td")?.getAttribute("colspan")).toBe(String(columnCount));
+  });
+});
