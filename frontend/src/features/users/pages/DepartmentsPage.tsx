@@ -39,8 +39,10 @@ const PAGE_SIZE = 20;
 const COMPANY_PAGE_SIZE = 50;
 
 /**
- * 新增模式的欄位預設值。`form.reset(values)` 會把傳入的 values 併成新的 `defaultValues`
- * （編輯模式帶入該筆部門），所以每次開啟都要顯式帶一份新的複本，不能只靠 `form.reset()`。
+ * 新增模式的欄位預設值。`form.reset(values)` 會把傳入的 values **整份取代** `defaultValues`
+ * （form-core 1.33.5 `FormApi.js`：`if (values && !opts?.keepDefaultValues) this.options = { ...this.options, defaultValues: values }`），
+ * 所以每次開啟都要顯式帶完整 values（編輯模式帶入該筆部門；新增模式帶一份新複本），
+ * 不能只靠 `form.reset()`，也不能只帶部分欄位（未帶到的欄位值會變 `undefined`）。
  */
 const EMPTY_DEPARTMENT_VALUES = { name: "", company: "" };
 
@@ -55,9 +57,10 @@ const companyClient = createClient(
 
 /**
  * 原生 select 的視覺（ui/ 沒有 select 元件）。`pr-10` 與顏色覆蓋的理由同 `CompaniesPage.tsx`。
+ * invalid 變體與 `ui/input.tsx` 一致：`Field` 標紅時，同一個 modal 裡的 Input 與 select 都是紅框。
  */
 const SELECT_CLASS =
-  "block w-full rounded-lg border border-border bg-card py-2 pr-10 pl-3 text-sm text-foreground focus:border-primary focus:ring-3 focus:ring-primary/50 focus:outline-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground";
+  "block w-full rounded-lg border border-border bg-card py-2 pr-10 pl-3 text-sm text-foreground focus:border-primary focus:ring-3 focus:ring-primary/50 focus:outline-none aria-invalid:border-destructive aria-invalid:focus-visible:ring-destructive/50 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground";
 
 /**
  * 原生 select（`ui/` 沒有 select 元件，用 `SELECT_CLASS` 手寫視覺）。
