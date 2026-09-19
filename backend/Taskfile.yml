@@ -13,6 +13,20 @@ tasks:
     desc: 全部測試
     cmd: go test ./...
 
+  test:integration:
+    desc: 整合測試(testcontainers;需本機容器 runtime,env 已固化於此)
+    # 本機無 docker CLI(只有 podman machine):DOCKER_HOST 指向 podman API socket;
+    # ryuk 在 podman 下無法運作(掛載 host socket、bridge 網路皆失敗),故停用
+    # (容器改由測試的 t.Cleanup 終止)。
+    # 環境已備妥現成 PostgreSQL 時,可改設 INTEGRATION_TEST_DSN 跳過容器(gating 名沿用既有整合測試)。
+    vars:
+      PODMAN_SOCK:
+        sh: podman machine inspect | jq -r '.[0].ConnectionInfo.PodmanSocket.Path'
+    env:
+      DOCKER_HOST: "unix://{{.PODMAN_SOCK}}"
+      TESTCONTAINERS_RYUK_DISABLED: "true"
+    cmd: go test -tags integration ./...
+
   check:
     desc: fmt + vet + lint + test（D31-2）
     cmds:
