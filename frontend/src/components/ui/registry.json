@@ -1,0 +1,220 @@
+{
+  "components": [
+    {
+      "name": "badge",
+      "path": "src/components/ui/badge.tsx",
+      "kind": "primitive",
+      "ark": [],
+      "deps": ["class-variance-authority", "~/lib/cn"],
+      "tokens": [
+        "--primary",
+        "--primary-foreground",
+        "--muted",
+        "--muted-foreground",
+        "--destructive",
+        "--border",
+        "--foreground",
+        "--success",
+        "--warning",
+        "--info",
+        "--ring"
+      ],
+      "variants": ["variant:default|secondary|destructive|outline|success|warning|info"],
+      "state": "stable",
+      "docs": "src/components/ui/badge.md"
+    },
+    {
+      "name": "button",
+      "path": "src/components/ui/button.tsx",
+      "kind": "primitive",
+      "ark": [],
+      "deps": ["class-variance-authority", "~/lib/cn"],
+      "tokens": [
+        "--primary",
+        "--primary-foreground",
+        "--destructive",
+        "--destructive-foreground",
+        "--card",
+        "--foreground",
+        "--secondary",
+        "--accent",
+        "--accent-foreground",
+        "--border",
+        "--success",
+        "--success-foreground",
+        "--warning",
+        "--warning-foreground",
+        "--info",
+        "--ring"
+      ],
+      "variants": [
+        "variant:default|destructive|outline|secondary|ghost|link|success|warning|info",
+        "size:xs|sm|default|lg|icon"
+      ],
+      "state": "stable",
+      "docs": "src/components/ui/button.md"
+    },
+    {
+      "name": "card",
+      "path": "src/components/ui/card.tsx",
+      "kind": "composite",
+      "ark": [],
+      "deps": ["~/lib/cn"],
+      "tokens": [
+        "--card",
+        "--card-foreground",
+        "--border",
+        "--muted",
+        "--muted-foreground",
+        "--foreground"
+      ],
+      "variants": [],
+      "state": "stable",
+      "docs": "src/components/ui/card.md"
+    },
+    {
+      "name": "checkbox",
+      "path": "src/components/ui/checkbox.tsx",
+      "kind": "primitive",
+      "ark": ["checkbox"],
+      "deps": ["@ark-ui/solid", "~/lib/cn"],
+      "tokens": ["--primary", "--primary-foreground", "--border", "--ring"],
+      "variants": ["state:checked|unchecked|disabled"],
+      "state": "stable",
+      "docs": "src/components/ui/checkbox.md"
+    },
+    {
+      "name": "dialog",
+      "path": "src/components/ui/dialog.tsx",
+      "kind": "composite",
+      "ark": ["dialog"],
+      "deps": ["@ark-ui/solid", "solid-js/web", "~/lib/cn"],
+      "tokens": [
+        "--card",
+        "--card-foreground",
+        "--border",
+        "--foreground",
+        "--muted-foreground",
+        "--ring"
+      ],
+      "variants": ["blur:on|off", "showCloseButton:on|off"],
+      "state": "stable",
+      "docs": "src/components/ui/dialog.md"
+    },
+    {
+      "name": "field",
+      "path": "src/components/ui/field.tsx",
+      "kind": "composite",
+      "ark": ["field"],
+      "deps": ["@ark-ui/solid", "~/lib/cn"],
+      "tokens": ["--foreground", "--muted-foreground", "--destructive"],
+      "variants": ["state:default|invalid|required|disabled"],
+      "state": "stable",
+      "docs": "src/components/ui/field.md"
+    },
+    {
+      "name": "input",
+      "path": "src/components/ui/input.tsx",
+      "kind": "primitive",
+      "ark": [],
+      "deps": ["~/lib/cn"],
+      "tokens": [
+        "--card",
+        "--border",
+        "--foreground",
+        "--muted-foreground",
+        "--primary",
+        "--destructive"
+      ],
+      "variants": [],
+      "state": "stable",
+      "docs": "src/components/ui/input.md"
+    },
+    {
+      "name": "label",
+      "path": "src/components/ui/label.tsx",
+      "kind": "primitive",
+      "ark": [],
+      "deps": ["class-variance-authority", "~/lib/cn"],
+      "tokens": ["--foreground"],
+      "variants": [],
+      "state": "stable",
+      "docs": "src/components/ui/label.md"
+    },
+    {
+      "name": "pagination",
+      "path": "src/components/ui/pagination.tsx",
+      "kind": "composite",
+      "ark": ["pagination"],
+      "deps": ["class-variance-authority", "lucide-solid", "~/lib/cn"],
+      "tokens": [
+        "--card",
+        "--border",
+        "--foreground",
+        "--muted",
+        "--muted-foreground",
+        "--accent",
+        "--accent-foreground",
+        "--primary",
+        "--ring"
+      ],
+      "variants": [
+        "variant:default|outline|ghost|flat",
+        "size:default|sm|lg|icon"
+      ],
+      "state": "stable",
+      "docs": "src/components/ui/pagination.md"
+    },
+    {
+      "name": "scroll-area",
+      "path": "src/components/ui/scroll-area.tsx",
+      "kind": "primitive",
+      "ark": ["scroll-area"],
+      "deps": ["@ark-ui/solid", "~/lib/cn"],
+      "tokens": ["--border", "--muted-foreground"],
+      "variants": ["orientation:vertical|horizontal|both"],
+      "state": "stable",
+      "docs": "src/components/ui/scroll-area.md"
+    },
+    {
+      "name": "spinner",
+      "path": "src/components/ui/spinner.tsx",
+      "kind": "primitive",
+      "ark": [],
+      "deps": ["class-variance-authority", "~/lib/cn"],
+      "tokens": ["--primary"],
+      "variants": ["size:sm|default|lg"],
+      "state": "stable",
+      "docs": "src/components/ui/spinner.md"
+    },
+    {
+      "name": "table",
+      "path": "src/components/ui/table.tsx",
+      "kind": "composite",
+      "ark": [],
+      "deps": ["~/lib/cn"],
+      "tokens": ["--border", "--muted", "--foreground", "--muted-foreground"],
+      "variants": [],
+      "state": "stable",
+      "docs": "src/components/ui/table.md"
+    },
+    {
+      "name": "tabs",
+      "path": "src/components/ui/tabs.tsx",
+      "kind": "composite",
+      "ark": ["tabs"],
+      "deps": ["@ark-ui/solid", "~/lib/cn"],
+      "tokens": [
+        "--muted",
+        "--muted-foreground",
+        "--card",
+        "--foreground",
+        "--background",
+        "--ring"
+      ],
+      "variants": ["orientation:horizontal|vertical"],
+      "state": "stable",
+      "docs": "src/components/ui/tabs.md"
+    }
+  ]
+}

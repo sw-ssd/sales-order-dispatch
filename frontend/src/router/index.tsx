@@ -2,6 +2,7 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  lazyRouteComponent,
   Outlet,
   RouterProvider,
 } from "@tanstack/solid-router";
@@ -70,6 +71,18 @@ const rolesRoute = createRoute({
   beforeLoad: requireAbility("read", "role"),
 });
 
+// 元件庫展示頁（`/ui`）：只在開發環境註冊。正式 build 時 `import.meta.env.DEV`
+// 被折成 false，整個分支——含動態 import 的 demo chunk——會被 tree-shake 掉。
+const devRoutes = import.meta.env.DEV
+  ? [
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: "/ui",
+        component: lazyRouteComponent(() => import("~/components/ui/demo/UiDemoPage")),
+      }),
+    ]
+  : [];
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -77,6 +90,7 @@ const routeTree = rootRoute.addChildren([
   companiesRoute,
   departmentsRoute,
   rolesRoute,
+  ...devRoutes,
 ]);
 
 export const router = createRouter({ routeTree });
