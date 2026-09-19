@@ -33,9 +33,15 @@
 
 ## 4. 測試
 
-- **只用 stdlib `testing` + `enttest`(sqlite)**;禁止引入 testify/testcontainers 等新測試依賴(go.mod 所有權共識)。
+- **單元測試**:只用 stdlib `testing` + `enttest`(sqlite);不引入 testify(維持 stdlib 斷言風格)。
+- **整合測試(需要真 PostgreSQL / OpenFGA / Valkey 才能觀察的行為)**:**使用 testcontainers-go 起拋棄式容器**。
+  - 使用者指示 2026-09-19:**啟用 testcontainers**;先前「禁止 testcontainers 等新測試依賴」的共識作廢。新測試依賴以 `github.com/testcontainers/testcontainers-go` 為限。
+  - 一律以 build tag `integration` 隔離(`//go:build integration`):**預設 `go test ./...` 不得起容器、必須可離線跑綠**(CI 的預設 job 即為此)。
+  - 容器啟動樣板集中在**單一** helper(位置見下),個別測試**不得**自寫 `podman`/`docker` 指令或自行拼 DSN。
+  - 若環境已提供現成 DB,可用 `INTEGRATION_TEST_DSN` 覆寫、跳過容器(既有 `internal/authz/openfga/integration_test.go` 的 gating 沿用此名)。
+  - 本機無 docker CLI(只有 podman machine):執行方式由 Taskfile 固化為 `task test:integration`(內部設 `DOCKER_HOST=unix://<podman machine socket>`;podman 下 ryuk 無法運作(掛載 socket volume 不支援),故關閉 `TESTCONTAINERS_RYUK_DISABLED=true`,容器清理改由 helper 的 `t.Cleanup` 負責),**不要**把這些 env 寫死在測試碼裡。
 - enttest 每個 subtest 建獨立 client + cleanup;sqlite DSN 避免共享 cache(日後加 `t.Parallel` 才安全)。
-- Valkey 依賴的測試需有 skip 保護(本機無 Valkey 時自動略過)。
+- Valkey 依賴的測試需有 skip 保護(本機無 Valkey 時自動略過);整合測試同理,但界線較嚴:**容器執行環境連不上 → `t.Skip`(附可行動訊息);runtime 可用而設定/起容器流程壞掉 → 必須 fail**。理由是後者若也 skip,整包會靜默全綠卻一個測試都沒跑(且會遺留殘留容器)。無論哪種情況,`go test ./...`(預設路徑)都不得因環境而紅。
 - 授權門檻測試必含矩陣:未登入 / guest / staff / dept_admin / company_admin / super。
 
 ## 5. Modern Go Guidelines(必備)
@@ -48,6 +54,8 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
 ```
 
 - 首次執行會自動 `go install` CLI 至快取目錄;版本自 go.mod / go.work / 本地 toolchain 解析。
+- 若上述 plugin 路徑在**本機不存在**(實測:2026-09-19 本機 `~/.omp/plugins/node_modules/go-modern-guidelines` 不存在、`omp-plugins.lock.json` 無此 plugin),改用同支腳本的上游來源執行,並在該次交付說明你用的是哪個來源:
+  `git clone --depth 1 https://github.com/JetBrains/go-modern-guidelines /tmp/go-modern-guidelines && sh /tmp/go-modern-guidelines/plugin/skills/use-modern-go/scripts/run-tool.sh list`
 - `list` 輸出必須完整讀取,**禁止** pipe 至 head/tail/grep 截斷(新規則排在前面,截斷會漏掉重要準則)。
 - 回傳的 guideline 視為本專案現代 Go 風格權威;與既有程式碼衝突時,新碼從 guideline、舊碼不主動回刷。
 
