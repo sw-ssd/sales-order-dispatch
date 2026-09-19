@@ -437,6 +437,27 @@ describe("<CompaniesPage> 公司清單查詢", () => {
     expect(screen.queryByText("既有公司")).toBeNull();
   });
 
+  it("換頁失敗：banner 顯示錯誤，且不得把「沒拿到資料」誤顯示成空狀態", async () => {
+    const failure = Promise.withResolvers<unknown>();
+    listCompaniesSpy.mockResolvedValueOnce({
+      companies: [EXISTING_COMPANY],
+      pagination: { total: 45 },
+    });
+    listCompaniesSpy.mockReturnValueOnce(failure.promise);
+    await renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "第 2 頁" }));
+    await waitFor(() => expect(listCompaniesSpy).toHaveBeenCalledTimes(2));
+    failure.reject(new ConnectError("伺服器暫時無法使用", Code.Internal));
+
+    // 失敗要看得到（banner）……
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toBe("伺服器暫時無法使用")
+    );
+    // ……但清單不得被誤判成空的（BASE 保留上一頁列；改寫後至少不顯示空狀態字樣）。
+    expect(screen.queryByText("尚無公司資料")).toBeNull();
+  });
+
   it("篩選送出：草稿不查詢、送出後帶入參數並回到第 1 頁（只查一次）", async () => {
     mockCompanyPages();
     await renderPage();

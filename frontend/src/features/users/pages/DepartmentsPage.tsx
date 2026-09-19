@@ -173,6 +173,11 @@ export default function DepartmentsPage() {
    * `isPlaceholderData` 期間的 `data` 屬於前一個 key（placeholderData 保留的舊結果），
    * 據以退回會把剛切過去的頁碼彈回來，故必須排除；這不會漏掉退回——新資料一到，
    * `data` 與 `isPlaceholderData` 都變動，這個 effect 會再跑一次。
+   *
+   * 誠實標註：這個守衛目前是**防禦性**的（UI 上不可達）——頁碼唯一的來源是以同一份 total
+   * 產生的分頁 UI，而 placeholder 保留的正是剛離開那一頁的 total，`page > maxPage` 在
+   * placeholder 期間不會成立，故寫不出可觀察差異的測試（複審實測：移除守衛專案測試仍全綠）。
+   * 3B 把 `page` 移交 table 的 pagination state 後可達性會上升，屆時必須保留並補測試。
    */
   createEffect(() => {
     if (query.isPlaceholderData || !query.data) return;
@@ -404,7 +409,12 @@ export default function DepartmentsPage() {
                 </TableCell>
               </TableRow>
             </Show>
-            <Show when={!query.isPending && (query.data?.departments.length ?? 0) === 0}>
+            {/*
+              空狀態必須排除 `isError`：換頁／送篩選失敗時新 key 沒有 placeholder 結果
+              （`data` 為 undefined、`isPlaceholderData` 為 false），只憑「非 pending 且 0 列」
+              會把它當成空清單，與 `placeholderData` 「不閃空」的意圖相反。
+            */}
+            <Show when={!query.isPending && !query.isError && (query.data?.departments.length ?? 0) === 0}>
               <TableRow class="hover:bg-transparent">
                 <TableCell colspan={4} class="py-8 text-center text-muted-foreground">
                   尚無部門資料

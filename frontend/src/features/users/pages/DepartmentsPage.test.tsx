@@ -455,6 +455,25 @@ describe("<DepartmentsPage> 部門清單與公司下拉查詢", () => {
     expect(screen.queryByText("業務部")).toBeNull();
   });
 
+  it("換頁失敗：banner 顯示錯誤，且不得把「沒拿到資料」誤顯示成空狀態", async () => {
+    const failure = Promise.withResolvers<unknown>();
+    listDepartmentsSpy.mockResolvedValueOnce({
+      departments: [EXISTING_DEPARTMENT],
+      pagination: { total: 45 },
+    });
+    listDepartmentsSpy.mockReturnValueOnce(failure.promise);
+    await renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "第 2 頁" }));
+    await waitFor(() => expect(listDepartmentsSpy).toHaveBeenCalledTimes(2));
+    failure.reject(new ConnectError("伺服器暫時無法使用", Code.Internal));
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toBe("伺服器暫時無法使用")
+    );
+    expect(screen.queryByText("尚無部門資料")).toBeNull();
+  });
+
   it("所屬公司篩選送出：草稿不查詢、送出後帶入參數並回到第 1 頁（只查一次）", async () => {
     mockDepartmentPages();
     await renderPage();
@@ -579,5 +598,36 @@ describe("<DepartmentsPage> 部門清單與公司下拉查詢", () => {
     const select = within(dialog).getByLabelText(/所屬公司/) as HTMLSelectElement;
     await waitFor(() => expect(select.value).toBe("c-9"));
     expect(getCompanySpy).toHaveBeenCalledWith({ companyId: "c-9" });
+  });
+
+  it("公司關鍵字搜尋送出後：補載釘住的公司不再殘留在選項裡", async () => {
+    // 先造出「補載釘住」的狀態：編輯的部門，其公司不在已載入的分頁內。
+    listDepartmentsSpy.mockResolvedValue({
+      departments: [{ id: "d-9", name: "外部部門", companyId: "c-9", companyName: "未載入公司" }],
+      pagination: { total: 1 },
+    });
+    getCompanySpy.mockResolvedValue({ company: { id: "c-9", name: "未載入公司" } });
+    mountPage();
+    await waitFor(() => expect(screen.getByText("外部部門")).toBeTruthy());
+
+    fireEvent.click(screen.getByRole("button", { name: "編輯" }));
+    const dialog = await waitFor(() => screen.getByRole("dialog"));
+    await waitFor(() => expect(within(dialog).getByLabelText(/所屬公司/)).toBeTruthy());
+    expect(companyOptionIds()).toContain("c-9");
+    await closeDialog();
+
+    // 換一組關鍵字送出：補載的那筆不屬於這組關鍵字的結果，必須被清掉。
+    listCompaniesSpy.mockResolvedValue({
+      companies: [{ id: "c-1", name: "關鍵字命中公司" }],
+      pagination: { total: 1 },
+    });
+    const searchForm = document.getElementById("company-search-keyword")?.closest("form");
+    if (!searchForm) throw new Error("找不到公司搜尋表單");
+    fireEvent.input(within(searchForm).getByLabelText("公司關鍵字"), {
+      target: { value: "命中" },
+    });
+    fireEvent.submit(searchForm);
+
+    await waitFor(() => expect(companyOptionIds()).toEqual(["c-1"]));
   });
 });

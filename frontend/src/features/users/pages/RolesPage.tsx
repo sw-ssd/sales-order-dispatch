@@ -66,29 +66,36 @@ export default function RolesPage() {
   const banner = () => (query.error ? errorMessage(query.error) : error());
 
   /**
-   * 超頁退回：回傳的 total 讓目前頁碼超界時（例：該頁資料被刪光），把頁碼夾到合法值。
-   * `page` 是 query key 的一部分 → `setPage` 自己就會觸發重取，不必也不能再手動重載；
-   * 夾到的頁碼必定 ≤ maxPage < 原頁碼（嚴格遞減、下界 1），所以重取次數有界。
+   * 超頁退回 ＋ 自動選取**同一個 effect**（讀寫順序即語意）。兩者不可以拆成兩個 effect：
+   * clamp 先 `setPage` 之後，observer 的 `data` 還會落後一拍（實測：同一次 flush 內 clamp
+   * effect 先跑並把 `page` 改成 1，自動選取 effect 卻仍讀到「被放棄那一頁」的 data），
+   * 於是拿舊資料判斷「頁碼是否超界」必為合法 → 會選了被放棄那一頁的第一筆，`selectedId`
+   * 指向新頁清單中不存在的角色 → 面板永久停在「請選擇角色」、矩陣不再自動載入，且多打一次
+   * `getRolePermissions`（BASE 不會）。合併後同一次讀取裡 `page` 與 `data` 才是一致的。
    *
-   * `isPlaceholderData` 期間的 `data` 屬於前一個 key（placeholderData 保留的舊結果），
-   * 據以退回會把剛切過去的頁碼彈回來，故必須排除；這不會漏掉退回——新資料一到，
-   * `data` 與 `isPlaceholderData` 都變動，這個 effect 會再跑一次。
+   * 1. 超頁退回：回傳的 total 讓目前頁碼超界時（例：該頁資料被刪光），把頁碼夾到合法值。
+   *    `page` 是 query key 的一部分 → `setPage` 自己就會觸發重取，不必也不能再手動重載；
+   *    夾到的頁碼必定 ≤ maxPage < 原頁碼（嚴格遞減、下界 1），所以重取次數有界。
+   * 2. 自動選取：沒有選取（首屏、或剛換頁被清空）時，選取當前頁第一筆並載入其矩陣——
+   *    與改寫前 `loadRoles` 的 `if (!selectedId() && list.length > 0)` 同義。
+   *
+   * `isPlaceholderData` 期間的 `data` 屬於前一個 key（placeholderData 保留的舊結果）：據以退回
+   * 會把剛切過去的頁碼彈回來、據以選取會把舊頁的角色留在面板上（新頁資料到了就會被當成
+   * 「已有選取」而不再更正），故必須排除；這不會漏掉任何一步——新資料一到，`data` 與
+   * `isPlaceholderData` 都變動，這個 effect 會再跑一次。
+   *
+   * 誠實標註：**對 clamp 而言**這個守衛目前是防禦性的（UI 上不可達）——頁碼唯一的來源是以同一份
+   * total 產生的分頁 UI，placeholder 保留的正是剛離開那一頁的 total，`page > maxPage` 在
+   * placeholder 期間不會成立；**對選取而言它是有牙的**（`超頁退回`、`換頁清空已選角色` 兩條
+   * 測試在移除後會變紅）。3B 把 `page` 移交 table 的 pagination state 後可達性會上升。
    */
   createEffect(() => {
     if (query.isPlaceholderData || !query.data) return;
     const maxPage = Math.max(1, Math.ceil(total() / PAGE_SIZE));
-    if (page() > maxPage) setPage(maxPage);
-  });
-
-  /**
-   * 自動選取：沒有選取（首屏、或剛換頁被清空）時，選取當前頁第一筆並載入其矩陣——
-   * 與改寫前 `loadRoles` 的 `if (!selectedId() && list.length > 0)` 同義。
-   *
-   * `isPlaceholderData` 的守衛理由同超頁退回：placeholder 期間的 `data` 是舊頁的結果，
-   * 據以選取會把舊頁的角色留在面板上（新頁資料到了就會被當成「已有選取」而不再更正）。
-   */
-  createEffect(() => {
-    if (query.isPlaceholderData) return;
+    if (page() > maxPage) {
+      setPage(maxPage);
+      return;
+    }
     const list = roles();
     if (selectedId() || list.length === 0) return;
     setSelectedId(list[0].id);
@@ -96,9 +103,10 @@ export default function RolesPage() {
   });
 
   /**
-   * 換頁：清空選取（新頁的角色清單與舊頁無關），與頁碼放在同一個 `batch`——
-   * 分開寫會讓自動選取 effect 有機會以「舊頁資料＋已清空的選取」跑一次，
-   * 反而把舊頁第一筆選回來。
+   * 換頁：清空選取（新頁的角色清單與舊頁無關）＋換頁碼，兩個 signal 放在同一個 `batch`。
+   * 這裡是**順序無關性**的防禦：兩者都是同一輪 flush 的輸入，同批寫入讓 effect 只看到最終狀態。
+   * 註：現行寫法（`setPage` 先）即使沒有 batch 也不會把舊頁第一筆選回來——observer 已切到
+   * 新 key（`isPlaceholderData` 為 true），自動選取 effect 會被守衛擋下（複審實測 m8 全綠）。
    */
   const goToPage = (p: number) => {
     batch(() => {
@@ -179,7 +187,12 @@ export default function RolesPage() {
           <Show when={query.isPending}>
             <p class="px-4 py-8 text-center text-sm text-muted-foreground">載入中…</p>
           </Show>
-          <Show when={!query.isPending && roles().length === 0}>
+          {/*
+            空狀態必須排除 `isError`：換頁失敗時新 key 沒有 placeholder 結果
+            （`data` 為 undefined、`isPlaceholderData` 為 false），只憑「非 pending 且 0 列」
+            會把它當成空清單，與 `placeholderData` 「不閃空」的意圖相反。
+          */}
+          <Show when={!query.isPending && !query.isError && roles().length === 0}>
             <p class="px-4 py-8 text-center text-sm text-muted-foreground">尚無角色</p>
           </Show>
           <ul class="divide-y divide-border">

@@ -1,15 +1,19 @@
 import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Code, ConnectError } from "@connectrpc/connect";
 import type * as ConnectRpc from "@connectrpc/connect";
 import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
+import { abilityQueryOptions } from "~/lib/ability/service";
 
 // 角色 API 以 spy 取代：RolesPage 的 client 在 `queries.ts` 模組層建立，
 // 因此以 createClient 的替身攔截（ConnectError/Code 保持真實）。
-const { listRolesSpy, getRolePermissionsSpy, updateRolePermissionsSpy } = vi.hoisted(() => ({
-  listRolesSpy: vi.fn(),
-  getRolePermissionsSpy: vi.fn(),
-  updateRolePermissionsSpy: vi.fn(),
-}));
+const { listRolesSpy, getRolePermissionsSpy, updateRolePermissionsSpy, getAbilitySpy } =
+  vi.hoisted(() => ({
+    listRolesSpy: vi.fn(),
+    getRolePermissionsSpy: vi.fn(),
+    updateRolePermissionsSpy: vi.fn(),
+    getAbilitySpy: vi.fn(),
+  }));
 
 vi.mock("@connectrpc/connect", async (importOriginal) => ({
   ...(await importOriginal<typeof ConnectRpc>()),
@@ -17,6 +21,7 @@ vi.mock("@connectrpc/connect", async (importOriginal) => ({
     listRoles: listRolesSpy,
     getRolePermissions: getRolePermissionsSpy,
     updateRolePermissions: updateRolePermissionsSpy,
+    getAbility: getAbilitySpy,
   }),
 }));
 
@@ -116,6 +121,7 @@ beforeEach(() => {
   listRolesSpy.mockReset();
   getRolePermissionsSpy.mockReset();
   updateRolePermissionsSpy.mockReset();
+  getAbilitySpy.mockReset();
   listRolesSpy.mockResolvedValue({
     roles: [ADMIN, COMPANY_ADMIN],
     pagination: { total: 2 },
@@ -163,6 +169,27 @@ describe("<RolesPage> 角色清單查詢", () => {
     expect(screen.queryByRole("button", { name: /系統管理員/ })).toBeNull();
   });
 
+  it("換頁失敗：banner 顯示錯誤，且不得把「沒拿到資料」誤顯示成空狀態", async () => {
+    const failure = Promise.withResolvers<unknown>();
+    listRolesSpy.mockReset();
+    listRolesSpy.mockResolvedValueOnce({
+      roles: [ADMIN, COMPANY_ADMIN],
+      pagination: { total: 45 },
+    });
+    listRolesSpy.mockReturnValueOnce(failure.promise);
+    await renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "第 2 頁" }));
+    await waitFor(() => expect(listRolesSpy).toHaveBeenCalledTimes(2));
+    failure.reject(new ConnectError("伺服器暫時無法使用", Code.Internal));
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toBe("伺服器暫時無法使用")
+    );
+    // 清單不得被誤判成空的（BASE 保留上一頁角色；改寫後至少不顯示空狀態字樣）。
+    expect(screen.queryByText("尚無角色")).toBeNull();
+  });
+
   it("超頁退回：回傳的 total 讓頁碼超界時夾回合法頁碼，且請求次數有界", async () => {
     // 第 2 頁的結果只剩 1 頁（例：該頁資料被刪光），目前頁碼因此超界。
     listRolesSpy.mockReset();
@@ -188,6 +215,15 @@ describe("<RolesPage> 角色清單查詢", () => {
       )
     );
     expect(roleButton("系統管理員")).toBeTruthy();
+
+    // clamp 之後面板必須是**新頁（第 1 頁）的第一筆**。若自動選取 effect 搶先用「被放棄的
+    // 第 2 頁」資料選了 STAFF，`selectedId` 會指向新頁清單中不存在的角色 → 面板永久停在
+    // 「請選擇角色」、矩陣不再自動載入（本回回歸），且多打一次 `getRolePermissions`。
+    await waitFor(() => expect(selectedRoleHeading()?.textContent).toBe("系統管理員"));
+    // 首屏 r-1 ＋ 夾回後 r-1 = 2 次；被放棄的 r-3 不得被選取（多一次 RPC 是回歸的副產品）。
+    await settle();
+    expect(getRolePermissionsSpy).toHaveBeenCalledTimes(2);
+    expect(getRolePermissionsSpy).toHaveBeenLastCalledWith({ roleId: "r-1" });
   });
 
   it("換頁清空已選角色：舊選取立即失效，新頁資料到達後改選該頁第一筆", async () => {
@@ -232,10 +268,13 @@ describe("<RolesPage> 角色清單查詢", () => {
     expect(granted("角色 管理")).toBe(false);
   });
 
-  it("儲存權限：全量更新後回讀矩陣，並失效 ability 快取", async () => {
+  it("儲存權限：全量更新後回讀矩陣，並讓 ability 快取真的重取", async () => {
     updateRolePermissionsSpy.mockResolvedValue({});
+    getAbilitySpy.mockResolvedValue({ rules: [] });
     const client = await renderPage();
-    const invalidate = vi.spyOn(client, "invalidateQueries");
+    // 能力規則由路由守衛的 `ensureQueryData` 填入快取（這裡走同一條路徑、同一顆注入的 client）。
+    await client.ensureQueryData(abilityQueryOptions);
+    expect(getAbilitySpy).toHaveBeenCalledTimes(1);
 
     // 勾一格讓表單進入 dirty（未 dirty 時儲存鈕是停用的）。
     fireEvent.click(screen.getByRole("checkbox", { name: "角色 新增" }));
@@ -246,8 +285,12 @@ describe("<RolesPage> 角色清單查詢", () => {
 
     await waitFor(() => expect(updateRolePermissionsSpy).toHaveBeenCalledTimes(1));
     expect(updateRolePermissionsSpy.mock.calls[0][0]).toMatchObject({ roleId: "r-1" });
-    // 權限異動後立刻失效 ability 快取（守衛／Can 立即以新規則生效）。
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["ability"] });
+    // 效果（不是「`invalidateQueries` 被呼叫」）：注入 client 上的 `["ability"]` 快取被標記失效
+    // ——失效落到錯的 key／錯的 client 這裡就看不到。
+    expect(client.getQueryState(["ability"])?.isInvalidated).toBe(true);
+    // 而且真的重取：同一條取用路徑再拿一次時，`staleTime`(60s) 內的舊快取不得被回傳。
+    await client.ensureQueryData({ ...abilityQueryOptions, revalidateIfStale: true });
+    await waitFor(() => expect(getAbilitySpy).toHaveBeenCalledTimes(2));
     // 回讀（sort_order 正規化後）。
     await waitFor(() => expect(getRolePermissionsSpy).toHaveBeenCalledTimes(2));
   });
