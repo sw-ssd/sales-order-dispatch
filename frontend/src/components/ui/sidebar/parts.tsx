@@ -303,7 +303,7 @@ export interface SidebarProps extends Omit<JSX.HTMLAttributes<HTMLDivElement>, "
 
 /**
  * 側邊欄根層，三種渲染分支：
- * - `collapsible="none"`：單純一欄，不隨狀態改變寬度。
+ * - `collapsible="none"`：單純一欄，帶 `--sidebar-width*`，不隨狀態改變寬度。
  * - 行動寬度：Ark `drawer`（off-canvas、Esc 關閉、焦點鎖定、關閉時內容 `hidden`；內含
  *   `CloseTrigger` 關閉鈕）。
  * - 桌面：帶 `data-state|data-collapsible|data-variant|data-side` 與 `--sidebar-width*` 的
@@ -340,6 +340,8 @@ export const Sidebar: ParentComponent<SidebarProps> = (props) => {
       data-collapsible=""
       data-variant={variant()}
       data-side={side()}
+      /* 與桌面分支同一組變數：`w-[var(--sidebar-width)]` 要有變數才算數，缺了會退化成內容寬。 */
+      style={SIDEBAR_WIDTH_VARS}
       class={cn(
         "flex h-dvh w-[var(--sidebar-width)] shrink-0 flex-col border-sidebar-border bg-sidebar text-sidebar-foreground",
         side() === "right" ? "border-l" : "border-r",

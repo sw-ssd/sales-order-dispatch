@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import { Users } from "lucide-solid";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { SIDEBAR_STORAGE_KEY, SidebarProvider } from "./context";
+import { SIDEBAR_STORAGE_KEY, SIDEBAR_WIDTH, SidebarProvider } from "./context";
 import {
   Sidebar,
   SidebarContent,
@@ -201,6 +201,29 @@ describe("Sidebar", () => {
     expect(tabbableLinkNames()).not.toContain("客戶總表");
     // 仍然留在 DOM，動畫與狀態才不會被重建。
     expect(screen.getByText("客戶總表")).toBeTruthy();
+  });
+
+  it("collapsible=none 帶上與桌面分支同一組 --sidebar-width 變數", () => {
+    render(() => (
+      <SidebarProvider>
+        <Sidebar collapsible="none">
+          <SidebarContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton as="a" href="/users/companies">
+                  <span>客戶總表</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarContent>
+        </Sidebar>
+      </SidebarProvider>
+    ));
+
+    const root = sidebarRoot();
+    // `w-[var(--sidebar-width)]` 只有在變數存在時才算數：缺變數時寬度會退化成內容寬（實測 113px）。
+    expect(root.style.getPropertyValue("--sidebar-width")).toBe(SIDEBAR_WIDTH);
+    expect(root.className).toContain("w-[var(--sidebar-width)]");
   });
 
   it("收合成 icon rail 時標籤改用 Ark tooltip，展開時不掛 tooltip", async () => {
