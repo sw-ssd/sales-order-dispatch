@@ -11,19 +11,23 @@ import {
   ShieldCheck,
   Truck,
   Users,
-  X,
 } from "lucide-solid";
-import { For, Show } from "solid-js";
+import { For, Show, type Component } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import { Button } from "~/components/ui/button";
-import { cn } from "~/lib/cn";
+import {
+  Sidebar as SidebarRoot,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "~/components/ui";
 
 /** 側邊欄可導向的路由：只列 router 實際註冊的路徑。 */
-export type NavRoute =
-  | "/"
-  | "/users/companies"
-  | "/users/departments"
-  | "/users/roles";
+export type NavRoute = "/" | "/users/companies" | "/users/departments" | "/users/roles";
 
 interface NavItem {
   label: string;
@@ -42,8 +46,7 @@ interface NavSection {
  * 導覽資料來源：依 Pixso 稿的 Web 畫面順序
  * （docs/design/2026-09-18-pixso-版面美化-進度存檔.md §2.1：Dashboard → 客戶總表 → 商品總表 →
  * 訂單管理 → 派車規劃 → 單據列印 → 管理人員名單 → 角色權限）。只有已註冊的路由帶 `to`，
- * 其餘尚無路由的畫面是佔位，避免指向不存在的路徑。圖示取自既有依賴 `lucide-solid`（repo 內
- * `pagination.tsx` 已在用），不照搬 Tailkit 版型的 heroicons／icon font。
+ * 其餘尚無路由的畫面是佔位，避免指向不存在的路徑。圖示取自既有依賴 `lucide-solid`。
  */
 const NAV_SECTIONS: NavSection[] = [
   {
@@ -69,10 +72,6 @@ const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
-/** Tailkit 導覽項目的共用結構（尺寸/間距照抄，顏色改語意 token）；`group` 供圖示的 `group-hover:text-primary` 使用。 */
-const NAV_ITEM =
-  "group flex items-center gap-2 rounded-lg border px-2.5 py-2 text-sm font-medium transition-colors";
-
 /** 目前路徑對應的導覽標題；不在導覽表內（例如登入頁）回 undefined。 */
 export function pageTitleFor(pathname: string): string | undefined {
   for (const section of NAV_SECTIONS) {
@@ -82,101 +81,92 @@ export function pageTitleFor(pathname: string): string | undefined {
   return undefined;
 }
 
-function NavPlaceholder(props: { item: NavItem }) {
-  return (
-    <span
-      aria-disabled="true"
-      class={cn(NAV_ITEM, "cursor-not-allowed border-transparent text-muted-foreground/60")}
-    >
-      <Dynamic component={props.item.icon} class="size-5 flex-none" />
-      <span class="grow">{props.item.label}</span>
-    </span>
-  );
-}
-
 export interface SidebarProps {
   /** 目前路徑（由 AppShell 的 useRouterState 取得）。 */
   pathname: string;
-  /** 行動寬度的收合狀態。 */
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
 }
 
-export default function Sidebar(props: SidebarProps) {
+/**
+ * app 層的側邊欄：導覽資料（`NAV_SECTIONS`）+ 元件庫的 sidebar 部件。
+ *
+ * 兩個 v2 遺留的無障礙問題在這裡被結構本身修掉（元件層的解剖見 `~/components/ui/sidebar`）：
+ * 品牌列放在 `SidebarHeader`（在 `<nav>` 之外），所以品牌即使是連到目前路徑的 `<Link to="/">`
+ * 也不會在同一個 landmark 裡產生第二個 `aria-current="page"`；行動版抽屜由 Ark `drawer` 持有，
+ * 關閉時整棵內容離開無障礙樹與 tab 順序。
+ *
+ * 收合成 icon rail（寬度只有 3rem）時，品牌文字要收進無障礙樹、整列改為置中；這件事用側欄根層的
+ * `data-collapsible="icon"` + `group/sidebar` 表達（元件的公開樣式契約），而不是讀 context——
+ * 這個元件是 `SidebarProvider`/`SidebarLayoutProvider` 的**外層**，讀不到它們的 context。
+ */
+const Sidebar: Component<SidebarProps> = (props) => {
   return (
-    <nav
-      id="page-sidebar"
-      aria-label="主要導覽"
-      class={cn(
-        "fixed top-0 bottom-0 left-0 z-50 flex h-full w-full -translate-x-full flex-col border-r border-border bg-card transition-transform duration-500 ease-out lg:w-64 lg:translate-x-0",
-        props.open && "translate-x-0",
-      )}
-    >
-      <div class="flex h-16 w-full flex-none items-center justify-between px-4 lg:justify-center">
+    <SidebarRoot collapsible="icon" class="w-full">
+      <SidebarHeader class="group-data-[collapsible=icon]/sidebar:items-center">
         <Link
           to="/"
-          class="group inline-flex items-center gap-2 text-lg font-bold tracking-wide text-foreground"
+          class="group inline-flex items-center gap-2 overflow-hidden text-lg font-bold tracking-wide text-foreground"
         >
           <Truck class="size-5 flex-none text-primary transition group-hover:scale-110" />
-          <span>多公司訂出貨系統</span>
+          <span class="truncate group-data-[collapsible=icon]/sidebar:sr-only">
+            多公司訂出貨系統
+          </span>
         </Link>
-        <div class="lg:hidden">
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="關閉側邊欄"
-            onClick={() => props.onOpenChange(false)}
-          >
-            <X />
-          </Button>
-        </div>
-      </div>
+      </SidebarHeader>
 
-      <div class="overflow-y-auto">
-        <div class="w-full p-4">
-          <div class="space-y-1">
-            <For each={NAV_SECTIONS}>
-              {(section) => (
-                <>
-                  <Show when={section.heading}>
-                    <div class="px-3 pt-5 pb-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                      {section.heading}
-                    </div>
-                  </Show>
+      <SidebarContent>
+        <For each={NAV_SECTIONS}>
+          {(section) => (
+            <SidebarGroup>
+              <Show when={section.heading}>
+                <SidebarGroupLabel>{section.heading}</SidebarGroupLabel>
+              </Show>
+              <SidebarGroupContent>
+                <SidebarMenu>
                   <For each={section.items}>
                     {(item) => (
-                      <Show when={item.to} fallback={<NavPlaceholder item={item} />}>
-                        {(to) => (
-                          <Link
-                            to={to()}
-                            class={cn(
-                              NAV_ITEM,
-                              item.to === props.pathname
-                                ? "border-primary/20 bg-primary/10 text-foreground"
-                                : "border-transparent text-foreground hover:bg-primary/10 active:border-primary/20",
-                            )}
-                          >
-                            <Dynamic
-                              component={item.icon}
-                              class={cn(
-                                "size-5 flex-none",
-                                item.to === props.pathname
-                                  ? "text-primary"
-                                  : "text-muted-foreground group-hover:text-primary",
-                              )}
-                            />
-                            <span class="grow">{item.label}</span>
-                          </Link>
-                        )}
-                      </Show>
+                      <SidebarMenuItem>
+                        <Show
+                          when={item.to}
+                          fallback={
+                            // 尚無路由的畫面：不可點的佔位（沿用 v2 的 `aria-disabled` 語意）。
+                            <SidebarMenuButton
+                              as="span"
+                              aria-disabled="true"
+                              tooltip={item.label}
+                              class="cursor-not-allowed text-muted-foreground/70"
+                            >
+                              <Dynamic component={item.icon} />
+                              <span>{item.label}</span>
+                            </SidebarMenuButton>
+                          }
+                        >
+                          {(to) => (
+                            /**
+                             * `as={Link}` 讓 `to` 退化成 `string`（拿不到 Link 的泛型），型別擋不下
+                             * 不存在的路徑——路徑由 `NavRoute` 這個聯集守住（見 ui/sidebar/README.md）。
+                             */
+                            <SidebarMenuButton
+                              as={Link}
+                              to={to()}
+                              isActive={to() === props.pathname}
+                              tooltip={item.label}
+                            >
+                              <Dynamic component={item.icon} />
+                              <span>{item.label}</span>
+                            </SidebarMenuButton>
+                          )}
+                        </Show>
+                      </SidebarMenuItem>
                     )}
                   </For>
-                </>
-              )}
-            </For>
-          </div>
-        </div>
-      </div>
-    </nav>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
+        </For>
+      </SidebarContent>
+    </SidebarRoot>
   );
-}
+};
+
+export default Sidebar;

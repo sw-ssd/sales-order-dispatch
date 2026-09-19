@@ -15,8 +15,9 @@ import RolesPage from "~/features/users/pages/RolesPage";
 import { requireAbility } from "~/lib/ability/guards";
 
 function HomePage() {
+  // 內距由 shell 統一提供（`AppShell` 是唯一內距所有者），頁面層不再自帶。
   return (
-    <main class="p-8">
+    <main>
       <h1 class="text-2xl font-bold">多公司訂出貨系統</h1>
       <p class="mt-2 text-muted-foreground">首頁佔位（Wave 1 骨架）</p>
     </main>
