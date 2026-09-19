@@ -63,6 +63,15 @@ export default function LoginPage() {
 
   const form = createForm(() => ({
     defaultValues: { customerCode: "", password: "" },
+    // 同 CompaniesPage／DepartmentsPage：form-core 的 `_handleSubmit`（FormApi.js:509-518）在
+    // 「canSubmit 為 false 且這是第一次送出（submissionAttempts <= 1）」時直接 return，
+    // 跳過 validateAllFields。任一欄被互動後 blur 標紅（touched + invalid）就讓 canSubmit 變
+    // false，於是那一次送出一個欄位都不驗證：先讓「客戶編號」blur 成 invalid 再按第一次
+    // 「登入」，密碼欄不會標紅，要按第二次才會（F3 同根因）。
+    // `canSubmitWhenInvalid: true`（FormApi.d.ts:142 的官方選項）讓 canSubmit 恆為 true，
+    // 送出永遠走完整驗證；本頁的送出鈕不是以 canSubmit 停用（守門用 isSubmitting），不受影響；
+    // 無效表單仍由送出前的 `isFieldsValid` 檢查擋下（FormApi.js:527-540），不會真的打 API。
+    canSubmitWhenInvalid: true,
     onSubmit: async ({ value }) => {
       try {
         await authClient.login(value);

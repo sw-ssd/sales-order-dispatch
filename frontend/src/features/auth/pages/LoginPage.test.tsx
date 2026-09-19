@@ -93,6 +93,23 @@ describe("<LoginPage> 店家分頁表單", () => {
     expect(password.getAttribute("aria-invalid")).toBeNull();
   });
 
+  it("客戶編號已被 blur 標紅時送出：兩個欄位都要標紅（F3 同根因，機制層）", async () => {
+    // 真瀏覽器的觸發路徑：某欄已互動而被 blur 標紅（touched + invalid）→ canSubmit 為 false。
+    // 此時「這一次」送出不能因此短路（FormApi 的 `!canSubmit && submissionAttempts <= 1`），
+    // 否則密碼欄一個錯誤都不會產生，要按第二次才會標紅。
+    const form = await openStoreForm();
+
+    fireEvent.blur(screen.getByLabelText("客戶編號"));
+    await waitFor(() => expect(screen.getByText("請輸入客戶編號")).toBeTruthy());
+
+    fireEvent.submit(form);
+
+    await waitFor(() => expect(screen.getByText("請輸入密碼")).toBeTruthy());
+    expect(screen.getByLabelText("客戶編號").getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByLabelText("密碼").getAttribute("aria-invalid")).toBe("true");
+    expect(loginSpy).not.toHaveBeenCalled();
+  });
+
   it("填入合法值：錯誤消失，並以正確 payload 登入後導向首頁", async () => {
     loginSpy.mockResolvedValue(undefined);
     const form = await openStoreForm();
