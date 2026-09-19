@@ -279,6 +279,53 @@ describe("<DepartmentsPage> 部門 modal 表單", () => {
     await waitFor(() => expect(screen.getByText("請輸入部門名稱")).toBeTruthy());
   });
 
+  it("名稱已被 blur 標紅時送出：兩個必填欄位都要標紅（F3 迴歸，機制層）", async () => {
+    // 真瀏覽器的 F3 路徑：modal 開啟時自動聚焦部門名稱，使用者點「儲存」造成該欄 blur
+    // （touched + invalid），此時「這一次」送出不能因此跳過所屬公司的驗證。
+    listCompaniesSpy.mockResolvedValue({ companies: [], pagination: { total: 0 } });
+    await renderPage();
+    const modal = await openDialog("新增部門");
+
+    fireEvent.blur(modal.name);
+    await waitFor(() => expect(screen.getByText("請輸入部門名稱")).toBeTruthy());
+
+    fireEvent.submit(modal.form);
+
+    await waitFor(() => expect(screen.getByText("請選擇所屬公司")).toBeTruthy());
+    expect(modal.company.getAttribute("aria-invalid")).toBe("true");
+    expect(modal.name.getAttribute("aria-invalid")).toBe("true");
+    expect(createDepartmentSpy).not.toHaveBeenCalled();
+  });
+
+  it("重開後空送出：兩個必填欄位都要標紅並掛上 aria 關聯（F3 迴歸）", async () => {
+    listCompaniesSpy.mockResolvedValue({ companies: [], pagination: { total: 0 } });
+    await renderPage();
+    const first = await openDialog("新增部門");
+    fireEvent.submit(first.form);
+    await waitFor(() => expect(screen.getByText("請選擇所屬公司")).toBeTruthy());
+    await settle();
+
+    await closeDialog();
+    const reopened = await openDialog("新增部門");
+
+    fireEvent.submit(reopened.form);
+
+    await waitFor(() => expect(screen.getByText("請輸入部門名稱")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("請選擇所屬公司")).toBeTruthy());
+
+    for (const [control, message] of [
+      [reopened.name, "請輸入部門名稱"],
+      [reopened.company, "請選擇所屬公司"],
+    ] as const) {
+      expect(control.getAttribute("aria-invalid")).toBe("true");
+      const describedBy = control.getAttribute("aria-describedby");
+      expect(describedBy).toBeTruthy();
+      expect(document.getElementById(describedBy!)?.textContent).toContain(message);
+    }
+
+    expect(createDepartmentSpy).not.toHaveBeenCalled();
+  });
+
   it("編輯後再新增：不會殘留上一筆的欄位值", async () => {
     await renderPage();
     const editing = await openDialog("編輯");

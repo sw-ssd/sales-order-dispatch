@@ -271,6 +271,51 @@ describe("<CompaniesPage> 公司 modal 表單", () => {
     await waitFor(() => expect(screen.getByText("請輸入公司名稱")).toBeTruthy());
   });
 
+  it("第一欄已被 blur 標紅時送出：兩個必填欄位都要標紅（F3 迴歸，機制層）", async () => {
+    // 真瀏覽器的 F3 路徑：modal 開啟時自動聚焦第一欄，使用者點「儲存」造成第一欄 blur
+    // （touched + invalid），此時「這一次」送出不能因此跳過其他欄位的驗證。
+    await renderPage();
+    const modal = await openDialog("新增公司");
+
+    fireEvent.blur(modal.name);
+    await waitFor(() => expect(screen.getByText("請輸入公司名稱")).toBeTruthy());
+
+    fireEvent.submit(modal.form);
+
+    await waitFor(() => expect(screen.getByText("請輸入識別碼(identifier)")).toBeTruthy());
+    expect(modal.identifier.getAttribute("aria-invalid")).toBe("true");
+    expect(modal.name.getAttribute("aria-invalid")).toBe("true");
+    expect(createCompanySpy).not.toHaveBeenCalled();
+  });
+
+  it("重開後空送出：兩個必填欄位都要標紅並掛上 aria 關聯（F3 迴歸）", async () => {
+    await renderPage();
+    const first = await openDialog("新增公司");
+    fireEvent.submit(first.form);
+    await waitFor(() => expect(screen.getByText("請輸入識別碼(identifier)")).toBeTruthy());
+    await settle();
+
+    await closeDialog();
+    const reopened = await openDialog("新增公司");
+
+    fireEvent.submit(reopened.form);
+
+    await waitFor(() => expect(screen.getByText("請輸入公司名稱")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("請輸入識別碼(identifier)")).toBeTruthy());
+
+    for (const [input, message] of [
+      [reopened.name, "請輸入公司名稱"],
+      [reopened.identifier, "請輸入識別碼(identifier)"],
+    ] as const) {
+      expect(input.getAttribute("aria-invalid")).toBe("true");
+      const describedBy = input.getAttribute("aria-describedby");
+      expect(describedBy).toBeTruthy();
+      expect(document.getElementById(describedBy!)?.textContent).toContain(message);
+    }
+
+    expect(createCompanySpy).not.toHaveBeenCalled();
+  });
+
   it("編輯後再新增：不會殘留上一筆的欄位值", async () => {
     await renderPage();
     const editing = await openDialog("編輯");

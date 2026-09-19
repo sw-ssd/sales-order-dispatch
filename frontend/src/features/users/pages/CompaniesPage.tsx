@@ -125,6 +125,14 @@ export default function CompaniesPage() {
 
   const form = createForm(() => ({
     defaultValues: { ...EMPTY_COMPANY_VALUES },
+    // form-core 的 `_handleSubmit`（FormApi.js:509-518）在「canSubmit 為 false 且
+    // 這是第一次送出（submissionAttempts <= 1）」時直接 return：不只跳過 validateAllFields，
+    // 也不會有任何欄位錯誤產生。modal 開啟時 Ark 會自動聚焦第一欄，使用者按「儲存」時
+    // mousedown 讓該欄 blur（touched + invalid）→ canSubmit 變 false → 這次送出完全不驗證，
+    // 其他空的必填欄位（identifier；部門的所屬公司）不會標紅，要再按一次才會出現（F3）。
+    // `canSubmitWhenInvalid: true`（FormApi.d.ts:142 的官方選項）讓 canSubmit 恆為 true，
+    // 送出永遠走完整驗證；本頁的送出鈕不是以 canSubmit 停用（守門用 isSubmitting），不受影響。
+    canSubmitWhenInvalid: true,
     onSubmit: async ({ value }) => {
       const current = editing();
       const name = value.name.trim();
