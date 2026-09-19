@@ -676,8 +676,8 @@ cd frontend && pnpm typecheck && pnpm lint && pnpm test && pnpm build
 
 - [ ] **Step 4: 視覺比對（允許開瀏覽器，收尾必須乾淨）**
 
-5 頁 × {桌面, 手機} × {淺色, 深色} 對照，記錄任何非預期差異。做法：dev server 用 `hub` 起，截圖／computed-style 用 playwright MCP 或 `chrome-headless-shell`。
-**收尾衛生（強制）**：任務結束前 `pkill -f chrome-headless-shell` 並確認 `pgrep -f chrome-headless-shell | wc -l` 為 0、刪掉你建的暫存 profile、不留暫存檔在 repo。若瀏覽器反覆崩潰（本機 Chrome 153 有此紀錄），降級為靜態佐證並在報告明寫未做像素級驗證，不要硬撐重試。
+5 頁 × {桌面, 手機} × {淺色, 深色} 對照，記錄任何非預期差異。做法：dev server 用 `hub` 起，**用 Microsoft Edge 開**（`/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge --headless=new` + CDP；不要用 Chrome for Testing／`chrome-headless-shell`，本機會崩）。
+**收尾衛生（強制）**：`pkill -f "Microsoft Edge.*--headless"`（只殺 headless，不動使用者的 Edge 視窗）並確認 `pgrep -f "Microsoft Edge.*--headless" | wc -l` 為 0、刪掉你建的 `/tmp/msedge-*` profile、不留暫存檔在 repo。若 Edge 反覆崩潰，降級為靜態佐證並在報告明寫未做像素級驗證。
 
 - [ ] **Step 5: Commit**
 
@@ -721,15 +721,17 @@ cd frontend && pnpm typecheck && pnpm lint && pnpm test && pnpm build
 
 Expected: 全綠、**0 warning**。
 
-- [ ] **Step 5: 瀏覽器實測（允許，收尾必須乾淨）**
+- [ ] **Step 5: 瀏覽器實測（用 Microsoft Edge）**
 
+以 Microsoft Edge（`--headless=new` + CDP）或使用者手動的 Edge 視窗驗證：
 1. `/login`：兩 tab 切換（含鍵盤 ArrowLeft/ArrowRight）、Google 按鈕、店家登入表單送出錯誤路徑
 2. 公司／部門：modal 開關、Escape、點 backdrop、表單驗證、CRUD 成功後表格更新
 3. 角色權限：矩陣 checkbox 勾選、disabled 格、儲存
 4. shell：側邊欄選中態、佔位項不可點、手機寬度收合
 5. 深色模式：以上全部再看一次（`document.documentElement.classList.add('dark')`）
 
-**收尾衛生（強制）**：`pkill -f chrome-headless-shell` 後確認 `pgrep -f chrome-headless-shell | wc -l` 為 0、刪除暫存 profile、不留暫存檔。若瀏覽器反覆崩潰（本機 Chrome 153 有此紀錄），改做靜態佐證並明列未驗項，不要硬撐。
+**不要用** Chrome for Testing／`chrome-headless-shell`（本機崩潰）。
+**收尾衛生（強制）**：`pkill -f "Microsoft Edge.*--headless"` 後確認 0 殘留、刪除 `/tmp/msedge-*`、不留暫存檔。Edge 亦崩潰時改做靜態佐證並明列未驗項。
 
 - [ ] **Step 6: impeccable detector**
 
