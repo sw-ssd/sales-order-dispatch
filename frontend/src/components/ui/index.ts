@@ -17,3 +17,4 @@ export * from "./sidebar";
 export * from "./spinner";
 export * from "./table";
 export * from "./tabs";
+export * from "./theme";

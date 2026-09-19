@@ -3,6 +3,30 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Anti-FOUC：同步讀偏好並在 CSS／bundle 之前套上深色 class，避免重整時先閃一下淺色。
+      // 規則與 `src/components/ui/theme.tsx` 一字不差（內聯腳本不能引用外部檔，因此刻意留兩份；
+      // 改規則時兩邊都要改）。放在 charset 之後：腳本裡的中文註解需要先確定編碼。
+      (function () {
+        var theme = "system";
+        try {
+          var stored = window.localStorage.getItem("ui:theme");
+          if (stored === "light" || stored === "dark" || stored === "system") {
+            theme = stored;
+          }
+        } catch (error) {
+          // 隱私模式／storage 被封鎖：照樣用系統偏好。
+        }
+        var dark =
+          theme === "dark" ||
+          (theme === "system" &&
+            typeof window.matchMedia === "function" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        if (dark) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
     <title>多公司訂出貨系統</title>
     <link rel="preconnect" href="https://fonts.bunny.net" />
     <link

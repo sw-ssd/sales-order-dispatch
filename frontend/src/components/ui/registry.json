@@ -229,6 +229,31 @@
       ],
       "state": "stable",
       "docs": "src/components/ui/sidebar/README.md"
+    },
+    {
+      "name": "theme",
+      "path": "src/components/ui/theme.tsx",
+      "kind": "composite",
+      "ark": [
+        "toggle-group"
+      ],
+      "deps": [
+        "@ark-ui/solid",
+        "lucide-solid",
+        "solid-js/web",
+        "~/lib/cn"
+      ],
+      "tokens": [
+        "--border",
+        "--muted",
+        "--muted-foreground",
+        "--card",
+        "--foreground",
+        "--ring"
+      ],
+      "variants": [],
+      "state": "stable",
+      "docs": "src/components/ui/theme.md"
     }
   ]
 }
