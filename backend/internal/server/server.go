@@ -246,7 +246,8 @@ func (s *Server) authorizeRPC(ctx context.Context, rpc rpcAuth) error {
 	e := authz.EngineFrom(ctx)
 	if e == nil {
 		// OpenFGA 已啟用卻無引擎 → 視為建置/接線失敗,fail-closed:拒絕(避免授權被靜默繞過)。
-		// production 由 mountOpenFGA fail-fast 避免此態;此處為防線(即使單元測試亦不誤放行)。
+		// 正常啟動下 OPENFGA_ENABLED=true 已由 mountOpenFGA fail-fast 擋掉此態;此處為防線
+		// (即使單元測試亦不誤放行)。
 		return connect.NewError(connect.CodeInternal, errors.New("OpenFGA 授權引擎未就緒"))
 	}
 	relation := "can_read"

@@ -27,8 +27,11 @@ type Client struct {
 }
 
 // NewPostgres 以 PostgreSQL datastore 起內嵌 server 並建立 store(生產單一 store)。
+// datastore 設定以官方 sqlcommon.NewConfig() 建立:型別/寫入限額(MaxTypesPerAuthorizationModel、
+// MaxTuplesPerWrite)為 0 時,官方 server 會直接拒絕寫 model
+// ("exceeds the allowed limit of 0",F2),故不可傳空 &sqlcommon.Config{}。
 func NewPostgres(ctx context.Context, dsn, storeName string) (*Client, error) {
-	ds, err := postgres.New(dsn, &sqlcommon.Config{})
+	ds, err := postgres.New(dsn, sqlcommon.NewConfig())
 	if err != nil {
 		return nil, fmt.Errorf("openfga: postgres datastore: %w", err)
 	}

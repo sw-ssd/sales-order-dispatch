@@ -113,8 +113,9 @@ func (s *Server) openEntClient() (*ent.Client, error) {
 
 // mountOpenFGA 建立內嵌 OpenFGA 授權引擎(D32)並注入 Server。
 // datastore 與業務共用 PostgreSQL(單一 store);dsn 沿用 Database.DatabaseURL。
-// production 為 fail-closed:引擎建立失敗即終止啟動(fail-fast),避免授權閘門被靜默繞過。
-// 非 production 開發降級:失敗時 log 並以 nil 繼續(此環境由各服務層既有授權承擔)。
+// OPENFGA_ENABLED=true 即 fail-fast(F2 裁定):所有環境 bootstrap 失敗都終止啟動,
+// 因為引擎缺席(或零 tuple)會讓 GetAbility 永遠回空、前端守衛 fail-closed 把全站
+// 使用者擋在 /403,比啟動失敗更難診斷。OPENFGA_ENABLED=false 為文件化退路(語意不變)。
 func (s *Server) mountOpenFGA(db *ent.Client) {
 	if !s.cfg.OpenFGA.Enabled {
 		return
@@ -125,21 +126,14 @@ func (s *Server) mountOpenFGA(db *ent.Client) {
 	}
 	client, err := ofga.NewPostgres(context.Background(), dsn, s.cfg.OpenFGA.StoreName)
 	if err != nil {
-		if s.cfg.API.Env == "production" {
-			log.Fatalf("config: ENV=production 且 OPENFGA_ENABLED=true 但 OpenFGA 引擎建立失敗,拒絕啟動: %v", err)
-		}
-		log.Printf("openfga: 略過授權引擎掛載(engine: %v),回退既有 RLS/Casbin 授權", err)
-		return
+		log.Fatalf("openfga: 授權引擎建立失敗(OPENFGA_ENABLED=true 即拒絕啟動,不降級): %v;請先執行 `go run ./cmd/migrate up` 建立 OpenFGA datastore schema,或設 OPENFGA_ENABLED=false 明示停用", err)
 	}
 	engine := authzopenfga.New(client)
 	s.SetOpenFGA(engine)
 	// 供給 OpenFGA 授權資料(role_permissions→role ability;users→role assigned),
-	// 使 middleware Check 得以判定(修復零 tuple → 全員 deny)。production 供給失敗即終止。
+	// 使 middleware Check 得以判定(修復零 tuple → 全員 deny);供給失敗同樣終止啟動。
 	if err := authz.Provision(context.Background(), engine, db); err != nil {
-		if s.cfg.API.Env == "production" {
-			log.Fatalf("config: OpenFGA 授權資料供給失敗,拒絕啟動: %v", err)
-		}
-		log.Printf("openfga: 授權資料供給失敗(略過): %v", err)
+		log.Fatalf("openfga: 授權資料供給失敗(拒絕以零 tuple 啟動,否則全站將被擋在 /403): %v", err)
 	}
 	log.Println("openfga: 內嵌授權引擎已掛載(D32)")
 }
