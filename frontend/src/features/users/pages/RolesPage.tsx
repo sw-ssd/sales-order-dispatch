@@ -135,8 +135,11 @@ export default function RolesPage() {
       cell: (info) => (
         <div class="text-right">
           {/*
-            `aria-label` 讓每列的按鈕名稱唯一（「選取 系統管理員」）——多列都有「選取」時，
+            `aria-label` 以角色 `name` 產生（「選取 系統管理員」）——多列都有「選取」時，
             螢幕閱讀器與測試都必須能指名道姓地選到某一列；可見文字「選取」包含在名稱內（WCAG 2.5.3）。
+            條件：`roles.name`／`code` 在 DB 皆無唯一約束（00005_core_schema.sql 只 NOT NULL），
+            所以可及名稱**只在資料沒有同名角色時**才唯一；若出現同名角色，會有多列共用同一個
+            名稱。本頁測試亦以「角色名稱不重複」為前提（`getByRole("button", { name })` 撞名即失敗）。
           */}
           <Button
             type="button"
@@ -394,6 +397,8 @@ export default function RolesPage() {
           {/*
             Ark 只負責渲染：頁碼與總數都取自 table 實例（`pageIndex` 0-based → `page` 1-based），
             換頁也只回寫 table 的 pagination state（`goToPage` 另外清空選取）。
+            `table.getRowCount()` 是全 repo 唯一的 rowCount 消費點；若改回直接讀 `total()`，
+            表格的 `rowCount` 就沒有消費端，這層保護會靜默失效（實測全綠，無測試可抓）。
           */}
           <ListPagination
             total={table.getRowCount()}

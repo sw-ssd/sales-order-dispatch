@@ -99,7 +99,7 @@ export function PermissionMatrix(props: PermissionMatrixProps) {
 
   return (
     <div class="overflow-x-auto rounded-lg border border-border bg-card shadow-xs">
-      <table class="min-w-full divide-y divide-border">
+      <table aria-label="權限矩陣" class="min-w-full divide-y divide-border">
         <thead class="bg-muted">
           <tr>
             <th class="sticky left-0 z-10 bg-muted px-4 py-3 text-left text-xs font-medium tracking-wide text-muted-foreground uppercase">

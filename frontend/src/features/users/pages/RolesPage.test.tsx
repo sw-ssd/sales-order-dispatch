@@ -375,6 +375,14 @@ describe("<RolesPage> 角色清單表格（TanStack Table，manual 分頁）", (
     expect(cells2.slice(0, 5)).toEqual(["role_2", "角色 2", "自訂", "停用", "r-2"]);
   });
 
+  it("同頁兩張表都有可及名稱：清單表與權限矩陣都能被指名", async () => {
+    await renderPage1(2);
+    await waitFor(() => expect(screen.getAllByRole("table")).toHaveLength(2));
+
+    expect(screen.getByRole("table", { name: "角色清單" })).toBeTruthy();
+    expect(screen.getByRole("table", { name: "權限矩陣" })).toBeTruthy();
+  });
+
   it("點列內「選取」按鈕：載入該角色的權限矩陣，且選取態跟著移到那一列", async () => {
     await renderPage1(2);
     // 首屏自動選取第一筆。

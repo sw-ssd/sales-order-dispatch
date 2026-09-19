@@ -567,6 +567,8 @@ export default function DepartmentsPage() {
         {/*
           Ark 只負責渲染：頁碼與總數都取自 table 實例（`pageIndex` 0-based → `page` 1-based），
           使用者換頁也只回寫 table 的 pagination state。
+          `table.getRowCount()` 是全 repo 唯一的 rowCount 消費點；若改回直接讀 `total()`，
+          表格的 `rowCount` 就沒有消費端，這層保護會靜默失效（實測全綠，無測試可抓）。
         */}
         <ListPagination
           total={table.getRowCount()}
