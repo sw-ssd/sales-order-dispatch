@@ -204,6 +204,31 @@
       "variants": ["orientation:horizontal|vertical"],
       "state": "stable",
       "docs": "src/components/ui/tabs.md"
+    },
+    {
+      "name": "sidebar",
+      "path": "src/components/ui/sidebar/index.tsx",
+      "kind": "composite",
+      "ark": ["drawer", "collapsible", "tooltip", "hotkeys"],
+      "deps": ["@ark-ui/solid", "lucide-solid", "solid-js/web", "~/lib/cn"],
+      "tokens": [
+        "--sidebar",
+        "--sidebar-foreground",
+        "--sidebar-accent",
+        "--sidebar-accent-foreground",
+        "--sidebar-border",
+        "--sidebar-ring",
+        "--foreground",
+        "--background",
+        "--border"
+      ],
+      "variants": [
+        "collapsible:offcanvas|icon|none",
+        "side:left|right",
+        "variant:sidebar|floating|inset"
+      ],
+      "state": "stable",
+      "docs": "src/components/ui/sidebar/README.md"
     }
   ]
 }

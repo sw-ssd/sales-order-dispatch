@@ -13,6 +13,7 @@ export * from "./field";
 export * from "./input";
 export * from "./pagination";
 export * from "./scroll-area";
+export * from "./sidebar";
 export * from "./spinner";
 export * from "./table";
 export * from "./tabs";
