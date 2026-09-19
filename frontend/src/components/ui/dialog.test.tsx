@@ -30,8 +30,12 @@ const Harness = (props: {
 describe("Dialog", () => {
   it("open 時顯示標題與說明", () => {
     render(() => <Harness />);
+    // getByRole 預設排除 hidden 節點：關閉時 Ark 仍把內容留在 DOM（帶 hidden），
+    // 少了這條正向斷言，即使 open 沒接上本案例也會全綠。
+    expect(screen.getByRole("dialog")).toBeTruthy();
     expect(screen.getByText("新增公司")).toBeTruthy();
     expect(screen.getByText("建立新的公司主檔")).toBeTruthy();
+    expect(screen.getByText("Close")).toBeTruthy();
   });
 
   it("點關閉鈕回報 onOpenChange(false)", async () => {
@@ -44,6 +48,8 @@ describe("Dialog", () => {
 
   it("showCloseButton=false 時沒有關閉鈕", () => {
     render(() => <Harness showCloseButton={false} />);
+    // 先確認對話框確實開著，否則「沒有關閉鈕」也可能只是因為整個對話框沒渲染。
+    expect(screen.getByRole("dialog")).toBeTruthy();
     expect(screen.queryByText("Close")).toBeNull();
   });
 

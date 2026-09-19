@@ -5,12 +5,13 @@ import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, MoreHorizontal 
 
 /* --- 1. Button Variants for Pagination Links ---
  *
- * 結構取自 Tailkit（a-c-pagination-01 Simple）：外框式按鈕、`px-4`／`font-semibold`／`rounded-lg`，
- * 選中頁以 `bg-muted` 標示；相鄰按鈕共用邊框（由 PaginationContent 的 `-space-x-px` 併攏）。
+ * 結構取自 Tailkit（a-c-pagination-01 Simple）：外框式按鈕、`px-4`／`font-semibold`，選中頁以 `bg-muted` 標示。
+ * 圓角刻意不放在 base（Tailkit 的 `rounded-lg` 只加在群組頭尾）：由 PaginationContent 的
+ * `[&>li:first-child>*]`／`[&>li:last-child>*]` 提供，相鄰按鈕共用邊框則由 `-space-x-px` 併攏。
  * 顏色一律語意 token，Tailkit 的色階字面值與其 `dark:` 顏色變體全部丟棄。
  */
 export const paginationButtonVariants = cva(
-  "inline-flex cursor-pointer select-none items-center justify-center gap-2 whitespace-nowrap font-semibold transition-colors focus-visible:outline-hidden focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex cursor-pointer select-none items-center justify-center gap-2 whitespace-nowrap font-semibold transition-colors focus-visible:outline-hidden focus-visible:ring-3 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {

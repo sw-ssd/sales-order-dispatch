@@ -34,7 +34,10 @@
   --info: oklch(0.50 0.13 250);
   --border: oklch(0.9220 0 0);
   --input: oklch(0.9220 0 0);
-  --ring: oklch(0.7080 0 0);
+  /* 焦點環：L 0.708→0.58。原本 L 0.708 配 ring-ring/50 疊在白底只有 1.55:1，未達 WCAG 1.4.11 的
+     3:1；改成不透明並調暗後對白底為 4.29:1、對元件自身的 border-border 為 3.41:1。
+     （保留 /50 不可行：淺色要疊到 3:1 得讓 --ring 近乎全黑，且深色得反向調到近白。） */
+  --ring: oklch(0.58 0 0);
   --chart-1: oklch(0.75 0.18 70);
   --chart-2: oklch(0.65 0.16 50);
   --chart-3: oklch(0.55 0.15 85);
@@ -94,7 +97,7 @@
   --info: oklch(0.80 0.13 250);
   --border: oklch(0.2750 0 0);
   --input: oklch(0.3250 0 0);
-  --ring: oklch(0.5560 0 0);
+  --ring: oklch(0.60 0 0);
   --chart-1: oklch(0.75 0.18 70);
   --chart-2: oklch(0.65 0.16 50);
   --chart-3: oklch(0.55 0.15 85);

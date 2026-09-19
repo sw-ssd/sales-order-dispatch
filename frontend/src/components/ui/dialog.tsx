@@ -80,7 +80,7 @@ export const DialogContent: Component<DialogContentProps> = (props) => {
             <div class="space-y-4 p-6">{local.children}</div>
           </ScrollArea>
           <Show when={local.showCloseButton !== false}>
-            <ArkDialog.CloseTrigger class="absolute top-3 right-3 inline-flex cursor-pointer items-center justify-center rounded-lg border border-transparent p-2 text-foreground opacity-70 transition-colors hover:border-border hover:opacity-100 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+            <ArkDialog.CloseTrigger class="absolute top-3 right-3 inline-flex cursor-pointer items-center justify-center rounded-lg border border-transparent p-2 text-foreground opacity-70 transition-colors hover:border-border hover:opacity-100 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring">
               <svg
                 class="size-4"
                 viewBox="0 0 24 24"

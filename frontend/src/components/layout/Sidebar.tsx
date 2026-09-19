@@ -69,9 +69,9 @@ const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
-/** Tailkit 導覽項目的共用結構（尺寸/間距照抄，顏色改語意 token）。 */
+/** Tailkit 導覽項目的共用結構（尺寸/間距照抄，顏色改語意 token）；`group` 供圖示的 `group-hover:text-primary` 使用。 */
 const NAV_ITEM =
-  "flex items-center gap-2 rounded-lg border px-2.5 py-2 text-sm font-medium transition-colors";
+  "group flex items-center gap-2 rounded-lg border px-2.5 py-2 text-sm font-medium transition-colors";
 
 /** 目前路徑對應的導覽標題；不在導覽表內（例如登入頁）回 undefined。 */
 export function pageTitleFor(pathname: string): string | undefined {

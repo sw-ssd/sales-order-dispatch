@@ -7,7 +7,7 @@ export default function GoogleLoginButton() {
   };
 
   return (
-    <Button type="button" variant="outline" class="w-full" onClick={handleClick}>
+    <Button type="button" variant="outline" class="w-full [&_svg]:size-5" onClick={handleClick}>
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path
           fill="#4285F4"
