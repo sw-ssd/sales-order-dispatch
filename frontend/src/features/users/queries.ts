@@ -37,9 +37,20 @@ import { transport } from "~/lib/transport";
  *   key 為 `["companies", "options", { … }]`（仍以 `["companies"]` 為失效前綴），
  *   `getNextPageParam` 由「已載入頁數 × 每頁筆數 vs 總筆數」決定；頁面把各頁攤平後去重。
  *
- * 頁面用法：
- *   const query = createQuery(() => companiesQueryOptions({ page: page(), pageSize: PAGE_SIZE, … }));
- *   const options = createInfiniteQuery(() => companyDropdownQueryOptions({ keyword }));
+ * 頁面用法（3B 之後的實際形狀；`pagination`／`sorting` 都是 table 的 state getter）：
+ *   const query = createQuery(() =>
+ *     companiesQueryOptions({
+ *       page: pagination().pageIndex + 1,
+ *       pageSize: pagination().pageSize,
+ *       sort: sorting()[0]?.id ?? "",
+ *       desc: sorting()[0]?.desc ?? false,
+ *       keyword: filter().keyword || undefined,
+ *       status: filter().status || undefined,
+ *     })
+ *   );
+ *   const options = createInfiniteQuery(() =>
+ *     companyDropdownQueryOptions({ keyword: companySearch() || undefined })
+ *   );
  */
 
 /** 清單每頁筆數（三張清單共用同一個值）。 */
@@ -87,7 +98,7 @@ export const companiesQueryOptions = (params: CompanyListParams) =>
   });
 
 /** 累積式公司下拉（部門頁「所屬公司」）每頁筆數：比清單的 20 筆大，減少「載入更多」次數。 */
-export const COMPANY_DROPDOWN_PAGE_SIZE = 50;
+const COMPANY_DROPDOWN_PAGE_SIZE = 50;
 
 /** 公司下拉查詢參數（全部參數都進 queryKey）。 */
 export interface CompanyDropdownParams {

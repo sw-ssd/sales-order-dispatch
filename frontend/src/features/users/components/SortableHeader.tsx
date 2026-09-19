@@ -18,11 +18,11 @@ import { createRoot, onCleanup, type Component, type JSX } from "solid-js";
  */
 
 /**
- * 這個控制項用得到的 tanstack v9 `Column` 子集（結構型別）。
+ * 這個控制項用得到的 tanstack v9 `Column` 子集（結構型別），**僅本檔使用**。
  * 三張表的 features／列型別各不相同，只取用得到的幾個成員即可，不必為每個 feature set
  * 各寫一次泛型元件（欄位定義本身仍留在各頁，見 D8）。
  */
-export interface SortableColumn {
+interface SortableColumn {
   id: string;
   getCanSort: () => boolean;
   getIsSorted: () => false | "asc" | "desc";
@@ -50,7 +50,7 @@ export interface SortableHeaderProps {
  * 可排序表頭（按鈕）。點擊直接走 table 自己的 toggle handler——排序 state 的寫入者仍是
  * table（各頁以 `state.sorting` ＋ `onSortingChange` 受控），這一層不自己動 state。
  */
-export const SortableHeader: Component<SortableHeaderProps> = (props) => {
+const SortableHeader: Component<SortableHeaderProps> = (props) => {
   const direction = () => props.column.getIsSorted();
 
   return (
