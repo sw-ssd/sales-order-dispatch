@@ -38,9 +38,12 @@ CREATE TABLE IF NOT EXISTS role_permissions (
     action     text NOT NULL,
     conditions jsonb,
     inverted   boolean NOT NULL DEFAULT false,
-    sort_order integer NOT NULL DEFAULT 0,
-    UNIQUE (role_id, resource, action, COALESCE(md5(conditions::text), ''))
+    sort_order integer NOT NULL DEFAULT 0
 );
+-- 權限列去重:conditions 為 NULL 時視為 '',讓 NULL 條件也能被抓重
+-- (表層 UNIQUE 不接受表達式,須以唯一索引表達;md5(jsonb::text) 為 IMMUTABLE 可入索引)。
+CREATE UNIQUE INDEX IF NOT EXISTS role_permissions_unique_idx
+    ON role_permissions (role_id, resource, action, COALESCE(md5(conditions::text), ''));
 
 CREATE TABLE IF NOT EXISTS users (
     id              bigserial PRIMARY KEY,
