@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, development]
   pull_request:
-    branches: [main]
+    branches: [main, development]
 
 permissions: read-all
 
@@ -33,6 +33,25 @@ jobs:
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
           govulncheck ./...
+
+  go-integration:
+    name: Go integration(backend)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27"
+          cache-dependency-path: backend/go.sum
+      # 真 PostgreSQL 的行為(遷移語法、唯一性語意、OpenFGA schema/版本表、啟動 fail-fast)
+      # 以 testcontainers 起拋棄式容器驗證。build tag `integration` 讓預設 `go test ./...` 不起容器
+      # (backend/AGENTS.md §4);runner 自帶 docker,故不需任何 TESTCONTAINERS_* env。
+      - name: Test(integration)
+        run: go test -tags integration -count=1 ./...
 
   frontend:
     name: Frontend(SolidJS)
