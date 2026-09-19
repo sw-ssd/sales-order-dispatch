@@ -129,7 +129,7 @@ export function PermissionMatrix(props: PermissionMatrixProps) {
                       <td class="px-3 py-3 text-center">
                         <Checkbox
                           checked={checked()}
-                          onChange={(value) => toggle(resource, action, value)}
+                          onCheckedChange={(value) => toggle(resource, action, value)}
                           aria-label={`${RESOURCE_LABELS[resource] ?? resource} ${ACTION_LABELS[action] ?? action}`}
                         />
                       </td>
