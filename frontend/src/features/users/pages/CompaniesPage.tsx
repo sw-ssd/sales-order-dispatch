@@ -1,5 +1,4 @@
 import { Code, ConnectError, createClient } from "@connectrpc/connect";
-import { createConnectTransport } from "@connectrpc/connect-web";
 import { createForm } from "@tanstack/solid-form";
 import {
   Badge,
@@ -29,6 +28,7 @@ import {
   CompanyService,
   type Company,
 } from "~/lib/proto/salesorder/v1/company_pb";
+import { transport } from "~/lib/transport";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import { ListPagination } from "../components/ListPagination";
 import { companySchema } from "../schemas";
@@ -43,10 +43,7 @@ const PAGE_SIZE = 20;
  */
 const EMPTY_COMPANY_VALUES = { name: "", identifier: "", taxId: "", status: "active" };
 
-const companyClient = createClient(
-  CompanyService,
-  createConnectTransport({ baseUrl: "/api/v1" }),
-);
+const companyClient = createClient(CompanyService, transport);
 
 const STATUS_LABELS: Record<string, string> = {
   active: "啟用",

@@ -1,21 +1,18 @@
 import { Code, ConnectError, createClient } from "@connectrpc/connect";
-import { createConnectTransport } from "@connectrpc/connect-web";
 import { createSignal, For, onMount, Show } from "solid-js";
 import {
   RoleService,
   type Permission,
   type Role,
 } from "~/lib/proto/salesorder/v1/role_pb";
+import { transport } from "~/lib/transport";
 import { Button, Card } from "~/components/ui";
 import { cn } from "@/lib/cn";
 import { queryClient } from "~/lib/query-client";
 import { PermissionMatrix } from "../components/PermissionMatrix";
 import { ListPagination } from "../components/ListPagination";
 
-const roleClient = createClient(
-  RoleService,
-  createConnectTransport({ baseUrl: "/api/v1" }),
-);
+const roleClient = createClient(RoleService, transport);
 
 const PAGE_SIZE = 20;
 

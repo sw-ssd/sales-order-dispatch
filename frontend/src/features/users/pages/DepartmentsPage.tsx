@@ -1,6 +1,5 @@
 import { useFieldContext } from "@ark-ui/solid/field";
 import { Code, ConnectError, createClient } from "@connectrpc/connect";
-import { createConnectTransport } from "@connectrpc/connect-web";
 import { createForm } from "@tanstack/solid-form";
 import {
   Button,
@@ -31,6 +30,7 @@ import {
   type Company,
   type Department,
 } from "~/lib/proto/salesorder/v1/company_pb";
+import { transport } from "~/lib/transport";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import { ListPagination } from "../components/ListPagination";
 import { departmentSchema } from "../schemas";
@@ -46,14 +46,8 @@ const COMPANY_PAGE_SIZE = 50;
  */
 const EMPTY_DEPARTMENT_VALUES = { name: "", company: "" };
 
-const departmentClient = createClient(
-  DepartmentService,
-  createConnectTransport({ baseUrl: "/api/v1" }),
-);
-const companyClient = createClient(
-  CompanyService,
-  createConnectTransport({ baseUrl: "/api/v1" }),
-);
+const departmentClient = createClient(DepartmentService, transport);
+const companyClient = createClient(CompanyService, transport);
 
 /**
  * 原生 select 的視覺（ui/ 沒有 select 元件）。`pr-10` 與顏色覆蓋的理由同 `CompaniesPage.tsx`。

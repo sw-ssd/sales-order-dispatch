@@ -1,5 +1,4 @@
 import { Code, ConnectError, createClient } from "@connectrpc/connect";
-import { createConnectTransport } from "@connectrpc/connect-web";
 import { createForm } from "@tanstack/solid-form";
 import { useNavigate } from "@tanstack/solid-router";
 import {
@@ -15,14 +14,12 @@ import {
 } from "~/components/ui";
 import { createSignal, Show, type JSX } from "solid-js";
 import { AuthService } from "~/lib/proto/salesorder/v1/auth_pb";
+import { transport } from "~/lib/transport";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import GoogleLoginButton from "../components/GoogleLoginButton";
 import { loginSchema } from "../schemas";
 
-const authClient = createClient(
-  AuthService,
-  createConnectTransport({ baseUrl: "/api/v1" }),
-);
+const authClient = createClient(AuthService, transport);
 
 type LoginTab = "employee" | "store";
 
