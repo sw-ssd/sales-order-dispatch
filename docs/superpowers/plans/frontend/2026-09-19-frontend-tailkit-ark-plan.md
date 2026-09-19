@@ -692,7 +692,19 @@ git commit -m "refactor(frontend): 5 頁改用 Tailkit 版面與語意 token"
 
 **Files:**
 - Delete: `frontend/nikala.config.json`、`frontend/.cursorrules`、`frontend/.cursor/rules/nikala.mdc`（並移除空的 `.cursor/rules/`）
-- Modify: `frontend/AGENTS.md`
+- Modify: `frontend/AGENTS.md`、`frontend/src/index.css`（對比修正）、`frontend/package.json`
+
+- [ ] **Step 0: 對比修正（token 層，驗收阻斷級）**
+
+T4 與 T9 的複審各自量到三處未達 WCAG AA 4.5:1（皆為既有 token 值造成，非頁面層硬改可解）：
+
+| 用法 | 現況對比（淺色） | 來源 |
+|---|---|---|
+| `bg-primary` + 白字（實心按鈕） | 3.20:1 | T4 複審 §8.3 |
+| `text-primary` 當 14px 文字（編輯連結、選中角色名） | 3.33:1（`bg-primary/10` 上 ≈3.1:1） | T9 複審 #2 |
+| `text-muted-foreground` on `bg-muted`（停用 badge、色帶） | 4.34:1 | T9 複審 #1 |
+
+作法：調整 **`:root` 的 `--primary` 與 `--muted-foreground`**（深色模式的值也要一起確認未退步），使上述三種用法都 ≥ 4.5:1。**必須量測**：用 Microsoft Edge + CDP 讀 computed style、以 WCAG 相對亮度公式算對比，把「調整前 → 調整後」數字寫進報告（T4 已建立此量測方法，可沿用）。調整後要檢查的消費端：`Button default`（白字）、`Badge` 狀態軟底、`Sidebar` 選中項、`Pagination` active、`Input` focus ring。若某個值無法同時滿足所有用法，選最小破壞的組合並在報告說明取捨。
 
 - [ ] **Step 1: 刪除 Nikala 痕跡並改 `AGENTS.md`**
 
