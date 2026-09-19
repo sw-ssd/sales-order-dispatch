@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"slices"
+	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -277,6 +279,78 @@ func TestListRolesPagination(t *testing.T) {
 	}
 	if len(p2.Msg.GetRoles()) != 1 {
 		t.Fatalf("第2頁應剩 1 筆,got %d", len(p2.Msg.GetRoles()))
+	}
+}
+
+// seedRoleSortFixtures 建立三個角色(插入順序 丙→甲→乙,id 依序 1/2/3):
+// 名稱碼位升冪(丙乙甲)、code 升冪(甲乙丙)與 id 升冪(丙甲乙)互不相同,
+// 確保各欄位排序確實生效(值全同則無法區分)。
+func seedRoleSortFixtures(t *testing.T, ctx context.Context, db *ent.Client) {
+	t.Helper()
+	for _, f := range []struct{ code, name string }{
+		{"role-c", "丙角色"},
+		{"role-a", "甲角色"},
+		{"role-b", "乙角色"},
+	} {
+		db.Role.Create().SetCode(f.code).SetName(f.name).SetDataScope(role.DataScopeCompany).SetIsSystem(false).SaveX(ctx)
+	}
+}
+
+// listRoleNames 以指定排序取回角色名稱序列(sort 空 = 服務預設排序)。
+func listRoleNames(t *testing.T, ctx context.Context, client salesorderv1connect.RoleServiceClient, sort string, desc bool) []string {
+	t.Helper()
+	res, err := client.ListRoles(ctx, connect.NewRequest(&v1.ListRolesRequest{
+		Page: 1, PageSize: 10, Sort: sort, Desc: desc,
+	}))
+	if err != nil {
+		t.Fatalf("ListRoles(sort=%q desc=%v): %v", sort, desc, err)
+	}
+	names := make([]string, 0, len(res.Msg.GetRoles()))
+	for _, r := range res.Msg.GetRoles() {
+		names = append(names, r.GetName())
+	}
+	return names
+}
+
+// TestListRolesSort D1/P3:角色清單 sort 白名單(code/name/id)與 desc 方向。
+// **預設(sort 空)為 id 升冪**——與公司/部門的 id 降冪不同,故以兩個案例釘住
+// (空、空+desc=true)且期望值與 id 升冪一致;其餘欄位預設升冪,desc=true 轉降冪;
+// 非法值 → InvalidArgument 並列出白名單。
+func TestListRolesSort(t *testing.T) {
+	ctx := t.Context()
+	super := authz.Identity{UserID: "u0", CompanyID: "c1", Role: "super", Roles: []string{"super"}}
+	client, db := newRoleTestServer(t, super)
+	seedRoleSortFixtures(t, ctx, db)
+
+	for _, tc := range []struct {
+		name string
+		sort string
+		desc bool
+		want []string
+	}{
+		{"sort 空 → 預設 id 升冪(現行行為)", "", false, []string{"丙角色", "甲角色", "乙角色"}},
+		{"sort 空且 desc=true → 仍為預設 id 升冪(忽略 desc)", "", true, []string{"丙角色", "甲角色", "乙角色"}},
+		{"sort=code → code 升冪", "code", false, []string{"甲角色", "乙角色", "丙角色"}},
+		{"sort=code+desc → code 降冪", "code", true, []string{"丙角色", "乙角色", "甲角色"}},
+		{"sort=name → 名稱升冪(sqlite 依碼位:丙 U+4E19 < 乙 U+4E59 < 甲 U+7532)", "name", false, []string{"丙角色", "乙角色", "甲角色"}},
+		{"sort=name+desc → 名稱降冪", "name", true, []string{"甲角色", "乙角色", "丙角色"}},
+		{"sort=id → id 升冪", "id", false, []string{"丙角色", "甲角色", "乙角色"}},
+		{"sort=id+desc → id 降冪", "id", true, []string{"乙角色", "甲角色", "丙角色"}},
+	} {
+		if got := listRoleNames(t, ctx, client, tc.sort, tc.desc); !slices.Equal(got, tc.want) {
+			t.Errorf("%s:got %v,want %v", tc.name, got, tc.want)
+		}
+	}
+
+	// 非法值 → InvalidArgument,且訊息須列出白名單欄位。
+	_, err := client.ListRoles(ctx, connect.NewRequest(&v1.ListRolesRequest{Sort: "bogus"}))
+	if connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("非法 sort 應回 InvalidArgument,got %v", err)
+	}
+	for _, w := range []string{"code", "name", "id"} {
+		if !strings.Contains(err.Error(), w) {
+			t.Errorf("錯誤訊息 %q 應列出白名單欄位 %q", err.Error(), w)
+		}
 	}
 }
 

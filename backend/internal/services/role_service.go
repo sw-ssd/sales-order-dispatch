@@ -73,12 +73,17 @@ func isSuper(id authz.Identity) bool {
 	return false
 }
 
-// ListRoles 分頁列出角色(依 id 升冪;角色權限設置頁的選單)。
+// ListRoles 分頁列出角色,可依 code / name / id 排序(sort 空 → 預設 id 升冪,角色權限設置頁的選單)。
 func (s *RoleService) ListRoles(ctx context.Context, req *connect.Request[v1.ListRolesRequest]) (*connect.Response[v1.ListRolesResponse], error) {
 	if err := requireRole(ctx, "read"); err != nil {
 		return nil, err
 	}
-	list, pg, err := pageList(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), roleListSource{q: s.db.Role.Query()}, roleToProto)
+	field, desc, err := roleSortField(req.Msg.GetSort(), req.Msg.GetDesc())
+	if err != nil {
+		return nil, err
+	}
+
+	list, pg, err := pageList(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), roleListSource{q: s.db.Role.Query(), field: field, desc: desc}, roleToProto)
 	if err != nil {
 		return nil, err
 	}
@@ -97,12 +102,39 @@ func roleToProto(r *ent.Role) *v1.Role {
 	}
 }
 
-// roleListSource 為 pageList 的 ent 查詢橋接。
-type roleListSource struct{ q *ent.RoleQuery }
+// roleListSource 為 pageList 的 ent 查詢橋接(排序白名單已先解析為 field/desc)。
+type roleListSource struct {
+	q     *ent.RoleQuery
+	field string
+	desc  bool
+}
 
 func (s roleListSource) Count(ctx context.Context) (int, error) { return s.q.Count(ctx) }
 func (s roleListSource) Page(ctx context.Context, off, lim int) ([]*ent.Role, error) {
-	return s.q.Clone().Order(ent.Asc(role.FieldID)).Offset(off).Limit(lim).All(ctx)
+	order := ent.Asc(s.field)
+	if s.desc {
+		order = ent.Desc(s.field)
+	}
+	return s.q.Clone().Order(order).Offset(off).Limit(lim).All(ctx)
+}
+
+// roleSortField 解析排序參數,回傳 ent 欄位與是否降冪(比照 companySortField 的白名單樣板)。
+// sort 空 → 預設 id 升冪(現行行為,與公司/部門的 id 降冪不同)並忽略 desc;
+// 其餘欄位預設升冪,desc=true 轉降冪。
+func roleSortField(sort string, desc bool) (string, bool, error) {
+	switch sort {
+	case "":
+		return role.FieldID, false, nil
+	case "code":
+		return role.FieldCode, desc, nil
+	case "name":
+		return role.FieldName, desc, nil
+	case "id":
+		return role.FieldID, desc, nil
+	default:
+		return "", false, connect.NewError(connect.CodeInvalidArgument,
+			fmt.Errorf("排序欄位 %q 不在白名單(code/name/id)", sort))
+	}
 }
 
 // GetRolePermissions 取得角色功能權限(依 sort_order 升冪)。
