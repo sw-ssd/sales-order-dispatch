@@ -165,7 +165,10 @@ type metadictListSource struct{ q *ent.MetadictQuery }
 
 func (s metadictListSource) Count(ctx context.Context) (int, error) { return s.q.Count(ctx) }
 func (s metadictListSource) Page(ctx context.Context, off, lim int) ([]*ent.Metadict, error) {
-	return s.q.Clone().Order(ent.Asc(metadict.FieldSortOrder), ent.Asc(metadict.FieldCode)).Offset(off).Limit(lim).All(ctx)
+	// F2(與 F1 同型):code 的唯一性只有 (type, 部門),可見集合(系統預設 + 當前部門)內
+	// (sort_order, code) 並不唯一 —— 同值群被頁邊界切開時 PostgreSQL 的 ties 順序又不保證
+	// 一致,故以 id 為次序鍵收斂成全序。
+	return s.q.Clone().Order(ent.Asc(metadict.FieldSortOrder), ent.Asc(metadict.FieldCode), ent.Asc(metadict.FieldID)).Offset(off).Limit(lim).All(ctx)
 }
 
 // GetMetadict 取得單一字典(限可見範圍)。

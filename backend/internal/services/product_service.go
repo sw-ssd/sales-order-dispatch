@@ -280,7 +280,10 @@ type productListSource struct{ q *ent.ProductQuery }
 
 func (s productListSource) Count(ctx context.Context) (int, error) { return s.q.Count(ctx) }
 func (s productListSource) Page(ctx context.Context, off, lim int) ([]*ent.Product, error) {
-	return s.q.Clone().Order(ent.Asc(product.FieldCode)).Offset(off).Limit(lim).All(ctx)
+	// F2(與 F1 同型):code 的唯一性是 (department_id, code),公司層可見範圍(跨部門)內同值 ——
+	// 排序鍵非唯一時 PostgreSQL 對同值群的順序不保證一致,逐頁 LIMIT/OFFSET 會重複與遺漏資料,
+	// 故以 id 為次序鍵收斂成全序。
+	return s.q.Clone().Order(ent.Asc(product.FieldCode), ent.Asc(product.FieldID)).Offset(off).Limit(lim).All(ctx)
 }
 
 // ---- RPC ----

@@ -65,7 +65,9 @@ type routeListSource struct{ q *ent.RouteQuery }
 
 func (s routeListSource) Count(ctx context.Context) (int, error) { return s.q.Count(ctx) }
 func (s routeListSource) Page(ctx context.Context, off, lim int) ([]*ent.Route, error) {
-	return s.q.Clone().Order(ent.Asc(route.FieldSortOrder)).Offset(off).Limit(lim).All(ctx)
+	// F2(與 F1 同型):sort_order 預設 0、同值群常遠大於一頁,排序鍵非唯一時 PostgreSQL 對
+	// 同值群(ties)的順序不保證一致,逐頁 LIMIT/OFFSET 會重複與遺漏資料,故以 id 為次序鍵。
+	return s.q.Clone().Order(ent.Asc(route.FieldSortOrder), ent.Asc(route.FieldID)).Offset(off).Limit(lim).All(ctx)
 }
 
 func (s *RouteService) ListRoutes(ctx context.Context, req *connect.Request[mastersv1.ListRoutesRequest]) (*connect.Response[mastersv1.ListRoutesResponse], error) {

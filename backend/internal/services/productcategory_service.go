@@ -66,7 +66,9 @@ type catListSource struct{ q *ent.ProductCategoryQuery }
 
 func (s catListSource) Count(ctx context.Context) (int, error) { return s.q.Count(ctx) }
 func (s catListSource) Page(ctx context.Context, off, lim int) ([]*ent.ProductCategory, error) {
-	return s.q.Clone().Order(ent.Asc(productcategory.FieldSortOrder)).Offset(off).Limit(lim).All(ctx)
+	// F2(與 F1 同型):sort_order 預設 0、同值群常遠大於一頁,排序鍵非唯一時 PostgreSQL 對
+	// 同值群(ties)的順序不保證一致,逐頁 LIMIT/OFFSET 會重複與遺漏資料,故以 id 為次序鍵。
+	return s.q.Clone().Order(ent.Asc(productcategory.FieldSortOrder), ent.Asc(productcategory.FieldID)).Offset(off).Limit(lim).All(ctx)
 }
 
 func (s *ProductCategoryService) ListProductCategories(ctx context.Context, req *connect.Request[mastersv1.ListProductCategoriesRequest]) (*connect.Response[mastersv1.ListProductCategoriesResponse], error) {

@@ -13,6 +13,14 @@
 // `name` 與 `created_at` 皆非唯一。客戶端點的白名單只有升冪(proto 的 ListCustomersRequest
 // 無 `desc` 欄位),故客戶清單只掃升冪與預設排序。
 //
+// F2(Phase 3 波複審,2026-09-20):同型缺陷另外收斂在六個清單端點(六者的 proto 都沒有
+// 排序參數,排序鍵固定):加工規格/商品分類/車次以 `sort_order` 排序(欄位預設 0,同值群
+// 常遠大於一頁)、字典以 `(sort_order, code)` 排序、商品/倉別以 `code` 排序。後三者的排序鍵
+// 在可見集合內不唯一 —— 字典的 code 唯一性只有 `(type, 部門)`,同一 code 在系統預設的不同
+// type、以及「系統預設 + 當前部門」的合併視角下都會重複;商品/倉別的 code 唯一性是
+// `(department_id, code)`,而 super/company_admin 的 deptScope 回 did=nil → 可見集合跨部門,
+// 同 code 一覽無遺。六處同法修:排序鍵後追加 `ent.Asc(<entity>.FieldID)`。
+//
 // 為何 sqlite(enttest)不足以守住:sqlite 的 sorter 對相同查詢給出穩定的 tie 順序,
 // LIMIT/OFFSET 只是同一結果的切片,故本缺陷在 sqlite 上無法重現(已實測:96 筆 tie 資料、
 // 每頁 20 筆逐頁掃描,全部白名單欄位 × 升/降冪皆為全綠)。此測試因此必須跑真 PostgreSQL:
@@ -40,10 +48,22 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customer"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
+	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
+	"github.com/salesorder/sales-order-1.0/backend/ent/processingspec"
+	"github.com/salesorder/sales-order-1.0/backend/ent/product"
+	"github.com/salesorder/sales-order-1.0/backend/ent/productcategory"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
+	"github.com/salesorder/sales-order-1.0/backend/ent/route"
+	"github.com/salesorder/sales-order-1.0/backend/ent/warehouse"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1/customersv1connect"
+	mastersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/masters/v1"
+	"github.com/salesorder/sales-order-1.0/backend/internal/proto/masters/v1/mastersv1connect"
+	metadictv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/metadict/v1"
+	"github.com/salesorder/sales-order-1.0/backend/internal/proto/metadict/v1/metadictv1connect"
+	productsv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/products/v1"
+	"github.com/salesorder/sales-order-1.0/backend/internal/proto/products/v1/productsv1connect"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
@@ -55,18 +75,55 @@ const (
 	listScanPageSize = 20
 	// listScanRows 每張表的 fixture 筆數(需 > listScanPageSize × 2 才有跨頁同值群)。
 	listScanRows = 96
+	// listScanSortOrderGroups 為固定排序鍵 `sort_order` 的同值群數(加工規格/商品分類/車次):
+	// 96 / 4 = 每群 24 筆 > listScanPageSize,且 listScanPageSize 不整除 24 → 頁邊界必落在
+	// 同值群內部(tie 被切開才會重複/遺漏)。欄位預設 0,生產中同值群常遠大於此。
+	listScanSortOrderGroups = 4
+	// listScanCodeScopes 為「唯一鍵含部門、可見集合跨部門」的兩張表(商品/倉別)的同值群數:
+	// 同一個 code 在 8 個部門各建一筆 → 同值群 8 筆(listScanPageSize 不整除 8)。
+	listScanCodeScopes = 8
+	// listScanMetadictCodes 為字典 fixture 每個 type 的 code 數:六個 type(validMetadictTypes
+	// 全值)× 16 個 code = 96 筆,系統預設與指定部門各一份 → 合併視角 192 筆。
+	listScanMetadictCodes = 16
+	// listScanMaxPages 是逐頁掃描的安全上限:正常情況會在最後一頁(不足 listScanPageSize)就結束,
+	// 只有「重複/遺漏嚴重到掃不完」時才會撞上此上限而 fail(比照 F1 的終止保護)。
+	listScanMaxPages = 32
 )
 
 // listScanner 以指定排序取回「某一頁」的 id 序列(逐頁掃描與全量掃描共用同一個呼叫點)。
 type listScanner func(t *testing.T, sortField string, desc bool, page, pageSize int32) []string
 
-// TestIntegrationListPageScanMatchesFullScan F1/P1-A 迴歸:對四張清單的每個白名單排序欄位
-// (含升/降冪與預設排序;客戶端點僅升冪)以多筆同值(NULl/重複 tax_id、同名、同 status、
-// 同 created_at,遠多於一頁)的資料,逐頁掃描的結果必須與全量一致:
+// newListScanner 由「呼叫某端點取第 page 頁」的 closure 造出 listScanner:統一取出 id 與錯誤處理。
+// 各清單的參數差異(sort/desc 的有無)由 closure 自行吸收 —— 沒有排序參數的端點(見 F2)忽略
+// sortField/desc,一律以服務端固定的排序鍵查詢。
+func newListScanner[T any](
+	name string,
+	call func(sortField string, desc bool, page, pageSize int32) ([]T, error),
+	id func(T) string,
+) listScanner {
+	return func(t *testing.T, sortField string, desc bool, page, pageSize int32) []string {
+		t.Helper()
+		rows, err := call(sortField, desc, page, pageSize)
+		if err != nil {
+			t.Fatalf("%s(sort=%q desc=%v page=%d page_size=%d): %v", name, sortField, desc, page, pageSize, err)
+		}
+		ids := make([]string, 0, len(rows))
+		for _, r := range rows {
+			ids = append(ids, id(r))
+		}
+		return ids
+	}
+}
+
+// TestIntegrationListPageScanMatchesFullScan F1/P1-A/F2 迴歸:對各清單的每個排序欄位
+// (含升/降冪與預設排序;客戶端點僅升冪;F2 的六個端點沒有排序參數,只有服務端固定的排序鍵)
+// 以多筆同值(NULl/重複 tax_id、同名、同 status、同 created_at、同 sort_order、同 code,
+// 遠多於一頁)的資料,逐頁掃描的結果必須與全量一致:
 //
 //	筆數 == 全量筆數、id 集合 == 全量 id 集合、且無任何重複 id。
 //
-// 拿掉四個 listSource 的 id 次序鍵 → 本測試必須紅(消去實驗見 f1-fix-report.md / p1a-report.md)。
+// 拿掉各 listSource 的 id 次序鍵 → 本測試必須紅(消去實驗見 f1-fix-report.md /
+// p1a-report.md / tiebreak-all-report.md)。
 func TestIntegrationListPageScanMatchesFullScan(t *testing.T) {
 	// fixture 筆數與 id 集合都以「全新空庫」為前提(DB 真值即全量),覆寫模式下 skip。
 	testsupport.RequiresContainer(t)
@@ -74,73 +131,137 @@ func TestIntegrationListPageScanMatchesFullScan(t *testing.T) {
 	db := openPGEntClient(t, testsupport.Postgres(t))
 
 	co := seedListScanCompanies(t, ctx, db)
-	seedListScanDepartments(t, ctx, db, co)
+	depts := seedListScanDepartments(t, ctx, db, co)
 	seedListScanRoles(t, ctx, db)
 	seedListScanCustomers(t, ctx, db, co.ID)
+	seedListScanProcessingSpecs(t, ctx, db, co.ID, depts[0].ID)
+	seedListScanProductCategories(t, ctx, db, co.ID, depts[0].ID)
+	seedListScanRoutes(t, ctx, db, co.ID, depts[0].ID)
+	seedListScanMetadicts(t, ctx, db, depts[0].ID)
+	seedListScanProducts(t, ctx, db, co.ID, deptIDs(depts[:listScanCodeScopes]))
+	seedListScanWarehouses(t, ctx, db, co.ID, deptIDs(depts[:listScanCodeScopes]))
 
-	cc, dc, rc, cuc := newListScanServer(t, db, co.ID)
+	cl := newListScanServer(t, db, co.ID)
 
-	companyScan := func(t *testing.T, sortField string, desc bool, page, pageSize int32) []string {
-		t.Helper()
-		res, err := cc.ListCompanies(ctx, connect.NewRequest(&v1.ListCompaniesRequest{
-			Page: page, PageSize: pageSize, Sort: sortField, Desc: desc,
-		}))
-		if err != nil {
-			t.Fatalf("ListCompanies(page=%d sort=%q desc=%v): %v", page, sortField, desc, err)
-		}
-		ids := make([]string, 0, len(res.Msg.GetCompanies()))
-		for _, c := range res.Msg.GetCompanies() {
-			ids = append(ids, c.GetId())
-		}
-		return ids
-	}
-	departmentScan := func(t *testing.T, sortField string, desc bool, page, pageSize int32) []string {
-		t.Helper()
-		res, err := dc.ListDepartments(ctx, connect.NewRequest(&v1.ListDepartmentsRequest{
-			Page: page, PageSize: pageSize, Sort: sortField, Desc: desc,
-		}))
-		if err != nil {
-			t.Fatalf("ListDepartments(page=%d sort=%q desc=%v): %v", page, sortField, desc, err)
-		}
-		ids := make([]string, 0, len(res.Msg.GetDepartments()))
-		for _, d := range res.Msg.GetDepartments() {
-			ids = append(ids, d.GetId())
-		}
-		return ids
-	}
-	roleScan := func(t *testing.T, sortField string, desc bool, page, pageSize int32) []string {
-		t.Helper()
-		res, err := rc.ListRoles(ctx, connect.NewRequest(&v1.ListRolesRequest{
-			Page: page, PageSize: pageSize, Sort: sortField, Desc: desc,
-		}))
-		if err != nil {
-			t.Fatalf("ListRoles(page=%d sort=%q desc=%v): %v", page, sortField, desc, err)
-		}
-		ids := make([]string, 0, len(res.Msg.GetRoles()))
-		for _, r := range res.Msg.GetRoles() {
-			ids = append(ids, r.GetId())
-		}
-		return ids
-	}
+	companyScan := newListScanner("ListCompanies",
+		func(sortField string, desc bool, page, pageSize int32) ([]*v1.Company, error) {
+			res, err := cl.companies.ListCompanies(ctx, connect.NewRequest(&v1.ListCompaniesRequest{
+				Page: page, PageSize: pageSize, Sort: sortField, Desc: desc,
+			}))
+			if err != nil {
+				return nil, err
+			}
+			return res.Msg.GetCompanies(), nil
+		}, func(c *v1.Company) string { return c.GetId() })
+	departmentScan := newListScanner("ListDepartments",
+		func(sortField string, desc bool, page, pageSize int32) ([]*v1.Department, error) {
+			res, err := cl.departments.ListDepartments(ctx, connect.NewRequest(&v1.ListDepartmentsRequest{
+				Page: page, PageSize: pageSize, Sort: sortField, Desc: desc,
+			}))
+			if err != nil {
+				return nil, err
+			}
+			return res.Msg.GetDepartments(), nil
+		}, func(d *v1.Department) string { return d.GetId() })
+	roleScan := newListScanner("ListRoles",
+		func(sortField string, desc bool, page, pageSize int32) ([]*v1.Role, error) {
+			res, err := cl.roles.ListRoles(ctx, connect.NewRequest(&v1.ListRolesRequest{
+				Page: page, PageSize: pageSize, Sort: sortField, Desc: desc,
+			}))
+			if err != nil {
+				return nil, err
+			}
+			return res.Msg.GetRoles(), nil
+		}, func(r *v1.Role) string { return r.GetId() })
+	// 客戶端點無 desc(白名單僅升冪),request 不帶 desc;其餘六個端點(F2)連 sort 都沒有,
+	// 一律以服務端固定的排序鍵查詢 —— sortField/desc 對這些 closure 只是共用的 listScanner 簽章。
+	customerScan := newListScanner("ListCustomers",
+		func(sortField string, _ bool, page, pageSize int32) ([]*customersv1.Customer, error) {
+			res, err := cl.customers.ListCustomers(ctx, connect.NewRequest(&customersv1.ListCustomersRequest{
+				Page: page, PageSize: pageSize, Sort: sortField,
+			}))
+			if err != nil {
+				return nil, err
+			}
+			return res.Msg.GetCustomers(), nil
+		}, func(c *customersv1.Customer) string { return c.GetId() })
+	// F2:以下六個端點無排序參數,排序鍵固定(加工規格/商品分類/車次 sort_order;字典
+	// sort_order, code;商品/倉別 code),故 case 表的 field 恆為 ""。
+	specScan := newListScanner("ListProcessingSpecs",
+		func(_ string, _ bool, page, pageSize int32) ([]*mastersv1.ProcessingSpec, error) {
+			res, err := cl.specs.ListProcessingSpecs(ctx, connect.NewRequest(&mastersv1.ListProcessingSpecsRequest{
+				Page: page, PageSize: pageSize,
+			}))
+			if err != nil {
+				return nil, err
+			}
+			return res.Msg.GetProcessingSpecs(), nil
+		}, func(p *mastersv1.ProcessingSpec) string { return p.GetId() })
+	catScan := newListScanner("ListProductCategories",
+		func(_ string, _ bool, page, pageSize int32) ([]*mastersv1.ProductCategory, error) {
+			res, err := cl.cats.ListProductCategories(ctx, connect.NewRequest(&mastersv1.ListProductCategoriesRequest{
+				Page: page, PageSize: pageSize,
+			}))
+			if err != nil {
+				return nil, err
+			}
+			return res.Msg.GetProductCategories(), nil
+		}, func(c *mastersv1.ProductCategory) string { return c.GetId() })
+	routeScan := newListScanner("ListRoutes",
+		func(_ string, _ bool, page, pageSize int32) ([]*mastersv1.Route, error) {
+			res, err := cl.routes.ListRoutes(ctx, connect.NewRequest(&mastersv1.ListRoutesRequest{
+				Page: page, PageSize: pageSize,
+			}))
+			if err != nil {
+				return nil, err
+			}
+			return res.Msg.GetRoutes(), nil
+		}, func(r *mastersv1.Route) string { return r.GetId() })
+	metadictScan := newListScanner("ListMetadicts",
+		func(_ string, _ bool, page, pageSize int32) ([]*metadictv1.Metadict, error) {
+			res, err := cl.metadicts.ListMetadicts(ctx, connect.NewRequest(&metadictv1.ListMetadictsRequest{
+				Page: page, PageSize: pageSize,
+			}))
+			if err != nil {
+				return nil, err
+			}
+			return res.Msg.GetItems(), nil
+		}, func(m *metadictv1.Metadict) string { return m.GetId() })
+	// metadictDeptScan 是「系統預設 + 當前部門」的合併視角(super 帶 department_id;部門身分的
+	// metadictScope 產出等價的 where)。
+	metadictDeptScan := newListScanner("ListMetadicts(department_id 指定)",
+		func(_ string, _ bool, page, pageSize int32) ([]*metadictv1.Metadict, error) {
+			res, err := cl.metadicts.ListMetadicts(ctx, connect.NewRequest(&metadictv1.ListMetadictsRequest{
+				Page: page, PageSize: pageSize, DepartmentId: strconv.Itoa(depts[0].ID),
+			}))
+			if err != nil {
+				return nil, err
+			}
+			return res.Msg.GetItems(), nil
+		}, func(m *metadictv1.Metadict) string { return m.GetId() })
+	productScan := newListScanner("ListProducts",
+		func(_ string, _ bool, page, pageSize int32) ([]*productsv1.Product, error) {
+			res, err := cl.products.ListProducts(ctx, connect.NewRequest(&productsv1.ListProductsRequest{
+				Page: page, PageSize: pageSize,
+			}))
+			if err != nil {
+				return nil, err
+			}
+			return res.Msg.GetProducts(), nil
+		}, func(p *productsv1.Product) string { return p.GetId() })
+	warehouseScan := newListScanner("ListWarehouses",
+		func(_ string, _ bool, page, pageSize int32) ([]*mastersv1.Warehouse, error) {
+			res, err := cl.warehouses.ListWarehouses(ctx, connect.NewRequest(&mastersv1.ListWarehousesRequest{
+				Page: page, PageSize: pageSize,
+			}))
+			if err != nil {
+				return nil, err
+			}
+			return res.Msg.GetWarehouses(), nil
+		}, func(w *mastersv1.Warehouse) string { return w.GetId() })
 
-	// 客戶端點無 desc(白名單僅升冪),request 不帶 desc,故 desc 參數在此僅為與其他清單共用
-	// listScanner 簽章而存在。
-	customerScan := func(t *testing.T, sortField string, _ bool, page, pageSize int32) []string {
-		t.Helper()
-		res, err := cuc.ListCustomers(ctx, connect.NewRequest(&customersv1.ListCustomersRequest{
-			Page: page, PageSize: pageSize, Sort: sortField,
-		}))
-		if err != nil {
-			t.Fatalf("ListCustomers(page=%d sort=%q): %v", page, sortField, err)
-		}
-		ids := make([]string, 0, len(res.Msg.GetCustomers()))
-		for _, c := range res.Msg.GetCustomers() {
-			ids = append(ids, c.GetId())
-		}
-		return ids
-	}
-
-	// 白名單欄位(空字串 = 服務預設排序)皆須涵蓋,含升/降冪。
+	// 白名單欄位(空字串 = 服務預設排序)皆須涵蓋,含升/降冪;F2 的六個端點沒有排序參數,
+	// 只有固定排序鍵,故僅 "" 一列。
 	all := map[string][]string{
 		"公司": allIDs(t, func() ([]int, error) { return db.Company.Query().Select(company.FieldID).Ints(ctx) }),
 		"部門": allIDs(t, func() ([]int, error) { return db.Department.Query().Select(department.FieldID).Ints(ctx) }),
@@ -149,12 +270,39 @@ func TestIntegrationListPageScanMatchesFullScan(t *testing.T) {
 		"客戶": allIDs(t, func() ([]int, error) {
 			return db.Customer.Query().Where(customer.CompanyIDEQ(co.ID)).Select(customer.FieldID).Ints(ctx)
 		}),
+		// F2:以下六個端點的可見範圍依 deptScope —— super 回 did=nil → 公司層(跨部門);
+		// 字典另走 metadictScope:super 不過濾部門,系統預設 + 全部部門擴充皆可見(故無公司條件)。
+		"加工規格": allIDs(t, func() ([]int, error) {
+			return db.ProcessingSpec.Query().Where(processingspec.CompanyIDEQ(co.ID)).Select(processingspec.FieldID).Ints(ctx)
+		}),
+		"商品分類": allIDs(t, func() ([]int, error) {
+			return db.ProductCategory.Query().Where(productcategory.CompanyIDEQ(co.ID)).Select(productcategory.FieldID).Ints(ctx)
+		}),
+		"車次": allIDs(t, func() ([]int, error) {
+			return db.Route.Query().Where(route.CompanyIDEQ(co.ID)).Select(route.FieldID).Ints(ctx)
+		}),
+		"字典(系統預設)": allIDs(t, func() ([]int, error) {
+			return db.Metadict.Query().Where(metadict.DepartmentIDIsNil()).Select(metadict.FieldID).Ints(ctx)
+		}),
+		// 系統預設 + 指定部門(與部門身分的 metadictScope 等價的 where)。
+		"字典(併當前部門)": allIDs(t, func() ([]int, error) {
+			return db.Metadict.Query().
+				Where(metadict.Or(metadict.DepartmentIDIsNil(), metadict.DepartmentIDEQ(depts[0].ID))).
+				Select(metadict.FieldID).Ints(ctx)
+		}),
+		"商品": allIDs(t, func() ([]int, error) {
+			return db.Product.Query().Where(product.CompanyIDEQ(co.ID)).Select(product.FieldID).Ints(ctx)
+		}),
+		"倉別": allIDs(t, func() ([]int, error) {
+			return db.Warehouse.Query().Where(warehouse.CompanyIDEQ(co.ID)).Select(warehouse.FieldID).Ints(ctx)
+		}),
 	}
 	for _, tc := range []struct {
 		entity string
 		field  string
 		scan   listScanner
-		// ascOnly 表示該端點的白名單只有升冪(客戶端點的 request 無 desc 欄位)。
+		// ascOnly 表示該端點只有升冪一途:客戶端點的 request 無 desc 欄位;F2 的六個端點連
+		// sort 都沒有(排序鍵固定),故 field 一律為 ""。
 		ascOnly bool
 	}{
 		{"公司", "", companyScan, false},
@@ -174,6 +322,13 @@ func TestIntegrationListPageScanMatchesFullScan(t *testing.T) {
 		{"客戶", "name", customerScan, true},
 		{"客戶", "customer_code", customerScan, true},
 		{"客戶", "created_at", customerScan, true},
+		{"加工規格", "", specScan, true},
+		{"商品分類", "", catScan, true},
+		{"車次", "", routeScan, true},
+		{"字典(系統預設)", "", metadictScan, true},
+		{"字典(併當前部門)", "", metadictDeptScan, true},
+		{"商品", "", productScan, true},
+		{"倉別", "", warehouseScan, true},
 	} {
 		descs := []bool{false, true}
 		if tc.ascOnly {
@@ -193,7 +348,7 @@ func TestIntegrationListPageScanMatchesFullScan(t *testing.T) {
 func scanPages(t *testing.T, scan listScanner, sortField string, desc bool) []string {
 	t.Helper()
 	ids := make([]string, 0, listScanRows)
-	for page := int32(1); page <= listScanRows/listScanPageSize+1; page++ {
+	for page := int32(1); page <= listScanMaxPages; page++ {
 		got := scan(t, sortField, desc, page, listScanPageSize)
 		ids = append(ids, got...)
 		if len(got) < listScanPageSize {
@@ -201,7 +356,7 @@ func scanPages(t *testing.T, scan listScanner, sortField string, desc bool) []st
 		}
 	}
 	t.Fatalf("sort=%q desc=%v:逐頁掃描超過 %d 頁仍未結束(F1 的重複/遺漏會讓掃描不終止)",
-		sortField, desc, listScanRows/listScanPageSize+1)
+		sortField, desc, listScanMaxPages)
 	return nil
 }
 
@@ -280,17 +435,37 @@ func openPGEntClient(t *testing.T, dsn string) *ent.Client {
 	return client
 }
 
+// listScanClients 為本測試用到的全部清單 client(同一 mux、同一 super 身分)。
+type listScanClients struct {
+	companies   salesorderv1connect.CompanyServiceClient
+	departments salesorderv1connect.DepartmentServiceClient
+	roles       salesorderv1connect.RoleServiceClient
+	customers   customersv1connect.CustomerServiceClient
+	specs       mastersv1connect.ProcessingSpecServiceClient
+	cats        mastersv1connect.ProductCategoryServiceClient
+	routes      mastersv1connect.RouteServiceClient
+	metadicts   metadictv1connect.MetadictServiceClient
+	products    productsv1connect.ProductServiceClient
+	warehouses  mastersv1connect.WarehouseServiceClient
+}
+
 // newListScanServer 以 super 身分(全權,涵蓋 requireScope/requireRole 門檻與 deptScope 的
-// 公司範圍)把公司 + 部門 + 角色 + 客戶 handler 掛在單一 mux 上(與 sqlite 版 newTestServer
-// 同構,只換 DB)。companyID 為客戶 fixture 所屬公司:客戶端點以 deptScope 解析身分的
-// CompanyID 作為可見範圍,故須為數字(其餘清單只用 requireScope,不看此欄位)。
-func newListScanServer(t *testing.T, db *ent.Client, companyID int) (salesorderv1connect.CompanyServiceClient, salesorderv1connect.DepartmentServiceClient, salesorderv1connect.RoleServiceClient, customersv1connect.CustomerServiceClient) {
+// 公司範圍)把十張清單的 handler 掛在單一 mux 上(與 sqlite 版 newTestServer 同構,只換 DB)。
+// companyID 為 fixture 所屬公司:各端點以 deptScope 解析身分的 CompanyID 作為可見範圍,
+// 故須為數字。
+func newListScanServer(t *testing.T, db *ent.Client, companyID int) listScanClients {
 	t.Helper()
 	super := authz.Identity{UserID: "1", CompanyID: strconv.Itoa(companyID), Role: "super", Roles: []string{"super"}}
 	mux := http.NewServeMux()
 	RegisterCompanyServices(mux, db)
 	RegisterRoleServices(mux, db)
 	RegisterCustomerServices(mux, db, "http://localhost:3000")
+	RegisterProcessingSpecService(mux, db)
+	RegisterProductCategoryService(mux, db)
+	RegisterRouteService(mux, db)
+	RegisterMetadictServices(mux, db)
+	RegisterProductService(mux, db)
+	RegisterWarehouseService(mux, db)
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := authz.WithIdentity(r.Context(), super)
 		ctx = authz.WithCASLEnabled(ctx, true)
@@ -300,10 +475,18 @@ func newListScanServer(t *testing.T, db *ent.Client, companyID int) (salesorderv
 	ts := httptest.NewServer(handler)
 	t.Cleanup(ts.Close)
 
-	return salesorderv1connect.NewCompanyServiceClient(http.DefaultClient, ts.URL),
-		salesorderv1connect.NewDepartmentServiceClient(http.DefaultClient, ts.URL),
-		salesorderv1connect.NewRoleServiceClient(http.DefaultClient, ts.URL),
-		customersv1connect.NewCustomerServiceClient(http.DefaultClient, ts.URL)
+	return listScanClients{
+		companies:   salesorderv1connect.NewCompanyServiceClient(http.DefaultClient, ts.URL),
+		departments: salesorderv1connect.NewDepartmentServiceClient(http.DefaultClient, ts.URL),
+		roles:       salesorderv1connect.NewRoleServiceClient(http.DefaultClient, ts.URL),
+		customers:   customersv1connect.NewCustomerServiceClient(http.DefaultClient, ts.URL),
+		specs:       mastersv1connect.NewProcessingSpecServiceClient(http.DefaultClient, ts.URL),
+		cats:        mastersv1connect.NewProductCategoryServiceClient(http.DefaultClient, ts.URL),
+		routes:      mastersv1connect.NewRouteServiceClient(http.DefaultClient, ts.URL),
+		metadicts:   metadictv1connect.NewMetadictServiceClient(http.DefaultClient, ts.URL),
+		products:    productsv1connect.NewProductServiceClient(http.DefaultClient, ts.URL),
+		warehouses:  mastersv1connect.NewWarehouseServiceClient(http.DefaultClient, ts.URL),
+	}
 }
 
 // seedListScanCompanies 建立 listScanRows 家公司並回傳第一家(供部門掛載)。
@@ -335,9 +518,10 @@ func seedListScanCompanies(t *testing.T, ctx context.Context, db *ent.Client) *e
 	return created[0]
 }
 
-// seedListScanDepartments 在單一公司下建立 listScanRows 個部門:name 每 24 筆同名
-// (部門無其他排序欄位,同值群須大於 listScanPageSize 才會被頁邊界切開)。
-func seedListScanDepartments(t *testing.T, ctx context.Context, db *ent.Client, co *ent.Company) {
+// seedListScanDepartments 在單一公司下建立 listScanRows 個部門並回傳(供 F2 的商品/倉別/
+// 字典 fixture 掛載):name 每 24 筆同名(部門無其他排序欄位,同值群須大於 listScanPageSize
+// 才會被頁邊界切開)。
+func seedListScanDepartments(t *testing.T, ctx context.Context, db *ent.Client, co *ent.Company) []*ent.Department {
 	t.Helper()
 	builders := make([]*ent.DepartmentCreate, 0, listScanRows)
 	for i := range listScanRows {
@@ -345,9 +529,20 @@ func seedListScanDepartments(t *testing.T, ctx context.Context, db *ent.Client, 
 			SetName(fmt.Sprintf("部門%02d", i/24)).
 			SetCompanyID(co.ID))
 	}
-	if _, err := db.Department.CreateBulk(builders...).Save(ctx); err != nil {
+	created, err := db.Department.CreateBulk(builders...).Save(ctx)
+	if err != nil {
 		t.Fatalf("建立部門 fixture: %v", err)
 	}
+	return created
+}
+
+// deptIDs 取出部門 id(seedListScan* 系列的 ent builder 只吃 id)。
+func deptIDs(depts []*ent.Department) []int {
+	out := make([]int, 0, len(depts))
+	for _, d := range depts {
+		out = append(out, d.ID)
+	}
+	return out
 }
 
 // seedListScanRoles 建立 listScanRows 個角色:name 每 24 筆同名、code 唯一
@@ -382,5 +577,129 @@ func seedListScanCustomers(t *testing.T, ctx context.Context, db *ent.Client, co
 	}
 	if _, err := db.Customer.CreateBulk(builders...).Save(ctx); err != nil {
 		t.Fatalf("建立客戶 fixture: %v", err)
+	}
+}
+
+// seedListScanProcessingSpecs 建立 listScanRows 個加工規格(掛同一部門):固定排序鍵
+// `sort_order` 每 listScanRows/listScanSortOrderGroups 筆同值(共 4 群,群內 code 互異)——
+// 生產中 sort_order 欄位預設 0,同值群常遠大於一頁,這裡造出「大於一頁且不整除頁寬」的同值群
+// 以確保頁邊界落在群內。
+func seedListScanProcessingSpecs(t *testing.T, ctx context.Context, db *ent.Client, companyID, departmentID int) {
+	t.Helper()
+	builders := make([]*ent.ProcessingSpecCreate, 0, listScanRows)
+	for i := range listScanRows {
+		builders = append(builders, db.ProcessingSpec.Create().
+			SetCompanyID(companyID).
+			SetDepartmentID(departmentID).
+			SetCode(fmt.Sprintf("SPEC-%03d", i)).
+			SetName(fmt.Sprintf("加工規格%02d", i)).
+			SetSortOrder(i/(listScanRows/listScanSortOrderGroups)))
+	}
+	if _, err := db.ProcessingSpec.CreateBulk(builders...).Save(ctx); err != nil {
+		t.Fatalf("建立加工規格 fixture: %v", err)
+	}
+}
+
+// seedListScanProductCategories 建立 listScanRows 個商品分類(掛同一部門):固定排序鍵
+// `sort_order` 每 24 筆同值(同 seedListScanProcessingSpecs 的造法);code 於部門內唯一。
+func seedListScanProductCategories(t *testing.T, ctx context.Context, db *ent.Client, companyID, departmentID int) {
+	t.Helper()
+	builders := make([]*ent.ProductCategoryCreate, 0, listScanRows)
+	for i := range listScanRows {
+		builders = append(builders, db.ProductCategory.Create().
+			SetCompanyID(companyID).
+			SetDepartmentID(departmentID).
+			SetCode(fmt.Sprintf("CAT-%03d", i)).
+			SetName(fmt.Sprintf("商品分類%02d", i)).
+			SetSortOrder(i/(listScanRows/listScanSortOrderGroups)))
+	}
+	if _, err := db.ProductCategory.CreateBulk(builders...).Save(ctx); err != nil {
+		t.Fatalf("建立商品分類 fixture: %v", err)
+	}
+}
+
+// seedListScanRoutes 建立 listScanRows 個車次(掛同一部門):固定排序鍵 `sort_order` 每 24 筆
+// 同值;code 於部門內唯一。
+func seedListScanRoutes(t *testing.T, ctx context.Context, db *ent.Client, companyID, departmentID int) {
+	t.Helper()
+	builders := make([]*ent.RouteCreate, 0, listScanRows)
+	for i := range listScanRows {
+		builders = append(builders, db.Route.Create().
+			SetCompanyID(companyID).
+			SetDepartmentID(departmentID).
+			SetCode(fmt.Sprintf("ROUTE-%03d", i)).
+			SetName(fmt.Sprintf("車次%02d", i)).
+			SetSortOrder(i/(listScanRows/listScanSortOrderGroups)))
+	}
+	if _, err := db.Route.CreateBulk(builders...).Save(ctx); err != nil {
+		t.Fatalf("建立車次 fixture: %v", err)
+	}
+}
+
+// seedListScanMetadicts 建立 2 × listScanMetadictCodes × 6 個字典:排序鍵是 `(sort_order, code)`,
+// 而 code 的生產唯一性只有 `(type, 部門)`(migration 00011 的兩道條件索引)。故同一批 code 各建在
+// 六個 type(validMetadictTypes 全值)上,並各再建一份屬於 departmentID 的部門擴充 ——
+//   - super 未指定 department_id(管理視角):可見集合 = 系統預設(96 筆),同一 code 有 6 筆同值;
+//   - super 指定 department_id / 部門身分:可見集合 = 系統預設 + 該部門(192 筆),同一 code 有
+//     12 筆同值(metadictScope 對部門身分的 where 與 super 帶 department_id 時完全相同)。
+//
+// 兩者的同值群都不整除 listScanPageSize,頁邊界必落在群內。
+func seedListScanMetadicts(t *testing.T, ctx context.Context, db *ent.Client, departmentID int) {
+	t.Helper()
+	types := []string{"unit", "payment_method", "settlement_method", "customer_type", "invoice_type", "order_source"}
+	perScope := listScanMetadictCodes * len(types)
+	builders := make([]*ent.MetadictCreate, 0, 2*perScope)
+	for scope := range 2 { // 0 = 系統預設(department_id NULL);1 = departmentID 的部門擴充
+		for i := range perScope {
+			b := db.Metadict.Create().
+				SetType(types[i%len(types)]).
+				SetCode(fmt.Sprintf("MD-%02d", i/len(types))).
+				SetDisplayName(fmt.Sprintf("字典%02d-%02d", scope, i))
+			if scope == 1 {
+				b = b.SetDepartmentID(departmentID)
+			}
+			builders = append(builders, b)
+		}
+	}
+	if _, err := db.Metadict.CreateBulk(builders...).Save(ctx); err != nil {
+		t.Fatalf("建立字典 fixture: %v", err)
+	}
+}
+
+// seedListScanProducts 建立 listScanRows 個商品:code 的唯一性是 `(department_id, code)`
+// (migration 00017 的部分唯一索引),故在 listScanCodeScopes 個部門各建一組相同 code ——
+// 每個 code 有 8 筆同值群。super/company_admin 的 deptScope 回 did=nil → 可見集合跨部門,
+// 正是生產中「同 code 落在同一頁序」的成因。
+func seedListScanProducts(t *testing.T, ctx context.Context, db *ent.Client, companyID int, departmentIDs []int) {
+	t.Helper()
+	codes := listScanRows / listScanCodeScopes
+	builders := make([]*ent.ProductCreate, 0, listScanRows)
+	for i := range listScanRows {
+		builders = append(builders, db.Product.Create().
+			SetCompanyID(companyID).
+			SetDepartmentID(departmentIDs[i/codes]).
+			SetCode(fmt.Sprintf("PD-%03d", i%codes)).
+			SetName(fmt.Sprintf("商品%02d", i)))
+	}
+	if _, err := db.Product.CreateBulk(builders...).Save(ctx); err != nil {
+		t.Fatalf("建立商品 fixture: %v", err)
+	}
+}
+
+// seedListScanWarehouses 建立 listScanRows 個倉別:同 seedListScanProducts,code 的唯一性是
+// `(department_id, code)`(migration 00016),8 個部門各一組相同 code → 每個 code 8 筆同值群。
+func seedListScanWarehouses(t *testing.T, ctx context.Context, db *ent.Client, companyID int, departmentIDs []int) {
+	t.Helper()
+	codes := listScanRows / listScanCodeScopes
+	builders := make([]*ent.WarehouseCreate, 0, listScanRows)
+	for i := range listScanRows {
+		builders = append(builders, db.Warehouse.Create().
+			SetCompanyID(companyID).
+			SetDepartmentID(departmentIDs[i/codes]).
+			SetCode(fmt.Sprintf("WH-%03d", i%codes)).
+			SetName(fmt.Sprintf("倉別%02d", i)))
+	}
+	if _, err := db.Warehouse.CreateBulk(builders...).Save(ctx); err != nil {
+		t.Fatalf("建立倉別 fixture: %v", err)
 	}
 }
