@@ -65,9 +65,10 @@ describe("<LoginPage> 店家分頁表單", () => {
     expect(navigateSpy).not.toHaveBeenCalled();
   });
 
-  it("驗證時機：輸入過程不標紅，blur 後才出現該欄錯誤", async () => {
+  it("驗證時機：輸入過程不標紅，blur 只驗該欄而不連帶標紅另一欄", async () => {
     await openStoreForm();
     const customerCode = screen.getByLabelText("客戶編號");
+    const password = screen.getByLabelText("密碼");
 
     fireEvent.input(customerCode, { target: { value: "S" } });
     fireEvent.input(customerCode, { target: { value: "" } });
@@ -75,6 +76,10 @@ describe("<LoginPage> 店家分頁表單", () => {
 
     fireEvent.blur(customerCode);
     await waitFor(() => expect(screen.getByText("請輸入客戶編號")).toBeTruthy());
+
+    // 只 blur 客戶編號 → 密碼欄未被觸碰，不該跟著標紅或出現訊息。
+    expect(screen.queryByText("請輸入密碼")).toBeNull();
+    expect(password.getAttribute("aria-invalid")).toBeNull();
   });
 
   it("填入合法值：錯誤消失，並以正確 payload 登入後導向首頁", async () => {
@@ -108,7 +113,25 @@ describe("<LoginPage> 店家分頁表單", () => {
     expect(navigateSpy).not.toHaveBeenCalled();
   });
 
-  it("提交中由表單的 isSubmitting 驅動按鈕載入狀態", async () => {
+  it("客戶端驗證失敗時清掉前一次留下的伺服器錯誤 banner", async () => {
+    loginSpy.mockRejectedValue(new ConnectError("invalid credentials", Code.Unauthenticated));
+    const form = await openStoreForm();
+
+    fillCredentials("S-001", "bad-password");
+    fireEvent.submit(form);
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toContain("客戶編號或密碼錯誤")
+    );
+
+    // 清空密碼後再提交：客戶端驗證先擋下（`onSubmit` 不會被呼叫），舊 banner 不該與欄位訊息並存。
+    fireEvent.input(screen.getByLabelText("密碼"), { target: { value: "" } });
+    fireEvent.submit(form);
+
+    await waitFor(() => expect(screen.getByText("請輸入密碼")).toBeTruthy());
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("提交中由表單的 isSubmitting 驅動按鈕載入狀態，且再次提交不會重複送 API", async () => {
     const login = Promise.withResolvers<void>();
     loginSpy.mockReturnValue(login.promise);
     const form = await openStoreForm();
@@ -123,7 +146,11 @@ describe("<LoginPage> 店家分頁表單", () => {
     expect(submitButton.disabled).toBe(true);
     expect(submitButton.getAttribute("aria-busy")).toBe("true");
 
+    // 提交中（按鈕已 disabled）再次觸發表單提交 → 不該重複送出。
+    fireEvent.submit(form);
+
     login.resolve();
     await waitFor(() => expect(submitButton.disabled).toBe(false));
+    expect(loginSpy).toHaveBeenCalledTimes(1);
   });
 });

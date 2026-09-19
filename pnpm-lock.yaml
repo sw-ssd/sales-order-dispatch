@@ -33,7 +33,7 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0(@bufbuild/protobuf@2.15.0)(@connectrpc/connect@2.2.0(@bufbuild/protobuf@2.15.0))
       '@tanstack/solid-form':
-        specifier: 1.33.5
+        specifier: ^1.33.5
         version: 1.33.5(solid-js@1.9.15)
       '@tanstack/solid-query':
         specifier: ^5.102.8

@@ -72,7 +72,6 @@ export default function LoginPage() {
   const form = createForm(() => ({
     defaultValues: { customerCode: "", password: "" },
     onSubmit: async ({ value }) => {
-      setServerError(undefined);
       try {
         await authClient.login(value);
         navigate({ to: "/", replace: true });
@@ -86,6 +85,8 @@ export default function LoginPage() {
 
   const handleStoreSubmit: JSX.EventHandler<HTMLFormElement, SubmitEvent> = (event) => {
     event.preventDefault();
+    // 客戶端驗證失敗時 `onSubmit` 不會被呼叫，舊的伺服器錯誤 banner 必須在這裡先清掉。
+    setServerError(undefined);
     void form.handleSubmit();
   };
 

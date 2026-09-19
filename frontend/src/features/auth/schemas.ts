@@ -12,8 +12,6 @@ export const loginSchema = v.object({
   password: v.pipe(v.string(), v.nonEmpty("請輸入密碼")),
 });
 
-export type LoginFormValues = v.InferOutput<typeof loginSchema>;
-
 /**
  * 欄位級 validator 工廠：`onBlur` 與 `onSubmit` 共用同一條 valibot 規則
  * （不掛 `onChange`，否則每次按鍵就標紅）。通過回 `undefined`，失敗回該欄第一則訊息。

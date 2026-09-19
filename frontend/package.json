@@ -15,7 +15,7 @@
     "@bufbuild/protobuf": "^2.15.0",
     "@connectrpc/connect": "^2.2.0",
     "@connectrpc/connect-web": "^2.2.0",
-    "@tanstack/solid-form": "1.33.5",
+    "@tanstack/solid-form": "^1.33.5",
     "@tanstack/solid-query": "^5.102.8",
     "@tanstack/solid-router": "^1.170.30",
     "class-variance-authority": "^0.7.1",
