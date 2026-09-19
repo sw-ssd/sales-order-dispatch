@@ -13,11 +13,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -28,8 +30,8 @@ const (
 	postgresUser  = "postgres"
 	postgresPass  = "postgres"
 	postgresPort  = "5432/tcp"
-	// postgresDB 為容器內建資料庫名。業務遷移 00002 以名定址(`ALTER DATABASE salesorder ...`),
-	// 故測試資料庫必須叫 salesorder —— 這也是每次呼叫各自起一顆容器(而非同顆開多庫)的原因。
+	// postgresDB 為容器內建資料庫名(業務 schema 的慣用名)。庫名可由 PostgresNamed 指定,
+	// 故 00002 起不再有「測試庫必須叫 salesorder」的限制(見 00002 以 current_database() 定址)。
 	postgresDB = "salesorder"
 	// INTEGRATION_TEST_DSN 覆寫:指向現成 PostgreSQL(該庫本身即測試用拋棄式庫),跳過容器。
 	dsnEnv = "INTEGRATION_TEST_DSN"
@@ -39,8 +41,7 @@ const (
 // INTEGRATION_TEST_DSN,未設定時起 postgres:16 容器並於測試結束終止。
 // 每次呼叫都是獨立 server/資料庫;容器執行環境不可用 → skip。
 //
-// 注意:覆寫模式下測試會直接對該 DSN 跑遷移,請指向專用的拋棄式資料庫,
-// 且庫名須為 salesorder(00002 以名定址)。
+// 注意:覆寫模式下測試會直接對該 DSN 跑遷移,請指向專用的拋棄式資料庫。
 func Postgres(t *testing.T) string {
 	t.Helper()
 	if dsn := os.Getenv(dsnEnv); dsn != "" {
@@ -49,11 +50,47 @@ func Postgres(t *testing.T) string {
 		}
 		return dsn
 	}
-	return startContainer(t)
+	return startContainer(t, postgresDB)
 }
 
-// startContainer 起拋棄式 postgres 容器,回傳其 DSN;容器執行環境不可用即 skip。
-func startContainer(t *testing.T) string {
+// PostgresNamed 回傳一台**全新空** PostgreSQL(庫名為 name)的連線字串,與 Postgres 共用
+// 同一容器樣板(唯一差異是 POSTGRES_DB)。供「庫名不叫 salesorder」的情境使用 —— 例如驗證
+// 00002 不再以硬編名定址資料庫(該實例內不得存在名為 salesorder 的庫,否則測不出硬編名)。
+//
+// 覆寫模式(INTEGRATION_TEST_DSN)無法保證庫名 → skip:寧可少跑一條,也不要對名為 salesorder
+// 的庫斷言「非預設庫名可遷移」而假通過。
+func PostgresNamed(t *testing.T, name string) string {
+	t.Helper()
+	if dsn := os.Getenv(dsnEnv); dsn != "" {
+		t.Skipf("%s 已設定,無法保證資料庫名為 %s;本測試需自建容器(移除該變數,或以 `task test:integration` 執行)", dsnEnv, name)
+	}
+	return startContainer(t, name)
+}
+
+// CreateDatabase 於同一台 PostgreSQL(adminDSN 所指的 server)建立額外空資料庫,回傳其 DSN。
+// 供「同一容器內第二個資料庫」情境使用(例如 OpenFGA 專用庫的優先序驗證),
+// 不另起容器:單一容器樣板仍只有一處。
+func CreateDatabase(t *testing.T, adminDSN, name string) string {
+	t.Helper()
+	db, err := sql.Open("pgx", adminDSN)
+	if err != nil {
+		t.Fatalf("連線以建立資料庫 %s: %v", name, err)
+	}
+	defer func() { _ = db.Close() }()
+	// CREATE DATABASE 不接受參數佔位,故以 pgx 的識別字引號處理(不自行拼字串)。
+	if _, err := db.Exec("CREATE DATABASE " + pgx.Identifier{name}.Sanitize()); err != nil {
+		t.Fatalf("建立資料庫 %s: %v", name, err)
+	}
+	u, err := url.Parse(adminDSN)
+	if err != nil {
+		t.Fatalf("解析 DSN(%s): %v", adminDSN, err)
+	}
+	u.Path = "/" + name
+	return u.String()
+}
+
+// startContainer 起拋棄式 postgres 容器(庫名 dbName),回傳其 DSN;容器執行環境不可用即 skip。
+func startContainer(t *testing.T, dbName string) string {
 	t.Helper()
 	ctx := context.Background()
 	ctr, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
@@ -63,7 +100,7 @@ func startContainer(t *testing.T) string {
 			Env: map[string]string{
 				"POSTGRES_USER":     postgresUser,
 				"POSTGRES_PASSWORD": postgresPass,
-				"POSTGRES_DB":       postgresDB,
+				"POSTGRES_DB":       dbName,
 			},
 			WaitingFor: wait.ForLog("database system is ready to accept connections").
 				WithStartupTimeout(2 * time.Minute),
@@ -97,7 +134,7 @@ func startContainer(t *testing.T) string {
 	if err != nil {
 		t.Fatalf("取得容器對外埠: %v", err)
 	}
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", postgresUser, postgresPass, host, port.Port(), postgresDB)
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", postgresUser, postgresPass, host, port.Port(), dbName)
 	if err := ping(dsn); err != nil {
 		t.Fatalf("容器已啟動但無法連線(%v)", err)
 	}

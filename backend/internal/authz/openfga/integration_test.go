@@ -1,3 +1,5 @@
+//go:build integration
+
 // Package openfga 的整合測試(D21 對應授權面):以真實 PostgreSQL 驗證 OpenFGA + RLS
 // 的跨公司/部門/self 授權隔離。要求環境變數 INTEGRATION_TEST_DSN(業務 DB 連線,
 // 亦供 OpenFGA datastore 使用);未設定時自動 skip(本 CI/單測環境無 Postgres)。

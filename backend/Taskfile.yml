@@ -25,7 +25,9 @@ tasks:
     env:
       DOCKER_HOST: "unix://{{.PODMAN_SOCK}}"
       TESTCONTAINERS_RYUK_DISABLED: "true"
-    cmd: go test -tags integration ./...
+    cmd: go test -tags integration ./... {{.CLI_ARGS}}
+    # 附加參數直接透傳(Task v3 需明寫 {{.CLI_ARGS}}),例如:
+    #   task test:integration -- -run TestIntegrationOpenFGAMigration -v
 
   check:
     desc: fmt + vet + lint + test（D31-2）

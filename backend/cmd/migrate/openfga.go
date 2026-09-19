@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 
-	ofgamigrate "github.com/openfga/openfga/pkg/storage/migrate"
 	serverconfig "github.com/openfga/openfga/pkg/server/config"
+	ofgamigrate "github.com/openfga/openfga/pkg/storage/migrate"
 	"github.com/pressly/goose/v3"
 
 	"github.com/salesorder/sales-order-1.0/backend/config"
