@@ -10,6 +10,7 @@ import {
   DepartmentService,
   type ListCompaniesResponse,
 } from "~/lib/proto/salesorder/v1/company_pb";
+import { RoleService } from "~/lib/proto/salesorder/v1/role_pb";
 import { transport } from "~/lib/transport";
 
 /**
@@ -137,4 +138,21 @@ export const departmentsQueryOptions = (params: DepartmentListParams) =>
         pageSize: params.pageSize,
         companyId: params.companyId,
       }),
+  });
+
+/** 角色服務 client：清單查詢與權限矩陣的讀（`getRolePermissions`）／寫（`updateRolePermissions`）共用同一個實例。 */
+export const roleClient = createClient(RoleService, transport);
+
+/** 角色清單查詢參數（全部參數都進 queryKey）；角色沒有篩選條件，只有分頁。 */
+export interface RoleListParams {
+  page: number;
+  pageSize: number;
+}
+
+/** 角色清單查詢選項；`createQuery(() => rolesQueryOptions(params))`。 */
+export const rolesQueryOptions = (params: RoleListParams) =>
+  queryOptions({
+    queryKey: ["roles", { page: params.page, pageSize: params.pageSize }],
+    placeholderData: (prev) => prev,
+    queryFn: () => roleClient.listRoles({ page: params.page, pageSize: params.pageSize }),
   });

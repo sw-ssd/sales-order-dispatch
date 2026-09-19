@@ -1,20 +1,12 @@
-import { Code, ConnectError, createClient } from "@connectrpc/connect";
-import { createSignal, For, onMount, Show } from "solid-js";
-import {
-  RoleService,
-  type Permission,
-  type Role,
-} from "~/lib/proto/salesorder/v1/role_pb";
-import { transport } from "~/lib/transport";
+import { Code, ConnectError } from "@connectrpc/connect";
+import { createQuery, useQueryClient } from "@tanstack/solid-query";
+import { batch, createEffect, createSignal, For, Show } from "solid-js";
+import type { Permission, Role } from "~/lib/proto/salesorder/v1/role_pb";
 import { Button, Card } from "~/components/ui";
 import { cn } from "@/lib/cn";
-import { queryClient } from "~/lib/query-client";
 import { PermissionMatrix } from "../components/PermissionMatrix";
 import { ListPagination } from "../components/ListPagination";
-
-const roleClient = createClient(RoleService, transport);
-
-const PAGE_SIZE = 20;
+import { PAGE_SIZE, roleClient, rolesQueryOptions } from "../queries";
 
 const DATA_SCOPE_LABELS: Record<string, string> = {
   all: "全部",
@@ -44,52 +36,75 @@ function errorMessage(err: unknown): string {
  * 角色權限設置頁(/users/roles;T19):角色清單 + 權限矩陣(resource × action)。
  * 版型照 Tailkit（Page Headings + 側欄卡片）：頁首標題區塊、左側角色卡片（選中列用 `bg-primary/10`）、
  * 右側矩陣。內距由 AppShell 內容區負責。
+ * 清單資料（角色列／總筆數／載入與錯誤狀態）一律來自 `../queries.ts` 的
+ * `rolesQueryOptions`＋`createQuery`：頁面持有的只有查詢輸入（頁碼）與「已選取角色」。
+ * 權限矩陣是受控編輯緩衝（80 格 checkbox 的草稿＋dirty），不是清單資料，
+ * 仍以區域 signal 持有、由 `getRolePermissions` 讀取（載入時機與改寫前相同）。
  */
 export default function RolesPage() {
-  const [roles, setRoles] = createSignal<Role[]>([]);
-  const [total, setTotal] = createSignal(0);
   const [page, setPage] = createSignal(1);
   const [selectedId, setSelectedId] = createSignal<string | null>(null);
   const [permissions, setPermissions] = createSignal<Permission[]>([]);
-  const [loadingRoles, setLoadingRoles] = createSignal(true);
   const [loadingPerms, setLoadingPerms] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
   const [saving, setSaving] = createSignal(false);
   const [dirty, setDirty] = createSignal(false);
   const [savedAt, setSavedAt] = createSignal<string | null>(null);
 
+  const client = useQueryClient();
+
+  // 清單唯一的資料來源：列資料、總筆數、載入與錯誤狀態全部由 query 狀態推導。
+  const query = createQuery(() =>
+    rolesQueryOptions({ page: page(), pageSize: PAGE_SIZE })
+  );
+
+  const roles = () => query.data?.roles ?? [];
+  const total = () => Number(query.data?.pagination?.total ?? 0);
   const selectedRole = () => roles().find((r) => r.id === selectedId()) ?? null;
+  // 清單載入失敗由 query 狀態驅動；矩陣讀取／儲存失敗不屬於任何 query，走區域 signal。
+  // 兩者共用一條 banner，清單錯誤優先（與改寫前的共用 `error` 同一個可見結果）。
+  const banner = () => (query.error ? errorMessage(query.error) : error());
 
+  /**
+   * 超頁退回：回傳的 total 讓目前頁碼超界時（例：該頁資料被刪光），把頁碼夾到合法值。
+   * `page` 是 query key 的一部分 → `setPage` 自己就會觸發重取，不必也不能再手動重載；
+   * 夾到的頁碼必定 ≤ maxPage < 原頁碼（嚴格遞減、下界 1），所以重取次數有界。
+   *
+   * `isPlaceholderData` 期間的 `data` 屬於前一個 key（placeholderData 保留的舊結果），
+   * 據以退回會把剛切過去的頁碼彈回來，故必須排除；這不會漏掉退回——新資料一到，
+   * `data` 與 `isPlaceholderData` 都變動，這個 effect 會再跑一次。
+   */
+  createEffect(() => {
+    if (query.isPlaceholderData || !query.data) return;
+    const maxPage = Math.max(1, Math.ceil(total() / PAGE_SIZE));
+    if (page() > maxPage) setPage(maxPage);
+  });
+
+  /**
+   * 自動選取：沒有選取（首屏、或剛換頁被清空）時，選取當前頁第一筆並載入其矩陣——
+   * 與改寫前 `loadRoles` 的 `if (!selectedId() && list.length > 0)` 同義。
+   *
+   * `isPlaceholderData` 的守衛理由同超頁退回：placeholder 期間的 `data` 是舊頁的結果，
+   * 據以選取會把舊頁的角色留在面板上（新頁資料到了就會被當成「已有選取」而不再更正）。
+   */
+  createEffect(() => {
+    if (query.isPlaceholderData) return;
+    const list = roles();
+    if (selectedId() || list.length === 0) return;
+    setSelectedId(list[0].id);
+    void loadPermissions(list[0].id);
+  });
+
+  /**
+   * 換頁：清空選取（新頁的角色清單與舊頁無關），與頁碼放在同一個 `batch`——
+   * 分開寫會讓自動選取 effect 有機會以「舊頁資料＋已清空的選取」跑一次，
+   * 反而把舊頁第一筆選回來。
+   */
   const goToPage = (p: number) => {
-    setPage(p);
-    setSelectedId(null); // 換頁後角色清單不同,清空選取由 loadRoles 自動選第一筆
-    void loadRoles();
-  };
-
-  const loadRoles = async () => {
-    setLoadingRoles(true);
-    setError(null);
-    try {
-      const res = await roleClient.listRoles({ page: page(), pageSize: PAGE_SIZE });
-      const list = res.roles;
-      setRoles(list);
-      const t = Number(res.pagination?.total ?? 0);
-      setTotal(t);
-      // 目前頁碼超出總頁數時退回最後一頁(與 CompaniesPage 一致)。
-      const maxPage = Math.max(1, Math.ceil(t / PAGE_SIZE));
-      if (page() > maxPage) {
-        setPage(maxPage);
-        return loadRoles();
-      }
-      if (!selectedId() && list.length > 0) {
-        setSelectedId(list[0].id);
-        void loadPermissions(list[0].id);
-      }
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setLoadingRoles(false);
-    }
+    batch(() => {
+      setPage(p);
+      setSelectedId(null);
+    });
   };
 
   const loadPermissions = async (roleId: string) => {
@@ -130,7 +145,9 @@ export default function RolesPage() {
       setDirty(false);
       setSavedAt(new Date().toLocaleTimeString());
       // 權限異動後失效 ability 快取(queryKey ["ability"]),守衛/Can 立即以新規則生效。
-      void queryClient.invalidateQueries({ queryKey: ["ability"] });
+      // 用頁面所在的 client(provider 注入的單例)而非 import 單例:兩者在 app 是同一個實例,
+      // 但測試注入的 client 才吃得到失效(與 CompaniesPage/DepartmentsPage 同一慣例)。
+      void client.invalidateQueries({ queryKey: ["ability"] });
       await loadPermissions(role.id); // 回讀(sort_order 正規化後)
     } catch (err) {
       setError(errorMessage(err));
@@ -138,10 +155,6 @@ export default function RolesPage() {
       setSaving(false);
     }
   };
-
-  onMount(() => {
-    void loadRoles();
-  });
 
   return (
     <main>
@@ -152,21 +165,21 @@ export default function RolesPage() {
         </p>
       </header>
 
-      <Show when={error()}>
+      <Show when={banner()}>
         <p
           class="mb-4 rounded-lg bg-destructive/15 px-3 py-2 text-sm font-medium text-destructive"
           role="alert"
         >
-          {error()}
+          {banner()}
         </p>
       </Show>
 
       <div class="grid gap-6 lg:grid-cols-[240px_1fr]">
         <Card class="h-fit">
-          <Show when={loadingRoles()}>
+          <Show when={query.isPending}>
             <p class="px-4 py-8 text-center text-sm text-muted-foreground">載入中…</p>
           </Show>
-          <Show when={!loadingRoles() && roles().length === 0}>
+          <Show when={!query.isPending && roles().length === 0}>
             <p class="px-4 py-8 text-center text-sm text-muted-foreground">尚無角色</p>
           </Show>
           <ul class="divide-y divide-border">
