@@ -340,19 +340,49 @@ func (s *DepartmentService) ListDepartments(ctx context.Context, req *connect.Re
 		q = q.Where(department.HasCompanyWith(company.ID(cid)))
 	}
 
-	list, pg, err := pageList(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), departmentListSource{q}, departmentToProto)
+	field, desc, err := departmentSortField(req.Msg.GetSort(), req.Msg.GetDesc())
+	if err != nil {
+		return nil, err
+	}
+
+	list, pg, err := pageList(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), departmentListSource{q, field, desc}, departmentToProto)
 	if err != nil {
 		return nil, err
 	}
 	return connect.NewResponse(&v1.ListDepartmentsResponse{Departments: list, Pagination: pg}), nil
 }
 
-// departmentListSource 為 pageList 的 ent 查詢橋接(部門需 eager-load 公司名稱供 toProto)。
-type departmentListSource struct{ q *ent.DepartmentQuery }
+// departmentListSource 為 pageList 的 ent 查詢橋接(部門需 eager-load 公司名稱供 toProto;
+// 排序白名單已先解析為 field/desc)。
+type departmentListSource struct {
+	q     *ent.DepartmentQuery
+	field string
+	desc  bool
+}
 
 func (s departmentListSource) Count(ctx context.Context) (int, error) { return s.q.Count(ctx) }
 func (s departmentListSource) Page(ctx context.Context, off, lim int) ([]*ent.Department, error) {
-	return s.q.Clone().Order(ent.Desc(department.FieldID)).Offset(off).Limit(lim).All(ctx)
+	order := ent.Asc(s.field)
+	if s.desc {
+		order = ent.Desc(s.field)
+	}
+	return s.q.Clone().Order(order).Offset(off).Limit(lim).All(ctx)
+}
+
+// departmentSortField 解析排序參數,回傳 ent 欄位與是否降冪(比照 companySortField 的白名單樣板)。
+// sort 空 → 預設 id 降冪(現行行為)並忽略 desc;其餘欄位預設升冪,desc=true 轉降冪。
+func departmentSortField(sort string, desc bool) (string, bool, error) {
+	switch sort {
+	case "":
+		return department.FieldID, true, nil // 預設排序:此案例把 desc 吃掉(契約:sort 空忽略 desc)
+	case "name":
+		return department.FieldName, desc, nil
+	case "id":
+		return department.FieldID, desc, nil
+	default:
+		return "", false, connect.NewError(connect.CodeInvalidArgument,
+			fmt.Errorf("排序欄位 %q 不在白名單(name/id)", sort))
+	}
 }
 
 // GetDepartment 取得單一部門(含所屬公司名稱)。

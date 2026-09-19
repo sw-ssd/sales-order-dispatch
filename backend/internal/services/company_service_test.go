@@ -272,6 +272,81 @@ func TestListCompaniesSort(t *testing.T) {
 	}
 }
 
+// seedDepartmentSortFixtures 在單一公司下建立三個部門(插入順序 丙→甲→乙,id 依序 1/2/3):
+// 名稱碼位升冪(丙乙甲)與 id 升冪(丙甲乙)互不相同,確保 name 排序確實生效。
+func seedDepartmentSortFixtures(t *testing.T, ctx context.Context, cc salesorderv1connect.CompanyServiceClient, dc salesorderv1connect.DepartmentServiceClient) {
+	t.Helper()
+	co, err := cc.CreateCompany(ctx, connect.NewRequest(&v1.CreateCompanyRequest{
+		Name:       "排序測試公司",
+		Identifier: "co-sort-dept",
+	}))
+	if err != nil {
+		t.Fatalf("seed CreateCompany: %v", err)
+	}
+	cid := co.Msg.GetCompany().GetId()
+	for _, name := range []string{"丙部", "甲部", "乙部"} {
+		if _, err := dc.CreateDepartment(ctx, connect.NewRequest(&v1.CreateDepartmentRequest{
+			CompanyId: cid,
+			Name:      name,
+		})); err != nil {
+			t.Fatalf("seed CreateDepartment(%s): %v", name, err)
+		}
+	}
+}
+
+// listDepartmentNames 以指定排序取回部門名稱序列(sort 空 = 服務預設排序)。
+func listDepartmentNames(t *testing.T, ctx context.Context, dc salesorderv1connect.DepartmentServiceClient, sort string, desc bool) []string {
+	t.Helper()
+	res, err := dc.ListDepartments(ctx, connect.NewRequest(&v1.ListDepartmentsRequest{
+		Page: 1, PageSize: 10, Sort: sort, Desc: desc,
+	}))
+	if err != nil {
+		t.Fatalf("ListDepartments(sort=%q desc=%v): %v", sort, desc, err)
+	}
+	names := make([]string, 0, len(res.Msg.GetDepartments()))
+	for _, d := range res.Msg.GetDepartments() {
+		names = append(names, d.GetName())
+	}
+	return names
+}
+
+// TestListDepartmentsSort D1/P3:部門清單 sort 白名單(name/id)與 desc 方向;
+// sort 空 → 預設 id 降冪(現行行為)且忽略 desc;非法值 → InvalidArgument 並列出白名單。
+func TestListDepartmentsSort(t *testing.T) {
+	ctx := t.Context()
+	cc, dc := newTestServer(t)
+	seedDepartmentSortFixtures(t, ctx, cc, dc)
+
+	for _, tc := range []struct {
+		name string
+		sort string
+		desc bool
+		want []string
+	}{
+		{"sort 空 → 預設 id 降冪", "", false, []string{"乙部", "甲部", "丙部"}},
+		{"sort 空且 desc=true → 仍為預設排序(忽略 desc)", "", true, []string{"乙部", "甲部", "丙部"}},
+		{"sort=name → 名稱升冪(sqlite 依碼位:丙 U+4E19 < 乙 U+4E59 < 甲 U+7532)", "name", false, []string{"丙部", "乙部", "甲部"}},
+		{"sort=name+desc → 名稱降冪", "name", true, []string{"甲部", "乙部", "丙部"}},
+		{"sort=id → id 升冪", "id", false, []string{"丙部", "甲部", "乙部"}},
+		{"sort=id+desc → id 降冪", "id", true, []string{"乙部", "甲部", "丙部"}},
+	} {
+		if got := listDepartmentNames(t, ctx, dc, tc.sort, tc.desc); !slices.Equal(got, tc.want) {
+			t.Errorf("%s:got %v,want %v", tc.name, got, tc.want)
+		}
+	}
+
+	// 非法值 → InvalidArgument,且訊息須列出白名單欄位。
+	_, err := dc.ListDepartments(ctx, connect.NewRequest(&v1.ListDepartmentsRequest{Sort: "bogus"}))
+	if connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("非法 sort 應回 InvalidArgument,got %v", err)
+	}
+	for _, w := range []string{"name", "id"} {
+		if !strings.Contains(err.Error(), w) {
+			t.Errorf("錯誤訊息 %q 應列出白名單欄位 %q", err.Error(), w)
+		}
+	}
+}
+
 func TestCompanyDeleteBlockedByDepartment(t *testing.T) {
 	ctx := context.Background()
 	cc, dc := newTestServer(t)
