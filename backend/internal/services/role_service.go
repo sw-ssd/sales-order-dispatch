@@ -115,7 +115,10 @@ func (s roleListSource) Page(ctx context.Context, off, lim int) ([]*ent.Role, er
 	if s.desc {
 		order = ent.Desc(s.field)
 	}
-	return s.q.Clone().Order(order).Offset(off).Limit(lim).All(ctx)
+	// F1:排序鍵非唯一時 PostgreSQL 對同值群(ties)的順序不保證一致,逐頁 LIMIT/OFFSET 會
+	// 重複與遺漏資料(前端翻完只看得到部分列),故一律以 id 為次序鍵收斂成全序。
+	// field 已是 id 時多一組等價鍵,id 為唯一鍵故結果不變。
+	return s.q.Clone().Order(order, ent.Asc(role.FieldID)).Offset(off).Limit(lim).All(ctx)
 }
 
 // roleSortField 解析排序參數,回傳 ent 欄位與是否降冪(比照 companySortField 的白名單樣板)。
