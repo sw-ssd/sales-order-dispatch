@@ -9,13 +9,24 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
+import { Badge } from "~/components/ui/badge";
+import { Button, buttonVariants } from "~/components/ui/button";
+import { Card } from "~/components/ui/card";
 import { Field, FieldLabel } from "~/components/ui/field";
+import { Input } from "~/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
 import { createSignal, For, onMount, Show } from "solid-js";
 import {
   CompanyService,
   type Company,
 } from "~/lib/proto/salesorder/v1/company_pb";
-import { cn } from "~/lib/cn";
 import { ListPagination } from "../components/ListPagination";
 
 const PAGE_SIZE = 20;
@@ -31,18 +42,21 @@ const STATUS_LABELS: Record<string, string> = {
   suspended: "暫停",
 };
 
-function statusBadgeClass(status: string): string {
-  switch (status) {
-    case "active":
-      return "bg-green-100 text-green-700";
-    case "inactive":
-      return "bg-gray-100 text-gray-600";
-    case "suspended":
-      return "bg-amber-100 text-amber-700";
-    default:
-      return "bg-gray-100 text-gray-600";
-  }
-}
+const STATUS_VARIANTS: Record<string, "success" | "warning" | "secondary"> = {
+  active: "success",
+  inactive: "secondary",
+  suspended: "warning",
+};
+
+/**
+ * 原生 select 的視覺（ui/ 沒有 select 元件）。
+ * `pr-10` 對齊 Tailkit a-c-form-elements-03：`@tailwindcss/forms` 的箭頭畫在
+ * `right .5rem center` 且佔 1.5em，而外掛的 `padding-right: 2.5rem` 落在 base layer、
+ * 會被頁面 utilities 蓋掉（實測只剩 12px），不補回箭頭就會疊在選項文字上。
+ * 底色與 focus ring 一併覆蓋外掛在 base layer 的硬編值（`#fff` 底、1px 藍 ring）。
+ */
+const SELECT_CLASS =
+  "block w-full rounded-lg border border-border bg-card py-2 pr-10 pl-3 text-sm text-foreground focus:border-primary focus:ring-3 focus:ring-primary/50 focus:outline-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground";
 
 function errorMessage(err: unknown): string {
   if (err instanceof ConnectError) {
@@ -64,7 +78,11 @@ function errorMessage(err: unknown): string {
   return "無法連線至伺服器,請確認後端服務已啟動";
 }
 
-/** 公司主檔 CRUD 頁(/users/companies)。 */
+/**
+ * 公司主檔 CRUD 頁(/users/companies)。
+ * 版型照 Tailkit（Page Headings + In Card 表格）：標題區塊帶下框線、篩選列為卡片色帶、
+ * 表格與分頁收在同一張 `Card` 內。頁面本身不帶內距——內距由 AppShell 內容區（`p-4 lg:p-6`）負責。
+ */
 export default function CompaniesPage() {
   const [companies, setCompanies] = createSignal<Company[]>([]);
   const [total, setTotal] = createSignal(0);
@@ -191,155 +209,130 @@ export default function CompaniesPage() {
   };
 
   return (
-    <main class="p-6">
-      <div class="mb-6 flex items-center justify-between">
+    <main>
+      <header class="mb-6 flex flex-col gap-4 border-b-2 border-border pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900">公司管理</h1>
-          <p class="mt-1 text-sm text-gray-500">多租戶公司主檔(共 {total()} 筆)</p>
+          <h1 class="text-2xl font-bold text-foreground">公司管理</h1>
+          <p class="mt-1 text-sm text-muted-foreground">多租戶公司主檔(共 {total()} 筆)</p>
         </div>
-        <button
-          type="button"
-          onClick={openCreate}
-          class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
+        <Button type="button" onClick={openCreate}>
           新增公司
-        </button>
-      </div>
-
-      <form
-        class="mb-4 flex flex-wrap items-end gap-3"
-        onSubmit={(e) => {
-          e.preventDefault();
-          setPage(1); // 查詢變更時回到第一頁
-          load();
-        }}
-      >
-        <div>
-          <label for="company-keyword" class="block text-sm font-medium text-gray-700">
-            關鍵字
-          </label>
-          <input
-            id="company-keyword"
-            value={keyword()}
-            onInput={(e) => setKeyword(e.currentTarget.value)}
-            placeholder="名稱 / 識別碼"
-            class="mt-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-          />
-        </div>
-        <div>
-          <label for="company-status-filter" class="block text-sm font-medium text-gray-700">
-            狀態
-          </label>
-          <select
-            id="company-status-filter"
-            value={statusFilter()}
-            onChange={(e) => setStatusFilter(e.currentTarget.value)}
-            class="mt-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-          >
-            <option value="">全部</option>
-            <option value="active">啟用</option>
-            <option value="inactive">停用</option>
-            <option value="suspended">暫停</option>
-          </select>
-        </div>
-        <button
-          type="submit"
-          class="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-        >
-          查詢
-        </button>
-      </form>
+        </Button>
+      </header>
 
       <Show when={error()}>
-        <p class="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p
+          class="mb-4 rounded-lg bg-destructive/15 px-3 py-2 text-sm font-medium text-destructive"
+          role="alert"
+        >
           {error()}
         </p>
       </Show>
 
-      <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                名稱
-              </th>
-              <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                識別碼
-              </th>
-              <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                統一編號
-              </th>
-              <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                狀態
-              </th>
-              <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                ID
-              </th>
-              <th class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500">
-                操作
-              </th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200">
+      <Card>
+        <form
+          class="flex flex-wrap items-end gap-3 border-b border-border bg-muted px-3 py-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setPage(1); // 查詢變更時回到第一頁
+            load();
+          }}
+        >
+          <Field class="w-full sm:w-64">
+            <FieldLabel for="company-keyword">關鍵字</FieldLabel>
+            <Input
+              id="company-keyword"
+              value={keyword()}
+              onInput={(e) => setKeyword(e.currentTarget.value)}
+              placeholder="名稱 / 識別碼"
+            />
+          </Field>
+          <Field class="w-full sm:w-40">
+            <FieldLabel for="company-status-filter">狀態</FieldLabel>
+            <select
+              id="company-status-filter"
+              value={statusFilter()}
+              onChange={(e) => setStatusFilter(e.currentTarget.value)}
+              class={SELECT_CLASS}
+            >
+              <option value="">全部</option>
+              <option value="active">啟用</option>
+              <option value="inactive">停用</option>
+              <option value="suspended">暫停</option>
+            </select>
+          </Field>
+          <Button type="submit" variant="outline">
+            查詢
+          </Button>
+        </form>
+
+        <Table>
+          <TableHeader>
+            <TableRow class="hover:bg-transparent">
+              <TableHead>名稱</TableHead>
+              <TableHead>識別碼</TableHead>
+              <TableHead>統一編號</TableHead>
+              <TableHead>狀態</TableHead>
+              <TableHead>ID</TableHead>
+              <TableHead class="text-right">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             <Show when={loading()}>
-              <tr>
-                <td colspan={6} class="px-4 py-8 text-center text-sm text-gray-500">
+              <TableRow class="hover:bg-transparent">
+                <TableCell colspan={6} class="py-8 text-center text-muted-foreground">
                   載入中…
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             </Show>
             <Show when={!loading() && companies().length === 0}>
-              <tr>
-                <td colspan={6} class="px-4 py-8 text-center text-sm text-gray-500">
+              <TableRow class="hover:bg-transparent">
+                <TableCell colspan={6} class="py-8 text-center text-muted-foreground">
                   尚無公司資料
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             </Show>
             <For each={companies()}>
               {(c) => (
-                <tr class="hover:bg-gray-50">
-                  <td class="px-4 py-3 text-sm font-medium text-gray-900">{c.name}</td>
-                  <td class="px-4 py-3 text-sm text-gray-600">{c.identifier}</td>
-                  <td class="px-4 py-3 text-sm text-gray-600">{c.taxId || "—"}</td>
-                  <td class="px-4 py-3 text-sm">
-                    <span
-                      class={cn(
-                        "rounded-full px-2 py-0.5 text-xs font-medium",
-                        statusBadgeClass(c.status),
-                      )}
-                    >
+                <TableRow>
+                  <TableCell class="font-medium text-foreground">{c.name}</TableCell>
+                  <TableCell class="text-muted-foreground">{c.identifier}</TableCell>
+                  <TableCell class="text-muted-foreground">{c.taxId || "—"}</TableCell>
+                  <TableCell>
+                    <Badge variant={STATUS_VARIANTS[c.status] ?? "secondary"}>
                       {STATUS_LABELS[c.status] ?? c.status}
-                    </span>
-                  </td>
-                  <td class="px-4 py-3 text-sm text-gray-400">{c.id}</td>
-                  <td class="px-4 py-3 text-right text-sm">
+                    </Badge>
+                  </TableCell>
+                  <TableCell class="text-muted-foreground">{c.id}</TableCell>
+                  <TableCell class="text-right">
                     <button
                       type="button"
                       onClick={() => openEdit(c)}
-                      class="text-blue-600 hover:text-blue-800"
+                      class="font-medium text-primary hover:underline"
                     >
                       編輯
                     </button>
                     <button
                       type="button"
                       onClick={() => remove(c)}
-                      class="ml-3 text-red-600 hover:text-red-800"
+                      class="ml-3 font-medium text-destructive hover:underline"
                     >
                       刪除
                     </button>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
             </For>
-          </tbody>
-        </table>
-      </div>
-      <ListPagination
-        total={total()}
-        pageSize={PAGE_SIZE}
-        page={page()}
-        onPageChange={goToPage}
-      />
+          </TableBody>
+        </Table>
+
+        <ListPagination
+          total={total()}
+          pageSize={PAGE_SIZE}
+          page={page()}
+          onPageChange={goToPage}
+        />
+      </Card>
 
       <Dialog open={dialogOpen()} onOpenChange={setDialogOpen}>
         <DialogContent>
@@ -350,72 +343,66 @@ export default function CompaniesPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={submit}>
-            <div class="mt-4 space-y-4">
-              <Field>
-                <FieldLabel for="company-name">公司名稱 *</FieldLabel>
-                <input
-                  id="company-name"
-                  required
-                  value={name()}
-                  onInput={(e) => setName(e.currentTarget.value)}
-                  class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                />
-              </Field>
-              <Field>
-                <FieldLabel for="company-identifier">識別碼(identifier) *</FieldLabel>
-                <input
-                  id="company-identifier"
-                  required
-                  disabled={!!editing()}
-                  value={identifier()}
-                  onInput={(e) => setIdentifier(e.currentTarget.value)}
-                  placeholder="建立後不可修改"
-                  class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-400"
-                />
-              </Field>
-              <Field>
-                <FieldLabel for="company-tax-id">統一編號</FieldLabel>
-                <input
-                  id="company-tax-id"
-                  value={taxId()}
-                  onInput={(e) => setTaxId(e.currentTarget.value)}
-                  class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                />
-              </Field>
-              <Field>
-                <FieldLabel for="company-status">狀態</FieldLabel>
-                <select
-                  id="company-status"
-                  value={status()}
-                  onChange={(e) => setStatus(e.currentTarget.value)}
-                  class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                >
-                  <option value="active">啟用</option>
-                  <option value="inactive">停用</option>
-                  <option value="suspended">暫停</option>
-                </select>
-              </Field>
+          <form class="space-y-4" onSubmit={submit}>
+            <Field>
+              <FieldLabel for="company-name">公司名稱 *</FieldLabel>
+              <Input
+                id="company-name"
+                required
+                value={name()}
+                onInput={(e) => setName(e.currentTarget.value)}
+              />
+            </Field>
+            <Field>
+              <FieldLabel for="company-identifier">識別碼(identifier) *</FieldLabel>
+              <Input
+                id="company-identifier"
+                required
+                disabled={!!editing()}
+                value={identifier()}
+                onInput={(e) => setIdentifier(e.currentTarget.value)}
+                placeholder="建立後不可修改"
+              />
+            </Field>
+            <Field>
+              <FieldLabel for="company-tax-id">統一編號</FieldLabel>
+              <Input
+                id="company-tax-id"
+                value={taxId()}
+                onInput={(e) => setTaxId(e.currentTarget.value)}
+              />
+            </Field>
+            <Field>
+              <FieldLabel for="company-status">狀態</FieldLabel>
+              <select
+                id="company-status"
+                value={status()}
+                onChange={(e) => setStatus(e.currentTarget.value)}
+                class={SELECT_CLASS}
+              >
+                <option value="active">啟用</option>
+                <option value="inactive">停用</option>
+                <option value="suspended">暫停</option>
+              </select>
+            </Field>
 
-              <Show when={formError()}>
-                <p class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
-                  {formError()}
-                </p>
-              </Show>
+            <Show when={formError()}>
+              <p
+                class="rounded-lg bg-destructive/15 px-3 py-2 text-sm font-medium text-destructive"
+                role="alert"
+              >
+                {formError()}
+              </p>
+            </Show>
 
-              <DialogFooter>
-                <DialogClose class="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                  取消
-                </DialogClose>
-                <button
-                  type="submit"
-                  disabled={saving()}
-                  class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {saving() ? "儲存中…" : "儲存"}
-                </button>
-              </DialogFooter>
-            </div>
+            <DialogFooter>
+              <DialogClose class={buttonVariants({ variant: "outline" })}>
+                取消
+              </DialogClose>
+              <Button type="submit" loading={saving()}>
+                儲存
+              </Button>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

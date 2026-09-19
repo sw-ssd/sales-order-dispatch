@@ -1,15 +1,14 @@
+import { Button } from "~/components/ui/button";
+
+/** Google 登入鈕:外觀照 Tailkit(a-p-sign-in-01)的次要登入鈕,改用 `Button` 的 outline 變體。 */
 export default function GoogleLoginButton() {
   const handleClick = () => {
     window.location.href = "/api/v1/auth/google";
   };
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      class="flex w-full items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-    >
-      <svg class="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+    <Button type="button" variant="outline" class="w-full" onClick={handleClick}>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
         <path
           fill="#4285F4"
           d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"
@@ -28,6 +27,6 @@ export default function GoogleLoginButton() {
         />
       </svg>
       使用 Google 登入
-    </button>
+    </Button>
   );
 }

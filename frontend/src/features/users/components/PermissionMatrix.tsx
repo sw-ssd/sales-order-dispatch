@@ -98,27 +98,27 @@ export function PermissionMatrix(props: PermissionMatrixProps) {
   };
 
   return (
-    <div class="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+    <div class="overflow-x-auto rounded-lg border border-border bg-card shadow-xs">
+      <table class="min-w-full divide-y divide-border">
+        <thead class="bg-muted">
           <tr>
-            <th class="sticky left-0 z-10 bg-gray-50 px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+            <th class="sticky left-0 z-10 bg-muted px-4 py-3 text-left text-xs font-medium tracking-wide text-muted-foreground uppercase">
               資源
             </th>
             <For each={ACTIONS}>
               {(action) => (
-                <th class="px-3 py-3 text-center text-xs font-medium uppercase tracking-wide text-gray-500">
+                <th class="px-3 py-3 text-center text-xs font-medium tracking-wide text-muted-foreground uppercase">
                   {ACTION_LABELS[action] ?? action}
                 </th>
               )}
             </For>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200">
+        <tbody class="divide-y divide-border">
           <For each={RESOURCES}>
             {(resource) => (
-              <tr class="hover:bg-gray-50">
-                <td class="sticky left-0 z-10 bg-white px-4 py-3 text-sm font-medium text-gray-900">
+              <tr class="hover:bg-muted/50">
+                <td class="sticky left-0 z-10 bg-card px-4 py-3 text-sm font-medium text-foreground">
                   {RESOURCE_LABELS[resource] ?? resource}
                 </td>
                 <For each={ACTIONS}>
@@ -142,7 +142,7 @@ export function PermissionMatrix(props: PermissionMatrixProps) {
         </tbody>
       </table>
       <Show when={props.isSystem}>
-        <p class="border-t border-gray-200 px-4 py-2 text-xs text-gray-500">
+        <p class="border-t border-border px-4 py-2 text-xs text-muted-foreground">
           內建角色權限為系統預設值;僅 super / developer 可修改。
         </p>
       </Show>

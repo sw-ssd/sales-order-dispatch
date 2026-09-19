@@ -6,6 +6,8 @@ import {
   type Permission,
   type Role,
 } from "~/lib/proto/salesorder/v1/role_pb";
+import { Button } from "~/components/ui/button";
+import { Card } from "~/components/ui/card";
 import { cn } from "~/lib/cn";
 import { queryClient } from "~/lib/query-client";
 import { PermissionMatrix } from "../components/PermissionMatrix";
@@ -42,7 +44,11 @@ function errorMessage(err: unknown): string {
   return "無法連線至伺服器,請確認後端服務已啟動";
 }
 
-/** 角色權限設置頁(/users/roles;T19):角色清單 + 權限矩陣(resource × action)。 */
+/**
+ * 角色權限設置頁(/users/roles;T19):角色清單 + 權限矩陣(resource × action)。
+ * 版型照 Tailkit（Page Headings + 側欄卡片）：頁首標題區塊、左側角色卡片（選中列用 `bg-primary/10`）、
+ * 右側矩陣。內距由 AppShell 內容區負責。
+ */
 export default function RolesPage() {
   const [roles, setRoles] = createSignal<Role[]>([]);
   const [total, setTotal] = createSignal(0);
@@ -142,29 +148,32 @@ export default function RolesPage() {
   });
 
   return (
-    <main class="p-6">
-      <div class="mb-6">
-        <h1 class="text-2xl font-bold text-gray-900">角色權限設置</h1>
-        <p class="mt-1 text-sm text-gray-500">
+    <main>
+      <header class="mb-6 border-b-2 border-border pb-4">
+        <h1 class="text-2xl font-bold text-foreground">角色權限設置</h1>
+        <p class="mt-1 text-sm text-muted-foreground">
           管理角色功能權限(resource × action);內建角色權限為系統預設值
         </p>
-      </div>
+      </header>
 
       <Show when={error()}>
-        <p class="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p
+          class="mb-4 rounded-lg bg-destructive/15 px-3 py-2 text-sm font-medium text-destructive"
+          role="alert"
+        >
           {error()}
         </p>
       </Show>
 
       <div class="grid gap-6 lg:grid-cols-[240px_1fr]">
-        <aside class="h-fit rounded-lg border border-gray-200 bg-white shadow-sm">
+        <Card class="h-fit">
           <Show when={loadingRoles()}>
-            <p class="px-4 py-8 text-center text-sm text-gray-500">載入中…</p>
+            <p class="px-4 py-8 text-center text-sm text-muted-foreground">載入中…</p>
           </Show>
           <Show when={!loadingRoles() && roles().length === 0}>
-            <p class="px-4 py-8 text-center text-sm text-gray-500">尚無角色</p>
+            <p class="px-4 py-8 text-center text-sm text-muted-foreground">尚無角色</p>
           </Show>
-          <ul class="divide-y divide-gray-200">
+          <ul class="divide-y divide-border">
             <For each={roles()}>
               {(r) => (
                 <li>
@@ -172,19 +181,19 @@ export default function RolesPage() {
                     type="button"
                     onClick={() => selectRole(r)}
                     class={cn(
-                      "w-full px-4 py-3 text-left hover:bg-gray-50",
-                      r.id === selectedId() && "bg-blue-50",
+                      "w-full px-4 py-3 text-left hover:bg-muted",
+                      r.id === selectedId() && "bg-primary/10",
                     )}
                   >
                     <span
                       class={cn(
                         "block text-sm font-medium",
-                        r.id === selectedId() ? "text-blue-700" : "text-gray-900",
+                        r.id === selectedId() ? "text-primary" : "text-foreground",
                       )}
                     >
                       {r.name}
                     </span>
-                    <span class="block text-xs text-gray-500">
+                    <span class="block text-xs text-muted-foreground">
                       {r.code} · {DATA_SCOPE_LABELS[r.dataScope] ?? r.dataScope}
                       {r.isSystem ? " · 內建" : ""}
                       {!r.isActive ? " · 停用" : ""}
@@ -200,36 +209,36 @@ export default function RolesPage() {
             page={page()}
             onPageChange={goToPage}
           />
-        </aside>
+        </Card>
 
         <section class="min-w-0">
           <Show
             when={selectedRole()}
-            fallback={<p class="text-sm text-gray-500">請選擇角色</p>}
+            fallback={<p class="text-sm text-muted-foreground">請選擇角色</p>}
           >
             {(role) => (
               <>
                 <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h2 class="text-lg font-bold text-gray-900">{role().name}</h2>
-                    <p class="mt-1 text-sm text-gray-500">
+                    <h2 class="text-lg font-bold text-foreground">{role().name}</h2>
+                    <p class="mt-1 text-sm text-muted-foreground">
                       {role().code} · 資料範圍{" "}
                       {DATA_SCOPE_LABELS[role().dataScope] ?? role().dataScope}
                       <Show when={savedAt()}> · 已儲存 {savedAt()}</Show>
                     </p>
                   </div>
-                  <button
+                  <Button
                     type="button"
                     onClick={save}
-                    disabled={!dirty() || saving()}
-                    class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={!dirty()}
+                    loading={saving()}
                   >
-                    {saving() ? "儲存中…" : "儲存變更"}
-                  </button>
+                    儲存變更
+                  </Button>
                 </div>
 
                 <Show when={loadingPerms()}>
-                  <p class="py-8 text-center text-sm text-gray-500">
+                  <p class="py-8 text-center text-sm text-muted-foreground">
                     載入權限中…
                   </p>
                 </Show>

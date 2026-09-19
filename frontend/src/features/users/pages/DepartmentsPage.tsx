@@ -9,7 +9,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
+import { Button, buttonVariants } from "~/components/ui/button";
+import { Card } from "~/components/ui/card";
 import { Field, FieldLabel } from "~/components/ui/field";
+import { Input } from "~/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
 import { createSignal, For, onMount, Show } from "solid-js";
 import {
   CompanyService,
@@ -31,6 +42,12 @@ const companyClient = createClient(
   createConnectTransport({ baseUrl: "/api/v1" }),
 );
 
+/**
+ * 原生 select 的視覺（ui/ 沒有 select 元件）。`pr-10` 與顏色覆蓋的理由同 `CompaniesPage.tsx`。
+ */
+const SELECT_CLASS =
+  "block w-full rounded-lg border border-border bg-card py-2 pr-10 pl-3 text-sm text-foreground focus:border-primary focus:ring-3 focus:ring-primary/50 focus:outline-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground";
+
 function errorMessage(err: unknown): string {
   if (err instanceof ConnectError) {
     switch (err.code) {
@@ -49,7 +66,11 @@ function errorMessage(err: unknown): string {
   return "無法連線至伺服器,請確認後端服務已啟動";
 }
 
-/** 部門主檔 CRUD 頁(/users/departments)。 */
+/**
+ * 部門主檔 CRUD 頁(/users/departments)。
+ * 版型同 `CompaniesPage`（Page Headings + In Card）：兩組篩選表單收在同一條卡片色帶內，
+ * 表格與分頁收在同一張 `Card`。內距由 AppShell 內容區負責。
+ */
 export default function DepartmentsPage() {
   const [departments, setDepartments] = createSignal<Department[]>([]);
   const [companies, setCompanies] = createSignal<Company[]>([]);
@@ -212,167 +233,152 @@ export default function DepartmentsPage() {
   };
 
   return (
-    <main class="p-6">
-      <div class="mb-6 flex items-center justify-between">
+    <main>
+      <header class="mb-6 flex flex-col gap-4 border-b-2 border-border pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900">部門管理</h1>
-          <p class="mt-1 text-sm text-gray-500">公司底下的業務單位(共 {total()} 筆)</p>
+          <h1 class="text-2xl font-bold text-foreground">部門管理</h1>
+          <p class="mt-1 text-sm text-muted-foreground">
+            公司底下的業務單位(共 {total()} 筆)
+          </p>
         </div>
-        <button
-          type="button"
-          onClick={openCreate}
-          class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
+        <Button type="button" onClick={openCreate}>
           新增部門
-        </button>
-      </div>
-
-      <form
-        class="mb-4 flex flex-wrap items-end gap-3"
-        onSubmit={(e) => {
-          e.preventDefault();
-          loadCompanies(true);
-        }}
-      >
-        <div>
-          <label for="company-search-keyword" class="block text-sm font-medium text-gray-700">
-            公司關鍵字
-          </label>
-          <input
-            id="company-search-keyword"
-            value={companyKeyword()}
-            onInput={(e) => setCompanyKeyword(e.currentTarget.value)}
-            placeholder="名稱 / 識別碼"
-            class="mt-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={companiesLoading()}
-          class="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-        >
-          搜尋公司
-        </button>
-        <div class="flex items-center gap-3 pb-1 text-sm text-gray-600">
-          <span>
-            已載入 {companies().length} 家,共 {companyTotal()} 家
-          </span>
-          <button
-            type="button"
-            onClick={() => loadCompanies(false)}
-            disabled={companiesLoading() || companies().length >= companyTotal()}
-            class="rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {companiesLoading() ? "載入中…" : "載入更多"}
-          </button>
-        </div>
-      </form>
-
-      <form
-        class="mb-4 flex flex-wrap items-end gap-3"
-        onSubmit={(e) => {
-          e.preventDefault();
-          setPage(1); // 查詢變更時回到第一頁
-          load();
-        }}
-      >
-        <div>
-          <label for="department-company-filter" class="block text-sm font-medium text-gray-700">
-            所屬公司
-          </label>
-          <select
-            id="department-company-filter"
-            value={companyFilter()}
-            onChange={(e) => setCompanyFilter(e.currentTarget.value)}
-            class="mt-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-          >
-            <option value="">全部公司</option>
-            <For each={companies()}>
-              {(c) => <option value={c.id}>{c.name}</option>}
-            </For>
-          </select>
-        </div>
-        <button
-          type="submit"
-          class="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-        >
-          查詢
-        </button>
-      </form>
+        </Button>
+      </header>
 
       <Show when={error()}>
-        <p class="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p
+          class="mb-4 rounded-lg bg-destructive/15 px-3 py-2 text-sm font-medium text-destructive"
+          role="alert"
+        >
           {error()}
         </p>
       </Show>
 
-      <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                部門名稱
-              </th>
-              <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                所屬公司
-              </th>
-              <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                ID
-              </th>
-              <th class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500">
-                操作
-              </th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-200">
+      <Card>
+        <div class="flex flex-col gap-3 border-b border-border bg-muted px-3 py-3">
+          <form
+            class="flex flex-wrap items-end gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              loadCompanies(true);
+            }}
+          >
+            <Field class="w-full sm:w-64">
+              <FieldLabel for="company-search-keyword">公司關鍵字</FieldLabel>
+              <Input
+                id="company-search-keyword"
+                value={companyKeyword()}
+                onInput={(e) => setCompanyKeyword(e.currentTarget.value)}
+                placeholder="名稱 / 識別碼"
+              />
+            </Field>
+            <Button type="submit" variant="outline" loading={companiesLoading()}>
+              搜尋公司
+            </Button>
+            <div class="flex h-9 items-center gap-3 text-sm text-muted-foreground">
+              <span>
+                已載入 {companies().length} 家,共 {companyTotal()} 家
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={companiesLoading() || companies().length >= companyTotal()}
+                onClick={() => loadCompanies(false)}
+              >
+                載入更多
+              </Button>
+            </div>
+          </form>
+
+          <form
+            class="flex flex-wrap items-end gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              setPage(1); // 查詢變更時回到第一頁
+              load();
+            }}
+          >
+            <Field class="w-full sm:w-64">
+              <FieldLabel for="department-company-filter">所屬公司</FieldLabel>
+              <select
+                id="department-company-filter"
+                value={companyFilter()}
+                onChange={(e) => setCompanyFilter(e.currentTarget.value)}
+                class={SELECT_CLASS}
+              >
+                <option value="">全部公司</option>
+                <For each={companies()}>
+                  {(c) => <option value={c.id}>{c.name}</option>}
+                </For>
+              </select>
+            </Field>
+            <Button type="submit" variant="outline">
+              查詢
+            </Button>
+          </form>
+        </div>
+
+        <Table>
+          <TableHeader>
+            <TableRow class="hover:bg-transparent">
+              <TableHead>部門名稱</TableHead>
+              <TableHead>所屬公司</TableHead>
+              <TableHead>ID</TableHead>
+              <TableHead class="text-right">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             <Show when={loading()}>
-              <tr>
-                <td colspan={4} class="px-4 py-8 text-center text-sm text-gray-500">
+              <TableRow class="hover:bg-transparent">
+                <TableCell colspan={4} class="py-8 text-center text-muted-foreground">
                   載入中…
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             </Show>
             <Show when={!loading() && departments().length === 0}>
-              <tr>
-                <td colspan={4} class="px-4 py-8 text-center text-sm text-gray-500">
+              <TableRow class="hover:bg-transparent">
+                <TableCell colspan={4} class="py-8 text-center text-muted-foreground">
                   尚無部門資料
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             </Show>
             <For each={departments()}>
               {(d) => (
-                <tr class="hover:bg-gray-50">
-                  <td class="px-4 py-3 text-sm font-medium text-gray-900">{d.name}</td>
-                  <td class="px-4 py-3 text-sm text-gray-600">{d.companyName || "—"}</td>
-                  <td class="px-4 py-3 text-sm text-gray-400">{d.id}</td>
-                  <td class="px-4 py-3 text-right text-sm">
+                <TableRow>
+                  <TableCell class="font-medium text-foreground">{d.name}</TableCell>
+                  <TableCell class="text-muted-foreground">{d.companyName || "—"}</TableCell>
+                  <TableCell class="text-muted-foreground">{d.id}</TableCell>
+                  <TableCell class="text-right">
                     <button
                       type="button"
                       onClick={() => openEdit(d)}
-                      class="text-blue-600 hover:text-blue-800"
+                      class="font-medium text-primary hover:underline"
                     >
                       編輯
                     </button>
                     <button
                       type="button"
                       onClick={() => remove(d)}
-                      class="ml-3 text-red-600 hover:text-red-800"
+                      class="ml-3 font-medium text-destructive hover:underline"
                     >
                       刪除
                     </button>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
             </For>
-          </tbody>
-        </table>
-      </div>
-      <ListPagination
-        total={total()}
-        pageSize={PAGE_SIZE}
-        page={page()}
-        onPageChange={goToPage}
-      />
+          </TableBody>
+        </Table>
+
+        <ListPagination
+          total={total()}
+          pageSize={PAGE_SIZE}
+          page={page()}
+          onPageChange={goToPage}
+        />
+      </Card>
 
       <Dialog open={dialogOpen()} onOpenChange={setDialogOpen}>
         <DialogContent>
@@ -383,56 +389,52 @@ export default function DepartmentsPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={submit}>
-            <div class="mt-4 space-y-4">
-              <Field>
-                <FieldLabel for="department-name">部門名稱 *</FieldLabel>
-                <input
-                  id="department-name"
-                  required
-                  value={name()}
-                  onInput={(e) => setName(e.currentTarget.value)}
-                  class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                />
-              </Field>
-              <Field>
-                <FieldLabel for="department-company">所屬公司 *</FieldLabel>
-                <select
-                  id="department-company"
-                  required
-                  disabled={!!editing()}
-                  value={companyId()}
-                  onChange={(e) => setCompanyId(e.currentTarget.value)}
-                  class="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-400"
-                >
-                  <option value="" disabled>
-                    請選擇公司
-                  </option>
-                  <For each={companies()}>
-                    {(c) => <option value={c.id}>{c.name}</option>}
-                  </For>
-                </select>
-              </Field>
+          <form class="space-y-4" onSubmit={submit}>
+            <Field>
+              <FieldLabel for="department-name">部門名稱 *</FieldLabel>
+              <Input
+                id="department-name"
+                required
+                value={name()}
+                onInput={(e) => setName(e.currentTarget.value)}
+              />
+            </Field>
+            <Field>
+              <FieldLabel for="department-company">所屬公司 *</FieldLabel>
+              <select
+                id="department-company"
+                required
+                disabled={!!editing()}
+                value={companyId()}
+                onChange={(e) => setCompanyId(e.currentTarget.value)}
+                class={SELECT_CLASS}
+              >
+                <option value="" disabled>
+                  請選擇公司
+                </option>
+                <For each={companies()}>
+                  {(c) => <option value={c.id}>{c.name}</option>}
+                </For>
+              </select>
+            </Field>
 
-              <Show when={formError()}>
-                <p class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
-                  {formError()}
-                </p>
-              </Show>
+            <Show when={formError()}>
+              <p
+                class="rounded-lg bg-destructive/15 px-3 py-2 text-sm font-medium text-destructive"
+                role="alert"
+              >
+                {formError()}
+              </p>
+            </Show>
 
-              <DialogFooter>
-                <DialogClose class="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                  取消
-                </DialogClose>
-                <button
-                  type="submit"
-                  disabled={saving()}
-                  class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {saving() ? "儲存中…" : "儲存"}
-                </button>
-              </DialogFooter>
-            </div>
+            <DialogFooter>
+              <DialogClose class={buttonVariants({ variant: "outline" })}>
+                取消
+              </DialogClose>
+              <Button type="submit" loading={saving()}>
+                儲存
+              </Button>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>

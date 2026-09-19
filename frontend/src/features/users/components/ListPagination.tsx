@@ -36,8 +36,8 @@ export function ListPagination(props: ListPaginationProps) {
 
   return (
     <Show when={props.total > props.pageSize}>
-      <div class="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 px-4 py-3">
-        <p class="text-sm text-gray-600">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-t border-border px-3 py-3">
+        <p class="text-sm text-muted-foreground">
           {props.total === 0
             ? "共 0 筆"
             : `第 ${rangeStart()}–${rangeEnd()} 筆,共 ${props.total} 筆`}
