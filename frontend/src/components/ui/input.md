@@ -18,9 +18,20 @@
 ## Ark 對應
 
 `ark: []`——**它沒有包裝任何 Ark primitive**（是原生 `<input>`）。但它 import 了
-`@ark-ui/solid/field` 的 `useFieldContext`：放在 `Field` 內時，會自行補上等同 Ark `Field.Input`
-`getControlProps()` 的 `aria-invalid`／`aria-describedby`。因此 `deps` 有 `@ark-ui/solid` 而 `ark` 為空。
-這條規則的實際好處：`Field` 的值錯誤態與說明文字只要寫在 `<Field>` 內就會自動關聯，不必手寫 id。
+`@ark-ui/solid/field` 的 `useFieldContext`：放在 `Field` 內時，會自行補上 `aria-invalid`／`aria-describedby`。
+因此 `deps` 有 `@ark-ui/solid` 而 `ark` 為空。
+
+關聯的組成**刻意不等同 Ark**（Ark 5.39.2 沒有公開 `getControlProps()`，且它的
+`aria-describedby` 只放 helper text、錯誤訊息走 `aria-errormessage`）：
+
+| 情況 | 本元件的 `aria-describedby` |
+| --- | --- |
+| `Field` 內、`invalid` 為真且有 `FieldError` | `errorText` + helper text 的 id（**錯誤訊息必須在 describedby 內**，本專案的驗收條款） |
+| `Field` 內、`invalid` 為假 | 只有 helper text 的 id（若有 `FieldDescription`） |
+| `Field` 外 | 完全不加這兩個屬性 |
+
+→ 因為 `invalid` 為真時 describedby 會指向 **errorText 的 id**，呼叫端**必須**在同期 `Field` 內渲染
+`FieldError`，否則該 id 會指向不存在的元素。
 
 ## 可及性
 
@@ -31,10 +42,23 @@
 ## 範例
 
 ```tsx
-import { Field, FieldLabel, Input } from "~/components/ui";
+import { Field, FieldDescription, FieldError, FieldLabel, Input } from "~/components/ui";
+
+const [email, setEmail] = createSignal("");
+const [error, setError] = createSignal<string>();
 
 <Field invalid={!!error()}>
   <FieldLabel for="email">電子郵件</FieldLabel>
-  <Input id="email" type="email" autocomplete="email" placeholder="you@example.com" />
+  <Input
+    id="email"
+    type="email"
+    autocomplete="email"
+    placeholder="you@example.com"
+    value={email()}
+    onInput={(e) => setEmail(e.currentTarget.value)}
+  />
+  <FieldDescription>派車與對帳通知寄送用。</FieldDescription>
+  {/* invalid 為真時必須有 FieldError，否則 aria-describedby 會指向不存在的元素 */}
+  <FieldError>{error()}</FieldError>
 </Field>;
 ```
