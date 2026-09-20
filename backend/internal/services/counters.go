@@ -41,6 +41,9 @@ func NewEntitlementCounter(db *ent.Client) entitlements.Counter {
 // SystemScopeTx 的代價（刻意接受）：①它是第二條連線（AGENTS §9-6），但只做唯讀 SELECT、
 // 不取任何列鎖，不會與請求交易互鎖；②它看不到請求交易內未提交的列 —— 守衛一律在寫入之前呼叫，
 // 該情境不存在，且「低報」屬 fail-closed 方向，遠比超額放行安全。
+//
+// 未特別處理空 data_scope（未知角色的請求）：同一組 policy 也會擋掉它的所有寫入（WITH CHECK
+// 不成立），故低報不可利用 —— 寫入面已 fail-closed。
 func (c *entitlementCounter) Count(ctx context.Context, companyID int, feature string) (int, error) {
 	switch auth.RLSFrom(ctx).DataScope {
 	case auth.DataScopeDepartment, auth.DataScopeSelf:
