@@ -67,9 +67,24 @@ func (b *Billing) EnsureNextPeriod(ctx context.Context, companyID int, now time.
 			return errcode.SysInternal.Wrap(err)
 		}
 
+		// 期別長度的**錨**是「第一期起日的日號」：月底起租的客戶永遠在月底結帳。
+		// 不能用 cur.PeriodStart.Day()：2 月把 31 夾成 28 之後，錨點會永久變成 28
+		// （1/31 → 2/28 → 3/28 → …）—— 月繳每期縮成 28 天，一年會開出 13 期（多收一期），
+		// 帳單日也永久漂移（I-1）。
+		anchorDay := cur.PeriodStart.Day()
+		switch first, err := b.st.OpenPeriodByNoTx(ctx, tx, sub.ID, 1); {
+		case err == nil:
+			anchorDay = first.PeriodStart.Day()
+		case errors.Is(err, sql.ErrNoRows):
+			// 第一期不在（資料被清理或由外部寫入）：退回「當期起日的日號」—— 那是唯一還帶著
+			// 客戶帳單日的線索；不猜、也不讓這一筆資料擋住整趟排程。
+		default:
+			return errcode.SysInternal.Wrap(err)
+		}
+
 		// 期別長度以訂閱的 billing_cycle 決定（G1）：空字串與未知值一律大聲失敗 ——
 		// 默默當成月繳會讓年繳只收 1 個月（少收 11 個月）。這裡先算期末，讓週期驗證只有一處。
-		nextEnd, err := addBillingPeriod(cur.PeriodEnd, sub.BillingCycle)
+		nextEnd, err := addBillingPeriod(cur.PeriodEnd, anchorDay, sub.BillingCycle)
 		if err != nil {
 			return errcode.PlatformSubscriptionInactive.Wrap(err, map[string]string{
 				"reason": fmt.Sprintf("訂閱 %d 的 billing_cycle 為 %q，無法決定期別長度",
@@ -102,6 +117,9 @@ func (b *Billing) EnsureNextPeriod(ctx context.Context, companyID int, now time.
 			"period_no":     nextNo,
 			"amount_cents":  amount,
 			"billing_cycle": sub.BillingCycle,
+			// 排程不寫平台稽核（見檔頭），故每個排程事件都自帶 reason ——
+			// 事件是補繳／催收／客服追查時唯一的「為什麼」。
+			"reason": "scheduled_next_period",
 		}); err != nil {
 			return errcode.SysInternal.Wrap(err)
 		}
@@ -129,12 +147,23 @@ func (b *Billing) MarkPastDue(ctx context.Context, now time.Time, graceDays int)
 			if !canTransition(sub.Status, "past_due") {
 				continue
 			}
+			// **第二層防線**（第一層是查詢的 `cur.status = 'open'`）：最新一期已付款或作廢不算逾期。
+			// 少了這一層，逾期後才繳清的客戶會被重新催收、寬限期重置，最後被停用凍結，
+			// 而 EnsureNextPeriod 只認服務中的訂閱又不會替他開下一期 → 客戶從此停止被開帳（C-1）。
+			cur, err := b.st.CurrentPeriodTx(ctx, tx, sub.ID)
+			if err != nil {
+				return errcode.SysInternal.Wrap(err)
+			}
+			if cur == nil || cur.Status != "open" {
+				continue
+			}
 			if err := b.st.SetSubscriptionStatusTx(ctx, tx, sub.ID, "past_due", &grace); err != nil {
 				return errcode.SysInternal.Wrap(err)
 			}
 			if err := b.emit(ctx, tx, sub.ID, "subscription.past_due", map[string]any{
 				"company_id":  sub.CompanyID,
 				"grace_until": grace.UTC().Format(time.RFC3339),
+				"reason":      "period_end_passed_unpaid",
 			}); err != nil {
 				return errcode.SysInternal.Wrap(err)
 			}
@@ -221,28 +250,32 @@ func (b *Billing) ExpireCancelled(ctx context.Context, now time.Time) (int, erro
 // addBillingPeriod 由期別期末起算下一個期末：月繳取「下月同日」、年繳取「明年同日」；
 // 該日不存在（1/31、3/31、閏年的 2/29）時取當月最後一日（G2）。
 //
+// anchorDay 是**該訂閱第一期起日的日號**（不是 from 的日號）：被 2 月夾擠一次之後，
+// 錨點若跟著變成 28，帳單日就永久漂移（1/31 → 2/28 → 3/28 → 4/28…），月繳每期縮成 28 天、
+// 一年開出 13 期 —— 月底起租的客戶每年多收一期（I-1）。
+//
 // 為何不用 time.AddDate：它會正規化（1/31 + 1 月 = 3/3），帳期會跳過整個 2 月 ——
 // 客戶被少算一個月的服務，而帳上卻看不出來。未知／空字串週期一律報錯，不得默默當成月繳（G1）。
-func addBillingPeriod(from time.Time, cycle string) (time.Time, error) {
+func addBillingPeriod(from time.Time, anchorDay int, cycle string) (time.Time, error) {
 	switch cycle {
 	case "monthly":
-		return dayOfMonthOrLast(from, from.Year(), int(from.Month())+1), nil
+		return dayOfMonthOrLast(from, anchorDay, from.Year(), int(from.Month())+1), nil
 	case "yearly":
-		return dayOfMonthOrLast(from, from.Year()+1, int(from.Month())), nil
+		return dayOfMonthOrLast(from, anchorDay, from.Year()+1, int(from.Month())), nil
 	default:
 		return time.Time{}, fmt.Errorf("未知的計費週期 %q（允許 monthly / yearly）", cycle)
 	}
 }
 
-// dayOfMonthOrLast 回傳「year-month 的同一天」（時分秒與時區沿用 from）；
+// dayOfMonthOrLast 回傳「year-month 的 anchorDay」（時分秒與時區沿用 from）；
 // 該日不存在時回該月最後一天。
-func dayOfMonthOrLast(from time.Time, year, month int) time.Time {
+func dayOfMonthOrLast(from time.Time, anchorDay, year, month int) time.Time {
 	if month > 12 {
 		year, month = year+1, month-12
 	}
 	loc := from.Location()
 	lastDay := time.Date(year, time.Month(month)+1, 0, 0, 0, 0, 0, loc).Day()
-	day := from.Day()
+	day := anchorDay
 	if day > lastDay {
 		day = lastDay
 	}
