@@ -83,12 +83,18 @@ func TestPlatformConfigured(t *testing.T) {
 	if (Platform{}).Configured() {
 		t.Fatal("空設定不得視為已設定")
 	}
-	full := Platform{
+	// CookieDomain 可為空（開發環境同源代理時用 host-only cookie）；
+	// 其餘三項缺一即不掛載。
+	noCookie := Platform{
 		OperatorJWTSecret: "s", AllowedEmailDomain: "example.com",
-		ConsoleURL: "https://console.example.com", CookieDomain: ".example.com",
+		ConsoleURL: "http://localhost:5173",
 	}
-	if !full.Configured() {
-		t.Fatal("四項齊備時應視為已設定")
+	if !noCookie.Configured() {
+		t.Fatal("CookieDomain 可為空，三項齊備即視為已設定")
+	}
+	missingSecret := Platform{AllowedEmailDomain: "example.com", ConsoleURL: "http://localhost:5173"}
+	if missingSecret.Configured() {
+		t.Fatal("缺 OperatorJWTSecret 不得視為已設定")
 	}
 }
 ```
@@ -116,10 +122,10 @@ type Platform struct {
 	CookieDomain string `envconfig:"PLATFORM_COOKIE_DOMAIN"`
 }
 
-// Configured 表示四項設定齊備，可掛載平台工具。
+// Configured 表示必要設定齊備，可掛載平台工具。
+// CookieDomain 可為空：同源／代理開發環境使用 host-only cookie（設 Domain=localhost 無效）。
 func (p Platform) Configured() bool {
-	return p.OperatorJWTSecret != "" && p.AllowedEmailDomain != "" &&
-		p.ConsoleURL != "" && p.CookieDomain != ""
+	return p.OperatorJWTSecret != "" && p.AllowedEmailDomain != "" && p.ConsoleURL != ""
 }
 ```
 
