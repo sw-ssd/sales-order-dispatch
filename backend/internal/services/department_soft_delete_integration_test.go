@@ -55,7 +55,6 @@ func TestIntegrationDepartmentSoftDelete(t *testing.T) {
 	cc, dc, uc := newDepartmentSoftDeleteServer(t, db, authz.Identity{
 		UserID: strconv.Itoa(actor.ID), CompanyID: strconv.Itoa(actorCo.ID), Role: "super", Roles: []string{"super"},
 	})
-	_ = cc
 
 	t.Run("00020 欄位與無表層 UNIQUE", func(t *testing.T) {
 		if !columnExists(t, sqlDB, "departments", "deleted_at") {
@@ -73,14 +72,8 @@ func TestIntegrationDepartmentSoftDelete(t *testing.T) {
 		// `CREATE UNIQUE INDEX`(含條件式唯一索引)不會出現在 pg_constraint,故另以 pg_index 直查:
 		// **無條件**唯一索引只能有 pkey 一個。帶 WHERE 的部分唯一索引是允許的(00019 對公司 identifier
 		// 的做法),但必須以 `WHERE deleted_at IS NULL` 表達,否則已刪除列會永久佔用該鍵。
-		var unconditionalUnique int
-		if err := sqlDB.QueryRow(
-			`SELECT count(*) FROM pg_index WHERE indrelid = 'departments'::regclass AND indisunique AND indpred IS NULL`,
-		).Scan(&unconditionalUnique); err != nil {
-			t.Fatalf("查 departments 的唯一索引: %v", err)
-		}
-		if unconditionalUnique != 1 {
-			t.Fatalf("departments 的無條件唯一索引只應有 pkey 一個(部分唯一索引須以 WHERE deleted_at IS NULL 表達),got %d", unconditionalUnique)
+		if got := unconditionalUniqueIndexes(t, sqlDB, "departments"); got != 1 {
+			t.Fatalf("departments 的無條件唯一索引只應有 pkey 一個(部分唯一索引須以 WHERE deleted_at IS NULL 表達),got %d", got)
 		}
 		// ② 的前提:audit_logs.department_id 的 FK 真的存在。
 		var fk int

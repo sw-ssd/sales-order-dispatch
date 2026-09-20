@@ -94,6 +94,13 @@ func TestIntegrationCompanySoftDelete(t *testing.T) {
 			t.Fatalf("companies 仍有 %d 個表層 UNIQUE 約束(軟刪除後識別碼將無法重用)", tableUnique)
 		}
 
+		// `CREATE UNIQUE INDEX`(含條件式唯一索引)不會出現在 pg_constraint,故另以 pg_index 直查:
+		// **無條件**唯一索引只能有 pkey 一個(00019 的部分唯一索引帶 WHERE,不在此計)。
+		// 少了這條,把表層 UNIQUE 換成非部分的 `CREATE UNIQUE INDEX` 時上面的斷言仍會通過(複審 M3)。
+		if got := unconditionalUniqueIndexes(t, sqlDB, "companies"); got != 1 {
+			t.Fatalf("companies 的無條件唯一索引只應有 pkey 一個(部分唯一索引須以 WHERE deleted_at IS NULL 表達),got %d", got)
+		}
+
 		// ② 的前提:audit_logs.company_id 的 FK 真的存在。
 		var fk int
 		if err := sqlDB.QueryRow(
@@ -258,6 +265,11 @@ func TestIntegrationCompanySoftDelete(t *testing.T) {
 		if tableUnique != 1 {
 			t.Fatalf("Down 必須還原表層 UNIQUE(companies_identifier_key),got %d", tableUnique)
 		}
+		// 表層 UNIQUE 的存在形式同樣經 pg_index 確認:Down 後的無條件唯一索引
+		// = pkey + 還原的 companies_identifier_key(部分唯一索引應已移除)。
+		if got := unconditionalUniqueIndexes(t, downDB, "companies"); got != 2 {
+			t.Fatalf("Down 後的無條件唯一索引應為 pkey + companies_identifier_key 兩個,got %d", got)
+		}
 
 		// 再 Up 一次:回到本波語意(索引在、表層 UNIQUE 不在)—— Up/Down 皆可重複套用。
 		migrateBusinessUp(t, downDSN)
@@ -275,7 +287,23 @@ func TestIntegrationCompanySoftDelete(t *testing.T) {
 		if tableUnique != 0 {
 			t.Fatalf("重跑 Up 後表層 UNIQUE 應再次被移除,got %d", tableUnique)
 		}
+		if got := unconditionalUniqueIndexes(t, downDB, "companies"); got != 1 {
+			t.Fatalf("重跑 Up 後的無條件唯一索引應只剩 pkey,got %d", got)
+		}
 	})
+}
+
+// unconditionalUniqueIndexes 數指定表上的**無條件**唯一索引(部分唯一索引帶 WHERE 不計)。
+// `CREATE UNIQUE INDEX` 不進 pg_constraint,只查 `contype='u'` 抓不到(複審 M3)。
+func unconditionalUniqueIndexes(t *testing.T, db *sql.DB, table string) int {
+	t.Helper()
+	var n int
+	if err := db.QueryRow(
+		`SELECT count(*) FROM pg_index WHERE indrelid = $1::regclass AND indisunique AND indpred IS NULL`, table,
+	).Scan(&n); err != nil {
+		t.Fatalf("查 %s 的唯一索引: %v", table, err)
+	}
+	return n
 }
 
 // indexExists 判斷指定索引是否存在。

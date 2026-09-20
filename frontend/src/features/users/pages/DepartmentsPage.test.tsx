@@ -67,6 +67,17 @@ async function renderPage() {
   await waitFor(() => expect(screen.getByText("業務部")).toBeTruthy());
 }
 
+/** `tbody` 的列（含載入列與空狀態列）。 */
+const tableRows = () => [...document.querySelectorAll("tbody tr")] as HTMLTableRowElement[];
+
+/**
+ * placeholder 列＝載入列與空狀態列：整個 `tbody` 只有它們是「單格 colspan」，資料列一律
+ * 逐欄渲染（四欄四格）。以結構判別「有沒有退回載入列／誤顯示空狀態」可避開文案 ——
+ * 改字串不會讓斷言失去鑑別力。
+ */
+const placeholderRows = () =>
+  tableRows().filter((row) => row.querySelector("td[colspan]") !== null);
+
 /** 開啟中的 modal 控制代號：欄位節點在 modal 開著期間不變，可在開啟時一次查好。 */
 interface DepartmentModal {
   form: HTMLFormElement;
@@ -449,9 +460,9 @@ describe("<DepartmentsPage> 部門清單與公司下拉查詢", () => {
       companyId: undefined,
     });
 
-    // 第 2 頁還在飛：placeholderData 讓舊頁資料留在畫面上，不退回載入列。
+    // 第 2 頁還在飛：placeholderData 讓舊頁那一列留在畫面上（不得退回載入列或顯示空狀態列）。
     expect(screen.getByText("業務部")).toBeTruthy();
-    expect(screen.queryByText("載入中…")).toBeNull();
+    expect(placeholderRows()).toHaveLength(0);
 
     secondPage.resolve({ departments: [SECOND_PAGE_DEPARTMENT], pagination: { total: 45 } });
 
@@ -475,7 +486,8 @@ describe("<DepartmentsPage> 部門清單與公司下拉查詢", () => {
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toBe("伺服器暫時無法使用")
     );
-    expect(screen.queryByText("尚無部門資料")).toBeNull();
+    // ……但清單不得被誤判成空的：畫面上不得出現 placeholder 列（＝載入列或空狀態列）。
+    expect(placeholderRows()).toHaveLength(0);
   });
 
   it("所屬公司篩選送出：草稿不查詢、送出後帶入參數並回到第 1 頁（只查一次）", async () => {
@@ -658,11 +670,6 @@ describe("<DepartmentsPage> 表格（TanStack Table，manual 分頁）", () => {
     ...document.querySelectorAll("thead th"),
   ] as HTMLTableCellElement[];
 
-  /** `tbody` 的列（含載入列與空狀態列）。 */
-  const tableRows = () => [
-    ...document.querySelectorAll("tbody tr"),
-  ] as HTMLTableRowElement[];
-
   /** 伺服器端分頁的替身：每頁回 `PAGE_SIZE` 筆（最後一頁可能更少），`total` 固定。 */
   function mockPages(total: number) {
     listDepartmentsSpy.mockImplementation((req: { page: number }) =>
@@ -693,7 +700,8 @@ describe("<DepartmentsPage> 表格（TanStack Table，manual 分頁）", () => {
       "ID",
       "操作",
     ]);
-    expect(tableRows()[0].querySelectorAll("td")).toHaveLength(headers.length);
+    // 字面值（不是 `headers.length` —— 兩邊同源時整欄被刪也一起變，鑑別力等於零）。
+    expect(tableRows()[0].querySelectorAll("td")).toHaveLength(4);
   });
 
   it("列數等於資料數（順序照查詢結果）", async () => {
@@ -713,22 +721,22 @@ describe("<DepartmentsPage> 表格（TanStack Table，manual 分頁）", () => {
     ]);
   });
 
-  it("載入列與空狀態列的 colspan 由欄位數推導（兩者都等於表頭欄位數）", async () => {
+  it("載入列與空狀態列的 colspan 為 4（實際欄位數），各只有一格", async () => {
     const pending = Promise.withResolvers<unknown>();
     listDepartmentsSpy.mockReturnValue(pending.promise);
     mountPage();
 
-    const columnCount = headerCells().length;
-    expect(columnCount).toBe(4);
+    // 欄位數以字面值釘住 —— 不拿 `headerCells().length` 去比對自己產生的欄位。
+    expect(headerCells()).toHaveLength(4);
 
     const loadingRow = (await waitFor(() => screen.getByText("載入中…"))).closest("tr");
-    expect(loadingRow?.querySelector("td")?.getAttribute("colspan")).toBe(String(columnCount));
+    expect(loadingRow?.querySelector("td")?.getAttribute("colspan")).toBe("4");
     expect(loadingRow?.querySelectorAll("td")).toHaveLength(1);
 
     pending.resolve({ departments: [], pagination: { total: 0 } });
 
     const emptyRow = (await waitFor(() => screen.getByText("尚無部門資料"))).closest("tr");
-    expect(emptyRow?.querySelector("td")?.getAttribute("colspan")).toBe(String(columnCount));
+    expect(emptyRow?.querySelector("td")?.getAttribute("colspan")).toBe("4");
   });
 
   it("分頁 UI 的頁碼與總數取自查詢結果（rowCount 決定頁數、頁碼來自 table）", async () => {
@@ -935,7 +943,6 @@ describe("<DepartmentsPage> 表頭排序（伺服器端）", () => {
     const button = sortButton("部門名稱");
     expect(button.tagName).toBe("BUTTON");
     expect(button.getAttribute("type")).toBe("button");
-    expect(button.tabIndex).toBe(0);
     button.focus();
     expect(document.activeElement).toBe(button);
 

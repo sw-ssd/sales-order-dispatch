@@ -54,6 +54,9 @@ describe("共用查詢 retry 謂詞", () => {
     const forbidden = new ConnectError("無權限", Code.PermissionDenied);
     // 第 1 次失敗(未達上限)且為暫時性錯誤 → 重試。
     expect(retry(0, unavailable)).toBe(true);
+    // 上限是 3,不是 1 或 2:第 2、3 次嘗試都要重試(只探 0 與 3 時 MAX_RETRIES=1/2 也會過)。
+    expect(retry(1, unavailable)).toBe(true);
+    expect(retry(2, unavailable)).toBe(true);
     // 已重試 3 次 → 停止(否則 Unavailable 會無限退避重試)。
     expect(retry(3, unavailable)).toBe(false);
     expect(retry(0, forbidden)).toBe(false);

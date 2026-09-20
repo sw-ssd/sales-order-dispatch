@@ -292,6 +292,12 @@ func TestIntegrationListPageScanMatchesFullScan(t *testing.T) {
 
 	// 白名單欄位(空字串 = 服務預設排序)皆須涵蓋,含升/降冪;F2 的六個端點沒有排序參數,
 	// 只有固定排序鍵,故僅 "" 一列。
+	//
+	// G6:固定排序鍵的八個案例(加工規格/商品分類/車次/字典×2/商品/倉別/稽核)的全量基準
+	// **刻意帶上預期方向的 ORDER BY** —— 集合比對對排序方向完全不敏感(服務端 Asc 改成 Desc、
+	// 稽核的 created_at/id 改成 Asc 都仍全綠),故另以 assertSequenceMatchesFull 逐位比對
+	// 「逐頁序列 == 本基準序列」。方向寫在測試裡、由同一個 PG 計算,建構與 tie 順序都不需
+	// 用碼位/字典序猜測(排序鍵為唯一鍵時多一組等價鍵,結果不變)。
 	all := map[string][]string{
 		"公司": allIDs(t, func() ([]int, error) { return db.Company.Query().Select(company.FieldID).Ints(ctx) }),
 		"部門": allIDs(t, func() ([]int, error) { return db.Department.Query().Select(department.FieldID).Ints(ctx) }),
@@ -303,32 +309,48 @@ func TestIntegrationListPageScanMatchesFullScan(t *testing.T) {
 		// F2:以下六個端點的可見範圍依 deptScope —— super 回 did=nil → 公司層(跨部門);
 		// 字典另走 metadictScope:super 不過濾部門,系統預設 + 全部部門擴充皆可見(故無公司條件)。
 		"加工規格": allIDs(t, func() ([]int, error) {
-			return db.ProcessingSpec.Query().Where(processingspec.CompanyIDEQ(co.ID)).Select(processingspec.FieldID).Ints(ctx)
+			return db.ProcessingSpec.Query().Where(processingspec.CompanyIDEQ(co.ID)).
+				Order(ent.Asc(processingspec.FieldSortOrder), ent.Asc(processingspec.FieldID)).
+				Select(processingspec.FieldID).Ints(ctx)
 		}),
 		"商品分類": allIDs(t, func() ([]int, error) {
-			return db.ProductCategory.Query().Where(productcategory.CompanyIDEQ(co.ID)).Select(productcategory.FieldID).Ints(ctx)
+			return db.ProductCategory.Query().Where(productcategory.CompanyIDEQ(co.ID)).
+				Order(ent.Asc(productcategory.FieldSortOrder), ent.Asc(productcategory.FieldID)).
+				Select(productcategory.FieldID).Ints(ctx)
 		}),
 		"車次": allIDs(t, func() ([]int, error) {
-			return db.Route.Query().Where(route.CompanyIDEQ(co.ID)).Select(route.FieldID).Ints(ctx)
+			return db.Route.Query().Where(route.CompanyIDEQ(co.ID)).
+				Order(ent.Asc(route.FieldSortOrder), ent.Asc(route.FieldID)).
+				Select(route.FieldID).Ints(ctx)
 		}),
 		"字典(系統預設)": allIDs(t, func() ([]int, error) {
-			return db.Metadict.Query().Where(metadict.DepartmentIDIsNil()).Select(metadict.FieldID).Ints(ctx)
+			return db.Metadict.Query().Where(metadict.DepartmentIDIsNil()).
+				Order(ent.Asc(metadict.FieldSortOrder), ent.Asc(metadict.FieldCode), ent.Asc(metadict.FieldID)).
+				Select(metadict.FieldID).Ints(ctx)
 		}),
 		// 系統預設 + 指定部門(與部門身分的 metadictScope 等價的 where)。
 		"字典(併當前部門)": allIDs(t, func() ([]int, error) {
 			return db.Metadict.Query().
 				Where(metadict.Or(metadict.DepartmentIDIsNil(), metadict.DepartmentIDEQ(depts[0].ID))).
+				Order(ent.Asc(metadict.FieldSortOrder), ent.Asc(metadict.FieldCode), ent.Asc(metadict.FieldID)).
 				Select(metadict.FieldID).Ints(ctx)
 		}),
 		"商品": allIDs(t, func() ([]int, error) {
-			return db.Product.Query().Where(product.CompanyIDEQ(co.ID)).Select(product.FieldID).Ints(ctx)
+			return db.Product.Query().Where(product.CompanyIDEQ(co.ID)).
+				Order(ent.Asc(product.FieldCode), ent.Asc(product.FieldID)).
+				Select(product.FieldID).Ints(ctx)
 		}),
 		"倉別": allIDs(t, func() ([]int, error) {
-			return db.Warehouse.Query().Where(warehouse.CompanyIDEQ(co.ID)).Select(warehouse.FieldID).Ints(ctx)
+			return db.Warehouse.Query().Where(warehouse.CompanyIDEQ(co.ID)).
+				Order(ent.Asc(warehouse.FieldCode), ent.Asc(warehouse.FieldID)).
+				Select(warehouse.FieldID).Ints(ctx)
 		}),
-		// M2:稽核 fixture 全部落在預設時間窗(近 3 個月)內,故全量 = 該表全部列。
+		// M2:稽核 fixture 全部落在預設時間窗(近 3 個月)內,故全量 = 該表全部列;
+		// 契約是「最新在前」,故基準為 created_at 降冪 + id 降冪(G6)。
 		"稽核": allIDs(t, func() ([]int, error) {
-			return db.AuditLog.Query().Select(auditlog.FieldID).Ints(ctx)
+			return db.AuditLog.Query().
+				Order(ent.Desc(auditlog.FieldCreatedAt), ent.Desc(auditlog.FieldID)).
+				Select(auditlog.FieldID).Ints(ctx)
 		}),
 	}
 	for _, tc := range []struct {
@@ -373,6 +395,11 @@ func TestIntegrationListPageScanMatchesFullScan(t *testing.T) {
 			t.Run(fmt.Sprintf("%s/sort=%q/desc=%v", tc.entity, tc.field, desc), func(t *testing.T) {
 				paged := scanPages(t, tc.scan, tc.field, desc)
 				assertScanMatchesFull(t, tc.entity, tc.field, desc, paged, all[tc.entity])
+				// G6:固定排序鍵的端點另釘住**方向**(含 tie 內的次序鍵方向)——
+				// 逐頁序列必須逐位等於全量基準(Asc ↔ Desc 對稱變動時集合比對看不出來)。
+				if tc.ascOnly {
+					assertSequenceMatchesFull(t, tc.entity, tc.field, desc, paged, all[tc.entity])
+				}
 				// 降冪的方向須有實效:同一欄位(非空)的升冪與降冪頁序必須不同(D2)。
 				if desc && !tc.ascOnly && tc.field != "" {
 					assertDescReversesAsc(t, tc.entity, tc.field, scanPages(t, tc.scan, tc.field, false), paged)
@@ -455,7 +482,44 @@ func assertScanMatchesFull(t *testing.T, entity, sortField string, desc bool, pa
 	}
 }
 
-// allIDs 取 DB 真值(該表 id 全量),作為「全量」基準。
+// assertSequenceMatchesFull 斷言逐頁序列與全量基準序列**逐位相同**(G6)。
+//
+// 全量基準帶有預期方向的 ORDER BY(見 `all` 的註解),故本斷言釘住的是排序方向:
+// 服務端把 `Asc` 改成 `Desc`、或稽核的 `created_at DESC, id DESC` 改成升冪,逐頁仍會取回
+// 同一個集合(assertScanMatchesFull 照樣全綠),但序列會反轉 → 在此必紅。
+// 逐位比對同時涵蓋 tie 內的次序鍵方向;兩邊的次序都由同一個 PG 以同一組 ORDER BY 產生,
+// 因此不依賴碼位/字典序的假設。
+func assertSequenceMatchesFull(t *testing.T, entity, sortField string, desc bool, paged, full []string) {
+	t.Helper()
+	if len(paged) != len(full) {
+		// 筆數不符已由 assertScanMatchesFull 報出原因(重複/遺漏),這裡只說明無法逐位比對。
+		t.Errorf("%s sort=%q desc=%v:逐頁 %d 筆 != 全量 %d 筆,無法逐位比對排序方向",
+			entity, sortField, desc, len(paged), len(full))
+		return
+	}
+	for i := range paged {
+		if paged[i] != full[i] {
+			t.Errorf("%s sort=%q desc=%v:第 %d 筆起序列與預期方向不符 —— 逐頁 %v、預期 %v",
+				entity, sortField, desc, i, listWindow(paged, i), listWindow(full, i))
+			return
+		}
+	}
+}
+
+// listWindow 取序列中索引 i 附近的一小段(錯誤訊息只印出有差異的位置,不整份傾倒)。
+func listWindow(ids []string, i int) []string {
+	const span = 5
+	lo := i
+	if lo > len(ids)-span {
+		lo = len(ids) - span
+	}
+	if lo < 0 {
+		lo = 0
+	}
+	return ids[lo:min(lo+span, len(ids))]
+}
+
+// allIDs 取 DB 真值(該表 id 全量或指定序列),作為「全量」基準。
 func allIDs(t *testing.T, query func() ([]int, error)) []string {
 	t.Helper()
 	ids, err := query()

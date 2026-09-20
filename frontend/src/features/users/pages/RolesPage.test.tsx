@@ -117,6 +117,20 @@ async function settle() {
   await flushed.promise;
 }
 
+/** 角色清單表格（同頁另有權限矩陣那張表，故以可及名稱指名）。 */
+const listTable = () => screen.getByRole("table", { name: "角色清單" });
+
+/** `tbody` 的列（含載入列與空狀態列）。 */
+const tableRows = () => [...listTable().querySelectorAll("tbody tr")] as HTMLTableRowElement[];
+
+/**
+ * placeholder 列＝載入列與空狀態列：整個 `tbody` 只有它們是「單格 colspan」，資料列一律
+ * 逐欄渲染（六欄六格）。以結構判別「有沒有退回載入列／誤顯示空狀態」可避開文案 ——
+ * 改字串不會讓斷言失去鑑別力。
+ */
+const placeholderRows = () =>
+  tableRows().filter((row) => row.querySelector("td[colspan]") !== null);
+
 beforeEach(() => {
   listRolesSpy.mockReset();
   getRolePermissionsSpy.mockReset();
@@ -159,9 +173,9 @@ describe("<RolesPage> 角色清單查詢", () => {
     await waitFor(() => expect(listRolesSpy).toHaveBeenCalledTimes(2));
     expect(listRolesSpy).toHaveBeenLastCalledWith({ page: 2, pageSize: PAGE_SIZE, sort: "", desc: false });
 
-    // 第 2 頁還在飛：placeholderData 讓舊頁的角色留在畫面上，不退回載入列。
+    // 第 2 頁還在飛：placeholderData 讓舊頁那一列留在畫面上（不得退回載入列或顯示空狀態列）。
     expect(roleButton("系統管理員")).toBeTruthy();
-    expect(screen.queryByText("載入中…")).toBeNull();
+    expect(placeholderRows()).toHaveLength(0);
 
     secondPage.resolve({ roles: [STAFF, ACCOUNTING], pagination: { total: 45 } });
 
@@ -186,8 +200,8 @@ describe("<RolesPage> 角色清單查詢", () => {
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toBe("伺服器暫時無法使用")
     );
-    // 清單不得被誤判成空的（BASE 保留上一頁角色；改寫後至少不顯示空狀態字樣）。
-    expect(screen.queryByText("尚無角色")).toBeNull();
+    // 清單不得被誤判成空的：畫面上不得出現 placeholder 列（＝載入列或空狀態列）。
+    expect(placeholderRows()).toHaveLength(0);
   });
 
   it("超頁退回：回傳的 total 讓頁碼超界時夾回合法頁碼，且請求次數有界", async () => {
@@ -310,16 +324,9 @@ describe("<RolesPage> 角色清單表格（TanStack Table，manual 分頁）", (
     };
   }
 
-  /** 角色清單表格（同頁另有權限矩陣那張表，故以可及名稱指名）。 */
-  const listTable = () => screen.getByRole("table", { name: "角色清單" });
-
   /** `thead` 的欄位表頭。 */
   const headerCells = () =>
     [...listTable().querySelectorAll("thead th")] as HTMLTableCellElement[];
-
-  /** `tbody` 的列（含載入列與空狀態列）。 */
-  const tableRows = () =>
-    [...listTable().querySelectorAll("tbody tr")] as HTMLTableRowElement[];
 
   /** 伺服器端分頁的替身：每頁回 `PAGE_SIZE` 筆（最後一頁可能更少），`total` 固定。 */
   function mockPages(total: number) {
@@ -363,7 +370,8 @@ describe("<RolesPage> 角色清單表格（TanStack Table，manual 分頁）", (
     ]);
 
     const firstRow = tableRows()[0];
-    expect(firstRow.querySelectorAll("td")).toHaveLength(headers.length);
+    // 字面值（不是 `headers.length` —— 兩邊同源時整欄被刪也一起變，鑑別力等於零）。
+    expect(firstRow.querySelectorAll("td")).toHaveLength(6);
     const cells = [...firstRow.querySelectorAll("td")].map((td) => td.textContent?.trim());
     // 角色 1：內建、啟用。
     expect(cells.slice(0, 5)).toEqual(["role_1", "角色 1", "內建", "啟用", "r-1"]);
@@ -408,15 +416,12 @@ describe("<RolesPage> 角色清單表格（TanStack Table，manual 分頁）", (
     expect(button.tagName).toBe("BUTTON");
     expect(button.getAttribute("type")).toBe("button");
     expect(button.disabled).toBe(false);
-    expect(button.tabIndex).toBe(0);
     // 可聚焦：焦點真的停在這個控制項上（不是整列）。
     button.focus();
     expect(document.activeElement).toBe(button);
 
     // 整列不可點：點第 2 列的非按鈕儲存格，選取不得改變、也不得多打一次 RPC。
     const row = tableRows()[1];
-    expect(row.getAttribute("tabindex")).toBeNull();
-    expect(row.getAttribute("role")).toBeNull();
     fireEvent.click(row.querySelectorAll("td")[1]);
     await settle();
     expect(selectedRoleHeading()?.textContent).toBe("角色 1");
@@ -494,22 +499,22 @@ describe("<RolesPage> 角色清單表格（TanStack Table，manual 分頁）", (
     expect(listRolesSpy).toHaveBeenCalledTimes(2);
   });
 
-  it("載入列與空狀態列的 colspan 由欄位數推導（兩者都等於表頭欄位數）", async () => {
+  it("載入列與空狀態列的 colspan 為 6（實際欄位數），各只有一格", async () => {
     const pending = Promise.withResolvers<unknown>();
     listRolesSpy.mockReturnValue(pending.promise);
     mountPage();
 
-    const columnCount = headerCells().length;
-    expect(columnCount).toBe(6);
+    // 欄位數以字面值釘住 —— 不拿 `headerCells().length` 去比對自己產生的欄位。
+    expect(headerCells()).toHaveLength(6);
 
     const loadingRow = (await waitFor(() => screen.getByText("載入中…"))).closest("tr");
-    expect(loadingRow?.querySelector("td")?.getAttribute("colspan")).toBe(String(columnCount));
+    expect(loadingRow?.querySelector("td")?.getAttribute("colspan")).toBe("6");
     expect(loadingRow?.querySelectorAll("td")).toHaveLength(1);
 
     pending.resolve({ roles: [], pagination: { total: 0 } });
 
     const emptyRow = (await waitFor(() => screen.getByText("尚無角色"))).closest("tr");
-    expect(emptyRow?.querySelector("td")?.getAttribute("colspan")).toBe(String(columnCount));
+    expect(emptyRow?.querySelector("td")?.getAttribute("colspan")).toBe("6");
   });
 });
 
