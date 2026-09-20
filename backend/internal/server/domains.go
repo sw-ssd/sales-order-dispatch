@@ -21,6 +21,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/handlers"
 	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
 	postgresstore "github.com/salesorder/sales-order-1.0/backend/internal/platform/store/postgres"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/internal/services"
@@ -38,6 +39,7 @@ const entitlementCacheTTL = 60 * time.Second
 // 並在下方定義該 mountXxx() 的組裝鏈。組裝唯一來源為此檔，禁止在 main.go 或各套件自行組裝。
 func (s *Server) InitDomains() {
 	s.mountAuth()
+	s.mountPlatformAuth()
 }
 
 // mountAuth 組裝 auth domain：ent client + Valkey client → token/鎖定/一次性 store →
@@ -135,6 +137,60 @@ func (s *Server) mountEntitlements(db *ent.Client) *entitlements.Service {
 	s.entitlements = svc
 	log.Println("platform: 權益守衛已掛載（entitlements.Service → 四個業務服務）")
 	return svc
+}
+
+// mountPlatformAuth 掛載平台工具的登入端點（/platform/auth/*）並把 operatorauth.Service 記在
+// Server 上（T9 的 PlatformAdminService 以它的 Interceptor 擋下非 operator）。
+//
+// 與租戶 auth 完全分離（D38/S8）：不同 secret、不同 audience、不同 cookie（名稱與 Path=/platform）。
+// 設定整組未設 = 不掛載（開發環境友善）；production 由 Init() 保證整組齊備或整組不設。
+//
+// 兩段式降級，兩個理由：
+//   - interceptor 只需設定即生效：已簽發的 operator token 在 Google discovery 暫時不可用時仍
+//     驗得了，重啟不會把平台工具整組鎖死（登入進不來，但既有工作階段不中斷）。
+//   - 登入端點**一律註冊**，只是缺 OIDC 依賴時回 503：回 404 會讓人以為路由沒寫（掛載問題），
+//     503 才是實情（暫時不可用）。
+func (s *Server) mountPlatformAuth() {
+	if !s.cfg.Platform.Configured() {
+		return
+	}
+	adminDB, err := database.OpenSQL(s.cfg.Database.AdminDSN())
+	if err != nil {
+		// 平台工具是唯一能停租戶／改訂閱的入口：認證層帶著壞連線啟動＝登入必爆，不如當場停。
+		log.Fatalf("platform: admin 連線不可用,無法掛載平台工具認證: %v", err)
+	}
+	opAuth := operatorauth.New(operatorauth.Config{
+		Secret:        s.cfg.Platform.OperatorJWTSecret,
+		CookieDomain:  s.cfg.Platform.CookieDomain,
+		ConsoleURL:    s.cfg.Platform.ConsoleURL,
+		AllowedDomain: s.cfg.Platform.AllowedEmailDomain,
+		// http 的開發環境不得設 Secure（瀏覽器不回送），其餘環境一律 Secure。
+		CookieSecure: s.cfg.API.Env != "development",
+	}, postgresstore.NewOperators(adminDB))
+	s.operatorAuth = opAuth
+	s.router.Get(operatorauth.LoginPath, opAuth.Login)
+	s.router.Get(operatorauth.CallbackPath, opAuth.Callback)
+
+	clientID := s.cfg.Auth.GoogleClientID
+	if clientID == "" {
+		log.Println("platform: GOOGLE_CLIENT_ID 未設定，平台登入端點回 503（interceptor 仍生效）")
+		return
+	}
+	// 回呼網址由租戶 OIDC 的 redirect URL 推導：兩者同一個 API 來源，只差路徑，
+	// 故不需要另一個環境變數（也就沒有「設了 console 卻忘記設 API 網址」的失配）。
+	redirectURL, err := operatorauth.RedirectURL(s.cfg.Auth.GoogleRedirectURL)
+	if err != nil {
+		log.Printf("platform: 平台登入端點回 503（%v）", err)
+		return
+	}
+	verifier, err := auth.NewGoogleVerifier(context.Background(), clientID)
+	if err != nil {
+		log.Printf("platform: 平台登入端點回 503（Google discovery: %v）", err)
+		return
+	}
+	oauthCfg := auth.NewGoogleOAuthConfig(clientID, s.cfg.Auth.GoogleClientSecret, redirectURL)
+	opAuth.WithOIDC(oauthCfg, auth.NewGoogleOAuthExchanger(oauthCfg), verifier)
+	log.Println("platform: 平台操作者認證已掛載（OIDC ＋ operator JWT ＋ cookie）")
 }
 
 // openEntClient 開啟業務 PostgreSQL ent client:連線仍委派 third_party/database(D31),

@@ -32,6 +32,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
 	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
 	salesorderv1connect "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/cache"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/database"
@@ -49,6 +50,9 @@ type Server struct {
 	// entitlements 為平台權益判定(配額守衛的來源,由 mountAuth 建立);T9/T10 的平台端與
 	// 租戶端投影亦由此取用,故留在 Server 上而非只傳進四個業務服務。
 	entitlements *entitlements.Service
+	// operatorAuth 為平台工具認證(mountPlatformAuth 建立)。T9 的 PlatformAdminService 以
+	// operatorAuth.Interceptor() 擋下非 operator;nil = 平台工具未設定,該 RPC 不掛載。
+	operatorAuth *operatorauth.Service
 }
 
 // rpcAuth 為受保護 RPC path 的 OpenFGA 對映(resource, action)。
