@@ -42,7 +42,7 @@ func TestRegisterPanicsOnViolations(t *testing.T) {
 		// 零值是外部套件唯一能造出的 Code（欄位未匯出）；使用它必須立刻爆掉，
 		// 而不是回一個沒有碼、沒有訊息的錯誤回應。
 		{"未註冊的零值 Code", func() {
-			Code{}.Error(nil)
+			_ = Code{}.Error(nil)
 		}},
 	}
 	for _, tc := range cases {

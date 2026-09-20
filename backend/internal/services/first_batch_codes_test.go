@@ -8,13 +8,12 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
-	commonv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 )
 
 // errorInfoOf 由 connect error 取 ErrorInfo detail（本套件共用的唯一解析點：碼／訊息／
 // details／trace_id 都在 ErrorInfo 裡，逐一自行解析只會出現兩份真相）。
-func errorInfoOf(t *testing.T, err error) *commonv1.ErrorInfo {
+func errorInfoOf(t *testing.T, err error) *v1.ErrorInfo {
 	t.Helper()
 	ce, ok := err.(*connect.Error)
 	if !ok {
@@ -25,7 +24,7 @@ func errorInfoOf(t *testing.T, err error) *commonv1.ErrorInfo {
 		if derr != nil {
 			t.Fatalf("detail 取值失敗: %v", derr)
 		}
-		if info, ok := v.(*commonv1.ErrorInfo); ok {
+		if info, ok := v.(*v1.ErrorInfo); ok {
 			return info
 		}
 	}

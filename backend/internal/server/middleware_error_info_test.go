@@ -32,19 +32,19 @@ type mwErrBody struct {
 // errorInfoOf 由 wire body 取 ErrorInfo（客戶端視角：base64 → proto）。
 func (b mwErrBody) errorInfoOf(t *testing.T) *commonv1.ErrorInfo {
 	t.Helper()
-	for _, d := range b.Details {
-		raw, err := base64.RawStdEncoding.DecodeString(d.Value)
-		if err != nil {
-			t.Fatalf("detail value 應為 base64: %v", err)
-		}
-		msg := &commonv1.ErrorInfo{}
-		if err := proto.Unmarshal(raw, msg); err != nil {
-			t.Fatalf("detail value 應為 ErrorInfo: %v", err)
-		}
-		return msg
+	if len(b.Details) == 0 {
+		t.Fatal("middleware 錯誤回應未帶 details(ErrorInfo)")
 	}
-	t.Fatal("middleware 錯誤回應未帶 details(ErrorInfo)")
-	return nil
+	d := b.Details[0]
+	raw, err := base64.RawStdEncoding.DecodeString(d.Value)
+	if err != nil {
+		t.Fatalf("detail value 應為 base64: %v", err)
+	}
+	msg := &commonv1.ErrorInfo{}
+	if err := proto.Unmarshal(raw, msg); err != nil {
+		t.Fatalf("detail value 應為 ErrorInfo: %v", err)
+	}
+	return msg
 }
 
 // TestMiddlewareErrorBodyCarriesErrorInfo：middleware 閘門（不經 connect handler）的錯誤

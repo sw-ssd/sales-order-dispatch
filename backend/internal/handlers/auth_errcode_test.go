@@ -12,12 +12,11 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	commonv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 )
 
 // authErrorInfo 由 connect error 取 ErrorInfo detail（碼／訊息／details 的唯一來源）。
-func authErrorInfo(t *testing.T, err error) *commonv1.ErrorInfo {
+func authErrorInfo(t *testing.T, err error) *v1.ErrorInfo {
 	t.Helper()
 	ce, ok := err.(*connect.Error)
 	if !ok {
@@ -28,7 +27,7 @@ func authErrorInfo(t *testing.T, err error) *commonv1.ErrorInfo {
 		if derr != nil {
 			t.Fatalf("detail 取值失敗: %v", derr)
 		}
-		if info, ok := v.(*commonv1.ErrorInfo); ok {
+		if info, ok := v.(*v1.ErrorInfo); ok {
 			return info
 		}
 	}
