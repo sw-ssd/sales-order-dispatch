@@ -58,15 +58,27 @@ func TestIntegrationRLSMetadictAuditIsolation(t *testing.T) {
 	insertRLSMetadict(t, admin, "unit", "DA", "部門A單位", &deptA)
 	insertRLSMetadict(t, admin, "unit", "DB", "部門B單位", &deptB)
 	auditA := insertRLSAuditRow(t, admin, coA, userA, "create")
-	insertRLSAuditRow(t, admin, coB, userB, "create")
+	auditB := insertRLSAuditRow(t, admin, coB, userB, "create")
 
 	app := openAppRoleDB(t, adminDSN)
 
-	t.Run("未設 scope → fail-closed(讀 0 列、寫被擋)", func(t *testing.T) {
-		for _, tbl := range metadictAuditRLSTables {
-			if n := countRows(t, app, `SELECT count(*) FROM `+tbl); n != 0 {
-				t.Fatalf("未設 scope 時 %s 必須 0 列,got %d", tbl, n)
-			}
+	t.Run("未設 scope → 稽核 0 列、字典僅系統預設列(fail-closed)", func(t *testing.T) {
+		if n := countRows(t, app, `SELECT count(*) FROM audit_logs`); n != 0 {
+			t.Fatalf("未設 scope 時 audit_logs 必須 0 列,got %d", n)
+		}
+		// metadicts 的 USING **永遠**允許系統預設列(department_id IS NULL,00011 的刻意設計 ——
+		// 未帶 scope 的請求仍讀得到系統字典),但不得看到任何部門擴充列。
+		var system, visible int
+		if err := app.QueryRow(
+			`SELECT count(*) FILTER (WHERE department_id IS NULL), count(*) FROM metadicts`).
+			Scan(&system, &visible); err != nil {
+			t.Fatalf("查字典: %v", err)
+		}
+		if system == 0 {
+			t.Fatal("系統預設字典應存在(00011 seed)")
+		}
+		if visible != system {
+			t.Fatalf("未設 scope 時不得看到部門擴充列,got 可見 %d 系統 %d", visible, system)
 		}
 		// 寫入:未設 scope 的稽核寫入必須被 WITH CHECK 擋(這是本波之前 auth_password 的處境)。
 		if err := appExecScoped(t, app, nil,
@@ -76,8 +88,18 @@ func TestIntegrationRLSMetadictAuditIsolation(t *testing.T) {
 		}
 	})
 
-	t.Run("scope=all:系統預設字典與任何公司稽核皆可寫", func(t *testing.T) {
+	t.Run("scope=all:系統預設字典與任何公司稽核皆可讀寫", func(t *testing.T) {
 		all := []string{`SET LOCAL app.current_data_scope = 'all'`}
+		// 讀:平台範圍看得到所有公司的稽核列。
+		tx := appTx(t, app, all)
+		defer func() { _ = tx.Rollback() }()
+		var cnt, distinct int
+		if err := tx.QueryRow(`SELECT count(*), count(DISTINCT company_id) FROM audit_logs`).Scan(&cnt, &distinct); err != nil {
+			t.Fatalf("查稽核: %v", err)
+		}
+		if cnt != 2 || distinct != 2 {
+			t.Fatalf("all 應看得到兩家公司的 2 列稽核,got count=%d distinct=%d", cnt, distinct)
+		}
 		// 系統預設字典(department_id IS NULL)只有 all 可寫(00011 刻意較嚴)。
 		if err := appExecScoped(t, app, all,
 			`INSERT INTO metadicts (type, code, display_name, department_id, sort_order, is_active)
@@ -87,13 +109,44 @@ func TestIntegrationRLSMetadictAuditIsolation(t *testing.T) {
 		// super 跨公司:寫任何公司的稽核皆可(平台/維運路徑,如跨公司重置臨時密碼)。
 		if err := appExecScoped(t, app, all,
 			`INSERT INTO audit_logs (company_id, user_id, action, resource_type, resource_id)
-			 VALUES ($1,$2,'update','scratch','5')`, coA, userA); err != nil {
+			 VALUES ($1,$2,'update','scratch','5') RETURNING id`, coA, userA); err != nil {
 			t.Fatalf("以 all 身分寫公司 A 的稽核應可通過,got %v", err)
 		}
 		if err := appExecScoped(t, app, all,
 			`INSERT INTO audit_logs (company_id, user_id, action, resource_type, resource_id)
-			 VALUES ($1,$2,'update','scratch','6')`, coB, userB); err != nil {
+			 VALUES ($1,$2,'update','scratch','6') RETURNING id`, coB, userB); err != nil {
 			t.Fatalf("以 all 身分寫公司 B 的稽核應可通過,got %v", err)
+		}
+	})
+
+	t.Run("跨租戶:任何 scope 都讀不到他公司的稽核列(租戶邊界)", func(t *testing.T) {
+		// 這是本檔**最重要**的斷言:放寬 USING 是為了讓 RETURNING 可寫自己公司的列,
+		// 跨公司可見性絕不能被放寬(單列 by-id 探測與整表 count 兩條都要 0)。
+		for _, tc := range []struct {
+			name  string
+			stmts []string
+		}{
+			{"company", companyScope(coA)},
+			{"department", departmentScope(coA, deptA)},
+			{"self", selfScope(coA, userA)},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				tx := appTx(t, app, tc.stmts)
+				defer func() { _ = tx.Rollback() }()
+				if !hasAuditRow(tx, auditA) {
+					t.Fatalf("%s:應看得到自己公司(公司 A)的稽核列 id=%d", tc.name, auditA)
+				}
+				if hasAuditRow(tx, auditB) {
+					t.Fatalf("%s(公司 A):不得看到他公司的稽核列 id=%d", tc.name, auditB)
+				}
+				var foreign int
+				if err := tx.QueryRow(`SELECT count(*) FROM audit_logs WHERE company_id = $1`, coB).Scan(&foreign); err != nil {
+					t.Fatalf("%s:查他公司稽核: %v", tc.name, err)
+				}
+				if foreign != 0 {
+					t.Fatalf("%s(公司 A):他公司的稽核列必須不可見,got %d 列", tc.name, foreign)
+				}
+			})
 		}
 	})
 
@@ -139,16 +192,28 @@ func TestIntegrationRLSMetadictAuditIsolation(t *testing.T) {
 			t.Fatalf("以公司身分寫入系統預設字典必須被 WITH CHECK 擋(SQLSTATE 42501),got %v", err)
 		}
 		// 公司級身分的稽核寫自己公司 → 必須可寫(生產路徑:company_admin 的每個寫入都落稽核)。
+		// 兩種寫法都要斷:PLAIN 與 `RETURNING id` —— ent 的 Create().Save() 一律是後者,而 PG 對
+		// RETURNING 會套用 SELECT policy(USING),故「只改 WITH CHECK」不足以讓 dept/self 寫入過關。
 		if err := appExecScoped(t, app, companyScope(coA),
 			`INSERT INTO audit_logs (company_id, user_id, action, resource_type, resource_id)
 			 VALUES ($1,$2,'update','scratch','1')`, coA, userA); err != nil {
-			t.Fatalf("以公司身分寫自己公司的稽核應可通過,got %v", err)
+			t.Fatalf("以公司身分寫自己公司的稽核(PLAIN)應可通過,got %v", err)
 		}
-		// 跨租戶:寫公司 B 的稽核 → 被擋。
+		if err := appExecScoped(t, app, companyScope(coA),
+			`INSERT INTO audit_logs (company_id, user_id, action, resource_type, resource_id)
+			 VALUES ($1,$2,'update','scratch','1r') RETURNING id`, coA, userA); err != nil {
+			t.Fatalf("以公司身分寫自己公司的稽核(RETURNING,ent 路徑)應可通過,got %v", err)
+		}
+		// 跨租戶:寫公司 B 的稽核 → 被擋(PLAIN 與 RETURNING 都要擋)。
 		if err := appExecScoped(t, app, companyScope(coA),
 			`INSERT INTO audit_logs (company_id, user_id, action, resource_type, resource_id)
 			 VALUES ($1,$2,'update','scratch','2')`, coB, userA); !isRLSViolation(err) {
-			t.Fatalf("以公司 A 的身分寫公司 B 的稽核必須被 WITH CHECK 擋(SQLSTATE 42501),got %v", err)
+			t.Fatalf("以公司 A 的身分寫公司 B 的稽核必須被擋(SQLSTATE 42501),got %v", err)
+		}
+		if err := appExecScoped(t, app, companyScope(coA),
+			`INSERT INTO audit_logs (company_id, user_id, action, resource_type, resource_id)
+			 VALUES ($1,$2,'update','scratch','2r') RETURNING id`, coB, userA); !isRLSViolation(err) {
+			t.Fatalf("以公司 A 的身分寫公司 B 的稽核(RETURNING)必須被擋(SQLSTATE 42501),got %v", err)
 		}
 	})
 
@@ -184,28 +249,31 @@ func TestIntegrationRLSMetadictAuditIsolation(t *testing.T) {
 			t.Fatalf("以部門 A 的身分寫部門 B 的字典必須被 WITH CHECK 擋(SQLSTATE 42501),got %v", err)
 		}
 		// 稽核:部門層級的請求同樣會落稽核(D18)→ 寫自己公司可、寫他公司被擋。
+		// 這裡刻意用 `RETURNING id`:ent 的 Create().Save() 就是這個形狀,而 PG 對 RETURNING 會
+		// 套用 SELECT policy(USING)—— 這正是本檔需要同時放寬 USING 的原因(見 migration 註解)。
 		if err := appExecScoped(t, app, departmentScope(coA, deptA),
 			`INSERT INTO audit_logs (company_id, user_id, action, resource_type, resource_id)
-			 VALUES ($1,$2,'update','scratch','3')`, coA, userA); err != nil {
-			t.Fatalf("以部門身分寫自己公司的稽核應可通過,got %v", err)
+			 VALUES ($1,$2,'update','scratch','3') RETURNING id`, coA, userA); err != nil {
+			t.Fatalf("以部門身分寫自己公司的稽核(ent 路徑)應可通過,got %v", err)
 		}
 		if err := appExecScoped(t, app, departmentScope(coA, deptA),
 			`INSERT INTO audit_logs (company_id, user_id, action, resource_type, resource_id)
-			 VALUES ($1,$2,'update','scratch','4')`, coB, userA); !isRLSViolation(err) {
-			t.Fatalf("以部門 A 的身分寫公司 B 的稽核必須被 WITH CHECK 擋(SQLSTATE 42501),got %v", err)
+			 VALUES ($1,$2,'update','scratch','4') RETURNING id`, coB, userA); !isRLSViolation(err) {
+			t.Fatalf("以部門 A 的身分寫公司 B 的稽核必須被擋(SQLSTATE 42501),got %v", err)
 		}
 	})
 
 	t.Run("scope=self:自助路徑的稽核可寫,跨公司不可寫", func(t *testing.T) {
 		// 客戶(customer/guest)的 data_scope=self:自助寫入(改密碼)也要落自己公司的稽核。
+		// 同樣用 `RETURNING id`(ent 路徑):改密碼就是這條路徑,先前 42501 也正是在此。
 		if err := appExecScoped(t, app, selfScope(coA, userA),
 			`INSERT INTO audit_logs (company_id, user_id, action, resource_type, resource_id)
-			 VALUES ($1,$2,'update','user','9')`, coA, userA); err != nil {
-			t.Fatalf("以 self 身分寫自己公司的稽核應可通過,got %v", err)
+			 VALUES ($1,$2,'update','user','9') RETURNING id`, coA, userA); err != nil {
+			t.Fatalf("以 self 身分寫自己公司的稽核(ent 路徑)應可通過,got %v", err)
 		}
 		if err := appExecScoped(t, app, selfScope(coA, userA),
 			`INSERT INTO audit_logs (company_id, user_id, action, resource_type, resource_id)
-			 VALUES ($1,$2,'update','user','8')`, coB, userA); !isRLSViolation(err) {
+			 VALUES ($1,$2,'update','user','8') RETURNING id`, coB, userA); !isRLSViolation(err) {
 			t.Fatalf("以 self 身分寫公司 B 的稽核必須被 WITH CHECK 擋(SQLSTATE 42501),got %v", err)
 		}
 	})
@@ -426,8 +494,15 @@ func TestIntegrationMetadictAuditUnderAppRole(t *testing.T) {
 		}
 		return res.Msg.GetItems(), nil
 	})
-	if len(empty) != 0 {
-		t.Fatalf("未注入 scope 時不得看到任何字典,got %d 筆", len(empty))
+	// metadicts 的 USING 永遠允許系統預設列(00011),故「無 scope」下仍看得到系統字典 ——
+	// 但**看不到任何部門擴充列**(本測試 walk 期間建立的 T8-DEPT 屬 deptA)。
+	if len(empty) == 0 {
+		t.Fatal("無 scope 時仍應看得到系統預設字典(00011 的 USING 允許 department_id IS NULL)")
+	}
+	for _, m := range empty {
+		if m.GetDepartmentId() != "" {
+			t.Fatalf("未注入 scope 時不得看到部門擴充列,got id=%s department=%s", m.GetId(), m.GetDepartmentId())
+		}
 	}
 	noScopeAudits := callRPC(t, func(ctx context.Context) ([]*auditv1.AuditLog, error) {
 		res, err := noScope.audits.ListAuditLogs(ctx, connect.NewRequest(&auditv1.ListAuditLogsRequest{Page: 1, PageSize: 10}))
@@ -646,22 +721,20 @@ func companyScope(companyID int) []string {
 
 // departmentScope 回傳部門範圍的 SET LOCAL 語句(dept_admin/staff 的生產 scope)。
 func departmentScope(companyID, departmentID int) []string {
-	return append(companyScope(companyID),
-		`SET LOCAL app.current_department_id = '`+itoa(departmentID)+`'`)
+	return []string{
+		`SET LOCAL app.current_data_scope = 'department'`,
+		`SET LOCAL app.current_company_id = '` + itoa(companyID) + `'`,
+		`SET LOCAL app.current_department_id = '` + itoa(departmentID) + `'`,
+	}
 }
 
 // selfScope 回傳 self 範圍的 SET LOCAL 語句(customer/guest 的生產 scope)。
 func selfScope(companyID, userID int) []string {
-	return append(companyScope(companyID),
-		`SET LOCAL app.current_user_id = '`+itoa(userID)+`'`)
-}
-
-// scopeStmts 取代 data_scope 為指定值(companyScope 先給 'company',此處覆寫成 department/self)。
-func scopeStmts(stmts []string, scope auth.DataScope) []string {
-	out := make([]string, len(stmts))
-	copy(out, stmts)
-	out[0] = `SET LOCAL app.current_data_scope = '` + string(scope) + `'`
-	return out
+	return []string{
+		`SET LOCAL app.current_data_scope = 'self'`,
+		`SET LOCAL app.current_company_id = '` + itoa(companyID) + `'`,
+		`SET LOCAL app.current_user_id = '` + itoa(userID) + `'`,
+	}
 }
 
 // appTx 以 app_rw 開一個交易並套用 scope(交易由呼叫端回滾)。
