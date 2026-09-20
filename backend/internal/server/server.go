@@ -122,10 +122,36 @@ func (s *Server) Init() error {
 		if err := database.Probe(context.Background(), s.cfg.Database.DatabaseURL); err != nil {
 			return fmt.Errorf("config: ENV=production 無法連線資料庫: %w", err)
 		}
+		// 業務連線必須是非 superuser(且不帶 BYPASSRLS):PG 的 superuser 恆繞過 RLS(FORCE 亦然),
+		// 業務 DSN 誤指 owner 會讓 00024–00028 的租戶邊界**靜默消失**(所有端點與測試照常綠)。
+		if err := assertBusinessRoleNotSuperuser(context.Background(), s.cfg.Database.DatabaseURL); err != nil {
+			return fmt.Errorf("config: ENV=production 業務連線角色不合法: %w", err)
+		}
 		vc := cache.NewClient(s.cfg.Cache.ValkeyAddr)
 		if err := cache.Ping(context.Background(), vc); err != nil {
 			return fmt.Errorf("config: ENV=production 無法連線 Valkey: %w", err)
 		}
+	}
+	return nil
+}
+
+// assertBusinessRoleNotSuperuser 以**業務連線**確認當前角色不是 superuser／不帶 BYPASSRLS。
+// PostgreSQL 的 superuser(與帶 BYPASSRLS 的角色)恆繞過 RLS,`FORCE ROW LEVEL SECURITY` 亦然 ——
+// 業務 DSN 誤指 owner 時租戶邊界會**靜默消失**(服務照常回應、測試照常綠),故 production 拒絕啟動。
+func assertBusinessRoleNotSuperuser(ctx context.Context, dsn string) error {
+	db, err := database.OpenSQL(dsn)
+	if err != nil {
+		return fmt.Errorf("開啟業務連線: %w", err)
+	}
+	defer func() { _ = db.Close() }()
+	var bypassesRLS bool
+	if err := db.QueryRowContext(ctx,
+		`SELECT rolsuper OR rolbypassrls FROM pg_roles WHERE rolname = current_user`).Scan(&bypassesRLS); err != nil {
+		return fmt.Errorf("查詢業務連線的角色屬性(pg_roles): %w", err)
+	}
+	if bypassesRLS {
+		return errors.New("業務連線角色為 superuser 或帶 BYPASSRLS,會繞過 RLS 使租戶隔離失效;" +
+			"請把 DATABASE_URL 指向非 owner 的業務角色(如 app_rw),其密碼可用 `task backend:db:app-password` 設定")
 	}
 	return nil
 }
