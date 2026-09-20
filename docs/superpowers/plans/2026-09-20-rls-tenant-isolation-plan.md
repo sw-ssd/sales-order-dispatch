@@ -2165,7 +2165,7 @@ git commit -m "feat(backend): 字典與稽核啟用 RLS 並收斂路徑（00027�
 - Modify: `internal/services/role_service.go`（6 處、1 處）
 - Modify: `internal/server/server.go`（**全部** ent 存取，非僅 167-210：`identityFor`(:300 讀 `users`＋`WithCompany`/`WithDepartment`)、`dataScopeForUser`(:348 讀 `roles`)、authz middleware 的身分查詢 → 一律改 `dbtenant.SystemScopeTx`）
 - Modify: `internal/handlers/auth_handler.go`（登入／註冊／OIDC 的 `users`/`companies` 查詢 → `dbtenant.SystemScopeTx`）
-- Modify: `internal/handlers/auth_password.go`（改密碼／臨時密碼路徑；`h.deps.DB.User.Query()` 等未以傳入 `tx` 進行的存取）
+- Modify: `internal/handlers/auth_password.go`（**T8 已收斂完成（含兩處讀取），T9 不要動、更不得退回自開交易**——此檔列入僅為記錄歸屬）
 - Modify: `internal/auth/token.go`（`BumpTokenVersion` 的 `m.db.User.UpdateOneID` — refresh 輪替路徑）
 - Modify: `internal/authz/provision.go`（讀 `role_permissions`／`users`／`roles` — 系統範圍工作）
 - **呼叫端一併處理**：`internal/server/domains.go:142` 目前以 `authz.Provision(context.Background(), engine, db)` 呼叫，`db` 是**已裝飾的業務 client** → 核心表 ENABLE 後這次讀取會回 **0 列**，於是 **OpenFGA 開機佈建靜默變成「什麼都沒授權」**（不是報錯，比報錯更危險）。必須讓它跑在系統範圍（`dbtenant.SystemScopeTx` 或等價）——在 `Provision` 內處理或改呼叫端皆可，但**要有一個測試會因「佈建 0 筆」而紅**。
