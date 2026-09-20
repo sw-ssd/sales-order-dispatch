@@ -26,6 +26,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
+	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 
@@ -74,9 +75,9 @@ func NewDepartmentService(db *ent.Client) *DepartmentService {
 //	services.RegisterCompanyServices(mux, db)
 //	s.router.Mount("/api/v1", mux) // chi Mount 會剝除 /api/v1 前綴,前端 baseUrl "/api/v1" 可直接對應
 func RegisterCompanyServices(mux *http.ServeMux, db *ent.Client) {
-	companyPath, companyHandler := salesorderv1connect.NewCompanyServiceHandler(NewCompanyService(db), dbtenant.HandlerOption(db))
+	companyPath, companyHandler := salesorderv1connect.NewCompanyServiceHandler(NewCompanyService(db), connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(db)))
 	mux.Handle(companyPath, companyHandler)
-	departmentPath, departmentHandler := salesorderv1connect.NewDepartmentServiceHandler(NewDepartmentService(db), dbtenant.HandlerOption(db))
+	departmentPath, departmentHandler := salesorderv1connect.NewDepartmentServiceHandler(NewDepartmentService(db), connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(db)))
 	mux.Handle(departmentPath, departmentHandler)
 }
 

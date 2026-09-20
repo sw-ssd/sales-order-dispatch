@@ -15,6 +15,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productcategory"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
+	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 	mastersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/masters/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/masters/v1/mastersv1connect"
 )
@@ -32,7 +33,7 @@ func NewProductCategoryService(db *ent.Client) *ProductCategoryService {
 
 // RegisterProductCategoryService 掛載。
 func RegisterProductCategoryService(mux *http.ServeMux, db *ent.Client) {
-	path, handler := mastersv1connect.NewProductCategoryServiceHandler(NewProductCategoryService(db), dbtenant.HandlerOption(db))
+	path, handler := mastersv1connect.NewProductCategoryServiceHandler(NewProductCategoryService(db), connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(db)))
 	mux.Handle(path, handler)
 }
 

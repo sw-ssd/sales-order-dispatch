@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 
+	"connectrpc.com/connect"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
@@ -16,6 +18,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	domainauth "github.com/salesorder/sales-order-1.0/backend/internal/domain/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/handlers"
+	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/internal/services"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/cache"
@@ -67,11 +70,11 @@ func (s *Server) mountAuth() {
 	// r.URL.Path 全路徑分派,掛載時剝除 /api/v1 前綴(與 RegisterCompanyServices 慣例一致)。
 	// LoadAndSave + authzMiddleware 包在最外層:session 身分 → authz.Identity/RLS ctx(T14 Step 4)。
 	apiMux := http.NewServeMux()
-	authPath, authHandler := salesorderv1connect.NewAuthServiceHandler(h, dbtenant.HandlerOption(entClient))
+	authPath, authHandler := salesorderv1connect.NewAuthServiceHandler(h, connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(entClient)))
 	apiMux.Handle(authPath, authHandler)
 	handlers.RegisterRoleHandler(apiMux, entClient) // RoleService(T18)
 	// AbilityService(T9/D30):CASL 規則下發給前端 @casl/ability 初始化。
-	abilityPath, abilityHandler := salesorderv1connect.NewAbilityServiceHandler(domainauth.NewAbilityHandler(entClient, domainauth.Config{DeveloperAccountEnabled: s.cfg.API.DeveloperAccountEnabled}), dbtenant.HandlerOption(entClient))
+	abilityPath, abilityHandler := salesorderv1connect.NewAbilityServiceHandler(domainauth.NewAbilityHandler(entClient, domainauth.Config{DeveloperAccountEnabled: s.cfg.API.DeveloperAccountEnabled}), connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(entClient)))
 	apiMux.Handle(abilityPath, abilityHandler)
 	services.RegisterCompanyServices(apiMux, entClient)                          // CompanyService/DepartmentService(T20)
 	services.RegisterUserServices(apiMux, entClient)                             // UserService(02 Task 3)

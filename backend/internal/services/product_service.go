@@ -26,6 +26,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/warehouse"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	domainproducts "github.com/salesorder/sales-order-1.0/backend/internal/domain/products"
+	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 	productsv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/products/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/products/v1/productsv1connect"
 )
@@ -41,7 +42,7 @@ func NewProductService(db *ent.Client) *ProductService { return &ProductService{
 
 // RegisterProductService 將 ProductService 掛到 mux。
 func RegisterProductService(mux *http.ServeMux, db *ent.Client) {
-	path, handler := productsv1connect.NewProductServiceHandler(NewProductService(db), dbtenant.HandlerOption(db))
+	path, handler := productsv1connect.NewProductServiceHandler(NewProductService(db), connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(db)))
 	mux.Handle(path, handler)
 }
 

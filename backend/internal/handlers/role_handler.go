@@ -9,6 +9,7 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
+	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/internal/services"
@@ -44,6 +45,6 @@ func (h *RoleHandler) UpdateRolePermissions(ctx context.Context, req *connect.Re
 // RegisterRoleHandler 組裝 RoleService 的 Connect handler 並掛到 mux(T18;server 掛載點)。
 // server 以 http.StripPrefix("/api/v1", mux) 掛載,與 RegisterCompanyServices 慣例一致。
 func RegisterRoleHandler(mux *http.ServeMux, db *ent.Client) {
-	path, handler := salesorderv1connect.NewRoleServiceHandler(NewRoleHandler(services.NewRoleService(db)), dbtenant.HandlerOption(db))
+	path, handler := salesorderv1connect.NewRoleServiceHandler(NewRoleHandler(services.NewRoleService(db)), connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(db)))
 	mux.Handle(path, handler)
 }

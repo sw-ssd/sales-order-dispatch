@@ -15,6 +15,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/warehouse"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
+	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 	mastersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/masters/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/masters/v1/mastersv1connect"
 )
@@ -30,7 +31,7 @@ func NewWarehouseService(db *ent.Client) *WarehouseService { return &WarehouseSe
 
 // RegisterWarehouseService 將 WarehouseService 掛到 mux。
 func RegisterWarehouseService(mux *http.ServeMux, db *ent.Client) {
-	path, handler := mastersv1connect.NewWarehouseServiceHandler(NewWarehouseService(db), dbtenant.HandlerOption(db))
+	path, handler := mastersv1connect.NewWarehouseServiceHandler(NewWarehouseService(db), connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(db)))
 	mux.Handle(path, handler)
 }
 
