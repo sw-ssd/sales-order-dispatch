@@ -121,7 +121,7 @@ func (s *CustomerService) validateMetadictRef(ctx context.Context, actorID authz
 	if err != nil {
 		return 0, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("字典欄位 %s 格式錯誤", typ))
 	}
-	q := s.db.Metadict.Query().Where(
+	q := dbtenant.Client(ctx, s.db).Metadict.Query().Where(
 		metadict.ID(mid), metadict.TypeEQ(typ), metadict.IsActiveEQ(true), metadict.DeletedAtIsNil(),
 	)
 	scope, err := metadictScope(actorID)
@@ -140,7 +140,7 @@ func (s *CustomerService) validateMetadictRef(ctx context.Context, actorID authz
 
 // validateSalesRep 驗證 default_sales_rep:同公司、業務角色、active;客戶有部門時需同部門。
 func (s *CustomerService) validateSalesRep(ctx context.Context, uid, cid int, did *int) (int, error) {
-	u, err := s.db.User.Query().Where(user.ID(uid)).WithCompany().WithDepartment().Only(ctx)
+	u, err := dbtenant.Client(ctx, s.db).User.Query().Where(user.ID(uid)).WithCompany().WithDepartment().Only(ctx)
 	if err != nil {
 		return 0, connect.NewError(connect.CodeInvalidArgument, errors.New("default_sales_rep_id 無效"))
 	}
@@ -156,38 +156,40 @@ func (s *CustomerService) validateSalesRep(ctx context.Context, uid, cid int, di
 	return uid, nil
 }
 
-// ensureCustomerCounter 確保該公司的 counter 列存在(獨立、幂等的建前步驟)。
-// 為何不放在主交易內建:併發首次建立會在 Postgres 造成唯一衝突而 abort 整個交易,
-// 之後的取號重試無法進行;故先以獨立小交易建好,主交易內只做樂觀更新(0 列非錯誤,交易仍健康)。
+// ensureCustomerCounter 確保該公司的 counter 列存在(幂等的建前步驟)。
+// 併發首次建立時兩個請求都會看到「不存在」而各自 INSERT,後到者撞唯一索引。舊制(本步驟以
+// autocommit 在請求交易外執行)可以吞掉該 unique_violation 繼續;T4 之後交易邊界由請求層
+// 擁有,任何敘述錯誤都會 abort 整個請求交易,**吞掉衝突再繼續已經不可能**(後續敘述會全部
+// 失敗),故改為讓後到者明確失敗:勝者的 counter 已提交,失敗的請求重試即成功。
+// 取捨記錄:ent v0.14.6 的產生碼沒有 OnConflict(無 upsert),無法以 `ON CONFLICT DO NOTHING`
+// 優雅化解;要真正容錯得在請求交易外另開一個「同 scope」的短交易(需 dbtenant 新介面),不在本票範圍。
 func (s *CustomerService) ensureCustomerCounter(ctx context.Context, cid int) error {
-	exists, err := s.db.CustomerCounter.Query().Where(customercounter.CompanyIDEQ(cid)).Exist(ctx)
+	db := dbtenant.Client(ctx, s.db)
+	exists, err := db.CustomerCounter.Query().Where(customercounter.CompanyIDEQ(cid)).Exist(ctx)
 	if err != nil {
 		return toConnectError(err)
 	}
 	if exists {
 		return nil
 	}
-	if _, err := s.db.CustomerCounter.Create().SetCompanyID(cid).SetNextSeq(1).SetVersion(0).Save(ctx); err != nil {
-		if ent.IsConstraintError(err) {
-			return nil // 已被併發建立,視為成功
-		}
+	if _, err := db.CustomerCounter.Create().SetCompanyID(cid).SetNextSeq(1).SetVersion(0).Save(ctx); err != nil {
 		return toConnectError(err)
 	}
 	return nil
 }
 
-// nextCustomerCode 於交易內以樂觀鎖 counter 取號,回傳 customer_code(公司前綴 + 6 位補零)。
+// nextCustomerCode 於請求交易內以樂觀鎖 counter 取號,回傳 customer_code(公司前綴 + 6 位補零)。
 // 呼叫前須先 ensureCustomerCounter。version 衝突(影響 0 列,非錯誤)則重試;逾限回 failed_precondition。
-func nextCustomerCode(ctx context.Context, tx *ent.Tx, cid int, prefix string) (string, error) {
+func nextCustomerCode(ctx context.Context, db *ent.Client, cid int, prefix string) (string, error) {
 	for i := 0; i < maxCustomerCodeRetries; i++ {
-		c, err := tx.CustomerCounter.Query().Where(customercounter.CompanyIDEQ(cid)).Only(ctx)
+		c, err := db.CustomerCounter.Query().Where(customercounter.CompanyIDEQ(cid)).Only(ctx)
 		if err != nil {
 			if ent.IsNotFound(err) {
 				return "", connect.NewError(connect.CodeFailedPrecondition, errors.New("客戶編號計數器未初始化"))
 			}
 			return "", err
 		}
-		n, err := tx.CustomerCounter.Update().
+		n, err := db.CustomerCounter.Update().
 			Where(customercounter.CompanyIDEQ(cid), customercounter.VersionEQ(c.Version)).
 			SetNextSeq(c.NextSeq + 1).SetVersion(c.Version + 1).Save(ctx)
 		if err != nil {
@@ -211,7 +213,7 @@ func (s *CustomerService) ListCustomers(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, err
 	}
-	q := customerScopeQuery(s.db.Customer.Query(), cid, did)
+	q := customerScopeQuery(dbtenant.Client(ctx, s.db).Customer.Query(), cid, did)
 	if !req.Msg.GetIncludeDeleted() {
 		q = q.Where(customer.DeletedAtIsNil())
 	}
@@ -285,7 +287,7 @@ func (s *CustomerService) GetCustomer(ctx context.Context, req *connect.Request[
 	if err != nil {
 		return nil, err
 	}
-	c, err := customerScopeQuery(s.db.Customer.Query(), cid, did).
+	c, err := customerScopeQuery(dbtenant.Client(ctx, s.db).Customer.Query(), cid, did).
 		Where(customer.ID(custID), customer.DeletedAtIsNil()).
 		Only(ctx)
 	if err != nil {
@@ -339,7 +341,7 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *connect.Reque
 		return nil, err
 	}
 	// 公司前綴(customer_code 取號必要)。軟刪除的公司(P2-A)視同不存在:不得在其下建客戶。
-	co, err := s.db.Company.Query().Where(company.ID(cid), company.DeletedAtIsNil()).Only(ctx)
+	co, err := dbtenant.Client(ctx, s.db).Company.Query().Where(company.ID(cid), company.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -356,11 +358,14 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *connect.Reque
 		return nil, err
 	}
 
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 由 ctx 取請求交易:稽核寫入需要 *ent.Tx(audit.Record 的簽章),且 D18「業務寫入與稽核
+	// 同一交易」正是靠它維持。無請求交易(CLI/seed/未掛 interceptor 的路徑)即回明確錯誤,
+	// 不得默默退回 fallback client 寫入 —— 客戶域 ENABLE+FORCE 後那會靜默漏掉租戶範圍。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client() // 查詢與寫入都用它;同一個交易
 
 	// E1(D1 協定):did 為**身分導出的部門**,而客戶列與主/業務子帳號都會掛在它身上。這一步必須
 	// 與掛載寫入同交易並以 FOR SHARE 讀該部門(與 DeleteDepartment 的 FOR UPDATE 互斥),否則
@@ -372,7 +377,7 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *connect.Reque
 		}
 	}
 
-	code, err := nextCustomerCode(ctx, tx, cid, prefix)
+	code, err := nextCustomerCode(ctx, db, cid, prefix)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -381,7 +386,7 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *connect.Reque
 	if len(days) == 0 {
 		days = []bool{false, false, false, false, false, false}
 	}
-	build := tx.Customer.Create().
+	build := db.Customer.Create().
 		SetCompanyID(cid).
 		SetCustomerCode(code).
 		SetName(name).
@@ -442,7 +447,7 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *connect.Reque
 	}
 	exp := time.Now().UTC().Add(customerTempPasswordTTL)
 
-	primaryUser, err := buildCustomerAccount(ctx, tx, accountSpec{
+	primaryUser, err := buildCustomerAccount(ctx, db, accountSpec{
 		CompanyID: cid, DepartmentID: did, CustomerID: created.ID,
 		Email: primaryEmail, Name: created.Name, AccountName: created.Name,
 		IsPrimary: true, SystemGenerated: false,
@@ -451,7 +456,7 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *connect.Reque
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	subUser, err := buildCustomerAccount(ctx, tx, accountSpec{
+	subUser, err := buildCustomerAccount(ctx, db, accountSpec{
 		CompanyID: cid, DepartmentID: did, CustomerID: created.ID,
 		Email: subEmail, Name: subName, AccountName: subName,
 		IsPrimary: false, SystemGenerated: true,
@@ -469,9 +474,7 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *connect.Reque
 		return nil, toConnectError(err)
 	}
 
-	if err := tx.Commit(); err != nil {
-		return nil, toConnectError(err)
-	}
+	// 交易由 interceptor 擁有(成功即 commit),服務層不再 commit/rollback。
 	return connect.NewResponse(&customersv1.CreateCustomerResponse{
 		Customer:             customerToProto(created),
 		PrimaryAccountName:   primaryUser.Name,
@@ -496,20 +499,21 @@ func (s *CustomerService) UpdateCustomer(ctx context.Context, req *connect.Reque
 	if err != nil {
 		return nil, err
 	}
-	cur, err := customerScopeQuery(s.db.Customer.Query(), cid, did).
+	cur, err := customerScopeQuery(dbtenant.Client(ctx, s.db).Customer.Query(), cid, did).
 		Where(customer.ID(custID), customer.DeletedAtIsNil()).
 		Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
 
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見本檔 CreateCustomer。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 
-	upd := tx.Customer.UpdateOneID(custID)
+	upd := db.Customer.UpdateOneID(custID)
 	if req.Msg.Name != nil {
 		n := strings.TrimSpace(*req.Msg.Name)
 		if n == "" {
@@ -595,9 +599,6 @@ func (s *CustomerService) UpdateCustomer(ctx context.Context, req *connect.Reque
 	if err := recordAudit(ctx, tx, "customer", "update", custID, cid, cur.DepartmentID, actor, map[string]any{"name": updated.Name}); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := tx.Commit(); err != nil {
-		return nil, toConnectError(err)
-	}
 	return connect.NewResponse(&customersv1.UpdateCustomerResponse{Customer: customerToProto(updated)}), nil
 }
 
@@ -615,24 +616,22 @@ func (s *CustomerService) DeleteCustomer(ctx context.Context, req *connect.Reque
 	if err != nil {
 		return nil, err
 	}
-	cur, err := customerScopeQuery(s.db.Customer.Query(), cid, did).
+	cur, err := customerScopeQuery(dbtenant.Client(ctx, s.db).Customer.Query(), cid, did).
 		Where(customer.ID(custID), customer.DeletedAtIsNil()).
 		Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見本檔 CreateCustomer。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
-	if err := tx.Customer.UpdateOneID(custID).SetDeletedAt(time.Now().UTC()).SetUpdatedBy(parseActor(id)).Exec(ctx); err != nil {
+	db := tx.Client()
+	if err := db.Customer.UpdateOneID(custID).SetDeletedAt(time.Now().UTC()).SetUpdatedBy(parseActor(id)).Exec(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := recordAudit(ctx, tx, "customer", "delete", custID, cid, cur.DepartmentID, parseActor(id), map[string]any{"customer_code": cur.CustomerCode, "name": cur.Name}); err != nil {
-		return nil, toConnectError(err)
-	}
-	if err := tx.Commit(); err != nil {
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&customersv1.DeleteCustomerResponse{}), nil
@@ -653,7 +652,7 @@ func (s *CustomerService) RestoreCustomer(ctx context.Context, req *connect.Requ
 		return nil, err
 	}
 	// 復原需能找到已刪除列:不加 DeletedAtIsNil,以範圍 + id 查詢。
-	cur, err := customerScopeQuery(s.db.Customer.Query(), cid, did).Where(customer.ID(custID)).Only(ctx)
+	cur, err := customerScopeQuery(dbtenant.Client(ctx, s.db).Customer.Query(), cid, did).Where(customer.ID(custID)).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -661,20 +660,18 @@ func (s *CustomerService) RestoreCustomer(ctx context.Context, req *connect.Requ
 		// 已是 active,冪等回傳。
 		return connect.NewResponse(&customersv1.RestoreCustomerResponse{Customer: customerToProto(cur)}), nil
 	}
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見本檔 CreateCustomer。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
-	restored, err := tx.Customer.UpdateOneID(custID).
+	db := tx.Client()
+	restored, err := db.Customer.UpdateOneID(custID).
 		ClearDeletedAt().SetUpdatedBy(parseActor(id)).Save(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := recordAudit(ctx, tx, "customer", "update", custID, cid, cur.DepartmentID, parseActor(id), map[string]any{"restored": true, "customer_code": restored.CustomerCode}); err != nil {
-		return nil, toConnectError(err)
-	}
-	if err := tx.Commit(); err != nil {
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&customersv1.RestoreCustomerResponse{Customer: customerToProto(restored)}), nil
@@ -718,9 +715,10 @@ type accountSpec struct {
 	TempExpiresAt   time.Time
 }
 
-// buildCustomerAccount 於交易內建立客戶帳號(角色 customer、is_customer=true)。
-func buildCustomerAccount(ctx context.Context, tx *ent.Tx, s accountSpec) (*ent.User, error) {
-	b := tx.User.Create().
+// buildCustomerAccount 於請求交易內建立客戶帳號(角色 customer、is_customer=true)。
+// db 為繫在該交易上的 client(呼叫端以 tx.Client() 取得),故與稽核同一交易(D18/D22)。
+func buildCustomerAccount(ctx context.Context, db *ent.Client, s accountSpec) (*ent.User, error) {
+	b := db.User.Create().
 		SetCompanyID(s.CompanyID).
 		SetEmail(s.Email).
 		SetName(s.Name).

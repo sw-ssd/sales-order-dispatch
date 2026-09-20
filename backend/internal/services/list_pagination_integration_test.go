@@ -683,18 +683,20 @@ func seedListScanRoles(t *testing.T, ctx context.Context, db *ent.Client) {
 // 排序鍵唯一時逐頁掃描本就不會重複/遺漏,消去實驗中會維持綠。
 func seedListScanCustomers(t *testing.T, ctx context.Context, db *ent.Client, companyID int) {
 	t.Helper()
-	base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	builders := make([]*ent.CustomerCreate, 0, listScanRows)
-	for i := range listScanRows {
-		builders = append(builders, db.Customer.Create().
-			SetCompanyID(companyID).
-			SetCustomerCode(fmt.Sprintf("C-%03d", i)).
-			SetName(fmt.Sprintf("客戶%02d", i/24)).
-			SetCreatedAt(base.AddDate(0, 0, i/24)))
-	}
-	if _, err := db.Customer.CreateBulk(builders...).Save(ctx); err != nil {
-		t.Fatalf("建立客戶 fixture: %v", err)
-	}
+	// 客戶域已 ENABLE(+FORCE):fixture 寫入走明確的系統範圍入口(見 seedTx)。
+	seedTx(t, db, func(tx *ent.Tx) error {
+		base := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+		builders := make([]*ent.CustomerCreate, 0, listScanRows)
+		for i := range listScanRows {
+			builders = append(builders, tx.Customer.Create().
+				SetCompanyID(companyID).
+				SetCustomerCode(fmt.Sprintf("C-%03d", i)).
+				SetName(fmt.Sprintf("客戶%02d", i/24)).
+				SetCreatedAt(base.AddDate(0, 0, i/24)))
+		}
+		_, err := tx.Customer.CreateBulk(builders...).Save(ctx)
+		return err
+	})
 }
 
 // seedListScanProcessingSpecs 建立 listScanRows 個加工規格(掛同一部門):固定排序鍵

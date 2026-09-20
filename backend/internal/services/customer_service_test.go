@@ -324,13 +324,22 @@ func TestCreateCustomerAccountFailureRollsBack(t *testing.T) {
 	if n, _ := db.Customer.Query().Count(ctx); n != 0 {
 		t.Fatalf("建帳失敗時不應有客戶列,得到 %d", n)
 	}
-	cnt, err := db.CustomerCounter.Query().Only(ctx)
-	if err != nil || cnt.NextSeq != 1 {
-		t.Fatalf("建帳失敗時計數器應回滾為 1,得到 %+v (err=%v)", cnt, err)
-	}
 	// 基準使用者數 = 業務 rep(1) + 佔位帳號(1) = 2;失敗後不得增加。
 	if n, _ := db.User.Query().Count(ctx); n != 2 {
 		t.Fatalf("建帳失敗時不應產生孤兒帳號,使用者數應仍為 2,得到 %d", n)
+	}
+	// 「計數器不得被消耗」以可觀察契約驗:排除佔位衝突後重試,必須仍取得第一號 TM000001。
+	// (不直接斷言 counter 列的存在/值:該列的建立自 T5 起與建檔同一請求交易,失敗時連列一併
+	// 回滾 —— 舊制它由請求外的小交易先建好、只回滾遞增。兩種情況都代表「編號未被消耗」。)
+	if _, err := db.User.Delete().Where(user.EmailEQ("customer.TM000001@system.local")).Exec(ctx); err != nil {
+		t.Fatalf("清除佔位帳號: %v", err)
+	}
+	resp, err := client.CreateCustomer(ctx, connect.NewRequest(&customersv1.CreateCustomerRequest{Name: "王", DefaultSalesRepId: uItoa(repID)}))
+	if err != nil {
+		t.Fatalf("衝突排除後重試建檔必須成功: %v", err)
+	}
+	if code := resp.Msg.GetCustomer().GetCustomerCode(); code != "TM000001" {
+		t.Fatalf("失敗的建檔不得消耗客戶編號:重試應取得 TM000001,得到 %q", code)
 	}
 }
 

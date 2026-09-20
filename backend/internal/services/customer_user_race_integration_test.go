@@ -78,6 +78,8 @@ func TestIntegrationCustomerAccountDepartmentDeleteRace(t *testing.T) {
 	dep := db.Department.Create().SetName("門市建檔競態").SetCompanyID(co.ID).SaveX(ctx)
 
 	// A:建檔交易內的兩步(生產函式)——驗證部門(FOR SHARE)→ 建客戶列 + 客戶帳號,尚未提交。
+	// 註:此處的 customers 寫入刻意**不**走 seedTx 的系統範圍輔助:本測試要驗的正是「這個交易
+	// 在提交前一直持有部門列鎖」,把它交給會自行 commit 的輔助會直接毀掉競態本身。
 	tx, err := db.Tx(ctx)
 	if err != nil {
 		t.Fatalf("開啟建檔交易: %v", err)
@@ -89,7 +91,7 @@ func TestIntegrationCustomerAccountDepartmentDeleteRace(t *testing.T) {
 	cust := tx.Customer.Create().
 		SetCompanyID(co.ID).SetCustomerCode("E1-000001").SetName("競態客戶").SetDepartmentID(dep.ID).
 		SaveX(ctx)
-	acct, err := buildCustomerAccount(ctx, tx, accountSpec{
+	acct, err := buildCustomerAccount(ctx, tx.Client(), accountSpec{
 		CompanyID: co.ID, DepartmentID: &dep.ID, CustomerID: cust.ID,
 		Email: "e1-race-account@system.local", Name: "競態客戶", AccountName: "競態客戶",
 		IsPrimary: true, PasswordHash: "x", MustChange: true, TempExpiresAt: time.Now().UTC().Add(time.Hour),

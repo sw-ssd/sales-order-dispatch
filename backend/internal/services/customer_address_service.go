@@ -15,6 +15,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customer"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customeraddress"
+	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
 )
 
@@ -30,7 +31,7 @@ func validAddressType(t string) bool {
 // requireCustomer 於交易外以範圍 + 未刪除載入客戶;不存在/跨部門 → not_found。
 // 目的:地址/聯絡人複寫客戶的 company_id / department_id,並確保寫入僅限可見範圍。
 func (s *CustomerService) requireCustomer(ctx context.Context, cid int, did *int, custID int) (*ent.Customer, error) {
-	c, err := customerScopeQuery(s.db.Customer.Query(), cid, did).
+	c, err := customerScopeQuery(dbtenant.Client(ctx, s.db).Customer.Query(), cid, did).
 		Where(customer.ID(custID), customer.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
@@ -89,7 +90,7 @@ func (s *CustomerService) ListAddresses(ctx context.Context, req *connect.Reques
 	if _, err := s.requireCustomer(ctx, cid, did, custID); err != nil {
 		return nil, err
 	}
-	q := addressScopeQuery(s.db.CustomerAddress.Query(), cid, did).Where(customeraddress.CustomerIDEQ(custID))
+	q := addressScopeQuery(dbtenant.Client(ctx, s.db).CustomerAddress.Query(), cid, did).Where(customeraddress.CustomerIDEQ(custID))
 	if !req.Msg.GetIncludeDeleted() {
 		q = q.Where(customeraddress.DeletedAtIsNil())
 	}
@@ -136,13 +137,16 @@ func (s *CustomerService) AddAddress(ctx context.Context, req *connect.Request[c
 	}
 	companyID := c.CompanyID
 
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 由 ctx 取請求交易:稽核寫入需要 *ent.Tx(audit.Record 的簽章),且 D18「業務寫入與稽核
+	// 同一交易」正是靠它維持。無請求交易(CLI/seed/未掛 interceptor 的路徑)即回明確錯誤,
+	// 不得默默退回 fallback client 寫入 —— ENABLE+FORCE 後那會靜默漏掉租戶範圍。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client() // 查詢與寫入都用它;同一個交易
 
-	n, err := tx.CustomerAddress.Query().
+	n, err := db.CustomerAddress.Query().
 		Where(customeraddress.CustomerIDEQ(custID), customeraddress.TypeEQ(customeraddress.Type(typ)), customeraddress.DeletedAtIsNil()).
 		Count(ctx)
 	if err != nil {
@@ -151,7 +155,7 @@ func (s *CustomerService) AddAddress(ctx context.Context, req *connect.Request[c
 	wantDefault := req.Msg.GetIsDefault() || n == 0 // 首筆同類型自動為預設(3.2.1 步驟 4)
 	if wantDefault {
 		// 先清同類型其餘預設(3.2.1 步驟 3)。
-		if err := tx.CustomerAddress.Update().
+		if err := db.CustomerAddress.Update().
 			Where(
 				customeraddress.CustomerIDEQ(custID),
 				customeraddress.TypeEQ(customeraddress.Type(typ)),
@@ -162,7 +166,7 @@ func (s *CustomerService) AddAddress(ctx context.Context, req *connect.Request[c
 		}
 	}
 	actor, _ := parseID(id.UserID)
-	build := tx.CustomerAddress.Create().
+	build := db.CustomerAddress.Create().
 		SetCompanyID(companyID).
 		SetCustomerID(custID).
 		SetType(customeraddress.Type(typ)).
@@ -190,9 +194,7 @@ func (s *CustomerService) AddAddress(ctx context.Context, req *connect.Request[c
 	if err := recordAudit(ctx, tx, "customer_address", "create", created.ID, companyID, c.DepartmentID, actor, map[string]any{"customer_id": custID, "type": typ}); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := tx.Commit(); err != nil {
-		return nil, toConnectError(err)
-	}
+	// 交易由 interceptor 擁有(成功即 commit),服務層不再 commit/rollback。
 	return connect.NewResponse(&customersv1.AddAddressResponse{Address: addressToProto(created)}), nil
 }
 
@@ -210,19 +212,20 @@ func (s *CustomerService) UpdateAddress(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("address id 格式錯誤"))
 	}
-	cur, err := addressScopeQuery(s.db.CustomerAddress.Query(), cid, did).
+	cur, err := addressScopeQuery(dbtenant.Client(ctx, s.db).CustomerAddress.Query(), cid, did).
 		Where(customeraddress.ID(addrID), customeraddress.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
 
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見本檔 AddAddress。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 
-	upd := tx.CustomerAddress.UpdateOneID(addrID)
+	upd := db.CustomerAddress.UpdateOneID(addrID)
 	typeChanged := false
 	if req.Msg.Type != nil {
 		typ := strings.TrimSpace(*req.Msg.Type)
@@ -261,7 +264,7 @@ func (s *CustomerService) UpdateAddress(ctx context.Context, req *connect.Reques
 		if req.Msg.Type != nil {
 			effType = customeraddress.Type(strings.TrimSpace(*req.Msg.Type))
 		}
-		if err := tx.CustomerAddress.Update().
+		if err := db.CustomerAddress.Update().
 			Where(
 				customeraddress.CustomerIDEQ(cur.CustomerID),
 				customeraddress.TypeEQ(effType),
@@ -290,9 +293,6 @@ func (s *CustomerService) UpdateAddress(ctx context.Context, req *connect.Reques
 	if err := recordAudit(ctx, tx, "customer_address", "update", addrID, cur.CompanyID, cur.DepartmentID, actor, map[string]any{"customer_id": cur.CustomerID}); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := tx.Commit(); err != nil {
-		return nil, toConnectError(err)
-	}
 	return connect.NewResponse(&customersv1.UpdateAddressResponse{Address: addressToProto(updated)}), nil
 }
 
@@ -310,24 +310,22 @@ func (s *CustomerService) DeleteAddress(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("address id 格式錯誤"))
 	}
-	cur, err := addressScopeQuery(s.db.CustomerAddress.Query(), cid, did).
+	cur, err := addressScopeQuery(dbtenant.Client(ctx, s.db).CustomerAddress.Query(), cid, did).
 		Where(customeraddress.ID(addrID), customeraddress.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見本檔 AddAddress。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 	actor, _ := parseID(id.UserID)
-	if err := tx.CustomerAddress.UpdateOneID(addrID).SetDeletedAt(time.Now().UTC()).SetUpdatedBy(actor).Exec(ctx); err != nil {
+	if err := db.CustomerAddress.UpdateOneID(addrID).SetDeletedAt(time.Now().UTC()).SetUpdatedBy(actor).Exec(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := recordAudit(ctx, tx, "customer_address", "delete", addrID, cur.CompanyID, cur.DepartmentID, actor, map[string]any{"customer_id": cur.CustomerID, "type": string(cur.Type)}); err != nil {
-		return nil, toConnectError(err)
-	}
-	if err := tx.Commit(); err != nil {
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&customersv1.DeleteAddressResponse{}), nil

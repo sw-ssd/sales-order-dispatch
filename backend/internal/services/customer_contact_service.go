@@ -15,6 +15,7 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customercontact"
+	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
 )
 
@@ -69,7 +70,7 @@ func (s *CustomerService) ListContacts(ctx context.Context, req *connect.Request
 	if _, err := s.requireCustomer(ctx, cid, did, custID); err != nil {
 		return nil, err
 	}
-	q := contactScopeQuery(s.db.CustomerContact.Query(), cid, did).Where(customercontact.CustomerIDEQ(custID))
+	q := contactScopeQuery(dbtenant.Client(ctx, s.db).CustomerContact.Query(), cid, did).Where(customercontact.CustomerIDEQ(custID))
 	if !req.Msg.GetIncludeDeleted() {
 		q = q.Where(customercontact.DeletedAtIsNil())
 	}
@@ -111,20 +112,23 @@ func (s *CustomerService) AddContact(ctx context.Context, req *connect.Request[c
 	}
 	companyID := c.CompanyID
 
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 由 ctx 取請求交易:稽核寫入需要 *ent.Tx(audit.Record 的簽章),且 D18「業務寫入與稽核
+	// 同一交易」正是靠它維持。無請求交易(CLI/seed/未掛 interceptor 的路徑)即回明確錯誤,
+	// 不得默默退回 fallback client 寫入 —— ENABLE+FORCE 後那會靜默漏掉租戶範圍。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client() // 查詢與寫入都用它;同一個交易
 
-	n, err := tx.CustomerContact.Query().
+	n, err := db.CustomerContact.Query().
 		Where(customercontact.CustomerIDEQ(custID), customercontact.DeletedAtIsNil()).Count(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
 	wantDefault := req.Msg.GetIsDefault() || n == 0 // 首筆聯絡人自動為預設(3.2.2 步驟 3)
 	if wantDefault {
-		if err := tx.CustomerContact.Update().
+		if err := db.CustomerContact.Update().
 			Where(
 				customercontact.CustomerIDEQ(custID),
 				customercontact.DeletedAtIsNil(),
@@ -134,7 +138,7 @@ func (s *CustomerService) AddContact(ctx context.Context, req *connect.Request[c
 		}
 	}
 	actor, _ := parseID(id.UserID)
-	build := tx.CustomerContact.Create().
+	build := db.CustomerContact.Create().
 		SetCompanyID(companyID).
 		SetCustomerID(custID).
 		SetName(name).
@@ -160,9 +164,7 @@ func (s *CustomerService) AddContact(ctx context.Context, req *connect.Request[c
 	if err := recordAudit(ctx, tx, "customer_contact", "create", created.ID, companyID, c.DepartmentID, actor, map[string]any{"customer_id": custID, "name": created.Name}); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := tx.Commit(); err != nil {
-		return nil, toConnectError(err)
-	}
+	// 交易由 interceptor 擁有(成功即 commit),服務層不再 commit/rollback。
 	return connect.NewResponse(&customersv1.AddContactResponse{Contact: contactToProto(created)}), nil
 }
 
@@ -180,19 +182,20 @@ func (s *CustomerService) UpdateContact(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("contact id 格式錯誤"))
 	}
-	cur, err := contactScopeQuery(s.db.CustomerContact.Query(), cid, did).
+	cur, err := contactScopeQuery(dbtenant.Client(ctx, s.db).CustomerContact.Query(), cid, did).
 		Where(customercontact.ID(contactID), customercontact.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
 
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見本檔 AddContact。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 
-	upd := tx.CustomerContact.UpdateOneID(contactID)
+	upd := db.CustomerContact.UpdateOneID(contactID)
 	if req.Msg.Name != nil {
 		n := strings.TrimSpace(*req.Msg.Name)
 		if n == "" {
@@ -214,7 +217,7 @@ func (s *CustomerService) UpdateContact(ctx context.Context, req *connect.Reques
 		upd = upd.SetPhone(*req.Msg.Phone)
 	}
 	if req.Msg.IsDefault != nil && *req.Msg.IsDefault {
-		if err := tx.CustomerContact.Update().
+		if err := db.CustomerContact.Update().
 			Where(
 				customercontact.CustomerIDEQ(cur.CustomerID),
 				customercontact.DeletedAtIsNil(),
@@ -237,9 +240,6 @@ func (s *CustomerService) UpdateContact(ctx context.Context, req *connect.Reques
 	if err := recordAudit(ctx, tx, "customer_contact", "update", contactID, cur.CompanyID, cur.DepartmentID, actor, map[string]any{"customer_id": cur.CustomerID}); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := tx.Commit(); err != nil {
-		return nil, toConnectError(err)
-	}
 	return connect.NewResponse(&customersv1.UpdateContactResponse{Contact: contactToProto(updated)}), nil
 }
 
@@ -257,24 +257,22 @@ func (s *CustomerService) DeleteContact(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("contact id 格式錯誤"))
 	}
-	cur, err := contactScopeQuery(s.db.CustomerContact.Query(), cid, did).
+	cur, err := contactScopeQuery(dbtenant.Client(ctx, s.db).CustomerContact.Query(), cid, did).
 		Where(customercontact.ID(contactID), customercontact.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見本檔 AddContact。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 	actor, _ := parseID(id.UserID)
-	if err := tx.CustomerContact.UpdateOneID(contactID).SetDeletedAt(time.Now().UTC()).SetUpdatedBy(actor).Exec(ctx); err != nil {
+	if err := db.CustomerContact.UpdateOneID(contactID).SetDeletedAt(time.Now().UTC()).SetUpdatedBy(actor).Exec(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := recordAudit(ctx, tx, "customer_contact", "delete", contactID, cur.CompanyID, cur.DepartmentID, actor, map[string]any{"customer_id": cur.CustomerID, "name": cur.Name}); err != nil {
-		return nil, toConnectError(err)
-	}
-	if err := tx.Commit(); err != nil {
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&customersv1.DeleteContactResponse{}), nil

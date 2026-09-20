@@ -68,8 +68,14 @@ func TestIntegrationCustomerCountersAlignEntSchema(t *testing.T) {
 	}
 
 	// ent 取號路徑用到的四種取用方式(修復前全部因 column "id" does not exist 失敗)。
+	// customer_counters 已 ENABLE(+FORCE):fixture 寫入走系統範圍入口(見 seedTx)。
 	co := db.Company.Create().SetName("E3 counter 公司").SetIdentifier("E3-COUNTER").SaveX(ctx)
-	created := db.CustomerCounter.Create().SetCompanyID(co.ID).SetNextSeq(1).SetVersion(0).SaveX(ctx)
+	var created *ent.CustomerCounter
+	seedTx(t, db, func(tx *ent.Tx) error {
+		var err error
+		created, err = tx.CustomerCounter.Create().SetCompanyID(co.ID).SetNextSeq(1).SetVersion(0).Save(ctx)
+		return err
+	})
 	if created.ID <= 0 {
 		t.Fatalf("ent Create 應由 sequence 取得 id,得到 %d", created.ID)
 	}
