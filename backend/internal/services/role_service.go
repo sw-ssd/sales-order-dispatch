@@ -84,7 +84,7 @@ func (s *RoleService) ListRoles(ctx context.Context, req *connect.Request[v1.Lis
 		return nil, err
 	}
 
-	list, pg, err := pageList(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), roleListSource{q: s.db.Role.Query(), field: field, desc: desc}, roleToProto)
+	list, pg, err := pageList(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), roleListSource{q: dbtenant.Client(ctx, s.db).Role.Query(), field: field, desc: desc}, roleToProto)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +151,7 @@ func (s *RoleService) GetRolePermissions(ctx context.Context, req *connect.Reque
 	if err != nil {
 		return nil, err
 	}
-	exists, err := s.db.Role.Query().Where(role.ID(roleID)).Exist(ctx)
+	exists, err := dbtenant.Client(ctx, s.db).Role.Query().Where(role.ID(roleID)).Exist(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -181,7 +181,7 @@ func (s *RoleService) UpdateRolePermissions(ctx context.Context, req *connect.Re
 	if err != nil {
 		return nil, err
 	}
-	r, err := s.db.Role.Get(ctx, roleID)
+	r, err := dbtenant.Client(ctx, s.db).Role.Get(ctx, roleID)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -211,17 +211,18 @@ func (s *RoleService) UpdateRolePermissions(ctx context.Context, req *connect.Re
 		return nil, err
 	}
 
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db(roles/role_permissions 為共享目錄,policy 只要求 scope 非空)。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 
-	if _, err := tx.RolePermission.Delete().Where(rolepermission.RoleID(roleID)).Exec(ctx); err != nil {
+	if _, err := db.RolePermission.Delete().Where(rolepermission.RoleID(roleID)).Exec(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
 	for _, p := range perms {
-		build := tx.RolePermission.Create().
+		build := db.RolePermission.Create().
 			SetRoleID(roleID).
 			SetResource(p.resource).
 			SetAction(p.action).
@@ -233,9 +234,6 @@ func (s *RoleService) UpdateRolePermissions(ctx context.Context, req *connect.Re
 		if _, err := build.Save(ctx); err != nil {
 			return nil, toConnectError(err)
 		}
-	}
-	if err := tx.Commit(); err != nil {
-		return nil, toConnectError(err)
 	}
 
 	// D32/Task8:role_permissions 異動同步至 OpenFGA tuples(引擎未注入時略過,向後相容)。
@@ -275,7 +273,7 @@ func (s *RoleService) ListConditionFields(ctx context.Context, req *connect.Requ
 
 // loadPermissionModels 讀取角色全部 role_permissions(交易前快照,供 OpenFGA 同步)。
 func (s *RoleService) loadPermissionModels(ctx context.Context, roleID int) ([]permission, error) {
-	rows, err := s.db.RolePermission.Query().
+	rows, err := dbtenant.Client(ctx, s.db).RolePermission.Query().
 		Where(rolepermission.RoleID(roleID)).
 		Order(rolepermission.BySortOrder()).
 		All(ctx)
@@ -384,7 +382,7 @@ func splitTupleKey(k string) (user, relation, object string) {
 
 // loadPermissions 依 sort_order 升冪讀取角色功能權限並轉 proto。
 func (s *RoleService) loadPermissions(ctx context.Context, roleID int) ([]*v1.Permission, error) {
-	rows, err := s.db.RolePermission.Query().
+	rows, err := dbtenant.Client(ctx, s.db).RolePermission.Query().
 		Where(rolepermission.RoleID(roleID)).
 		Order(rolepermission.BySortOrder()).
 		All(ctx)
