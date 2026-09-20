@@ -214,14 +214,17 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
     **營運者驅動的寫入仍必須寫平台稽核並帶真實 `operator_id`**——那才是本約束的意圖。
     為什麼：這個例外不是「方便」，是 schema 上不可滿足；硬寫的結果不是更安全，而是交易直接失敗或留下一列不存在的 actor。
 
-20. **排程事件的 payload 必須自帶 `company_id` 與 `reason`**——四個事件的 `reason` 契約（`lifecycle.go:115`／`:165`／`:206`／`:249`）：
+20. **排程事件的 payload 必須自帶 `company_id` 與 `reason`**——**五個**事件的 `reason` 契約（`ExpireTrials`／`MarkPastDue`／`SuspendOverdue`／`ExpireCancelled`／`EnsureNextPeriod`）：
 
     | 事件 | `reason` |
     |---|---|
     | `period.opened` | `scheduled_next_period` |
+    | `subscription.trial_ended` | `trial_expired` |
     | `subscription.past_due` | `period_end_passed_unpaid` |
     | `subscription.suspended` | `overdue` |
     | `subscription.expired` | `cancelled_at_period_end` |
+
+    **排程掃描的順序（`cron.RunOnce`，有依賴不可重排）**：試用到期 → 逾期 → 停用 → 取消到期 → 產生期別 → 派送事件。試用到期放最前面，因為它是生命週期最早的階段，而且轉成 `past_due` 之後就不在「服務中」→ 同一趟的產生期別不會替一個試用已到期的租戶再開一期（`trialing` 沒有到期路徑就等於無上界的免費放行：判定層把 `trialing` 當可用、`EnsureNextPeriod` 每期照開未付期別、而 `MarkPastDue` 只掃 `active`）。
 
     為什麼：排程不寫平台稽核（第 19 條），事件的 payload 就是補繳／催收／客服追查時唯一的「為什麼」；`company_id` 也讓 consumer **不必為了補一個欄位再查一次 DB**（事件與查詢之間狀態可能已經變了）。
 

@@ -540,6 +540,8 @@ func TestCreateSubscriptionWithTrialStartsTrialing(t *testing.T) {
 // 沒有期別、沒有事件、沒有稽核、沒有失效）—— 開通是「一次寫入 = 一個交易」，失敗不得留半成品。
 func TestCreateSubscriptionRejectsInvalidInput(t *testing.T) {
 	past := time.Now().Add(-time.Hour)
+	// 上限 365 天（maxTrialDays）：試用是不收錢地放行全部權益，沒有上界就等於送出無限期免費。
+	tooFar := time.Now().AddDate(0, 0, 366)
 	cases := []struct {
 		name string
 		in   billing.CreateSubscriptionInput
@@ -565,6 +567,9 @@ func TestCreateSubscriptionRejectsInvalidInput(t *testing.T) {
 		{"試用期已過", billing.CreateSubscriptionInput{
 			CompanyID: 42, PlanCode: "std", BillingCycle: "monthly", SeatCount: 3,
 			TrialEnds: &past, ActorOperatorID: 7, Reason: "開通"}, "SYS-1001"},
+		{"試用期超過上限", billing.CreateSubscriptionInput{
+			CompanyID: 42, PlanCode: "std", BillingCycle: "monthly", SeatCount: 3,
+			TrialEnds: &tooFar, ActorOperatorID: 7, Reason: "開通"}, "SYS-1001"},
 		{"方案不存在", billing.CreateSubscriptionInput{
 			CompanyID: 42, PlanCode: "ghost", BillingCycle: "monthly", SeatCount: 3,
 			ActorOperatorID: 7, Reason: "開通"}, "SYS-4002"},
@@ -595,6 +600,74 @@ func TestCreateSubscriptionRejectsInvalidInput(t *testing.T) {
 		t.Fatalf("錯誤必須說出「不得開出 0 元期別」，got %q", reason)
 	}
 	assertNothingWritten(t, f, cache)
+}
+
+// TestCreateSubscriptionAcceptsTrialAtUpperBound 驗上限的**邊界方向**：364 天可以、366 天不行
+// （off-by-one 寫反的話，這一條會紅；單看「366 天被拒」看不出界線畫在哪）。
+func TestCreateSubscriptionAcceptsTrialAtUpperBound(t *testing.T) {
+	within := time.Now().AddDate(0, 0, 364).Truncate(time.Second)
+	f := createFixture()
+	created, err := billing.NewBilling(f).CreateSubscription(context.Background(),
+		billing.CreateSubscriptionInput{
+			CompanyID: 42, PlanCode: "std", BillingCycle: "monthly", SeatCount: 1,
+			TrialEnds: &within, ActorOperatorID: 7, Reason: "一年期 POC"})
+	if err != nil || created.Status != "trialing" {
+		t.Fatalf("364 天的試用應被接受: %v (%+v)", err, created)
+	}
+	if sub := readSub(t, f, 42); sub.TrialEnds == nil || !sub.TrialEnds.Equal(within) {
+		t.Fatalf("試用到期日應原樣落地，got %v", sub.TrialEnds)
+	}
+}
+
+// priceLookupFails 讓取價以**基礎設施錯誤**（不是「沒有價目」）失敗：M-1 的映射要用它。
+type priceLookupFails struct{ *store.FakeBilling }
+
+func (priceLookupFails) CurrentPriceTx(context.Context, *sql.Tx, int64, string) (store.Price, error) {
+	return store.Price{}, errors.New("連線中斷")
+}
+
+// TestCreateSubscriptionDistinguishesPriceLookupFailure 驗 M-1：「沒有該週期的價目」與「查價失敗」
+// 必須是兩種答案。前者是資料問題（operator 要改的是價目 → PLAT-3001），後者是基礎設施問題
+// （連線中斷、死鎖 → SYS-9000）；把後者也講成「這個方案沒有價目」會讓 operator 去改一個沒壞的設定。
+func TestCreateSubscriptionDistinguishesPriceLookupFailure(t *testing.T) {
+	f := createFixture()
+	_, err := billing.NewBilling(priceLookupFails{f}).CreateSubscription(context.Background(),
+		billing.CreateSubscriptionInput{
+			CompanyID: 42, PlanCode: "std", BillingCycle: "monthly", SeatCount: 3,
+			ActorOperatorID: 7, Reason: "開通"})
+	if connect.CodeOf(err) != connect.CodeInternal || errorCodeOf(t, err) != "SYS-9000" {
+		t.Fatalf("查價失敗（非缺價目）應 SYS-9000，got %v", err)
+	}
+	assertNothingWritten(t, f, &recordingCache{})
+}
+
+// TestCreateSubscriptionRollsBackWhenEventWriteFails 驗**回滾涵蓋訂閱列與第一期**（不只交易前的檢查）：
+// 事件寫入失敗 → 訂閱、期別、稽核三者都不存在。少了這一條，「一次寫入 = 一個交易」只在
+// 前置檢查那一段被驗過 —— 而開通要嘛整份成立，要嘛整份不成立。
+func TestCreateSubscriptionRollsBackWhenEventWriteFails(t *testing.T) {
+	f := createFixture()
+	_, err := billing.NewBilling(failEvents{f}).CreateSubscription(context.Background(),
+		billing.CreateSubscriptionInput{
+			CompanyID: 42, PlanCode: "std", BillingCycle: "monthly", SeatCount: 3,
+			ActorOperatorID: 7, Reason: "開通"})
+	if err == nil {
+		t.Fatal("事件寫入失敗時不得回成功")
+	}
+	if connect.CodeOf(err) != connect.CodeInternal || errorCodeOf(t, err) != "SYS-9000" {
+		t.Fatalf("基礎設施失敗應 SYS-9000，got %v", err)
+	}
+	if sub, err := f.OpenSubscriptionTx(context.Background(), nil, 42); err != nil || sub != nil {
+		t.Fatalf("回滾後不得留下訂閱列: %+v (%v)", sub, err)
+	}
+	if periods, err := f.PeriodsByStatus(context.Background(), "open"); err != nil || len(periods) != 0 {
+		t.Fatalf("回滾後不得留下期別: %v (%d 筆)", err, len(periods))
+	}
+	if audits := f.Audits(); len(audits) != 0 {
+		t.Fatalf("回滾後不得留下稽核，got %+v", audits)
+	}
+	if events := f.Events(); len(events) != 0 {
+		t.Fatalf("回滾後不得留下事件，got %v", eventTypes(f))
+	}
 }
 
 // TestCreateSubscriptionRejectsSecondLiveSubscription 驗 00029 的

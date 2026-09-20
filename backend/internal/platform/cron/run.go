@@ -35,6 +35,9 @@ import (
 // Billing 為排程驅動的帳務掃描(實作:billing.Billing)。宣告成介面(C-08)是為了讓 RunOnce
 // 能用假 deps 測 —— 掃描語意屬 Task 5,編排語意屬本套件,兩者不該互相綁進容器。
 type Billing interface {
+	// ExpireTrials 把「試用已到期」的 trialing 訂閱轉 past_due 並設寬限期,回實際筆數。
+	// 轉過去之後由 SuspendOverdue／RecordPayment 接手(同一張狀態機,不另立第二套轉移)。
+	ExpireTrials(ctx context.Context, now time.Time, graceDays int) (int, error)
 	// MarkPastDue 把「期末已過且當期仍 open」的 active 訂閱轉 past_due 並設寬限期,回實際筆數。
 	MarkPastDue(ctx context.Context, now time.Time, graceDays int) (int, error)
 	// SuspendOverdue 把寬限期已過的 past_due 訂閱轉 suspended 並發 subscription.suspended,回筆數。
@@ -142,6 +145,7 @@ type Summary struct {
 	// 另一個執行正在跑、本趟未處理任何事(不是錯誤),其餘計數必為 0 —— 有了它,log 才分得出
 	// 「跳過」與「跑了但沒事可做」。
 	Locked           bool `json:"locked"`
+	TrialsExpired    int  `json:"trials_expired"`
 	PastDue          int  `json:"past_due"`
 	Suspended        int  `json:"suspended"`
 	ExpiredCancelled int  `json:"expired_cancelled"`
@@ -150,9 +154,11 @@ type Summary struct {
 	Receivables      int  `json:"receivables"`
 }
 
-// RunOnce 執行一趟完整排程:逾期 → 凍結(停用欠費、取消到期) → 產生期別 → 派送事件。
+// RunOnce 執行一趟完整排程:**試用到期 → 逾期 → 凍結(停用欠費、取消到期) → 產生期別 → 派送事件**。
 //
 // 順序有依賴,不能重排:
+//   - 試用到期放**最前面**:它是生命週期最早的階段(還在試用的租戶不該被當成逾期),而且轉成
+//     past_due 之後就不在「服務中」→ 本趟的產生期別不會替一個試用已到期的租戶再開一期;
 //   - 先轉移狀態再產生期別:剛被停用的租戶不該被開新期(而且停用是**在 DB 裡**先發生,
 //     掃描本身也排除非 active/trialing,兩層一致);
 //   - 派送放最後:本趟產生的每一個事件(含凍結)都在同一趟內被認領,不留「事件寫了但沒送」的窗口。
@@ -184,6 +190,9 @@ func runOnceGuarded(ctx context.Context, deps Deps, now time.Time, p Params) (s 
 		}
 	}()
 
+	if s.TrialsExpired, err = deps.Billing.ExpireTrials(ctx, now, p.GraceDays); err != nil {
+		return s, fmt.Errorf("試用到期: %w", err)
+	}
 	if s.PastDue, err = deps.Billing.MarkPastDue(ctx, now, p.GraceDays); err != nil {
 		return s, fmt.Errorf("標記逾期: %w", err)
 	}

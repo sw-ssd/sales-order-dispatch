@@ -864,3 +864,117 @@ func TestScheduleEventPayloadCarriesCompanyAndReason(t *testing.T) {
 		})
 	}
 }
+
+// ---------------------------------------------------------------------------
+// I-1（Task 15 修正輪）：**試用到期**。少了這一步，試用就是「無上界的免費放行」：
+// 判定層把 trialing 當可用、EnsureNextPeriod 把 trialing 當服務中（每期照開未付期別）、
+// 而 MarkPastDue 只掃 active → 試用到期後既不催收也不凍結。
+// ---------------------------------------------------------------------------
+
+// TestExpireTrialsTransitionsToPastDueOnce 驗：trialing 且試用已過 → past_due ＋ 寬限期 ＋
+// 一個 subscription.trial_ended（payload 帶得出公司／寬限／原因）；重跑不再轉也不再發；
+// 試用**未到**的訂閱不動。
+//
+// 排程不寫平台稽核（platform.audit_logs.operator_id 是 NOT NULL 且 FK 到 platform.operators，而排程
+// 沒有 operator 主體；見 lifecycle.go 檔頭），故這裡反向斷言**零筆稽核** —— 那條界線若被打破，
+// 生產會在 FK 上炸，而單元測試的假 store 不會。
+func TestExpireTrialsTransitionsToPastDueOnce(t *testing.T) {
+	now := at(2026, time.October, 1, 3)
+	f := store.NewFakeBilling()
+	trialEnd := now.Add(-time.Hour)
+	seedSub(f, store.Subscription{CompanyID: 42, Status: "trialing", PlanID: 1, BillingCycle: "monthly",
+		TrialEnds: &trialEnd}, now.AddDate(0, -1, 0), now.AddDate(0, 0, 20))
+	b := billing.NewBilling(f)
+
+	n, err := b.ExpireTrials(context.Background(), now, 7)
+	if err != nil || n != 1 {
+		t.Fatalf("應轉移 1 筆: n=%d err=%v", n, err)
+	}
+	wantGrace := now.AddDate(0, 0, 7)
+	sub := readSub(t, f, 42)
+	if sub.Status != "past_due" {
+		t.Fatalf("試用到期應轉 past_due，got %q", sub.Status)
+	}
+	if sub.GraceUntil == nil || !sub.GraceUntil.Equal(wantGrace) {
+		t.Fatalf("寬限期應為 %s，got %v", wantGrace, sub.GraceUntil)
+	}
+	// 試用到期日不得被清掉：它是「這個租戶試用到哪天」的唯一事實（判定層與 console 都讀它）。
+	if sub.TrialEnds == nil || !sub.TrialEnds.Equal(trialEnd) {
+		t.Fatalf("試用到期日必須保留，got %v", sub.TrialEnds)
+	}
+	var p struct {
+		CompanyID  int    `json:"company_id"`
+		GraceUntil string `json:"grace_until"`
+		Reason     string `json:"reason"`
+	}
+	eventPayload(t, f, "subscription.trial_ended", &p)
+	if p.CompanyID != 42 || p.GraceUntil != wantGrace.Format(time.RFC3339) || p.Reason == "" {
+		t.Fatalf("事件需帶得出公司、寬限期與原因: %+v", p)
+	}
+	if got := eventCount(f, "subscription.trial_ended"); got != 1 {
+		t.Fatalf("應恰發一個事件，got %d（%v）", got, eventTypes(f))
+	}
+	if audits := f.Audits(); len(audits) != 0 {
+		t.Fatalf("排程不寫平台稽核（沒有 operator 主體），got %+v", audits)
+	}
+
+	// 重跑：狀態已不是 trialing → 不轉、不重發、不推進寬限期。
+	n2, err := b.ExpireTrials(context.Background(), now, 7)
+	if err != nil || n2 != 0 {
+		t.Fatalf("重跑不應轉移: n=%d err=%v", n2, err)
+	}
+	if got := eventCount(f, "subscription.trial_ended"); got != 1 {
+		t.Fatalf("重跑不得重複發事件（%d 筆）", got)
+	}
+	if sub := readSub(t, f, 42); !sub.GraceUntil.Equal(wantGrace) {
+		t.Fatalf("重跑不得改動已設定的寬限期，got %v", sub.GraceUntil)
+	}
+
+	// 試用**未到** → 一個字都不動（差一刻也不算到期）。
+	f2 := store.NewFakeBilling()
+	future := now.Add(time.Second)
+	seedSub(f2, store.Subscription{CompanyID: 43, Status: "trialing", PlanID: 1, BillingCycle: "monthly",
+		TrialEnds: &future}, now.AddDate(0, -1, 0), now.AddDate(0, 0, 20))
+	if n, err := billing.NewBilling(f2).ExpireTrials(context.Background(), now, 7); err != nil || n != 0 {
+		t.Fatalf("試用未到不得轉移: n=%d err=%v", n, err)
+	}
+	if sub := readSub(t, f2, 43); sub.Status != "trialing" || sub.GraceUntil != nil {
+		t.Fatalf("試用未到的訂閱不得被動到: %+v", sub)
+	}
+	if len(f2.Events()) != 0 {
+		t.Fatalf("試用未到不得發事件，got %v", eventTypes(f2))
+	}
+}
+
+// TestExpireTrialsOnlyTouchesTrialingWithTrialEnd 驗掃描的集合邊界：active／past_due／cancelled
+// 不管 trial_ends_at 寫了什麼都不算「試用到期」；**trialing 但沒有到期日**也不算（那是資料異常，
+// 該由開通端的上限擋住，而不是被排程猜成到期）。
+func TestExpireTrialsOnlyTouchesTrialingWithTrialEnd(t *testing.T) {
+	now := at(2026, time.October, 1, 3)
+	f := store.NewFakeBilling()
+	oldTrial := now.Add(-time.Hour)
+	for i, s := range []store.Subscription{
+		{CompanyID: 42, Status: "active", TrialEnds: &oldTrial},
+		{CompanyID: 43, Status: "past_due", TrialEnds: &oldTrial},
+		{CompanyID: 44, Status: "cancelled", TrialEnds: &oldTrial},
+		{CompanyID: 45, Status: "trialing"}, // 沒有到期日
+	} {
+		seedSub(f, store.Subscription{PlanID: 1, BillingCycle: "monthly", Status: s.Status,
+			CompanyID: s.CompanyID, TrialEnds: s.TrialEnds, ID: int64(5 + i)},
+			now.AddDate(0, -1, 0), now.AddDate(0, 0, 20))
+	}
+
+	n, err := billing.NewBilling(f).ExpireTrials(context.Background(), now, 7)
+	if err != nil || n != 0 {
+		t.Fatalf("只有 trialing 且有到期日者才算試用到期: n=%d err=%v", n, err)
+	}
+	for _, companyID := range []int{42, 43, 44, 45} {
+		if sub := readSub(t, f, companyID); sub.Status != map[int]string{42: "active", 43: "past_due",
+			44: "cancelled", 45: "trialing"}[companyID] {
+			t.Fatalf("公司 %d 的狀態不得被動到，got %q", companyID, sub.Status)
+		}
+	}
+	if len(f.Events()) != 0 {
+		t.Fatalf("不得發任何事件，got %v", eventTypes(f))
+	}
+}

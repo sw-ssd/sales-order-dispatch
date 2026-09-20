@@ -12,6 +12,7 @@ package cron_test
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"slices"
 	"strings"
@@ -65,6 +66,13 @@ func (s *spyBilling) call(name string) error {
 		return errors.New("假造的失敗:" + name)
 	}
 	return nil
+}
+
+func (s *spyBilling) ExpireTrials(ctx context.Context, now time.Time, graceDays int) (int, error) {
+	if err := s.call("ExpireTrials"); err != nil {
+		return 0, err
+	}
+	return s.inner.ExpireTrials(ctx, now, graceDays)
 }
 
 func (s *spyBilling) MarkPastDue(ctx context.Context, now time.Time, graceDays int) (int, error) {
@@ -244,6 +252,20 @@ func newDeps(f *store.FakeBilling) (cron.Deps, *callLog, *spyBilling, *recording
 	}, log, spy, setter
 }
 
+// seedTrialingSub 種一筆試用中的訂閱(trial_ends_at = trialEnds)與它的第 1 期(期末 end)。
+func seedTrialingSub(f *store.FakeBilling, companyID int, trialEnds, end time.Time) int64 {
+	id := f.PutSubscription(store.Subscription{
+		CompanyID: companyID, Status: "trialing", PlanID: 1, SeatCount: 3,
+		BillingCycle: "monthly", TrialEnds: &trialEnds,
+	})
+	f.PutPeriod(store.Period{
+		SubscriptionID: id, PeriodNo: 1, Status: "open",
+		PeriodStart: end.AddDate(0, -1, 0), PeriodEnd: end,
+		PlanID: 1, SeatCount: 3, AmountCents: 195000, Currency: "TWD",
+	})
+	return id
+}
+
 // 一趟排程的順序與可重跑:逾期末付 → past_due;寬限已過 → suspended;已取消期末已過 → expired(G7);
 // 進入提前窗 → 開下一期;事件在同一趟內被認領(含凍結)。第二趟不得產生任何第二個副作用。
 //
@@ -257,12 +279,14 @@ func TestRunOnceIsIdempotent(t *testing.T) {
 	f.PutSetting("system_actor_user_id", "7")
 	f.PutPlanPrice(1, "monthly", store.Price{BaseCents: 150000, SeatCents: 15000, Currency: "TWD"})
 	// 42:逾期未付(→past_due);43:寬限已過(→suspended);44:已取消且期末已過(→expired,G7);
-	// 45:服務中且期末在提前窗內(→開下一期)。
+	// 45:服務中且期末在提前窗內(→開下一期);46:試用已到期(→past_due,且**不得**被開新期)。
 	seedSub(f, 42, "active", "monthly", nil, now.Add(-time.Hour))
 	pastGrace := now.Add(-24 * time.Hour)
 	seedSub(f, 43, "past_due", "monthly", &pastGrace, now.Add(-2*time.Hour))
 	seedSub(f, 44, "cancelled", "monthly", nil, now.Add(-2*time.Hour))
 	seedSub(f, 45, "active", "monthly", nil, now.AddDate(0, 0, 10))
+	// 46 的期末刻意放在提前窗**外**:若試用到期沒有先轉走狀態,本趟就會替它開出第 2 期。
+	sub46 := seedTrialingSub(f, 46, now.Add(-time.Hour), now.AddDate(0, 0, 10))
 
 	deps, log, _, setter := newDeps(f)
 
@@ -272,18 +296,24 @@ func TestRunOnceIsIdempotent(t *testing.T) {
 	}
 	// 四類掃描的順序(逾期 → 停用 → 取消到期 → 產生期別)＋派送放最後:本趟產生的每個事件
 	// (含凍結)都在同一趟內被認領,不留「事件寫了但沒送」的窗口。
-	wantOrder := []string{"MarkPastDue", "SuspendOverdue", "ExpireCancelled", "EnsureNextPeriod", "DispatchOnce"}
+	wantOrder := []string{"ExpireTrials", "MarkPastDue", "SuspendOverdue", "ExpireCancelled", "EnsureNextPeriod", "DispatchOnce"}
 	if got := log.order(); !slices.Equal(got, wantOrder) {
 		t.Fatalf("掃描順序不符: got %v want %v", got, wantOrder)
 	}
-	if first.PastDue != 1 || first.Suspended != 1 || first.ExpiredCancelled != 1 ||
-		first.PeriodsOpened != 1 {
+	if first.TrialsExpired != 1 || first.PastDue != 1 || first.Suspended != 1 ||
+		first.ExpiredCancelled != 1 || first.PeriodsOpened != 1 {
 		t.Fatalf("第一趟計數不符: %+v", first)
 	}
-	// 4 筆事件:past_due／suspended／expired／period.opened(最後一筆是本趟開期產生的,
+	// 5 筆事件:trial_ended／past_due／suspended／expired／period.opened(最後一筆是本趟開期產生的,
 	// 派送放在產生期別之後才會在同一趟被認領)。
-	if first.Dispatched != 4 {
-		t.Fatalf("第一趟應認領 4 筆事件(past_due／suspended／expired／period.opened),got %d", first.Dispatched)
+	if first.Dispatched != 5 {
+		t.Fatalf("第一趟應認領 5 筆事件(trial_ended／past_due／suspended／expired／period.opened),got %d",
+			first.Dispatched)
+	}
+	// 試用到期只把狀態轉成 past_due(仍可用、尚未凍結)→ **不得**有產品域動作;
+	// 而且它轉走之後就不在服務中 → 不會被開下一期(46 只有第 1 期)。
+	if _, err := f.OpenPeriodByNoTx(ctx, nil, sub46, 2); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("試用已到期的租戶不得被開第 2 期（轉 past_due 之後就不在服務中）: %v", err)
 	}
 	// 凍結真的走到產品域唯一入口:43(suspended)與 44(expired→凍結)。
 	if got := setter.companies(); !slices.Equal(got, []int{43, 44}) {
@@ -298,8 +328,8 @@ func TestRunOnceIsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("第二趟: %v", err)
 	}
-	if second.PastDue != 0 || second.Suspended != 0 || second.ExpiredCancelled != 0 ||
-		second.PeriodsOpened != 0 || second.Dispatched != 0 {
+	if second.TrialsExpired != 0 || second.PastDue != 0 || second.Suspended != 0 ||
+		second.ExpiredCancelled != 0 || second.PeriodsOpened != 0 || second.Dispatched != 0 {
 		t.Fatalf("重跑不得重複轉移或重複派送: %+v", second)
 	}
 	if second.Receivables != first.Receivables {
@@ -308,7 +338,7 @@ func TestRunOnceIsIdempotent(t *testing.T) {
 	if got := setter.companies(); !slices.Equal(got, []int{43, 44}) {
 		t.Fatalf("重跑不得再動產品域,got %v", got)
 	}
-	if events := len(f.Events()); events != 4 {
+	if events := len(f.Events()); events != 5 {
 		t.Fatalf("重跑不得產生第二個事件,got %d 筆", events)
 	}
 }
@@ -338,7 +368,7 @@ func TestRunOnceReportsPartialSummaryOnFailure(t *testing.T) {
 	if got.Dispatched != 0 {
 		t.Fatalf("中止後不得派送,got %d", got.Dispatched)
 	}
-	want := []string{"MarkPastDue", "SuspendOverdue"}
+	want := []string{"ExpireTrials", "MarkPastDue", "SuspendOverdue"}
 	if order := log.order(); !slices.Equal(order, want) {
 		t.Fatalf("失敗即中止(不得繼續後面的步驟): got %v want %v", order, want)
 	}
@@ -420,6 +450,8 @@ func TestRunGuardedSecondOverlappingRunDoesNothing(t *testing.T) {
 	<-gate.entered // 第一趟已進到掃描之中(鎖在手上)
 
 	// 第二趟:取不到鎖 → 直接結束(不是錯誤)。
+	// 以「呼叫數不變」斷言(不是寫死的步驟數):新增一個掃描步驟不該讓這條測試紅。
+	callsBeforeSecondRun := len(log.order())
 	second, err := cron.RunGuarded(context.Background(), deps, now, p)
 	if err != nil {
 		t.Fatalf("取不到鎖不是錯誤: %v", err)
@@ -427,8 +459,8 @@ func TestRunGuardedSecondOverlappingRunDoesNothing(t *testing.T) {
 	if second != (cron.Summary{}) {
 		t.Fatalf("第二個執行不得處理任何事: %+v", second)
 	}
-	if len(log.order()) != 3 {
-		t.Fatalf("第二趟不得再呼叫任何掃描,got %v", log.order())
+	if got := log.order(); len(got) != callsBeforeSecondRun {
+		t.Fatalf("第二趟不得再呼叫任何掃描,got %v", got)
 	}
 
 	close(gate.release)
@@ -561,6 +593,10 @@ func (b stubBilling) call(name string) {
 	}
 }
 
+func (b stubBilling) ExpireTrials(context.Context, time.Time, int) (int, error) {
+	b.call("ExpireTrials")
+	return 0, nil
+}
 func (b stubBilling) MarkPastDue(ctx context.Context, _ time.Time, _ int) (int, error) {
 	b.call("MarkPastDue")
 	if b.waitForCtx {

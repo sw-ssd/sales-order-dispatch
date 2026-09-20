@@ -28,6 +28,11 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
 )
 
+// maxTrialDays 為試用的**上限**（365 天）。開通是不收錢地放行一個方案的全部權益，而平台稽核只會
+// 留下一筆「開了這個試用」的紀錄：沒有上界的試用等於一次「送出無限期免費」的權限，而唯一會發現的
+// 人是下一個看帳的人。365 天同時保證「試用一定有到期的一天」，ExpireTrials 才有東西可掃。
+const maxTrialDays = 365
+
 // CreateSubscriptionInput 為**開通**的輸入:建立訂閱並當場開出第一期。
 //
 // PlanCode 而不是 plan_id:方案對 operator 是 code(console 的方案清單就是 code),而
@@ -65,8 +70,9 @@ type CreatedSubscription struct {
 // 金額是**當期生效價**的快照(money.PeriodAmount(方案基價, 每席價, 席位數)),沒有價目一律
 // 大聲失敗 —— 開出 0 元期別等於免費送方案。
 //
-// 狀態由 trial_ends_at 決定(有且為未來 → trialing,否則 active):狀態機的 `trialing → active`
-// 出口是收款(spec §5.2),開通只負責把合約放進正確的起點。
+// 狀態由 trial_ends_at 決定(有且在未來 **且不超過 maxTrialDays** → trialing,否則 active):
+// 狀態機的 `trialing → active` 出口是收款、`trialing → past_due` 是試用到期(spec §5.2),
+// 開通只負責把合約放進正確的起點。
 //
 // 重複開通由 00029 的 subscriptions_active_company_unique 擋下(SYS-2001):兩份並行的合約
 // 沒有「哪一份生效」的定義。已取消的合約不佔這條唯一鍵 —— 要再服務是**新合約**。
@@ -82,9 +88,9 @@ func (b *Billing) CreateSubscription(ctx context.Context, in CreateSubscriptionI
 		return nil, errcode.SysInvalidArgument.Error(map[string]string{"field": "seat_count"})
 	}
 	now := b.now()
-	if in.TrialEnds != nil && !in.TrialEnds.After(now) {
-		// 已過（或等於現在）的試用期等於「一開通就是過期」:判定層把 trialing 當可用,而排程
-		// 不掃試用到期(只掃 active 的逾期),那筆訂閱會永遠停在一個不成立的事實上。
+	if in.TrialEnds != nil && (!in.TrialEnds.After(now) || in.TrialEnds.After(now.AddDate(0, 0, maxTrialDays))) {
+		// 兩條界線都要:已過（或等於現在）的試用是「一開通就過期」；沒有上界的試用是不收錢地
+		// 放行全部權益（見 maxTrialDays）。到期後由 ExpireTrials 轉 past_due，再走既有的催收／凍結。
 		return nil, errcode.SysInvalidArgument.Error(map[string]string{"field": "trial_ends_at"})
 	}
 	// 期別長度只有 addBillingPeriod 一個真相來源(未知週期在此先擋,不讓它變成一筆開到一半的帳)。
@@ -110,10 +116,15 @@ func (b *Billing) CreateSubscription(ctx context.Context, in CreateSubscriptionI
 		}
 		price, err := b.st.CurrentPriceTx(ctx, tx, planID, in.BillingCycle)
 		if err != nil {
-			return errcode.PlatformSubscriptionInactive.Wrap(err, map[string]string{
-				"reason": fmt.Sprintf("方案 %s 沒有 %s 週期的生效價，不得開出 0 元期別",
-					planCode, in.BillingCycle),
-			})
+			// 「沒有價目」是資料問題(operator 要改的是價目),「查價失敗」是基礎設施問題(連線、死鎖)
+			// —— 兩者都包成 PLAT-3001 會讓 operator 去改一個沒壞的設定。交易已回滾,無帳務影響。
+			if errors.Is(err, store.ErrNotFound) {
+				return errcode.PlatformSubscriptionInactive.Wrap(err, map[string]string{
+					"reason": fmt.Sprintf("方案 %s 沒有 %s 週期的生效價，不得開出 0 元期別",
+						planCode, in.BillingCycle),
+				})
+			}
+			return errcode.SysInternal.Wrap(err)
 		}
 		amount, err := money.PeriodAmount(price.BaseCents, price.SeatCents, in.SeatCount)
 		if err != nil {

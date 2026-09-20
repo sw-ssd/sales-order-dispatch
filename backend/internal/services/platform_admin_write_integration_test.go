@@ -733,6 +733,20 @@ func loadPeriodCents(t *testing.T, rig *writeRig, companyID, periodNo int) int64
 	return cents
 }
 
+// runCronOnce 跑一趟真排程(真 store ＋ 真 billing;派送器替身見 noDispatch),now 由呼叫端給
+// (排程不讀時鐘 —— 試用到期／寬限的測試才能把時間往前撥)。
+func runCronOnce(t *testing.T, rig *writeRig, now time.Time) cron.Summary {
+	t.Helper()
+	st := platformstore.New(rig.admin)
+	summary, err := cron.RunOnce(t.Context(), cron.Deps{
+		Billing: billing.NewBilling(st), Consumer: noDispatch{}, Store: st,
+	}, now, cron.Params{GraceDays: 7, LeadDays: 14, EventBatch: cron.EventBatch})
+	if err != nil {
+		t.Fatalf("跑一趟排程(now=%v): %v", now, err)
+	}
+	return summary
+}
+
 // noDispatch 為本測試的派送器替身:這一趟只驗「排程不會為剛開通的租戶再開一期」的編排路徑,
 // 事件的產品域副作用(凍結公司)由 cron 自己的整合測試以真 consumer 把關。
 type noDispatch struct{}
@@ -918,14 +932,7 @@ func TestIntegrationCreateSubscription(t *testing.T) {
 
 	// ⑥ 排程不重複開期:剛開通的第一期期末還有一個月,不得被提前窗選中而開出第二期。
 	//    (排程的掃描會處理 seed 的其他租戶,故這裡斷言的是**這家公司的期別數**與 PeriodsOpened。)
-	summary, err := cron.RunOnce(ctx, cron.Deps{
-		Billing:  billing.NewBilling(platformstore.New(rig.admin)),
-		Consumer: noDispatch{},
-		Store:    platformstore.New(rig.admin),
-	}, time.Now(), cron.Params{GraceDays: 7, LeadDays: 14, EventBatch: cron.EventBatch})
-	if err != nil {
-		t.Fatalf("跑一趟排程: %v", err)
-	}
+	summary := runCronOnce(t, rig, time.Now())
 	if summary.PeriodsOpened != 0 {
 		t.Fatalf("沒有訂閱落在提前窗內,不得開任何期別: %+v", summary)
 	}
@@ -998,4 +1005,124 @@ func TestIntegrationCreateSubscription(t *testing.T) {
 	if cancelled != 1 || live != 1 {
 		t.Fatalf("舊合約必須保持 cancelled 且只多出一筆新的: cancelled=%d live=%d", cancelled, live)
 	}
+}
+
+// TestIntegrationExpireTrial 串起**試用到期**（I-1）：開通（trialing）→ 排程把試用已到期的訂閱
+// 轉 past_due → 寬限過後由既有的 SuspendOverdue 接手。沒有這一步，開通就等於無上界的免費放行：
+// 判定層把 trialing 當可用、EnsureNextPeriod 每期照開未付期別、而 MarkPastDue 只掃 active。
+//
+// 三件事在假 store 上驗不到，故用真容器:①部分唯一索引與真 SQL 的掃描謂詞一起動;
+// ②「試用未到 → 不動」與「到期 → 轉一次」的分界是**時間比較**（`trial_ends_at < $1`）;
+// ③寬限期的日曆運算（now + 7 天）真的落地。
+//
+// 執行:task test:integration -- -count=1 -run TestIntegrationExpireTrial -v
+func TestIntegrationExpireTrial(t *testing.T) {
+	rig := newWriteRig(t)
+	company := int(rig.seed.noneID)
+	ctx := t.Context()
+
+	// trial_ends_at 必須是未來（開通端擋過去），故取 +2 秒，再把排程的 now 撥到它前後。
+	trialEnds := time.Now().UTC().Add(2 * time.Second).Truncate(time.Second)
+	resp, err := rig.svc.CreateSubscription(rig.ctx, connect.NewRequest(&platformv1.CreateSubscriptionRequest{
+		CompanyId: itoa(company), PlanCode: "std", BillingCycle: "monthly", SeatCount: 2,
+		TrialEndsAt: trialEnds.Format(time.RFC3339), Reason: "POC 試用"}))
+	if err != nil {
+		t.Fatalf("開通試用: %v", err)
+	}
+	if resp.Msg.GetStatus() != "trialing" || resp.Msg.GetTrialEndsAt() != trialEnds.Format(time.RFC3339) {
+		t.Fatalf("有未來試用應為 trialing，got %+v", resp.Msg)
+	}
+	subID := resp.Msg.GetSubscriptionId()
+
+	// ① 試用還差一秒 → 排程一個字都不動。
+	if got := runCronOnce(t, rig, trialEnds.Add(-time.Second)); got.TrialsExpired != 0 {
+		t.Fatalf("試用未到不得轉移，got %+v", got)
+	}
+	if status := subscriptionStatus(t, rig, subID); status != "trialing" {
+		t.Fatalf("試用未到的訂閱不得被動到，got %q", status)
+	}
+
+	// ② 試用到期 → past_due ＋ 寬限期（now + 7 天）＋ 恰一筆 subscription.trial_ended。
+	after := trialEnds.Add(time.Second)
+	if got := runCronOnce(t, rig, after); got.TrialsExpired != 1 {
+		t.Fatalf("試用到期應轉 1 筆，got %+v", got)
+	}
+	var (
+		status     string
+		graceUntil sql.NullTime
+		trialKept  sql.NullTime
+	)
+	if err := rig.admin.QueryRowContext(ctx, `
+		SELECT status, grace_until, trial_ends_at FROM platform.subscriptions WHERE id = $1`, subID).
+		Scan(&status, &graceUntil, &trialKept); err != nil {
+		t.Fatalf("讀訂閱: %v", err)
+	}
+	if status != "past_due" {
+		t.Fatalf("試用到期應為 past_due，got %q", status)
+	}
+	if !graceUntil.Valid || !graceUntil.Time.Equal(after.AddDate(0, 0, 7)) {
+		t.Fatalf("寬限期應為 now+7 天(%v)，got %v", after.AddDate(0, 0, 7), graceUntil.Time)
+	}
+	if !trialKept.Valid || !trialKept.Time.Equal(trialEnds) {
+		t.Fatalf("試用到期日必須保留(trial_ends_at 是唯一的事實): %v", trialKept.Time)
+	}
+	var trialEvents int
+	var payloadCompany, payloadReason string
+	if err := rig.admin.QueryRowContext(ctx, `
+		SELECT count(*), COALESCE(max(payload->>'company_id'),''), COALESCE(max(payload->>'reason'),'')
+		  FROM platform.events WHERE event_type = 'subscription.trial_ended' AND aggregate_id = $1`,
+		subID).Scan(&trialEvents, &payloadCompany, &payloadReason); err != nil {
+		t.Fatalf("查事件: %v", err)
+	}
+	if trialEvents != 1 || payloadCompany != itoa(company) || payloadReason != "trial_expired" {
+		t.Fatalf("subscription.trial_ended 不符: n=%d company=%q reason=%q",
+			trialEvents, payloadCompany, payloadReason)
+	}
+	// 轉走之後就不在「服務中」→ 不得被開新的一期。
+	if n := countPeriods(t, rig, subID); n != 1 {
+		t.Fatalf("試用到期不得被開新期，got %d 期", n)
+	}
+
+	// ③ 再跑一趟同一時間 → 不轉也不再發事件（掃描謂詞自己冪等）。
+	if got := runCronOnce(t, rig, after); got.TrialsExpired != 0 {
+		t.Fatalf("重跑不得再轉移，got %+v", got)
+	}
+	if err := rig.admin.QueryRowContext(ctx, `
+		SELECT count(*) FROM platform.events
+		 WHERE event_type = 'subscription.trial_ended' AND aggregate_id = $1`, subID).
+		Scan(&trialEvents); err != nil {
+		t.Fatalf("重跑後查事件: %v", err)
+	}
+	if trialEvents != 1 {
+		t.Fatalf("重跑不得重複發事件，got %d 筆", trialEvents)
+	}
+
+	// ④ 寬限過後 → 既有的 SuspendOverdue 接手（同一張狀態機，不是第二套邏輯）。
+	//    產品的凍結（companies.status）由 consumer 負責，真 consumer 的那條路徑由 cron 的整合
+	//    測試把關；這裡驗平台域的轉移真的發生。
+	runCronOnce(t, rig, after.AddDate(0, 0, 8))
+	if status := subscriptionStatus(t, rig, subID); status != "suspended" {
+		t.Fatalf("寬限過後應由 SuspendOverdue 接手轉 suspended，got %q", status)
+	}
+}
+
+// subscriptionStatus 讀某訂閱的狀態；countPeriods 數它的期別數。
+func subscriptionStatus(t *testing.T, rig *writeRig, subID string) string {
+	t.Helper()
+	var status string
+	if err := rig.admin.QueryRowContext(t.Context(),
+		`SELECT status FROM platform.subscriptions WHERE id = $1`, subID).Scan(&status); err != nil {
+		t.Fatalf("讀訂閱狀態(%s): %v", subID, err)
+	}
+	return status
+}
+
+func countPeriods(t *testing.T, rig *writeRig, subID string) int {
+	t.Helper()
+	var n int
+	if err := rig.admin.QueryRowContext(t.Context(),
+		`SELECT count(*) FROM platform.subscription_periods WHERE subscription_id = $1`, subID).Scan(&n); err != nil {
+		t.Fatalf("數期別(%s): %v", subID, err)
+	}
+	return n
 }

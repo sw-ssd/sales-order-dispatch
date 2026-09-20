@@ -6,8 +6,10 @@
 // 狀態轉移。三支掃描查詢本身即帶冪等謂詞（期末 < now、grace_until IS NOT NULL、NOT EXISTS
 // subscription.expired），見 store.BillingStore。
 //
-// 順序由呼叫端決定（cron.RunOnce）：逾期 → 停用 → 取消到期 → 派送事件 → 產生期別。
-// 先轉移狀態並派送事件（凍結／停用）再開期別，避免對剛停用的租戶開新期。
+// 順序由呼叫端決定（cron.RunOnce）：**試用到期 → 逾期 → 停用 → 取消到期 → 產生期別 → 派送事件**。
+// 先轉移狀態並派送事件（凍結／停用）再開期別，避免對剛停用的租戶開新期；試用到期排在最前面，
+// 因為它是生命週期最早的階段（還在試用的租戶不該被當成逾期），而轉成 past_due 之後的催收／凍結
+// 由後面幾支既有掃描接手。
 //
 // **不寫平台稽核**：platform.audit_logs.operator_id 是 NOT NULL 且 FK 到 platform.operators，
 // 排程沒有 operator 主體（store.SystemActor 是租戶 users.id，硬寫會被 FK 擋下）。凍結／復原的
@@ -130,6 +132,60 @@ func (b *Billing) EnsureNextPeriod(ctx context.Context, companyID int, now time.
 		return false, err
 	}
 	return created, nil
+}
+
+// ExpireTrials 掃描 **trialing 且試用已到期**的訂閱 → past_due（設 grace_until = now + graceDays），
+// 回傳實際轉移的筆數。
+//
+// 為什麼需要（這是開通介面的閉環；沒有它，試用就是無上界的免費放行）：
+//   - 判定層把 trialing 當**可用**（entitlements.usable）→ 試用到期的租戶照樣使用全部權益；
+//   - EnsureNextPeriod 把 trialing 當**服務中** → 每期繼續開出 open 的未付期別（帳一直累積）；
+//   - MarkPastDue 只掃 active → 試用到期後既不催收也不凍結。
+//
+// 轉 past_due 是**同一張 allowedTransitions** 上的既有轉移（trialing → past_due），之後
+// SuspendOverdue 在寬限過後照常凍結、RecordPayment 可把它帶回 active —— 不另立第二套轉移邏輯。
+//
+// 事件的 payload 自帶 company_id／reason／grace_until（排程不寫平台稽核，見檔頭：事件是唯一的
+// 「為什麼」）。冪等由狀態本身保證：轉過去之後就不是 trialing，查詢自然選不中 —— 重跑不重複發事件。
+func (b *Billing) ExpireTrials(ctx context.Context, now time.Time, graceDays int) (int, error) {
+	n := 0
+	// changed 收集本趟**真的轉移**的租戶：失效只能在提交後做（見 invalidate）。
+	var changed []int
+	err := b.st.WithTx(ctx, func(tx *sql.Tx) error {
+		expired, err := b.st.TrialingSubscriptionsExpiredTrial(ctx, tx, now)
+		if err != nil {
+			return errcode.SysInternal.Wrap(err)
+		}
+		grace := now.AddDate(0, 0, graceDays)
+		for _, sub := range expired {
+			// 狀態機是第二道閘（查詢條件改壞時仍擋得住非法轉移）。
+			if !canTransition(sub.Status, "past_due") {
+				continue
+			}
+			if err := b.st.SetSubscriptionStatusTx(ctx, tx, sub.ID, "past_due", &grace); err != nil {
+				return errcode.SysInternal.Wrap(err)
+			}
+			if err := b.emit(ctx, tx, sub.ID, "subscription.trial_ended", map[string]any{
+				"company_id":  sub.CompanyID,
+				"grace_until": grace.UTC().Format(time.RFC3339),
+				"reason":      "trial_expired",
+			}); err != nil {
+				return errcode.SysInternal.Wrap(err)
+			}
+			changed = append(changed, sub.CompanyID)
+			n++
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	// trialing 與 past_due 都是**可用**狀態，但兩者的寬限／催收語意不同，且 trial_ends_at 仍留在
+	// 投影上（租戶卡片據此顯示試用）→ 提交後逐一失效，別讓最長 TTL 內仍讀到「還在試用」。
+	for _, companyID := range changed {
+		b.invalidate(ctx, companyID)
+	}
+	return n, nil
 }
 
 // MarkPastDue 掃描 active 且期末已過的訂閱 → past_due，並設 grace_until = now + graceDays；

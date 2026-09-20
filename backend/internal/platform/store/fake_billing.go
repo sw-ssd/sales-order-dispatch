@@ -298,7 +298,8 @@ func (f *FakeBilling) CurrentPriceTx(_ context.Context, _ *sql.Tx, planID int64,
 	defer f.mu.Unlock()
 	p, ok := f.prices[priceKey{planID: planID, cycle: cycle}]
 	if !ok {
-		return Price{}, fmt.Errorf("方案 %d 沒有 %s 週期的價目", planID, cycle)
+		// 與 SQL 同語意:沒有價目回 store.ErrNotFound(「查價失敗」才回其他錯誤)。
+		return Price{}, fmt.Errorf("方案 %d 沒有 %s 週期的價目: %w", planID, cycle, ErrNotFound)
 	}
 	return p, nil
 }
@@ -422,6 +423,16 @@ func (f *FakeBilling) PastDueSubscriptionsExpiredGrace(_ context.Context, _ *sql
 	defer f.mu.Unlock()
 	return f.filterSubs(func(s Subscription) bool {
 		return s.Status == "past_due" && s.GraceUntil != nil && s.GraceUntil.Before(now)
+	}), nil
+}
+
+// TrialingSubscriptionsExpiredTrial:trialing 且 trial_ends_at 已過(SQL 的
+// `trial_ends_at IS NOT NULL AND trial_ends_at < now`;無到期日不算到期)。
+func (f *FakeBilling) TrialingSubscriptionsExpiredTrial(_ context.Context, _ *sql.Tx, now time.Time) ([]Subscription, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.filterSubs(func(s Subscription) bool {
+		return s.Status == "trialing" && s.TrialEnds != nil && s.TrialEnds.Before(now)
 	}), nil
 }
 

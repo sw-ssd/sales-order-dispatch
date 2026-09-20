@@ -12,6 +12,7 @@ const setTenantOverride = vi.fn();
 const revokeTenantOverride = vi.fn();
 const listPlans = vi.fn();
 const createSubscription = vi.fn();
+const getBillingSettings = vi.fn();
 vi.mock("../lib/api", () => ({
   loginUrl: "/platform/auth/google",
   platform: {
@@ -22,6 +23,7 @@ vi.mock("../lib/api", () => ({
     revokeTenantOverride: (...args: unknown[]) => revokeTenantOverride(...args),
     listPlans: (...args: unknown[]) => listPlans(...args),
     createSubscription: (...args: unknown[]) => createSubscription(...args),
+    getBillingSettings: (...args: unknown[]) => getBillingSettings(...args),
   },
 }));
 
@@ -125,6 +127,7 @@ describe("TenantDetailPage", () => {
       revokeTenantOverride,
       listPlans,
       createSubscription,
+      getBillingSettings,
     ]) {
       fn.mockReset();
     }
@@ -135,6 +138,9 @@ describe("TenantDetailPage", () => {
     revokeTenantOverride.mockResolvedValue({ companyId: "1", featureCode: "limit.seats" });
     listPlans.mockResolvedValue({ plans: [stdPlan] });
     createSubscription.mockResolvedValue({ subscriptionId: "7", status: "active" });
+    getBillingSettings.mockResolvedValue({
+      settings: [{ key: "trial_days", value: "14", description: "試用天數" }],
+    });
   });
 
   it("列出訂閱概況與例外；投影為方案 ⊕ 例外，且已過期的例外不列入生效值", async () => {
@@ -398,6 +404,8 @@ describe("TenantDetailPage", () => {
     fireEvent.change(screen.getByLabelText(/方案/), { target: { value: "std" } });
     fireEvent.change(screen.getByLabelText(/計費週期/), { target: { value: "yearly" } });
     fireEvent.input(screen.getByLabelText(/席位數/), { target: { value: "5" } });
+    // 清空預設帶入的試用日（這一條驗的是週期；試用的驗證在另一條測試）。
+    fireEvent.input(screen.getByLabelText(/試用到期/), { target: { value: "" } });
     fireEvent.input(screen.getByLabelText(/原因/), { target: { value: "重新簽約" } });
     fireEvent.click(screen.getByRole("button", { name: "建立訂閱" }));
 
@@ -411,5 +419,68 @@ describe("TenantDetailPage", () => {
         reason: "重新簽約",
       }),
     );
+  });
+
+  it("試用到期：預設帶入營運參數的 trial_days；過去的日期／超過 365 天都在送出前擋下", async () => {
+    getTenant.mockResolvedValue({
+      tenant: { ...tenant, planCode: "", planName: "", subscriptionStatus: "none", seatCount: 0 },
+      overrides: [],
+    });
+    renderAt();
+    await screen.findByText("甲公司");
+    fireEvent.click(screen.getByRole("button", { name: "開通訂閱" }));
+    await screen.findByRole("option", { name: "標準" });
+
+    // 預設值＝現在 ＋ trial_days（14 天）；operator 沒動過欄位才填（見元件的 createEffect）。
+    const trial = screen.getByLabelText(/試用到期/) as HTMLInputElement;
+    await waitFor(() => expect(trial.value).not.toBe(""));
+    const days = (new Date(trial.value).getTime() - Date.now()) / (24 * 60 * 60 * 1000);
+    expect(days).toBeGreaterThan(13.9);
+    expect(days).toBeLessThan(14.1);
+
+    fireEvent.change(screen.getByLabelText(/方案/), { target: { value: "std" } });
+    fireEvent.input(screen.getByLabelText(/席位數/), { target: { value: "3" } });
+    fireEvent.input(screen.getByLabelText(/原因/), { target: { value: "試用開通" } });
+
+    // 過去的試用：後端回 SYS-1001，前端先講清楚（少跑一趟）。
+    const past = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    fireEvent.input(trial, { target: { value: past } });
+    fireEvent.click(screen.getByRole("button", { name: "建立訂閱" }));
+    await waitFor(() => expect(screen.getByText(/必須是未來時間/)).toBeTruthy());
+    expect(createSubscription).not.toHaveBeenCalled();
+
+    // 超過 365 天：後端 maxTrialDays 一律拒，前端也擋。
+    const tooFar = new Date(Date.now() + 400 * 24 * 60 * 60 * 1000).toISOString();
+    fireEvent.input(trial, { target: { value: tooFar } });
+    fireEvent.click(screen.getByRole("button", { name: "建立訂閱" }));
+    await waitFor(() => expect(screen.getByText(/不得超過 365 天/)).toBeTruthy());
+    expect(createSubscription).not.toHaveBeenCalled();
+
+    // 清空＝不試用（直接生效）：清空後可以送出，且線路上不帶試用日期。
+    fireEvent.input(trial, { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "建立訂閱" }));
+    await waitFor(() =>
+      expect(createSubscription).toHaveBeenCalledWith({
+        companyId: "1",
+        planCode: "std",
+        billingCycle: "monthly",
+        seatCount: 3,
+        trialEndsAt: "",
+        reason: "試用開通",
+      }),
+    );
+  });
+
+  it("開通對話框不得留下 markdown 標記（operator 看到的是字面星號）", async () => {
+    getTenant.mockResolvedValue({
+      tenant: { ...tenant, planCode: "", planName: "", subscriptionStatus: "none", seatCount: 0 },
+      overrides: [],
+    });
+    renderAt();
+    await screen.findByText("甲公司");
+
+    fireEvent.click(screen.getByRole("button", { name: "開通訂閱" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog.textContent).not.toContain("**");
   });
 });

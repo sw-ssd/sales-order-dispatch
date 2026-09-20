@@ -1,6 +1,6 @@
 import { createMutation, createQuery, useQueryClient } from "@tanstack/solid-query";
 import { useParams } from "@tanstack/solid-router";
-import { createSignal, For, Show } from "solid-js";
+import { createEffect, createSignal, For, Show } from "solid-js";
 import { Badge } from "@ui/badge";
 import { Button } from "@ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@ui/card";
@@ -233,6 +233,17 @@ function RevokeOverrideDialog(props: {
 }
 
 /**
+ * 試用天數的上限：**與後端的 `billing.maxTrialDays` 同值**（365）。開通是不收錢地放行一個方案的
+ * 全部權益，無上界的試用等於送出無限期免費 —— 前端先講清楚，後端（權威）也會擋。
+ */
+const MAX_TRIAL_DAYS = 365;
+
+/** inDaysRFC3339 回「n 天後」的 RFC3339（UTC）；後端的 trial_ends_at 就是這個形狀。 */
+function inDaysRFC3339(days: number): string {
+  return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
+/**
  * 開通（CreateSubscription）：建立訂閱與第一期（後端同一個交易）。
  *
  * 為什麼要有這個表單：`RecordPayment` 對**沒有合約**的公司回 `PLAT-3001`、`EnsureNextPeriod`
@@ -248,10 +259,29 @@ function CreateSubscriptionForm(props: {
   onDone: () => void;
 }) {
   const plans = createQuery(() => ({ queryKey: ["plans"], queryFn: () => platform.listPlans({}) }));
+  // 試用的預設天數沿用營運參數 trial_days（platform.settings 的既有 RPC，不新增欄位）。
+  const settings = createQuery(() => ({
+    queryKey: ["billing-settings"],
+    queryFn: () => platform.getBillingSettings({}),
+  }));
   const [planCode, setPlanCode] = createSignal("");
   const [billingCycle, setBillingCycle] = createSignal("monthly");
   const [seatCount, setSeatCount] = createSignal("");
   const [trialEndsAt, setTrialEndsAt] = createSignal("");
+
+  // 開通預設帶試用（D2：試用是常態），天數由營運參數決定 —— 但**只在 operator 還沒動過欄位時**填一次
+  // （把 operator 清空的欄位又填回去，等於跟他搶方向鍵）。拿不到設定就留空：猜一個天數等於
+  // 無聲地送出免費期，而 operator 不會知道那個數字是從哪來的。
+  let prefilledTrial = false;
+  let trialTouchedByOperator = false;
+  createEffect(() => {
+    const days = Number(
+      settings.data?.settings.find((s) => s.key === "trial_days")?.value ?? Number.NaN,
+    );
+    if (prefilledTrial || trialTouchedByOperator || !Number.isInteger(days) || days <= 0) return;
+    prefilledTrial = true;
+    setTrialEndsAt(inDaysRFC3339(days));
+  });
 
   const mutation = createMutation(() => ({
     mutationFn: (input: {
@@ -268,7 +298,7 @@ function CreateSubscriptionForm(props: {
   }));
 
   // 只填日期（2027-01-01）在 JS 的 Date 是合法的，但後端用 time.Parse(time.RFC3339) 會擋 ——
-  // 前端若用 `new Date()` 判，就會放行一個註定失敗的輸入，所以要照 RFC3339 的形狀判。
+  // 前端若用 `new Date()` 判形狀，就會放行一個註定失敗的輸入，所以要照 RFC3339 的形狀判。
   const RFC3339 = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
 
   const validate = (): string | undefined => {
@@ -278,8 +308,19 @@ function CreateSubscriptionForm(props: {
     if (!/^\d+$/.test(seatCount().trim()) || Number(seatCount().trim()) < 1) {
       return "席位數必須是不小於 1 的整數：0 席的訂閱等於停用，那該走取消。";
     }
-    if (trialEndsAt().trim() !== "" && !RFC3339.test(trialEndsAt().trim())) {
+    const trial = trialEndsAt().trim();
+    if (trial === "") return undefined;
+    if (!RFC3339.test(trial)) {
       return "試用到期請填 RFC3339（例：2027-01-01T00:00:00Z），或留空表示不試用（只填日期後端會擋）。";
+    }
+    // 未來的試用才有意義（過去的試用等於一開通就過期），而**超過 MAX_TRIAL_DAYS 天**後端一律拒
+    // （試用是不收錢地放行全部權益）。兩者都在這裡先講清楚，不讓 operator 白跑一趟。
+    const at = new Date(trial).getTime();
+    if (at <= Date.now()) {
+      return "試用到期必須是未來時間：過去的試用等於一開通就過期。";
+    }
+    if (at > Date.now() + MAX_TRIAL_DAYS * 24 * 60 * 60 * 1000) {
+      return `試用到期不得超過 ${MAX_TRIAL_DAYS} 天：試用是不收錢地放行全部權益，後端會拒（SYS-1001）。`;
     }
     return undefined;
   };
@@ -361,11 +402,15 @@ function CreateSubscriptionForm(props: {
           id="create-trial"
           value={trialEndsAt()}
           placeholder="2026-10-05T00:00:00Z"
-          onInput={(e) => setTrialEndsAt(e.currentTarget.value)}
+          onInput={(e) => {
+            trialTouchedByOperator = true;
+            setTrialEndsAt(e.currentTarget.value);
+          }}
         />
         <FieldDescription>
-          留空＝直接生效（active）；填了（必須是未來）→ 狀態為試用中（trialing），到期後由收款帶回
-          active。無論試用與否都會開出第一期。
+          預設帶入營運參數的試用天數（trial_days）；留空＝直接生效（active）。填了（必須是未來且不超過
+          {MAX_TRIAL_DAYS} 天）→ 狀態為試用中（trialing），到期後排程轉為逾期、由收款帶回 active。
+          無論試用與否都會開出第一期。
         </FieldDescription>
       </Field>
     </WriteForm>
@@ -385,7 +430,7 @@ function CreateSubscriptionDialog(props: {
           <DialogTitle>開通訂閱</DialogTitle>
           <DialogDescription>
             建立合約與第一期（訂閱、期別、事件與平台稽核在同一個交易）。同一家公司同時只能有一份
-            未取消的合約；已取消的合約要再服務是**新的一筆**合約，不是把舊的復活。
+            未取消的合約；已取消的合約要再服務時，是再開一筆新合約，不是把舊的復活。
           </DialogDescription>
         </DialogHeader>
 

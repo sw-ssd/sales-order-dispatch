@@ -236,6 +236,7 @@ Valkey key `ent:{companyID}`；方案變更／override／訂閱狀態異動即 *
 | 轉移 | 觸發者 |
 |---|---|
 | `trialing → active` | `RecordPayment`（人工記收款；日後金流 webhook 打**同一入口**） |
+| `trialing → past_due` | 每日排程：**試用已到期**（`trial_ends_at < now`；`ExpireTrials`，Plan C Task 15 修正輪補上，見 §5.2.1） |
 | `active → past_due` | 每日排程：**最新一期仍是 `open`（未付／未作廢）且已過 `period_end`** |
 | `past_due → active` | `RecordPayment`（補款） |
 | `past_due → suspended` | 排程：逾 `grace_until`（預設 7 天） |
@@ -258,14 +259,15 @@ Valkey key `ent:{companyID}`；方案變更／override／訂閱狀態異動即 *
 > （`docs/superpowers/plans/2026-09-20-platform-lifecycle-console-plan.md` 的 Task 5 段），**該樣板已被實作取代**
 > ——本 spec 的 §3.2／§4.5 經 `grep -n "period_end" ` 查證**不含**任何排程 SQL（只有 §5.2／§5.4／§5.5／§5.6 描述此行為）。
 
-### 5.2.1 排程事件的 `reason` 契約（Plan C Task 5 落地；四個事件必帶 `company_id`）
+### 5.2.1 排程事件的 `reason` 契約（Plan C Task 5 落地、Task 15 修正輪補第五個；**每個事件必帶 `company_id`**）
 
 | 事件 | `reason` | 觸發 |
 |---|---|---|
-| `period.opened` | `scheduled_next_period` | `EnsureNextPeriod` 開出下一期（`lifecycle.go:115`） |
-| `subscription.past_due` | `period_end_passed_unpaid` | `MarkPastDue`：當期 open 且已過期末（`lifecycle.go:165`） |
-| `subscription.suspended` | `overdue` | `SuspendOverdue`：逾 `grace_until`（`lifecycle.go:206`） |
-| `subscription.expired` | `cancelled_at_period_end` | `ExpireCancelled`：`cancelled` 且期末已過（`lifecycle.go:249`） |
+| `period.opened` | `scheduled_next_period` | `EnsureNextPeriod` 開出下一期 |
+| `subscription.trial_ended` | `trial_expired` | `ExpireTrials`：`trialing` 且試用已到期（**先於**其他掃描；轉 `past_due` 後由 `SuspendOverdue` 接手） |
+| `subscription.past_due` | `period_end_passed_unpaid` | `MarkPastDue`：當期 open 且已過期末 |
+| `subscription.suspended` | `overdue` | `SuspendOverdue`：逾 `grace_until` |
+| `subscription.expired` | `cancelled_at_period_end` | `ExpireCancelled`：`cancelled` 且期末已過 |
 
 **為什麼是 payload 自帶（而不是查表／查稽核）**：排程**不寫 `platform.audit_logs`**（schema 上不可滿足：`operator_id` 是 `NOT NULL REFERENCES platform.operators`，而 `settings.system_actor_user_id` 是租戶 `users.id`），所以事件的 payload 就是唯一的「為什麼」；consumer 也不得為了補欄位再查一次 DB。
 

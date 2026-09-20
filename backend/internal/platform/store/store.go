@@ -181,7 +181,10 @@ type BillingStore interface {
 	// CurrentPeriodTx 取訂閱最新一期(期別產生與逾期判定用);無期別回 (nil, nil)。
 	CurrentPeriodTx(ctx context.Context, tx *sql.Tx, subID int64) (*Period, error)
 	// CurrentPriceTx 取方案在指定計費週期的當期生效價(cycle: monthly | yearly,G1);
-	// 沒有該週期的價目即錯誤(不得靜默用 0,那等於免費送方案)。
+	// **沒有該週期的價目即回 store.ErrNotFound**(不得靜默用 0,那等於免費送方案)。
+	//
+	// 「沒有價目」與「查價失敗」必須可分:呼叫端對前者要說出「這個方案不能開這個週期」,
+	// 對後者(連線中斷、死鎖)只能回 5xx —— 把後者也講成資料問題會讓 operator 去改一個沒壞的設定。
 	CurrentPriceTx(ctx context.Context, tx *sql.Tx, planID int64, cycle string) (Price, error)
 	// MarkPeriodPaidTx 標記期別已付款。note(G8)為短收／溢收的人工註記:空字串保留原值,
 	// 不得用空字串清掉既有註記。同交易號重送視為重複入帳(no-op),交易號不同則拒絕覆蓋。
@@ -206,6 +209,9 @@ type BillingStore interface {
 	ActiveSubscriptionsWithDueOpenPeriod(ctx context.Context, tx *sql.Tx, now time.Time) ([]Subscription, error)
 	// PastDueSubscriptionsExpiredGrace 回 past_due 且寬限期已過者(轉 suspended)。
 	PastDueSubscriptionsExpiredGrace(ctx context.Context, tx *sql.Tx, now time.Time) ([]Subscription, error)
+	// TrialingSubscriptionsExpiredTrial 回 trialing 且試用已到期者(轉 past_due;`trial_ends_at`
+	// 是判定層唯一讀得到的到期依據,見 ExpireTrials)。
+	TrialingSubscriptionsExpiredTrial(ctx context.Context, tx *sql.Tx, now time.Time) ([]Subscription, error)
 	// CancelledSubscriptionsPastPeriodEnd 回 cancelled 且最新期別已過期末、且尚未發過
 	// subscription.expired 者(G7):排程可重跑而不重複發事件。
 	CancelledSubscriptionsPastPeriodEnd(ctx context.Context, tx *sql.Tx, now time.Time) ([]Subscription, error)

@@ -181,7 +181,8 @@ func (s *Store) CurrentPriceTx(ctx context.Context, tx *sql.Tx, planID int64, cy
 	if err := row.Scan(&p.BaseCents, &p.SeatCents, &p.Currency); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			// 不得靜默回 0 元:沒有價目等於免費送方案,必須讓呼叫端停下來。
-			return store.Price{}, fmt.Errorf("方案 %d 沒有 %s 週期的價目", planID, cycle)
+			// 帶上 store.ErrNotFound 讓「沒有價目」與「查價失敗」可分(見介面說明)。
+			return store.Price{}, fmt.Errorf("方案 %d 沒有 %s 週期的價目: %w", planID, cycle, store.ErrNotFound)
 		}
 		return store.Price{}, err
 	}
@@ -333,7 +334,7 @@ func (s *Store) PeriodsByStatus(ctx context.Context, status string) ([]store.Per
 // EnsureNextPeriod 只認 active/trialing 又不會替他開下一期 → 客戶從此停止被開帳(C-1)。
 // 函式名承諾的 due **open** period 就是這個意思。
 //
-// 三個排程查詢都必須帶出 plan_id／seat_count／billing_cycle:排程據以開啟下一期,而 **billing_cycle
+// 四個排程查詢都必須帶出 plan_id／seat_count／billing_cycle:排程據以開啟下一期,而 **billing_cycle
 // 漏帶等於 G1**(年繳被當月繳、只加一個月 → 少收 11 個月);store 這端少帶,呼叫端只會拿到空字串。
 func (s *Store) ActiveSubscriptionsWithDueOpenPeriod(ctx context.Context, tx *sql.Tx, now time.Time) ([]store.Subscription, error) {
 	return s.scanSubscriptions(ctx, tx, `
@@ -355,6 +356,20 @@ func (s *Store) PastDueSubscriptionsExpiredGrace(ctx context.Context, tx *sql.Tx
 		SELECT id, company_id, status, plan_id, seat_count, billing_cycle
 		  FROM platform.subscriptions
 		 WHERE status = 'past_due' AND grace_until IS NOT NULL AND grace_until < $1`, now)
+}
+
+// TrialingSubscriptionsExpiredTrial 回 trialing 且**試用已到期**者(排程轉 past_due)。
+//
+// `trial_ends_at IS NULL` 不算到期:沒有到期日的試用是無上界的免費放行,那種列不該被「猜」成到期,
+// 而應該被開通端的上限(見 billing.CreateSubscription 的 maxTrialDays)擋在門外。
+//
+// 與其他排程查詢同一個形狀:可重跑(轉移本身冪等 —— 轉過去之後狀態就不是 trialing,查詢自然選不中),
+// 且必須帶出 plan_id／seat_count／billing_cycle。
+func (s *Store) TrialingSubscriptionsExpiredTrial(ctx context.Context, tx *sql.Tx, now time.Time) ([]store.Subscription, error) {
+	return s.scanSubscriptions(ctx, tx, `
+		SELECT id, company_id, status, plan_id, seat_count, billing_cycle
+		  FROM platform.subscriptions
+		 WHERE status = 'trialing' AND trial_ends_at IS NOT NULL AND trial_ends_at < $1`, now)
 }
 
 // CancelledSubscriptionsPastPeriodEnd 回 cancelled 且最新一期已過期末者(G7)。
