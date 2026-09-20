@@ -40,9 +40,21 @@ if err := tx.Commit(); err != nil {
 改為（交易由請求層 interceptor 擁有，服務內不再開交易、不再 commit/rollback）：
 
 ```go
-db := dbtenant.Client(ctx, s.db) // 有請求交易時為該交易；CLI／測試無請求時退回原 client
-// … 全部改用 db.…
+// 由 ctx 取請求交易：稽核寫入需要 *ent.Tx（audit.Record 的簽章），
+// 且 D18「業務寫入與稽核同一交易」正是靠它維持。
+tx, ok := dbtenant.TxFrom(ctx)
+if !ok {
+	// 無請求交易：CLI／seed／未掛載的路徑。回明確錯誤，不要默默退回 fallback client 寫入。
+	return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
+}
+db := tx.Client() // 查詢與寫入都用它；同一個交易
+// … 原本用 tx.X() 的地方全部改用 db.…；recordAuditBA(ctx, tx, …) 維持傳 tx
 ```
+
+**兩個必須避免的錯誤**（T4 review 交接）：
+
+1. **不要**把 `db.Tx(ctx)` 機械式改成 `dbtenant.Client(ctx, s.db).Tx(ctx)` —— `Client()` 回傳的是「綁在請求交易上的 client」，再對它開交易會得到 ent 的 `ErrTxStarted`，所有寫入路徑會壞。
+2. **不要**讓稽核寫入落到另一個交易：`recordAuditBA(ctx, tx, …)` 必須續用請求交易的 `tx`，否則 D18 的「同交易」會被靜默拆開。
 
 同時把同檔所有 `s.db.` 改為 `dbtenant.Client(ctx, s.db).`：
 
@@ -1170,8 +1182,10 @@ func (d *rlsDriver) Tx(ctx context.Context) (dialect.Tx, error) {
 		return nil, err
 	}
 	for _, stmt := range auth.RLSStatements(auth.RLSFrom(ctx)) {
-		// dialect.Tx.Exec 的 v 參數對 SQL driver 而言是 *sql.Result（見 ent dialect 文件）。
-		if err := tx.Exec(ctx, stmt, []any{}, &entsql.Result{}); err != nil {
+		// dialect.Tx.Exec 的 v 參數對 SQL driver 而言是 *sql.Result（entsql.Result 是別名介面，
+		// 不能寫 `&entsql.Result{}` —— 要用具體變數取址）。
+		var res sql.Result
+		if err := tx.Exec(ctx, stmt, []any{}, &res); err != nil {
 			_ = tx.Rollback()
 			return nil, fmt.Errorf("dbtenant: 套用 RLS 失敗(%s): %w", stmt, err)
 		}
