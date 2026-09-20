@@ -1983,6 +1983,13 @@ git commit -m "feat(backend): 商品域（含子表）啟用 RLS 並收斂路徑
 - Modify: `internal/services/metadict_service.go`（8 處、3 處）
 - Modify: `internal/services/audit_service.go`（2 處）
 - Modify: `internal/audit/recorder.go`（稽核寫入需在同一交易；確認其以傳入 tx 執行）
+- Modify: `internal/handlers/auth_password.go`（:67／:125 的 `h.deps.DB.Tx(ctx)` **自開交易** → `dbtenant.TxFrom(ctx)`；:158／:174 的 `audit.Record` 續用同一 tx）
+- Modify: `internal/handlers/auth_password_test.go`／`auth_handler_test.go`（若 harness 未掛 `dbtenant.HandlerOption` 需補上，使測試與生產掛載一致──`AuthService` 在 `internal/server/domains.go:70` 確實掛了 `HandlerOption`）
+
+**[MUST] `audit_logs` 一旦 ENABLE，任何未帶 scope 的稽核寫入都會被 `WITH CHECK` 擋**（fail-closed，且現有 sqlite 測試**看不到**）。因此本任務必須：
+1. 先把 `auth_password.go` 的稽核路徑收斂（改走請求交易），再落 ENABLE。
+2. 探針要涵蓋「**改密碼後稽核列確實落地**」與「**臨時密碼簽發**」兩條路徑，且必須在 **`app_rw`** 下以真 handler 走（sqlite 測試對 RLS 無鑑別力）。
+3. 動手前掃描（與 Global Constraints 的收斂掃描同法）：`grep -rn 'audit\.Record(' internal --include='*.go' | grep -v _test.go` 的所有生產命中點都要在同一個請求交易內。
 
 **Interfaces:**
 - Consumes: `dbtenant.Client(ctx, s.db)`
