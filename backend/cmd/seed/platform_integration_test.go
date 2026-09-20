@@ -121,6 +121,14 @@ func TestIntegrationSeedPlatformIdempotent(t *testing.T) {
 	if again := seedString(t, admin, `SELECT updated_at::text FROM platform.settings WHERE key = 'system_actor_user_id'`); again != actorUpdatedAt {
 		t.Fatalf("值未變時重跑 seed 不得推進 updated_at：%s → %s", actorUpdatedAt, again)
 	}
+	// 護欄不得擋掉自癒方向：值被改壞 → 重跑 seed 必須修回（否則 WHERE 寫反了也測不出來）。
+	if _, err := admin.Exec(`UPDATE platform.settings SET value = '999' WHERE key = 'system_actor_user_id'`); err != nil {
+		t.Fatalf("改壞 settings：%v", err)
+	}
+	if err := SeedPlatform(ctx, admin, client, cfg); err != nil {
+		t.Fatalf("修復後重跑 seed：%v", err)
+	}
+	assertPlatformSettings(t, admin, cfg)
 	if second := platformSeedCountsOf(t, admin); second != first {
 		t.Fatalf("重跑 seed 不得改變列數：\n第一次 %+v\n第二次 %+v", first, second)
 	}
