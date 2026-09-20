@@ -79,6 +79,16 @@ func TestFirstBatchCodesAreReturned(t *testing.T) {
 				&customersv1.UpdateCustomerRequest{Id: uItoa(c.ID), Name: strPtr("   ")}))
 			return err
 		}},
+		{"公司識別碼重複", "SYS-2001", func(t *testing.T) error {
+			ctx := context.Background()
+			cc, _, db := newTestServerWithIdentity(t, authz.Identity{
+				UserID: "1", CompanyID: "1", Role: "super", Roles: []string{"super"}})
+			db.Company.Create().SetName("既有公司").SetIdentifier("ERR-DUP").SaveX(ctx)
+			// 已知的識別碼重複（前置查詢判定，非 DB 約束推導）→ SYS-2001。
+			_, err := cc.CreateCompany(ctx, connect.NewRequest(
+				&v1.CreateCompanyRequest{Name: "重複", Identifier: "ERR-DUP"}))
+			return err
+		}},
 	}
 
 	for _, tc := range cases {

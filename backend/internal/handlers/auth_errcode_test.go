@@ -121,6 +121,20 @@ func TestAuthFirstBatchCodesAreReturned(t *testing.T) {
 				&v1.ChangePasswordRequest{OldPassword: "a1234567", NewPassword: "b1234567"}))
 			return err
 		}},
+		{"完成註冊 email 重複", "SYS-2001", nil, func(t *testing.T) error {
+			e := newTestEnv(t)
+			coID := mustCreateCompany(t, e, "co-err-dup-mail")
+			e.db.User.Create().SetEmail("dup@example.com").SetName("既有").SetStatus(user.StatusActive).
+				SetRole("staff").SetPasswordHash("x").SetCompanyID(coID).SaveX(e.ctx)
+			const token = "reg-token-dup"
+			if err := e.handler.deps.OneTime.Put(e.ctx, auth.RegistrationKey(token), "dup@example.com", auth.RegistrationTokenTTL); err != nil {
+				t.Fatalf("seed registration token: %v", err)
+			}
+			req := connect.NewRequest(&v1.RegisterCompleteRequest{CompanyId: strconv.Itoa(coID), Name: "重複"})
+			req.Header().Set("X-Registration-Token", token)
+			_, err := e.rpc.RegisterComplete(e.ctx, req)
+			return err
+		}},
 	}
 
 	for _, tc := range cases {

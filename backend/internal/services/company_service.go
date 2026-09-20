@@ -218,7 +218,8 @@ func (s *CompanyService) CreateCompany(ctx context.Context, req *connect.Request
 		return nil, toConnectError(err)
 	}
 	if used {
-		return nil, connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("識別碼(identifier) %q 已被使用,請換一個", identifier))
+		// 已知的識別碼重複（前置查詢判定）→ SYS-2001；識別碼放 details（訊息樣板不含參數）。
+		return nil, errcode.SysConflict.Error(map[string]string{"identifier": identifier})
 	}
 
 	build := dbtenant.Client(ctx, s.db).Company.Create().

@@ -494,7 +494,8 @@ func (h *AuthHandler) registerWithToken(ctx context.Context, token, name string,
 			return internal(qerr)
 		}
 		if exists {
-			return connect.NewError(connect.CodeAlreadyExists, errors.New("該 email 已有帳號,請直接登入"))
+			// 已知的識別碼（email）重複 → SYS-2001；email 放 details（訊息樣板不含參數）。
+			return errcode.SysConflict.Error(map[string]string{"email": email})
 		}
 		if _, cerr := db.User.Create().
 			SetEmail(email).
