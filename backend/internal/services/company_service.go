@@ -101,7 +101,7 @@ func (s *CompanyService) ListCompanies(ctx context.Context, req *connect.Request
 	if err := requireScope(ctx, "company", "read"); err != nil {
 		return nil, err
 	}
-	q := s.db.Company.Query().Where(company.DeletedAtIsNil())
+	q := dbtenant.Client(ctx, s.db).Company.Query().Where(company.DeletedAtIsNil())
 	if status := strings.TrimSpace(req.Msg.GetStatus()); status != "" {
 		if !validCompanyStatuses[status] {
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("無效的公司狀態 %q(允許: active / inactive / suspended)", status))
@@ -176,7 +176,7 @@ func (s *CompanyService) GetCompany(ctx context.Context, req *connect.Request[v1
 		return nil, err
 	}
 	// 軟刪除(P2-A):已刪除的公司對所有查詢與異動皆不存在。
-	c, err := s.db.Company.Query().Where(company.ID(id), company.DeletedAtIsNil()).Only(ctx)
+	c, err := dbtenant.Client(ctx, s.db).Company.Query().Where(company.ID(id), company.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -207,7 +207,7 @@ func (s *CompanyService) CreateCompany(ctx context.Context, req *connect.Request
 	// migration 00019),軟刪除後可重用。DB 約束是後盾,但自行判別才回得出語意明確的
 	// AlreadyExists:約束錯誤一律映射為 FailedPrecondition 且不含 DB 原文(P2-A)。
 	identifier := strings.TrimSpace(msg.GetIdentifier())
-	used, err := s.db.Company.Query().Where(company.IdentifierEQ(identifier), company.DeletedAtIsNil()).Exist(ctx)
+	used, err := dbtenant.Client(ctx, s.db).Company.Query().Where(company.IdentifierEQ(identifier), company.DeletedAtIsNil()).Exist(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -215,7 +215,7 @@ func (s *CompanyService) CreateCompany(ctx context.Context, req *connect.Request
 		return nil, connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("識別碼(identifier) %q 已被使用,請換一個", identifier))
 	}
 
-	build := s.db.Company.Create().
+	build := dbtenant.Client(ctx, s.db).Company.Create().
 		SetName(strings.TrimSpace(msg.GetName())).
 		SetIdentifier(identifier)
 	if taxID := strings.TrimSpace(msg.GetTaxId()); taxID != "" {
@@ -251,18 +251,20 @@ func (s *CompanyService) UpdateCompany(ctx context.Context, req *connect.Request
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("identifier 建立後不可修改"))
 	}
 
-	exists, err := s.db.Company.Query().Where(company.ID(id), company.DeletedAtIsNil()).Only(ctx)
+	exists, err := dbtenant.Client(ctx, s.db).Company.Query().Where(company.ID(id), company.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
 	// 業務異動 + 稽核(D18)同一交易,公司停用連鎖之 status 變更尤須留痕。
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18)。核心表 ENABLE+FORCE 後,
+	// 自開交易(池化連線、未帶 scope)會被 policy 過濾成 0 列/WITH CHECK 擋下。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 
-	build := tx.Company.UpdateOneID(id)
+	build := db.Company.UpdateOneID(id)
 	changed := false
 	before := map[string]any{"name": exists.Name, "tax_id": exists.TaxID, "status": string(exists.Status)}
 	after := map[string]any{"name": exists.Name, "tax_id": exists.TaxID, "status": string(exists.Status)}
@@ -304,9 +306,6 @@ func (s *CompanyService) UpdateCompany(ctx context.Context, req *connect.Request
 			return nil, toConnectError(err)
 		}
 	}
-	if err := tx.Commit(); err != nil {
-		return nil, toConnectError(err)
-	}
 	p, err := companyToProto(updated)
 	if err != nil {
 		return nil, toConnectError(err)
@@ -328,12 +327,12 @@ func (s *CompanyService) DeleteCompany(ctx context.Context, req *connect.Request
 	if err != nil {
 		return nil, err
 	}
-	cur, err := s.db.Company.Query().Where(company.ID(id), company.DeletedAtIsNil()).Only(ctx)
+	cur, err := dbtenant.Client(ctx, s.db).Company.Query().Where(company.ID(id), company.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
 	// 已軟刪除的部門不算「仍有部門」:軟刪除部門的列會保留(00020),不排除就會讓公司永遠刪不掉。
-	hasDepartments, err := s.db.Department.Query().
+	hasDepartments, err := dbtenant.Client(ctx, s.db).Department.Query().
 		Where(department.HasCompanyWith(company.ID(id)), department.DeletedAtIsNil()).
 		Exist(ctx)
 	if err != nil {
@@ -342,7 +341,7 @@ func (s *CompanyService) DeleteCompany(ctx context.Context, req *connect.Request
 	if hasDepartments {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("公司仍有部門,無法刪除"))
 	}
-	hasUsers, err := s.db.User.Query().Where(user.HasCompanyWith(company.ID(id))).Exist(ctx)
+	hasUsers, err := dbtenant.Client(ctx, s.db).User.Query().Where(user.HasCompanyWith(company.ID(id))).Exist(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -350,21 +349,20 @@ func (s *CompanyService) DeleteCompany(ctx context.Context, req *connect.Request
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("公司仍有使用者,無法刪除"))
 	}
 
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18)。核心表 ENABLE+FORCE 後,
+	// 自開交易(池化連線、未帶 scope)會被 policy 過濾成 0 列/WITH CHECK 擋下。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 
 	actor, _ := parseID(authz.IdentityFrom(ctx).UserID)
-	if err := tx.Company.UpdateOneID(id).SetDeletedAt(time.Now().UTC()).Exec(ctx); err != nil {
+	if err := db.Company.UpdateOneID(id).SetDeletedAt(time.Now().UTC()).Exec(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := recordAuditBA(ctx, tx, "company", "delete", id, id, nil, actor,
 		map[string]any{"name": cur.Name, "identifier": cur.Identifier, "status": string(cur.Status)}, nil); err != nil {
-		return nil, toConnectError(err)
-	}
-	if err := tx.Commit(); err != nil {
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&v1.DeleteCompanyResponse{}), nil
@@ -376,7 +374,7 @@ func (s *DepartmentService) ListDepartments(ctx context.Context, req *connect.Re
 		return nil, err
 	}
 	// 軟刪除(00020):已刪除的部門對所有查詢與異動皆不存在。
-	q := s.db.Department.Query().WithCompany().Where(department.DeletedAtIsNil())
+	q := dbtenant.Client(ctx, s.db).Department.Query().WithCompany().Where(department.DeletedAtIsNil())
 	if companyID := strings.TrimSpace(req.Msg.GetCompanyId()); companyID != "" {
 		cid, err := parseID(companyID)
 		if err != nil {
@@ -443,7 +441,7 @@ func (s *DepartmentService) GetDepartment(ctx context.Context, req *connect.Requ
 	if err != nil {
 		return nil, err
 	}
-	d, err := s.db.Department.Query().WithCompany().Where(department.ID(id), department.DeletedAtIsNil()).Only(ctx)
+	d, err := dbtenant.Client(ctx, s.db).Department.Query().WithCompany().Where(department.ID(id), department.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -463,7 +461,7 @@ func (s *DepartmentService) CreateDepartment(ctx context.Context, req *connect.R
 	if strings.TrimSpace(msg.GetName()) == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("部門名稱不可為空"))
 	}
-	exists, err := s.db.Company.Query().Where(company.ID(companyID), company.DeletedAtIsNil()).Exist(ctx)
+	exists, err := dbtenant.Client(ctx, s.db).Company.Query().Where(company.ID(companyID), company.DeletedAtIsNil()).Exist(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -471,7 +469,7 @@ func (s *DepartmentService) CreateDepartment(ctx context.Context, req *connect.R
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("公司 %d 不存在", companyID))
 	}
 
-	created, err := s.db.Department.Create().
+	created, err := dbtenant.Client(ctx, s.db).Department.Create().
 		SetCompanyID(companyID).
 		SetName(strings.TrimSpace(msg.GetName())).
 		Save(ctx)
@@ -479,7 +477,7 @@ func (s *DepartmentService) CreateDepartment(ctx context.Context, req *connect.R
 		return nil, toConnectError(err)
 	}
 	// 回傳時補載公司名稱。
-	created, err = s.db.Department.Query().WithCompany().Where(department.ID(created.ID)).Only(ctx)
+	created, err = dbtenant.Client(ctx, s.db).Department.Query().WithCompany().Where(department.ID(created.ID)).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -497,10 +495,10 @@ func (s *DepartmentService) UpdateDepartment(ctx context.Context, req *connect.R
 		return nil, err
 	}
 	// 軟刪除(00020):已刪除的部門視同不存在,不得再更名(UpdateOneID 不看 deleted_at,故須自行擋)。
-	if _, err := s.db.Department.Query().Where(department.ID(id), department.DeletedAtIsNil()).Only(ctx); err != nil {
+	if _, err := dbtenant.Client(ctx, s.db).Department.Query().Where(department.ID(id), department.DeletedAtIsNil()).Only(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
-	build := s.db.Department.UpdateOneID(id)
+	build := dbtenant.Client(ctx, s.db).Department.UpdateOneID(id)
 	if msg.Name != nil {
 		if strings.TrimSpace(msg.GetName()) == "" {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("部門名稱不可為空"))
@@ -512,7 +510,7 @@ func (s *DepartmentService) UpdateDepartment(ctx context.Context, req *connect.R
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	updated, err = s.db.Department.Query().WithCompany().Where(department.ID(updated.ID)).Only(ctx)
+	updated, err = dbtenant.Client(ctx, s.db).Department.Query().WithCompany().Where(department.ID(updated.ID)).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -540,11 +538,13 @@ func (s *DepartmentService) DeleteDepartment(ctx context.Context, req *connect.R
 	if err != nil {
 		return nil, err
 	}
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18)。核心表 ENABLE+FORCE 後,
+	// 自開交易(池化連線、未帶 scope)會被 policy 過濾成 0 列/WITH CHECK 擋下。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 
 	// D1:先對該部門列取互斥鎖(與掛載路徑 CreateUser/UpdateUser/AssignRole 的 FOR SHARE 衝突)。
 	// 只有掛載端的 FOR SHARE 不夠:刪除的條件式 UPDATE 雖會等掛載提交,但 READ COMMITTED 下它
@@ -553,7 +553,7 @@ func (s *DepartmentService) DeleteDepartment(ctx context.Context, req *connect.R
 	// UPDATE 才會以新快照重評 NOT EXISTS(users) → 看到新成員 → FailedPrecondition。
 	// 本敘述不 eager-load:WithCompany 的 JOIN 不能套用 FOR UPDATE(outer join 的 nullable 側)。
 	// 附帶效果:併發重複刪除時,後者在本敘述就讀到 deleted_at → NotFound(而非 FailedPrecondition)。
-	cur, err := tx.Department.Query().
+	cur, err := db.Department.Query().
 		Where(department.ID(id), department.DeletedAtIsNil(), predicate.Department(lockDepartmentForDelete)).
 		Only(ctx)
 	if err != nil {
@@ -566,7 +566,7 @@ func (s *DepartmentService) DeleteDepartment(ctx context.Context, req *connect.R
 	}
 	// 「部門仍有使用者」的限制與寫入仍是同一個敘述(複審 M1):即使列鎖已收斂併發,條件留在
 	// WHERE 讓資料庫對同一個快照判定限制與寫入本身。
-	affected, err := tx.Department.Update().
+	affected, err := db.Department.Update().
 		Where(department.ID(id), department.DeletedAtIsNil(), department.Not(department.HasUsers())).
 		SetDeletedAt(time.Now().UTC()).
 		Save(ctx)
@@ -582,9 +582,6 @@ func (s *DepartmentService) DeleteDepartment(ctx context.Context, req *connect.R
 	actor, _ := parseID(authz.IdentityFrom(ctx).UserID)
 	if err := recordAuditBA(ctx, tx, "department", "delete", id, companyID, &id, actor,
 		map[string]any{"name": cur.Name, "company_id": companyID}, nil); err != nil {
-		return nil, toConnectError(err)
-	}
-	if err := tx.Commit(); err != nil {
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&v1.DeleteDepartmentResponse{}), nil
