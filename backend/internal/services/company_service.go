@@ -28,7 +28,6 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
 	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 
@@ -50,12 +49,12 @@ var validCompanyStatuses = map[string]bool{
 type CompanyService struct {
 	db *ent.Client
 	// ent 為權益判定（配額守衛）；建構子強制注入，呼叫端無法靜默漏掛。
-	ent *entitlements.Service
+	ent entitlementChecker
 	salesorderv1connect.UnimplementedCompanyServiceHandler
 }
 
 // NewCompanyService 建立 CompanyService。
-func NewCompanyService(db *ent.Client, entSvc *entitlements.Service) *CompanyService {
+func NewCompanyService(db *ent.Client, entSvc entitlementChecker) *CompanyService {
 	return &CompanyService{db: db, ent: entSvc}
 }
 
@@ -63,12 +62,12 @@ func NewCompanyService(db *ent.Client, entSvc *entitlements.Service) *CompanySer
 type DepartmentService struct {
 	db *ent.Client
 	// ent 為權益判定（配額守衛）；建構子強制注入，呼叫端無法靜默漏掛。
-	ent *entitlements.Service
+	ent entitlementChecker
 	salesorderv1connect.UnimplementedDepartmentServiceHandler
 }
 
 // NewDepartmentService 建立 DepartmentService。
-func NewDepartmentService(db *ent.Client, entSvc *entitlements.Service) *DepartmentService {
+func NewDepartmentService(db *ent.Client, entSvc entitlementChecker) *DepartmentService {
 	return &DepartmentService{db: db, ent: entSvc}
 }
 
@@ -80,7 +79,7 @@ func NewDepartmentService(db *ent.Client, entSvc *entitlements.Service) *Departm
 //	mux := http.NewServeMux()
 //	services.RegisterCompanyServices(mux, db, entSvc)
 //	s.router.Mount("/api/v1", mux) // chi Mount 會剝除 /api/v1 前綴,前端 baseUrl "/api/v1" 可直接對應
-func RegisterCompanyServices(mux *http.ServeMux, db *ent.Client, entSvc *entitlements.Service) {
+func RegisterCompanyServices(mux *http.ServeMux, db *ent.Client, entSvc entitlementChecker) {
 	companyPath, companyHandler := salesorderv1connect.NewCompanyServiceHandler(NewCompanyService(db, entSvc), connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(db)))
 	mux.Handle(companyPath, companyHandler)
 	departmentPath, departmentHandler := salesorderv1connect.NewDepartmentServiceHandler(NewDepartmentService(db, entSvc), connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(db)))

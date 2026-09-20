@@ -23,6 +23,17 @@ const (
 	maxPageSize     = 100
 )
 
+// entitlementChecker 為寫入守衛所需的最小介面（consumer 端定義 —— Go 慣例「接受介面」）：
+// services 只用到 CheckLimit，故介面只宣告它，測試才能注入「記錄呼叫了哪個 feature」的假物件。
+// `*entitlements.Service` 與 `entitlements.Unlimited()` 都直接滿足此介面，無需轉接。
+//
+// 注意：RPC 守衛一律用 CheckLimit（才會帶 PLAT-3001／5002／5001 與 details，見 T4 的 Allows
+// doc 分工）；租戶端投影需要的是另一組方法（Allows／Load），由該 consumer（T10）自訂自己的
+// 窄介面，不併入此處（同一個介面塞兩組用途就成了胖介面）。
+type entitlementChecker interface {
+	CheckLimit(ctx context.Context, companyID int, feature string, delta int) error
+}
+
 // requireAuth 取得已登入身分;未登入 → AUTH-4001(對外 Unauthenticated,所有主檔方法共用)。
 //
 // 「未登入」的判定沿用既有語意(無任何角色):注入工具的測試以 Roles-only 身分驗「缺租戶範圍」

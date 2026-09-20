@@ -26,7 +26,6 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
 	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1/customersv1connect"
 )
@@ -44,18 +43,18 @@ type CustomerService struct {
 	db                   *ent.Client
 	accountManageBaseURL string // config.Auth.FrontendURL(組 D22 帳號管理深層連結)
 	// ent 為權益判定（配額守衛）；建構子強制注入，呼叫端無法靜默漏掛。
-	ent *entitlements.Service
+	ent entitlementChecker
 	customersv1connect.UnimplementedCustomerServiceHandler
 }
 
 // NewCustomerService 建立 CustomerService。accountManageBaseURL 為前端 base URL,用於組出
 // D22 帳號管理深層連結(config.Auth.FrontendURL)。
-func NewCustomerService(db *ent.Client, accountManageBaseURL string, entSvc *entitlements.Service) *CustomerService {
+func NewCustomerService(db *ent.Client, accountManageBaseURL string, entSvc entitlementChecker) *CustomerService {
 	return &CustomerService{db: db, accountManageBaseURL: accountManageBaseURL, ent: entSvc}
 }
 
 // RegisterCustomerServices 將 CustomerService 掛到 mux。
-func RegisterCustomerServices(mux *http.ServeMux, db *ent.Client, accountManageBaseURL string, entSvc *entitlements.Service) {
+func RegisterCustomerServices(mux *http.ServeMux, db *ent.Client, accountManageBaseURL string, entSvc entitlementChecker) {
 	path, handler := customersv1connect.NewCustomerServiceHandler(NewCustomerService(db, accountManageBaseURL, entSvc), connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(db)))
 	mux.Handle(path, handler)
 }

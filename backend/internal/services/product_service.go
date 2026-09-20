@@ -27,7 +27,6 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	domainproducts "github.com/salesorder/sales-order-1.0/backend/internal/domain/products"
 	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	productsv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/products/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/products/v1/productsv1connect"
 )
@@ -36,17 +35,17 @@ import (
 type ProductService struct {
 	db *ent.Client
 	// ent 為權益判定（配額守衛）；建構子強制注入，呼叫端無法靜默漏掛。
-	ent *entitlements.Service
+	ent entitlementChecker
 	productsv1connect.UnimplementedProductServiceHandler
 }
 
 // NewProductService 建立 ProductService。
-func NewProductService(db *ent.Client, entSvc *entitlements.Service) *ProductService {
+func NewProductService(db *ent.Client, entSvc entitlementChecker) *ProductService {
 	return &ProductService{db: db, ent: entSvc}
 }
 
 // RegisterProductService 將 ProductService 掛到 mux。
-func RegisterProductService(mux *http.ServeMux, db *ent.Client, entSvc *entitlements.Service) {
+func RegisterProductService(mux *http.ServeMux, db *ent.Client, entSvc entitlementChecker) {
 	path, handler := productsv1connect.NewProductServiceHandler(NewProductService(db, entSvc), connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(db)))
 	mux.Handle(path, handler)
 }
