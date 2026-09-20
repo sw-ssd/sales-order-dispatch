@@ -1,6 +1,9 @@
 package config
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
 func TestPlatformFromEnv(t *testing.T) {
 	t.Setenv("PLATFORM_JWT_SECRET", "s3cret")
@@ -24,6 +27,31 @@ func TestNewBindsPlatform(t *testing.T) {
 	c := New()
 	if c.Platform.OperatorJWTSecret != "s3cret" || c.Platform.ConsoleURL != "https://console.example.com" {
 		t.Fatalf("Config.Platform 未由 config.New() 載入: %+v", c.Platform)
+	}
+}
+
+// TestPlatformSeedOperatorEmailHasNoDefault 釘住「首位 operator 的 email／name 不得有預設值」：
+// 它是 platform.operators 白名單（＝能登入平台工具的人），有預設值就等於把版控裡的真實 email
+// 種成可登入帳號（controller 的硬要求）。把 `default:"…"` 加回 struct tag 必須讓本測試轉紅。
+//
+// envconfig **只在環境變數不存在時**才套用 default（明確設成空字串會覆蓋預設值），
+// 故這裡必須真的 unset —— t.Setenv 只能設值。
+func TestPlatformSeedOperatorEmailHasNoDefault(t *testing.T) {
+	for _, key := range []string{"PLATFORM_SEED_OPERATOR_EMAIL", "PLATFORM_SEED_OPERATOR_NAME"} {
+		prev, had := os.LookupEnv(key)
+		if err := os.Unsetenv(key); err != nil {
+			t.Fatalf("unset %s: %v", key, err)
+		}
+		t.Cleanup(func() {
+			if had {
+				_ = os.Setenv(key, prev)
+			}
+		})
+	}
+	p := New().Platform
+	if p.SeedOperatorEmail != "" || p.SeedOperatorName != "" {
+		t.Fatalf("首位 operator 的 email／name 不得有預設值（未設時 seed 必須跳過），got %q／%q",
+			p.SeedOperatorEmail, p.SeedOperatorName)
 	}
 }
 
