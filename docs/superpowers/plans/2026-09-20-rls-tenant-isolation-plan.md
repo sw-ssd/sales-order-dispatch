@@ -17,11 +17,13 @@
 - 服務層 DB 存取一律經 `dbtenant.Client(ctx, s.db)`；`db.Tx(ctx)` 不得再自行開交易（42 處全數改為使用請求交易）
 - RLS 相關測試一律 `//go:build integration` + `internal/testsupport`；**不得以 sqlite（enttest）測 RLS**（enttest 不支援 `SET`／`FORCE`）
 - **RLS 的驗證必須以非 superuser 連線**（T5 實測更正）：測試容器的 `postgres` 是 superuser，而 PostgreSQL superuser **恆繞過 RLS（`FORCE` 亦然）** → 以它連線的測試全綠**不能**當作「RLS 生效」的證據（只能當 regression gate）。凡宣稱驗 RLS 的測試，必須以 `app_rw`（或專用非 superuser 角色）建立連線／client。
+- **探針必須涵蓋多個 scope 等級（T8 教訓）**：T5／T6／T7 的探針全部只用 `company` scope，因而**潛伏了一個直到 T8 才炸的缺陷**——`core_audit_logs_scope` 的 WITH CHECK 只有 `'all'`／`'company'` 分支，缺 `department`/`self`，導致 dept_admin／staff／客戶的寫入會因稽核 INSERT 被擋而整筆失敗（與 D18 衝突）。凡政策的 USING／WITH CHECK 有 `department`／`self` 分支的表，探針**至少各有一條該等級身分的讀或寫斷言**。
 - **收斂範圍的路徑級窮盡（T9 前車之鑑）**：ENABLE 某表之前，必須先確認**所有**讀寫該表的生產路徑都已收斂——**不限於 `internal/services`**。已盤點到的服務外存取點：`internal/server/server.go`（`identityFor`／`dataScopeForUser`，**每個已驗證請求**都會經過）、`internal/handlers/auth_handler.go`＋`auth_password.go`、`internal/auth/token.go`（`BumpTokenVersion`）、`internal/authz/provision.go`、`internal/audit/recorder.go`。動手前跑：
   ```bash
   cd backend && grep -rn '\.Query()\|\.Create()\|UpdateOneID\|DeleteOneID\|\.Get(ctx' internal --include='*.go' | grep -v _test.go
   ```
   並在報告中列出你掃到的檔案與處置。**測試套件抓不到漏網（superuser／sqlite），只有這個掃描與 app_rw 探針抓得到。**
+- **收斂掃描要連「policy 的 scope 分支」一起查**：新增／重建 policy 時，逐一確認每一個「合法的寫入者 scope 等級」都在 WITH CHECK 有對應分支；缺分支 = 該角色寫入必壞（fail-closed，且 **superuser／sqlite 測試看不到**）。同理，凡 USING 只認 `'all'`／`'company'` 而未涵蓋 `department`／`self` 的表，都要確認「該等級的使用者本來就不該讀」是**刻意**的，而非漏寫。
 - **未登入／系統範圍路徑一律 `dbtenant.SystemScopeTx`**（不是 `dbtenant.Client`）：登入、註冊、OIDC、refresh 輪替、身分查詢（middleware 的 `identityFor`）、`authz.Provision`、`cmd/seed`。
 - **政策啟用順序 = 先收斂後啟用**：每個 domain 任務必須在**同一個 commit 序列內**先完成路徑收斂再落 ENABLE migration；不得先啟用再補收斂（會留下生產路徑 fail-closed 的窗口）。
 - 建 `companies` fixture 時**不得**寫 `created_at`／`updated_at`（該表無此欄位，見 `00005`；T5 實測踩過）。
@@ -1991,6 +1993,18 @@ git commit -m "feat(backend): 商品域（含子表）啟用 RLS 並收斂路徑
 2. 探針要涵蓋「**改密碼後稽核列確實落地**」與「**臨時密碼簽發**」兩條路徑，且必須在 **`app_rw`** 下以真 handler 走（sqlite 測試對 RLS 無鑑別力）。
 3. 動手前掃描（與 Global Constraints 的收斂掃描同法）：`grep -rn 'audit\.Record(' internal --include='*.go' | grep -v _test.go` 的所有生產命中點都要在同一個請求交易內。
 
+**[RULING] `audit_logs` 的 WITH CHECK 是白名單例外，必須在 00027 修正**（實測根因，非 scope setter 問題：`auth.RLSStatements` 對任何等級都會設 `app.current_company_id`）：
+- `core_audit_logs_scope`（`00023:92-107`）的 USING／WITH CHECK **只有 `'all'`／`'company'` 分支，缺 `department`／`self`**；同一批的 `users`（`00023:47-79`）與 `departments`（`00023:21-45`）都有這兩個分支，`roles`／`role_permissions` 用 `scope <> ''` → **audit_logs 是唯一例外**。後果：dept_admin／staff／客戶的任何寫入都會因稽核 INSERT 被擋而**整筆失敗**（違反 D18；superuser／sqlite 測試看不到）。
+- 00027 的 Up **只改 WITH CHECK**：
+  ```sql
+  WITH CHECK (
+      COALESCE(current_setting('app.current_data_scope', true), '') = 'all'
+      OR (NULLIF(current_setting('app.current_company_id', true), ''))::bigint = company_id
+  )
+  ```
+  **USING（讀）逐字不動**（讀取仍限 super／company，與服務層 ACL 一致，屬深度防禦）。Down 還原為 00025 的形式。00023／00025 不改（歷史不改）。
+- 必須附證據：①scope 矩陣探針（`all`／`company`／`department`／`self` × 自己公司 INSERT → PASS；跨公司 → 42501；未設 scope → 42501）；②**端到端 dept-scope 寫入**（以 department 身分走一條**已啟用**域的寫入路徑如 `CreateCustomer`，斷言交易成功且稽核列落地）——這條目前完全沒有覆蓋，正是缺陷潛伏至今的原因。
+
 **Interfaces:**
 - Consumes: `dbtenant.Client(ctx, s.db)`
 - Produces: `metadicts`／`audit_logs` ENABLE + FORCE
@@ -2458,6 +2472,8 @@ git commit -m "feat(backend): 核心域啟用 RLS，未登入路徑改系統範�
 **Interfaces:**
 - Consumes: 前九個任務的全部產物
 - Produces: 端到端探針（每個租戶端點都驗一次跨租戶不可見）、RLS 慣例成文
+
+**[待查開放問題 — 必須在 T10 給出結論（結論進 `backend/AGENTS.md`，不要只在報告裡）]**：`core_customers_scope`（`00023:110-135`）的 USING 分支是「`all`」或「`company_id = current_company_id` 且（`department_id IS NULL` 或 `= current_department_id`）」——**沒有 `self` 分支**。而 `ScopeForRole` 對 `customer` 角色回 `self`（`internal/auth/rls.go`），且 `RLSStatements` 對 `self` 等級**不會**設 `department_id`（身分沒有部門）→ 於是「客戶 App 讀自己的資料」在 RLS 下會比對到 `department_id IS NULL` 的列，語意與「只讀自己」不符。目前 App 業務頁面尚未實作（見功能對照表），所以不是現行破損，但**是設計層缺口**。T10 要：①確認 `customers` 是否應有 `id = current_customer_id`（或等價）的 `self` 分支、`current_customer_id` 從哪來；②把結論寫進 `backend/AGENTS.md`（若需修 policy 則另立任務，不夾帶在 T10）。
 
 - [ ] **Step 1: 寫端到端探針（`internal/services/rls_cross_tenant_integration_test.go`）**
 
