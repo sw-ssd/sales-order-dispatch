@@ -43,7 +43,7 @@
 
 ```mermaid
 flowchart LR
-    P0["P0 安全底線<br/>Plan A（RLS）＋ G1-G5 修計畫"] --> P1["P1 能收錢<br/>Plan B 全部 ＋ Plan C T1-T7"]
+    P0["P0 安全底線<br/>Plan A（RLS）＋ Plan D（錯誤碼）＋ G1-G5 修計畫"] --> P1["P1 能收錢<br/>Plan B 全部 ＋ Plan C T1-T7"]
     P1 --> P2["P2 能賣<br/>05 訂單 → 04殘項(G6/3.6) → 09 列印"]
     P1 --> P3["P3 能營運<br/>Plan C T8-T14（RPC補G6/G7 ＋ console 六頁）"]
     P2 --> P4["P4 其餘<br/>07 通知、08 派車、App、G10-G14"]
@@ -58,8 +58,9 @@ flowchart LR
 | P0-2 | **修 G1–G5**（③ 的 billing_cycle／日期算術／空交易號冪等／金額驗證；② 的系統 actor seed） | 五個都是「不修就會做出錯的帳或開不了機」，且都在 P1 的檔案內；先修計畫再開工，比開工後回頭改便宜 |
 | P0-3 | **定調 G6／G7**（三個寫入 RPC 與 cancelled 到期行為）並同步 spec | 這兩個會改變 P1 的 RPC 介面；介面定了才好寫測試 |
 | P0-4 | **在 AGENTS.md 寫入 G15**（平台授權只有一層） | 一行慣例，避免 P1 的新路徑漏檢查 |
+| P0-5 | **Plan D T1–T4（錯誤碼骨架）**：`ErrorInfo` proto、registry、`trace_id`、`toConnectError` 改走 registry | **與 P0-1 並行、檔案不重疊**（Plan D 動 proto／handlers／錯誤建構；Plan A 動 DSN／policy／交易邊界）。理由是錯誤碼是**對外契約**：P1 一旦出貨，補碼就是 breaking change；且 P1 的配額錯誤（`PLAT-5001/5002`）必須在 Plan B 開工前可用，否則 B／C 的錯誤建構要重寫一次。T5–T6（首批碼落地與基線守門）可與 P1 交錯進行 |
 
-**驗收**：`task test:integration` 全綠；以 `app_rw` 直連看不到他租戶資料；跨租戶寫入被擋（Plan A 的紅→綠測試）。
+**驗收**：P0-1＋P0-2 為 `task test:integration` 全綠、以 `app_rw` 直連看不到他租戶資料、跨租戶寫入被擋（Plan A 的紅→綠測試）；**P0-5 為** `go test ./internal/errcode/` 全綠、`TestIntegrationErrorInfoReachesClient` 通過（碼與 trace_id 跨網路到得了客戶端）。
 
 ### P1：能收錢的最小閉環
 
