@@ -40,10 +40,12 @@ func TestIntegrationEntitlementCounterCountsWithinRequestScope(t *testing.T) {
 	insertCounterDepartment(t, admin, coA, "部門乙", true) // 軟刪除
 	insertCounterDepartment(t, admin, coB, "部門丙", false)
 
-	insertCounterUser(t, admin, coA, "a1@example.com", "active")
-	insertCounterUser(t, admin, coA, "a2@example.com", "pending") // 非 inactive → 佔席位
-	insertCounterUser(t, admin, coA, "a3@example.com", "inactive")
-	insertCounterUser(t, admin, coB, "b1@example.com", "active")
+	insertCounterUser(t, admin, coA, "a1@example.com", "active", 0)
+	insertCounterUser(t, admin, coA, "a2@example.com", "pending", 0) // 非 inactive → 佔席位
+	insertCounterUser(t, admin, coA, "a3@example.com", "inactive", 0)
+	// 部門帳號：department scope 只看得到它，公司 scope 看得到全部 → 用來分辨「每部門上限」。
+	insertCounterUser(t, admin, coA, "a4@example.com", "active", deptA)
+	insertCounterUser(t, admin, coB, "b1@example.com", "active", 0)
 
 	insertCounterCustomer(t, admin, coA, "CNT000001", false)
 	insertCounterCustomer(t, admin, coA, "CNT000002", true) // 軟刪除
@@ -61,7 +63,7 @@ func TestIntegrationEntitlementCounterCountsWithinRequestScope(t *testing.T) {
 		feature string
 		want    int
 	}{
-		{entitlements.LimitSeats, 2},
+		{entitlements.LimitSeats, 3}, // active ＋ pending ＋ 部門 active（inactive 不佔）
 		{entitlements.LimitCustomers, 1},
 		{entitlements.LimitProducts, 1},
 		{entitlements.LimitDepartments, 1},
@@ -125,14 +127,58 @@ func TestIntegrationEntitlementCounterCountsWithinRequestScope(t *testing.T) {
 			t.Errorf("同一請求交易內剛建立的客戶必須計入(1 筆種子 ＋ 1 筆未提交),got %d", got)
 		}
 	})
+
+	// 配額是「公司層」的（spec §3.2：WHERE company_id=?），不是「每部門一份」。
+	// dept_admin／staff 的請求 scope 是 department，而他們**可以建立**客戶／商品／使用者；
+	// 若計數就著請求交易數，RLS 只會暴露本部門 → 配額被低報成每部門一份 → T6 掛上守衛後
+	// 超額放行（fail-open）。實測（修前）：company scope 回 3、department scope 回 1。
+	t.Run("部門 scope 的身分 → 仍必須拿到公司總數（配額是公司層）", func(t *testing.T) {
+		ctx := auth.WithRLS(context.Background(), auth.RLSScope{
+			DataScope: auth.DataScopeDepartment, CompanyID: itoa(coA), DepartmentID: itoa(deptA),
+			CompanyActive: true,
+		})
+		tx, err := client.Tx(ctx)
+		if err != nil {
+			t.Fatalf("開租戶交易: %v", err)
+		}
+		defer func() { _ = tx.Rollback() }()
+		ctx = dbtenant.WithTenantTx(ctx, tx)
+
+		// 先確認這條 scope 真的只暴露本部門（否則本子測就沒有鑑別力）。
+		deptOnly, err := tx.Client().User.Query().Count(ctx)
+		if err != nil {
+			t.Fatalf("部門 scope 下數使用者: %v", err)
+		}
+		if deptOnly != 1 {
+			t.Fatalf("部門 scope 應只看得到 1 位部門帳號(測試前提),got %d", deptOnly)
+		}
+
+		for _, tc := range []struct {
+			feature string
+			want    int
+		}{
+			{entitlements.LimitSeats, 3},     // 公司全部非 inactive（1＋1＋1），不是部門的 1
+			{entitlements.LimitCustomers, 1}, // 客戶的 department_id 為 NULL → 部門 scope 看不到
+		} {
+			got, err := counter.Count(ctx, coA, tc.feature)
+			if err != nil {
+				t.Fatalf("Count(%s): %v", tc.feature, err)
+			}
+			if got != tc.want {
+				t.Errorf("部門 scope 下 %s 仍應回公司總數 %d（不可低報成部門用量），got %d",
+					tc.feature, tc.want, got)
+			}
+		}
+	})
 }
 
-// insertCounterUser 以 admin 連線建一位使用者；status 決定是否佔席位。
-func insertCounterUser(t *testing.T, db *sql.DB, companyID int, email, status string) {
+// insertCounterUser 以 admin 連線建一位使用者；status 決定是否佔席位，
+// departmentID=0 表示不屬於任何部門（NULL）。
+func insertCounterUser(t *testing.T, db *sql.DB, companyID int, email, status string, departmentID int) {
 	t.Helper()
 	if _, err := db.Exec(
-		`INSERT INTO users (email, name, role, status, password_hash, company_users)
-		 VALUES ($1, '使用者', 'staff', $2, 'x', $3)`, email, status, companyID); err != nil {
+		`INSERT INTO users (email, name, role, status, password_hash, company_users, department_users)
+		 VALUES ($1, '使用者', 'staff', $2, 'x', $3, NULLIF($4, 0))`, email, status, companyID, departmentID); err != nil {
 		t.Fatalf("建使用者 %s: %v", email, err)
 	}
 }
