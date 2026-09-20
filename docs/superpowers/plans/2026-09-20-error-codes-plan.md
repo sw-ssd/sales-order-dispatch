@@ -498,6 +498,32 @@ func (e *wrapped) Unwrap() error { return e.cause }
 1. `Error`／`Wrap` 的第一個參數是 `ctx`：`trace_id` 由 `requestid.From(ctx)` 取得。呼叫端一律 `errcode.SysNotFound.Error(ctx, nil)`；測試以 `requestid.With(ctx, "trace-1")` 斷言 trace_id 有帶出。
 2. 附掛 ErrorInfo 失敗時不得讓錯誤處理失效（記 log，仍回 connect 碼與訊息）——錯誤路徑上的二次失敗最難追。
 
+**[修正] `{trace}` 必須由 ctx 注入渲染參數**：`SysInternal` 的訊息含 `{trace}`，但上面的 `Error`／`Wrap` 只把呼叫端的 `params` 交給 `Render` → 若不注入，**每一個 5xx 的對外訊息都會是字面的「請提供代碼 {trace}」**（並在 log 留下「缺參數」噪音）。實作時請加一個小 helper 並在 `Error`／`Wrap` 內使用：
+
+```go
+// renderParams 回傳渲染用參數 = 呼叫端參數 ＋ trace（由 ctx 取得，供 SYS-9000 的 {trace} 使用）。
+// 刻意不改動呼叫端的 map；且 **details 仍只放呼叫端提供的參數**（trace_id 另有 ErrorInfo.trace_id 欄位，
+// 不重複塞進 details）。未注入 trace 時不得留下字面 {trace}。
+func renderParams(ctx context.Context, params map[string]string) map[string]string {
+	tid := requestid.From(ctx)
+	switch {
+	case tid == "":
+		return params
+	case params == nil:
+		return map[string]string{"trace": tid}
+	default:
+		out := make(map[string]string, len(params)+1)
+		for k, v := range params {
+			out[k] = v
+		}
+		out["trace"] = tid
+		return out
+	}
+}
+```
+
+驗收：一條測試以 `requestid.With(ctx, "trace-1")` 呼叫 `errcode.SysInternal.Error(ctx, nil)`，斷言 `Message()` 含 `trace-1` 且**不含** `{trace}`；另一條在未注入 trace 時呼叫，斷言訊息**不含** `{trace}`（改為一般文案，例如把 `SysInternal` 的樣板寫成「系統忙碌，請稍後再試（代碼 {trace}）」→ 未注入時應由實作自行去掉尾註，或把樣板改成不含 `{trace}` 並改由 `details` 傳遞；二擇一並在報告說明）。
+
 - [ ] **Step 4: 首批碼（四個分域檔）**
 
 ```go
@@ -614,7 +640,7 @@ Expected: PASS（含 panic 行為與 ErrorInfo 攜帶）
 
 ```bash
 git add backend/internal/errcode
-git commit -m "feat(errcode): 錯誤碼 registry（常數即註冊、啟動驗證、區段規則）與首批 16 碼"
+git commit -m "feat(errcode): 錯誤碼 registry（常數即註冊、啟動驗證、區段規則）與首批 18 碼"
 ```
 
 ---
