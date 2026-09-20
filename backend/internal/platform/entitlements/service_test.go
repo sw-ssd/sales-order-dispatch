@@ -359,6 +359,62 @@ func TestCancelledSubscriptionIsContractInactive(t *testing.T) {
 	}
 }
 
+// F-1：訂閱狀態是 **allow-list** —— 只有 trialing／active／past_due 走正常權益路徑，其餘
+// （含 suspended／cancelled 與**任何未列舉的狀態**）一律視為合約不可用（PLAT-3001，Allows 為 false）。
+//
+// 為什麼要逐個未列舉狀態測：platform.subscriptions.status 在 00029 **沒有 CHECK 約束**，
+// 「新狀態、拼字錯誤（canceled）、大小寫不同（ACTIVE）、空字串」都是真實資料形狀。修復前是
+// deny-list（只擋 none／suspended／cancelled）→ 這些狀態落到正常權益路徑而**放行**
+// （CheckLimit 回 nil、Allows 回 true），訂閱死了照樣寫資料，且沒有任何測試會紅。
+func TestUnlistedSubscriptionStatusIsContractInactive(t *testing.T) {
+	newSvc := func(status string) *entitlements.Service {
+		f := store.NewFake()
+		f.PutFeature(seatsDef)
+		f.PutPlan("std", stdPlan)
+		// stubStore 遮蔽 Fake 的「不吐 cancelled」語意：本測試要斷言的是判定層對**任何**狀態的
+		// 立場，不能靠 store 先替我們過濾掉一部分。
+		return entitlements.New(stubStore{Store: f, sub: subWithStatus(status)},
+			counting{seats: 1}, entitlements.NewMemoryCache(), 0)
+	}
+
+	for _, status := range []string{"canceled", "paused", "unpaid", "whatever", "ACTIVE", ""} {
+		t.Run("未列舉="+status, func(t *testing.T) {
+			svc := newSvc(status)
+			ctx := context.Background()
+			ok, err := svc.Allows(ctx, 1, seats)
+			if err != nil {
+				t.Fatalf("Allows 不得因判定結果回錯: %v", err)
+			}
+			if ok {
+				t.Fatalf("狀態 %q 未列舉 → 必須視為合約不可用（Allows 為 false），不得放行", status)
+			}
+			err = svc.CheckLimit(ctx, 1, seats, 1)
+			if err == nil {
+				t.Fatalf("狀態 %q 未列舉 → CheckLimit 必須拒絕，不得放行", status)
+			}
+			if got := errorCodeOf(t, err); got != "PLAT-3001" {
+				t.Fatalf("ErrorInfo.code = %q；want %q", got, "PLAT-3001")
+			}
+		})
+	}
+
+	// 對照組：明確可用的狀態照常走權益路徑（allow-list 不得把生意擋掉），含 past_due 的既有語意
+	// （仍在寬限內 → 放行；催收由 dunning job 改狀態，判定層不自行推算 grace_until）。
+	for _, status := range []string{"active", "trialing", "past_due"} {
+		t.Run("可用="+status, func(t *testing.T) {
+			svc := newSvc(status)
+			ctx := context.Background()
+			ok, err := svc.Allows(ctx, 1, seats)
+			if err != nil || !ok {
+				t.Fatalf("Allows = (%v, %v)；狀態 %q 應可用", ok, err, status)
+			}
+			if err := svc.CheckLimit(ctx, 1, seats, 1); err != nil {
+				t.Fatalf("狀態 %q 未達上限應放行: %v", status, err)
+			}
+		})
+	}
+}
+
 func TestUnlimitedAllowsEverything(t *testing.T) {
 	svc := entitlements.Unlimited()
 	ctx := context.Background()

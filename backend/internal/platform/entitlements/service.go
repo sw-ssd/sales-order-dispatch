@@ -27,14 +27,30 @@ const (
 	FeatureReturns   = "feature.returns"
 )
 
-// 訂閱狀態（platform.subscriptions.status）。只有 suspended／cancelled 是「合約不可用」：
-// past_due 仍在寬限內（催收由 dunning job 改狀態，判定層不自行推算 grace_until）。
+// 訂閱狀態（platform.subscriptions.status）。判定採 **allow-list**（見 usable）：
+// **新增狀態必須明確決定它是否可用 —— 未列舉＝不可用**（fail-closed）。
 const (
-	statusNone      = "none" // 沒有未取消的訂閱（Store 回 nil）
-	statusTrialing  = "trialing"
-	statusSuspended = "suspended"
-	statusCancelled = "cancelled"
+	statusNone      = "none"      // 沒有未取消的訂閱（Store 回 nil）：不是合約問題，走功能判定（PLAT-5002）
+	statusTrialing  = "trialing"  // 可用：試用中
+	statusActive    = "active"    // 可用
+	statusPastDue   = "past_due"  // 可用：仍在寬限內（催收由 dunning job 改狀態，判定層不自行推算 grace_until）
+	statusSuspended = "suspended" // 不可用
+	statusCancelled = "cancelled" // 不可用（store 契約上不回，但換一個 store 實作就可能看到）
 )
+
+// usable 為訂閱狀態的 **allow-list**：只有明確可用的狀態才走正常權益路徑，其餘一律視為合約不可用。
+//
+// **新增狀態必須明確決定它是否可用 —— 未列舉＝不可用**。為什麼不用 deny-list（只列不可用者）：
+// platform.subscriptions.status 在 00029 **沒有 CHECK 約束**，漏列一個狀態（新狀態、拼字錯誤、
+// 大小寫不同、空字串）就會讓該租戶靜默恢復全部權益 —— 症狀是「訂閱停了的租戶照常寫資料」，
+// 沒有任何測試或 log 會指出來。allow-list 的相反失誤（新狀態明明可用卻被擋）是吵的、立刻會被發現。
+func usable(status string) bool {
+	switch status {
+	case statusTrialing, statusActive, statusPastDue:
+		return true
+	}
+	return false
+}
 
 // Counter 由業務域提供（於 server.InitDomains 注入）：判定層不認得業務 schema，
 // 只認 feature code → 目前用量的對照。回傳錯誤即視為系統錯誤（不得當成 0 放行）。
@@ -133,11 +149,6 @@ func (s *Service) state(ctx context.Context, companyID int) (*tenantState, error
 	return out, nil
 }
 
-// unavailable 回報訂閱是否處於「合約不可用」；沒有訂閱同理（沒買就沒有權益）。
-func unavailable(status string) bool {
-	return status == statusNone || status == statusSuspended || status == statusCancelled
-}
-
 // resolved 為單一 feature 的最終權益。
 type resolved struct {
 	enabled bool
@@ -150,7 +161,7 @@ func resolveFeature(st *tenantState, feature string, now time.Time) (resolved, b
 	if !known {
 		return resolved{}, false // 未定義的功能一律 denied（fail-closed）
 	}
-	if unavailable(st.Status) {
+	if !usable(st.Status) {
 		return resolved{}, true
 	}
 
@@ -206,8 +217,10 @@ func (s *Service) CheckLimit(ctx context.Context, companyID int, feature string,
 	if err != nil {
 		return errcode.SysInternal.Wrap(err)
 	}
-	if st.Status == statusSuspended || st.Status == statusCancelled {
-		// PLAT-3001：合約不可用。先於功能判定——訂閱死了，功能有沒有買都不是重點。
+	// 沒有訂閱（none）走功能判定 —— PLAT-5002「方案未含此功能」的既定語意包含「根本沒訂閱」。
+	// 其餘不可用狀態（suspended／cancelled／**任何未列舉者**）一律 PLAT-3001，且先於功能判定：
+	// 合約死了，功能有沒有買都不是重點。
+	if st.Status != statusNone && !usable(st.Status) {
 		return errcode.PlatformSubscriptionInactive.Error(nil)
 	}
 	r, known := resolveFeature(st, feature, s.now())
