@@ -310,7 +310,8 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *connect.Reque
 	if name == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("name 必填"))
 	}
-	// 字典/業務驗證(交易外先驗,減少 tx 內失敗)。
+	// 字典/業務驗證:走 dbtenant.Client(即請求交易的 client)—— 驗證與寫入同一個交易,
+	// 任何 DB 錯誤(含約束)都會中止整個請求交易,故不另闢交易、也不吞掉錯誤。
 	payID, err := s.validateMetadictRef(ctx, id, req.Msg.GetPaymentMethodId(), "payment_method")
 	if err != nil {
 		return nil, err
@@ -353,7 +354,8 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *connect.Reque
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("公司未設定客戶編號前綴"))
 	}
 
-	// 先確保 counter 列存在(獨立幂等步驟,避免主交易被唯一衝突 abort;見 ensureCustomerCounter)。
+	// 建前步驟:確保 counter 列存在。它在**請求交易內**執行(見 ensureCustomerCounter)——
+	// 併發首建時後到者撞唯一索引即整請求失敗(重試即成功),不會、也無法吞掉該衝突再繼續。
 	if err := s.ensureCustomerCounter(ctx, cid); err != nil {
 		return nil, err
 	}

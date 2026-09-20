@@ -28,7 +28,9 @@ func validAddressType(t string) bool {
 	return false
 }
 
-// requireCustomer 於交易外以範圍 + 未刪除載入客戶;不存在/跨部門 → not_found。
+// requireCustomer 於**請求交易內**(dbtenant.Client 取的是請求交易的 client)以範圍 + 未刪除
+// 載入客戶;不存在/跨部門 → not_found。地址/聯絡人的讀寫與此讀取同屬一個交易(不再有「交易外
+// 先驗」的步驟:任何 DB 錯誤都會中止整個請求交易)。
 // 目的:地址/聯絡人複寫客戶的 company_id / department_id,並確保寫入僅限可見範圍。
 func (s *CustomerService) requireCustomer(ctx context.Context, cid int, did *int, custID int) (*ent.Customer, error) {
 	c, err := customerScopeQuery(dbtenant.Client(ctx, s.db).Customer.Query(), cid, did).
