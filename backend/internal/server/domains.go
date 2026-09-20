@@ -171,6 +171,20 @@ func (s *Server) mountPlatformAuth() {
 	s.router.Get(operatorauth.LoginPath, opAuth.Login)
 	s.router.Get(operatorauth.CallbackPath, opAuth.Callback)
 
+	// 平台 RPC 掛在**字面 /platform/ 之下**（瀏覽器路徑成 /platform/platform.v1.PlatformAdminService/…）。
+	//
+	// 不能照 Connect 的自然路徑掛在根：operator cookie 的 Path 是 /platform，而 RFC 6265 的
+	// path-match 是逐段前綴 —— /platform 對 /platform.v1.… 不成立（未涵蓋的第一個字元是 "."），
+	// 於是瀏覽器**不會送出** cookie，登入看似成功但每個 RPC 都回 401。反過來把 cookie 的 Path
+	// 放寬成 "/" 也不行（operator cookie 會跟著送往租戶 API）。兩者既然必須是同一個值，這裡
+	// 就用 CookiePath 當前綴（不寫字面字串，免得日後改了一邊）。
+	//
+	// 掛在此處（登入路由之後、OIDC 依賴檢查之前）：RPC 只需要 interceptor，不需要 Google
+	// discovery —— OIDC 暫時不可用時既有工作階段仍能讀取。
+	platformMux := http.NewServeMux()
+	services.RegisterPlatformAdminService(platformMux, postgresstore.NewAdmin(adminDB), opAuth)
+	s.router.Mount(operatorauth.CookiePath, http.StripPrefix(operatorauth.CookiePath, platformMux))
+
 	clientID := s.cfg.Auth.GoogleClientID
 	if clientID == "" {
 		log.Println("platform: GOOGLE_CLIENT_ID 未設定，平台登入端點回 503（interceptor 仍生效）")
