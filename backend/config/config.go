@@ -8,6 +8,7 @@ type Config struct {
 	Auth          Auth
 	Cache         Cache
 	Database      Database
+	Platform      Platform
 	Storage       Storage
 	Observability Observability
 	OpenFGA       OpenFGA
@@ -20,6 +21,7 @@ func New() *Config {
 	mustProcess(&c.Auth)
 	mustProcess(&c.Cache)
 	mustProcess(&c.Database)
+	mustProcess(&c.Platform)
 	mustProcess(&c.Storage)
 	mustProcess(&c.Observability)
 	mustProcess(&c.OpenFGA)

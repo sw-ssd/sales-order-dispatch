@@ -60,4 +60,21 @@ func TestInitPlatformGuards(t *testing.T) {
 			t.Fatalf("development 不得被平台守護擋下,got %v", err)
 		}
 	})
+
+	// 順序鎖:整組不設(零值)必須落到既有的 infra 檢查,不得由平台守護先攔。
+	// business_role_integration_test.go 以「業務連線角色」訊息斷言 production 的拒絕來源 ——
+	// 平台守護若提前插隊,該測試會以錯誤的理由變綠(訊息被蓋掉)。
+	t.Run("整組不設不觸發平台守護", func(t *testing.T) {
+		s := New(&config.Config{
+			API:  config.API{Env: "production"},
+			Auth: config.Auth{JWTSecret: "tenant-secret"},
+		})
+		err := s.Init()
+		if err == nil {
+			t.Fatal("production 於無 infra 環境應被 DB/Valkey fail-fast 拒絕")
+		}
+		if strings.Contains(err.Error(), "平台工具") || strings.Contains(err.Error(), "PLATFORM_JWT_SECRET") {
+			t.Fatalf("零值不得由平台守護拒絕,應落到 infra 檢查,got %q", err.Error())
+		}
+	})
 }

@@ -120,6 +120,19 @@ func (s *Server) Init() error {
 		if s.cfg.Auth.JWTSecret == config.DefaultJWTSecret {
 			return fmt.Errorf("config: ENV=production 且 JWT_SECRET 仍為預設值(dev-only),拒絕啟動")
 		}
+		// 平台工具設定(D38)守護。平台設定只有兩種合法狀態:整組設好,或整組不設(不掛載平台工具)。
+		// config.New() 會替 AllowedEmailDomain 填預設值,故正常啟動(經 envconfig)的 production 恆為
+		// 非零值 → 等同 production 必須設好 PLATFORM_JWT_SECRET 與 PLATFORM_CONSOLE_URL;
+		// 只設一半會讓 operator 登入看似啟用卻走不通,而錯誤直到登入才爆 → 拒絕啟動。
+		if s.cfg.Platform != (config.Platform{}) && !s.cfg.Platform.Configured() {
+			return fmt.Errorf("config: ENV=production 平台工具設定不完整,拒絕啟動;" +
+				"請設定 PLATFORM_JWT_SECRET(平台工具專用密鑰,勿與 JWT_SECRET 共用)與" +
+				"PLATFORM_CONSOLE_URL(console 根網址),或整組留空以停用平台工具")
+		}
+		// 兩個密鑰共用等於租戶 token 可冒充平台操作者(反之亦然)→ 拒絕啟動。訊息不帶密鑰值。
+		if s.cfg.Platform.Configured() && s.cfg.Platform.OperatorJWTSecret == s.cfg.Auth.JWTSecret {
+			return fmt.Errorf("config: PLATFORM_JWT_SECRET 不得與 JWT_SECRET 相同(跨用將使租戶 token 可冒充平台操作者)")
+		}
 		// 設計 §3(D31):production fail-fast 需涵蓋 DB/Valkey 連線,
 		// 避免 auth/service 因 infra 不可用而靜默不掛載(見 domains.go mountAuth 開發降級)。
 		if err := database.Probe(context.Background(), s.cfg.Database.DatabaseURL); err != nil {
