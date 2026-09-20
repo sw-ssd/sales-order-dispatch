@@ -103,7 +103,7 @@ func TestIntegrationRLSProductsIsolation(t *testing.T) {
 		} {
 			var cnt, distinctParents, minChild int
 			if err := tx.QueryRow(
-				`SELECT count(*), count(DISTINCT product_id), COALESCE(min(id), 0) FROM ` + child.table,
+				`SELECT count(*), count(DISTINCT product_id), COALESCE(min(id), 0) FROM `+child.table,
 			).Scan(&cnt, &distinctParents, &minChild); err != nil {
 				t.Fatalf("查 %s: %v", child.table, err)
 			}
@@ -120,7 +120,6 @@ func TestIntegrationRLSProductsIsolation(t *testing.T) {
 				t.Errorf("父商品不可見時 %s 的子列也不得可見,got %d 列", child.table, cross)
 			}
 		}
-
 	})
 
 	// 跨租戶寫入:以 A 的身分寫 B 公司的商品,或把子列掛到 B 的商品上 → 皆被 WITH CHECK 擋。
