@@ -105,6 +105,8 @@ func (s *Store) Overrides(ctx context.Context, companyID int) ([]store.Override,
 // Subscription 回傳該公司的現行訂閱;**已取消的訂閱也要回傳**（只有一列是 cancelled 時就回它）。
 // 沒有列才回 (nil, nil)。billing_cycle 必須帶出:期別產生靠它決定 +1 月或 +1 年(G1)。
 // 方案名取自 JOIN 的 plans.name(租戶端投影要顯示它)。
+// id 一併帶出(與 BillingStore.OpenSubscriptionTx 同一條取列路徑、逐字相同的 ORDER BY):
+// 訂閱主鍵是期別與狀態變更的鍵,兩條路徑的 Subscription 不得只有一條填得滿。
 //
 // **不得**把 `s.status <> 'cancelled'` 寫進 WHERE（F-8）：那樣「只有一筆已取消訂閱」的公司與
 // 「完全沒有訂閱列」在判定層不可區分 —— 而判定層對後者是「尚未開通計費 → 不施加任何限制」
@@ -114,7 +116,7 @@ func (s *Store) Overrides(ctx context.Context, companyID int) ([]store.Override,
 // partial unique index 保證未取消者至多一筆，故 LIMIT 1 不會少算也不會重複。
 func (s *Store) Subscription(ctx context.Context, companyID int) (*store.Subscription, error) {
 	row := s.db.QueryRowContext(ctx, `
-		SELECT s.company_id, p.code, p.name, s.status, p.id, s.seat_count,
+		SELECT s.id, s.company_id, p.code, p.name, s.status, p.id, s.seat_count,
 		       s.billing_cycle, s.trial_ends_at, s.grace_until
 		  FROM platform.subscriptions s
 		  JOIN platform.plans p ON p.id = s.plan_id
@@ -123,8 +125,8 @@ func (s *Store) Subscription(ctx context.Context, companyID int) (*store.Subscri
 		 LIMIT 1`, companyID)
 	var sub store.Subscription
 	var trial, grace sql.NullTime
-	err := row.Scan(&sub.CompanyID, &sub.PlanCode, &sub.PlanName, &sub.Status, &sub.PlanID, &sub.SeatCount,
-		&sub.BillingCycle, &trial, &grace)
+	err := row.Scan(&sub.ID, &sub.CompanyID, &sub.PlanCode, &sub.PlanName, &sub.Status, &sub.PlanID,
+		&sub.SeatCount, &sub.BillingCycle, &trial, &grace)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
