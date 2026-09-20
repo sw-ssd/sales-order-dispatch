@@ -1021,8 +1021,11 @@ func TestIntegrationExpireTrial(t *testing.T) {
 	company := int(rig.seed.noneID)
 	ctx := t.Context()
 
-	// trial_ends_at 必須是未來（開通端擋過去），故取 +2 秒，再把排程的 now 撥到它前後。
-	trialEnds := time.Now().UTC().Add(2 * time.Second).Truncate(time.Second)
+	// trial_ends_at 必須是未來（開通端擋過去），故取 +45 秒，再把排程的 now 撥到它前後。
+	// 窗要夠寬：這一段是**唯一**看牆鐘的地方（`CreateSubscription` 要求 trial_ends_at > now），
+	// 2 秒的窗在 CI 的冷啟動與負載下會偶發「一開通就過期」（SYS-1001）；排程判定不受影響 ——
+	// 它的 now 一律由呼叫端顯式傳入（trialEnds ± 1 秒），與真實時間無關。
+	trialEnds := time.Now().UTC().Add(45 * time.Second).Truncate(time.Second)
 	resp, err := rig.svc.CreateSubscription(rig.ctx, connect.NewRequest(&platformv1.CreateSubscriptionRequest{
 		CompanyId: itoa(company), PlanCode: "std", BillingCycle: "monthly", SeatCount: 2,
 		TrialEndsAt: trialEnds.Format(time.RFC3339), Reason: "POC 試用"}))

@@ -3,8 +3,8 @@
 //
 // 每個函式都必須**可重跑**：判斷只依「當前狀態 ＋ 時間」，不依賴呼叫次數 —— 排程會重複執行
 // （每日一趟、手動補跑、單飛鎖失效後的第二趟），重跑不得產生第二個期別、第二個事件、第二次
-// 狀態轉移。三支掃描查詢本身即帶冪等謂詞（期末 < now、grace_until IS NOT NULL、NOT EXISTS
-// subscription.expired），見 store.BillingStore。
+// 狀態轉移。四支掃描查詢本身即帶冪等謂詞（期別期末 < now、grace_until IS NOT NULL、NOT EXISTS
+// subscription.expired、trial_ends_at < now），見 store.BillingStore。
 //
 // 順序由呼叫端決定（cron.RunOnce）：**試用到期 → 逾期 → 停用 → 取消到期 → 產生期別 → 派送事件**。
 // 先轉移狀態並派送事件（凍結／停用）再開期別，避免對剛停用的租戶開新期；試用到期排在最前面，
@@ -96,11 +96,17 @@ func (b *Billing) EnsureNextPeriod(ctx context.Context, companyID int, now time.
 		// 價格取「當期生效價」：期別是快照，調價後新期別用新價、舊期別不變。
 		price, err := b.st.CurrentPriceTx(ctx, tx, sub.PlanID, sub.BillingCycle)
 		if err != nil {
-			// 沒有價目不得靜默用 0 元（那等於免費送方案）。
-			return errcode.PlatformSubscriptionInactive.Wrap(err, map[string]string{
-				"reason": fmt.Sprintf("方案 %d 沒有 %s 週期的生效價，不得開出 0 元期別",
-					sub.PlanID, sub.BillingCycle),
-			})
+			// 「沒有價目」是資料問題（operator 要改的是價目設定），「查價失敗」是基礎設施問題
+			// （連線中斷、死鎖）—— 兩者都包成 PLAT-3001 會讓整趟排程把這筆當成「單一租戶的髒
+			// 資料」繼續跑，並把 operator 指向一個沒壞的價目設定。分流與 CreateSubscription 一致。
+			if errors.Is(err, store.ErrNotFound) {
+				// 沒有價目不得靜默用 0 元（那等於免費送方案）。
+				return errcode.PlatformSubscriptionInactive.Wrap(err, map[string]string{
+					"reason": fmt.Sprintf("方案 %d 沒有 %s 週期的生效價，不得開出 0 元期別",
+						sub.PlanID, sub.BillingCycle),
+				})
+			}
+			return errcode.SysInternal.Wrap(err)
 		}
 		amount, err := money.PeriodAmount(price.BaseCents, price.SeatCents, sub.SeatCount)
 		if err != nil {

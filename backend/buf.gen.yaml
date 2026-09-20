@@ -1,19 +1,23 @@
 version: v2
+# 遠端 plugin 一律**釘版**(`:vX.Y.Z`):不釘版時 BSR 上架新版,所有人的產生檔會一起漂移
+# (與任何改動無關),而 CI 的 proto 冪等閘門會因此全紅。版本＝產出已入 commit 的那一組,
+# 由產生檔表頭(protoc-gen-go / protoc-gen-es)與 go.mod／app/pubspec.yaml 的客戶端版本對齊;
+# 換版時連同產生檔一起 commit(並在 .github/workflows/ci.yml 的 proto 註解同步)。
 plugins:
   # Go 訊息 + Connect-Go 服務
-  - remote: buf.build/protocolbuffers/go
+  - remote: buf.build/protocolbuffers/go:v1.36.12
     out: internal/proto
     opt: paths=source_relative
-  - remote: buf.build/connectrpc/go
+  - remote: buf.build/connectrpc/go:v1.21.0
     out: internal/proto
     opt: paths=source_relative
   # TS 訊息(protobuf-es v2 *_pb,connect v2 runtime 自 *_pb GenService 匯入)
-  - remote: buf.build/bufbuild/es
+  - remote: buf.build/bufbuild/es:v2.15.0
     out: ../frontend/src/lib/proto
   # 平台 console 的 TS 訊息:**獨立一份**輸出(不借用租戶 SPA 的 proto 目錄)。
   # 兩個 app 各自 commit 自己那份,console 才不會因為租戶端改 proto 而意外跟著動;
   # 同一組 plugin/版本產出的位元組相同,CI 的 proto 冪等閘門涵蓋此路徑。
-  - remote: buf.build/bufbuild/es
+  - remote: buf.build/bufbuild/es:v2.15.0
     out: ../platform-console/src/lib/proto
   # 註:connectrpc/es 已移除——最新 v1.6.1 生成 connect v1 風格 *_connect 檔,與
   # @connectrpc/connect v2 不相容且前端零引用(一律自 *_pb GenService 匯入);
@@ -24,5 +28,5 @@ plugins:
   - local: protoc-gen-dart
     out: ../app/lib/gen
   # Dart Connect 用戶端
-  - remote: buf.build/connectrpc/dart
+  - remote: buf.build/connectrpc/dart:v2.0.0
     out: ../app/lib/gen

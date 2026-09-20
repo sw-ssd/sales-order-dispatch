@@ -285,7 +285,8 @@ func TestRunOnceIsIdempotent(t *testing.T) {
 	seedSub(f, 43, "past_due", "monthly", &pastGrace, now.Add(-2*time.Hour))
 	seedSub(f, 44, "cancelled", "monthly", nil, now.Add(-2*time.Hour))
 	seedSub(f, 45, "active", "monthly", nil, now.AddDate(0, 0, 10))
-	// 46 的期末刻意放在提前窗**外**:若試用到期沒有先轉走狀態,本趟就會替它開出第 2 期。
+	// 46 的期末刻意放在提前窗**內**（10 天 < LeadDays=14；45 正是靠這點才被開出第 2 期）:
+	// 若試用到期沒有先轉走狀態,本趟就會替它開出第 2 期。
 	sub46 := seedTrialingSub(f, 46, now.Add(-time.Hour), now.AddDate(0, 0, 10))
 
 	deps, log, _, setter := newDeps(f)

@@ -471,6 +471,45 @@ describe("TenantDetailPage", () => {
     );
   });
 
+  it("trial_days 大於上限時，預填的試用日要夾住 365 天（否則表單一開就自帶一個自己會拒的值）", async () => {
+    // trial_days 是可被改大的營運參數（UpdateBillingSettings 沒有上界）；照抄 730 天會預填一個
+    // 超過後端 maxTrialDays 的日期 —— operator 一開對話框就看到紅字，卻不知道紅字是自己填的。
+    getBillingSettings.mockResolvedValue({
+      settings: [{ key: "trial_days", value: "730", description: "試用天數" }],
+    });
+    getTenant.mockResolvedValue({
+      tenant: { ...tenant, planCode: "", planName: "", subscriptionStatus: "none", seatCount: 0 },
+      overrides: [],
+    });
+    renderAt();
+    await screen.findByText("甲公司");
+    fireEvent.click(screen.getByRole("button", { name: "開通訂閱" }));
+    await screen.findByRole("option", { name: "標準" });
+
+    const trial = screen.getByLabelText(/試用到期/) as HTMLInputElement;
+    await waitFor(() => expect(trial.value).not.toBe(""));
+    const days = (new Date(trial.value).getTime() - Date.now()) / (24 * 60 * 60 * 1000);
+    expect(days).toBeGreaterThan(364);
+    expect(days).toBeLessThanOrEqual(365);
+
+    // 預填值必須是**可送出的**：填完其餘欄位後真的送出去（若還超過 365 天，驗證會擋下且不呼叫 RPC）。
+    fireEvent.change(screen.getByLabelText(/方案/), { target: { value: "std" } });
+    fireEvent.input(screen.getByLabelText(/席位數/), { target: { value: "2" } });
+    fireEvent.input(screen.getByLabelText(/原因/), { target: { value: "POC" } });
+    fireEvent.click(screen.getByRole("button", { name: "建立訂閱" }));
+    await waitFor(() =>
+      expect(createSubscription).toHaveBeenCalledWith({
+        companyId: "1",
+        planCode: "std",
+        billingCycle: "monthly",
+        seatCount: 2,
+        trialEndsAt: trial.value,
+        reason: "POC",
+      }),
+    );
+    expect(screen.queryByText(/不得超過 365 天/)).toBeNull();
+  });
+
   it("開通對話框不得留下 markdown 標記（operator 看到的是字面星號）", async () => {
     getTenant.mockResolvedValue({
       tenant: { ...tenant, planCode: "", planName: "", subscriptionStatus: "none", seatCount: 0 },

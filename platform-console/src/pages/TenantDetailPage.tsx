@@ -280,7 +280,9 @@ function CreateSubscriptionForm(props: {
     );
     if (prefilledTrial || trialTouchedByOperator || !Number.isInteger(days) || days <= 0) return;
     prefilledTrial = true;
-    setTrialEndsAt(inDaysRFC3339(days));
+    // 夾住上限：trial_days 是可以被改大的營運參數，照抄會預填一個**這個表單自己會拒**的值
+    // （operator 一開啟對話框就看到紅字，卻不知道紅字是自己填的）。
+    setTrialEndsAt(inDaysRFC3339(Math.min(days, MAX_TRIAL_DAYS)));
   });
 
   const mutation = createMutation(() => ({

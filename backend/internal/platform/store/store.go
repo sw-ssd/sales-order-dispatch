@@ -222,6 +222,10 @@ type BillingStore interface {
 	// UndispatchedEvents 取未派送事件(依 id 排序,consumer 用)。
 	UndispatchedEvents(ctx context.Context, limit int) ([]Event, error)
 	// MarkEventDispatchedTx 標記事件已派送(重試次數記在 attempts)。
+	//
+	// **目前無生產呼叫端**:consumer 走自己的條件式認領(consumer.go 的 claimSQL,同一句 UPDATE
+	// 外加 dispatched_at IS NULL 的條件),本方法只剩測試在用。留著是因為 fake 與整合測試需要
+	// 「無條件標記」來造出已派送／未派送的中間狀態;實作與 fake 必須一起改(介面契約仍在)。
 	MarkEventDispatchedTx(ctx context.Context, tx *sql.Tx, id int64) error
 	// RecordAuditTx 寫入平台稽核(S9:actor 為 operator_id,不 FK 租戶 users)。
 	// reason 必填:空字串即拒絕 —— 動到錢與權限的操作必須留下「為什麼」。

@@ -697,6 +697,59 @@ func TestEnsureNextPeriodAbortsOnLookupFailure(t *testing.T) {
 	}
 }
 
+// 取價失敗的兩種錯誤必須**分流**（與 CreateSubscription 的 M-1 同一條界線）：沒有價目是資料問題
+// （operator 要改的是價目設定 → PLAT-3001），其他錯誤（連線中斷、死鎖）是基礎設施問題 → SYS-9000。
+//
+// 為什麼這一條特別要緊：產生期別的失敗在 RunOnce 裡是**逐租戶**處理的（記下錯誤、跑完其餘租戶），
+// 全包成 PLAT-3001 會讓一次連線抖動被讀成「這個租戶的價目沒設好」——operator 照著訊息去改一個
+// 沒壞的設定，而真正壞掉的是連線，且症狀會在每一趟排程重複出現。
+func TestEnsureNextPeriodSeparatesMissingPriceFromLookupFailure(t *testing.T) {
+	now := at(2026, time.October, 1, 3)
+	seedServiceable := func(f *store.FakeBilling) {
+		seedSub(f, store.Subscription{CompanyID: 42, Status: "active", PlanID: 1, SeatCount: 3,
+			BillingCycle: "monthly"}, at(2026, time.September, 3, 3), at(2026, time.October, 3, 3))
+	}
+
+	t.Run("沒有生效價目", func(t *testing.T) {
+		f := store.NewFakeBilling()
+		seedServiceable(f) // 刻意不種價目。
+
+		created, err := billing.NewBilling(f).EnsureNextPeriod(context.Background(), 42, now, 14)
+		if err == nil || created {
+			t.Fatalf("缺價目必須失敗: created=%v err=%v", created, err)
+		}
+		if code := errorCodeOf(t, err); code != "PLAT-3001" {
+			t.Fatalf("ErrorInfo.code = %q；want PLAT-3001", code)
+		}
+		if ps := openPeriods(t, f); len(ps) != 1 {
+			t.Fatalf("缺價目不得留下新期別（更不得開出 0 元期別）: %+v", ps)
+		}
+		if evs := eventTypes(f); len(evs) != 0 {
+			t.Fatalf("失敗不得寫事件，got %v", evs)
+		}
+	})
+
+	t.Run("查價失敗（連線中斷）", func(t *testing.T) {
+		f := store.NewFakeBilling()
+		seedServiceable(f)
+		f.PutPlanPrice(1, "monthly", store.Price{BaseCents: 150000, SeatCents: 15000, Currency: "TWD"})
+
+		created, err := billing.NewBilling(priceLookupFails{f}).EnsureNextPeriod(context.Background(), 42, now, 14)
+		if err == nil || created {
+			t.Fatalf("查價失敗必須中止: created=%v err=%v", created, err)
+		}
+		if code := errorCodeOf(t, err); code != "SYS-9000" {
+			t.Fatalf("ErrorInfo.code = %q；want SYS-9000（查價失敗不是「沒有價目」）", code)
+		}
+		if connect.CodeOf(err) != connect.CodeInternal {
+			t.Fatalf("connect 碼應為 internal，got %v", connect.CodeOf(err))
+		}
+		if ps := openPeriods(t, f); len(ps) != 1 {
+			t.Fatalf("中止時不得開新期: %+v", ps)
+		}
+	})
+}
+
 // G7：cancelled 且期末已過 → 發 subscription.expired（由 consumer 把公司轉 suspended）；
 // **不得改變訂閱狀態**（cancelled 是終態，改狀態會破壞帳與稽核的可重現性）。
 func TestExpireCancelledEmitsEventWithoutChangingStatus(t *testing.T) {

@@ -46,7 +46,8 @@ jobs:
       # **已落地並在清單內**；路徑不存在時兩個檢查對它只是 no-op。
       # 現況（2026-09-21 實測）：以等效的 TS-only template 重跑 buf generate 後，該目錄與
       # frontend/src/lib/proto 皆逐位元組相同。
-      # 工具鏈必須自備且**釘版**：Go／TS 走 BSR 遠端 plugin、Dart 走本地 protoc-gen-dart，
+      # 工具鏈必須自備且**釘版**：Go／TS／Dart 的 BSR 遠端 plugin 各自在 `buf.gen.yaml` 以 `:vX.Y.Z` 釘住
+      # （未釘版時 BSR 一上架新版，所有產生檔一起漂移、閘門全紅），Dart 訊息另走本地 protoc-gen-dart，
       # 三個版本（buf／Dart SDK／protoc_plugin）任一不釘，下一次上架或升版就會讓所有 PR 的產生檔
       # 無故漂移。此處用的即產出已入 commit 的那一組：buf 1.73.0、Dart 3.13.3（.fvmrc 的 fvm stable）、
       # protoc_plugin 25.1.0 —— 換版時請連同產生檔一起 commit（並在本註解更新）。
@@ -68,7 +69,7 @@ jobs:
           git diff --exit-code -- $paths
           test -z "$(git status --porcelain -- $paths)"
       - name: Build
-        run: go build ./cmd/server
+        run: go build ./cmd/...
       - name: Vulnerability scan(D31-2)
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
