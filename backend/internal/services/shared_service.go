@@ -34,20 +34,26 @@ type entitlementChecker interface {
 	CheckLimit(ctx context.Context, companyID int, feature string, delta int) error
 }
 
-// guardCompanyID 回傳配額守衛要檢查的租戶：**以身分為準**（authz.IdentityFrom(ctx)），
-// 不得採用請求帶入的 company_id —— 否則可以用別人方案的額度替自己的寫入背書。
+// guardQuota 為配額守衛的**唯一入口**（六個寫入 RPC 與 UpdateUser 的席位復原都只經過它）。
+// 兩條政策寫死在此，散到呼叫點就會漂移：
 //
-// 只有 super／developer 例外：他們沒有租戶範圍（在任意公司代營運），此時目標公司就是請求
-// 指定的公司 —— 它的存在與操作權限已於守衛之前驗證完畢（CreateUser 的公司存在檢查、
-// CreateDepartment 的 requireScope 與存在檢查）。
-func guardCompanyID(id authz.Identity, requested int) int {
+//  1. **平台層身分（super／developer，data_scope=all）略過 entitlement 判定**（spec §4.3）：
+//     平台方代營運不受單一租戶合約限制 —— 無訂閱／suspended／cancelled／已達上限都不得把平台方
+//     擋在門外（S10／R8 的逃生門）。判斷留在本層而非 CheckLimit：判定層必須與身分無關，否則
+//     平台端視圖會說謊。
+//  2. 租戶 id 以**身分**為準（authz.IdentityFrom(ctx).CompanyID），不得採用請求帶入的 id ——
+//     否則可以用別人方案的額度替自己的寫入背書。targetCompanyID 是已驗證過的目標公司
+//     （呼叫端傳入；UpdateUser 傳的是目標使用者的公司），只在身分沒有租戶範圍時使用。
+func guardQuota(ctx context.Context, ent entitlementChecker, targetCompanyID int, feature string, delta int) error {
+	id := authz.IdentityFrom(ctx)
 	if isSuperIdentity(id) {
-		return requested
+		return nil
 	}
+	companyID := targetCompanyID
 	if own, err := parseID(id.CompanyID); err == nil {
-		return own
+		companyID = own
 	}
-	return requested
+	return ent.CheckLimit(ctx, companyID, feature, delta)
 }
 
 // requireAuth 取得已登入身分;未登入 → AUTH-4001(對外 Unauthenticated,所有主檔方法共用)。

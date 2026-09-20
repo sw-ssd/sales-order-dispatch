@@ -390,7 +390,7 @@ func (s *ProductService) CreateProduct(ctx context.Context, req *connect.Request
 	}
 	// 配額守衛（商品數）：驗證完成、任何寫入之前。配額是**公司層**的（cid 來自身分），
 	// department scope 的計數器另開系統範圍交易取公司總數。
-	if err := s.ent.CheckLimit(ctx, guardCompanyID(id, cid), entitlements.LimitProducts, 1); err != nil {
+	if err := guardQuota(ctx, s.ent, cid, entitlements.LimitProducts, 1); err != nil {
 		return nil, err
 	}
 	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見 customer_service.CreateCustomer:
@@ -624,7 +624,7 @@ func (s *ProductService) RestoreProduct(ctx context.Context, req *connect.Reques
 	}
 	// 配額守衛（商品數）：**復原會增加有效筆數**（軟刪除設計下的專屬漏洞），守衛在
 	// 「確認該列存在且已刪除」之後、復原寫入之前（已 active 的冪等回傳不佔用新額度）。
-	if err := s.ent.CheckLimit(ctx, guardCompanyID(id, cid), entitlements.LimitProducts, 1); err != nil {
+	if err := guardQuota(ctx, s.ent, cid, entitlements.LimitProducts, 1); err != nil {
 		return nil, err
 	}
 	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由同 CreateProduct。

@@ -373,7 +373,7 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *connect.Reque
 	// 配額守衛（客戶數）：驗證完成、任何寫入之前（含下面的 counter 列）。配額是**公司層**的，
 	// cid 來自身分（deptScope）；計數器在 department scope 下另開系統範圍交易取公司總數，
 	// 否則只數到本部門 → 低報 → 超額放行。
-	if err := s.ent.CheckLimit(ctx, guardCompanyID(id, cid), entitlements.LimitCustomers, 1); err != nil {
+	if err := guardQuota(ctx, s.ent, cid, entitlements.LimitCustomers, 1); err != nil {
 		return nil, err
 	}
 
@@ -678,7 +678,7 @@ func (s *CustomerService) RestoreCustomer(ctx context.Context, req *connect.Requ
 	}
 	// 配額守衛（客戶數）：**復原會增加有效筆數**（軟刪除設計下的專屬漏洞），故守衛在
 	// 「確認該列存在且已刪除」之後、復原寫入之前 —— 已 active 的冪等回傳不佔用新額度。
-	if err := s.ent.CheckLimit(ctx, guardCompanyID(id, cid), entitlements.LimitCustomers, 1); err != nil {
+	if err := guardQuota(ctx, s.ent, cid, entitlements.LimitCustomers, 1); err != nil {
 		return nil, err
 	}
 	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見本檔 CreateCustomer。

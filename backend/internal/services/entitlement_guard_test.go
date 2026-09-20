@@ -46,8 +46,10 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 )
 
-// guardCases 為 spec §4.5 的守衛清單：RPC → feature。新增寫入 RPC 未登記即紅
-// （漏掛＝該 RPC 完全不檢查配額）。見檔頭的「待補第 7 項」。
+// guardCases 為 spec §4.5 的守衛清單：RPC → feature。**已登錄的** case 漏掛／掛錯 feature／
+// 掛兩次即紅；新增的配額相關寫入 RPC 必須**同步登錄在此表**（本表不會自動發現沒人手動登記的
+// RPC —— 「哪些 RPC 該有配額」是規格問題，不是機制問題，要靠 descriptor 自動列舉也判斷不出來）。
+// 見檔頭的「待補第 7 項」。
 var guardCases = []struct {
 	name    string
 	feature string
@@ -300,6 +302,128 @@ func TestCreateCustomerBlockedForDeptAdminAtCompanyLimit(t *testing.T) {
 	}
 }
 
+// TestSuperIdentitySkipsQuotaGuard 平台層身分（super／developer，data_scope=all）**略過**
+// entitlement 判定（spec §4.3）：平台方代營運不得被單一租戶的合約綁住 —— 無訂閱、達上限都
+// 必須照樣能寫。同時釘住對照組：同情境的 company_admin 必須被擋（否則「守衛什麼都放行」也是綠的）。
+func TestSuperIdentitySkipsQuotaGuard(t *testing.T) {
+	ctx := t.Context()
+	db := guardDB(t)
+	co, _, _ := seedUserCompany(t, db)
+	mount := func(m *http.ServeMux, e entitlementChecker) { RegisterUserServices(m, db, e) }
+
+	// ① 平台層身分 ＋ 公司**沒有訂閱**：逃生門（無訂閱時 PLAT-5002 不得擋平台方）。
+	super := authz.Identity{UserID: "1", Role: "super", Roles: []string{"super"}}
+	superClient := salesorderv1connect.NewUserServiceClient(http.DefaultClient,
+		guardURL(t, db, super, guardAllScope(), guardEntitlementsNoSubscription(t, db, entitlements.LimitSeats), mount))
+	if _, err := superClient.CreateUser(ctx, connect.NewRequest(&v1.CreateUserRequest{
+		Name: "平台代建", Email: "platform@t.com", CompanyId: uItoa(co), Role: "staff",
+	})); err != nil {
+		t.Fatalf("平台層身分於無訂閱公司建帳號必須成功（spec §4.3 的逃生門），got %v", err)
+	}
+
+	// ② 對照組：同一家公司、同樣無訂閱 → company_admin 必須被擋在 PLAT-5002。
+	admin := authz.Identity{UserID: "2", CompanyID: uItoa(co), Role: "company_admin", Roles: []string{"company_admin"}}
+	adminClient := salesorderv1connect.NewUserServiceClient(http.DefaultClient,
+		guardURL(t, db, admin, guardCompanyScope(co), guardEntitlementsNoSubscription(t, db, entitlements.LimitSeats), mount))
+	_, err := adminClient.CreateUser(ctx, connect.NewRequest(&v1.CreateUserRequest{
+		Name: "租戶自建", Email: "tenant@t.com", CompanyId: uItoa(co), Role: "staff",
+	}))
+	if connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Fatalf("無訂閱時 company_admin 必須被擋，got %v", err)
+	}
+	if got := errorInfoOf(t, err).GetCode(); got != "PLAT-5002" {
+		t.Fatalf("無訂閱／方案未含必須帶 ErrorInfo.code=PLAT-5002，got %q", got)
+	}
+	if n, _ := db.User.Query().Where(user.HasCompanyWith(company.ID(co)), user.EmailEQ("tenant@t.com")).Count(ctx); n != 0 {
+		t.Fatalf("被擋後不得落庫，got %d 筆", n)
+	}
+
+	// ③ 平台層身分 ＋ 公司**已達上限**：同樣略過（逃生門不得只在無訂閱時有效）。
+	for i := range 10 {
+		db.User.Create().SetCompanyID(co).SetEmail(fmt.Sprintf("cap%d@t.com", i)).SetName("佔位").
+			SetRole("staff").SetStatus(user.StatusActive).SetPasswordHash("x").SaveX(ctx)
+	}
+	superOver := salesorderv1connect.NewUserServiceClient(http.DefaultClient,
+		guardURL(t, db, super, guardAllScope(), guardEntitlements(t, db, co, entitlements.LimitSeats, 10), mount))
+	if _, err := superOver.CreateUser(ctx, connect.NewRequest(&v1.CreateUserRequest{
+		Name: "平台超額代建", Email: "platform-over@t.com", CompanyId: uItoa(co), Role: "staff",
+	})); err != nil {
+		t.Fatalf("平台層身分於達上限公司仍必須能寫（不受租戶配額限制），got %v", err)
+	}
+}
+
+// TestUpdateUserReactivationBlockedAtSeatLimit 停用**不佔**席位，把帳號改回非 inactive 就重新
+// 佔用 —— 與 Restore* 同型（軟刪除／停用是省額度，改回有效即恢復佔用）。守衛只在
+// inactive → 非 inactive 的轉換上生效：滿席時**普通更新（改名）必須照常可用**。
+func TestUpdateUserReactivationBlockedAtSeatLimit(t *testing.T) {
+	ctx := t.Context()
+	db := guardDB(t)
+	co, _, _ := seedUserCompany(t, db)
+	seats := make([]*ent.User, 0, 10)
+	for i := range 10 {
+		seats = append(seats, db.User.Create().SetCompanyID(co).SetEmail(fmt.Sprintf("u%d@t.com", i)).
+			SetName("佔位").SetRole("staff").SetStatus(user.StatusActive).SetPasswordHash("x").SaveX(ctx))
+	}
+	id := authz.Identity{UserID: "1", CompanyID: uItoa(co), Role: "company_admin", Roles: []string{"company_admin"}}
+	client := salesorderv1connect.NewUserServiceClient(http.DefaultClient,
+		guardURL(t, db, id, guardCompanyScope(co), guardEntitlements(t, db, co, entitlements.LimitSeats, 10),
+			func(m *http.ServeMux, e entitlementChecker) { RegisterUserServices(m, db, e) }))
+
+	// 滿席 → 建帳號被擋。
+	if _, err := client.CreateUser(ctx, connect.NewRequest(&v1.CreateUserRequest{
+		Name: "第 11 人", Email: "over@t.com", CompanyId: uItoa(co), Role: "staff",
+	})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Fatalf("滿席時 CreateUser 應被擋，got %v", err)
+	}
+	// 停用一席（不佔席位）→ 建帳號放行。
+	if _, err := client.UpdateUser(ctx, connect.NewRequest(&v1.UpdateUserRequest{
+		UserId: uItoa(seats[0].ID), Status: strPtr(string(user.StatusInactive)),
+	})); err != nil {
+		t.Fatalf("停用（釋放席位）應可用: %v", err)
+	}
+	if _, err := client.CreateUser(ctx, connect.NewRequest(&v1.CreateUserRequest{
+		Name: "遞補", Email: "refill@t.com", CompanyId: uItoa(co), Role: "staff",
+	})); err != nil {
+		t.Fatalf("停用釋放席位後應可建立: %v", err)
+	}
+
+	// 把原帳號改回 active → 回到 11 席 → 必須被擋（且不得真的改回 active）。
+	_, err := client.UpdateUser(ctx, connect.NewRequest(&v1.UpdateUserRequest{
+		UserId: uItoa(seats[0].ID), Status: strPtr(string(user.StatusActive)),
+	}))
+	if connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Fatalf("滿席時把停用帳號改回 active 必須被擋（與復原同型的漏洞），got %v", err)
+	}
+	if got := errorInfoOf(t, err).GetCode(); got != "PLAT-5001" {
+		t.Fatalf("席位超限必須帶 ErrorInfo.code=PLAT-5001，got %q", got)
+	}
+	if got := db.User.GetX(ctx, seats[0].ID).Status; got != user.StatusInactive {
+		t.Fatalf("被擋後不得改回 active，got %q", got)
+	}
+
+	// 滿席時的**普通更新**（改名）必須照常可用 —— 否則滿席的公司連改名字都做不到。
+	if _, err := client.UpdateUser(ctx, connect.NewRequest(&v1.UpdateUserRequest{
+		UserId: uItoa(seats[0].ID), Name: strPtr("改個名"),
+	})); err != nil {
+		t.Fatalf("滿席時改名不得被配額守衛擋下: %v", err)
+	}
+	if got := db.User.GetX(ctx, seats[0].ID).Name; got != "改個名" {
+		t.Fatalf("改名應生效，got %q", got)
+	}
+
+	// 對照：騰出一個席位後，同一筆 inactive → active 就應放行（證明前面的紅是配額造成，不是恆擋）。
+	if _, err := client.UpdateUser(ctx, connect.NewRequest(&v1.UpdateUserRequest{
+		UserId: uItoa(seats[1].ID), Status: strPtr(string(user.StatusInactive)),
+	})); err != nil {
+		t.Fatalf("再停用一席: %v", err)
+	}
+	if _, err := client.UpdateUser(ctx, connect.NewRequest(&v1.UpdateUserRequest{
+		UserId: uItoa(seats[0].ID), Status: strPtr(string(user.StatusActive)),
+	})); err != nil {
+		t.Fatalf("騰出席位後改回 active 應放行: %v", err)
+	}
+}
+
 // guardDB 建立 sqlite 記憶體 client（各域既有測試同款）。
 func guardDB(t *testing.T) *ent.Client {
 	t.Helper()
@@ -339,10 +463,25 @@ func guardEntitlements(t *testing.T, db *ent.Client, companyID int, feature stri
 	return entitlements.New(f, NewEntitlementCounter(db), entitlements.NewMemoryCache(), 0)
 }
 
-// guardCompanyScope／guardDepartmentScope 組出與生產 authzMiddleware 相同的 RLS scope
-// （命名加 guard 前綴：整合測試檔已有同名的 []string 版 helper）。
+// guardEntitlementsNoSubscription 建一個「方案有此 feature、但該公司**沒有訂閱**」的判定服務：
+// 任何租戶身分的守衛都會被擋（PLAT-5002）—— 用來對照平台層身分必須照樣放行（逃生門）。
+func guardEntitlementsNoSubscription(t *testing.T, db *ent.Client, feature string) *entitlements.Service {
+	t.Helper()
+	f := store.NewFake()
+	f.PutFeature(store.Feature{Code: feature, Type: "integer"})
+	f.PutPlan("std", []store.Entitlement{{FeatureCode: feature, Enabled: true, Limit: ptr(int64(10))}})
+	return entitlements.New(f, NewEntitlementCounter(db), entitlements.NewMemoryCache(), 0)
+}
+
+// guardCompanyScope／guardDepartmentScope／guardAllScope 組出與生產 authzMiddleware 相同的 RLS
+// scope（命名加 guard 前綴：整合測試檔已有同名的 []string 版 helper）。
 func guardCompanyScope(companyID int) auth.RLSScope {
 	return auth.RLSScope{DataScope: auth.DataScopeCompany, CompanyID: uItoa(companyID), CompanyActive: true}
+}
+
+// guardAllScope 為平台層身分的 scope（super／developer；平台層略過配額判定正是以此為據）。
+func guardAllScope() auth.RLSScope {
+	return auth.RLSScope{DataScope: auth.DataScopeAll}
 }
 
 func guardDepartmentScope(companyID, departmentID int) auth.RLSScope {
