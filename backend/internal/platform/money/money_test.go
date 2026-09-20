@@ -50,6 +50,10 @@ func TestFormatCentsRoundTrip(t *testing.T) {
 			t.Fatalf("FormatCents(%d) = %q；want %q", c, got, in)
 		}
 	}
+	// 取負對 math.MinInt64 會回繞，格式不得因此損壞（修前為 "-92233720368547758.-8"）。
+	if got := money.FormatCents(math.MinInt64); got != "-92233720368547758.08" {
+		t.Fatalf("FormatCents(math.MinInt64) = %q；want \"-92233720368547758.08\"", got)
+	}
 }
 
 // 期別金額 = 月費（或年費）＋ 席位單價 × 席位數；整數運算，不得溢位。
@@ -83,5 +87,16 @@ func TestYearlyFromMonthly(t *testing.T) {
 	// 不足一分的尾差向上取到分（帳務不得無條件捨去）。
 	if got := money.YearlyFromMonthly(1, 1000); got != 11 { // 0.12×0.9 = 0.108 → 0.11
 		t.Fatalf("尾差進位 = %d；want 11", got)
+	}
+	// 折扣基點由方案價目寫入路徑提供（營運可編輯）：>= 10000 一律視為 100% 折扣，年費 0；
+	// 修前 10000-bps 轉負會讓年費靜默變成負值（退款方向），違反本套件不變式。
+	for _, bps := range []int{10000, 10001, 12000, 20000} {
+		if got := money.YearlyFromMonthly(1200000, bps); got != 0 {
+			t.Fatalf("YearlyFromMonthly(1200000, %d) = %d；want 0（金額不得為負）", bps, got)
+		}
+	}
+	// 負折扣基點 = 不打折（沿用既有語意）。
+	if got := money.YearlyFromMonthly(1200000, -500); got != 14400000 {
+		t.Fatalf("負折扣基點年繳 = %d；want 14400000", got)
 	}
 }

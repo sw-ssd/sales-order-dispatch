@@ -85,19 +85,26 @@ func PeriodAmount(baseCents, seatCents int64, seats int) (int64, error) {
 }
 
 // YearlyFromMonthly 由月費推導年費：月費 × 12 後套用折扣基點（1000 = 9 折），
-// 結果四捨五入到分（月費 ×12 必為偶數，故 num 的餘數不可能正好是 5000，無平手情形）。
-// 折扣基點 <= 0 一律視為不打折。
+// 結果四捨五入到分（月費 ×12 恆為偶數，故 num 的餘數不可能正好是 5000，無平手情形）。
 //
-// 月費與折扣基點來自方案設定／seed（非使用者輸入），且 DB 的 numeric(12,2) 上限遠低於
-// int64——本函式沒有 error 回傳，溢位時一律「飽和」成上限值或無折扣年費，**不得回繞成
-// 負數**（負的年費會靜默變成退款方向）。
+// **本函式夾住折扣基點 0..10000**：<= 0 視為不打折；>= 10000 視為 100% 折扣（年費 0）。
+// 折扣基點由方案價目寫入路徑提供（營運可編輯，屬外部輸入），夾住是為了不讓 10000-bps
+// 轉負後把年費算成負數——負的年費等於靜默變成退款方向（金額一律不得為負）。
+// **呼叫端（方案價目寫入路徑）仍必須自行驗證 0 <= discountBps <= 10000 並拒絕超界值**：
+// 這裡的夾住只保證不回傳負數，不是把超界輸入當成合法設定。
+//
+// 月費與折扣基點都來自方案設定（非使用者輸入），且 DB 的 numeric(12,2) 上限遠低於 int64——
+// 本函式沒有 error 回傳，溢位時一律「飽和」成上限值或無折扣年費，**不得回繞成負數**。
 func YearlyFromMonthly(monthlyCents int64, discountBps int) int64 {
+	if discountBps <= 0 {
+		discountBps = 0
+	}
+	if discountBps >= 10000 {
+		return 0
+	}
 	yearly, err := mulCheck(monthlyCents, 12)
 	if err != nil {
 		return math.MaxInt64
-	}
-	if discountBps <= 0 {
-		return yearly
 	}
 	// x × (10000 - bps) / 10000，四捨五入：先乘後除以避免精度損失。
 	num, err := mulCheck(yearly, int64(10000-discountBps))
