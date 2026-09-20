@@ -80,7 +80,7 @@
 
 | # | 項目 | 現況 | 選項 | 歸屬 |
 |---|---|---|---|---|
-| 1 | **席位 vs 客戶帳號的口徑矛盾** | `CreateCustomer` 會建一列 active 的 `users`（`customer_service.go:747`），而席位計數含所有非 `inactive` 帳號（`counters.go`）→ 但該路徑只受 `LimitCustomers` 守衛 → 已達席位上限仍可藉「建客戶」超額佔席位。spec §3.2（席位＝未停用帳號）與 §4.5（只有 `CreateUser` 綁 `limit.seats`）互相打架 | (a) 席位只算**非客戶**帳號（`is_customer=false`）——SaaS 直覺，需改 spec §3.2＋計數器（**建議**）；(b) `CreateCustomer` 也檢查 `limit.seats`——與現行 spec 一致但「加一個客戶吃掉一個員工席位」 | 產品／spec 擁有者定調（會動計費語意，本計畫不自行改） |
+| 1 | **席位 vs 客戶帳號的口徑矛盾** | `CreateCustomer` 會建一列 active 的 `users`（`customer_service.go` 的 `buildCustomerAccount`，:466／:475 呼叫），而席位計數含所有非 `inactive` 帳號（`counters.go` 的 `countFeature`）→ 但該路徑只受 `LimitCustomers` 守衛 → 已達席位上限仍可藉「建客戶」超額佔席位。spec §3.2（席位＝未停用帳號）與 §4.5（只有 `CreateUser` 綁 `limit.seats`）互相打架 | (a) 席位只算**非客戶**帳號（`is_customer=false`）——SaaS 直覺，需改 spec §3.2＋計數器（**建議**）；(b) `CreateCustomer` 也檢查 `limit.seats`——與現行 spec 一致但「加一個客戶吃掉一個員工席位」 | 產品／spec 擁有者定調（會動計費語意，本計畫不自行改） |
 | 2 | **spec §4.5 守衛清單缺 `UpdateUser`** | 實作已含 inactive→active 的席位守衛（`7122767`），spec 清單未列 | 回寫 spec §4.5 | spec 擁有者（T12 已在 spec §4.5 補註記） |
 | 3 | **`RestoreDepartment` 不存在** | spec §4.5 列了「部門復原」，repo 無此 RPC；`guardCases` 記為具名缺口 | 補 RPC（含守衛）或從 spec 刪列 | `backend-02-tenancy-users`（T12 已在 spec §4.5 補註記） |
 | 4 | **`platform.settings` 由 Plan C 的 `00030` 建立** | Plan B 的 seed 對該表採「有表才寫、跳過並印提示」；形狀已與 Plan C 對齊（`key`／`value` 皆 TEXT） | — （已寫成跨計畫硬契約） | Plan C：落地後**必須重跑 `cmd/seed`**，否則 `cmd/platform-cron` 一開跑就 Fatal |
