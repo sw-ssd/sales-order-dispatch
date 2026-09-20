@@ -23,8 +23,10 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/internal/services"
 )
 
 const (
@@ -34,6 +36,15 @@ const (
 	// RegistrationTokenCookie 為首次 OIDC 登入(尚未建帳號)時派發的一次性註冊憑證 cookie。
 	RegistrationTokenCookie = "registration_token"
 )
+
+// seatGuard 為席位守衛所需的最小介面（consumer 端定義）：AuthHandler 只用 CheckLimit，
+// `*entitlements.Service` 與 `entitlements.Unlimited()` 都直接滿足它。
+//
+// **未注入（nil）時建帳號路徑一律拒絕**（見 guardSeats）：漏注入等於無守衛＝靜默超額，
+// 而這是 fail-closed 的護欄、不是可選功能；生產的組裝鏈固定注入（domains.go 的 mountAuth）。
+type seatGuard interface {
+	CheckLimit(ctx context.Context, companyID int, feature string, delta int) error
+}
 
 // AuthDeps 集中 AuthHandler 依賴。
 type AuthDeps struct {
@@ -46,6 +57,8 @@ type AuthDeps struct {
 	OAuth     *oauth2.Config
 	Exchanger auth.OAuthExchanger
 	Verifier  auth.OIDCVerifier
+	// Entitlements 為席位上限守衛（見 guardSeats）。
+	Entitlements seatGuard
 }
 
 // AuthHandler 實作 salesorder.v1.AuthService 與 OIDC 公開端點。
@@ -65,6 +78,44 @@ func (h *AuthHandler) SetOIDC(cfg *oauth2.Config, exchanger auth.OAuthExchanger,
 	h.deps.OAuth = cfg
 	h.deps.Exchanger = exchanger
 	h.deps.Verifier = verifier
+}
+
+// guardSeats 在**建立 users 列之前**檢查席位上限（席位＝該公司所有非 inactive 帳號，
+// 見 internal/services/counters.go）。AuthHandler 有兩條會新增 users 列的路徑：
+// OIDC 首次登入（hd 對應公司 → 直接建 guest）與 RegisterComplete 的 registration-token 分支
+// （建 guest）。兩者都不需要管理權，漏了守衛就是「員工用公司網域的 Google 帳號首次登入即靜默
+// 超額佔席位」，而席位的超額正是這條路徑造成的。
+//
+// 公司由呼叫端明示帶入：這些是**無租戶身分**的系統路徑（見 systemScope），不能像業務服務那樣
+// 由身分推導公司，故走 services.GuardQuotaForCompany（與 guardQuota 同一份實作）。
+//
+// 未注入守衛（nil）→ **一律拒絕**：漏注入等於無守衛，而這是 fail-closed 的護欄不是可選功能；
+// 生產的組裝鏈固定注入（domains.go 的 mountAuth），所以 nil 只可能來自組裝漏掉。
+func (h *AuthHandler) guardSeats(ctx context.Context, companyID int) error {
+	if h.deps.Entitlements == nil {
+		return errcode.SysInternal.Wrap(errors.New("auth: 未注入席位守衛（AuthDeps.Entitlements）"))
+	}
+	return services.GuardQuotaForCompany(ctx, h.deps.Entitlements, companyID, entitlements.LimitSeats, 1)
+}
+
+// errCodeID 取 errcode 註冊碼（例 PLAT-5001）。OIDC 是 HTTP redirect，沒有 ErrorInfo 通道
+// （見 redirectError），只能把碼放進 query 由前端查表顯示可行動訊息
+// （frontend/src/lib/errcode.ts 的碼 → 訊息對照）；取不到碼一律當系統錯誤。
+func errCodeID(err error) string {
+	ce, ok := err.(*connect.Error)
+	if !ok {
+		return errcode.SysInternal.ID()
+	}
+	for _, d := range ce.Details() {
+		v, derr := d.Value()
+		if derr != nil {
+			continue
+		}
+		if info, ok := v.(*v1.ErrorInfo); ok {
+			return info.GetCode()
+		}
+	}
+	return errcode.SysInternal.ID()
 }
 
 // ---------------------------------------------------------------------------
@@ -327,6 +378,11 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 			h.issueRegistration(w, r, id, client)
 			return
 		}
+		// 席位守衛：這條路徑會新增 users 列（＝佔一個席位），且不需要管理權。
+		if gerr := h.guardSeats(r.Context(), co.ID); gerr != nil {
+			h.redirectError(w, r, errCodeID(gerr))
+			return
+		}
 		name := id.Name
 		if name == "" {
 			name = emailLocalPart(id.Email)
@@ -485,6 +541,11 @@ func (h *AuthHandler) registerWithToken(ctx context.Context, token, name string,
 	}
 	if !ok {
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("註冊憑證無效或已過期,請重新以 Google 登入"))
+	}
+	// 席位守衛：這條路徑會新增 users 列（＝佔一個席位），公司由請求帶入但已在上游驗證
+	// （RegisterComplete 先確認公司存在、未軟刪除且啟用）；此處仍不採身分推導（無身分）。
+	if err := h.guardSeats(ctx, companyID); err != nil {
+		return nil, err
 	}
 	// 去重與建帳號同一條系統交易(未登入路徑;users 受 RLS 約束,見 systemScope)。
 	if err := h.systemScope(ctx, func(ctx context.Context) error {

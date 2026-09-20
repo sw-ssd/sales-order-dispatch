@@ -420,6 +420,9 @@ func newCoreHTTPServer(t *testing.T, client *ent.Client, cfg *config.Config, kv 
 		Lockout:  auth.NewLoginLock(kv),
 		OneTime:  auth.NewOneTimeStore(kv),
 		Sessions: sessions,
+		// 席位守衛（本檔驗 RLS 與身分路徑，不驗配額）：Unlimited 等同不受配額限制，
+		// 與注入前語意相同（nil 是 fail-closed，會擋住 OIDC／註冊的建帳號）。
+		Entitlements: entitlements.Unlimited(),
 	})
 	apiMux := http.NewServeMux()
 	authPath, authConnectHandler := salesorderv1connect.NewAuthServiceHandler(authHandler, dbtenant.HandlerOption(client))

@@ -66,20 +66,24 @@ func (s *Server) mountAuth() {
 	sessions := auth.WebSessionManager(auth.NewSessionStore(kv),
 		s.cfg.Auth.SessionLifetime, s.cfg.Auth.SessionSecure, s.cfg.Auth.SessionSameSite)
 
+	// 權益守衛（平台域）先建立再掛載業務服務與 auth handler：建構子要求表態，漏掛即編譯失敗；
+	// auth handler 的兩條建帳號路徑（OIDC 首次登入、RegisterComplete）也吃它做席位守衛，
+	// 漏注入會在執行期 fail-closed 擋住註冊（見 handlers.guardSeats），故此處必須先建立。
+	entSvc := s.mountEntitlements(entClient)
+
 	h := handlers.NewAuthHandler(handlers.AuthDeps{
-		Cfg:      s.cfg,
-		DB:       entClient,
-		Tokens:   tokens,
-		Lockout:  lockout,
-		OneTime:  oneTime,
-		Sessions: sessions,
+		Cfg:          s.cfg,
+		DB:           entClient,
+		Tokens:       tokens,
+		Lockout:      lockout,
+		OneTime:      oneTime,
+		Sessions:     sessions,
+		Entitlements: entSvc,
 	})
 
 	// /api/v1 底下所有 Connect-RPC 共用一個 ServeMux:connect 產生的 handler 依
 	// r.URL.Path 全路徑分派,掛載時剝除 /api/v1 前綴(與 RegisterCompanyServices 慣例一致)。
 	// LoadAndSave + authzMiddleware 包在最外層:session 身分 → authz.Identity/RLS ctx(T14 Step 4)。
-	// 權益守衛（平台域）先建立再掛載四個業務服務：建構子要求表態，漏掛即編譯失敗。
-	entSvc := s.mountEntitlements(entClient)
 	apiMux := http.NewServeMux()
 	authPath, authHandler := salesorderv1connect.NewAuthServiceHandler(h, connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(entClient)))
 	apiMux.Handle(authPath, authHandler)

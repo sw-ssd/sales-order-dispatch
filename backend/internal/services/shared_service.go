@@ -53,6 +53,20 @@ func guardQuota(ctx context.Context, ent entitlementChecker, targetCompanyID int
 	if own, err := parseID(id.CompanyID); err == nil {
 		companyID = own
 	}
+	return GuardQuotaForCompany(ctx, ent, companyID, feature, delta)
+}
+
+// GuardQuotaForCompany 為**無租戶身分**路徑的配額守衛入口（今日：auth handler 的 OIDC 首次登入
+// 建 guest 與 RegisterComplete 的 registration-token 分支，兩者都在建立 users 列之前呼叫）。
+//
+// 為什麼需要第二個入口：那些路徑還沒有身分（或身分沒有租戶範圍 —— 見 auth_handler 的
+// systemScope），不能用 guardQuota 的「公司 id 一律來自身分」，只能由呼叫端帶入**已驗證過的
+// 目標公司**。它與 guardQuota 共用同一份 CheckLimit 呼叫，差別只在公司怎麼來：
+// 身分推導（guardQuota）vs 呼叫端明示（本函式）。
+//
+// 不在此判斷身分（含平台層逃生門）：這些路徑本來就沒有平台層身分，而判定層必須與身分無關。
+// 錯誤原封不動往上傳（PLAT-3001／5002／5001 與 details），由呼叫端決定對外形式。
+func GuardQuotaForCompany(ctx context.Context, ent entitlementChecker, companyID int, feature string, delta int) error {
 	return ent.CheckLimit(ctx, companyID, feature, delta)
 }
 

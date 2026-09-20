@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -23,6 +24,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
+	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 )
@@ -47,17 +50,38 @@ func (f *fakeExchanger) Exchange(_ context.Context, _ string) (string, error) {
 	return f.raw, f.err
 }
 
+// fakeSeatGuard 為席位守衛的測試替身：記錄以哪個公司／feature 查過，並依設定回錯
+// （nil＝未達上限）。用替身而非真品，是因為本套件要驗的是「**有沒有在建立 users 列之前查**」
+// 與「被擋時回哪個碼」，計數正確性屬 internal/services 的測試範圍。
+type fakeSeatGuard struct {
+	calls []string // "companyID feature delta"
+	err   error
+}
+
+func (f *fakeSeatGuard) CheckLimit(_ context.Context, companyID int, feature string, delta int) error {
+	f.calls = append(f.calls, fmt.Sprintf("%d %s %d", companyID, feature, delta))
+	return f.err
+}
+
+// seatLimitExceeded 為「已達席位上限」的守衛回應（PLAT-5001，帶 details；與 CheckLimit 同碼）。
+func seatLimitExceeded() error {
+	return errcode.PlatformLimitExceeded.Error(map[string]string{
+		"feature": entitlements.LimitSeats, "used": "10", "limit": "10",
+	})
+}
+
 // testEnv 組裝 handlers 測試環境(enttest sqlite + MemoryStore + fake OIDC)。
 type testEnv struct {
-	ctx      context.Context
-	db       *ent.Client
-	kv       *auth.MemoryStore
-	tokens   *auth.TokenManager
-	handler  *AuthHandler
-	sessions *scs.SessionManager
-	verifier *fakeVerifier
-	exch     *fakeExchanger
-	rpc      salesorderv1connect.AuthServiceClient
+	ctx       context.Context
+	db        *ent.Client
+	kv        *auth.MemoryStore
+	tokens    *auth.TokenManager
+	handler   *AuthHandler
+	sessions  *scs.SessionManager
+	verifier  *fakeVerifier
+	exch      *fakeExchanger
+	rpc       salesorderv1connect.AuthServiceClient
+	seatGuard *fakeSeatGuard
 }
 
 func newTestEnv(t *testing.T) *testEnv {
@@ -76,8 +100,10 @@ func newTestEnv(t *testing.T) *testEnv {
 
 	verifier := &fakeVerifier{id: &auth.OIDCIdentity{Email: "emp@example.com", Name: "張三", HostedDomain: "example.com"}}
 	exch := &fakeExchanger{raw: "fake-id-token"}
+	seatGuard := &fakeSeatGuard{}
 	h := NewAuthHandler(AuthDeps{
 		Cfg: cfg, DB: db, Tokens: tokens, Lockout: lockout, OneTime: oneTime, Sessions: sessions,
+		Entitlements: seatGuard,
 	})
 	h.SetOIDC(auth.NewGoogleOAuthConfig("cid", "csec", "http://localhost:3080/api/v1/auth/google/callback"), exch, verifier)
 
@@ -92,6 +118,7 @@ func newTestEnv(t *testing.T) *testEnv {
 	return &testEnv{
 		ctx: context.Background(), db: db, kv: kv, tokens: tokens,
 		handler: h, sessions: sessions, verifier: verifier, exch: exch, rpc: rpc,
+		seatGuard: seatGuard,
 	}
 }
 
@@ -384,6 +411,9 @@ func newIdentifiedAuthClientWithDB(t *testing.T, db *ent.Client, id authz.Identi
 	h := NewAuthHandler(AuthDeps{
 		DB: db, Tokens: auth.NewTokenManager("test-secret", kv, db),
 		Lockout: auth.NewLoginLock(kv), OneTime: auth.NewOneTimeStore(kv), Sessions: sessions,
+		// 本環境只驗密碼路徑（不建帳號）；席位守衛注入 Unlimited 等同「不受配額限制」，
+		// 語意與注入前相同（AuthDeps.Entitlements 為 nil 時是 fail-closed：不注入會擋住建帳號）。
+		Entitlements: entitlements.Unlimited(),
 	})
 	// 與生產一致(internal/server/domains.go:70)掛上 dbtenant.HandlerOption:請求層租戶交易是
 	// A3 密碼路徑的必要條件(auth_password.go 以 dbtenant.TxFrom 取請求交易;缺它 → internal 錯誤)。
@@ -626,4 +656,149 @@ func TestResetCustomerPasswordNonCustomer(t *testing.T) {
 	if _, err := client.ResetCustomerPassword(ctx, connect.NewRequest(&v1.ResetCustomerPasswordRequest{UserId: strconv.Itoa(emp)})); connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Fatalf("目標非客戶應 invalid_argument,got %v", err)
 	}
+}
+
+// ---------------------------------------------------------------------------
+// F-2（最終全分支審查）：席位上線的**未守衛建帳號路徑**
+
+// 席位＝該公司所有非 inactive 的 users 列（internal/services/counters.go），但只有 6 個寫入
+// RPC 與 UpdateUser 復原掛了守衛。以下兩條會新增 users 列的路徑**原本不受任何檢查**：
+//   - OIDC 首次登入（hd 對應公司 → 直接建 guest，status=active）；
+//   - RegisterComplete 的 registration-token 分支（建 guest，status=pending）。
+// 兩者都不需要管理權，員工用公司網域的 Google 帳號首次登入就能靜默超額佔席位。
+//
+// 驗收：達上限 → 被擋（PLAT-5001 對外碼）且**不落 users 列**；未達上限 → 照常成功。
+
+// TestCallbackGuestCreationChecksSeatLimit：OIDC 首次登入建 guest 前必須先檢查席位。
+func TestCallbackGuestCreationChecksSeatLimit(t *testing.T) {
+	t.Run("未達上限：照常建 guest 並登入", func(t *testing.T) {
+		e := newTestEnv(t)
+		coID := mustCreateCompany(t, e, "example.com") // hd 對應公司 → 直接建 guest
+
+		state := "state-seat-ok"
+		if err := e.handler.deps.OneTime.Put(e.ctx, auth.StateKey(state), "1", time.Minute); err != nil {
+			t.Fatalf("寫入 state: %v", err)
+		}
+		rec := e.callback(t, state, "")
+		if rec.Code != http.StatusFound {
+			t.Fatalf("callback 應 302,got %d", rec.Code)
+		}
+		if loc := rec.Header().Get("Location"); loc != "http://localhost:3000/" {
+			t.Fatalf("未達上限時應完成登入回跳首頁,got %q", loc)
+		}
+		u, err := e.db.User.Query().Where(user.EmailEQ("emp@example.com")).Only(e.ctx)
+		if err != nil {
+			t.Fatalf("未達上限時應建立 guest: %v", err)
+		}
+		if u.Role != RoleGuest || u.Status != user.StatusActive {
+			t.Fatalf("guest 應為 active: role=%q status=%q", u.Role, u.Status)
+		}
+		want := strconv.Itoa(coID) + " " + entitlements.LimitSeats + " 1"
+		if got := e.seatGuard.calls; len(got) != 1 || got[0] != want {
+			t.Fatalf("應以 hd 對應的公司查一次席位（%q）,got %v", want, got)
+		}
+	})
+
+	t.Run("達上限：不得建 users 列，回跳帶 PLAT-5001", func(t *testing.T) {
+		e := newTestEnv(t)
+		coID := mustCreateCompany(t, e, "example.com")
+		e.seatGuard.err = seatLimitExceeded()
+
+		state := "state-seat-blocked"
+		if err := e.handler.deps.OneTime.Put(e.ctx, auth.StateKey(state), "1", time.Minute); err != nil {
+			t.Fatalf("寫入 state: %v", err)
+		}
+		rec := e.callback(t, state, "")
+		if rec.Code != http.StatusFound {
+			t.Fatalf("callback 應 302（回跳登入頁）,got %d", rec.Code)
+		}
+		// OIDC 是 HTTP redirect，沒有 ErrorInfo 通道 → 碼放進 query 供前端查表顯示訊息
+		// （frontend/src/lib/errcode.ts 的 PLAT-5001＝「已達方案上限（…），請升級方案」）。
+		if loc := rec.Header().Get("Location"); !strings.Contains(loc, "error=PLAT-5001") {
+			t.Fatalf("被擋時應回跳 login?error=PLAT-5001,got %q", loc)
+		}
+		if n := e.db.User.Query().Where(user.EmailEQ("emp@example.com")).CountX(e.ctx); n != 0 {
+			t.Fatalf("達上限時不得建立 users 列（席位就是這個路徑超額的）,count=%d", n)
+		}
+		want := strconv.Itoa(coID) + " " + entitlements.LimitSeats + " 1"
+		if got := e.seatGuard.calls; len(got) != 1 || got[0] != want {
+			t.Fatalf("應以 hd 對應的公司查一次席位（%q）,got %v", want, got)
+		}
+	})
+
+	t.Run("未注入守衛：fail-closed（漏注入＝無守衛）", func(t *testing.T) {
+		e := newTestEnv(t)
+		mustCreateCompany(t, e, "example.com")
+		e.handler.deps.Entitlements = nil
+
+		state := "state-no-guard"
+		if err := e.handler.deps.OneTime.Put(e.ctx, auth.StateKey(state), "1", time.Minute); err != nil {
+			t.Fatalf("寫入 state: %v", err)
+		}
+		rec := e.callback(t, state, "")
+		if loc := rec.Header().Get("Location"); strings.Contains(loc, "http://localhost:3000/") && !strings.Contains(loc, "error=") {
+			t.Fatalf("未注入守衛時不得放行建帳號,got %q", loc)
+		}
+		if n := e.db.User.Query().Where(user.EmailEQ("emp@example.com")).CountX(e.ctx); n != 0 {
+			t.Fatalf("未注入守衛時不得建立 users 列,count=%d", n)
+		}
+	})
+}
+
+// TestRegisterCompleteChecksSeatLimit：registration-token 分支建 guest 前必須先檢查席位。
+func TestRegisterCompleteChecksSeatLimit(t *testing.T) {
+	newRegisterToken := func(t *testing.T, e *testEnv, email string) string {
+		t.Helper()
+		token, err := auth.NewRegistrationToken()
+		if err != nil {
+			t.Fatalf("NewRegistrationToken: %v", err)
+		}
+		if err := e.handler.deps.OneTime.Put(e.ctx, auth.RegistrationKey(token), email, time.Minute); err != nil {
+			t.Fatalf("寫入 registration token: %v", err)
+		}
+		return token
+	}
+
+	t.Run("未達上限：照常建 guest（pending）", func(t *testing.T) {
+		e := newTestEnv(t)
+		coID := mustCreateCompany(t, e, "co-seat")
+		token := newRegisterToken(t, e, "new@other.example")
+
+		req := connect.NewRequest(&v1.RegisterCompleteRequest{CompanyId: itoa(coID), Name: "李四"})
+		req.Header().Set("Cookie", RegistrationTokenCookie+"="+token)
+		if _, err := e.rpc.RegisterComplete(e.ctx, req); err != nil {
+			t.Fatalf("RegisterComplete: %v", err)
+		}
+		u, err := e.db.User.Query().Where(user.EmailEQ("new@other.example")).Only(e.ctx)
+		if err != nil {
+			t.Fatalf("未達上限時應建立 guest: %v", err)
+		}
+		if u.Role != RoleGuest || u.Status != user.StatusPending {
+			t.Fatalf("guest 應為 pending: role=%q status=%q", u.Role, u.Status)
+		}
+		want := strconv.Itoa(coID) + " " + entitlements.LimitSeats + " 1"
+		if got := e.seatGuard.calls; len(got) != 1 || got[0] != want {
+			t.Fatalf("應以所選公司查一次席位（%q）,got %v", want, got)
+		}
+	})
+
+	t.Run("達上限：不得建 users 列，回 PLAT-5001", func(t *testing.T) {
+		e := newTestEnv(t)
+		coID := mustCreateCompany(t, e, "co-seat")
+		e.seatGuard.err = seatLimitExceeded()
+		token := newRegisterToken(t, e, "new@other.example")
+
+		req := connect.NewRequest(&v1.RegisterCompleteRequest{CompanyId: itoa(coID), Name: "李四"})
+		req.Header().Set("Cookie", RegistrationTokenCookie+"="+token)
+		_, err := e.rpc.RegisterComplete(e.ctx, req)
+		if connect.CodeOf(err) != connect.CodeFailedPrecondition {
+			t.Fatalf("達席位上限應 failed_precondition,got %v", err)
+		}
+		if got := authErrorInfo(t, err).GetCode(); got != "PLAT-5001" {
+			t.Fatalf("ErrorInfo.code = %q；want PLAT-5001（前端據以導向升級方案）", got)
+		}
+		if n := e.db.User.Query().Where(user.EmailEQ("new@other.example")).CountX(e.ctx); n != 0 {
+			t.Fatalf("達上限時不得建立 users 列,count=%d", n)
+		}
+	})
 }

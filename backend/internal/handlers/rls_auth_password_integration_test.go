@@ -22,6 +22,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/handlers"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
@@ -236,6 +237,9 @@ func newAuthAppRoleServer(t *testing.T, client *ent.Client, id authz.Identity, s
 		Lockout:  auth.NewLoginLock(kv),
 		OneTime:  auth.NewOneTimeStore(kv),
 		Sessions: auth.WebSessionManager(memstore.New(), 24*time.Hour, false, "lax"),
+		// 本檔驗的是密碼重設路徑（不建帳號）：席位守衛注入 Unlimited 等同不受配額限制，
+		// 語意與注入前相同（nil 是 fail-closed，會擋住建帳號）。
+		Entitlements: entitlements.Unlimited(),
 	})
 	path, handler := salesorderv1connect.NewAuthServiceHandler(h, dbtenant.HandlerOption(client))
 	mux := http.NewServeMux()
