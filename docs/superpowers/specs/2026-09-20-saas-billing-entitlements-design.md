@@ -166,7 +166,7 @@ type Counter interface {
 **已知不一致（未解，歸屬 auth／spec 擁有者，Plan D 不單方面改）**：
 
 1. **公司停用的對外碼兩個路徑不同**：middleware 閘門（`internal/server/server.go` 的 `authzMiddleware`）回**裸 `unauthenticated`／HTTP 401**（`internal/server/server_test.go` 明文釘住 401，且該處註解說明「不刪 session、公司恢復後可續用」的設計），登入路徑則回 `AUTH-4002` `AuthCompanyInactive`／`permission_denied`／HTTP 403。選項：(a) 改閘門＋測試（動既有對外 HTTP 狀態與前端 401 處理）；(b) 另立一個 Unauthenticated 語意的公司停用碼（會把這個不一致固化成兩個碼）。**需 auth／spec 擁有者裁定**，不宜由文件對齊單方面決定。
-2. **`httpStatusForCode` 缺 `failed_precondition`**（`internal/server/server.go`）：middleware 閘門的 HTTP 狀態只映射 unauthenticated→401／permission_denied→403／invalid_argument→400，其餘（含 `failed_precondition`）**一律 500**，而 connect 規格是 **412**。故「首登受限」閘門（`AUTH-3004`）目前實際回 HTTP 500（碼與訊息正確，僅 HTTP 狀態不符規格）。改它會動既有對外 HTTP 狀態，故與上一項一併待裁定。
+2. **`httpStatusForCode` 的映射不完整**（`internal/server/server.go`）：middleware 閘門的 HTTP 狀態只映射 unauthenticated→401／permission_denied→403／invalid_argument→400，**其餘一律 500**。可查證的對照：Connect 規格（<https://connectrpc.com/docs/protocol>「Error codes」表）與 connect-go v1.21.0 的 `connectCodeToHTTP` 都把 `failed_precondition` 映射為 **400 Bad Request**（不是 412）。故「首登受限」閘門（`AUTH-3004`）目前實際回 **HTTP 500**，`not_found`（→404）／`already_exists`（→409）同樣落到 500。**碼與訊息正確，只有 HTTP 狀態不符**；改它會動既有對外 HTTP 狀態，故與上一項一併待裁定（RPC 路徑不受影響：那條走 connect-go 自己的映射）。
 
 ### 4.4 快取
 

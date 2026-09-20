@@ -37,6 +37,56 @@
 
 ---
 
+## Progress
+
+> 執行記錄與逐任務細節（含每次審查的判定、裁決與更正）見 `.superpowers/sdd/2026-09-20-error-codes-plan/progress.md`。狀態：**7/7 主任務完成**（＋ T3b；T5b 待 Plan B 落地），2026-09-20。下表依**實際執行順序**排列（T1 → T3 → T3b → T2 → T4 → T5 → T6 → T7，理由見「執行期間的計畫更正」第 1 項）。
+
+| # | 任務 | 狀態 | 產出（commit） | 驗證 |
+|---|---|---|---|---|
+| 1 | `ErrorInfo` proto 與三端生成 | ✅ | `526142b` | 三語言執行期往返皆 62 bytes、重跑生成零 diff |
+| 3 | `trace_id` interceptor（15 個生產掛載點） | ✅ | `0e3816b`＋`40a41c7` | `go test ./internal/obs/...`、掛載回歸 25 PASS（log 出現 `rpc: … trace_id=…`） |
+| 3b | 回應邊界為帶 `ErrorInfo` 的錯誤補 `trace_id` | ✅ | `5905f40` | 跨網路 `TestErrorInfoTraceIdReachesClient` 7 子測；**實測：就地修改不可行，必須重建** |
+| 2 | `internal/errcode` registry 與首批碼 | ✅ | `3e095fe`＋`28a6d4e`＋`d2a254f` | 21 碼逐條落在區段允許集合、五項啟動驗證（含零值與前綴 panic）、`go list -deps` 證明葉節點 |
+| 4 | `toConnectError` 改走 registry | ✅ | `943118d`＋`7c1ee8d` | 6 分支表驅動＋訊息外洩／根因落 log 斷言；Plan A 四支整合探針全 PASS（含 42501 遮蔽） |
+| 5 | 首批碼落地（auth／權限／樣板域）＋閘門 | ✅ | `374f7ff`＋`c78ff64`／`a52339a`／`2a42db0`／`9003c5e` | P0-5 跨網路驗收 `TestIntegrationErrorInfoReachesClient` PASS；`writeConnectError` 改帶 `ErrorInfo`＋trace_id |
+| 6 | 基線守門、碼表與三端常數產生 | ✅ | `b52e3d6`／`4665c36`／`0a0f72b`／`c8af1c7`＋`9a53850`／`17bfb8c` | 三種 RED 齊備；`go generate` 連跑零 diff；CI 漂移與未 commit 產物皆擋下（exit=1） |
+| 7 | 慣例與跨文件對齊 | ✅ | `faf0b4c`＋`c0af568`＋本表所在 commit | `git diff --stat` 僅文件；數字全數以指令重驗（見下） |
+| 5b | `PLAT-*` 四碼落地（entitlements／billing） | ⬜ 待 Plan B 落地 | — | Plan B／C 已標明碼與落點（見「未結項」第 3 項、Plan B Task 4／Task 6 與 Plan C Task 4／Task 5／Task 9 的註記） |
+
+**現況數字（以程式與產生檔為準，勿抄舊稿）**：碼 **21** 個（SYS 7／AUTH 7／PLAT 4／CUST 3）＝ `docs/error-codes.md`；基線 **98 行／233 呼叫點**＝ `wc -l internal/services/errcode_baseline.txt` 與該檔筆數欄之和；**已落點 14 碼**（`AUTH-3002/3003/3004/4001/4002/4003`、`CUST-1001`、`SYS-1001/2001/3001/3002/4001/4002/9000`）。
+
+### 執行期間的計畫更正（已寫回內文）
+
+| # | 更正 | 理由 |
+|---|---|---|
+| 1 | 執行順序改為 **T1 → T3 → T2 → T4…** | `code.go` 原本硬相依 `requestid`（T3 產物） |
+| 2 | **`trace_id` 改由邊界補**（不再是 `Error(ctx)`） | 省下 176 處呼叫點的機械改動；`SYS-9000` 樣板移除 `{trace}`，消除「缺參數外洩字面 `{trace}`」整類問題 |
+| 3 | 首批碼 **18 → 20 → 21** | T4 前置補 `SYS-3001`／`SYS-3002`（保住 Plan A T11 的 42501 語意）；T5 收尾新增 `AUTH-3004`（首登閘門） |
+| 4 | `AUTH-1001`／`AUTH-1002` → **`AUTH-4003`／`AUTH-3003`** | 原 ID 落在 `1xxx`（只允許 `InvalidArgument`）→ 照抄會在 init panic |
+| 5 | 基線估算 **282 處 → 98 行／233 呼叫點** | T6 的實際掃描才是真相；`grep` 的粒度含行號，與守門鍵不同 |
+| 6 | T5 拆為 **T5（可執行）＋ T5b（延後）** | `internal/platform/**` 是 Plan B／C 產物，執行時不存在 |
+| 7 | 守門鍵改 **`path:歸屬名:筆數`** | 「同函式新增第二個未註冊呼叫」原本不會被擋（61% 基線鍵屬此類） |
+
+### 未結項（deferred：具名、現況、選項、歸屬）
+
+1. **公司停用閘門的對外碼不一致**（歸屬：**auth／spec 擁有者**，Plan D 不單方面改）
+   - 現況：middleware 閘門（`internal/server/server.go` 的 `authzMiddleware`）回**裸 `unauthenticated`／HTTP 401**，`server_test.go` 明文釘住 401，且該處註解說明「不刪 session、公司恢復後可續用」；登入路徑則回 `AUTH-4002` `AuthCompanyInactive`／`permission_denied`／HTTP 403。
+   - 選項：(a) 改閘門＋測試（動既有對外 HTTP 狀態與前端 401 處理）；(b) 另立一個 Unauthenticated 語意的公司停用碼（會把不一致固化成兩個碼）。
+   - 已寫進 spec §4.3「已知不一致」。**現況更正**：該閘門回的是**裸 connect 錯誤**（不帶 `ErrorInfo`）→ 回應 body 只有 `code`／`message`，**沒有** `details`／`trace_id`（`requestid.Stamp` 只為帶 `ErrorInfo` 的錯誤補 trace_id）。
+2. **`httpStatusForCode` 的映射不完整**（歸屬：**auth／spec 擁有者**，與上項一併裁定）
+   - 現況：`internal/server/server.go` 只映射 unauthenticated→401／permission_denied→403／invalid_argument→400，其餘**一律 500**；故「首登受限」閘門（`AUTH-3004`）實際回 **HTTP 500**，`not_found`／`already_exists` 亦同。碼與訊息正確，僅 HTTP 狀態不符。
+   - **規格值可查證**：Connect 規格（<https://connectrpc.com/docs/protocol>「Error codes」表）與 connect-go v1.21.0 的 `connectCodeToHTTP`（`protocol_connect.go`）都把 `failed_precondition` 映射為 **400**（**不是 412**——原 T5 註記的 412 與規格不符，以規格與 connect-go 為準）；`not_found`→404、`already_exists`→409。
+   - 選項：補完對照表（會動既有對外 HTTP 狀態，需前端同步確認）；或維持現狀並在 spec 明載。
+3. **未落點的已註冊碼**（歸屬見各項）
+   - `AUTH-3001` `AuthRegistrationRequired`：**無語意相符且可達的路徑**（OIDC callback 是 redirect 而非錯誤；`completeGuest` 非 guest 分支語意相反；`subjectFromUser` 的未歸屬公司分支是 FK 不可能出現的防禦分支）→ 歸屬 **auth 流程**（identity-access）；正解是新增碼而非借用，故本計畫保留不落點。
+   - `CUST-2001` `CustomerCodeExists`／`CUST-3001` `CustomerDeleted`：**編號由 counter 自動取號**（無「已存在」前置檢查，真撞號只會是 constraint → `SYS-3002`）；已刪除者以 `DeletedAtIsNil` 過濾 → 一律收斂為 `SYS-4002`，這是 Plan A 刻意的 anti-oracle 設計。**保留不落點**，理由已寫在 `codes_customer.go` 的註解；長期不用應考慮標 deprecated（碼不得重用或改義）。
+   - `PLAT-*` ×4：**全部未落點**，落地點見 Task 5b（Plan B／C 已標明各碼與應在哪裡用）。
+4. **`platform-console/src/lib/errcode.ts`**（歸屬：**Plan C**）
+   - 現況：目錄尚不存在 → 產生器跳過並印提示（no-op）；CI 的「Error codes up to date」已把該路徑列入檢查，Plan C 一落地就會自動產生並要求 commit。
+   - 已寫進 Plan C Task 14 的 §11 慣例追加（第 14 條）。
+
+---
+
 ## File Structure
 
 | 路徑 | 職責 |
