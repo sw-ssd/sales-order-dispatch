@@ -66,28 +66,37 @@ const tenantFilter = `
 // 服務層一處,免得兩個地方各有一套(改了一邊就會出現「第 0 頁」這種查詢)。
 func (s *Admin) ListTenants(ctx context.Context, keyword, status string, page, pageSize int32) ([]store.TenantRow, int, error) {
 	pattern := likeContains(keyword)
-	var total int
-	if err := s.db.QueryRowContext(ctx, `SELECT count(*)`+tenantJoins+tenantFilter,
-		keyword, pattern, status).Scan(&total); err != nil {
-		return nil, 0, err
-	}
-	rows, err := s.db.QueryContext(ctx, tenantCols+tenantJoins+tenantFilter+`
+	var (
+		out   []store.TenantRow
+		total int
+	)
+	err := s.withSystemScope(ctx, func(tx *sql.Tx) error {
+		if err := tx.QueryRowContext(ctx, `SELECT count(*)`+tenantJoins+tenantFilter,
+			keyword, pattern, status).Scan(&total); err != nil {
+			return err
+		}
+		rows, err := tx.QueryContext(ctx, tenantCols+tenantJoins+tenantFilter+`
 	 ORDER BY c.id
 	 LIMIT $4 OFFSET $5`, keyword, pattern, status, pageSize, (page-1)*pageSize)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = rows.Close() }()
+
+		out = make([]store.TenantRow, 0, pageSize)
+		for rows.Next() {
+			row, err := scanTenant(rows)
+			if err != nil {
+				return err
+			}
+			out = append(out, row)
+		}
+		return rows.Err()
+	})
 	if err != nil {
 		return nil, 0, err
 	}
-	defer func() { _ = rows.Close() }()
-
-	out := make([]store.TenantRow, 0, pageSize)
-	for rows.Next() {
-		row, err := scanTenant(rows)
-		if err != nil {
-			return nil, 0, err
-		}
-		out = append(out, row)
-	}
-	return out, total, rows.Err()
+	return out, total, nil
 }
 
 // GetTenant 取單一租戶的概況與其未撤銷的例外;公司不存在(或已軟刪除)回 store.ErrNotFound。
@@ -99,25 +108,58 @@ func (s *Admin) GetTenant(ctx context.Context, companyID string) (*store.TenantR
 	if err != nil {
 		return nil, nil, err
 	}
-	row := s.db.QueryRowContext(ctx, tenantCols+tenantJoins+`
+	var (
+		tenant    store.TenantRow
+		overrides []store.TenantOverrideRow
+	)
+	err = s.withSystemScope(ctx, func(tx *sql.Tx) error {
+		row := tx.QueryRowContext(ctx, tenantCols+tenantJoins+`
 	 WHERE c.id = $1 AND c.deleted_at IS NULL`, id)
-	tenant, err := scanTenant(row)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil, store.ErrNotFound
-	}
-	if err != nil {
-		return nil, nil, err
-	}
-	overrides, err := s.tenantOverrides(ctx, id)
+		tenant, err = scanTenant(row)
+		if errors.Is(err, sql.ErrNoRows) {
+			return store.ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		overrides, err = tenantOverrides(ctx, tx, id)
+		return err
+	})
 	if err != nil {
 		return nil, nil, err
 	}
 	return &tenant, overrides, nil
 }
 
+// withSystemScope 在系統範圍(scope=all)的交易內執行 fn。
+//
+// companies 已 ENABLE ＋ FORCE RLS(00028),而 FORCE **讓 table owner 也受 policy 約束**
+// (00025/00028 檔頭:生產的 owner 不是 superuser)→ 連 admin(owner)連線都必須先
+// `SET LOCAL app.current_data_scope = 'all'` 才讀得到跨租戶的公司列。少了這一層的失效模式
+// 不報錯、只是**靜默回 0 列** —— console 顯示「沒有任何租戶」,而 migration 檔頭點名的正是這件事。
+//
+// 為什麼是交易而非 session 級 SET:連線池的 session 會被下一個請求重用,殘留的 scope=all
+// 會讓租戶請求讀到全庫。交易結束即失效是唯一安全的範圍。platform schema 本身不套 RLS,
+// 故只有「讀業務表」的查詢包在這裡。
+func (s *Admin) withSystemScope(ctx context.Context, fn func(*sql.Tx) error) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	// commit 後 Rollback 回 ErrTxDone(no-op);失敗路徑一律回滾,沒有殘留的 scope=all 連線。
+	defer func() { _ = tx.Rollback() }()
+	if _, err := tx.ExecContext(ctx, `SET LOCAL app.current_data_scope = 'all'`); err != nil {
+		return err
+	}
+	if err := fn(tx); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
 // tenantOverrides 取某公司未撤銷的例外(已到期者照樣回傳;到期與否由判定層／UI 判斷)。
-func (s *Admin) tenantOverrides(ctx context.Context, companyID int64) ([]store.TenantOverrideRow, error) {
-	rows, err := s.db.QueryContext(ctx, `
+func tenantOverrides(ctx context.Context, q queryer, companyID int64) ([]store.TenantOverrideRow, error) {
+	rows, err := q.QueryContext(ctx, `
 		SELECT id, feature_code, enabled, limit_value, reason, owner, expires_at
 		  FROM platform.tenant_overrides
 		 WHERE company_id = $1 AND revoked_at IS NULL
@@ -369,6 +411,12 @@ func scanTenant(sc rowScanner) (store.TenantRow, error) {
 // rowScanner 為 *sql.Row 與 *sql.Rows 的共用面(兩者的 Scan 形狀相同)。
 type rowScanner interface {
 	Scan(dest ...any) error
+}
+
+// queryer 為 *sql.DB 與 *sql.Tx 的共用面:同一個查詢在交易內外都要能跑(例外查詢在
+// withSystemScope 的交易內執行,因為它與租戶概況必須是同一個快照)。
+type queryer interface {
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
 }
 
 // likeContains 把使用者輸入轉為 ILIKE 的「包含」樣式,並跳脫 LIKE 的萬用字元。

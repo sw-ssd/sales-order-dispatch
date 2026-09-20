@@ -176,16 +176,16 @@ func TestPlatformAdminRejectsInvalidArguments(t *testing.T) {
 	ctx := operatorauth.WithIdentity(context.Background(),
 		operatorauth.Identity{OperatorID: 1, Email: "ops@example.com", Role: "admin"})
 
-	tests := map[string]func() error{
-		"company_id 非數字": func() error {
+	tests := map[string]func(svc *PlatformAdminService) error{
+		"company_id 非數字": func(svc *PlatformAdminService) error {
 			_, err := svc.GetTenant(ctx, connect.NewRequest(&platformv1.GetTenantRequest{CompanyId: "abc"}))
 			return err
 		},
-		"company_id 為空": func() error {
+		"company_id 為空": func(svc *PlatformAdminService) error {
 			_, err := svc.GetTenant(ctx, connect.NewRequest(&platformv1.GetTenantRequest{}))
 			return err
 		},
-		"plan_code 為空": func() error {
+		"plan_code 為空": func(svc *PlatformAdminService) error {
 			_, err := svc.GetPlanEntitlements(ctx, connect.NewRequest(&platformv1.GetPlanEntitlementsRequest{}))
 			return err
 		},
@@ -195,7 +195,7 @@ func TestPlatformAdminRejectsInvalidArguments(t *testing.T) {
 			fake := platformAdminFixture()
 			svc := NewPlatformAdminService(fake)
 
-			err := call()
+			err := call(svc)
 			if connect.CodeOf(err) != connect.CodeInvalidArgument {
 				t.Fatalf("應回 InvalidArgument,got %v", err)
 			}
