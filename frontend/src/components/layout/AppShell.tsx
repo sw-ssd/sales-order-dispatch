@@ -1,6 +1,7 @@
 import { Splitter, type SplitterPanelData, type SplitterResizeDetails } from "@ark-ui/solid";
 import { useRouterState } from "@tanstack/solid-router";
 import { createEffect, createSignal, Show, type ParentProps } from "solid-js";
+import PlanBanner from "~/features/account/PlanBanner";
 import {
   SIDEBAR_WIDTH,
   SIDEBAR_WIDTH_ICON,
@@ -46,6 +47,8 @@ function ShellInset(props: ParentProps<{ pathname: string }>) {
   return (
     <SidebarInset class="h-dvh overflow-y-auto">
       <Topbar pathname={props.pathname} />
+      {/* 權益提示條：只在用量近上限或試用將到期時出現（其餘狀態渲染為空）。 */}
+      <PlanBanner />
       <div class="grow p-4 lg:p-6">{props.children}</div>
     </SidebarInset>
   );

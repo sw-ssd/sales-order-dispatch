@@ -7,6 +7,7 @@ import {
   RouterProvider,
 } from "@tanstack/solid-router";
 import App from "~/App";
+import AccountPage from "~/features/account/AccountPage";
 import LoginPage from "~/features/auth/pages/LoginPage";
 import ForbiddenPage from "~/features/auth/pages/ForbiddenPage";
 import CompaniesPage from "~/features/users/pages/CompaniesPage";
@@ -72,6 +73,18 @@ const rolesRoute = createRoute({
   beforeLoad: requireAbility("read", "role"),
 });
 
+/**
+ * 帳號／方案頁：租戶後台唯讀的權益卡片。
+ *
+ * 刻意的**沒有**能力守衛：`platform.*` 能力不得出現在租戶端（S11），而這張卡片誰看得到
+ * 由後端決定（`GetTenantEntitlements` 只回自己的公司、`requireAuth` 擋未登入），前端不代判。
+ */
+const accountRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/account",
+  component: AccountPage,
+});
+
 // 元件庫展示頁（`/ui`）：只在開發環境註冊。正式 build 時 `import.meta.env.DEV`
 // 被折成 false，整個分支——含動態 import 的 demo chunk——會被 tree-shake 掉。
 const devRoutes = import.meta.env.DEV
@@ -91,6 +104,7 @@ const routeTree = rootRoute.addChildren([
   companiesRoute,
   departmentsRoute,
   rolesRoute,
+  accountRoute,
   ...devRoutes,
 ]);
 

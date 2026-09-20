@@ -3,6 +3,7 @@ import type { LucideIcon } from "lucide-solid";
 import {
   Building2,
   ClipboardList,
+  CreditCard,
   Home,
   Network,
   Package,
@@ -27,7 +28,12 @@ import {
 } from "~/components/ui";
 
 /** 側邊欄可導向的路由：只列 router 實際註冊的路徑。 */
-export type NavRoute = "/" | "/users/companies" | "/users/departments" | "/users/roles";
+export type NavRoute =
+  | "/"
+  | "/users/companies"
+  | "/users/departments"
+  | "/users/roles"
+  | "/account";
 
 interface NavItem {
   label: string;
@@ -69,6 +75,12 @@ const NAV_SECTIONS: NavSection[] = [
       { label: "部門", icon: Network, to: "/users/departments" },
       { label: "角色權限", icon: ShieldCheck, to: "/users/roles" },
     ],
+  },
+  {
+    heading: "帳號",
+    // 租戶後台的訂閱資訊收在這裡（spec §2.4 規則 2）：頁面上是唯讀的方案與用量卡片，
+    // 需要提醒時由 shell 的 banner 提示。
+    items: [{ label: "帳號／方案", icon: CreditCard, to: "/account" }],
   },
 ];
 
