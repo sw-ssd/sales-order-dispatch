@@ -626,17 +626,25 @@ func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 		}
 	}
 	pastGrace := now.Add(-24 * time.Hour)
-	seedPeriod(seedSub(50, "active", "monthly", nil), 1, now.Add(-24*time.Hour))
-	seedPeriod(seedSub(51, "active", "monthly", nil), 3, now.Add(24*time.Hour))
-	seedPeriod(seedSub(52, "past_due", "yearly", &pastGrace), 1, now.Add(-24*time.Hour))
+	// 排程 fixture 的訂閱 id 逐一留存：PeriodsByStatus 只按狀態過濾（無租戶條件），
+	// 這裡的斷言一律針對自己的列，不用全表計數 —— 下一次新增 fixture 才不會又紅（F-1）。
+	dueSub := seedSub(50, "active", "monthly", nil)
+	seedPeriod(dueSub, 1, now.Add(-24*time.Hour))
+	futureSub := seedSub(51, "active", "monthly", nil)
+	seedPeriod(futureSub, 3, now.Add(24*time.Hour))
+	gracePastSub := seedSub(52, "past_due", "yearly", &pastGrace)
+	seedPeriod(gracePastSub, 1, now.Add(-24*time.Hour))
 	graceFuture := now.Add(24 * time.Hour)
-	seedPeriod(seedSub(53, "past_due", "yearly", &graceFuture), 1, now.Add(-24*time.Hour))
-	seedPeriod(seedSub(54, "past_due", "monthly", nil), 1, now.Add(-24*time.Hour))
+	graceFutureSub := seedSub(53, "past_due", "yearly", &graceFuture)
+	seedPeriod(graceFutureSub, 1, now.Add(-24*time.Hour))
+	noGraceSub := seedSub(54, "past_due", "monthly", nil)
+	seedPeriod(noGraceSub, 1, now.Add(-24*time.Hour))
 	cancelledSub := seedSub(55, "cancelled", "yearly", nil)
 	seedPeriod(cancelledSub, 1, now.Add(-24*time.Hour))
-	seedPeriod(seedSub(56, "cancelled", "monthly", nil), 1, now.Add(24*time.Hour))
+	cancelledFutureSub := seedSub(56, "cancelled", "monthly", nil)
+	seedPeriod(cancelledFutureSub, 1, now.Add(24*time.Hour))
 	trialingSub := seedSub(57, "trialing", "yearly", nil)
-	// 58／59：期末已過但當期已付款／已作廢 —— 逾期後才補繳的客戶不得被再次催收（C-1）。
+	// 58／59：期末已過但當期已付款／已作廢 —— 逾期後才繳清的客戶不得被再次催收（C-1）。
 	seedPeriod(seedSub(58, "active", "monthly", nil), 1, now.Add(-24*time.Hour), "paid")
 	seedPeriod(seedSub(59, "active", "monthly", nil), 1, now.Add(-24*time.Hour), "void")
 
@@ -713,15 +721,40 @@ func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 	if cur := currentPeriod(t, db, st, trialingSub); cur != nil {
 		t.Fatalf("沒有期別的訂閱應回 (nil, nil)（不是錯誤），got %+v", *cur)
 	}
+	// PeriodsByStatus 只按狀態過濾（沒有租戶／訂閱條件），而 fixture 會隨時間增加 ——
+	// 斷言必須只針對**本測試自己的**訂閱，不得假設全表只有一筆（F-1）。
 	paidList, err := st.PeriodsByStatus(ctx, "paid")
 	if err != nil {
 		t.Fatalf("PeriodsByStatus(paid): %v", err)
 	}
-	if len(paidList) != 1 || paidList[0].ID != opened.ID || paidList[0].Note != "短收 100 元" {
-		t.Fatalf("已付款清單應只含那一期（含 note），got %+v", paidList)
+	var mine []store.Period
+	for _, p := range paidList {
+		if p.SubscriptionID == subID {
+			mine = append(mine, p)
+		}
 	}
-	if open, err := st.PeriodsByStatus(ctx, "open"); err != nil || len(open) != 7 {
-		t.Fatalf("open 期別應為 fixture 的 7 期（42 那一期已付款），got %d err=%v", len(open), err)
+	if len(mine) != 1 || mine[0].ID != opened.ID || mine[0].Note != "短收 100 元" {
+		t.Fatalf("本訂閱（%d）已付款的期別應只有那一期（含 note），got %+v（全表 %d 筆）",
+			subID, mine, len(paidList))
+	}
+	// open 清單同樣只按狀態過濾：只斷言「排程 fixture 的那 7 期仍在」＋「42 已付款的那一期不在」
+	// —— 不用全表計數，新增 fixture 不會讓它失真（F-1）。
+	openList, err := st.PeriodsByStatus(ctx, "open")
+	if err != nil {
+		t.Fatalf("PeriodsByStatus(open): %v", err)
+	}
+	open := make(map[int64]bool, len(openList))
+	for _, p := range openList {
+		open[p.SubscriptionID] = true
+	}
+	for _, id := range []int64{dueSub, futureSub, gracePastSub, graceFutureSub,
+		noGraceSub, cancelledSub, cancelledFutureSub} {
+		if !open[id] {
+			t.Fatalf("排程 fixture 的訂閱 %d 應仍有一期 open，got %v", id, open)
+		}
+	}
+	if open[subID] {
+		t.Fatalf("42 已付款的那一期不得留在 open 清單，got %v", open)
 	}
 	price := withTx(t, db, func(tx *sql.Tx) (store.Price, error) {
 		return st.CurrentPriceTx(ctx, tx, planID, "monthly")

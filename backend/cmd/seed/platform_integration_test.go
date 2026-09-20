@@ -171,6 +171,13 @@ func TestIntegrationSeedPlatformOperatorEmailUnset(t *testing.T) {
 	ctx := t.Context()
 	cfg.SeedOperatorEmail = ""
 
+	// 00030 之後任何「完整遷移過」的庫都有 platform.settings，本測試驗的是**缺表**那條分支
+	// （未遷移的 DB：seed 必須印提示並繼續，不得中斷）—— 故先把表拿掉（F-2）。
+	// 遷移後的契約由 TestIntegrationSeedPlatformSettingsFromMigration 釘住。
+	if _, err := admin.Exec(`DROP TABLE IF EXISTS platform.settings`); err != nil {
+		t.Fatalf("移除 platform.settings（測缺表分支）：%v", err)
+	}
+
 	var logs strings.Builder
 	log.SetOutput(&logs)
 	t.Cleanup(func() { log.SetOutput(os.Stderr) })
@@ -210,6 +217,42 @@ func TestIntegrationSeedPlatformOperatorEmailUnset(t *testing.T) {
 	}
 	if n := seedCount(t, admin, `SELECT count(*) FROM platform.operators`); n != 1 {
 		t.Fatalf("重跑不得新增 operator，got %d 列", n)
+	}
+}
+
+// TestIntegrationSeedPlatformSettingsFromMigration 釘住 Task 3 的 00030 契約（此前只用人工容器
+// 驗過）：**完整遷移後** platform.settings 由 migration 建立（不是測試自己 CREATE 出來的）、
+// seed 寫入四鍵（G5 的系統 actor ＋ T7 的營運參數），且重跑 seed 逐字不推進任何一鍵的
+// updated_at（console 的「最後修改時間」）。
+func TestIntegrationSeedPlatformSettingsFromMigration(t *testing.T) {
+	admin, client, cfg := newPlatformSeedFixture(t)
+	ctx := t.Context()
+
+	// 表來自 migration：00030 之後必須存在（seed 不得靠自己建表才跑得動）。
+	if n := seedCount(t, admin, `SELECT count(*) FROM information_schema.tables
+		WHERE table_schema = 'platform' AND table_name = 'settings'`); n != 1 {
+		t.Fatal("00030 之後 platform.settings 必須由 migration 建立")
+	}
+
+	if err := SeedPlatform(ctx, admin, client, cfg); err != nil {
+		t.Fatalf("seed：%v", err)
+	}
+	assertPlatformSettings(t, admin, cfg)
+	// 四鍵齊備（值由上面的 helper 逐鍵比對；這裡把「哪四鍵」寫死，缺一鍵 T7 的排程讀不到參數）。
+	settings := seedMap(t, admin, `SELECT key, value FROM platform.settings`)
+	for _, key := range []string{"system_actor_user_id", "trial_days", "grace_days", "lead_days"} {
+		if _, ok := settings[key]; !ok {
+			t.Fatalf("settings 缺少 %q（G5／T7 的排程參數），got %v", key, settings)
+		}
+	}
+
+	// 重跑：值未變 → 四鍵的 updated_at 逐字不變（任一鍵被推進都代表 seed 每次都在覆寫）。
+	before := seedMap(t, admin, `SELECT key, updated_at::text FROM platform.settings`)
+	if err := SeedPlatform(ctx, admin, client, cfg); err != nil {
+		t.Fatalf("重跑 seed（冪等）：%v", err)
+	}
+	if after := seedMap(t, admin, `SELECT key, updated_at::text FROM platform.settings`); !maps.Equal(after, before) {
+		t.Fatalf("值未變時重跑 seed 不得推進 updated_at：\n前 %v\n後 %v", before, after)
 	}
 }
 
