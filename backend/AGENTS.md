@@ -145,11 +145,11 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
 3. **區段規則是硬規則**：`1xxx`→`InvalidArgument`／`2xxx`→`AlreadyExists`／`3xxx`→`FailedPrecondition`／`4xxx`→`{PermissionDenied, Unauthenticated, NotFound}`／`5xxx`→`FailedPrecondition`／`9xxx`→`Internal`。ID 形態固定 `^[A-Z]{2,6}-\d{4}$`，且 domain 前綴須與 ID 相符；`MustRegister` 於套件 `init` 驗證（格式／重複／缺訊息／前綴／區段），違反即 **panic → 啟動就失敗**。**語意與 connect 碼衝突時改 ID、不改 connect 碼**（`AUTH-4003`／`AUTH-3003` 就是為此從 `1xxx` 移出的）。
 4. **5xx 一律 `SYS-9000`**（`SysInternal`）：內部細節（`SQLSTATE`、constraint 名、RLS policy 名、stack）只進 server log，永不進對外訊息。`trace_id` 由 `internal/obs/requestid` 的 interceptor 在**回應邊界**補進 `ErrorInfo.trace_id`（**不**寫進訊息樣板——否則每個呼叫點都得先注入參數，漏了就外洩字面 `{trace}`）；middleware 閘門（不走 connect handler）另由 `writeConnectError` 的 `requestid.Ensure`／`Stamp` 補——**但 `Stamp` 只對「已帶 `ErrorInfo`」的錯誤生效**，故任何自建裸 `connect.NewError` 的閘門錯誤連 `trace_id` 都沒有（這正是本節第 1 條要消滅的寫法）。
 5. **跨租戶與不存在一律 `SYS-4002`**（`SysNotFound`，訊息「資源不存在或無權存取」）：不洩漏資源是否存在（防 oracle 探測）。授權**檢查**失敗（角色／範圍不足）才是 `SYS-4001`（`SysPermissionDenied`）—— 兩者語意不同，前端處理也不同（「請管理員開權」vs「找不到」）。第三種是**寫入被 RLS 的 `WITH CHECK` 擋下** → `SYS-3001`（`SysScopeViolation`，見 §9-13）。
-6. **配額與訂閱用 `PLAT-*`，不得以 `PermissionDenied` 表示額度問題**：`PLAT-5001`（`PlatformLimitExceeded`，details 帶 `feature`／`used`／`limit`）／`PLAT-5002`（`PlatformFeatureNotInPlan`，details 帶 `feature`）／`PLAT-3001`（`PlatformSubscriptionInactive`）／`PLAT-3002`（`PlatformPaymentConflict`，details 帶 `reason`）。前端據碼導向升級方案或收款處理，與「缺權限」是不同操作。**落點現況（2026-09-21 更新，Plan C Task 14）**：`PLAT-5001`／`PLAT-5002`／`PLAT-3001` 已隨 Plan B 落在 `internal/platform/entitlements` 的判定層（見 §11-4）；**`PLAT-3002` 已隨 Plan C 的收款路徑落點**（`RecordPayment`，`internal/platform/billing/billing.go:153`／`:185`／`:198`），**`PLAT-3003`（`PlatformOperatorGovernance`）為 Plan C 新增**（操作者治理，見 §11-16）。計畫 `docs/superpowers/plans/2026-09-20-error-codes-plan.md` 的 **Task 5b** 即為 `PLAT-3002` 而留（已結）。
+6. **配額與訂閱用 `PLAT-*`，不得以 `PermissionDenied` 表示額度問題**：`PLAT-5001`（`PlatformLimitExceeded`，details 帶 `feature`／`used`／`limit`）／`PLAT-5002`（`PlatformFeatureNotInPlan`，details 帶 `feature`）／`PLAT-3001`（`PlatformSubscriptionInactive`）／`PLAT-3002`（`PlatformPaymentConflict`，details 帶 `reason`）。前端據碼導向升級方案或收款處理，與「缺權限」是不同操作。**落點現況（2026-09-21 更新，Plan C Task 14）**：`PLAT-5001`／`PLAT-5002`／`PLAT-3001` 已隨 Plan B 落在 `internal/platform/entitlements` 的判定層（見 §11-4）；**`PLAT-3002` 已隨 Plan C 的收款路徑落點**（`internal/platform/billing` 的 `RecordPayment`，共 3 處），**`PLAT-3003`（`PlatformOperatorGovernance`）為 Plan C 新增**（操作者治理，見 §11-16）。計畫 `docs/superpowers/plans/2026-09-20-error-codes-plan.md` 的 **Task 5b** 即為 `PLAT-3002` 而留（已結）。
 7. **`Error`／`Wrap` 不收 ctx**：`trace_id` 由邊界補，`internal/errcode` 因此是**葉節點**（不 import `internal/obs` 或任何服務層套件），任何層都能直接引用。`Wrap` 保留根因供 log／`errors.Is` 追查（自訂型別的 `Unwrap`），但 cause 文字**不進對外訊息**——connect 對任何碼都逐字轉送 `Message()`，所以絕不用 `fmt.Errorf("%s: %w", …)` 當訊息。
    **實測（connect-go v1.21.0）**：`(*connect.Error).Details()` 回傳的 `ErrorDetail.Value()` 是 `proto.Clone`，序列化走 `NewErrorDetail` 當下 marshal 的 `pbAny` → **就地修改既有的 `ErrorInfo` 不會生效，必須重建錯誤**（`connect.NewError` ＋其餘 detail 依序 `AddDetail` ＋ `Meta()` 逐鍵複製）；實作見 `internal/obs/requestid.stampTraceID`。
 8. **產生檔必須與 registry 同步**：`go generate ./internal/errcode`（產生器在 `cmd/gen-errcodes`）輸出 `docs/error-codes.md` 與三端常數，產物一律入 commit；CI 的「Error codes up to date」步驟重跑產生後以 `git diff --exit-code` ＋ `git status --porcelain` 驗同步（**未 commit 的新產物也會擋**）。`platform-console/src/lib/errcode.ts` 只在該目錄存在時才寫（**已落地並在 CI 清單內**：2026-09-21 實測產生器對它回報「未變更」）。
-   現況（2026-09-21 以指令重數，見 Plan C Task 14）：**22 碼**（SYS 7／AUTH 7／PLAT 5／CUST 3），其中 **19 碼已實際落點**（SYS 7／AUTH 6／PLAT 5／CUST 1）——Plan B 落點 `PLAT-3001`／`PLAT-5001`／`PLAT-5002`（§11-4），**Plan C 落點 `PLAT-3002`**（收款路徑，`internal/platform/billing/billing.go:153`／`:185`／`:198`）與新增碼 `PLAT-3003`（操作者治理，`platform_admin_service.go`）；未落點者（`AUTH-3001`、`CUST-2001`／`CUST-3001`）的現況、選項與歸屬見計畫 `docs/superpowers/plans/2026-09-20-error-codes-plan.md` Progress 的「未結項」（`CUST-*` 另見 `codes_customer.go` 的註解）。
+   現況（2026-09-21 以指令重數，見 Plan C Task 14）：**22 碼**（SYS 7／AUTH 7／PLAT 5／CUST 3），其中 **19 碼已實際落點**（SYS 7／AUTH 6／PLAT 5／CUST 1）——Plan B 落點 `PLAT-3001`／`PLAT-5001`／`PLAT-5002`（§11-4），**Plan C 落點 `PLAT-3002`**（收款路徑，`internal/platform/billing` 的 `RecordPayment`）與新增碼 `PLAT-3003`（操作者治理，`platform_admin_service.go`）；未落點者（`AUTH-3001`、`CUST-2001`／`CUST-3001`）的現況、選項與歸屬見計畫 `docs/superpowers/plans/2026-09-20-error-codes-plan.md` Progress 的「未結項」（`CUST-*` 另見 `codes_customer.go` 的註解）。
 
 ## 11. 平台域（SaaS 訂閱與權益，D34–D39；2026-09-20 起）
 
@@ -178,7 +178,7 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
    為什麼：共用 secret 或共用 cookie 路徑，等於任何租戶 token 都能通過平台 RPC 的驗證——而平台 RPC 跨租戶讀寫，是全系統權限最高的一條路徑。
 10. **`platform.*` 能力不得出現在租戶 `GetAbility`／角色權限矩陣**（S11）。
     為什麼：`platform.*` 屬 operator 的世界，一旦下發給租戶前端就會被當成「租戶也有這些權限」；前端守衛雖不構成授權（§3），但會誤導下一個實作者把平台能力掛到租戶路徑。
-11. **平台稽核不寫租戶 `audit_logs`**：一律寫 `platform.audit_logs`，且**只有兩條入口**——`internal/platform/billing` 的 `RecordAuditTx`（`RecordPayment`，`billing.go:245`）與 `billing.audit`（**四支**訂閱寫入，`subscription.go` 的 `CreateSubscription`／`SetSeatCount`／`ChangePlan`／`CancelSubscription`），以及服務層的 `PlatformAdminService.writeTx`（七支營運 RPC）。**十二條**寫入都在**該次寫入的同一個交易內**。
+11. **平台稽核不寫租戶 `audit_logs`**：一律寫 `platform.audit_logs`，且**只有兩條入口**——`internal/platform/billing` 的 `RecordAuditTx`（由 `RecordPayment` 呼叫）與 `billing.audit`（**四支**訂閱寫入，`subscription.go` 的 `CreateSubscription`／`SetSeatCount`／`ChangePlan`／`CancelSubscription`），以及服務層的 `PlatformAdminService.writeTx`（七支營運 RPC）。**十二條**寫入都在**該次寫入的同一個交易內**。
     為什麼：租戶稽核的 `company_id`／`user_id` 非零且 FK 到租戶 `users`，而平台操作者兩者皆無——硬寫會被 FK 擋下，或更糟：在稽核裡留下一個不存在的租戶 actor。
     **更正（2026-09-21）**：本條原寫「唯一入口 `recordPlatformAudit`」——該函式是唯讀時期的暫置物，已於 Plan C Task 9 **刪除**（全 repo 只剩該檔一行歷史註解）。留著它等於允許「稽核說改了、其實沒動」。**排程**不寫本表是唯一例外，見第 19 條。
 12. **寫入平台表用 admin 連線；任何需要跨租戶讀業務表的平台查詢，必須在同一交易內 `SET LOCAL app.current_data_scope='all'`**（例：租戶列表投影的 LATERAL 查詢）。
@@ -193,7 +193,7 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
 
 15. **平台寫入一律單一交易：資料＋事件＋稽核同一個 commit，`reason` 必填，每次寫入恰一筆稽核**。
     骨架：`internal/platform/billing` 的 `BillingStore.WithTx`（admin 連線）內完成「讀現況（需要時 `FOR UPDATE` 鎖訂閱列）→ 寫期別／訂閱狀態 → 寫 `platform.events` → 寫 `platform.audit_logs`」；服務層的營運寫入走 `PlatformAdminService.writeTx`（`apply` 之後才寫稽核，**同一個交易**）。
-    - `reason` 必填是**進入點**的守衛：`billing.RecordPayment`（`billing.go:112`）、`billing.audit`（`subscription.go`，四支訂閱寫入的稽核）與服務層 `platformReason`都以 `strings.TrimSpace(reason) == ""` 拒絕（全空白也算空）。**store 層只擋空字串**：兩條入口共用的 `recordAuditTx`（`postgres/billing.go:453`、fake `fake_billing.go:477`，`admin_writes.go:60` 只是轉呼叫）檢查的是 `reason == ""` —— 因此**新增寫入點必須自己 trim**（`platform.audit_logs.reason` 是 NOT NULL 但**空字串合法**，`"   "` 會被寫成一列看起來有值、其實沒有理由的稽核）。
+    - `reason` 必填是**進入點**的守衛：`billing.RecordPayment`、`internal/platform/billing` 的 `requireReason`（四支訂閱寫入的稽核共用它）與服務層 `platformReason` 都以 `strings.TrimSpace(reason) == ""` 拒絕（全空白也算空）。**store 層只擋空字串**：兩條入口共用的 `recordAuditTx`（`postgres/billing.go`；`fake_billing.go` 的 `RecordAuditTx` 是它的假實作；`admin_writes.go` 的 `RecordAuditTx` 只是轉呼叫）檢查的是 `reason == ""` —— 因此**新增寫入點必須自己 trim**（`platform.audit_logs.reason` 是 NOT NULL 但**空字串合法**，`"   "` 會被寫成一列看起來有值、其實沒有理由的稽核）。
     - 「恰一筆稽核」是**結構保證**而非紀律：billing 路徑自己寫（服務層對它不再寫第二筆，測試以 `writes.audits == 0` 反向斷言）；營運 RPC 由 `writeTx` 的單一 `RecordAuditTx` 寫。
     為什麼：`platform` 與業務表**同一個 PostgreSQL 資料庫**，跨域副作用（`companies.status`）因此可同交易完成 → **不使用補償式設計**。任何「先 commit 再補寫」的形狀都會產生「帳改了、稽核沒寫」或「稽核說改了、其實沒動」。
 
@@ -205,7 +205,7 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
 17. **`internal/platform/billing` 是訂閱狀態的唯一入口**：`allowedTransitions` 是唯一轉移表（**未列舉的狀態一律拒絕**，fail-closed），而**收款只有 `Billing.RecordPayment` 一個入口**——人工記帳與日後金流 webhook 的差別只在「誰呼叫它」。新增金流商＝新增 adapter 呼叫同一支，**不得新增第二條改變訂閱狀態的路徑**。
     為什麼：`subscriptions.status` 一旦有第二個寫入點，「一轉移一事件」就不再成立，帳面、事件流與 console 會各自說不同的話；`reactivated` 只在原本非 active 時才發，也是同一個不變式的延伸。
 
-18. **金額一律 `int64` 分，且只走 `internal/platform/money`**：禁止 `float32`／`float64` 參與任何金額運算；DB 邊界（`numeric(12,2)`）一律以 `money.ParseCents`／`FormatCents` 轉換；期別金額與年繳折扣用 `money.PeriodAmount`／`YearlyFromMonthly`（**折扣基點在乘法前就夾住 `0..10000`**）。金額路徑必附測試。
+18. **金額一律 `int64` 分，且只走 `internal/platform/money`**：禁止 `float32`／`float64` 參與任何金額運算；DB 邊界（`numeric(12,2)`）一律以 `money.ParseCents`／`FormatCents` 轉換；期別金額與年繳折扣用 `money.PeriodAmount`／`YearlyFromMonthly`（**折扣基點在乘法前就夾住 `0..10000`**）。金額路徑必附測試。**`YearlyFromMonthly` 目前沒有生產呼叫端**（proto 與 DB 都還沒有 `discount_bps`，只有定義與測試）—— 它是「方案價目加上年繳折扣」那天要用的唯一折扣算術，屆時由價目寫入路徑呼叫它，**不要另寫一份**。
     為什麼：浮點是尾差與對帳爭議的來源；而年繳折扣的基點不夾住會**靜默算出負年費**（Plan C Task 2 實測 `(1200000, 10001) = -1439`、`(1200000, 20000) = -14399999`），帳面上只看到一個負數、看不出是誰算錯。
 
 19. **排程（`cmd/platform-cron`）不寫 `platform.audit_logs`——這是「每個平台寫入都寫稽核」的唯一例外**。
@@ -229,7 +229,7 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
 
     為什麼：排程不寫平台稽核（第 19 條），事件的 payload 就是補繳／催收／客服追查時唯一的「為什麼」；`company_id` 也讓 consumer **不必為了補一個欄位再查一次 DB**（事件與查詢之間狀態可能已經變了）。
 
-21. **consumer 的交易形狀與冪等認領**：`internal/platform/consumer` 在**一個系統範圍（scope=all）的 ent 交易**內依序做「**條件式認領** `UPDATE platform.events … WHERE id = $1 AND dispatched_at IS NULL`（0 列＝別的執行已處理，跳過且**不算失敗**）→ `services.SetCompanyStatus`（產品域唯一入口）→ commit」。
+21. **consumer 的交易形狀與冪等認領**：`internal/platform/consumer` 在**一個系統範圍（scope=all）的 ent 交易**內依序做「**條件式認領** `UPDATE platform.events … WHERE id = $1 AND dispatched_at IS NULL`（0 列＝別的執行已處理，跳過且**不算失敗**；`store.BillingStore.MarkEventDispatchedTx` 是**無條件**的舊方法，只剩測試在用，不得當成認領的實作）→ `services.SetCompanyStatus`（產品域唯一入口）→ commit」。
     - **未對應的事件型別**：記一行 log 後**認領**（不認領＝排程每趟重掃同一筆，無限循環）；目前對應表只有三個型別（`subscription.suspended`／`subscription.expired` → `suspended`，`subscription.reactivated` → `active`）。
     - **單筆失敗不認領**（`dispatched_at` 留 NULL、下趟重試）且**不阻塞後續事件**：記錯後 `continue`、迴圈結束才 `errors.Join` 外傳。
     為什麼：`platform.events` 是 outbox，認領與副作用若不在同一交易，就會出現「事件說已派送、公司沒被凍結」；而「頭部一筆永遠失敗的事件」曾讓**後面所有租戶**的凍結全部卡住（Plan C Task 6 的 I-1）。

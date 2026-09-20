@@ -31,7 +31,7 @@
 
 ## Progress
 
-> 執行記錄與逐任務細節（每次審查的判定、裁決、修正輪、突變與回退實驗）見 `.superpowers/sdd/2026-09-20-platform-lifecycle-console-plan/progress.md`（ledger）。狀態：**14/14 任務完成（2026-09-21）**。本計畫自 `7e31bae`（Plan B 收尾）起共 **26 個 commit**（`git log --oneline 7e31bae..HEAD^ | wc -l`，不含 T14 本 commit）。
+> 執行記錄與逐任務細節（每次審查的判定、裁決、修正輪、突變與回退實驗）見 `.superpowers/sdd/2026-09-20-platform-lifecycle-console-plan/progress.md`（ledger）。狀態：**15/15 任務完成（2026-09-21）**（含最終全分支審查 B-1 的補救任務 T15，以及其後的「最終修正波」一次性修正）。本計畫自 `7e31bae`（Plan B 收尾）起共 **32 個 commit**（`git log --oneline 7e31bae..HEAD | wc -l`；不含本檔案所在的最終修正波 commit）。
 
 | # | 任務 | 狀態 | 產出（commit 範圍） | 交付後修正輪 |
 |---|---|---|---|---|
@@ -48,7 +48,8 @@
 | 11 | 租戶列表／租戶詳情＋override／方案與價目 | ✅ | `f3dbc43`..`a765e3d` | 1 輪：權益投影宣稱「與後端同序」是錯的、對話框欄位跨次殘留（會送錯金額）、「權益下一期生效」與事實不符、`reason` 未 trim、死碼 |
 | 12 | 權益矩陣（唯讀）／收款與發票／平台稽核 | ✅ | `a765e3d`..`668578c` | 1 輪：清空最後一頁→**假空狀態＋分頁消失的死路**、金額 `0` 會被當成「本期不收」而記為已收、CSV 無 BOM、query key 脫鉤、`target_type` 自由文字造成假空狀態 |
 | 13 | 租戶後台唯讀權益卡片 | ✅ | `668578c`..`28b27a2` | 1 輪：`limit_set=true,limit_value=0` 被顯示成「不限」（方向性錯誤）、不可用訂閱狀態逐列寫「方案未含」、`used > limit` 仍說「接近上限」、`trialing→active` 未清試用到期 |
-| 14 | CI、慣例文件與計畫文件（本任務） | ✅ | 本表所在 commit | — |
+| 14 | CI、慣例文件與計畫文件（本任務） | ✅ | 本表所在 commit | 2 輪：`AGENTS.md` §10-6 與 §10-8 互相否定、§11-15 的 `reason` 契約與實作不符（2 Critical）＋6 項（spec 行號、數字對指令錯、`plans/README` 歷史值混淆、`test:integration` 缺 `-count=1`） |
+| 15 | 最小訂閱開通介面 `CreateSubscription`（最終審查 B-1 的補救） | ✅ | `8bc8d60`..`35f78dd` | 1 輪：**`trialing` 無到期路徑＝無上界免費放行** → 新增 `ExpireTrials` 掃描（轉 `past_due`、走既有轉移表）＋ `trial_ends_at` 365 天上限；併修取價錯誤分流（缺價目 vs 查價失敗）、console 的 markdown 字面值與試用日期驗證、回滾證據補到 `OpenPeriodTx` 之後 |
 
 每個任務都經**獨立審查**（spec 合規 ＋ quality）與必要的修正輪；修正輪一律附「修前會紅」的證據（突變、overlay、逐項回退或真容器重跑）。T5 之後凡動到 store／migration／seed 的任務，controller 另跑**完整**整合套件（聚焦 pattern 曾漏掉跨套件波及：F-1／F-2）。
 
@@ -58,13 +59,18 @@
 |---|---|---|
 | migration 編號 | 至 **`00030`** | `ls backend/database/migrations \| tail -1` |
 | `platform` schema 表數 | **11**（`00029` 的 10 ＋ `00030` 的 `settings`） | `grep -c "CREATE TABLE IF NOT EXISTS platform\." backend/database/migrations/00029_platform_schema.sql` ＝ 10；`grep -c "CREATE TABLE" backend/database/migrations/00030_platform_settings.sql` ＝ 1 |
-| 平台寫入 RPC | **11**（4 支走 `billing`：收款／席位／改方案／取消；7 支走服務層 `writeTx`：計費參數、override 設定／撤銷、方案價目、方案權益、新增／停用 operator） | `grep -c "s.writeTx(" backend/internal/services/platform_admin_service.go` ＝ 7；`grep -c "s.billing\.\(RecordPayment\|SetSeatCount\|ChangePlan\|CancelSubscription\)" …` |
+| 平台寫入 RPC | **12**（**5 支**走 `billing`：開通／收款／席位／改方案／取消；7 支走服務層 `writeTx`：計費參數、override 設定／撤銷、方案價目、方案權益、新增／停用 operator） | `grep -c "s.writeTx(" backend/internal/services/platform_admin_service.go` ＝ 7；`grep -c "s.billing\.\(CreateSubscription\|RecordPayment\|SetSeatCount\|ChangePlan\|CancelSubscription\)" …` ＝ 5（T15 加入開通） |
+| `platform/v1` RPC | **20**（T15 新增 `CreateSubscription` 前為 19） | `grep -c "^  rpc " backend/proto/platform/v1/platform.proto` |
+| 平台事件型別（產生端） | **9**（`period.opened`／`period.payment_recorded`／`subscription.created`／`cancelled`／`expired`／`past_due`／`reactivated`／`suspended`／`trial_ended`）；其中排程產生 **5** 個 | `grep -rhoE '\bemit\(ctx, tx, [^,]+, "[a-z]+\.[a-z_]+"' backend/internal/platform/billing/*.go \| grep -oE '"[a-z]+\.[a-z_]+"' \| sort -u \| wc -l` ＝ 9 |
+| consumer 對應的事件型別 | **3**（`subscription.suspended`／`expired` → `suspended`；`reactivated` → `active`；其餘型別記一行 log 後認領） | `sed -n '/^var actions = map/,/^}/p' backend/internal/platform/consumer/consumer.go` |
 | 限 `role=admin` 的 RPC | **2**（`CreateOperator`／`DisableOperator`） | `grep -c "requireAdmin(ctx)" backend/internal/services/platform_admin_service.go` |
 | 錯誤碼 | **22 碼**（SYS 7／AUTH 7／PLAT 5／CUST 3），**19 已落點** | 見 `AGENTS.md` §10-8（2026-09-21 重數） |
 | errcode 基線 | **98 行／233 呼叫點**（只減不增，本計畫未動） | `wc -l < backend/internal/services/errcode_baseline.txt`；`awk -F: '{s+=$NF} END {print s}' …` |
 | console 頁面 | **6**（`/tenants`、`/tenants/$tenantId`、`/plans`、`/entitlements`、`/receivables`、`/audit`；另有根路由 `"/"` 轉導與 `LOGIN_ROUTE`） | `grep -c 'path: "/' platform-console/src/router.tsx` ＝ **7**（含根路由 `"/"` 那一列，扣掉即 6 頁；`/login` 用 `LOGIN_ROUTE` 常數故不在這 7 列內） |
-| console 測試 | **72**（12 檔） | `pnpm -C platform-console test` |
+| console 測試 | **78**（12 檔） | `pnpm -C platform-console test` |
 | CI job | **5**（go／go-integration／frontend／platform-console／flutter） | `grep -E "^  [a-z-]+:$" .github/workflows/ci.yml`（多一列是 `on:` 的 `push:`） |
+| `AGENTS.md` §11 條目 | **23**（Plan B 交付時 14 條） | `sed -n '/^## 11\. 平台域/,/^## 12\./p' backend/AGENTS.md \| grep -cE "^[0-9]+\. \*\*"` |
+| 本檔「未結項」列數 | **44** | `sed -n '/^### 未結項/,/^---/p' docs/superpowers/plans/2026-09-20-platform-lifecycle-console-plan.md \| grep -cE "^\| [0-9]+ \|"` |
 
 ### 執行期間的計畫更正（已寫回程式碼、AGENTS.md 或 spec）
 
@@ -84,6 +90,8 @@
 | 12 | 計畫 Task 5 樣板碼的舊逾期 SQL 已被實作取代 | 樣板是派工用的草稿；實作加了 `cur.status='open'`，spec §5.2 已就地更正並標日期 |
 | 13 | 排程事件名以 T4/T5 為準：`period.payment_recorded`（不是裁定文字裡的 `payment.recorded`） | 該事件本無跨域副作用，consumer 記一行 log 後認領，無功能影響 |
 | 14 | **`task test:integration` 補上 `-count=1`**（`backend/Taskfile.yml`，T14 修） | 少了它整趟會命中 Go 測試快取並回報全綠（2026-09-21 實測：牆鐘 0.75s、全部 `(cached)`）→ **守門指令可假綠**；CI 的 `go-integration` job 本來就有 `-count=1`。**驗收指令一律要有「真的跑過」的證據** |
+| 15 | **計畫漏列「開通」（`CreateSubscription`）＝計畫缺陷，由 T15 補上** | 計畫 Goal 是「平台域能真的收錢」，spec §7.4 的 DoD 第一跳就是開通，但 19 支 RPC 沒有任何建立訂閱／第一期的路徑 → 不靠手工 SQL 收不到一筆錢（收款／期別／催收／凍結全部 inert，測試都從手工種好的訂閱列起跑）。來源＝**最終全分支審查 B-1** |
+| 16 | **`buf.gen.yaml` 的遠端 plugin 全面釘版**（`protocolbuffers/go:v1.36.12`／`connectrpc/go:v1.21.0`／`bufbuild/es:v2.15.0`×2／`connectrpc/dart:v2.0.0`） | 未釘版時 BSR 一上架新版，所有人的產生檔一起漂移、CI 的 proto 冪等閘門全紅（而漂移與改動無關，排查成本極高）。**釘版後以 `task proto:gen` ＋ `git diff --exit-code` 實測產物逐位元組不變**；版本本身以產生檔的表頭（`protoc-gen-go v1.36.12`／`protoc-gen-es v2.15.0`）與 `go.mod`／`pubspec.yaml` 對齊 |
 
 ### 未結項（deferred：現況、選項、歸屬）
 
@@ -124,8 +132,17 @@
 | 31 | 清空最後一頁後 `page` 停在 2 而 `lastPage` 變 1 → 顯示「**第 2 / 1 頁（共 50 筆）**」的矛盾頁碼 | 未動（上一頁仍可按、總筆數為真） | 當頁變空時把頁碼夾回 `lastPage`，或讓 Pagination 顯示值夾住 | `platform-console`（低） |
 | 32 | `PlanBanner.test.tsx` 以 `queryKey` 字串當同步閘（改 key 會假紅）；`USABLE_STATUSES` 是後端 `usable()` 的**手抄副本**；`usageValue` 的數值分支不再看 `featureCode` 前綴；提示條只有兩級色階 | 未動（漂移方向是「過度阻擋」，大聲） | 把 allow-list 寫成後端契約測試；色階分級 | `frontend` account 功能（低） |
 | 33 | **Plan B 未結項 #13 仍留給後端**：投影在「無訂閱列」時仍讓每個 boolean feature 列 `enabled=false` | 前端以 `isUnprovisioned` 因應；後端未改 | 投影加「尚未開通訂閱」的專屬形狀 | `platform/entitlements` 投影（訂閱指派落地時） |
-| 34 | **store 層的 `reason` 只擋空字串，不 trim**（`recordAuditTx`：`postgres/billing.go:453`、fake `fake_billing.go:477`；`admin_writes.go:60` 只是轉呼叫） | 目前**不可達**：三個進入點（`RecordPayment` `billing.go:112`／`billing.audit` `subscription.go:263`／`platformReason` `platform_admin_service.go:1015`）都以 `TrimSpace` 先擋。但 `platform.audit_logs.reason` 是 NOT NULL、**空字串合法** → 未來新增寫入點若忘了 trim，`"   "` 會寫成一列看起來有值卻沒有理由的稽核（T14 審查發現，已寫進 AGENTS.md §11-15 的事實敘述） | store 端也 `TrimSpace` 後再判定（1 行，需動程式碼）；或把「進入點必須 trim」寫成 store 介面的契約註解 | `platform/store` 後續維護（低～中） |
+| 34 | **store 層的 `reason` 只擋空字串，不 trim**（`recordAuditTx`：`postgres/billing.go` 與 `fake_billing.go` 各一份、`admin_writes.go` 的 `RecordAuditTx` 只是轉呼叫） | 目前**不可達**：三個進入點（`RecordPayment`／`internal/platform/billing` 的 `requireReason`（四支訂閱寫入共用）／`platform_admin_service.go` 的 `platformReason`）都以 `TrimSpace` 先擋。但 `platform.audit_logs.reason` 是 NOT NULL、**空字串合法** → 未來新增寫入點若忘了 trim，`"   "` 會寫成一列看起來有值卻沒有理由的稽核（T14 審查發現，已寫進 AGENTS.md §11-15 的事實敘述） | store 端也 `TrimSpace` 後再判定（1 行，需動程式碼）；或把「進入點必須 trim」寫成 store 介面的契約註解 | `platform/store` 後續維護（低～中） |
 | 35 | **`task test:integration` 曾缺 `-count=1`**（可假綠） | **T14 已修**（`backend/Taskfile.yml` 一行，見更正表第 14 列）；同類風險仍在其他「跑測試」的入口：任何只回報「全綠」而不帶 `-count=1` 的守門指令都可能命中快取 | 新增任何測試指令時一律帶 `-count=1`（或 `-count=1` 由 Taskfile 統一提供） | 全 repo 的 Taskfile／CI 慣例 |
+| 36 | **開通時傳入不存在的 `company_id` → FK `23503` 被 `toConnectError` 收成 `SYS-9000`**（`CreateSubscription`；console 只能選既有租戶，故僅自製客戶端可達） | 未動 | 服務層先以租戶投影驗存在（回 `SYS-4002`），或把 23503 分流成 4xx | `platform/v1` 下一個計畫（低） |
+| 37 | **價目 `base=seat=0` 仍能開出 0 元期別**（`UpdatePlanPrice` 不擋 0；開通只擋「沒有價目」） | 未動（若「免費方案」是刻意設計則可接受） | 價目寫入路徑擋 0，或為免費方案立旗標 | 產品語意定調（低） |
+| 38 | **`subscription.created` 對 consumer 是未知型別**（記一行 log 後認領，無副作用；排程不會重掃） | 安全，但事件流的價值只剩審計 | 日後要在產品域對開通做事時，於 consumer 的 `actions` 明列語意 | `platform/consumer`（低） |
+| 39 | **console 的開通按鈕顯示條件綁在「同一公司只能有一份未取消合約」**（只在 `none`／空／`cancelled` 顯示，與 00029 的部分唯一索引同義） | 未動 | 後端若放寬成「同公司多份合約」，前端要同步放寬（否則介面比後端保守而不自知） | 後端放寬時同步（低） |
+| 40 | **`trial_ends_at IS NULL` 的 `trialing` 訂閱無告警**：`ExpireTrials` 的謂詞刻意只認 `trial_ends_at IS NOT NULL`（不讓排程猜），而這種列**永遠停在試用**（可用、不催收、不凍結） | 未動（寫入路徑已擋：開通要求未來日期；DB 層無約束） | 加檢查（指標／排程摘要欄位）或 `CHECK (status <> 'trialing' OR trial_ends_at IS NOT NULL)` | 排程告警／migration（中） |
+| 41 | **試用期長於一期時，第一期會在試用期間到期且不被催收**（第一期一律自 `now` 起算，而 `MarkPastDue` 只掃 `active`） | 未動（T15 已記錄） | 「試用期不開帳」需同時改 `EnsureNextPeriod` 與催收謂詞 | 產品語意定調（中） |
+| 42 | **開通只有 RPC／console 一條路徑**：seed／CLI 若要種 demo 訂閱**必須**呼叫 `billing.CreateSubscription`，不得直接 INSERT（否則第一期、事件、稽核、價格快照全缺） | 未動（已寫進 AGENTS.md §11-14） | — | 慣例（已文件化） |
+| 43 | **`store.BillingStore.MarkEventDispatchedTx` 只剩測試在用**（consumer 走 `claimSQL` 的條件式認領）；移除會連帶刪掉 fake／整合測試的覆蓋 | 未動（介面 doc 已標「僅測試／歷史」） | 若 consumer 改走 store 的標記，兩者合併成一個 | `platform/store`（低） |
+| 44 | **`money.YearlyFromMonthly` 沒有生產呼叫端**（proto 與 DB 都還沒有 `discount_bps`） | 未動（函式註解與 AGENTS.md §11-18 已標明；保留是為了價目加上年繳折扣那天） | 價目寫入路徑加上折扣時由它負責算，勿另寫一份 | `platform/money`（低） |
 
 ---
 
