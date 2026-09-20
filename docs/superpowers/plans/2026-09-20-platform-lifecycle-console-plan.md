@@ -31,7 +31,7 @@
 
 ## Progress
 
-> 執行記錄與逐任務細節（每次審查的判定、裁決、修正輪、突變與回退實驗）見 `.superpowers/sdd/2026-09-20-platform-lifecycle-console-plan/progress.md`（ledger）。狀態：**15/15 任務完成（2026-09-21）**（含最終全分支審查 B-1 的補救任務 T15，以及其後的「最終修正波」一次性修正）。本計畫自 `7e31bae`（Plan B 收尾）起共 **32 個 commit**（`git log --oneline 7e31bae..HEAD | wc -l`；不含本檔案所在的最終修正波 commit）。
+> 執行記錄與逐任務細節（每次審查的判定、裁決、修正輪、突變與回退實驗）見 `.superpowers/sdd/2026-09-20-platform-lifecycle-console-plan/progress.md`（ledger）。狀態：**15/15 任務完成（2026-09-21）**（含最終全分支審查 B-1 的補救任務 T15，以及其後的「最終修正波」一次性修正）。本計畫自 `7e31bae`（Plan B 收尾）起共 **35 個 commit**（`git log --oneline 7e31bae..HEAD | wc -l`，**含**本檔案所在的 commit；其中最終修正波＝`246090e`（程式與設定）＋`a4575b3`（文件）＋`e5bfa68`（註解查證指令）＋本 commit）。
 
 | # | 任務 | 狀態 | 產出（commit 範圍） | 交付後修正輪 |
 |---|---|---|---|---|
