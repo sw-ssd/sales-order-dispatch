@@ -57,6 +57,12 @@ tasks:
     desc: 執行冪等 seeder
     cmd: go run ./cmd/seed
 
+  db:app-password:
+    desc: 為本機開發資料庫設定 app_rw 密碼（migration 00022 只建角色不建密碼）
+    # 本 Taskfile 不載入 .env：使用前先 export DATABASE_ADMIN_URL（owner 連線）。
+    cmds:
+      - psql "$DATABASE_ADMIN_URL" -c "ALTER ROLE app_rw WITH PASSWORD 'app_rw'"
+
   proto:gen:
     desc: buf 產生 Go/TS/Dart 型別(本地 protoc-gen-dart 需於 PATH)
     env:
