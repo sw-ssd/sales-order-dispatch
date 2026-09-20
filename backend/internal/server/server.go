@@ -237,10 +237,10 @@ func (s *Server) authzMiddleware(entClient *ent.Client, sessions *scs.SessionMan
 				return
 			}
 		}
-		// A3 受限態(1.5.2):must_change_password=true 時僅放行 ChangePassword,其餘回 failed_precondition,
-		// 強制首登改密碼後才能使用業務 RPC。
+		// A3 受限態(1.5.2):must_change_password=true 時僅放行 ChangePassword,其餘回 failed_precondition
+		// (AUTH-3004),強制首登改密碼後才能使用業務 RPC。
 		if id := authz.IdentityFrom(ctx); id.MustChangePassword && r.URL.Path != salesorderv1connect.AuthServiceChangePasswordProcedure {
-			writeConnectError(w, r, connect.NewError(connect.CodeFailedPrecondition, errors.New("首次登入須先修改密碼")))
+			writeConnectError(w, r, errcode.AuthPasswordChangeRequired.Error(nil))
 			return
 		}
 		// OpenFGA 授權閘門(D32):受保護 RPC path 以 OpenFGA Check 判定;developer 跳過。

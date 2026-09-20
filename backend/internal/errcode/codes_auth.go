@@ -25,6 +25,15 @@ var (
 	AuthTempPasswordExpired = MustRegister(Code{id: "AUTH-3002", domain: DomainAuth,
 		connectCode: connect.CodeFailedPrecondition, message: "臨時密碼已過期，請聯繫管理員重置"})
 
+	// AuthPasswordChangeRequired 為「首登／臨時密碼態」的受限閘門（middleware）：帳號已登入但
+	// must_change_password=true，除 ChangePassword 外的請求一律被擋（A3 1.5.2）。
+	// 為什麼另立一碼而不是借用 AUTH-3001／AUTH-3002（Task 5 的裁定）：
+	//   本狀態＝「憑證有效、只差改密碼」（前端應導向改密碼頁，改完即可用）；
+	//   AUTH-3001「尚未完成註冊」＝前端會導向註冊流程（語意相反）；
+	//   AUTH-3002「臨時密碼已過期」＝該憑證已不可用，只能由管理員重置。
+	AuthPasswordChangeRequired = MustRegister(Code{id: "AUTH-3004", domain: DomainAuth,
+		connectCode: connect.CodeFailedPrecondition, message: "首次登入須先修改密碼"})
+
 	// AuthUnauthenticated 為「未帶有效身分就存取需登入的端點」（前端導向登入頁）。
 	// 與 AuthBadCredentials（AUTH-4003）同為 Unauthenticated 但語意不同，**不可合併**：
 	// 本碼沒有登入嘗試的上下文，前端不應在登入頁顯示表單錯誤。

@@ -88,6 +88,43 @@ func TestMiddlewareErrorBodyCarriesErrorInfo(t *testing.T) {
 		}
 	})
 
+	t.Run("首登受限 → AUTH-3004 + trace_id", func(t *testing.T) {
+		s, sessions := newIdentityTestEnv()
+		ctx := context.Background()
+		db := openIdentityDB(t, "file:mw-errcode-c?mode=memory&cache=shared&_fk=1")
+		co := db.Company.Create().SetName("測試公司").SetIdentifier("T-mw-mcp").SaveX(ctx)
+		u := db.User.Create().SetEmail("mcp@example.com").SetName("首登").SetStatus(user.StatusActive).
+			SetRole("staff").SetPasswordHash("x").SetCompanyID(co.ID).SetMustChangePassword(true).SaveX(ctx)
+		ts := mwServer(t, s, db, sessions)
+
+		req, err := http.NewRequest(http.MethodGet, ts.URL+protectedPath, nil)
+		if err != nil {
+			t.Fatalf("NewRequest: %v", err)
+		}
+		req.AddCookie(testSessionCookie(t, sessions, int(u.ID), "staff"))
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("Do: %v", err)
+		}
+		defer func() { _ = resp.Body.Close() }()
+		body := decodeMWErrBody(t, resp)
+		// 既有欄位不變：connect 碼仍為 failed_precondition（HTTP 5xx 是既有對映，
+		// failed_precondition 不在 httpStatusForCode 的表內；修正屬另一件事，見報告 deferred）。
+		if body.Code != "failed_precondition" {
+			t.Fatalf("connect 碼 = %q, want failed_precondition", body.Code)
+		}
+		if body.Message != "首次登入須先修改密碼" {
+			t.Fatalf("message = %q，對外文字不得改變", body.Message)
+		}
+		info := body.errorInfoOf(t)
+		if info.GetCode() != "AUTH-3004" {
+			t.Fatalf("ErrorInfo.code = %q, want AUTH-3004", info.GetCode())
+		}
+		if info.GetTraceId() == "" {
+			t.Fatal("ErrorInfo.trace_id 不得為空")
+		}
+	})
+
 	t.Run("OpenFGA 無權 → SYS-4001 + details 帶 resource/action", func(t *testing.T) {
 		s, sessions := newIdentityTestEnv()
 		ctx := context.Background()
