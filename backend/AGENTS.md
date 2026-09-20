@@ -30,6 +30,7 @@
 - 跨租戶資料存取失敗的錯誤碼分兩層:**服務層 ACL 判定的越權** → `PermissionDenied`(非 `invalid_argument`;輸入驗證失敗才回 `InvalidArgument`);**被 RLS 過濾掉的目標**(查詢根本看不到該列)→ `NotFound`,不得回 `PermissionDenied` 洩漏「該資源存在」(見 §9-8)。
 - `role_permissions` 異動前必跑條件驗證 + 防鎖死(含 `all`/`*` subject);company_admin 的 id 欄位值須為自身公司或佔位符(以 `casl.ParseConditions` 展開驗證)。
 - 設定密鑰(JWT_SECRET 等)production 下空值/預設值 → `Init()` fail-fast 拒絕啟動;驗證端對空密鑰 fail-closed。
+- **平台側授權只有一層（G15，2026-09-20）**：`platform` schema 的表**不套 RLS**（設計如此；`app_rw` 對其為零權限，這是唯一的 DB 層緩解）。因此 console／平台 RPC 的 operator 授權**全靠服務層檢查**：任何新增的平台路徑都**必須**有服務層授權檢查與對應測試，沒有第二道防線會在事後擋下來。
 
 ## 4. 測試
 
