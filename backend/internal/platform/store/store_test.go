@@ -30,13 +30,13 @@ func TestFakeStoreSubscriptionMissingOrCancelledIsNil(t *testing.T) {
 }
 
 // 未取消的訂閱要帶出判定層真正會用到的欄位:BillingCycle 決定期別 +1 月還是 +1 年(G1),
-// Status 決定是否放行,PlanCode 是取權益的鍵。
+// Status 決定是否放行,PlanCode 是取權益的鍵,PlanName 是租戶端投影要顯示的名字。
 func TestFakeStoreSubscriptionCarriesBillingCycle(t *testing.T) {
 	ctx := context.Background()
 	trial := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
 	f := store.NewFake()
 	f.PutSubscription(store.Subscription{
-		CompanyID: 7, PlanID: 3, PlanCode: "std", Status: "trialing",
+		CompanyID: 7, PlanID: 3, PlanCode: "std", PlanName: "標準", Status: "trialing",
 		SeatCount: 10, BillingCycle: "yearly", TrialEnds: &trial,
 	})
 
@@ -46,6 +46,9 @@ func TestFakeStoreSubscriptionCarriesBillingCycle(t *testing.T) {
 	}
 	if sub.PlanCode != "std" || sub.Status != "trialing" || sub.BillingCycle != "yearly" {
 		t.Fatalf("訂閱的 code／status／billing_cycle 未完整帶出,got %+v", *sub)
+	}
+	if sub.PlanName != "標準" {
+		t.Fatalf("訂閱的方案名未帶出(租戶端投影要顯示它),got %q", sub.PlanName)
 	}
 	if sub.TrialEnds == nil || !sub.TrialEnds.Equal(trial) {
 		t.Fatalf("試用到期日未帶出,got %+v", sub.TrialEnds)

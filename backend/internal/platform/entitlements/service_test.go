@@ -131,7 +131,7 @@ var (
 )
 
 func subWithStatus(status string) *store.Subscription {
-	return &store.Subscription{CompanyID: 1, PlanCode: "std", Status: status}
+	return &store.Subscription{CompanyID: 1, PlanCode: "std", PlanName: "標準", Status: status}
 }
 
 // TestJudgementTable 是本套件的主表：逐列固定「買了沒有／額度夠不夠」的判定語意

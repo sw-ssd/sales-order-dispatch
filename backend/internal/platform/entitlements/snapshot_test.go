@@ -32,7 +32,7 @@ func TestSnapshot(t *testing.T) {
 				return f
 			}(),
 			counts:   map[string]int{seats: 3, entitlements.FeaturePrinting: 999},
-			wantMeta: entitlements.Snapshot{PlanCode: "std", Status: "active", TrialEndsAt: &trialEnds},
+			wantMeta: entitlements.Snapshot{PlanCode: "std", PlanName: "標準", Status: "active", TrialEndsAt: &trialEnds},
 			want: []entitlements.FeatureUsage{
 				{FeatureCode: entitlements.FeaturePrinting, Enabled: true},
 				{FeatureCode: seats, Enabled: true, Limit: ptr(int64(10)), Used: 3},
@@ -62,9 +62,11 @@ func TestSnapshot(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Snapshot: %v", err)
 			}
-			if got.Status != tc.wantMeta.Status || got.PlanCode != tc.wantMeta.PlanCode {
-				t.Fatalf("方案／狀態 = (%q, %q)；want (%q, %q)",
-					got.PlanCode, got.Status, tc.wantMeta.PlanCode, tc.wantMeta.Status)
+			if got.Status != tc.wantMeta.Status || got.PlanCode != tc.wantMeta.PlanCode ||
+				got.PlanName != tc.wantMeta.PlanName {
+				t.Fatalf("方案／狀態 = (%q, %q, %q)；want (%q, %q, %q)",
+					got.PlanCode, got.PlanName, got.Status,
+					tc.wantMeta.PlanCode, tc.wantMeta.PlanName, tc.wantMeta.Status)
 			}
 			if (got.TrialEndsAt == nil) != (tc.wantMeta.TrialEndsAt == nil) {
 				t.Fatalf("TrialEndsAt = %v；want %v", got.TrialEndsAt, tc.wantMeta.TrialEndsAt)

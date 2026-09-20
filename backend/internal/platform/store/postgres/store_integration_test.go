@@ -145,6 +145,10 @@ func TestIntegrationPlatformStore(t *testing.T) {
 		sub.Status != "active" || sub.SeatCount != 10 || sub.BillingCycle != "monthly" {
 		t.Fatalf("42 的訂閱欄位不對(同一公司另有已取消的列,不得回錯那一列),got %+v", *sub)
 	}
+	// 方案名來自 JOIN plans.name:租戶端投影要顯示它,漏掃就只會是空字串。
+	if sub.PlanName != "標準" {
+		t.Fatalf("方案名必須從 platform.plans.name 帶出,got %q", sub.PlanName)
+	}
 	if sub.TrialEnds != nil || sub.GraceUntil != nil {
 		t.Fatalf("42 的試用／寬限為 NULL,應掃成 nil,got %+v", *sub)
 	}
