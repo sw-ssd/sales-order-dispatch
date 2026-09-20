@@ -1756,7 +1756,13 @@ Expected: 無輸出。四檔各自的自開交易（各 4 處）依 Global Const
 --
 -- 作法：逐表 DROP POLICY 後以 NULLIF 版本重建（USING 與 WITH CHECK 其餘條件不變；
 -- core_metadicts_scope 已有較嚴的 WITH CHECK，沿用原樣但同樣加 NULLIF）。
--- 18 張表的清單與 UPDATE 物件請照 00023 的對應關係逐一處理，不得遺漏或放寬語意。
+-- policy 來源：**17 個在 `00023_rls_policy_with_check.sql`**（Up 區塊 10-347），第 18 個
+--   `core_metadicts_scope` 在 `00011_metadicts.sql:31-41`（00023 明文不動它，其 WITH CHECK
+--   刻意較嚴：不含 `department_id IS NULL`）。逐表 `DROP POLICY IF EXISTS` + `CREATE POLICY`
+--   重建，不得遺漏或放寬語意。其中 8 張（customers／customer_addresses／customer_contacts／
+--   warehouses／routes／processing_specs／product_categories／products）的表達式**逐位元組相同**
+--   （只有表名與 `company_id`／`department_id` 之別），可同一改法複製。
+--   Up 完成後 `rls_policy_integration_test.go` 仍須看到 **18 張表各有一個 FOR ALL policy 且 WITH CHECK 非空**。
 -- +goose Up
 -- （policy 重建：companies/departments/users/roles/role_permissions/audit_logs/metadicts/
 --   customers/customer_counters/customer_addresses/customer_contacts/
@@ -1785,7 +1791,7 @@ ALTER TABLE product_categories  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE product_categories  FORCE  ROW LEVEL SECURITY;
 
 -- +goose Down
--- （policy 還原：把 NULLIF 版重建回 00023 的版本；masters 四表關閉 RLS）
+-- （policy 還原：17 個重建回 `00023` 的 Up 定義、`core_metadicts_scope` 重建回 `00011` 的定義；masters 四表先 NO FORCE 再 DISABLE）
 ALTER TABLE warehouses          NO FORCE ROW LEVEL SECURITY;
 ALTER TABLE warehouses          DISABLE ROW LEVEL SECURITY;
 ALTER TABLE routes              NO FORCE ROW LEVEL SECURITY;
