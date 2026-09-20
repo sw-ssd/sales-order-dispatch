@@ -77,9 +77,15 @@ func SeedDeveloper(ctx context.Context, client *ent.Client, env string, companyI
 	return err
 }
 
-// firstCompanyID 回傳任一家**未刪除**公司 ID;無公司時回傳 0(developer 錨點缺失略過)。
+// firstCompanyID 回傳任一家**未刪除且非平台自營**的公司 ID;無公司時回傳 0(developer 錨點缺失略過)。
+//
+// 為何排除平台自營公司(D34／G5 的 seed 產物):它是系統自己的租戶、不屬於任何客戶;若被當成
+// developer 帳號的錨點,重跑 seed 會把共用開發者帳號建進平台租戶內(實測:第二次 seed 讓平台
+// 公司的 users 由 1 變 2)—— 而那個帳號是**繞過 Casbin/RLS 的逃生門**(developer 角色)。
 func firstCompanyID(ctx context.Context, client *ent.Client) int {
-	c, err := client.Company.Query().Where(company.DeletedAtIsNil()).First(ctx)
+	c, err := client.Company.Query().
+		Where(company.DeletedAtIsNil(), company.IdentifierNEQ(platformCompanyIdentifier)).
+		First(ctx)
 	if err != nil {
 		return 0
 	}

@@ -236,6 +236,32 @@ func TestIntegrationSeedPlatformActorNeedsSystemScope(t *testing.T) {
 	}
 }
 
+// TestIntegrationSeedPlatformDoesNotAnchorDeveloper 驗平台自營公司不會被當成 developer 帳號的
+// 錨點。實測（真容器 + `go run ./cmd/seed` 連跑兩次）：第一次 seed 時庫裡還沒有任何公司 → 略過
+// developer；第二次 seed 因為自營公司已存在 → `firstCompanyID` 挑到它 → **共用開發者帳號被建進
+// 平台自營租戶**（平台公司的 users 由 1 變 2）。自營公司是系統自己的租戶，不得住任何租戶帳號。
+func TestIntegrationSeedPlatformDoesNotAnchorDeveloper(t *testing.T) {
+	admin, client, cfg := newPlatformSeedFixture(t)
+	ctx := t.Context()
+	if err := SeedPlatform(ctx, admin, client, cfg); err != nil {
+		t.Fatalf("seed：%v", err)
+	}
+	if id := firstCompanyID(ctx, client); id != 0 {
+		t.Fatalf("平台自營公司不得作為 developer 錨點，got companyID=%d", id)
+	}
+
+	// 一般公司仍是合法錨點（否則開發環境的 developer 帳號永遠建不出來）。
+	var companyID int
+	if err := admin.QueryRow(
+		`INSERT INTO companies (name, identifier, status) VALUES ('種子測試公司', 'SEED-T2', 'active') RETURNING id`).
+		Scan(&companyID); err != nil {
+		t.Fatalf("建公司錨點：%v", err)
+	}
+	if id := firstCompanyID(ctx, client); id != companyID {
+		t.Fatalf("一般公司仍應可作為錨點，got companyID=%d want %d", id, companyID)
+	}
+}
+
 // createPlatformSettingsTable 建立 Plan C（生命週期／console 計畫）的 platform.settings。
 // Plan B 內這張表還不存在（00029 沒有它），而 G5 要求 seed 把系統 actor 與營運參數寫進去 →
 // 測試自行建表以驗證那條路徑；DDL 逐字對齊 Plan C 的定義（key／value／updated_at）。
@@ -292,25 +318,25 @@ func assertPlatformCatalog(t *testing.T, db *sql.DB) {
 		e.enabled::text || '/' || coalesce(e.limit_value::text, 'NULL')
 		FROM platform.plan_entitlements e JOIN platform.plans pl ON pl.id = e.plan_id`)
 	want := map[string]string{
-		"free/limit.seats":         "true/3",
-		"free/limit.customers":     "true/50",
-		"free/limit.products":      "true/100",
-		"free/limit.departments":   "true/1",
-		"free/limit.storage_gb":    "true/1",
-		"std/limit.seats":          "true/10",
-		"std/limit.customers":      "true/500",
-		"std/limit.products":       "true/2000",
-		"std/limit.departments":    "true/5",
-		"std/limit.storage_gb":     "true/20",
-		"std/feature.printing":     "true/NULL", // -1：enabled 但不限
-		"pro/limit.seats":          "true/50",
-		"pro/limit.customers":      "true/NULL",
-		"pro/limit.products":       "true/NULL",
-		"pro/limit.departments":    "true/20",
-		"pro/limit.storage_gb":     "true/200",
-		"pro/feature.printing":     "true/NULL",
-		"pro/feature.dispatch":     "true/NULL",
-		"pro/feature.returns":      "true/NULL",
+		"free/limit.seats":       "true/3",
+		"free/limit.customers":   "true/50",
+		"free/limit.products":    "true/100",
+		"free/limit.departments": "true/1",
+		"free/limit.storage_gb":  "true/1",
+		"std/limit.seats":        "true/10",
+		"std/limit.customers":    "true/500",
+		"std/limit.products":     "true/2000",
+		"std/limit.departments":  "true/5",
+		"std/limit.storage_gb":   "true/20",
+		"std/feature.printing":   "true/NULL", // -1：enabled 但不限
+		"pro/limit.seats":        "true/50",
+		"pro/limit.customers":    "true/NULL",
+		"pro/limit.products":     "true/NULL",
+		"pro/limit.departments":  "true/20",
+		"pro/limit.storage_gb":   "true/200",
+		"pro/feature.printing":   "true/NULL",
+		"pro/feature.dispatch":   "true/NULL",
+		"pro/feature.returns":    "true/NULL",
 	}
 	if !maps.Equal(got, want) {
 		t.Fatalf("方案權益不符：\ngot  %v\nwant %v", got, want)
