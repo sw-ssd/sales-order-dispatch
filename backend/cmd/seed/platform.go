@@ -1,4 +1,4 @@
-// 平台域 seeder（D34／G5）：8 個 features、3 個方案（免費／標準／專業）與價目、方案權益、
+// 平台域 seeder（D34／G5）：7 個 features、3 個方案（免費／標準／專業）與價目、方案權益、
 // 首位 operator，以及 G5 的平台自營公司＋系統使用者與 platform.settings 的營運參數。
 //
 // 冪等：重跑 seed 不新增列，也不覆寫營運已調整的值（價目與營運參數只補缺）—— `task seed`
@@ -32,18 +32,17 @@ import (
 // platformCompanyIdentifier 為平台自營公司的識別碼（G5 的系統 actor 錨點）。
 const platformCompanyIdentifier = "platform"
 
-// platformFeatures 為 v1 定案清單（spec §4.5）：5 個數值上限 ＋ 3 個 boolean 功能。
+// platformFeatures 為 v1 定案清單（spec §4.5）：4 個數值上限 ＋ 3 個 boolean 功能。
 //
-// 注意 limit.storage_gb：計數器（internal/services/counters.go）目前只認 4 個數值 feature，
-// 判定層的 Snapshot 卻對每個 integer feature 都要用量 → 這個 feature 一旦被種出來，
-// 租戶端投影（TenantEntitlementService）會以 SysInternal 失敗。此處仍照 v1 清單種；
-// 缺口記在報告 concerns（要嘛補檔案空間計數，要嘛從清單移除）。
+// `limit.storage_gb` **刻意不在清單內**（controller 2026-09-20 裁定）：計數器
+// （internal/services/counters.go）沒有檔案空間的來源可以量，而判定層的 Snapshot 對每個
+// integer feature 都要用量 → 種了它只會讓租戶端權益投影對**所有租戶**失敗。檔案功能（P2-1）
+// 落地並補上計數器後再加回來。
 var platformFeatures = []struct{ Code, Type, Unit, Desc string }{
 	{"limit.seats", "integer", "席", "帳號席位上線"},
 	{"limit.customers", "integer", "客戶", "客戶筆數上線"},
 	{"limit.products", "integer", "商品", "商品筆數上線"},
 	{"limit.departments", "integer", "部門", "部門數上線"},
-	{"limit.storage_gb", "integer", "GB", "檔案空間上線"},
 	{"feature.printing", "boolean", "", "單據列印"},
 	{"feature.dispatch", "boolean", "", "派車看板"},
 	{"feature.returns", "boolean", "", "退貨申請與審核"},
@@ -60,17 +59,17 @@ type platformPlan struct {
 var platformPlans = []platformPlan{
 	{"free", "免費", 1, map[string]int64{
 		"limit.seats": 3, "limit.customers": 50, "limit.products": 100,
-		"limit.departments": 1, "limit.storage_gb": 1,
+		"limit.departments": 1,
 	}},
 	{"std", "標準", 2, map[string]int64{
 		"limit.seats": 10, "limit.customers": 500, "limit.products": 2000,
-		"limit.departments": 5, "limit.storage_gb": 20,
-		"feature.printing": -1,
+		"limit.departments": 5,
+		"feature.printing":  -1,
 	}},
 	{"pro", "專業", 3, map[string]int64{
 		"limit.seats": 50, "limit.customers": -1, "limit.products": -1,
-		"limit.departments": 20, "limit.storage_gb": 200,
-		"feature.printing": -1, "feature.dispatch": -1, "feature.returns": -1,
+		"limit.departments": 20,
+		"feature.printing":  -1, "feature.dispatch": -1, "feature.returns": -1,
 	}},
 }
 

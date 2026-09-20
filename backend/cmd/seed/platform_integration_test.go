@@ -1,6 +1,6 @@
 //go:build integration
 
-// 平台域 seed 的整合契約（D34／G5）：8 個 features、3 個方案與價目、方案權益、首位 operator、
+// 平台域 seed 的整合契約（D34／G5）：7 個 features、3 個方案與價目、方案權益、首位 operator、
 // 平台自營公司與系統使用者、platform.settings 的系統 actor 與營運參數。
 // 驗收要求：**連跑兩次，筆數不變**（`task seed` 會反覆執行）。
 //
@@ -118,7 +118,7 @@ func TestIntegrationSeedPlatformIdempotent(t *testing.T) {
 	if second := platformSeedCountsOf(t, admin); second != first {
 		t.Fatalf("重跑 seed 不得改變列數：\n第一次 %+v\n第二次 %+v", first, second)
 	}
-	want := platformSeedCounts{features: 8, plans: 3, prices: 6, entitlements: 19, operators: 1}
+	want := platformSeedCounts{features: 7, plans: 3, prices: 6, entitlements: 16, operators: 1}
 	want.companies, want.users = 1, 1
 	if first != want {
 		t.Fatalf("seed 內容不符：got %+v want %+v", first, want)
@@ -176,7 +176,7 @@ func TestIntegrationSeedPlatformOperatorEmailUnset(t *testing.T) {
 	if !strings.Contains(logs.String(), "platform.settings") {
 		t.Fatalf("缺 platform.settings 必須印出提示並繼續，got log=%q", logs.String())
 	}
-	if n := seedCount(t, admin, `SELECT count(*) FROM platform.features`); n != 8 {
+	if n := seedCount(t, admin, `SELECT count(*) FROM platform.features`); n != 7 {
 		t.Fatalf("跳過 operator 不得影響其他 seed，features=%d", n)
 	}
 
@@ -231,7 +231,7 @@ func TestIntegrationSeedPlatformActorNeedsSystemScope(t *testing.T) {
 	if counts.companies != 1 || counts.users != 1 {
 		t.Fatalf("系統範圍內的 seed 應恰建一家自營公司與一位系統使用者，got %+v", counts)
 	}
-	if counts.features != 8 || counts.operators != 1 {
+	if counts.features != 7 || counts.operators != 1 {
 		t.Fatalf("平台域內容不符，got %+v", counts)
 	}
 }
@@ -265,6 +265,14 @@ func TestIntegrationSeedPlatformDoesNotAnchorDeveloper(t *testing.T) {
 // createPlatformSettingsTable 建立 Plan C（生命週期／console 計畫）的 platform.settings。
 // Plan B 內這張表還不存在（00029 沒有它），而 G5 要求 seed 把系統 actor 與營運參數寫進去 →
 // 測試自行建表以驗證那條路徑；DDL 逐字對齊 Plan C 的定義（key／value／updated_at）。
+//
+// **Plan C 必須照這個形狀建（欄位型別與值的形狀是跨計畫契約）**：
+//   - 兩欄皆 TEXT：`key text PRIMARY KEY`、`value text NOT NULL`（＋`updated_at timestamptz`）；
+//   - `system_actor_user_id`：**users.id 的十進位字串**（seed 以 strconv.FormatInt 寫入；
+//     讀取端 strconv.ParseInt → id）；
+//   - `trial_days`／`grace_days`／`lead_days`：**十進位整數字串**（seed 以 strconv.Itoa 寫入）。
+//
+// 值的形狀由測試釘住：`system_actor_user_id` 必須等於系統使用者的 `id::text`。
 func createPlatformSettingsTable(t *testing.T, db *sql.DB) {
 	t.Helper()
 	if _, err := db.Exec(`
@@ -286,7 +294,6 @@ func assertPlatformCatalog(t *testing.T, db *sql.DB) {
 		"limit.customers":   "integer/客戶",
 		"limit.products":    "integer/商品",
 		"limit.departments": "integer/部門",
-		"limit.storage_gb":  "integer/GB",
 		"feature.printing":  "boolean/",
 		"feature.dispatch":  "boolean/",
 		"feature.returns":   "boolean/",
@@ -322,18 +329,15 @@ func assertPlatformCatalog(t *testing.T, db *sql.DB) {
 		"free/limit.customers":   "true/50",
 		"free/limit.products":    "true/100",
 		"free/limit.departments": "true/1",
-		"free/limit.storage_gb":  "true/1",
 		"std/limit.seats":        "true/10",
 		"std/limit.customers":    "true/500",
 		"std/limit.products":     "true/2000",
 		"std/limit.departments":  "true/5",
-		"std/limit.storage_gb":   "true/20",
 		"std/feature.printing":   "true/NULL", // -1：enabled 但不限
 		"pro/limit.seats":        "true/50",
 		"pro/limit.customers":    "true/NULL",
 		"pro/limit.products":     "true/NULL",
 		"pro/limit.departments":  "true/20",
-		"pro/limit.storage_gb":   "true/200",
 		"pro/feature.printing":   "true/NULL",
 		"pro/feature.dispatch":   "true/NULL",
 		"pro/feature.returns":    "true/NULL",

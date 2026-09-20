@@ -54,6 +54,6 @@ func main() {
 	if err := SeedPlatform(ctx, sqlDB, client, cfg.Platform); err != nil {
 		log.Fatalf("seed 平台域: %v", err)
 	}
-	log.Println("seed: 平台域已確保（8 features／3 方案與價目／首位 operator 依 env／平台自營公司與系統使用者，冪等）")
+	log.Println("seed: 平台域已確保（7 features／3 方案與價目／首位 operator 依 env／平台自營公司與系統使用者，冪等）")
 	log.Println("seed: 完成")
 }
