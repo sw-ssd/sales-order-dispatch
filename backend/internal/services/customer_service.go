@@ -221,43 +221,52 @@ func (s *CustomerService) ListCustomers(ctx context.Context, req *connect.Reques
 			customer.TaxIDContainsFold(kw),
 		))
 	}
-	field, err := customerSortField(req.Msg.GetSort())
+	field, desc, err := customerSortField(req.Msg.GetSort(), req.Msg.GetDesc())
 	if err != nil {
 		return nil, err
 	}
 
-	list, pg, err := pageList(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), customerListSource{q, field}, customerToProto)
+	list, pg, err := pageList(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), customerListSource{q, field, desc}, customerToProto)
 	if err != nil {
 		return nil, err
 	}
 	return connect.NewResponse(&customersv1.ListCustomersResponse{Customers: list, Pagination: pg}), nil
 }
 
-// customerListSource 為 pageList 的 ent 查詢橋接(排序白名單已先算為 field)。
+// customerListSource 為 pageList 的 ent 查詢橋接(排序白名單已先解析為 field/desc)。
 type customerListSource struct {
 	q     *ent.CustomerQuery
 	field string
+	desc  bool
 }
 
 func (s customerListSource) Count(ctx context.Context) (int, error) { return s.q.Count(ctx) }
 func (s customerListSource) Page(ctx context.Context, off, lim int) ([]*ent.Customer, error) {
+	order := ent.Asc(s.field)
+	if s.desc {
+		order = ent.Desc(s.field)
+	}
 	// P1-A(與 F1 同型):排序鍵非唯一時 PostgreSQL 對同值群(ties)的順序不保證一致,逐頁
 	// LIMIT/OFFSET 會重複與遺漏資料,故一律以 id 為次序鍵收斂成全序(name/customer_code/
 	// created_at 三者中 name 與 created_at 皆非唯一;field 為唯一鍵時多一組等價鍵,結果不變)。
-	return s.q.Clone().Order(ent.Asc(s.field), ent.Asc(customer.FieldID)).Offset(off).Limit(lim).All(ctx)
+	return s.q.Clone().Order(order, ent.Asc(customer.FieldID)).Offset(off).Limit(lim).All(ctx)
 }
 
-// customerSortField 將排序參數對應到白名單欄位;預設 name。
-func customerSortField(sort string) (string, error) {
-	switch sort {
-	case "", "name":
-		return customer.FieldName, nil
+// customerSortField 解析排序參數,回傳 ent 欄位與是否降冪(比照 companySortField 的白名單樣板)。
+// sort 空 → 預設 name 升冪(現行行為)並忽略 desc;其餘欄位預設升冪,desc=true 轉降冪。
+// D2:sort 與同檔 keyword 一樣先 trim(前後空白不影響判定),白名單外的值仍 InvalidArgument。
+func customerSortField(sort string, desc bool) (string, bool, error) {
+	switch strings.TrimSpace(sort) {
+	case "":
+		return customer.FieldName, false, nil
+	case "name":
+		return customer.FieldName, desc, nil
 	case "customer_code":
-		return customer.FieldCustomerCode, nil
+		return customer.FieldCustomerCode, desc, nil
 	case "created_at":
-		return customer.FieldCreatedAt, nil
+		return customer.FieldCreatedAt, desc, nil
 	default:
-		return "", connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("排序欄位 %q 不在白名單(name/customer_code/created_at)", sort))
+		return "", false, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("排序欄位 %q 不在白名單(name/customer_code/created_at)", sort))
 	}
 }
 

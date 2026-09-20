@@ -10,8 +10,14 @@
 //
 // P1-A(Phase 3 波複審,2026-09-20):同一缺陷類別在客戶清單(`customerListSource.Page`,
 // `customer_service.go`)仍存在 —— 其排序白名單 `name`/`customer_code`/`created_at` 中
-// `name` 與 `created_at` 皆非唯一。客戶端點的白名單只有升冪(proto 的 ListCustomersRequest
-// 無 `desc` 欄位),故客戶清單只掃升冪與預設排序。
+// `name` 與 `created_at` 皆非唯一。修法同 F1。
+//
+// D2(2026-09-20):客戶端點補上 `desc`(proto 的 ListCustomersRequest 先前無此欄位),
+// 故客戶清單與公司/部門/角色一致地掃升冪與降冪。
+//
+// 降冪另有一層守門:兩個方向都掃的端點,同一排序欄位(非空)**升冪與降冪的頁序必須不同**
+// (見 assertDescReversesAsc)——「desc 被忽略」這種退化實作在逐頁/全量集合比對下看不出來
+// (兩個方向都會等於全量),只有比對兩個方向的序列才看得到。
 //
 // F2(Phase 3 波複審,2026-09-20):同型缺陷另外收斂在六個清單端點(六者的 proto 都沒有
 // 排序參數,排序鍵固定):加工規格/商品分類/車次以 `sort_order` 排序(欄位預設 0,同值群
@@ -128,7 +134,7 @@ func newListScanner[T any](
 }
 
 // TestIntegrationListPageScanMatchesFullScan F1/P1-A/F2 迴歸:對各清單的每個排序欄位
-// (含升/降冪與預設排序;客戶端點僅升冪;F2 的六個端點沒有排序參數,只有服務端固定的排序鍵)
+// (含升/降冪與預設排序;F2 的六個端點沒有排序參數,只有服務端固定的排序鍵)
 // 以多筆同值(NULl/重複 tax_id、同名、同 status、同 created_at、同 sort_order、同 code,
 // 遠多於一頁)的資料,逐頁掃描的結果必須與全量一致:
 //
@@ -186,12 +192,12 @@ func TestIntegrationListPageScanMatchesFullScan(t *testing.T) {
 			}
 			return res.Msg.GetRoles(), nil
 		}, func(r *v1.Role) string { return r.GetId() })
-	// 客戶端點無 desc(白名單僅升冪),request 不帶 desc;其餘六個端點(F2)連 sort 都沒有,
+	// 客戶端點(D2 起有 desc)與公司/部門/角色同形;其餘六個端點(F2)連 sort 都沒有,
 	// 一律以服務端固定的排序鍵查詢 —— sortField/desc 對這些 closure 只是共用的 listScanner 簽章。
 	customerScan := newListScanner("ListCustomers",
-		func(sortField string, _ bool, page, pageSize int32) ([]*customersv1.Customer, error) {
+		func(sortField string, desc bool, page, pageSize int32) ([]*customersv1.Customer, error) {
 			res, err := cl.customers.ListCustomers(ctx, connect.NewRequest(&customersv1.ListCustomersRequest{
-				Page: page, PageSize: pageSize, Sort: sortField,
+				Page: page, PageSize: pageSize, Sort: sortField, Desc: desc,
 			}))
 			if err != nil {
 				return nil, err
@@ -329,8 +335,8 @@ func TestIntegrationListPageScanMatchesFullScan(t *testing.T) {
 		entity string
 		field  string
 		scan   listScanner
-		// ascOnly 表示該端點只有升冪一途:客戶端點的 request 無 desc 欄位;F2 的六個端點連
-		// sort 都沒有(排序鍵固定),故 field 一律為 ""。
+		// ascOnly 表示該端點只有升冪一途:F2 的六個端點連 sort 都沒有(排序鍵固定),
+		// 故 field 一律為 "";其餘端點皆掃升冪與降冪。
 		ascOnly bool
 	}{
 		{"公司", "", companyScan, false},
@@ -346,10 +352,10 @@ func TestIntegrationListPageScanMatchesFullScan(t *testing.T) {
 		{"角色", "code", roleScan, false},
 		{"角色", "name", roleScan, false},
 		{"角色", "id", roleScan, false},
-		{"客戶", "", customerScan, true},
-		{"客戶", "name", customerScan, true},
-		{"客戶", "customer_code", customerScan, true},
-		{"客戶", "created_at", customerScan, true},
+		{"客戶", "", customerScan, false},
+		{"客戶", "name", customerScan, false},
+		{"客戶", "customer_code", customerScan, false},
+		{"客戶", "created_at", customerScan, false},
 		{"加工規格", "", specScan, true},
 		{"商品分類", "", catScan, true},
 		{"車次", "", routeScan, true},
@@ -367,8 +373,23 @@ func TestIntegrationListPageScanMatchesFullScan(t *testing.T) {
 			t.Run(fmt.Sprintf("%s/sort=%q/desc=%v", tc.entity, tc.field, desc), func(t *testing.T) {
 				paged := scanPages(t, tc.scan, tc.field, desc)
 				assertScanMatchesFull(t, tc.entity, tc.field, desc, paged, all[tc.entity])
+				// 降冪的方向須有實效:同一欄位(非空)的升冪與降冪頁序必須不同(D2)。
+				if desc && !tc.ascOnly && tc.field != "" {
+					assertDescReversesAsc(t, tc.entity, tc.field, scanPages(t, tc.scan, tc.field, false), paged)
+				}
 			})
 		}
+	}
+}
+
+// assertDescReversesAsc 斷言同一排序欄位(非空)的降冪頁序與升冪不同。
+// 「desc 被忽略」的退化實作在此必紅 —— 逐頁掃描集合在兩個方向都會等於全量,
+// 只有頁序看得出 desc 是否生效。方向本身的正確性由 sqlite 的映射鎖
+// (TestListCustomersSortWhitelist)逐值釘住。
+func assertDescReversesAsc(t *testing.T, entity, sortField string, asc, descPaged []string) {
+	t.Helper()
+	if slices.Equal(asc, descPaged) {
+		t.Errorf("%s sort=%q:降冪頁序與升冪相同 —— desc 未被套用", entity, sortField)
 	}
 }
 

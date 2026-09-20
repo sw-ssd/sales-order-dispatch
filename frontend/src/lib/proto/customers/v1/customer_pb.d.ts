@@ -161,11 +161,18 @@ export declare type ListCustomersRequest = Message<"customers.v1.ListCustomersRe
   includeDeleted: boolean;
 
   /**
-   * name | customer_code | created_at(白名單)
+   * 白名單:name | customer_code | created_at(空 = 預設排序)
    *
    * @generated from field: string sort = 5;
    */
   sort: string;
+
+  /**
+   * 是否降冪(sort 空時忽略)
+   *
+   * @generated from field: bool desc = 6;
+   */
+  desc: boolean;
 };
 
 /**

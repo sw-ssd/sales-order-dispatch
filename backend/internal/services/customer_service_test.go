@@ -423,12 +423,14 @@ func TestCustomerScopeCrossDept(t *testing.T) {
 	}
 }
 
-// TestListCustomersSortWhitelist:客戶清單排序白名單的映射與預設(sort 空 → name 升冪)。
+// TestListCustomersSortWhitelist:客戶清單排序白名單的映射與預設(sort 空 → name 升冪)
+// 與升/降冪方向(desc)。
 //
 // sqlite 層的回歸鎖:跨頁重複/遺漏是同值群次序不穩定的**執行計畫層級**缺陷,sqlite 上看不到
 // (見 list_pagination_integration_test.go 的說明),故本測試只釘住「每個白名單值用到正確的
-// 欄位」與「sort 空 = name」。fixture 三筆的 id / name(碼位) / customer_code / created_at
-// 升冪序列兩兩互異 → 服務若忽略 sort 或把某欄映射到別的欄位,期望序列立即不符。
+// 欄位」「sort 空 = name 且忽略 desc」與「desc 真的反轉」。fixture 三筆的 id / name(碼位) /
+// customer_code / created_at 升冪序列兩兩互異 → 服務若忽略 sort、把某欄映射到別的欄位、
+// 或忽略/誤用 desc,期望序列立即不符。
 func TestListCustomersSortWhitelist(t *testing.T) {
 	ctx := t.Context()
 	_, db := newCustomerTestServer(t, authz.Identity{})
@@ -455,31 +457,43 @@ func TestListCustomersSortWhitelist(t *testing.T) {
 
 	for _, tc := range []struct {
 		sort string
+		desc bool
 		want []string
 	}{
-		{"", []string{"丙客戶", "乙客戶", "甲客戶"}}, // 預設排序 == name 升冪
-		{"name", []string{"丙客戶", "乙客戶", "甲客戶"}},
-		{"customer_code", []string{"丙客戶", "甲客戶", "乙客戶"}},
-		{"created_at", []string{"乙客戶", "丙客戶", "甲客戶"}},
+		{"", false, []string{"丙客戶", "乙客戶", "甲客戶"}},  // 預設排序 == name 升冪
+		{"", true, []string{"丙客戶", "乙客戶", "甲客戶"}},   // 契約:sort 空時忽略 desc
+		{"  ", true, []string{"丙客戶", "乙客戶", "甲客戶"}}, // 全空白 sort == 空(sort 前後空白須 trim)
+		{"name", false, []string{"丙客戶", "乙客戶", "甲客戶"}},
+		{"name", true, []string{"甲客戶", "乙客戶", "丙客戶"}},
+		{"customer_code", false, []string{"丙客戶", "甲客戶", "乙客戶"}},
+		{"customer_code", true, []string{"乙客戶", "甲客戶", "丙客戶"}},
+		{"created_at", false, []string{"乙客戶", "丙客戶", "甲客戶"}},
+		{"created_at", true, []string{"甲客戶", "丙客戶", "乙客戶"}},
+		{"  name  ", false, []string{"丙客戶", "乙客戶", "甲客戶"}}, // 前後空白可解析
+		{"  name  ", true, []string{"甲客戶", "乙客戶", "丙客戶"}},
 	} {
-		res, err := client.ListCustomers(ctx, connect.NewRequest(&customersv1.ListCustomersRequest{Sort: tc.sort}))
+		res, err := client.ListCustomers(ctx, connect.NewRequest(&customersv1.ListCustomersRequest{Sort: tc.sort, Desc: tc.desc}))
 		if err != nil {
-			t.Fatalf("sort=%q: %v", tc.sort, err)
+			t.Errorf("sort=%q desc=%v: %v", tc.sort, tc.desc, err)
+			continue
 		}
 		got := make([]string, 0, len(res.Msg.GetCustomers()))
 		for _, c := range res.Msg.GetCustomers() {
 			got = append(got, c.GetName())
 		}
 		if !slices.Equal(got, tc.want) {
-			t.Errorf("sort=%q:got %v,want %v", tc.sort, got, tc.want)
+			t.Errorf("sort=%q desc=%v:got %v,want %v", tc.sort, tc.desc, got, tc.want)
 		}
 	}
 
-	_, err := client.ListCustomers(ctx, connect.NewRequest(&customersv1.ListCustomersRequest{Sort: "bogus"}))
-	if connect.CodeOf(err) != connect.CodeInvalidArgument {
-		t.Fatalf("非法 sort 應 InvalidArgument,got %v", err)
-	}
-	if msg := err.Error(); !strings.Contains(msg, "name/customer_code/created_at") {
-		t.Errorf("錯誤訊息應逐字列出白名單,got %q", msg)
+	// 空白包住的亂值仍在 trim 後落回白名單外 → 必須仍是 InvalidArgument(而非被當成預設排序)。
+	for _, sort := range []string{"bogus", "  bogus  ", "name,desc"} {
+		_, err := client.ListCustomers(ctx, connect.NewRequest(&customersv1.ListCustomersRequest{Sort: sort}))
+		if connect.CodeOf(err) != connect.CodeInvalidArgument {
+			t.Fatalf("非法 sort=%q 應 InvalidArgument,got %v", sort, err)
+		}
+		if msg := err.Error(); !strings.Contains(msg, "name/customer_code/created_at") {
+			t.Errorf("錯誤訊息應逐字列出白名單(sort=%q),got %q", sort, msg)
+		}
 	}
 }

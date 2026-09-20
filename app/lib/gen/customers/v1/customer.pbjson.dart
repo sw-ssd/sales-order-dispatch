@@ -81,6 +81,7 @@ const ListCustomersRequest$json = {
     {'1': 'keyword', '3': 3, '4': 1, '5': 9, '10': 'keyword'},
     {'1': 'include_deleted', '3': 4, '4': 1, '5': 8, '10': 'includeDeleted'},
     {'1': 'sort', '3': 5, '4': 1, '5': 9, '10': 'sort'},
+    {'1': 'desc', '3': 6, '4': 1, '5': 8, '10': 'desc'},
   ],
 };
 
@@ -88,7 +89,8 @@ const ListCustomersRequest$json = {
 final $typed_data.Uint8List listCustomersRequestDescriptor = $convert.base64Decode(
     'ChRMaXN0Q3VzdG9tZXJzUmVxdWVzdBISCgRwYWdlGAEgASgFUgRwYWdlEhsKCXBhZ2Vfc2l6ZR'
     'gCIAEoBVIIcGFnZVNpemUSGAoHa2V5d29yZBgDIAEoCVIHa2V5d29yZBInCg9pbmNsdWRlX2Rl'
-    'bGV0ZWQYBCABKAhSDmluY2x1ZGVEZWxldGVkEhIKBHNvcnQYBSABKAlSBHNvcnQ=');
+    'bGV0ZWQYBCABKAhSDmluY2x1ZGVEZWxldGVkEhIKBHNvcnQYBSABKAlSBHNvcnQSEgoEZGVzYx'
+    'gGIAEoCFIEZGVzYw==');
 
 @$core.Deprecated('Use listCustomersResponseDescriptor instead')
 const ListCustomersResponse$json = {

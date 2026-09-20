@@ -193,7 +193,8 @@ type ListCustomersRequest struct {
 	PageSize       int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	Keyword        string                 `protobuf:"bytes,3,opt,name=keyword,proto3" json:"keyword,omitempty"`                                      // 對 name / customer_code / tax_id 不區分大小寫 OR 模糊比對
 	IncludeDeleted bool                   `protobuf:"varint,4,opt,name=include_deleted,json=includeDeleted,proto3" json:"include_deleted,omitempty"` // 是否含已刪除(管理介面)
-	Sort           string                 `protobuf:"bytes,5,opt,name=sort,proto3" json:"sort,omitempty"`                                            // name | customer_code | created_at(白名單)
+	Sort           string                 `protobuf:"bytes,5,opt,name=sort,proto3" json:"sort,omitempty"`                                            // 白名單:name | customer_code | created_at(空 = 預設排序)
+	Desc           bool                   `protobuf:"varint,6,opt,name=desc,proto3" json:"desc,omitempty"`                                           // 是否降冪(sort 空時忽略)
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -261,6 +262,13 @@ func (x *ListCustomersRequest) GetSort() string {
 		return x.Sort
 	}
 	return ""
+}
+
+func (x *ListCustomersRequest) GetDesc() bool {
+	if x != nil {
+		return x.Desc
+	}
+	return false
 }
 
 type ListCustomersResponse struct {
@@ -2096,13 +2104,14 @@ const file_customers_v1_customer_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\x0f \x01(\tR\tupdatedAt\x12\x1d\n" +
 	"\n" +
-	"deleted_at\x18\x10 \x01(\tR\tdeletedAt\"\x9e\x01\n" +
+	"deleted_at\x18\x10 \x01(\tR\tdeletedAt\"\xb2\x01\n" +
 	"\x14ListCustomersRequest\x12\x12\n" +
 	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x18\n" +
 	"\akeyword\x18\x03 \x01(\tR\akeyword\x12'\n" +
 	"\x0finclude_deleted\x18\x04 \x01(\bR\x0eincludeDeleted\x12\x12\n" +
-	"\x04sort\x18\x05 \x01(\tR\x04sort\"\x88\x01\n" +
+	"\x04sort\x18\x05 \x01(\tR\x04sort\x12\x12\n" +
+	"\x04desc\x18\x06 \x01(\bR\x04desc\"\x88\x01\n" +
 	"\x15ListCustomersResponse\x124\n" +
 	"\tcustomers\x18\x01 \x03(\v2\x16.customers.v1.CustomerR\tcustomers\x129\n" +
 	"\n" +

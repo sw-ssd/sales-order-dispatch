@@ -61,7 +61,8 @@ message ListCustomersRequest {
   int32 page_size = 2;
   string keyword = 3;         // 對 name / customer_code / tax_id 不區分大小寫 OR 模糊比對
   bool include_deleted = 4;   // 是否含已刪除(管理介面)
-  string sort = 5;            // name | customer_code | created_at(白名單)
+  string sort = 5;            // 白名單:name | customer_code | created_at(空 = 預設排序)
+  bool desc = 6;              // 是否降冪(sort 空時忽略)
 }
 
 message ListCustomersResponse {
