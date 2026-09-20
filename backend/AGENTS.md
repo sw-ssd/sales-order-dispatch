@@ -145,9 +145,44 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
 3. **區段規則是硬規則**：`1xxx`→`InvalidArgument`／`2xxx`→`AlreadyExists`／`3xxx`→`FailedPrecondition`／`4xxx`→`{PermissionDenied, Unauthenticated, NotFound}`／`5xxx`→`FailedPrecondition`／`9xxx`→`Internal`。ID 形態固定 `^[A-Z]{2,6}-\d{4}$`，且 domain 前綴須與 ID 相符；`MustRegister` 於套件 `init` 驗證（格式／重複／缺訊息／前綴／區段），違反即 **panic → 啟動就失敗**。**語意與 connect 碼衝突時改 ID、不改 connect 碼**（`AUTH-4003`／`AUTH-3003` 就是為此從 `1xxx` 移出的）。
 4. **5xx 一律 `SYS-9000`**（`SysInternal`）：內部細節（`SQLSTATE`、constraint 名、RLS policy 名、stack）只進 server log，永不進對外訊息。`trace_id` 由 `internal/obs/requestid` 的 interceptor 在**回應邊界**補進 `ErrorInfo.trace_id`（**不**寫進訊息樣板——否則每個呼叫點都得先注入參數，漏了就外洩字面 `{trace}`）；middleware 閘門（不走 connect handler）另由 `writeConnectError` 的 `requestid.Ensure`／`Stamp` 補——**但 `Stamp` 只對「已帶 `ErrorInfo`」的錯誤生效**，故任何自建裸 `connect.NewError` 的閘門錯誤連 `trace_id` 都沒有（這正是本節第 1 條要消滅的寫法）。
 5. **跨租戶與不存在一律 `SYS-4002`**（`SysNotFound`，訊息「資源不存在或無權存取」）：不洩漏資源是否存在（防 oracle 探測）。授權**檢查**失敗（角色／範圍不足）才是 `SYS-4001`（`SysPermissionDenied`）—— 兩者語意不同，前端處理也不同（「請管理員開權」vs「找不到」）。第三種是**寫入被 RLS 的 `WITH CHECK` 擋下** → `SYS-3001`（`SysScopeViolation`，見 §9-13）。
-6. **配額與訂閱用 `PLAT-*`，不得以 `PermissionDenied` 表示額度問題**：`PLAT-5001`（`PlatformLimitExceeded`，details 帶 `feature`／`used`／`limit`）／`PLAT-5002`（`PlatformFeatureNotInPlan`，details 帶 `feature`）／`PLAT-3001`（`PlatformSubscriptionInactive`）／`PLAT-3002`（`PlatformPaymentConflict`，details 帶 `reason`）。前端據碼導向升級方案或收款處理，與「缺權限」是不同操作。這 4 碼**已註冊但尚未落點**（`internal/platform/` 是 Plan B／C 的產物），落地點見計畫 `docs/superpowers/plans/2026-09-20-error-codes-plan.md` 的 **Task 5b**。
+6. **配額與訂閱用 `PLAT-*`，不得以 `PermissionDenied` 表示額度問題**：`PLAT-5001`（`PlatformLimitExceeded`，details 帶 `feature`／`used`／`limit`）／`PLAT-5002`（`PlatformFeatureNotInPlan`，details 帶 `feature`）／`PLAT-3001`（`PlatformSubscriptionInactive`）／`PLAT-3002`（`PlatformPaymentConflict`，details 帶 `reason`）。前端據碼導向升級方案或收款處理，與「缺權限」是不同操作。**落點現況**：`PLAT-5001`／`PLAT-5002`／`PLAT-3001` 已隨 Plan B 落在 `internal/platform/entitlements` 的判定層（見 §11-4）；`PLAT-3002` 待 Plan C 的收款路徑（`RecordPayment`）。計畫 `docs/superpowers/plans/2026-09-20-error-codes-plan.md` 的 **Task 5b** 即為此而留。
 7. **`Error`／`Wrap` 不收 ctx**：`trace_id` 由邊界補，`internal/errcode` 因此是**葉節點**（不 import `internal/obs` 或任何服務層套件），任何層都能直接引用。`Wrap` 保留根因供 log／`errors.Is` 追查（自訂型別的 `Unwrap`），但 cause 文字**不進對外訊息**——connect 對任何碼都逐字轉送 `Message()`，所以絕不用 `fmt.Errorf("%s: %w", …)` 當訊息。
    **實測（connect-go v1.21.0）**：`(*connect.Error).Details()` 回傳的 `ErrorDetail.Value()` 是 `proto.Clone`，序列化走 `NewErrorDetail` 當下 marshal 的 `pbAny` → **就地修改既有的 `ErrorInfo` 不會生效，必須重建錯誤**（`connect.NewError` ＋其餘 detail 依序 `AddDetail` ＋ `Meta()` 逐鍵複製）；實作見 `internal/obs/requestid.stampTraceID`。
 8. **產生檔必須與 registry 同步**：`go generate ./internal/errcode`（產生器在 `cmd/gen-errcodes`）輸出 `docs/error-codes.md` 與三端常數，產物一律入 commit；CI 的「Error codes up to date」步驟重跑產生後以 `git diff --exit-code` ＋ `git status --porcelain` 驗同步（**未 commit 的新產物也會擋**）。`platform-console/src/lib/errcode.ts` 只在該目錄存在時才寫（Plan C 落地後自動納管，目前為 no-op）。
-   現況：**21 碼**（SYS 7／AUTH 7／PLAT 4／CUST 3），其中 **14 碼已實際落點**；未落點者（`PLAT-*`×4、`AUTH-3001`、`CUST-2001`／`CUST-3001`）的現況、選項與歸屬見計畫 `docs/superpowers/plans/2026-09-20-error-codes-plan.md` Progress 的「未結項」（`CUST-*` 另見 `codes_customer.go` 的註解）。
+   現況：**21 碼**（SYS 7／AUTH 7／PLAT 4／CUST 3），其中 **17 碼已實際落點**（Plan B 之後新增 `PLAT-3001`／`PLAT-5001`／`PLAT-5002` 三個落點，見 §11-4）；未落點者（`PLAT-3002`、`AUTH-3001`、`CUST-2001`／`CUST-3001`）的現況、選項與歸屬見計畫 `docs/superpowers/plans/2026-09-20-error-codes-plan.md` Progress 的「未結項」（`CUST-*` 另見 `codes_customer.go` 的註解）。
+
+## 11. 平台域（SaaS 訂閱與權益，D34–D39；2026-09-20 起）
+
+平台域是獨立 package（`internal/platform/**`）＋ 獨立 proto（`platform/v1`）＋ 獨立 PG schema（`platform`）。權威文件：設計 `docs/superpowers/specs/2026-09-20-saas-billing-entitlements-design.md`、實作計畫 `docs/superpowers/plans/2026-09-20-platform-entitlements-plan.md`。以下每一條都是實測換來的；平台域的失效模式大多是**靜默**的（授權不見了、查詢回 0 列、`trace_id` 空），所以規則寫得比業務域死。
+
+1. **`platform` schema 與業務域不 JOIN**：只以 `company_id` 對照；跨域副作用一律經 `platform.events`（outbox）。
+   為什麼：平台域走 admin（owner）連線、業務域走 RLS 的租戶交易，JOIN 會讓兩套邊界在同一句 SQL 內互相污染，且沒有東西保證 RLS 條件在改寫後仍完整。
+2. **`app_rw` 對 `platform` schema 零權限；平台域只走 `cfg.Database.AdminDSN()`**。新增平台表時**不得** `GRANT` 給 `app_rw`。
+   為什麼：`00022` 是白名單制（新表不繼承任何授權），而方案／權益／訂閱一旦能被業務角色讀取，租戶就取得「自己的合約由自己證明」的能力——資料層沒有第二道防線會擋下來。
+3. **平台表不用 ent**：`database/sql` ＋ 明確 SQL；`database/migrations/**` 仍是 schema 唯一真相（§8-1）。
+   為什麼：`platform` schema 在 sqlite 不存在（enttest 跑不了），ent codegen／auto-migrate 只會製造摩擦，而 §8-1 已禁止對 goose 管理的庫跑 auto-migrate。
+4. **權益判定 fail-closed**：無訂閱／未定義 feature → 一律拒絕；額度不足與訂閱不可用回 `FailedPrecondition`＋`PLAT-5001`／`PLAT-5002`／`PLAT-3001`（`PermissionDenied` 保留給「缺權限」，見 §10-6）。
+   為什麼：fail-open 的那一邊是「沒付錢也能用」；把額度問題說成權限問題則讓前端導錯路（請管理員開權 vs 升級方案）。
+5. **守衛必須可機械驗證**：新增配額相關的寫入 RPC，要在 `internal/services/entitlement_guard_test.go` 的 `guardCases` 登記（RPC → feature）；漏登記的 RPC 不會被矩陣覆蓋，掛錯 feature 或一次請求檢查兩次都會紅。
+   為什麼：「哪些 RPC 該有配額」是規格問題（descriptor 列舉判斷不出來），但「登記了就要掛對」是機制問題——把可機械化的那半交給測試，另一半留給 review。
+   現況：清單 **6 項**（`CreateUser`／`CreateCustomer`／`RestoreCustomer`／`CreateProduct`／`RestoreProduct`／`CreateDepartment`）；spec §4.5 的「部門復原」是**具名缺口**（repo 無 `RestoreDepartment`，見 spec §4.5 的註記）。
+6. **`company_id` 一律來自身分，不採用請求帶入的 id**：所有守衛只經過 `shared_service.go` 的 `guardQuota` 唯一入口；平台層身分（`super`／`developer`，`data_scope=all`）依 spec §4.3 **略過**配額判定。
+   為什麼：請求的 `company_id` 可被偽造，等於「拿別人的額度替自己的寫入背書」；而略過只寫在守衛入口、**不寫進 `CheckLimit`**——判定層必須與身分無關，否則平台端視圖會說謊。
+7. **配額是 check-then-act**：併發下兩筆請求可能同時通過檢查而超額 1 筆，屬**商業護欄**而非硬上限；**RLS 才是資料層的最後一道防線**（§9）。
+   為什麼：要嚴格上限得把計數序列化（另一票）。在拿到那個之前，不要把配額當成不可逾越的保證，也不要用它替代授權。
+8. **平台 RPC 必須掛在字面 `/platform/` 之下，且必須裝 `requestid.Interceptor()`**：
+   - 平台 Connect procedure 是 `/platform.v1.…`，而 operator cookie 的 `Path=/platform`；RFC 6265 的 path-match 是逐段前綴，`/platform` 對 `/platform.v1.…` **不成立**（未涵蓋的第一個字元是 `.`）→ 瀏覽器**不會送出** `platform_session`，登入看似成功但每個 RPC 都 401。正解是 `Mount("/platform", StripPrefix("/platform", platformMux))`（瀏覽器路徑成 `/platform/platform.v1.…`）；**不得**把 cookie 放寬成 `Path=/`（operator cookie 會跟著送往租戶 API）。
+   - 漏裝 `requestid.Interceptor()` → `ErrorInfo.trace_id` 永遠是空字串、也沒有 `rpc: … trace_id=…` 的 log 行（平台 RPC 是 repo 第 16 個掛載點，其餘 15 個全裝了）。
+   為什麼：平台域的故障排查只能靠 trace，而這個漏裝**不會有任何測試變紅**。
+9. **租戶與 operator 身分互不通用**：不同 JWT secret（`PLATFORM_JWT_SECRET` vs `JWT_SECRET`）＋不同 audience（`aud=platform`）＋不同 cookie（`platform_session`，`Path=/platform`）；租戶服務一律掛 `/api/v1`、平台服務掛 `/platform/`，**兩者不得混**；跨用測試必須存在。
+   為什麼：共用 secret 或共用 cookie 路徑，等於任何租戶 token 都能通過平台 RPC 的驗證——而平台 RPC 跨租戶讀寫，是全系統權限最高的一條路徑。
+10. **`platform.*` 能力不得出現在租戶 `GetAbility`／角色權限矩陣**（S11）。
+    為什麼：`platform.*` 屬 operator 的世界，一旦下發給租戶前端就會被當成「租戶也有這些權限」；前端守衛雖不構成授權（§3），但會誤導下一個實作者把平台能力掛到租戶路徑。
+11. **平台稽核不寫租戶 `audit_logs`**：一律寫 `platform.audit_logs`（唯一入口 `recordPlatformAudit`）。
+    為什麼：租戶稽核的 `company_id`／`user_id` 非零且 FK 到租戶 `users`，而平台操作者兩者皆無——硬寫會被 FK 擋下，或更糟：在稽核裡留下一個不存在的租戶 actor。
+12. **寫入平台表用 admin 連線；任何需要跨租戶讀業務表的平台查詢，必須在同一交易內 `SET LOCAL app.current_data_scope='all'`**（例：租戶列表投影的 LATERAL 查詢）。
+    為什麼：`companies` 等業務表是 `ENABLE`＋**`FORCE`** RLS，`FORCE` 讓 **table owner（admin 連線）也受 policy 約束** → 少了這個 `SET LOCAL`，平台端的租戶列表會**靜默回 0 列**（真容器實測；用容器預設的 superuser 連線測不出來）。
+13. **seed 的「冪等」定義**：重跑 `task seed` 不新增列、不覆寫營運已調整的值；**`updated_at` 與 sequence 跳號不算變更**。
+    為什麼：`platform.settings` 只寫「值真的不同」的那幾筆（`WHERE value IS DISTINCT FROM EXCLUDED.value`），否則每次重跑都推進 `updated_at`，「有沒有被改過」就失去意義；`plans` 的 `INSERT … ON CONFLICT DO UPDATE … RETURNING id` 即使走 UPDATE 分支也會消耗一次 `nextval`（id 不變、跳號無實害），把它算成變更只會逼出「先 SELECT 再 UPDATE」的複雜寫法。
+    註：`limit.storage_gb` 目前**不在** v1 seed 清單（無計數器 → 種下去會讓租戶端權益投影全面失敗），檔案功能與其計數器落地後再加回（見 spec §4.5 的註記）。
 
