@@ -23,6 +23,7 @@
   cd backend && grep -rn '\.Query()\|\.Create()\|UpdateOneID\|DeleteOneID\|\.Get(ctx' internal --include='*.go' | grep -v _test.go
   ```
   並在報告中列出你掃到的檔案與處置。**測試套件抓不到漏網（superuser／sqlite），只有這個掃描與 app_rw 探針抓得到。**
+- **不得在同一請求內對「同一列」開第二條交易（互鎖死結）**（T9 實測教訓，例：guest 註冊把 `users` 更新與 token_version bump 拆成兩條交易 → 死結）。需要系統範圍讀寫時，**把該段邏輯與外層交易合併為同一條 `SystemScopeTx`**（用 `tx.Client()`），而不是在外層交易內再開一條。
 - **`USING` 絕不得嚴於 `WITH CHECK`（可較寬、不可較嚴）（T8 實測的堆疊層不變式）**：PG 對 `INSERT ... RETURNING` 會套 **SELECT policy（USING）**，而 ent 的 `Create().Save()`／`Exec()` 一律產生 `INSERT ... RETURNING id`（ent v0.14.6 `sqlgraph/graph.go:1475`，除非自帶 id）→ **只要 USING 比 WITH CHECK 嚴，該表在對應 scope 等級下的寫入必定失敗**（fail-closed；superuser／sqlite 測試看不到）。實測（app_rw）：同條件下 `dept/plain INSERT` 成功、`dept/INSERT…RETURNING` 42501。因此「讀取權限比寫入權限嚴」在 DB 層**不可實作**；讀取權限的收緊一律由服務層 ACL 承擔（並須有測試證明它是閘門），DB 層只負責**跨公司隔離**。「同條件」是常態（17 個 policy 如此），但**允許 USING 較寬**——`core_metadicts_scope` 就是刻意如此（讀放寬、寫收緊），**不得**為了「一致」去改它。
 - **收斂掃描要連「policy 的 scope 分支」一起查**：新增／重建 policy 時，逐一確認每一個「合法的寫入者 scope 等級」都在 WITH CHECK 有對應分支；缺分支 = 該角色寫入必壞（fail-closed，且 **superuser／sqlite 測試看不到**）。同理，凡 USING 只認 `'all'`／`'company'` 而未涵蓋 `department`／`self` 的表，都要確認「該等級的使用者本來就不該讀」是**刻意**的，而非漏寫。
 - **未登入／系統範圍路徑一律 `dbtenant.SystemScopeTx`**（不是 `dbtenant.Client`）：登入、註冊、OIDC、refresh 輪替、身分查詢（middleware 的 `identityFor`）、`authz.Provision`、`cmd/seed`。
