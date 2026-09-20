@@ -14,9 +14,13 @@ import (
 
 	"connectrpc.com/connect"
 
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
+
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
+	"github.com/salesorder/sales-order-1.0/backend/ent/predicate"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
@@ -140,8 +144,9 @@ func (s companyListSource) Page(ctx context.Context, off, lim int) ([]*ent.Compa
 
 // companySortField 解析排序參數,回傳 ent 欄位與是否降冪(比照 customerSortField 的白名單樣板)。
 // sort 空 → 預設 id 降冪(現行行為)並忽略 desc;其餘欄位預設升冪,desc=true 轉降冪。
+// D1:sort 與 status/keyword 一樣先 trim(前後空白不影響判定),白名單外的值仍 InvalidArgument。
 func companySortField(sort string, desc bool) (string, bool, error) {
-	switch sort {
+	switch strings.TrimSpace(sort) {
 	case "":
 		return company.FieldID, true, nil
 	case "name":
@@ -413,8 +418,9 @@ func (s departmentListSource) Page(ctx context.Context, off, lim int) ([]*ent.De
 
 // departmentSortField 解析排序參數,回傳 ent 欄位與是否降冪(比照 companySortField 的白名單樣板)。
 // sort 空 → 預設 id 降冪(現行行為)並忽略 desc;其餘欄位預設升冪,desc=true 轉降冪。
+// D1:sort 與同檔 status/keyword 一樣先 trim(前後空白不影響判定),白名單外的值仍 InvalidArgument。
 func departmentSortField(sort string, desc bool) (string, bool, error) {
-	switch sort {
+	switch strings.TrimSpace(sort) {
 	case "":
 		return department.FieldID, true, nil // 預設排序:此案例把 desc 吃掉(契約:sort 空忽略 desc)
 	case "name":
@@ -516,6 +522,10 @@ func (s *DepartmentService) UpdateDepartment(ctx context.Context, req *connect.R
 // 部門仍有使用者時回 FailedPrecondition;已刪除或不存在 → NotFound。
 // 「部門仍有使用者」的限制與寫入是同一個敘述式條件更新(複審 M1),理由見下方 WHERE 的說明。
 //
+// D1:掛載路徑(user_service.validateDepartmentInCompany)在**自己的交易內**以 FOR SHARE 讀本列,
+// 本方法則在讀取快照之前先對同列取 FOR UPDATE —— 兩者互斥,故「掛載驗證通過 → 刪除提交」的交錯
+// 不再產生活帳號落在已軟刪部門(真 PG 併發證據:department_delete_race_integration_test.go)。
+//
 // 為何軟刪除:audit_logs.department_id 是 FK(00010),而以「目標使用者部門」寫入的稽核
 // (recordUserAudit)以及倉別/路線/加工規格/產品分類/客戶的 department_id,在成員被調離後
 // 仍會指向該部門 —— 硬刪除必被 FK 擋下,且錯誤被映射成與原因無關的通用訊息。列保留後所有
@@ -535,15 +545,26 @@ func (s *DepartmentService) DeleteDepartment(ctx context.Context, req *connect.R
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	// 快照(存在性 + 稽核 before 值)與寫入同交易。
-	cur, err := tx.Department.Query().WithCompany().
-		Where(department.ID(id), department.DeletedAtIsNil()).Only(ctx)
+	// D1:先對該部門列取互斥鎖(與掛載路徑 CreateUser/UpdateUser/AssignRole 的 FOR SHARE 衝突)。
+	// 只有掛載端的 FOR SHARE 不夠:刪除的條件式 UPDATE 雖會等掛載提交,但 READ COMMITTED 下它
+	// 重評條件用的是**該敘述開始時的舊快照**,看不到「等待期間才提交」的新成員,於是仍會刪成功
+	// (實測:department_delete_race_integration_test.go 的消去實驗)。把等待移到本敘述之後,
+	// UPDATE 才會以新快照重評 NOT EXISTS(users) → 看到新成員 → FailedPrecondition。
+	// 本敘述不 eager-load:WithCompany 的 JOIN 不能套用 FOR UPDATE(outer join 的 nullable 側)。
+	// 附帶效果:併發重複刪除時,後者在本敘述就讀到 deleted_at → NotFound(而非 FailedPrecondition)。
+	cur, err := tx.Department.Query().
+		Where(department.ID(id), department.DeletedAtIsNil(), predicate.Department(lockDepartmentForDelete)).
+		Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	// 「部門仍有使用者」的限制與寫入必須是同一個敘述:兩者分開(各自取快照)時,併發的
-	// CreateUser/UpdateUser/AssignRole 可在「檢查通過」之後才把活帳號掛進本部門,產生
-	// 「活帳號位於已軟刪部門」。條件式更新讓資料庫對同一個快照判定限制與列鎖。
+	// 稽核 before 值需要的公司(部門的公司 FK):以 edge query 取得,不讓上面的鎖敘述帶 JOIN。
+	co, err := cur.QueryCompany().Only(ctx)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	// 「部門仍有使用者」的限制與寫入仍是同一個敘述(複審 M1):即使列鎖已收斂併發,條件留在
+	// WHERE 讓資料庫對同一個快照判定限制與寫入本身。
 	affected, err := tx.Department.Update().
 		Where(department.ID(id), department.DeletedAtIsNil(), department.Not(department.HasUsers())).
 		SetDeletedAt(time.Now().UTC()).
@@ -555,10 +576,7 @@ func (s *DepartmentService) DeleteDepartment(ctx context.Context, req *connect.R
 		// 上一句已確認該列存在且未刪除,故未更新只剩「仍有使用者」一個原因。
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("部門仍有使用者,無法刪除"))
 	}
-	companyID := 0
-	if cur.Edges.Company != nil {
-		companyID = cur.Edges.Company.ID
-	}
+	companyID := co.ID
 	// 稽核的 department_id 指向被刪部門本身:列保留(軟刪除)故 FK 成立。
 	actor, _ := parseID(authz.IdentityFrom(ctx).UserID)
 	if err := recordAuditBA(ctx, tx, "department", "delete", id, companyID, &id, actor,
@@ -569,6 +587,16 @@ func (s *DepartmentService) DeleteDepartment(ctx context.Context, req *connect.R
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&v1.DeleteDepartmentResponse{}), nil
+}
+
+// lockDepartmentForDelete 為刪除路徑的部門讀取加上 FOR UPDATE 列鎖(D1):
+// 與掛載路徑的 FOR SHARE(lockDepartmentForShare)**互斥**,使「取鎖 → 讀成員快照 → 寫入」
+// 之間不會被新的掛載插入穿透。SQLite 無此語法(ent 於該 dialect 直接讓查詢報錯),故僅
+// PostgreSQL 生效;競態本身由真 PG 整合測試守住。
+func lockDepartmentForDelete(s *sql.Selector) {
+	if s.Dialect() == dialect.Postgres {
+		s.ForUpdate()
+	}
 }
 
 // parseID 將字串 ID 轉為 ent 自增 int64 ID;格式錯誤回 InvalidArgument。

@@ -124,8 +124,9 @@ func (s roleListSource) Page(ctx context.Context, off, lim int) ([]*ent.Role, er
 // roleSortField 解析排序參數,回傳 ent 欄位與是否降冪(比照 companySortField 的白名單樣板)。
 // sort 空 → 預設 id 升冪(現行行為,與公司/部門的 id 降冪不同)並忽略 desc;
 // 其餘欄位預設升冪,desc=true 轉降冪。
+// D1:sort 與 companySortField 一樣先 trim(前後空白不影響判定),白名單外的值仍 InvalidArgument。
 func roleSortField(sort string, desc bool) (string, bool, error) {
-	switch sort {
+	switch strings.TrimSpace(sort) {
 	case "":
 		return role.FieldID, false, nil
 	case "code":

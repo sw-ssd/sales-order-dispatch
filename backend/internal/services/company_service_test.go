@@ -254,20 +254,24 @@ func TestListCompaniesSort(t *testing.T) {
 		{"sort=status → 狀態升冪", "status", false, []string{"丙公司", "乙公司", "甲公司"}},
 		{"sort=id → id 升冪", "id", false, []string{"丙公司", "甲公司", "乙公司"}},
 		{"sort=id+desc → id 降冪", "id", true, []string{"乙公司", "甲公司", "丙公司"}},
+		{"sort=\" name \" → 前後空白 trim 後視為 name", " name ", false, []string{"丙公司", "乙公司", "甲公司"}},
+		{"sort=\"  \" → trim 後為空 → 預設 id 降冪", "  ", false, []string{"乙公司", "甲公司", "丙公司"}},
 	} {
 		if got := listCompanyNames(t, ctx, cc, tc.sort, tc.desc); !slices.Equal(got, tc.want) {
 			t.Errorf("%s:got %v,want %v", tc.name, got, tc.want)
 		}
 	}
 
-	// 非法值 → InvalidArgument,且訊息須列出白名單欄位。
-	_, err := cc.ListCompanies(ctx, connect.NewRequest(&v1.ListCompaniesRequest{Sort: "bogus"}))
-	if connect.CodeOf(err) != connect.CodeInvalidArgument {
-		t.Fatalf("非法 sort 應回 InvalidArgument,got %v", err)
-	}
-	for _, w := range []string{"name", "identifier", "tax_id", "status", "id"} {
-		if !strings.Contains(err.Error(), w) {
-			t.Errorf("錯誤訊息 %q 應列出白名單欄位 %q", err.Error(), w)
+	// 非法值(含前後空白者)→ InvalidArgument,且訊息須列出白名單欄位。
+	for _, sort := range []string{"bogus", " bogus "} {
+		_, err := cc.ListCompanies(ctx, connect.NewRequest(&v1.ListCompaniesRequest{Sort: sort}))
+		if connect.CodeOf(err) != connect.CodeInvalidArgument {
+			t.Fatalf("非法 sort %q 應回 InvalidArgument,got %v", sort, err)
+		}
+		for _, w := range []string{"name", "identifier", "tax_id", "status", "id"} {
+			if !strings.Contains(err.Error(), w) {
+				t.Errorf("錯誤訊息 %q 應列出白名單欄位 %q", err.Error(), w)
+			}
 		}
 	}
 }
@@ -329,20 +333,24 @@ func TestListDepartmentsSort(t *testing.T) {
 		{"sort=name+desc → 名稱降冪", "name", true, []string{"甲部", "乙部", "丙部"}},
 		{"sort=id → id 升冪", "id", false, []string{"丙部", "甲部", "乙部"}},
 		{"sort=id+desc → id 降冪", "id", true, []string{"乙部", "甲部", "丙部"}},
+		{"sort=\" name \" → 前後空白 trim 後視為 name", " name ", false, []string{"丙部", "乙部", "甲部"}},
+		{"sort=\"  \" → trim 後為空 → 預設 id 降冪", "  ", false, []string{"乙部", "甲部", "丙部"}},
 	} {
 		if got := listDepartmentNames(t, ctx, dc, tc.sort, tc.desc); !slices.Equal(got, tc.want) {
 			t.Errorf("%s:got %v,want %v", tc.name, got, tc.want)
 		}
 	}
 
-	// 非法值 → InvalidArgument,且訊息須列出白名單欄位。
-	_, err := dc.ListDepartments(ctx, connect.NewRequest(&v1.ListDepartmentsRequest{Sort: "bogus"}))
-	if connect.CodeOf(err) != connect.CodeInvalidArgument {
-		t.Fatalf("非法 sort 應回 InvalidArgument,got %v", err)
-	}
-	for _, w := range []string{"name", "id"} {
-		if !strings.Contains(err.Error(), w) {
-			t.Errorf("錯誤訊息 %q 應列出白名單欄位 %q", err.Error(), w)
+	// 非法值(含前後空白者)→ InvalidArgument,且訊息須列出白名單欄位。
+	for _, sort := range []string{"bogus", " bogus "} {
+		_, err := dc.ListDepartments(ctx, connect.NewRequest(&v1.ListDepartmentsRequest{Sort: sort}))
+		if connect.CodeOf(err) != connect.CodeInvalidArgument {
+			t.Fatalf("非法 sort %q 應回 InvalidArgument,got %v", sort, err)
+		}
+		for _, w := range []string{"name", "id"} {
+			if !strings.Contains(err.Error(), w) {
+				t.Errorf("錯誤訊息 %q 應列出白名單欄位 %q", err.Error(), w)
+			}
 		}
 	}
 }

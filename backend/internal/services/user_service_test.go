@@ -5,13 +5,17 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
 	"connectrpc.com/connect"
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
 	_ "github.com/mattn/go-sqlite3" // sqlite in-memory 測試驅動
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
+	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
@@ -662,5 +666,41 @@ func TestListUsersPagination(t *testing.T) {
 	}
 	if len(p2.Msg.GetUsers()) != 1 {
 		t.Fatalf("第2頁應剩 1 筆,got %d", len(p2.Msg.GetUsers()))
+	}
+}
+
+// TestDepartmentRowLockDialectGuard D1:兩側的部門列鎖都只允許在 PostgreSQL 生效。
+// SQLite 沒有 FOR SHARE/FOR UPDATE,ent 於該 dialect 會讓整條查詢報錯
+// (`sql: SELECT .. FOR UPDATE/SHARE not supported in SQLite`,dialect/sql/builder.go 的
+// Selector.For)—— sqlite 路徑(sqlite3 預設回歸套件)必須完全不寫入該子句;PG 則必須寫入,
+// 否則掛載(CreateUser/UpdateUser/AssignRole)與部門刪除不再互斥(D1 的缺陷會回來)。
+func TestDepartmentRowLockDialectGuard(t *testing.T) {
+	locks := []struct {
+		name string
+		lock func(*sql.Selector)
+	}{
+		{"掛載端 FOR SHARE", lockDepartmentForShare},
+		{"刪除端 FOR UPDATE", lockDepartmentForDelete},
+	}
+	for _, l := range locks {
+		for _, tc := range []struct {
+			dialect  string
+			wantLock bool
+		}{
+			{dialect: dialect.SQLite, wantLock: false},
+			{dialect: dialect.Postgres, wantLock: true},
+		} {
+			t.Run(l.name+"/"+tc.dialect, func(t *testing.T) {
+				sel := sql.Dialect(tc.dialect).Select().From(sql.Table(department.Table))
+				l.lock(sel)
+				if err := sel.Err(); err != nil {
+					t.Fatalf("selector 於 %s 不應報錯: %v", tc.dialect, err)
+				}
+				query, _ := sel.Query()
+				if got := strings.Contains(query, "FOR "); got != tc.wantLock {
+					t.Fatalf("%s 的查詢 %q 含列鎖子句 = %v,want %v", tc.dialect, query, got, tc.wantLock)
+				}
+			})
+		}
 	}
 }

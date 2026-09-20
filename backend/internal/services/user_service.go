@@ -13,9 +13,13 @@ import (
 	"connectrpc.com/connect"
 	"log"
 
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
+
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
+	"github.com/salesorder/sales-order-1.0/backend/ent/predicate"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
@@ -269,10 +273,6 @@ func (s *UserService) CreateUser(ctx context.Context, req *connect.Request[v1.Cr
 		if err != nil {
 			return nil, err
 		}
-		// 部門必須屬於目標公司(I6;避免跨公司資料擺放)。
-		if err := s.validateDepartmentInCompany(ctx, did, cid); err != nil {
-			return nil, err
-		}
 		deptRef = did
 	}
 
@@ -292,6 +292,11 @@ func (s *UserService) CreateUser(ctx context.Context, req *connect.Request[v1.Cr
 		// 員工帳號走 OAuth 不存密碼:password_hash 以 OIDC sentinel 佔位(規格 4.1,密碼登入必失敗)。
 		SetPasswordHash(auth.OIDCPasswordSentinel)
 	if deptRef > 0 {
+		// 部門必須屬於目標公司(I6;避免跨公司資料擺放)。必須在**本交易內**讀取才取得 FOR SHARE
+		// 列鎖(D1:與 DeleteDepartment 的條件式 UPDATE 互斥),見 validateDepartmentInCompany。
+		if err := s.validateDepartmentInCompany(ctx, tx, deptRef, cid); err != nil {
+			return nil, err
+		}
 		build = build.SetDepartmentID(deptRef)
 	}
 	if req.Msg.GetPhone() != "" {
@@ -395,7 +400,7 @@ func (s *UserService) UpdateUser(ctx context.Context, req *connect.Request[v1.Up
 			if companyRef == nil {
 				return nil, connect.NewError(connect.CodeInternal, errors.New("目標使用者缺少公司關聯"))
 			}
-			if err := s.validateDepartmentInCompany(ctx, did, companyRef.ID); err != nil {
+			if err := s.validateDepartmentInCompany(ctx, tx, did, companyRef.ID); err != nil {
 				return nil, err
 			}
 			update = update.SetDepartmentID(did)
@@ -478,7 +483,7 @@ func (s *UserService) AssignRole(ctx context.Context, req *connect.Request[v1.As
 		if companyRef == nil {
 			return nil, connect.NewError(connect.CodeInternal, errors.New("目標使用者缺少公司關聯"))
 		}
-		if err := s.validateDepartmentInCompany(ctx, did, companyRef.ID); err != nil {
+		if err := s.validateDepartmentInCompany(ctx, tx, did, companyRef.ID); err != nil {
 			return nil, err
 		}
 		update = update.SetDepartmentID(did)
@@ -707,12 +712,25 @@ func isValidRole(role string) bool {
 // 不符 → InvalidArgument(輸入驗證失敗),不允許跨公司資料擺放。
 // 軟刪除(00020):已刪除的部門視同不存在 —— 這是唯一以請求指定 department_id 的掛載路徑
 // (CreateUser / UpdateUser / AssignRole),不擋就會把活帳號掛進已刪除的部門。
-func (s *UserService) validateDepartmentInCompany(ctx context.Context, deptID, companyID int) error {
-	ok, err := s.db.Department.Query().
+//
+// D1(列鎖):本讀取必須與掛載寫入同交易,且以 FOR SHARE 取得該部門列鎖。原因:users 的
+// department_id FK 插入只取 FOR KEY SHARE,與 DeleteDepartment 的條件式 UPDATE(FOR NO KEY UPDATE)
+// 不衝突 —— 只靠「讀到未刪除」擋不住「讀取之後才提交的刪除」(活帳號落在已軟刪部門)。
+// FOR SHARE 與 FOR NO KEY UPDATE 互斥,兩種交錯都被收斂:
+//   - 刪除先取鎖 → 本讀取等它提交後才讀,看到 deleted_at → InvalidArgument(fail-closed);
+//   - 本讀取先取鎖 → 刪除等本交易結束後重評 NOT EXISTS(users) → 看到新成員 → FailedPrecondition。
+//
+// 因此呼叫端必須傳入**自己交易的** tx,且交易需涵蓋掛載寫入(CreateUser 已同步調整)。
+func (s *UserService) validateDepartmentInCompany(ctx context.Context, tx *ent.Tx, deptID, companyID int) error {
+	ok, err := tx.Department.Query().
 		Where(
 			department.ID(deptID),
 			department.DeletedAtIsNil(),
 			department.HasCompanyWith(company.ID(companyID), company.DeletedAtIsNil()),
+			// 列鎖以 predicate 形式附加(predicate.Department 即 func(*sql.Selector),ent 建構查詢時
+			// 依序套用,見 ent/department_query.go 的 sqlQuery):本版 ent 未啟用 sql/modifier feature
+			// (查詢建構子無 Modify),故不走 Query.Modify(lock.ForShare()) 該 API。
+			predicate.Department(lockDepartmentForShare),
 		).
 		Exist(ctx)
 	if err != nil {
@@ -722,6 +740,16 @@ func (s *UserService) validateDepartmentInCompany(ctx context.Context, deptID, c
 		return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("部門 %d 不屬於公司 %d", deptID, companyID))
 	}
 	return nil
+}
+
+// lockDepartmentForShare 為部門讀取加上 FOR SHARE 列鎖(D1)。
+// SQLite 無 FOR SHARE(ent 於該 dialect 直接讓查詢報錯),故僅 PostgreSQL 生效 ——
+// 測試路徑(sqlite/enttest)不受影響,競態本身由真 PG 整合測試守住
+// (department_delete_race_integration_test.go)。
+func lockDepartmentForShare(s *sql.Selector) {
+	if s.Dialect() == dialect.Postgres {
+		s.ForShare()
+	}
 }
 
 // userToProto 將 ent.User 轉為 proto User(不含 password_hash)。
