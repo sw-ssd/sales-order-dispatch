@@ -427,15 +427,18 @@ func (c Code) Error(ctx context.Context, params map[string]string) *connect.Erro
 	return err
 }
 
-// Wrap 同 Error，但保留底層錯誤（Unwrap）供 log 追查；底層細節不得進對外訊息。
+// Wrap 同 Error，但保留底層錯誤（Unwrap）供 log 追查；**cause 不進入對外 message**。
 func (c Code) Wrap(ctx context.Context, cause error, params ...map[string]string) *connect.Error {
 	var p map[string]string
 	if len(params) > 0 {
 		p = params[0]
 	}
 	msg := c.Render(p)
-	// 底層錯誤只作為 Unwrap 的因（供 log／errors.Is），不進入 message。
-	err := connect.NewError(c.ConnectCode, fmt.Errorf("%s: %w", msg, cause))
+	// 為什麼不用 fmt.Errorf("%s: %w", msg, cause)：那會把 cause 的文字寫進 message，
+	// 而 connect-go 對任何 code 都逐字轉送 connectErr.Message()（T4 review 實證：
+	// 客戶端會收到 SQLSTATE／policy 名／SET LOCAL 語句文字）。改以自訂型別承載：
+	// 對外只看到 msg，伺服器端仍可 errors.Is／Unwrap 追根因（根因另由 log 記錄）。
+	err := connect.NewError(c.ConnectCode, &wrapped{msg: msg, cause: cause})
 	info := &commonv1.ErrorInfo{Code: c.ID, Message: msg, TraceId: requestid.From(ctx)}
 	if len(p) > 0 {
 		info.Details = p
@@ -447,6 +450,15 @@ func (c Code) Wrap(ctx context.Context, cause error, params ...map[string]string
 	}
 	return err
 }
+
+// wrapped 讓對外訊息與根因分離：Error() 只回對外訊息，Unwrap() 保留根因供 log 追查。
+type wrapped struct {
+	msg   string
+	cause error
+}
+
+func (e *wrapped) Error() string { return e.msg }
+func (e *wrapped) Unwrap() error { return e.cause }
 ```
 
 **兩個實作要點**（已反映在上方程式碼，實作時照抄即可）：
