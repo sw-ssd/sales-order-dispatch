@@ -2475,6 +2475,18 @@ git commit -m "feat(backend): 核心域啟用 RLS，未登入路徑改系統範�
 - Modify: `backend/AGENTS.md`（新增 RLS 慣例小節）
 - Create: `internal/services/rls_cross_tenant_integration_test.go`
 
+**`backend/AGENTS.md` 的 RLS 小節必須成文下列每一條（這些都是本計畫用實測換來的，不寫下來就會重犯）**：
+1. **superuser 恆繞過 RLS**（`FORCE` 亦然）→ 宣稱驗 RLS 的測試必須以 `app_rw`（非 superuser）連線；以 superuser 連線的既有測試只能當 regression gate。
+2. **`USING` 不得嚴於 `WITH CHECK`**（PG 對 `INSERT … RETURNING` 會套 SELECT policy，而 ent 一律 `INSERT … RETURNING id`）→ 讀取權限的收緊一律放服務層 ACL，DB 層只負責跨公司隔離；`USING` 可較寬（`core_metadicts_scope` 即如此）。
+3. **policy 取值一律 `NULLIF(current_setting('app.current_*', true), '')`**（`SET LOCAL` 對自訂 GUC 會留下空字串 placeholder → `''::bigint` 22P02）。
+4. **每個 scope 等級都要在 WITH CHECK 有分支**：缺分支 = 該角色寫入必壞（audit_logs 曾缺 `department`/`self` 而潛伏）。
+5. **未登入／系統路徑一律 `dbtenant.SystemScopeTx`**（登入、註冊、OIDC、refresh、`identityFor`、`authz.Provision`、`cmd/seed`）。
+6. **`SystemScopeTx` 需要 ≥2 條連線**（它與請求交易並存）→ 連線池不得設為 1（會互鎖死結）；生產應明確設定 `MaxOpenConns` 上限，而非依賴預設無限。
+7. **同一請求內不得對同一列開第二條交易**（互鎖死結；需要系統範圍時合併為單一 `SystemScopeTx`）。
+8. **跨租戶一律回 `NotFound`**（不洩漏「該資源是否存在」），且不得有副作用。
+9. **收斂掃描是路徑級且窮盡**（不限 `internal/services`：`internal/server`／`handlers`／`auth`／`authz`／`audit` 都要查）。
+10. **已知待收斂項**：`internal/auth` 因 import cycle 自帶第二份 `systemScopeTx`（與 `dbtenant.SystemScopeTx` 等價）；後續應把 RLS 原語下沉到 `auth` 後改為委派，避免兩份實作漂移。
+
 **Interfaces:**
 - Consumes: 前九個任務的全部產物
 - Produces: 端到端探針（每個租戶端點都驗一次跨租戶不可見）、RLS 慣例成文
