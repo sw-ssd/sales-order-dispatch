@@ -17,7 +17,13 @@
 - 服務層 DB 存取一律經 `dbtenant.Client(ctx, s.db)`；`db.Tx(ctx)` 不得再自行開交易（42 處全數改為使用請求交易）
 - RLS 相關測試一律 `//go:build integration` + `internal/testsupport`；**不得以 sqlite（enttest）測 RLS**（enttest 不支援 `SET`／`FORCE`）
 - **RLS 的驗證必須以非 superuser 連線**（T5 實測更正）：測試容器的 `postgres` 是 superuser，而 PostgreSQL superuser **恆繞過 RLS（`FORCE` 亦然）** → 以它連線的測試全綠**不能**當作「RLS 生效」的證據（只能當 regression gate）。凡宣稱驗 RLS 的測試，必須以 `app_rw`（或專用非 superuser 角色）建立連線／client。
-- **每個 domain 的 app_rw 探針必須走過該域所有已遷移的寫入路徑**（T5 review 教訓）：至少各一支 `Create`／`Update`／`Delete`／`Restore` ＋ 子資源（地址／聯絡人）三支，並斷言回傳資料的 `company_id` 等於身分所屬公司；**只驗 2–3 條讀取路徑不足以證明收斂**（漏掛 `dbtenant.Client` 仍會全綠）。另需一條**負向對照**：以 `app_rw` 建 server 但**不注入 scope** 時，寫入應失敗、清單應回 0 筆。
+- **收斂範圍的路徑級窮盡（T9 前車之鑑）**：ENABLE 某表之前，必須先確認**所有**讀寫該表的生產路徑都已收斂——**不限於 `internal/services`**。已盤點到的服務外存取點：`internal/server/server.go`（`identityFor`／`dataScopeForUser`，**每個已驗證請求**都會經過）、`internal/handlers/auth_handler.go`＋`auth_password.go`、`internal/auth/token.go`（`BumpTokenVersion`）、`internal/authz/provision.go`、`internal/audit/recorder.go`。動手前跑：
+  ```bash
+  cd backend && grep -rn '\.Query()\|\.Create()\|UpdateOneID\|DeleteOneID\|\.Get(ctx' internal --include='*.go' | grep -v _test.go
+  ```
+  並在報告中列出你掃到的檔案與處置。**測試套件抓不到漏網（superuser／sqlite），只有這個掃描與 app_rw 探針抓得到。**
+- **未登入／系統範圍路徑一律 `dbtenant.SystemScopeTx`**（不是 `dbtenant.Client`）：登入、註冊、OIDC、refresh 輪替、身分查詢（middleware 的 `identityFor`）、`authz.Provision`、`cmd/seed`。
+- **政策啟用順序 = 先收斂後啟用**：每個 domain 任務必須在**同一個 commit 序列內**先完成路徑收斂再落 ENABLE migration；不得先啟用再補收斂（會留下生產路徑 fail-closed 的窗口）。
 - 建 `companies` fixture 時**不得**寫 `created_at`／`updated_at`（該表無此欄位，見 `00005`；T5 實測踩過）。
 - **policy 取值一律 `NULLIF(current_setting('app.current_*', true), '')`**（T5 實測更正）：`SET LOCAL` 對自訂 GUC 會在 session 層留下**空字串** placeholder（交易結束後仍在），於是同一條池化連線在「後續未設 scope」的查詢上會拿到 `''` 而非 NULL → `''::bigint` 直接 **22P02** 報錯，而不是回 0 列（仍 fail-closed，但把「查不到」變成「系統錯誤」，且錯誤訊息會帶 policy 文字）。以 `NULLIF` 正規化為 NULL，語意回到「未設 scope → 0 列」。T6 的 `00025` 負責重建 18 個 policy 為此形式。
 - 每個 migration 必含 `Up`/`Down`；ENABLE 的 `Down` 必含 `NO FORCE` + `DISABLE`
@@ -2131,8 +2137,19 @@ git commit -m "feat(backend): 字典與稽核啟用 RLS 並收斂路徑（00027�
 - Modify: `internal/services/company_service.go`（19 處、3 處）
 - Modify: `internal/services/user_service.go`（15 處、5 處）
 - Modify: `internal/services/role_service.go`（6 處、1 處）
-- Modify: `internal/server/server.go:167-210`（authzMiddleware 的身分查詢改 `SystemScopeTx`）
-- Modify: `internal/handlers/auth_handler.go`（登入憑證查詢改 `SystemScopeTx`）
+- Modify: `internal/server/server.go`（**全部** ent 存取，非僅 167-210：`identityFor`(:300 讀 `users`＋`WithCompany`/`WithDepartment`)、`dataScopeForUser`(:348 讀 `roles`)、authz middleware 的身分查詢 → 一律改 `dbtenant.SystemScopeTx`）
+- Modify: `internal/handlers/auth_handler.go`（登入／註冊／OIDC 的 `users`/`companies` 查詢 → `dbtenant.SystemScopeTx`）
+- Modify: `internal/handlers/auth_password.go`（改密碼／臨時密碼路徑；`h.deps.DB.User.Query()` 等未以傳入 `tx` 進行的存取）
+- Modify: `internal/auth/token.go`（`BumpTokenVersion` 的 `m.db.User.UpdateOneID` — refresh 輪替路徑）
+- Modify: `internal/authz/provision.go`（讀 `role_permissions`／`users`／`roles` — 系統範圍工作）
+
+**[MUST] 收斂掃描是路徑級且窮盡**：上列行號只是盤點快照，**以你實際 grep 到的為準**。動手前先跑：
+
+```bash
+cd backend && grep -rn '\.Query()\|\.Create()\|UpdateOneID\|DeleteOneID\|\.Get(ctx' internal/auth internal/authz internal/handlers internal/server internal/audit --include='*.go' | grep -v _test.go
+```
+
+凡命中的**生產**檔案（`_test.go` 除外）都要處理，且不得以「先跳過、之後再補」收尾。未登入／系統範圍路徑（登入、註冊、OIDC、refresh、身分查詢、`authz.Provision`）一律 `dbtenant.SystemScopeTx`；已有身分者的業務路徑走 `dbtenant.Client(ctx, s.db)`。
 
 **Interfaces:**
 - Consumes: `dbtenant.SystemScopeTx`、`dbtenant.Client`
