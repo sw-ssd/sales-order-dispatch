@@ -127,14 +127,17 @@ type Code struct {
 	Deprecated  bool
 }
 
-func (c Code) Error(ctx context.Context, params map[string]string) *connect.Error
-func (c Code) Wrap(ctx context.Context, err error, params ...map[string]string) *connect.Error
+// 注意：Error／Wrap **不收 ctx**——trace_id 由 T3 的 requestid interceptor 在**邊界**補進
+// ErrorInfo（見 Task 3 Step 3b）。理由：`toConnectError` 有 176 個呼叫點，逐點傳 ctx 是
+// 176 處機械改動且會與 T5 同檔衝突；而「當前請求的 trace_id」本來就只有邊界知道。
+func (c Code) Error(params map[string]string) *connect.Error
+func (c Code) Wrap(err error, params ...map[string]string) *connect.Error
 func (c Code) Render(params map[string]string) string
 func Lookup(id string) (Code, bool)
 func All() []Code // 已排序，供產生器與文件
 ```
 
-**[執行順序（修正）] T2 硬相依 T3**：`code.go` 的 `Error`／`Wrap`／`ErrorInfo.TraceId` 用 `requestid.From(ctx)`，而 `internal/obs/requestid`（`From`／`With`／`Interceptor`）是 **T3** 的產物。因此本計畫的實際執行順序是 **T1 → T3 → T2 → T4 → T5 → T6 → T7**（T3 先建立 `requestid` 並接上 handler options，T2 才編得過）。`Error`／`Wrap` 的第一個參數是 `ctx`（見上列 Interfaces；Step 1 的測試已對齊）。
+**[修正] 相依與順序**：本任務**不** import `requestid`（trace_id 改由邊界補，見 Task 3 Step 3b）→ **T2 不再相依 T3**。（T3 已完成，故現況無影響；此註記是為了保留設計理由。）
 
 - [ ] **Step 1: 寫失敗測試（`registry_test.go`）**
 
@@ -152,7 +155,6 @@ import (
 
 	commonv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
-	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 )
 
 var idFormat = regexp.MustCompile(`^[A-Z]{2,6}-\d{4}$`)
@@ -272,18 +274,7 @@ func TestRenderMissingParamFallsBackAndWrapKeepsCause(t *testing.T) {
 	}
 }
 
-// 契約 5：trace_id 由 ctx 帶出（T3 的 requestid interceptor 注入；未注入則為空）。
-func TestErrorCarriesTraceIDFromContext(t *testing.T) {
-	ctx := requestid.With(t.Context(), "trace-1")
-	err := errcode.SysNotFound.Error(ctx, nil)
-	if got := errorInfoOf(t, err).GetTraceId(); got != "trace-1" {
-		t.Fatalf("trace_id 應為 trace-1，got %q", got)
-	}
-	// 未注入時不得爆掉，只需為空。
-	if got := errorInfoOf(t, errcode.SysNotFound.Error(t.Context(), nil)).GetTraceId(); got != "" {
-		t.Fatalf("未注入 trace_id 時應為空，got %q", got)
-	}
-}
+// 契約 5（trace_id）已移至 Task 3 的邊界測試：本套件不感知 ctx。
 ```
 
 - [ ] **Step 2: 跑測試確認失敗**
@@ -495,34 +486,10 @@ func (e *wrapped) Unwrap() error { return e.cause }
 
 **兩個實作要點**（已反映在上方程式碼，實作時照抄即可）：
 
-1. `Error`／`Wrap` 的第一個參數是 `ctx`：`trace_id` 由 `requestid.From(ctx)` 取得。呼叫端一律 `errcode.SysNotFound.Error(ctx, nil)`；測試以 `requestid.With(ctx, "trace-1")` 斷言 trace_id 有帶出。
+1. `Error`／`Wrap` **不收 ctx**；`trace_id` 由 requestid interceptor 在邊界補進 `ErrorInfo`（Task 3 Step 3b）。呼叫端一律 `errcode.SysNotFound.Error(nil)`。
 2. 附掛 ErrorInfo 失敗時不得讓錯誤處理失效（記 log，仍回 connect 碼與訊息）——錯誤路徑上的二次失敗最難追。
 
-**[修正] `{trace}` 必須由 ctx 注入渲染參數**：`SysInternal` 的訊息含 `{trace}`，但上面的 `Error`／`Wrap` 只把呼叫端的 `params` 交給 `Render` → 若不注入，**每一個 5xx 的對外訊息都會是字面的「請提供代碼 {trace}」**（並在 log 留下「缺參數」噪音）。實作時請加一個小 helper 並在 `Error`／`Wrap` 內使用：
-
-```go
-// renderParams 回傳渲染用參數 = 呼叫端參數 ＋ trace（由 ctx 取得，供 SYS-9000 的 {trace} 使用）。
-// 刻意不改動呼叫端的 map；且 **details 仍只放呼叫端提供的參數**（trace_id 另有 ErrorInfo.trace_id 欄位，
-// 不重複塞進 details）。未注入 trace 時不得留下字面 {trace}。
-func renderParams(ctx context.Context, params map[string]string) map[string]string {
-	tid := requestid.From(ctx)
-	switch {
-	case tid == "":
-		return params
-	case params == nil:
-		return map[string]string{"trace": tid}
-	default:
-		out := make(map[string]string, len(params)+1)
-		for k, v := range params {
-			out[k] = v
-		}
-		out["trace"] = tid
-		return out
-	}
-}
-```
-
-驗收：一條測試以 `requestid.With(ctx, "trace-1")` 呼叫 `errcode.SysInternal.Error(ctx, nil)`，斷言 `Message()` 含 `trace-1` 且**不含** `{trace}`；另一條在未注入 trace 時呼叫，斷言訊息**不含** `{trace}`（改為一般文案，例如把 `SysInternal` 的樣板寫成「系統忙碌，請稍後再試（代碼 {trace}）」→ 未注入時應由實作自行去掉尾註，或把樣板改成不含 `{trace}` 並改由 `details` 傳遞；二擇一並在報告說明）。
+**[修正] SYS-9000 的樣板**：`SysInternal` 的訊息**不含 `{trace}`**（改為「系統忙碌，請稍後再試」）。理由：`trace_id` 已由 `ErrorInfo.trace_id` 這個**結構化欄位**承載（前端與客服端可直接顯示），把 `{trace}` 塞進訊息樣板反而要求每個呼叫點都先注入參數、否則外洩字面 `{trace}`（原設計的缺口）。客服要看的代碼請由回應的 `ErrorInfo.trace_id` 取。
 
 - [ ] **Step 4: 首批碼（四個分域檔）**
 
@@ -537,11 +504,24 @@ var (
 	SysInvalidArgument = MustRegister(Code{ID: "SYS-1001", Domain: DomainSys,
 		ConnectCode: connect.CodeInvalidArgument, Message: "參數驗證失敗"})
 
-	// SysConflict 為資料庫約束類錯誤（識別碼已使用、參照對象不存在）；
-	// 原始細節（SQLSTATE／約束名）只進 log，不對外揭露。
+	// SysConflict 為**已知的**識別碼重複（例：CreateCompany 以 DeletedAtIsNil 前置查詢判定後回此碼）。
+	// 為什麼不由 DB 約束錯誤推導：ent 的 constraint 錯誤無法分辨「識別碼重複」與「FK 阻擋」，
+	// 把後者回成 AlreadyExists 正是 P2-A 的原始缺陷（見 SysConstraintViolation）。
 	SysConflict = MustRegister(Code{ID: "SYS-2001", Domain: DomainSys,
-		ConnectCode: connect.CodeAlreadyExists,
-		Message:     "資料衝突，請確認識別碼是否已被使用或參照對象是否仍存在"})
+		ConnectCode: connect.CodeAlreadyExists, Message: "資料衝突，請確認識別碼是否已被使用"})
+
+	// SysScopeViolation 為寫入被 RLS 的 WITH CHECK 擋下（資料範圍不符）。
+	// 為什麼是 FailedPrecondition 而非 Internal：這是「身分／範圍與該列不匹配」，不是伺服器故障
+	// （用 Internal 會讓監控誤判 5xx 並誤導客戶）；SQLSTATE 與 policy 原文只進 log。
+	SysScopeViolation = MustRegister(Code{ID: "SYS-3001", Domain: DomainSys,
+		ConnectCode: connect.CodeFailedPrecondition, Message: "資料超出目前的存取範圍,無法完成此操作"})
+
+	// SysConstraintViolation 為資料庫約束類錯誤（識別碼重複、FK 阻擋、CHECK 失敗）——無法分辨是哪一種。
+	// 為什麼不是 AlreadyExists：P2-A 的原始缺陷正是「FK 阻擋被當成識別碼重複回 AlreadyExists」，
+	// 且 ent 給的 constraint 錯誤無法區分兩者；訊息刻意保留「請確認…」的可行動指引但不揭露 DB 細節。
+	SysConstraintViolation = MustRegister(Code{ID: "SYS-3002", Domain: DomainSys,
+		ConnectCode: connect.CodeFailedPrecondition,
+		Message:     "資料違反資料庫約束,無法完成此操作(請確認識別碼是否已被使用、參照對象是否仍存在)"})
 
 	// SysPermissionDenied 為授權檢查失敗（角色/資料範圍不足）。前端應導向「請管理員開權」。
 	SysPermissionDenied = MustRegister(Code{ID: "SYS-4001", Domain: DomainSys,
@@ -552,9 +532,10 @@ var (
 	SysNotFound = MustRegister(Code{ID: "SYS-4002", Domain: DomainSys,
 		ConnectCode: connect.CodeNotFound, Message: "資源不存在或無權存取"})
 
-	// SysInternal 為所有 5xx：對外只給碼與 trace_id。
+	// SysInternal 為所有 5xx：對外只給碼與訊息；trace_id 由 ErrorInfo 的結構化欄位承載
+	// （客服回報用），**不**寫進訊息樣板（否則每個呼叫點都得先注入參數、漏了就外洩字面 {trace}）。
 	SysInternal = MustRegister(Code{ID: "SYS-9000", Domain: DomainSys,
-		ConnectCode: connect.CodeInternal, Message: "系統忙碌，請提供代碼 {trace}"})
+		ConnectCode: connect.CodeInternal, Message: "系統忙碌，請稍後再試"})
 )
 ```
 
@@ -640,7 +621,7 @@ Expected: PASS（含 panic 行為與 ErrorInfo 攜帶）
 
 ```bash
 git add backend/internal/errcode
-git commit -m "feat(errcode): 錯誤碼 registry（常數即註冊、啟動驗證、區段規則）與首批 18 碼"
+git commit -m "feat(errcode): 錯誤碼 registry（常數即註冊、啟動驗證、區段規則）與首批 20 碼"
 ```
 
 ---
@@ -735,7 +716,56 @@ func Interceptor() connect.Interceptor {
 
 （`google/uuid` 已在 `go.mod`；若無則 `go get github.com/google/uuid`。`spec.Procedure` 為 connect-go 的方法全名。）
 
-- [ ] **Step 3: 掛載（`internal/server/domains.go`）**
+**Step 2b: 邊界補 `trace_id`（本計畫的關鍵設計）**
+
+`errcode` 刻意不收 ctx（見 Task 2 的 Interfaces 註記），`trace_id` 由本 interceptor 在**回應邊界**補進錯誤的 `ErrorInfo`：
+
+```go
+// Interceptor 內：呼叫 next 後補 trace_id。
+res, err := next(ctx, req)
+return res, stampTraceID(ctx, err)
+
+// stampTraceID 為「已帶 ErrorInfo 的錯誤」補上本請求的 trace_id；其他錯誤原樣回。
+// 為什麼在邊界補：錯誤碼有 176 個生產呼叫點，逐點傳 ctx 是無謂的機械改動；且「當前請求的
+// trace_id」本來就只有邊界知道。
+func stampTraceID(ctx context.Context, err error) error {
+	id := From(ctx)
+	if id == "" || err == nil {
+		return err
+	}
+	ce, ok := err.(*connect.Error)
+	if !ok {
+		return err
+	}
+	var info *commonv1.ErrorInfo
+	for _, d := range ce.Details() {
+		if m, ok := d.(proto.Message); ok {
+			if ei, ok := m.(*commonv1.ErrorInfo); ok {
+				info = ei
+			}
+		}
+	}
+	if info == nil || info.GetTraceId() != "" {
+		return err
+	}
+	info.TraceId = id
+	return err
+}
+```
+
+⚠️ **必須以測試確認「就地修改真的傳得出去」**：connect-go 的 `Details()` 是否回傳原指標（改了就生效）或序列化副本（改了沒用）依版本而異。若就地修改無效，改為**重建錯誤**（`connect.NewError(ce.Code(), errors.New(ce.Message()))` ＋ `AddDetail(新 ErrorInfo)`）——不論哪一種，**驗收標準是「客戶端真的收到非空 trace_id」**：
+
+```go
+// 驗收（整合）：掛上 interceptor 的 handler 回 errcode.SysNotFound.Error(nil)，
+// 客戶端收到的錯誤必須帶 ErrorInfo{code:"SYS-4002", trace_id:非空}，
+// 且該 trace_id 與同請求 handler 內 requestid.From(ctx) 相同。
+```
+
+
+
+- [ ] **Step 3: 掛載（`internal/server/domains.go` 與各 `RegisterXServices`）**
+
+**注意（T3 實測）**：生產掛載點共 **15 處**——`domains.go` 只有 2 個（auth／ability），其餘 13 個在 `internal/services/*.go` 的 `RegisterXServices` 與 `internal/handlers/role_handler.go`。**每一個**都要改（否則那些 RPC 沒有 trace_id）。
 
 每個 `NewXServiceHandler(h, opts...)` 的 options 加上，順序：`connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(entClient))`（trace_id 先產生，讓 dbtenant 的交易錯誤也帶得到）。
 
@@ -784,10 +814,13 @@ func TestToConnectErrorMapsToRegisteredCodes(t *testing.T) {
 	}{
 		{"not found", &ent.NotFoundError{}, "SYS-4002", connect.CodeNotFound},
 		{"validation", &ent.ValidationError{}, "SYS-1001", connect.CodeInvalidArgument},
-		{"constraint", &ent.ConstraintError{}, "SYS-2001", connect.CodeAlreadyExists},
+		{"constraint", &ent.ConstraintError{}, "SYS-3002", connect.CodeFailedPrecondition},
+		{"rls 違反", &pgconn.PgError{Code: "42501", Message: `new row violates row-level security policy for table "customers"`}, "SYS-3001", connect.CodeFailedPrecondition},
 		{"not singular", &ent.NotSingularError{}, "SYS-9000", connect.CodeInternal},
 		{"unknown", errors.New("boom"), "SYS-9000", connect.CodeInternal},
 	}
+	// 另需一條「訊息不得外洩」斷言：rls／constraint／unknown 三種輸入的 Message()
+	// 都不得含 "SQLSTATE"／"row-level security"／表名／約束名。
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			got := toConnectError(tc.in)
@@ -826,30 +859,41 @@ Expected: FAIL —目前 `toConnectError` 只回 connect 碼、無 detail
 
 ```go
 // toConnectError 將底層錯誤集中映射為「已註冊的錯誤碼」。
-// 原則：DB 原始訊息（SQLSTATE／約束名）只進 log；5xx 一律 SYS-9000 並帶 trace_id。
+// 原則：DB 原始訊息（SQLSTATE／約束名／表名）只進 log，對外一律固定訊息；
+// 伺服器端的意外（含 NotSingular 與未知錯誤）一律 SYS-9000（trace_id 由邊界補進 ErrorInfo）。
+//
+// **簽章不變**（不收 ctx）：本函式有 176 個生產呼叫點，逐點傳 ctx 是無謂的機械改動；
+// trace_id 由 requestid interceptor 在回應邊界補（Task 3 Step 3b）。
 func toConnectError(err error) error {
 	if err == nil {
 		return nil
 	}
+	// 已是錯誤碼（含 registry 產生的）→ 不重複包裝，避免碼被內層蓋掉。
 	if ce, ok := err.(*connect.Error); ok {
-		return ce // 已是錯誤碼，不重複包裝
+		return ce
 	}
 	switch {
 	case ent.IsNotFound(err):
 		return errcode.SysNotFound.Error(nil)
 	case ent.IsValidationError(err):
 		return errcode.SysInvalidArgument.Error(nil)
+	case isRLSPolicyViolation(err):
+		// 保留 Plan A（T11）的語意：範圍不符 ≠ 伺服器故障，故 FailedPrecondition 而非 Internal。
+		log.Printf("services: RLS 違反（已映射為 SYS-3001，細節不對外揭露）: %v", err)
+		return errcode.SysScopeViolation.Error(nil)
 	case ent.IsConstraintError(err):
-		log.Printf("services: 資料庫約束錯誤（對外不揭露細節）: %v", err)
-		return errcode.SysConflict.Error(nil)
+		log.Printf("services: 資料庫約束錯誤（已映射為 SYS-3002，細節不對外揭露）: %v", err)
+		return errcode.SysConstraintViolation.Error(nil)
 	default:
 		log.Printf("services: 內部錯誤（對外僅回 SYS-9000）: %v", err)
-		return errcode.SysInternal.Wrap(err)
+		return errcode.SysInternal.Error(nil)
 	}
 }
 ```
 
-（`Error(nil)`／`Wrap(err)` 需帶 `ctx`：依 Task 2 的實作決定，改為 `Error(ctx, nil)` 並讓 `toConnectError` 收 `ctx context.Context` 為第一參數 —— 呼叫端已有 ctx，實作時一併更新呼叫點即可。）
+**兩個必須遵守的點**：①`isRLSPolicyViolation`（`company_service.go`）**保留**，不可刪——它攔的是 ent 的 constraint 判定**認不出**的 PG 42501（見該函式上方註解）；②本函式**不**把 `err` 附進回應（不用 `Wrap`）——DB 原文一旦掛在 `connect.Error` 上，任何後續路徑（log 中介層、detail 序列化）都有機會把它帶出去；根因已由上面的 `log.Printf` 落 server log。
+
+（原稿要求「`Error(ctx, nil)` 並讓 `toConnectError` 收 ctx」——**已作廢**：簽章不變、trace_id 由邊界補。）
 
 - [ ] **Step 4: 跑測試確認通過並收斂呼叫點**
 
