@@ -27,6 +27,14 @@ jobs:
           working-directory: backend
       - name: Test
         run: go test ./...
+      # 產生檔（碼表與三端常數）必須與 registry 同步：跑完 go generate 後不得有 diff。
+      # platform-console/src/lib/errcode.ts 是 Plan C 的產物，尚未落地；路徑不存在時 git diff 對它是
+      # no-op，Plan C 落地後會自動納入（產生器只在該目錄存在時輸出該檔）。
+      - name: Error codes up to date
+        run: |
+          go generate ./internal/errcode
+          git diff --exit-code -- ../docs/error-codes.md ../frontend/src/lib/errcode.ts \
+            ../platform-console/src/lib/errcode.ts ../app/lib/gen/errcode.dart
       - name: Build
         run: go build ./cmd/server
       - name: Vulnerability scan(D31-2)
