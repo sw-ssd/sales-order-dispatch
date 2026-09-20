@@ -482,6 +482,10 @@ git commit -m "feat(backend): 金額套件（int64 分、禁 float、期別金�
 
 **Files:**
 - Create: `database/migrations/00030_platform_settings.sql`
+
+**[controller 加的硬契約（來自 Plan B 的 seed 實作，2026-09-20）]**
+1. **鍵名必須與 Plan B 的 seeder 對齊**：`cmd/seed/platform.go`（Plan B Task 11）在「`platform.settings` 存在時」會寫入 `system_actor_user_id`／`trial_days`／`grace_days`／`lead_days`（這四個 key 同時是 **G5**（系統 actor）與本計畫 cron 的參數來源）。本 migration 的欄位／鍵名稱與型別必須與它一致，否則 seed 寫得進去但讀不到（或反之）。**落地後必須重跑 `cmd/seed`**（或由本計畫的 seed 補寫）——否則 `cmd/platform-cron` 一開跑就 Fatal，即 **G5 的原始缺陷原樣回來**。
+2. **與 seed 的寫入策略互動**：Plan B 的 seeder 對 `features`／`plans`／`plan_entitlements` 是 **`DO UPDATE`**（價目已改成「只補缺」）。若本計畫的 console 之後允許營運編輯方案權益，**重跑 seed 會把營運調整蓋回去** → 屆時必須把那三張表也改成「只補缺」或在 seed 中排除已有列（本任務不需修，但需知道）。
 - Create: `internal/platform/store/postgres/billing.go`
 - Create: `internal/platform/store/postgres/billing_integration_test.go`
 - Modify: `internal/platform/store/store.go`（新增期別／訂閱／事件／稽核／settings 的介面方法）
