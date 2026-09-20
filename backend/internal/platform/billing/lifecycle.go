@@ -136,6 +136,8 @@ func (b *Billing) EnsureNextPeriod(ctx context.Context, companyID int, now time.
 // 回傳實際轉移的筆數。
 func (b *Billing) MarkPastDue(ctx context.Context, now time.Time, graceDays int) (int, error) {
 	n := 0
+	// changed 收集本趟**真的轉移**的租戶：失效只能在提交後做（見 invalidate），故先記下來。
+	var changed []int
 	err := b.st.WithTx(ctx, func(tx *sql.Tx) error {
 		overdue, err := b.st.ActiveSubscriptionsWithDueOpenPeriod(ctx, tx, now)
 		if err != nil {
@@ -167,12 +169,16 @@ func (b *Billing) MarkPastDue(ctx context.Context, now time.Time, graceDays int)
 			}); err != nil {
 				return errcode.SysInternal.Wrap(err)
 			}
+			changed = append(changed, sub.CompanyID)
 			n++
 		}
 		return nil
 	})
 	if err != nil {
 		return 0, err
+	}
+	for _, companyID := range changed {
+		b.invalidate(ctx, companyID)
 	}
 	return n, nil
 }
@@ -182,6 +188,7 @@ func (b *Billing) MarkPastDue(ctx context.Context, now time.Time, graceDays int)
 // 回傳實際停用的筆數。
 func (b *Billing) SuspendOverdue(ctx context.Context, now time.Time) (int, error) {
 	n := 0
+	var changed []int // 本趟真的被停用的租戶（提交後逐一失效，見 invalidate）
 	err := b.st.WithTx(ctx, func(tx *sql.Tx) error {
 		due, err := b.st.PastDueSubscriptionsExpiredGrace(ctx, tx, now)
 		if err != nil {
@@ -202,12 +209,18 @@ func (b *Billing) SuspendOverdue(ctx context.Context, now time.Time) (int, error
 			}); err != nil {
 				return errcode.SysInternal.Wrap(err)
 			}
+			changed = append(changed, sub.CompanyID)
 			n++
 		}
 		return nil
 	})
 	if err != nil {
 		return 0, err
+	}
+	// 停用的意義就是「這個租戶不能再用了」，而判定層看到的是快取裡的舊狀態（usable 仍為 true）
+	// → 這是最不能漏失效的一條路徑（漏了就是停用後還照常寫資料，最長 60s）。
+	for _, companyID := range changed {
+		b.invalidate(ctx, companyID)
 	}
 	return n, nil
 }
@@ -220,6 +233,9 @@ func (b *Billing) SuspendOverdue(ctx context.Context, now time.Time) (int, error
 // **不改變訂閱狀態**（cancelled 是終態，狀態一改，帳與稽核就無法重現）：只發事件，由 consumer
 // 把公司轉為 suspended（資料保留、登入被擋）。冪等由查詢的 NOT EXISTS 謂詞保證 ——
 // 排程可重跑且不重複發事件。
+//
+// 因此這裡**不做**權益快取失效：訂閱狀態沒變，判定層的答案就不會變（cancelled 本來就不可用，
+// 見 entitlements.usable），真正的狀態變更是 consumer 端把公司凍結那一步（那條路徑自己失效）。
 func (b *Billing) ExpireCancelled(ctx context.Context, now time.Time) (int, error) {
 	n := 0
 	err := b.st.WithTx(ctx, func(tx *sql.Tx) error {

@@ -39,6 +39,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
 	"github.com/salesorder/sales-order-1.0/backend/internal/services"
 )
@@ -110,12 +111,23 @@ type Consumer struct {
 	events EventStore
 	sysTx  SystemTx
 	setter CompanyStatusSetter
+	// cache 為**可選**的權益快取（nil＝未接上）：公司狀態改變後失效該租戶的權益快照。
+	cache entitlements.Cache
 }
 
 // New 建立 consumer:events 為平台讀取,setter 為產品域入口(生產:ProductDomain{},
 // 單元測試:假實作),sysTx 提供「認領 ＋ 狀態變更」所在的系統範圍交易。
 func New(events EventStore, sysTx SystemTx, setter CompanyStatusSetter) *Consumer {
 	return &Consumer{events: events, sysTx: sysTx, setter: setter}
+}
+
+// WithCache 接上權益快取(於組裝時呼叫;nil＝不失效)。
+//
+// 為什麼需要:consumer 才是讓公司「真的」被凍結／復原的那一段,而權益判定的快取裡存著訂閱狀態
+// 的快照。少了這一步,console 顯示已凍結、配額判定卻還在用舊快照放行 —— 直到 TTL 到期為止。
+func (c *Consumer) WithCache(cache entitlements.Cache) *Consumer {
+	c.cache = cache
+	return c
 }
 
 // DispatchOnce 依序派送未處理事件,回傳**本趟認領**的事件數。
@@ -188,7 +200,17 @@ func (c *Consumer) dispatch(ctx context.Context, ev store.Event, act eventAction
 		}
 		return c.setter.SetStatus(ctx, tx.Client(), companyID, act.status, act.reason, actor)
 	})
-	return claimed, err
+	if err != nil || !claimed || !mapped {
+		// 失敗（整筆回滾）與未對應型別（沒動公司狀態）都不得失效：前者資料沒變，後者根本沒改東西。
+		return claimed, err
+	}
+	// 交易提交成功且公司狀態真的變了 → 失效該租戶的權益快取。失敗只記 log（快取的錯誤不該讓
+	// 「事件已派送」這件事變成失敗：事件已經認領、狀態已經生效，回錯誤只會讓排程謊報一趟失敗）。
+	if err := entitlements.Invalidate(ctx, c.cache, companyID); err != nil {
+		log.Printf("platform consumer: 權益快取失效失敗(company=%d): %v（該租戶最長 TTL 內仍讀舊權益）",
+			companyID, err)
+	}
+	return claimed, nil
 }
 
 // systemActor 組出稽核主體。Role 只是標記(seed 的系統 actor 是 super);稽核只取 UserID,

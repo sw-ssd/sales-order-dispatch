@@ -30,8 +30,11 @@ import (
 	ofga "github.com/salesorder/sales-order-1.0/backend/third_party/openfga"
 )
 
-// entitlementCacheTTL 為權益快照的行程內快取 TTL（縮短＝更即時、更多平台庫查詢；
-// Plan C 換成 Valkey 快取時一併調整）。
+// entitlementCacheTTL 為權益快照的快取 TTL（縮短＝更即時、更多平台庫查詢）。
+//
+// 這只是**保底**：正確性不靠它 —— 方案／override／訂閱狀態異動時，寫入路徑會顯式刪除該租戶的鍵
+// （見 entitlements.Invalidate／InvalidateAll，以及三個寫入來源：平台 RPC、billing 排程、consumer）。
+// TTL 的用途是「萬一某條寫入路徑漏了失效」時的最長收斂時間（見 billing.invalidate 的說明）。
 const entitlementCacheTTL = 60 * time.Second
 
 // InitDomains 逐 domain 組裝 repo→usecase→handler 並掛上 router。
@@ -138,12 +141,31 @@ func (s *Server) mountEntitlements(db *ent.Client) *entitlements.Service {
 	if err != nil {
 		log.Fatalf("platform: admin 連線不可用,拒絕以無守衛狀態啟動(守衛缺席＝配額形同虛設): %v", err)
 	}
-	// 快取：v1 用行程內 MemoryCache；Valkey 實作與寫入後失效屬 Plan C 的訂閱寫入路徑,屆時換此處。
+	// 快取：**跨行程共用的 Valkey**（排程與 consumer 也是寫入來源，只有共用同一顆快取，
+	// 它們的失效才會對 API 生效）；Valkey 不可用時退回行程內記憶體 —— 快取是加速器，
+	// 不是啟動前提，沒有它配額判定照常運作（只是各行程各記一份、跨行程失效不生效）。
+	entCache := s.openEntitlementCache()
 	svc := entitlements.New(postgresstore.New(adminDB), services.NewEntitlementCounter(db),
-		entitlements.NewMemoryCache(), entitlementCacheTTL)
-	s.entitlements = svc
+		entCache, entitlementCacheTTL)
+	s.entitlements, s.entitlementCache = svc, entCache
 	log.Println("platform: 權益守衛已掛載（entitlements.Service → 四個業務服務）")
 	return svc
+}
+
+// openEntitlementCache 選用權益快取：Valkey 可用即用，否則退回行程內記憶體。
+//
+// 判準沿用 repo 既有的 Valkey 設定來源（config.Cache.ValkeyAddr）＋ 一次 Ping —— 不看「位址字串
+// 是否為空」：它有預設值 localhost:6379，永遠非空，而以 Ping 判定才與 mountAuth 的降級語意
+// 一致（連得上才算設定）。**不 fail-fast**：Valkey 掛掉只該讓快取退化（每請求多打一次平台庫），
+// 不該讓服務起不來 —— 判定層對快取故障本來就會回源（見 entitlements.Service.state）。
+func (s *Server) openEntitlementCache() entitlements.Cache {
+	client := cache.NewClient(s.cfg.Cache.ValkeyAddr)
+	if err := cache.Ping(context.Background(), client); err != nil {
+		log.Printf("platform: 略過 Valkey 權益快取（%v）→ 改用行程內記憶體"+
+			"（多 replica／跨行程的失效不會生效，最長 TTL 內可能讀到舊權益）", err)
+		return entitlements.NewMemoryCache()
+	}
+	return entitlements.NewValkeyCache(client)
 }
 
 // mountPlatformAuth 掛載平台工具的登入端點（/platform/auth/*）並把 operatorauth.Service 記在

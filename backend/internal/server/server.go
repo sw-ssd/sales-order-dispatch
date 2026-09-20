@@ -47,9 +47,13 @@ type Server struct {
 	router *chi.Mux
 	fga    *authzopenfga.Engine // 可選:OpenFGA 授權引擎(設入後 middleware 對受保護 RPC 做 Check,D32)
 	tokens *auth.TokenManager   // JWT access/refresh 管理(01 1.6;App Bearer 路徑逐請求驗證)
-	// entitlements 為平台權益判定(配額守衛的來源,由 mountAuth 建立);T9/T10 的平台端與
-	// 租戶端投影亦由此取用,故留在 Server 上而非只傳進四個業務服務。
+	// entitlements 為平台權益判定（配額守衛的來源，由 mountAuth 建立）；T9/T10 的平台端與
+	// 租戶端投影亦由此取用，故留在 Server 上而非只傳進四個業務服務。
 	entitlements *entitlements.Service
+	// entitlementCache 為判定用的快取（Valkey 實作或缺 Valkey 時的行程內版），於 mountEntitlements
+	// 一併建立。**平台寫入 RPC（T9）的注入點**：改方案／override／訂閱狀態後必須失效同一顆快取，
+	// 而快取的建立（連線設定）屬組裝，T9 只該拿到介面。nil = 尚未掛載。
+	entitlementCache entitlements.Cache
 	// operatorAuth 為平台工具認證(mountPlatformAuth 建立)。T9 的 PlatformAdminService 以
 	// operatorAuth.Interceptor() 擋下非 operator;nil = 平台工具未設定,該 RPC 不掛載。
 	operatorAuth *operatorauth.Service

@@ -24,7 +24,9 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/billing"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/consumer"
 	platformcron "github.com/salesorder/sales-order-1.0/backend/internal/platform/cron"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store/postgres"
+	"github.com/salesorder/sales-order-1.0/backend/third_party/cache"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/database"
 )
 
@@ -59,9 +61,22 @@ func main() {
 	defer func() { _ = db.Close() }()
 
 	st := postgres.New(db)
+	// 權益快取的寫入來源之一就在本行程（排程改訂閱狀態）：接上**同一顆 Valkey**，排程端的失效
+	// 才會對 API 生效（跨行程共用快取是這整件事的前提，見 entitlements.ValkeyCache）。
+	//
+	// Valkey 不可用**不讓排程失敗**：排程的責任是帳務狀態機，快取只是它的副作用之一；
+	// 沒有快取＝不失效（該租戶最長 TTL 內仍讀舊權益），TTL 是那條路的保底。
+	var entCache entitlements.Cache
+	valkeyClient := cache.NewClient(cfg.Cache.ValkeyAddr)
+	if pingErr := cache.Ping(context.Background(), valkeyClient); pingErr != nil {
+		log.Printf("platform-cron: Valkey 不可用(%v) → 訂閱狀態異動不做權益快取失效（最長 TTL 內仍讀舊權益）",
+			pingErr)
+	} else {
+		entCache = entitlements.NewValkeyCache(valkeyClient)
+	}
 	deps := platformcron.Deps{
-		Billing:  billing.NewBilling(st),
-		Consumer: consumer.New(st, consumer.NewDBSystemTx(db), consumer.ProductDomain{}),
+		Billing:  billing.NewBilling(st).WithCache(entCache),
+		Consumer: consumer.New(st, consumer.NewDBSystemTx(db), consumer.ProductDomain{}).WithCache(entCache),
 		Store:    st,
 		Lock:     platformcron.NewAdvisoryLocker(db, platformcron.LockKey),
 	}

@@ -12,12 +12,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/money"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
 )
@@ -40,11 +42,39 @@ var allowedTransitions = map[string][]string{
 type Billing struct {
 	st  store.BillingStore
 	now func() time.Time
+	// cache 為**可選**的權益快取（nil＝未接上）：訂閱狀態改變時失效該租戶的權益快照。
+	// 可選的理由：排程／帳務不該因為快取沒接上（本機、CLI、單元測試）而不能跑，
+	// 而沒有快取就等於沒有東西要失效。
+	cache entitlements.Cache
 }
 
 // NewBilling 建立帳務狀態機。st 為平台寫入 store：正式路徑是 admin 連線（postgres.New），
 // 單元測試用 store.NewFakeBilling。
 func NewBilling(st store.BillingStore) *Billing { return &Billing{st: st, now: time.Now} }
+
+// WithCache 接上權益快取（於組裝時呼叫；nil＝不失效）。
+//
+// 為什麼不是 NewBilling 的必填參數：這個依賴是**加速器的失效**，不是帳務語意的一部分 ——
+// 讓它成為必要參數，等於每個測試、每個 CLI 都得先準備一份快取才能記一筆帳。
+func (b *Billing) WithCache(c entitlements.Cache) *Billing {
+	b.cache = c
+	return b
+}
+
+// invalidate 在**交易提交成功之後**失效該租戶的權益快取。
+//
+// 為什麼一定要在提交後：交易內刪除會在回滾時白刪 —— 資料沒變、快取卻空了（下一次判定還要重建），
+// 而「刪了」在 log 上與成功一模一樣。提交後刪才對得上「資料真的變成新的」這個事實。
+//
+// 為什麼失敗只記 log：快取的錯誤不得讓**已經落地的帳務寫入**回錯誤（錢收了卻回 500，呼叫端會
+// 重試，而重試撞上的是冪等路徑 —— 症狀變成「收款成功但介面說失敗」）。代價寫在明處：這條路徑
+// 失效失敗時，該租戶最長 TTL（60s）內仍以舊權益放行 —— 這是刻意的界線，不是漏掉的錯誤處理。
+func (b *Billing) invalidate(ctx context.Context, companyID int) {
+	if err := entitlements.Invalidate(ctx, b.cache, companyID); err != nil {
+		log.Printf("billing: 權益快取失效失敗(company=%d): %v（該租戶最長 TTL 內仍讀舊權益）",
+			companyID, err)
+	}
+}
 
 // RecordPaymentInput 為一次收款的輸入。金額一律 int64 分（不得有 float）。
 type RecordPaymentInput struct {
@@ -215,6 +245,11 @@ func (b *Billing) RecordPayment(ctx context.Context, in RecordPaymentInput) (*st
 	if err != nil {
 		return nil, err
 	}
+	// 收款可能把訂閱由 trialing／past_due／suspended 帶回 active（權益因此改變）→ 提交後失效。
+	//
+	// 重送（期別已付款、交易號相同的 no-op）也會刪一次：DEL 是冪等的，而且分辨「這次到底改了什麼」
+	// 需要在交易內多帶一個旗標出來，換來的只是一次 Valkey 往返 —— 不值得。
+	b.invalidate(ctx, in.CompanyID)
 	return out, nil
 }
 

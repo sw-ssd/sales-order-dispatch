@@ -108,8 +108,12 @@ func cacheKey(companyID int) string { return fmt.Sprintf("ent:%d", companyID) }
 // 無訂閱（或訂閱不可用）時回傳 status 對應的狀態，由判定層決定拒絕。
 func (s *Service) state(ctx context.Context, companyID int) (*tenantState, error) {
 	if s.cache != nil && s.ttl > 0 {
-		if raw, ok, err := s.cache.Get(ctx, cacheKey(companyID)); err != nil {
-			return nil, err
+		raw, ok, err := s.cache.Get(ctx, cacheKey(companyID))
+		if err != nil {
+			// **快取是加速器，不是資料來源**：Valkey 掛掉（或設定錯）時回源，不得因此拒絕服務。
+			// 判定是配額守衛的來源，讓它失敗等於全站業務寫入失敗 —— 那比「這陣子每個租戶都打一次
+			// 平台庫」貴得多。log 要吵：效能問題必須看得見，但不可以變成可用性問題。
+			log.Printf("entitlements: 權益快取讀取失敗(company=%d)，改為回源: %v", companyID, err)
 		} else if ok {
 			var st tenantState
 			if err := json.Unmarshal(raw, &st); err == nil {
@@ -159,7 +163,8 @@ func (s *Service) state(ctx context.Context, companyID int) (*tenantState, error
 	if s.cache != nil && s.ttl > 0 {
 		if raw, err := json.Marshal(out); err == nil {
 			if err := s.cache.Set(ctx, cacheKey(companyID), raw, s.ttl); err != nil {
-				return nil, err
+				// 寫不進去只是「下次還要回源」，同樣不得讓判定失敗（見上方 Get 的說明）。
+				log.Printf("entitlements: 權益快取寫入失敗(company=%d)，本次不快取: %v", companyID, err)
 			}
 		}
 	}
