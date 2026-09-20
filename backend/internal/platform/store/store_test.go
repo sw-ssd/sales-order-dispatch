@@ -70,11 +70,18 @@ func TestFakeStoreOverridesKeepExpiredRows(t *testing.T) {
 	if len(ov) != 2 {
 		t.Fatalf("到期過濾是判定層的職責,假實作應回全部未撤銷的 override,got %d 筆: %+v", len(ov), ov)
 	}
-	if ov[0].Enabled != nil || ov[0].Limit == nil || *ov[0].Limit != 50 {
-		t.Fatalf("只寫限額的例外:enabled 必須保持 nil、limit 必須帶出,got %+v", ov[0])
+	// 以功能 code 定址,不靠切片位置:介面從未承諾順序(真 PG 實作反而 ORDER BY created_at
+	// DESC),位置斷言會把「假實作的插入順序」變成事實上的契約。
+	byFeature := map[string]store.Override{}
+	for _, o := range ov {
+		byFeature[o.FeatureCode] = o
 	}
-	if ov[1].Enabled == nil || !*ov[1].Enabled || ov[1].ExpiresAt == nil || !ov[1].ExpiresAt.Equal(expired) {
-		t.Fatalf("enabled／到期日未帶出,got %+v", ov[1])
+	if o, ok := byFeature["limit.seats"]; !ok || o.Enabled != nil || o.Limit == nil || *o.Limit != 50 {
+		t.Fatalf("只寫限額的例外:enabled 必須保持 nil、limit 必須帶出,got %+v(存在=%v)", o, ok)
+	}
+	if o, ok := byFeature["feature.printing"]; !ok || o.Enabled == nil || !*o.Enabled ||
+		o.ExpiresAt == nil || !o.ExpiresAt.Equal(expired) {
+		t.Fatalf("enabled／到期日未帶出,got %+v(存在=%v)", o, ok)
 	}
 
 	if other, err := f.Overrides(ctx, 8); err != nil || len(other) != 0 {
@@ -108,11 +115,15 @@ func TestFakeStoreFeaturesAndPlanEntitlementsByCode(t *testing.T) {
 	if len(ents) != 2 {
 		t.Fatalf("方案權益應回 2 筆,got %d: %+v", len(ents), ents)
 	}
-	if ents[0].Limit == nil || *ents[0].Limit != 10 {
-		t.Fatalf("權益限額未帶出,got %+v", ents[0])
+	byCode := map[string]store.Entitlement{}
+	for _, e := range ents {
+		byCode[e.FeatureCode] = e
 	}
-	if ents[1].Limit != nil {
-		t.Fatalf("NULL 限額(不限)必須維持 nil,不是 0,got %+v", ents[1])
+	if e, ok := byCode["limit.seats"]; !ok || e.Limit == nil || *e.Limit != 10 {
+		t.Fatalf("權益限額未帶出,got %+v(存在=%v)", e, ok)
+	}
+	if e, ok := byCode["feature.printing"]; !ok || e.Limit != nil {
+		t.Fatalf("NULL 限額(不限)必須維持 nil,不是 0,got %+v(存在=%v)", e, ok)
 	}
 	if unknown, err := f.PlanEntitlements(ctx, "no_such_plan"); err != nil || len(unknown) != 0 {
 		t.Fatalf("未知方案應回空,got %+v err=%v", unknown, err)
@@ -125,3 +136,61 @@ func TestFakeStoreFeaturesAndPlanEntitlementsByCode(t *testing.T) {
 }
 
 func ptr[T any](v T) *T { return &v }
+
+// 假實作要與 PG 實作一樣「回傳的資料與內部狀態無關」:PG 每列掃描都配置新的指標,呼叫端
+// 改動不到 store。若假實作共用指標,`*ov[0].Limit = 999` 會靜默改到之後所有讀取
+// (跨測試／跨案例汙染,而判定層的測試正是共用同一份假實作)。Put 與 getter 兩端的承諾
+// 必須一致:都不別名呼叫端的指標。
+func TestFakeStoreDoesNotAliasPointerFields(t *testing.T) {
+	ctx := context.Background()
+	limit, enabled := int64(50), true
+	expires := time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC)
+	trial := time.Date(2027, 2, 1, 0, 0, 0, 0, time.UTC)
+
+	f := store.NewFake()
+	f.PutOverride(store.Override{
+		CompanyID: 7, FeatureCode: "limit.seats", Enabled: &enabled, Limit: &limit, ExpiresAt: &expires,
+	})
+	f.PutPlan("std", []store.Entitlement{{FeatureCode: "limit.seats", Enabled: true, Limit: &limit}})
+	f.PutSubscription(store.Subscription{CompanyID: 7, PlanCode: "std", Status: "active", TrialEnds: &trial})
+
+	// 放進去之後才改動那組指標(呼叫端擁有的記憶體)。
+	limit, enabled = 1, false
+	expires, trial = time.Time{}, time.Time{}
+
+	// 讀出來的那組指標也改動一次。
+	ov, err := f.Overrides(ctx, 7)
+	if err != nil || len(ov) != 1 {
+		t.Fatalf("取 overrides: got %+v err=%v", ov, err)
+	}
+	*ov[0].Limit, *ov[0].Enabled, *ov[0].ExpiresAt = 999, false, time.Time{}
+	ents, err := f.PlanEntitlements(ctx, "std")
+	if err != nil || len(ents) != 1 {
+		t.Fatalf("取方案權益: got %+v err=%v", ents, err)
+	}
+	*ents[0].Limit = 999
+	sub, err := f.Subscription(ctx, 7)
+	if err != nil || sub == nil {
+		t.Fatalf("取訂閱: got %+v err=%v", sub, err)
+	}
+	*sub.TrialEnds = time.Time{}
+
+	// 再讀一次:兩端都必須維持原值。
+	ov, err = f.Overrides(ctx, 7)
+	if err != nil || len(ov) != 1 {
+		t.Fatalf("重取 overrides: got %+v err=%v", ov, err)
+	}
+	if ov[0].Limit == nil || *ov[0].Limit != 50 || ov[0].Enabled == nil || !*ov[0].Enabled ||
+		ov[0].ExpiresAt == nil || !ov[0].ExpiresAt.Equal(time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC)) {
+		t.Fatalf("override 的指標欄位被呼叫端改到了,got %+v", ov[0])
+	}
+	ents, err = f.PlanEntitlements(ctx, "std")
+	if err != nil || len(ents) != 1 || ents[0].Limit == nil || *ents[0].Limit != 50 {
+		t.Fatalf("權益的限額被呼叫端改到了,got %+v err=%v", ents, err)
+	}
+	sub, err = f.Subscription(ctx, 7)
+	if err != nil || sub == nil || sub.TrialEnds == nil ||
+		!sub.TrialEnds.Equal(time.Date(2027, 2, 1, 0, 0, 0, 0, time.UTC)) {
+		t.Fatalf("訂閱的試用到期日被呼叫端改到了,got %+v err=%v", sub, err)
+	}
+}
