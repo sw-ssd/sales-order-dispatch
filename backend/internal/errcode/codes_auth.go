@@ -5,6 +5,9 @@ import "connectrpc.com/connect"
 // 認證域：登入、鎖定、註冊流程與公司狀態。
 var (
 	// AuthBadCredentials 刻意不區分「帳號不存在」與「密碼錯誤」（防帳號列舉）。
+	// 與 AuthUnauthenticated（AUTH-4001）同為 Unauthenticated 但語意不同，**不可合併**：
+	// 本碼＝「登入嘗試的憑證錯誤」（登入端點回此碼，前端留在登入頁顯示訊息）；
+	// AUTH-4001＝「未帶有效身分就存取需登入的端點」（前端導向登入頁）。
 	// ID 為 4xxx（非 1xxx）：憑證錯誤必須是對外 Unauthenticated，而 1xxx 區段只允許
 	// InvalidArgument——區段規則是硬規則，碼必須落在語意相符的區段。
 	AuthBadCredentials = MustRegister(Code{ID: "AUTH-4003", Domain: DomainAuth,
@@ -22,6 +25,9 @@ var (
 	AuthTempPasswordExpired = MustRegister(Code{ID: "AUTH-3002", Domain: DomainAuth,
 		ConnectCode: connect.CodeFailedPrecondition, Message: "臨時密碼已過期，請聯繫管理員重置"})
 
+	// AuthUnauthenticated 為「未帶有效身分就存取需登入的端點」（前端導向登入頁）。
+	// 與 AuthBadCredentials（AUTH-4003）同為 Unauthenticated 但語意不同，**不可合併**：
+	// 本碼沒有登入嘗試的上下文，前端不應在登入頁顯示表單錯誤。
 	AuthUnauthenticated = MustRegister(Code{ID: "AUTH-4001", Domain: DomainAuth,
 		ConnectCode: connect.CodeUnauthenticated, Message: "未登入"})
 
