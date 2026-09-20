@@ -237,8 +237,16 @@ func (s *RoleService) UpdateRolePermissions(ctx context.Context, req *connect.Re
 	}
 
 	// D32/Task8:role_permissions 異動同步至 OpenFGA tuples(引擎未注入時略過,向後相容)。
-	if err := s.syncRolePermissions(ctx, roleID, oldPerms, perms); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("OpenFGA tuple 同步失敗: %w", err))
+	// 必須排在**請求交易 commit 之後**(dbtenant.AfterCommit):在交易內同步一旦本交易其後被回滾
+	// (如下方 loadPermissions 讀取失敗),OpenFGA 就停在被回滾的 DB 狀態(新增方向 = 多授權)。
+	// 掛鉤失敗的語意沿用原本:DB 已提交,回 Internal 交由呼叫端重試/下次 reconcile 修正。
+	if err := dbtenant.AfterCommit(ctx, func(ctx context.Context) error {
+		if err := s.syncRolePermissions(ctx, roleID, oldPerms, perms); err != nil {
+			return connect.NewError(connect.CodeInternal, fmt.Errorf("OpenFGA tuple 同步失敗: %w", err))
+		}
+		return nil
+	}); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("OpenFGA tuple 同步註冊失敗: %w", err))
 	}
 
 	out, err := s.loadPermissions(ctx, roleID)

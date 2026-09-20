@@ -74,6 +74,36 @@ func WithTenantTx(ctx context.Context, tx *ent.Tx) context.Context {
 	return context.WithValue(ctx, txCtxKey{}, tx)
 }
 
+// afterCommitKey 為請求交易內的 post-commit 掛鉤收集器（見 AfterCommit）。
+type afterCommitKey struct{}
+
+// pendingAfterCommit 收集「請求交易 commit 成功後才執行」的工作。
+type pendingAfterCommit struct{ fns []func(context.Context) error }
+
+// withAfterCommit 把收集器放進 ctx（僅 Interceptor 內部使用）。
+func withAfterCommit(ctx context.Context, p *pendingAfterCommit) context.Context {
+	return context.WithValue(ctx, afterCommitKey{}, p)
+}
+
+// AfterCommit 註冊一項「請求交易 commit 成功後才執行」的工作（目前用於 OpenFGA tuple 同步）。
+//
+// 為何需要這個掛鉤：OpenFGA 與業務 DB 不是同一個交易，同步必須發生在業務交易提交**之後** ——
+// 在交易內同步一旦該交易其後被回滾（同函式後續讀取失敗、或 Interceptor 的 Commit 失敗），
+// OpenFGA 就停在**被回滾的 DB 狀態**：新增方向 = 多授權（fail-open）、移除方向 = 多收縮，兩者都要
+// 等下次 authz.Provision reconcile 才修正；而且業務交易的列鎖會跨越外部寫入。反之，handler 自行
+// commit 又違反「交易邊界由請求擁有」與「同一請求不得對同一列開第二條交易」。
+// 因此由 Interceptor 在 handler 之前放收集器、**Commit 成功後**依序執行；回滾則整個丟棄不執行。
+//
+// 沒有請求交易（CLI／單元測試直接呼叫 service）→ 回錯誤：呼叫端的同步沒被安排，fail-closed。
+func AfterCommit(ctx context.Context, fn func(context.Context) error) error {
+	p, ok := ctx.Value(afterCommitKey{}).(*pendingAfterCommit)
+	if !ok {
+		return errors.New("dbtenant: 沒有請求交易，無法註冊 post-commit 工作")
+	}
+	p.fns = append(p.fns, fn)
+	return nil
+}
+
 // TxFrom 取出請求交易；未注入時回 false（CLI／seed／單元測試）。
 func TxFrom(ctx context.Context) (*ent.Tx, bool) {
 	tx, ok := ctx.Value(txCtxKey{}).(*ent.Tx)
@@ -103,16 +133,25 @@ func Interceptor(client *ent.Client) connect.Interceptor {
 				log.Printf("dbtenant: 開啟租戶交易失敗: %v", err)
 				return nil, connect.NewError(connect.CodeInternal, errors.New("開啟租戶交易失敗"))
 			}
-			resp, err := next(WithTenantTx(ctx, tx), req)
+			pending := &pendingAfterCommit{}
+			resp, err := next(withAfterCommit(WithTenantTx(ctx, tx), pending), req)
 			if err != nil {
 				if rbErr := tx.Rollback(); rbErr != nil {
 					log.Printf("dbtenant: 回滾租戶交易失敗: %v", rbErr)
 				}
+				// 回滾 → 掛鉤整個丟棄(AFTER 的同步只允許發生在已提交的狀態上)。
 				return nil, err
 			}
 			if err := tx.Commit(); err != nil {
 				log.Printf("dbtenant: 提交租戶交易失敗: %v", err)
 				return nil, connect.NewError(connect.CodeInternal, errors.New("提交交易失敗"))
+			}
+			// commit 成功後才執行掛鉤(列鎖已釋放、DB 已定案)。掛鉤失敗即回該錯誤 ——
+			// 與「handler 自行 commit 後同步失敗」的舊語意一致(DB 已提交,不回滾)。
+			for _, fn := range pending.fns {
+				if err := fn(ctx); err != nil {
+					return nil, err
+				}
 			}
 			return resp, nil
 		}

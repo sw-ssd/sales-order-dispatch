@@ -502,12 +502,18 @@ func (s *UserService) AssignRole(ctx context.Context, req *connect.Request[v1.As
 	}
 
 	// 同步 OpenFGA assigned tuple(引擎未注入時略過,OpenFGA 停用/開發降級時由 rolePolicy 承擔)。
-	// 對齊 role_service.syncRolePermissions:OpenFGA 與業務非同交易,在 commit 後執行。
+	// 對齊 role_service.syncRolePermissions:交由 dbtenant.AfterCommit 排在本請求交易 **commit 之後**
+	// 執行(在交易內同步會讓 OpenFGA 停在被回滾的 DB 狀態,且列鎖跨越外部寫入)。
 	// 殘留 #3:sync 失敗於 commit 之後——業務已提交(role/tv 已變更),此時不得回報請求失敗,
 	// 否則呼叫端會重試而二次 bump token_version,且資料庫與 OpenFGA 皆已變。
 	// 改以 log 記錄並回成功,授權由 OpenFGA 於下次 reconcile/provision(啟動)補齊(最終一致)。
-	if err := s.syncUserRoleTuple(ctx, target, roleCode); err != nil {
-		log.Printf("user_service: AssignRole(user=%d) OpenFGA assigned tuple 同步失敗(延遲補齊): %v", userID, err)
+	if err := dbtenant.AfterCommit(ctx, func(ctx context.Context) error {
+		if err := s.syncUserRoleTuple(ctx, target, roleCode); err != nil {
+			log.Printf("user_service: AssignRole(user=%d) OpenFGA assigned tuple 同步失敗(延遲補齊): %v", userID, err)
+		}
+		return nil
+	}); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("OpenFGA tuple 同步註冊失敗: %w", err))
 	}
 
 	u, err := dbtenant.Client(ctx, s.db).User.Query().WithCompany().WithDepartment().Where(user.ID(userID)).Only(ctx)
@@ -639,19 +645,36 @@ func (s *UserService) syncUserRoleTuple(ctx context.Context, target *ent.User, n
 
 	// 刪除舊角色 assigned(若存在)。
 	if target.Role != "" && target.Role != newRoleCode {
-		if oldRole, err := dbtenant.Client(ctx, s.db).Role.Query().Where(role.CodeEQ(target.Role)).Only(ctx); err == nil {
-			if derr := e.DeleteTuple(ctx, userObj, "assigned", fmt.Sprintf("role:%d", oldRole.ID)); derr != nil {
+		if oldID, ok := s.roleIDByCode(ctx, target.Role); ok {
+			if derr := e.DeleteTuple(ctx, userObj, "assigned", fmt.Sprintf("role:%d", oldID)); derr != nil {
 				return derr
 			}
 		}
 	}
 	// 寫入新角色 assigned(若角色存在)。
-	if nr, err := dbtenant.Client(ctx, s.db).Role.Query().Where(role.CodeEQ(newRoleCode)).Only(ctx); err == nil {
-		if werr := e.WriteTuple(ctx, userObj, "assigned", fmt.Sprintf("role:%d", nr.ID)); werr != nil {
+	if newID, ok := s.roleIDByCode(ctx, newRoleCode); ok {
+		if werr := e.WriteTuple(ctx, userObj, "assigned", fmt.Sprintf("role:%d", newID)); werr != nil {
 			return werr
 		}
 	}
 	return nil
+}
+
+// roleIDByCode 以**系統範圍**讀 roles 取得角色 id(找不到 → false,略過該方向的同步)。
+// 為何系統範圍:本函式只被 post-commit 掛鉤呼叫,那時請求交易已結束、ctx 已無租戶 scope;
+// roles 是共享目錄(00025 的 policy 只要求 scope 非空),而核心表在 00028 之後受 RLS 約束 ——
+// 用裸 client 會靜默讀到 0 列,於是 assigned tuple 永遠不寫。
+func (s *UserService) roleIDByCode(ctx context.Context, code string) (int, bool) {
+	id := 0
+	err := dbtenant.SystemScopeTx(ctx, s.db, func(tx *ent.Tx) error {
+		r, qerr := tx.Client().Role.Query().Where(role.CodeEQ(code)).Only(ctx)
+		if qerr != nil {
+			return qerr
+		}
+		id = r.ID
+		return nil
+	})
+	return id, err == nil
 }
 
 // loadUser 載入單一使用者(含 company/department edge,供範圍判定)。

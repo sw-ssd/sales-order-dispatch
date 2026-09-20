@@ -19,10 +19,12 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
+	authzopenfga "github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	ofga "github.com/salesorder/sales-order-1.0/backend/third_party/openfga"
 )
 
 // 本檔為核心域(companies / departments / users / roles / role_permissions)＋ 依賴它們最重的
@@ -630,6 +632,89 @@ func TestIntegrationCoreWritesStayInRequestTx(t *testing.T) {
 	})
 }
 
+// TestIntegrationOpenFGAHookAfterCommit OpenFGA tuple 同步必須排在請求交易 **commit 之後**
+// (dbtenant.AfterCommit)。兩條斷言各釘一半:
+//
+//	① 回滾路徑(handler 之後強制失敗)→ 掛鉤被丟棄:tuple 不得寫入,業務列亦未落地;
+//	② 成功路徑 → 掛鉤跑了:新權限的 can_write tuple 存在。
+//
+// 把同步移回交易內(commit 前)會讓 ① 紅 —— OpenFGA 停在被回滾的 DB 狀態(新增方向 = 多授權,
+// fail-open,且要等下次 authz.Provision reconcile 才修正)。
+// 兩個子測試各用**自己的 in-memory 引擎**,互不污染;順序刻意「先回滾、後成功」,讓兩者都在
+// 「DB 初始為 1 筆權限、請求欲增為 2 筆」的同一 diff 上比較。
+func TestIntegrationOpenFGAHookAfterCommit(t *testing.T) {
+	testsupport.RequiresContainer(t)
+	adminDSN := testsupport.Postgres(t)
+	migrateBusinessUp(t, adminDSN)
+
+	admin := openRawDB(t, adminDSN)
+	defer func() { _ = admin.Close() }()
+
+	coA := insertRLSCompany(t, admin, "A", "CORE-HOOK-A")
+	superID := insertRLSUser(t, admin, coA, "core-hook-super@example.com", "super")
+	roleID := insertRLSCoreRole(t, admin, "core_hook_role")
+	insertRLSCoreRolePermission(t, admin, roleID, "customer", "read")
+
+	client := openAppRoleEntClient(t, adminDSN)
+	super := authz.Identity{UserID: itoa(superID), CompanyID: itoa(coA), Role: "super", Roles: []string{"super"}}
+	scope := auth.RLSScope{UserID: itoa(superID), CompanyID: itoa(coA), DataScope: auth.DataScopeAll, CompanyActive: true}
+	userset := "role:" + strconv.Itoa(roleID) + "#assigned"
+
+	// addUpdate 把角色權限由 1 筆(read)擴為 2 筆(read + update)→ can_write 需要新 tuple。
+	addUpdate := func() *v1.UpdateRolePermissionsRequest {
+		return &v1.UpdateRolePermissionsRequest{
+			RoleId: strconv.Itoa(roleID),
+			Permissions: []*v1.Permission{
+				{Resource: "customer", Action: "read", SortOrder: 0},
+				{Resource: "customer", Action: "update", SortOrder: 1},
+			},
+		}
+	}
+	// newEngine 建立一個乾淨的 in-memory 引擎(store 名須符合 OpenFGA 的命名 regex,故不用 t.Name())。
+	newEngine := func(t *testing.T, name string) (*authzopenfga.Engine, func(string) bool) {
+		t.Helper()
+		fgaClient, err := ofga.NewMemory(t.Context(), "t9-hook-"+name)
+		if err != nil {
+			t.Fatalf("NewMemory: %v", err)
+		}
+		t.Cleanup(fgaClient.Close)
+		e := authzopenfga.New(fgaClient)
+		return e, func(relation string) bool {
+			ok, cerr := e.Check(t.Context(), userset, relation, "ability:customer")
+			if cerr != nil {
+				t.Fatalf("engine.Check(%s): %v", relation, cerr)
+			}
+			return ok
+		}
+	}
+
+	t.Run("回滾路徑:掛鉤被丟棄 → tuple 未寫入且業務列未落地", func(t *testing.T) {
+		engine, has := newEngine(t, "rollback")
+		c := newCoreEngineServer(t, client, super, scope, engine, true)
+		assertForcedFailure(t, callCoreErr(t, c.roles.UpdateRolePermissions, addUpdate()))
+		if n := countRows(t, admin, `SELECT count(*) FROM role_permissions WHERE role_id = $1`, roleID); n != 1 {
+			t.Fatalf("請求交易回滾後 role_permissions 必須維持原樣(1 筆),got %d", n)
+		}
+		if has("can_write") {
+			t.Fatal("交易回滾時 post-commit 掛鉤不得執行:OpenFGA 會停在被回滾的 DB 狀態(多授權/fail-open)")
+		}
+	})
+
+	t.Run("成功路徑:commit 後掛鉤執行 → tuple 已寫入", func(t *testing.T) {
+		engine, has := newEngine(t, "success")
+		c := newCoreEngineServer(t, client, super, scope, engine, false)
+		callCore(t, c.roles.UpdateRolePermissions, addUpdate())
+		// syncRolePermissions 只同步「差異」(全量對齊是開機的 authz.Provision 負責),故此處只斷言
+		// 新增的那個 tuple 已被寫入。
+		if !has("can_write") {
+			t.Fatal("commit 成功後 post-commit 掛鉤應寫入 can_write tuple")
+		}
+		if n := countRows(t, admin, `SELECT count(*) FROM role_permissions WHERE role_id = $1`, roleID); n != 2 {
+			t.Fatalf("成功路徑應留下 2 筆權限,got %d", n)
+		}
+	})
+}
+
 // TestIntegrationRLSCoreEnableMigrationDown 00028 的 Up/Down 必須對稱(ENABLE + FORCE ↔
 // NO FORCE + DISABLE),且 Down 不得動到任何 policy(五張表的 policy 由 00023/00025 定義:少了
 // 它們,回退後的環境與 00027 的狀態不一致,而旗標上看不出來),並可重複套用。
@@ -822,21 +907,13 @@ func openAppRoleEntClient(t *testing.T, adminDSN string) *ent.Client {
 func newCoreAppRoleServer(t *testing.T, client *ent.Client, id authz.Identity, scope auth.RLSScope, withScope bool) coreClients {
 	t.Helper()
 	mux := http.NewServeMux()
-	RegisterCompanyServices(mux, client)
-	RegisterUserServices(mux, client)
-	RegisterRoleServices(mux, client)
-	return serveCoreClients(t, mux, id, scope, withScope)
+	mountCoreHandlers(mux, client, dbtenant.HandlerOption(client))
+	return serveCoreClients(t, mux, id, scope, withScope, nil)
 }
 
-// newCoreFailingServer 與 newCoreAppRoleServer 相同的組裝,差別在 interceptor 疊法:
-// dbtenant.Interceptor 在外、failAfterHandler 在內(同一組 WithInterceptors 的參數順序即外→內),
-// 故 handler 的寫入先進入請求交易、再由外層 rollback。
-func newCoreFailingServer(t *testing.T, client *ent.Client, id authz.Identity, scope auth.RLSScope) coreClients {
-	t.Helper()
-	mux := http.NewServeMux()
-	opts := []connect.HandlerOption{
-		connect.WithInterceptors(dbtenant.Interceptor(client), failAfterHandler{}),
-	}
+// mountCoreHandlers 以 opts 掛上核心域四支 handler(與 RegisterCompanyServices／RegisterUserServices／
+// RegisterRoleServices 相同的組裝,差別是能把額外 interceptor 疊在 dbtenant.Interceptor 之後)。
+func mountCoreHandlers(mux *http.ServeMux, client *ent.Client, opts ...connect.HandlerOption) {
 	companyPath, companyHandler := salesorderv1connect.NewCompanyServiceHandler(NewCompanyService(client), opts...)
 	mux.Handle(companyPath, companyHandler)
 	departmentPath, departmentHandler := salesorderv1connect.NewDepartmentServiceHandler(NewDepartmentService(client), opts...)
@@ -845,15 +922,38 @@ func newCoreFailingServer(t *testing.T, client *ent.Client, id authz.Identity, s
 	mux.Handle(userPath, userHandler)
 	rolePath, roleHandler := salesorderv1connect.NewRoleServiceHandler(NewRoleService(client), opts...)
 	mux.Handle(rolePath, roleHandler)
-	return serveCoreClients(t, mux, id, scope, true)
+}
+
+// newCoreFailingServer 與 newCoreAppRoleServer 相同的組裝,差別在 interceptor 疊法:
+// dbtenant.Interceptor 在外、failAfterHandler 在內(同一組 WithInterceptors 的參數順序即外→內),
+// 故 handler 的寫入先進入請求交易、再由外層 rollback。
+func newCoreFailingServer(t *testing.T, client *ent.Client, id authz.Identity, scope auth.RLSScope) coreClients {
+	t.Helper()
+	return newCoreEngineServer(t, client, id, scope, nil, true)
+}
+
+// newCoreEngineServer 與 newCoreFailingServer 相同的組裝,差別是能把 OpenFGA 引擎放進 ctx
+// (供 tuple 同步的 post-commit 掛鉤斷言);failing=true 時在 handler 之後強制失敗(驗證回滾丟棄掛鉤)。
+func newCoreEngineServer(t *testing.T, client *ent.Client, id authz.Identity, scope auth.RLSScope, engine *authzopenfga.Engine, failing bool) coreClients {
+	t.Helper()
+	mux := http.NewServeMux()
+	interceptors := []connect.Interceptor{dbtenant.Interceptor(client)}
+	if failing {
+		interceptors = append(interceptors, failAfterHandler{})
+	}
+	mountCoreHandlers(mux, client, connect.WithInterceptors(interceptors...))
+	return serveCoreClients(t, mux, id, scope, true, engine)
 }
 
 // serveCoreClients 以指定身分與 scope 包住 mux 並起 httptest server。
-func serveCoreClients(t *testing.T, mux *http.ServeMux, id authz.Identity, scope auth.RLSScope, withScope bool) coreClients {
+func serveCoreClients(t *testing.T, mux *http.ServeMux, id authz.Identity, scope auth.RLSScope, withScope bool, engine *authzopenfga.Engine) coreClients {
 	t.Helper()
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := authz.WithIdentity(r.Context(), id)
 		ctx = audit.WithMeta(ctx, audit.Meta{IP: "10.0.0.9", UserAgent: "t9-core-probe"})
+		if engine != nil {
+			ctx = authz.WithEngine(ctx, engine)
+		}
 		if withScope {
 			ctx = auth.WithRLS(ctx, scope)
 		}
