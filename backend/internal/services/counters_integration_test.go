@@ -15,16 +15,19 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
 )
 
-// TestIntegrationEntitlementCounterCountsWithinRequestScope 計數器必須以「當前請求的 scoped
-// client」查詢（dbtenant.Client），否則在請求路徑永遠回 0 —— 0 等於「用量為零」，配額守衛
-// 會全面放行（形同無限額上限）。
+// TestIntegrationEntitlementCounterCountsWithinRequestScope 計數器必須看得見**整個公司** ——
+// 那是配額的單位（spec §3.2 的 WHERE company_id=?）。可見範圍由 RLS scope 決定，故如下的三分支
+// 都是守衛會踩到的情境：
+//
+//	① 未帶請求交易／無 scope（無身分的系統路徑：OIDC 首次登入、RegisterComplete、CLI）
+//	   → 走系統範圍交易（scope=all）拿到公司層真數字。**修前這裡回 0**：00028 的 FORCE RLS 把
+//	   users 等表濾成 0 列 → used=0 → 任何上限都不觸發（守衛成了裝飾品）。
+//	② 帶請求交易（scope=company A）→ 各 feature 拿到正確筆數（非 0），B 公司的列不計入。
+//	③ 部門 scope（dept_admin／staff）→ 仍必須是公司總數（不得低報成「每部門一份」）。
 //
 // 為什麼一定要 app_rw：容器／測試的 admin 是 superuser，PG 的 superuser 永遠繞過 RLS
 // （FORCE 亦然）→ 以 admin 連線計數「怎麼查都對」，測不出漏帶 scope 的實作。
-// app_rw 是 00022 的 NOBYPASSRLS 業務角色，正是生產路徑的角色：
-//
-//	① 未帶請求交易（無 scope）→ 四張表都看不到列 → 0（對照組，證明 RLS 真的擋著）；
-//	② 帶請求交易（scope=company A）→ 各 feature 拿到正確筆數（非 0），B 公司的列不計入。
+// app_rw 是 00022 的 NOBYPASSRLS 業務角色，正是生產路徑的角色。
 func TestIntegrationEntitlementCounterCountsWithinRequestScope(t *testing.T) {
 	testsupport.RequiresContainer(t)
 	adminDSN := testsupport.Postgres(t)
@@ -69,16 +72,22 @@ func TestIntegrationEntitlementCounterCountsWithinRequestScope(t *testing.T) {
 		{entitlements.LimitDepartments, 1},
 	}
 
-	t.Run("未帶請求交易 → app_rw 看不到列,一律 0(對照組)", func(t *testing.T) {
+	t.Run("未帶請求交易(無 scope)→ 系統範圍交易,仍拿到公司層真數字", func(t *testing.T) {
 		for _, tc := range features {
 			got, err := counter.Count(context.Background(), coA, tc.feature)
 			if err != nil {
 				t.Fatalf("Count(%s): %v", tc.feature, err)
 			}
-			if got != 0 {
-				t.Fatalf("沒有請求 scope 時 %s 應為 0(RLS fail-closed),got %d "+
-					"(>0 代表計數走了 admin／無 RLS 的連線)", tc.feature, got)
+			if got != tc.want {
+				t.Fatalf("無 scope（無身分系統路徑）時 %s 應為公司層真數字 %d,got %d "+
+					"(修前的實作在此回 0 → 守衛形同裝飾品)", tc.feature, tc.want, got)
 			}
+		}
+		// 公司條件仍是**明示**的 company_id：他公司的列不得計入（系統範圍不等於全表亂數）。
+		if got, err := counter.Count(context.Background(), coB, entitlements.LimitSeats); err != nil {
+			t.Fatalf("Count(coB): %v", err)
+		} else if got != 1 {
+			t.Fatalf("無 scope 時仍只數該公司（B 應為 1），got %d", got)
 		}
 	})
 

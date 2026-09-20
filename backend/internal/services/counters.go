@@ -30,23 +30,30 @@ func NewEntitlementCounter(db *ent.Client) entitlements.Counter {
 // 可見範圍（關鍵）：配額是**公司層**的（spec §3.2 的 WHERE company_id=?），但 RLS 會把可見範圍
 // 縮到請求 scope。故依 auth.RLSFrom(ctx).DataScope 分流：
 //
-//   - company／all／空（無請求交易，CLI 與單元測試的 fallback client）：直接在請求交易內計數。
-//     請求交易本身即可見整個公司，且看得到同請求尚未提交的列（守衛在寫入前呼叫 → 同請求內
-//     連續建立時前一筆也算得到）。
+//   - company／all：請求交易本身即可見整個公司（all 亦靠明示的 company_id 條件），直接在請求
+//     交易內計數。請求交易看得到同請求尚未提交的列（守衛在寫入前呼叫 → 同請求內連續建立時
+//     前一筆也算得到）。
 //   - department／self（dept_admin／staff 的請求）：**改走獨立的系統範圍交易**
 //     （dbtenant.SystemScopeTx，scope=all）在公司層計數。理由：這兩種 scope 在請求交易內只看得到
 //     本部門／本人的列，直接數會把配額低報成「每部門一份」，而 dept_admin／staff 可以建立
 //     客戶／商品／使用者 → 掛上守衛後就是**超額放行（fail-open）**。
+//   - **空 scope（＝無租戶身分）**：同樣走系統範圍交易。這是 00028 **ENABLE＋FORCE RLS** 的
+//     直接後果：未設 scope 的請求交易（或完全沒有請求交易 —— OIDC 首次登入、CLI）把 users 等表
+//     濾成 **0 列** → `used=0` → 任何上限都不觸發，守衛成了**裝飾品**。無身分 ≠ 沒有限制：
+//     公司由呼叫端明示帶入（services.GuardQuotaForCompany），計數就必須看得見整個公司。
+//     （sqlite 的 enttest 沒有 RLS，這條路徑在單元層「怎麼數都對」——真容器整合測試才量得出來。）
 //
 // SystemScopeTx 的代價（刻意接受）：①它是第二條連線（AGENTS §9-6），但只做唯讀 SELECT、
 // 不取任何列鎖，不會與請求交易互鎖；②它看不到請求交易內未提交的列 —— 守衛一律在寫入之前呼叫，
 // 該情境不存在，且「低報」屬 fail-closed 方向，遠比超額放行安全。
 //
-// 未特別處理空 data_scope（未知角色的請求）：同一組 policy 也會擋掉它的所有寫入（WITH CHECK
-// 不成立），故低報不可利用 —— 寫入面已 fail-closed。
+// 未特別處理 DataScopeAll：平台層身分（super／developer）的配額略過寫在守衛入口
+// （services.guardQuota），判定層只認 scope 的可見性。
 func (c *entitlementCounter) Count(ctx context.Context, companyID int, feature string) (int, error) {
 	switch auth.RLSFrom(ctx).DataScope {
-	case auth.DataScopeDepartment, auth.DataScopeSelf:
+	case auth.DataScopeCompany, auth.DataScopeAll:
+		return countFeature(ctx, dbtenant.Client(ctx, c.db), companyID, feature)
+	default:
 		var n int
 		err := dbtenant.SystemScopeTx(ctx, c.db, func(tx *ent.Tx) error {
 			var err error
@@ -54,8 +61,6 @@ func (c *entitlementCounter) Count(ctx context.Context, companyID int, feature s
 			return err
 		})
 		return n, err
-	default:
-		return countFeature(ctx, dbtenant.Client(ctx, c.db), companyID, feature)
 	}
 }
 
