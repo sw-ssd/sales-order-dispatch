@@ -234,7 +234,7 @@ func TestRegisterPanicsOnViolations(t *testing.T) {
 // 契約 3：Error() 產生帶 ErrorInfo 的 connect error（碼與 details 可被客戶端讀取）。
 func TestErrorCarriesErrorInfo(t *testing.T) {
 	ctx := t.Context()
-	err := errcode.PlatformLimitExceeded.Error(ctx, map[string]string{"used": "10", "limit": "10"})
+	err := errcode.PlatformLimitExceeded.Error(map[string]string{"used": "10", "limit": "10"})
 	if connect.CodeOf(err) != connect.CodeFailedPrecondition {
 		t.Fatalf("connect 碼應為 FailedPrecondition，got %v", connect.CodeOf(err))
 	}
@@ -265,7 +265,7 @@ func TestRenderMissingParamFallsBackAndWrapKeepsCause(t *testing.T) {
 		t.Fatalf("缺參數時應保留樣板原文，got %q", msg)
 	}
 	cause := errors.New("db: connection reset")
-	err := errcode.SysInternal.Wrap(ctx, cause)
+	err := errcode.SysInternal.Wrap(cause)
 	if !errors.Is(err, cause) {
 		t.Fatal("Wrap 應保留底層錯誤（Unwrap），否則 log 追不到原因")
 	}
@@ -927,14 +927,14 @@ git commit -m "refactor(services): toConnectError 改走錯誤碼 registry（ent
 // requireAuth：未登入
 id := authz.IdentityFrom(ctx)
 if id.UserID == "" {
-	return authz.Identity{}, errcode.AuthUnauthenticated.Error(ctx, nil)
+	return authz.Identity{}, errcode.AuthUnauthenticated.Error(nil)
 }
 ```
 
 ```go
 // requireScope：授權檢查失敗（角色/範圍不足）——與「查不到」不同語意
 if !ok {
-	return errcode.SysPermissionDenied.Error(ctx, map[string]string{"resource": resource, "action": action})
+	return errcode.SysPermissionDenied.Error(map[string]string{"resource": resource, "action": action})
 }
 ```
 
@@ -945,21 +945,21 @@ if !ok {
 ```go
 // 帳密錯誤：不區分帳號不存在與密碼錯誤（防列舉）
 if user == nil || !auth.CheckPasswordHash(password, user.PasswordHash) {
-	return nil, errcode.AuthBadCredentials.Error(ctx, nil)
+	return nil, errcode.AuthBadCredentials.Error(nil)
 }
 // 鎖定（帶解鎖時間）
 if locked {
-	return nil, errcode.AuthLocked.Error(ctx, map[string]string{
+	return nil, errcode.AuthLocked.Error(map[string]string{
 		"until": unlockAt.Format("15:04"),
 	})
 }
 // 公司停用連鎖
 if !companyActive {
-	return nil, errcode.AuthCompanyInactive.Error(ctx, nil)
+	return nil, errcode.AuthCompanyInactive.Error(nil)
 }
 // 首登未完成／臨時密碼過期
-return nil, errcode.AuthRegistrationRequired.Error(ctx, nil)
-return nil, errcode.AuthTempPasswordExpired.Error(ctx, nil)
+return nil, errcode.AuthRegistrationRequired.Error(nil)
+return nil, errcode.AuthTempPasswordExpired.Error(nil)
 ```
 
 - [ ] **Step 3: 配額與收款（`entitlements`、`billing`）**
@@ -967,20 +967,20 @@ return nil, errcode.AuthTempPasswordExpired.Error(ctx, nil)
 ```go
 // CheckLimit：未含功能 / 已達上限，各自帶 details 供前端導向升級
 if !known || !r.enabled {
-	return errcode.PlatformFeatureNotInPlan.Error(ctx, map[string]string{"feature": feature})
+	return errcode.PlatformFeatureNotInPlan.Error(map[string]string{"feature": feature})
 }
 if cur+delta > int(*r.limit) {
-	return errcode.PlatformLimitExceeded.Error(ctx, map[string]string{
+	return errcode.PlatformLimitExceeded.Error(map[string]string{
 		"feature": feature, "used": strconv.Itoa(cur), "limit": strconv.Itoa(*r.limit),
 	})
 }
 // 訂閱不可用（suspended／cancelled）
-return errcode.PlatformSubscriptionInactive.Error(ctx, nil)
+return errcode.PlatformSubscriptionInactive.Error(nil)
 ```
 
 ```go
 // billing：金額不符（G4）與期別已付款衝突（G3 的 log 分支升級為碼）
-return errcode.PlatformPaymentConflict.Error(ctx, map[string]string{
+return errcode.PlatformPaymentConflict.Error(map[string]string{
 	"reason": fmt.Sprintf("輸入金額 %s 與期別金額 %s 不符",
 		money.FormatCents(in.AmountCents), money.FormatCents(period.AmountCents)),
 })
@@ -1249,7 +1249,7 @@ func TestNoUnregisteredErrorConstruction(t *testing.T) {
 		}
 	}
 	if len(added) > 0 {
-		t.Fatalf("新增的錯誤建構未使用註冊碼（請改用 errcode.<Code>.Error(ctx, …)）:\n%s",
+		t.Fatalf("新增的錯誤建構未使用註冊碼（請改用 errcode.<Code>.Error(…)）:\n%s",
 			strings.Join(added, "\n"))
 	}
 	if len(stale) > 0 {
