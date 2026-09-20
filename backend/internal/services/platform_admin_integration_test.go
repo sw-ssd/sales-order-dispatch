@@ -34,8 +34,23 @@ type platformAdminSeed struct {
 	activeID   int64 // 有訂閱的租戶
 	noneID     int64 // 沒有訂閱的租戶
 	deletedID  int64 // 已軟刪除的租戶(不得出現在任何列表)
-	periodEnd  time.Time
+	// cancelledID 為**只有**一筆已取消訂閱的租戶:取消是「期末終止、資料不刪除」(spec §5.6),
+	// console 必須看得到那份合約(方案／席位／到期日),不得被投影成「從未訂閱」。
+	cancelledID int64
+	// bothID 為同時有「歷史 cancelled ＋ 現行 active」的租戶:投影必須取現行那筆且**不得重複列**。
+	bothID int64
+	// platformOwnedID 為 G5 的平台自營公司(identifier='platform'):不是租戶,不得出現在列表。
+	platformOwnedID int64
+	periodEnd       time.Time
+	// cancelledPeriodEnd／bothPeriodEnd 為 cancelled 與「歷史 cancelled＋現行 active」兩家的
+	// 本期到期日:用來證明投影的期別來自**被選中的那筆訂閱**。
+	cancelledPeriodEnd time.Time
+	bothPeriodEnd      time.Time
 }
+
+// platformCompanyIdentifier 與 `cmd/seed/platform.go` 的同名常數一致(那里未匯出,無法引用):
+// G5 的平台自營公司識別碼。投影查詢必須排除它,否則 console 會對平台自己計費。
+const platformCompanyIdentifier = "platform"
 
 // TestIntegrationPlatformAdmin 驗五個唯讀 RPC 的真 SQL 投影。
 func TestIntegrationPlatformAdmin(t *testing.T) {
@@ -51,15 +66,22 @@ func TestIntegrationPlatformAdmin(t *testing.T) {
 
 	t.Run("ListTenants 投影", func(t *testing.T) {
 		resp := listTenants(t, svc, ctx, &platformv1.ListTenantsRequest{Page: 1, PageSize: 20})
-		if got := resp.GetPagination().GetTotal(); got != 2 {
-			t.Fatalf("總數應為 2(已軟刪除的租戶不算),got %d", got)
+		// 夾具的四家租戶:有訂閱／未訂閱／只有 cancelled／歷史 cancelled＋現行 active。
+		// 已軟刪除的公司與 G5 的平台自營公司都不算租戶。
+		if got := resp.GetPagination().GetTotal(); got != 4 {
+			t.Fatalf("總數應為 4(已軟刪除與平台自營公司不算),got %d", got)
 		}
 		byID := map[string]*platformv1.TenantSummary{}
 		for _, x := range resp.GetTenants() {
 			byID[x.GetCompanyId()] = x
 		}
-		if _, ok := byID[itoa(int(seed.deletedID))]; ok {
-			t.Fatal("已軟刪除的公司不得出現在租戶列表")
+		for name, id := range map[string]int64{
+			"已軟刪除的公司": seed.deletedID,
+			"平台自營公司":  seed.platformOwnedID,
+		} {
+			if _, ok := byID[itoa(int(id))]; ok {
+				t.Fatalf("%s 不得出現在租戶列表(console 會把它當成一個租戶)", name)
+			}
 		}
 
 		active := byID[itoa(int(seed.activeID))]
@@ -91,6 +113,40 @@ func TestIntegrationPlatformAdmin(t *testing.T) {
 		if none.GetCurrentPeriodEnd() != "" || none.GetOverdue() {
 			t.Fatalf("未訂閱租戶不得有到期日／逾期: %v", none)
 		}
+
+		// 已取消的租戶:合約仍在(期末終止、資料不刪除),console 必須看得見它 ——
+		// 投影成 status=none 會讓營運找不到那份合約,status=cancelled 的篩選也永遠 0 筆。
+		cancelled := byID[itoa(int(seed.cancelledID))]
+		if cancelled == nil {
+			t.Fatalf("只有已取消訂閱的租戶仍必須在列表內: %v", byID)
+		}
+		if cancelled.GetSubscriptionStatus() != "cancelled" {
+			t.Fatalf("已取消訂閱的狀態必須是 cancelled(不得被當成未訂閱),got %q", cancelled.GetSubscriptionStatus())
+		}
+		if cancelled.GetPlanCode() != "std" || cancelled.GetPlanName() != "標準" || cancelled.GetSeatCount() != 5 {
+			t.Fatalf("已取消租戶的方案／席位必須照實投影: %v", cancelled)
+		}
+		if got, want := cancelled.GetCurrentPeriodEnd(), seed.cancelledPeriodEnd.UTC().Format(time.RFC3339); got != want {
+			t.Fatalf("已取消租戶的本期到期日應為 %s,got %q", want, got)
+		}
+		if cancelled.GetOverdue() {
+			t.Fatal("已取消租戶的期別已付清,不得標記逾期")
+		}
+
+		// 歷史 cancelled ＋ 現行 active:取現行那筆(3 席),且該公司只出現一次(不得因兩筆訂閱重複列)。
+		both := byID[itoa(int(seed.bothID))]
+		if both == nil {
+			t.Fatalf("有現行訂閱的租戶必須在列表內: %v", byID)
+		}
+		if both.GetSubscriptionStatus() != "active" || both.GetSeatCount() != 3 {
+			t.Fatalf("有歷史 cancelled 時仍必須取現行訂閱: %v", both)
+		}
+		if got, want := both.GetCurrentPeriodEnd(), seed.bothPeriodEnd.UTC().Format(time.RFC3339); got != want {
+			t.Fatalf("本期到期日必須來自現行訂閱(%s),got %q", want, got)
+		}
+		if len(resp.GetTenants()) != 4 {
+			t.Fatalf("每家租戶只能出現一次(歷史 cancelled 不得造成重複列),got %d 筆", len(resp.GetTenants()))
+		}
 	})
 
 	t.Run("ListTenants 篩選與分頁", func(t *testing.T) {
@@ -110,6 +166,18 @@ func TestIntegrationPlatformAdmin(t *testing.T) {
 		if noneOnly.GetPagination().GetTotal() != 1 || noneOnly.GetTenants()[0].GetCompanyId() != itoa(int(seed.noneID)) {
 			t.Fatalf("status=none 應只回未訂閱那家: %v", noneOnly.GetTenants())
 		}
+		// status=cancelled 必須真的篩得到(舊投影把取消的租戶變成 none → 這個篩選永遠 0 筆)。
+		cancelledOnly := listTenants(t, svc, ctx,
+			&platformv1.ListTenantsRequest{Status: "cancelled", Page: 1, PageSize: 20})
+		if cancelledOnly.GetPagination().GetTotal() != 1 ||
+			cancelledOnly.GetTenants()[0].GetCompanyId() != itoa(int(seed.cancelledID)) {
+			t.Fatalf("status=cancelled 應回已取消的那家: %v", cancelledOnly.GetTenants())
+		}
+		// status=active 只回現行有效訂閱者(cancelled 那家不得混進來)
+		if got := listTenants(t, svc, ctx,
+			&platformv1.ListTenantsRequest{Status: "active", Page: 1, PageSize: 20}).GetPagination().GetTotal(); got != 2 {
+			t.Fatalf("status=active 應回 2 家(甲、丁),got %d", got)
+		}
 		// LIKE 的萬用字元必須被跳脫:keyword "%" 不得變成「符合全部」
 		if got := listTenants(t, svc, ctx,
 			&platformv1.ListTenantsRequest{Keyword: "%", Page: 1, PageSize: 20}).GetPagination().GetTotal(); got != 0 {
@@ -117,8 +185,8 @@ func TestIntegrationPlatformAdmin(t *testing.T) {
 		}
 		// 分頁:page_size=1、page=2 → 總數不變、回第二家(證明 OFFSET 生效)
 		second := listTenants(t, svc, ctx, &platformv1.ListTenantsRequest{Page: 2, PageSize: 1})
-		if second.GetPagination().GetTotal() != 2 || len(second.GetTenants()) != 1 {
-			t.Fatalf("分頁應回 1 筆而總數仍為 2,got %d 筆／total %d",
+		if second.GetPagination().GetTotal() != 4 || len(second.GetTenants()) != 1 {
+			t.Fatalf("分頁應回 1 筆而總數仍為 4,got %d 筆／total %d",
 				len(second.GetTenants()), second.GetPagination().GetTotal())
 		}
 		if second.GetPagination().GetPage() != 2 || second.GetPagination().GetPageSize() != 1 {
@@ -356,8 +424,8 @@ func TestIntegrationPlatformAdmin(t *testing.T) {
 		ownerSvc := NewPlatformAdminService(platformstore.NewAdmin(db))
 
 		resp := listTenants(t, ownerSvc, ctx, &platformv1.ListTenantsRequest{Page: 1, PageSize: 20})
-		if resp.GetPagination().GetTotal() != 2 {
-			t.Fatalf("admin 連線的跨租戶投影必須看得到 2 家租戶(少了系統範圍會靜默回 0),got %d",
+		if resp.GetPagination().GetTotal() != 4 {
+			t.Fatalf("admin 連線的跨租戶投影必須看得到 4 家租戶(少了系統範圍會靜默回 0),got %d",
 				resp.GetPagination().GetTotal())
 		}
 		if _, err := ownerSvc.GetTenant(ctx, connect.NewRequest(&platformv1.GetTenantRequest{
@@ -438,6 +506,9 @@ func seedPlatformAdmin(t *testing.T, admin *sql.DB) platformAdminSeed {
 	seed.activeID = newCompany("甲公司", "PA-ACTIVE", false)
 	seed.noneID = newCompany("乙公司", "PA-NONE", false)
 	seed.deletedID = newCompany("已刪除公司", "PA-DELETED", true)
+	seed.cancelledID = newCompany("丙公司", "PA-CANCELLED", false)
+	seed.bothID = newCompany("丁公司", "PA-BOTH", false)
+	seed.platformOwnedID = newCompany("平台營運", platformCompanyIdentifier, false)
 
 	mustExec(t, admin, `INSERT INTO platform.features (code, type, unit, description) VALUES
 		('limit.seats','integer','席','席位上線'),
@@ -479,6 +550,50 @@ func seedPlatformAdmin(t *testing.T, admin *sql.DB) platformAdminSeed {
 		($1,1, now() - interval '60 days', now() - interval '30 days', $2, 1000.00, 200.00, 8, 2600.00, 'open'),
 		($1,2, now() - interval '30 days', $3, $2, 1000.00, 200.00, 8, 2600.00, 'open')`,
 		subID, stdID, seed.periodEnd)
+
+	// 只有一筆 cancelled 訂閱的租戶:投影必須是 status=cancelled 且仍帶方案／席位／到期日
+	// (spec §5.6:期末終止、資料不刪除)。它同時是「status=cancelled 篩選必須回得到東西」的夾具。
+	var cancelledSubID int64
+	if err := admin.QueryRowContext(ctx, `INSERT INTO platform.subscriptions
+		(company_id, plan_id, seat_count, billing_cycle, status, cancelled_at)
+		VALUES ($1, $2, 5, 'monthly', 'cancelled', now()) RETURNING id`,
+		seed.cancelledID, stdID).Scan(&cancelledSubID); err != nil {
+		t.Fatalf("seed cancelled 訂閱: %v", err)
+	}
+	cancelledEnd := time.Now().Add(10 * 24 * time.Hour).Truncate(time.Second)
+	seed.cancelledPeriodEnd = cancelledEnd
+	mustExec(t, admin, `INSERT INTO platform.subscription_periods
+		(subscription_id, period_no, period_start, period_end, plan_id,
+		 unit_price, seat_price, seat_count, amount, status) VALUES
+		($1,1, now() - interval '20 days', $2, $3, 1000.00, 200.00, 5, 1800.00, 'paid')`,
+		cancelledSubID, cancelledEnd, stdID)
+
+	// 歷史 cancelled ＋ 現行 active 的租戶:投影必須取現行那筆(3 席而非 1 席)且不得重複列;
+	// 歷史訂閱也有一期(較早到期),故 current_period_end 必須來自現行那筆。
+	var bothOldSubID, bothSubID int64
+	if err := admin.QueryRowContext(ctx, `INSERT INTO platform.subscriptions
+		(company_id, plan_id, seat_count, billing_cycle, status, cancelled_at)
+		VALUES ($1, $2, 1, 'monthly', 'cancelled', now() - interval '90 days') RETURNING id`,
+		seed.bothID, stdID).Scan(&bothOldSubID); err != nil {
+		t.Fatalf("seed 歷史 cancelled 訂閱: %v", err)
+	}
+	mustExec(t, admin, `INSERT INTO platform.subscription_periods
+		(subscription_id, period_no, period_start, period_end, plan_id,
+		 unit_price, seat_price, seat_count, amount, status) VALUES
+		($1,1, now() - interval '120 days', now() - interval '90 days', $2, 900.00, 100.00, 1, 1000.00, 'paid')`,
+		bothOldSubID, stdID)
+	if err := admin.QueryRowContext(ctx, `INSERT INTO platform.subscriptions
+		(company_id, plan_id, seat_count, billing_cycle, status)
+		VALUES ($1, $2, 3, 'monthly', 'active') RETURNING id`, seed.bothID, stdID).Scan(&bothSubID); err != nil {
+		t.Fatalf("seed 現行訂閱: %v", err)
+	}
+	bothEnd := time.Now().Add(20 * 24 * time.Hour).Truncate(time.Second)
+	seed.bothPeriodEnd = bothEnd
+	mustExec(t, admin, `INSERT INTO platform.subscription_periods
+		(subscription_id, period_no, period_start, period_end, plan_id,
+		 unit_price, seat_price, seat_count, amount, status) VALUES
+		($1,1, now() - interval '10 days', $2, $3, 1000.00, 200.00, 3, 1600.00, 'open')`,
+		bothSubID, bothEnd, stdID)
 
 	mustExec(t, admin, `INSERT INTO platform.tenant_overrides
 		(company_id, feature_code, enabled, limit_value, reason, owner, created_by) VALUES

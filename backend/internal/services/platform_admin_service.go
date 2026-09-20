@@ -11,6 +11,7 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
+	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
 	platformstore "github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
 	platformv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/platform/v1"
@@ -69,7 +70,12 @@ func NewPlatformAdminService(st platformStore) *PlatformAdminService {
 // 以此簽章說明(實際掛載見 server.mountPlatformAuth)。
 func RegisterPlatformAdminService(mux *http.ServeMux, st platformStore, op *operatorauth.Service) {
 	path, handler := platformv1connect.NewPlatformAdminServiceHandler(
-		NewPlatformAdminService(st), connect.WithInterceptors(op.Interceptor()))
+		NewPlatformAdminService(st),
+		// requestid 必須**在最前面**:trace_id 由它在回應邊界補進 ErrorInfo(requestid.stampTraceID),
+		// 內層 interceptor 與服務層產生的錯誤才帶得到。少了它,console 收到的 ErrorInfo 只有
+		// code/message —— 客服回報時沒有任何線索能對上 server log(spec §2.2 的三種接觸面
+		// 都要求含 trace_id),而這個缺失在測試只驗 connect 碼時看不出來。
+		connect.WithInterceptors(requestid.Interceptor(), op.Interceptor()))
 	mux.Handle(path, handler)
 }
 

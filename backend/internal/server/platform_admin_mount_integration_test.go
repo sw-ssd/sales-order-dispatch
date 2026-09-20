@@ -4,17 +4,21 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/salesorder/sales-order-1.0/backend/config"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
+	platformv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/platform/v1"
 	platformv1connect "github.com/salesorder/sales-order-1.0/backend/internal/proto/platform/v1/platformv1connect"
+	commonv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
 )
 
@@ -131,6 +135,75 @@ func TestIntegrationPlatformAdminMount(t *testing.T) {
 			t.Fatalf("無 OIDC 依賴不得影響平台 RPC,got %d", code)
 		}
 	})
+
+	t.Run("錯誤也帶 trace_id（requestid interceptor）", func(t *testing.T) {
+		// 平台 RPC 的錯誤必須帶 ErrorInfo{trace_id}:那是客服／console 唯一能對上 server log 的
+		// 線索（spec §2.2 的三種接觸面都要求）。少了 requestid.Interceptor(),這條會拿到空字串
+		// —— 其餘測試只看 connect 碼,漏裝永遠不會紅。
+		srv := httptest.NewServer(s.Handler())
+		defer srv.Close()
+		// base URL **必須含掛載前綴**:connect client 由 baseURL + procedure 組出請求路徑,
+		// 平台 RPC 掛在 /platform 之下(RFC 6265),少了前綴就是 404(等於沒掛載)。
+		client := platformv1connect.NewPlatformAdminServiceClient(
+			&http.Client{Transport: cookieTransport{name: operatorauth.CookieName, value: token}},
+			srv.URL+operatorauth.CookiePath)
+
+		// company_id 非數字 → SYS-1001(必然失敗,且不碰資料庫)。
+		_, err := client.GetTenant(t.Context(), connect.NewRequest(
+			&platformv1.GetTenantRequest{CompanyId: "abc"}))
+		if connect.CodeOf(err) != connect.CodeInvalidArgument {
+			t.Fatalf("應回 InvalidArgument,got %v", err)
+		}
+		info := platformErrorInfoOf(t, err)
+		if info.GetCode() != "SYS-1001" {
+			t.Fatalf("錯誤碼應為 SYS-1001,got %q", info.GetCode())
+		}
+		if info.GetTraceId() == "" {
+			t.Fatal("ErrorInfo 必須帶 trace_id(掛載時漏了 requestid.Interceptor)")
+		}
+
+		// 認證失敗也一樣要帶(interceptor 在最前面,內層的錯誤才補得到)。
+		cookieLess := platformv1connect.NewPlatformAdminServiceClient(
+			http.DefaultClient, srv.URL+operatorauth.CookiePath)
+		_, err = cookieLess.ListTenants(t.Context(), connect.NewRequest(
+			&platformv1.ListTenantsRequest{Page: 1, PageSize: 20}))
+		if connect.CodeOf(err) != connect.CodeUnauthenticated {
+			t.Fatalf("無 cookie 應回 Unauthenticated,got %v", err)
+		}
+		if got := platformErrorInfoOf(t, err).GetTraceId(); got == "" {
+			t.Fatal("認證失敗的 ErrorInfo 也必須帶 trace_id")
+		}
+	})
+}
+
+// cookieTransport 為每個請求補上 operator cookie(測試跑不到瀏覽器的 cookie 篩選,
+// 「cookie 會不會被送出」由 rfc6265PathMatches 的路徑契約斷言)。
+type cookieTransport struct{ name, value string }
+
+func (t cookieTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	r = r.Clone(r.Context())
+	r.AddCookie(&http.Cookie{Name: t.name, Value: t.value})
+	return http.DefaultTransport.RoundTrip(r)
+}
+
+// platformErrorInfoOf 由 connect error 取 ErrorInfo detail(code／message／details／trace_id 都在裡面)。
+func platformErrorInfoOf(t *testing.T, err error) *commonv1.ErrorInfo {
+	t.Helper()
+	var ce *connect.Error
+	if !errors.As(err, &ce) {
+		t.Fatalf("應為 *connect.Error,got %T", err)
+	}
+	for _, d := range ce.Details() {
+		v, derr := d.Value()
+		if derr != nil {
+			t.Fatalf("detail 取值失敗: %v", derr)
+		}
+		if info, ok := v.(*commonv1.ErrorInfo); ok {
+			return info
+		}
+	}
+	t.Fatal("錯誤應帶 ErrorInfo detail")
+	return nil
 }
 
 // postPlatform 以 Connect 協定(JSON)對平台 RPC 發一次 unary 請求,回傳狀態碼。
