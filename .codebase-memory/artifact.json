@@ -1,11 +1,11 @@
 {
     "schema_version": 2,
-    "commit": "74f68d2011cd0ce51202ef5a971911d3a903e1ab",
-    "indexed_at": "2026-09-18T21:46:26Z",
+    "commit": "93317a62fa81a6f0f3a2d9bca87150dd34f329d8",
+    "indexed_at": "2026-09-20T02:15:32Z",
     "project": "Users-ssd-Documents-developments-sales-order-dispatch",
-    "nodes": 11900,
-    "edges": 65012,
-    "original_size": 61931520,
-    "compressed_size": 6693829,
+    "nodes": 14194,
+    "edges": 74241,
+    "original_size": 71827456,
+    "compressed_size": 8384003,
     "compression_level": 3
 }
