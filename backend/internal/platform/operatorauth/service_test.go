@@ -85,6 +85,23 @@ func callWithCookie(t *testing.T, svc *operatorauth.Service, value string) error
 	return err
 }
 
+// assertTokenAccepted 以 interceptor 驗一個應被接受的值（正向對照；handler 必須被呼叫）。
+func assertTokenAccepted(t *testing.T, svc *operatorauth.Service, value string) {
+	t.Helper()
+	req := connect.NewRequest(&emptypb.Empty{})
+	req.Header().Set("Cookie", operatorauth.CookieName+"="+value)
+	reached := false
+	if _, err := svc.Interceptor().WrapUnary(func(_ context.Context, _ connect.AnyRequest) (connect.AnyResponse, error) {
+		reached = true
+		return nil, nil
+	})(context.Background(), req); err != nil {
+		t.Fatalf("應通過 operator 驗證,got %v", err)
+	}
+	if !reached {
+		t.Fatal("handler 未被呼叫")
+	}
+}
+
 // ① 租戶 secret 簽出的 token 不得通過平台 interceptor（跨用等於可冒充平台操作者）。
 func TestTenantTokenRejected(t *testing.T) {
 	svc := newTestService(t, activeStore())
@@ -226,13 +243,14 @@ func testOAuthConfig() *oauth2.Config {
 }
 
 // newOIDCService 建立含 OIDC 依賴的 Service；cfg 由呼叫端補（測試 cookie 旗標需要變化）。
-func newOIDCService(t *testing.T, st *fakeStore, cfg operatorauth.Config) *operatorauth.Service {
+// ident 為 fake verifier 回傳的 Google 身分（網域限制的受測輸入）。
+func newOIDCService(t *testing.T, st *fakeStore, cfg operatorauth.Config, ident *auth.OIDCIdentity) *operatorauth.Service {
 	t.Helper()
 	cfg.Secret = testSecret
 	cfg.AllowedDomain = "example.com"
 	cfg.ConsoleURL = "https://console.example.com"
 	return operatorauth.New(cfg, st).WithOIDC(testOAuthConfig(), fakeExchanger{raw: "raw-id-token"},
-		fakeVerifier{ident: &auth.OIDCIdentity{Email: "ops@example.com", Name: "Ops"}})
+		fakeVerifier{ident: ident})
 }
 
 // findCookie 由回應取出指定名稱的 cookie。
@@ -247,11 +265,13 @@ func findCookie(t *testing.T, resp *httptest.ResponseRecorder, name string) *htt
 	return nil
 }
 
-// ⑧ Login 的 state cookie 必須 HttpOnly／Secure／SameSite=Lax／Path=/platform。
+// ⑧ Login 的 state cookie 必須 HttpOnly／Secure／SameSite=Lax／Path=/platform／Domain。
+// （Go 的 http 套件會去掉前導點：Domain=.example.com 序列化為 example.com，比對以此為準。）
 func TestLoginSetsStateCookieFlags(t *testing.T) {
 	for _, secure := range []bool{true, false} {
 		st := activeStore()
-		svc := newOIDCService(t, st, operatorauth.Config{CookieSecure: secure, CookieDomain: ".example.com"})
+		svc := newOIDCService(t, st, operatorauth.Config{CookieSecure: secure, CookieDomain: "example.com"},
+			&auth.OIDCIdentity{Email: "ops@example.com", Name: "Ops"})
 		resp := httptest.NewRecorder()
 		svc.Login(resp, httptest.NewRequest(http.MethodGet, "/platform/auth/google", nil))
 
@@ -264,7 +284,7 @@ func TestLoginSetsStateCookieFlags(t *testing.T) {
 		}
 		c := findCookie(t, resp, operatorauth.StateCookieName)
 		if !c.HttpOnly || c.Secure != secure || c.SameSite != http.SameSiteLaxMode ||
-			c.Path != operatorauth.CookiePath || c.Domain != ".example.com" || c.Value == "" {
+			c.Path != operatorauth.CookiePath || c.Domain != "example.com" || c.Value == "" {
 			t.Fatalf("state cookie 旗標不符(HttpOnly/Secure=%v/SameSite=Lax/Path/Domain): %+v", secure, c)
 		}
 	}
@@ -274,7 +294,8 @@ func TestLoginSetsStateCookieFlags(t *testing.T) {
 // 清掉 state cookie、留下登入時間與稽核、導回 ConsoleURL。
 func TestCallbackSuccess(t *testing.T) {
 	st := activeStore()
-	svc := newOIDCService(t, st, operatorauth.Config{CookieSecure: true, CookieDomain: ".example.com"})
+	svc := newOIDCService(t, st, operatorauth.Config{CookieSecure: true, CookieDomain: "example.com"},
+		&auth.OIDCIdentity{Email: "ops@example.com", Name: "Ops"})
 
 	req := httptest.NewRequest(http.MethodGet, "/platform/auth/google/callback?state=st-1&code=code-1", nil)
 	req.AddCookie(&http.Cookie{Name: operatorauth.StateCookieName, Value: "st-1"})
@@ -288,13 +309,11 @@ func TestCallbackSuccess(t *testing.T) {
 	}
 	c := findCookie(t, resp, operatorauth.CookieName)
 	if !c.HttpOnly || !c.Secure || c.SameSite != http.SameSiteLaxMode ||
-		c.Path != operatorauth.CookiePath || c.Domain != ".example.com" || c.Value == "" {
+		c.Path != operatorauth.CookiePath || c.Domain != "example.com" || c.Value == "" {
 		t.Fatalf("session cookie 旗標不符: %+v", c)
 	}
-	// 簽出的 token 必須能通過 interceptor（cookie 值與驗證路徑同一份契約）。
-	if err := callWithCookie(t, svc, c.Value); err != nil {
-		t.Fatalf("Callback 簽出的 token 應可通過 interceptor: %v", err)
-	}
+	// 簽出的 token 必須能通過 interceptor（cookie 裡放的是 operator token，不是 id_token）。
+	assertTokenAccepted(t, svc, c.Value)
 	// 一次性 state：驗完即清。
 	if cleared := findCookie(t, resp, operatorauth.StateCookieName); cleared.Value != "" || cleared.MaxAge >= 0 {
 		t.Fatalf("state cookie 必須驗完即清,got %+v", cleared)
@@ -334,7 +353,7 @@ func TestCallbackRejections(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			st := &fakeStore{op: tc.op, failAudit: tc.auditErr}
-			svc := newOIDCService(t, st, operatorauth.Config{})
+			svc := newOIDCService(t, st, operatorauth.Config{}, tc.ident)
 			req := httptest.NewRequest(http.MethodGet, "/platform/auth/google/callback"+tc.query, nil)
 			if tc.state != "" {
 				req.AddCookie(&http.Cookie{Name: operatorauth.StateCookieName, Value: tc.state})
