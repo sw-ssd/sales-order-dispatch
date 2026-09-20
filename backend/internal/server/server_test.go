@@ -421,12 +421,23 @@ func TestAuthzMiddlewareOpenFGA(t *testing.T) {
 		if rec.Code != http.StatusUnauthorized {
 			t.Fatalf("status = %d, want 401", rec.Code)
 		}
-		var body map[string]string
+		// body 為 connect 錯誤協定的 JSON 形狀（code／message／details）;既有欄位不得少。
+		var body struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+			Details []struct {
+				Type  string `json:"type"`
+				Value string `json:"value"`
+			} `json:"details"`
+		}
 		if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 			t.Fatalf("錯誤 body 應為合法 JSON: %v (body=%q)", err, rec.Body.Bytes())
 		}
-		if body["code"] != "unauthenticated" {
-			t.Fatalf("body.code = %q, want unauthenticated", body["code"])
+		if body.Code != "unauthenticated" {
+			t.Fatalf("body.code = %q, want unauthenticated", body.Code)
+		}
+		if body.Message == "" {
+			t.Fatal("body.message 不得為空")
 		}
 	})
 	t.Run("developer → 跳過放行", func(t *testing.T) {

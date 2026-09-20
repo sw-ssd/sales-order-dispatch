@@ -32,13 +32,31 @@ func From(ctx context.Context) string {
 func Interceptor() connect.Interceptor {
 	return connect.UnaryInterceptorFunc(func(next connect.UnaryFunc) connect.UnaryFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
-			id := uuid.Must(uuid.NewV7()).String()
-			ctx = With(ctx, id)
-			log.Printf("rpc: %s trace_id=%s", req.Spec().Procedure, id)
+			ctx, _ = Ensure(ctx, req.Spec().Procedure)
 			res, err := next(ctx, req)
 			return res, stampTraceID(ctx, err)
 		}
 	})
+}
+
+// Ensure 回傳帶 trace_id 的 ctx 與該 id：已有就沿用，沒有就產生一個（與 Interceptor 同一份
+// 產生＋log 實作）。供**不經過 connect handler** 的回應路徑（HTTP middleware 的錯誤閘門）使用
+// —— 那些錯誤照樣要能對上 server log，否則客戶回報的代碼無從追查。
+//
+// procedure 只用在 log（RPC 路徑或 HTTP 路徑皆可）。
+func Ensure(ctx context.Context, procedure string) (context.Context, string) {
+	if id := From(ctx); id != "" {
+		return ctx, id
+	}
+	id := uuid.Must(uuid.NewV7()).String()
+	log.Printf("rpc: %s trace_id=%s", procedure, id)
+	return With(ctx, id), id
+}
+
+// Stamp 為「已帶 ErrorInfo 且 TraceId 為空」的錯誤補上 ctx 的 trace_id；其餘原樣回傳
+// （實作與 Interceptor 在回應邊界用的是同一份 stampTraceID）。供不經 Interceptor 的回應路徑使用。
+func Stamp(ctx context.Context, err error) error {
+	return stampTraceID(ctx, err)
 }
 
 // stampTraceID 為「已帶 ErrorInfo 且 TraceId 為空」的錯誤補上本請求的 trace_id；其餘原樣回傳

@@ -4,6 +4,7 @@ package server
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,6 +29,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	authzopenfga "github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
+	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
+	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 	salesorderv1connect "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/cache"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/database"
@@ -230,20 +233,20 @@ func (s *Server) authzMiddleware(entClient *ent.Client, sessions *scs.SessionMan
 		// 既有 session 可續用,不需重新登入。
 		if id := authz.IdentityFrom(ctx); len(id.Roles) > 0 && id.Role != "developer" {
 			if scope := auth.RLSFrom(ctx); !scope.CompanyActive {
-				writeConnectError(w, connect.NewError(connect.CodeUnauthenticated, errors.New("所屬公司已停用,無法繼續操作")))
+				writeConnectError(w, r, connect.NewError(connect.CodeUnauthenticated, errors.New("所屬公司已停用,無法繼續操作")))
 				return
 			}
 		}
 		// A3 受限態(1.5.2):must_change_password=true 時僅放行 ChangePassword,其餘回 failed_precondition,
 		// 強制首登改密碼後才能使用業務 RPC。
 		if id := authz.IdentityFrom(ctx); id.MustChangePassword && r.URL.Path != salesorderv1connect.AuthServiceChangePasswordProcedure {
-			writeConnectError(w, connect.NewError(connect.CodeFailedPrecondition, errors.New("首次登入須先修改密碼")))
+			writeConnectError(w, r, connect.NewError(connect.CodeFailedPrecondition, errors.New("首次登入須先修改密碼")))
 			return
 		}
 		// OpenFGA 授權閘門(D32):受保護 RPC path 以 OpenFGA Check 判定;developer 跳過。
 		if rpc, ok := protectedRPC[r.URL.Path]; ok {
 			if err := s.authorizeRPC(ctx, rpc); err != nil {
-				writeConnectError(w, err)
+				writeConnectError(w, r, err)
 				return
 			}
 		}
@@ -258,7 +261,7 @@ func (s *Server) authzMiddleware(entClient *ent.Client, sessions *scs.SessionMan
 func (s *Server) authorizeRPC(ctx context.Context, rpc rpcAuth) error {
 	id := authz.IdentityFrom(ctx)
 	if len(id.Roles) == 0 {
-		return connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+		return errcode.AuthUnauthenticated.Error(nil)
 	}
 	// developer/super 逃生門:僅在開關啟用時(身分成立)跳過 OpenFGA 檢查。
 	// super 為「全資源」管理角色(rolePolicy "*":{"*"}),其 role_permissions 亦有具體能力 tuples;
@@ -286,21 +289,55 @@ func (s *Server) authorizeRPC(ctx context.Context, rpc rpcAuth) error {
 		return connect.NewError(connect.CodeInternal, err)
 	}
 	if !allowed {
-		return connect.NewError(connect.CodePermissionDenied, errors.New("無權限執行此操作"))
+		return errcode.SysPermissionDenied.Error(map[string]string{"resource": rpc.resource, "action": rpc.action})
 	}
 	return nil
 }
 
-// writeConnectError 以 Connect 錯誤協定寫出錯誤回應(供 middleware)。
-// 以 JSON 物件(單次 Marshal)輸出合法 body,並依 connect code 對映正確 HTTP 狀態:
-// unauthenticated→401、permission_denied→403、invalid_argument→400,其餘→500。
-func writeConnectError(w http.ResponseWriter, err error) {
+// connectErrBody 為 Connect 錯誤協定的 JSON 形狀（與 connect-go 的 wire 格式一致）：
+// {"code":"permission_denied","message":"…","details":[{"type":"…","value":"<base64>"}]}。
+// 既有欄位（code／message）刻意保留：只讀這兩欄的既有前端不受影響。
+type connectErrBody struct {
+	Code    string             `json:"code"`
+	Message string             `json:"message"`
+	Details []connectErrDetail `json:"details,omitempty"`
+}
+
+// connectErrDetail 對映 connect 的錯誤 detail（type 為去前綴的完整型別名，value 為 proto 值的
+// base64；與 connect-go 內部 wire 格式相同，只是該型別未匯出，故在此重建同樣的形狀）。
+type connectErrDetail struct {
+	Type  string `json:"type"`
+	Value string `json:"value"`
+}
+
+// writeConnectError 以 Connect 錯誤協定寫出錯誤回應(供 middleware 的閘門)。
+//
+// 為什麼要自己寫:這些閘門在 connect handler **之前**就拒絕請求,因此 requestid.Interceptor
+// 的「回應邊界補 trace_id」看不到它們 —— 客戶端只會拿到一個沒有碼、沒有 trace_id 的錯誤,
+// 客服無從追查。此處以 requestid.Ensure/Stamp 補上 trace_id(與 RPC 路徑同一份實作),
+// 並輸出與 connect 一致的 JSON 形狀(含 details),使客戶端能用同一套解析讀到錯誤碼。
+//
+// HTTP 狀態碼仍由 httpStatusForCode 依 connect code 對映(unauthenticated→401、
+// permission_denied→403、invalid_argument→400、其餘→500)。
+func writeConnectError(w http.ResponseWriter, r *http.Request, err error) {
+	ctx, _ := requestid.Ensure(r.Context(), r.URL.Path)
+	err = requestid.Stamp(ctx, err)
+
+	body := connectErrBody{Code: connect.CodeOf(err).String(), Message: err.Error()}
+	if ce, ok := err.(*connect.Error); ok {
+		// 與 connect 一致:message 只用 Message()(不含 "code: " 前綴),details 逐一帶出。
+		body.Message = ce.Message()
+		for _, d := range ce.Details() {
+			body.Details = append(body.Details, connectErrDetail{
+				Type:  d.Type(),
+				Value: base64.RawStdEncoding.EncodeToString(d.Bytes()),
+			})
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(httpStatusForCode(connect.CodeOf(err)))
-	_ = json.NewEncoder(w).Encode(map[string]string{
-		"code":    connect.CodeOf(err).String(),
-		"message": err.Error(),
-	})
+	_ = json.NewEncoder(w).Encode(body)
 }
 
 // httpStatusForCode 對映 Connect code → HTTP 狀態碼(供 middleware 錯誤回應)。
