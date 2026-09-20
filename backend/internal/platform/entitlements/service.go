@@ -144,22 +144,21 @@ func unavailable(status string) bool {
 
 // resolved 為單一 feature 的最終權益。
 type resolved struct {
-	feature store.Feature
 	enabled bool
 	limit   *int64
 }
 
 // resolveFeature 依 tenantState 計算單一 feature 的最終權益（純函式：可單獨測試）。
 func resolveFeature(st *tenantState, feature string, now time.Time) (resolved, bool) {
-	def, known := st.Features[feature]
+	_, known := st.Features[feature]
 	if !known {
 		return resolved{}, false // 未定義的功能一律 denied（fail-closed）
 	}
 	if unavailable(st.Status) {
-		return resolved{feature: def}, true
+		return resolved{}, true
 	}
 
-	out := resolved{feature: def}
+	var out resolved
 	if e, ok := st.Entitlements[feature]; ok {
 		out.enabled, out.limit = e.Enabled, e.Limit
 	}
