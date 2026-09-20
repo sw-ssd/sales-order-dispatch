@@ -82,6 +82,8 @@ flowchart LR
 2. 租戶後台的訂閱資訊**唯讀且不吵**：僅在用量達 80/90% 或試用將到期時以 banner 提示，其餘收在「帳號／方案」頁。
 3. 平台工具與租戶系統**共用 proto 與 UI 元件庫，不共用路由與登入**；`platform.*` 能力不得出現在租戶 `GetAbility`（S11）。
 
+> **待辦（2026-09-21 補記，Plan C Task 14）**：**完整的「角色 × RPC」矩陣尚未定義**。v1 只實作了「操作者管理」的收緊：`CreateOperator`／`DisableOperator` 要求 `role = 'admin'`（含「建立 admin」本身），其餘 **9 支平台寫入 RPC**（收款、席位、改方案、取消、計費參數、override 設定／撤銷、方案價目、方案權益）**目前對 `operator` 與 `admin` 一視同仁**；且**兩支 RPC 都還無法在前端依角色隱藏按鈕**——console 沒有取得自身角色的 RPC（`GetOperatorSelf` 不存在，新增它會動 proto）。要收緊任何一支，必須先有本表（列的授權才是設計，逐支 `if` 會漂移）；歸屬：**platform/v1 的下一個計畫**（含 `GetOperatorSelf`）。
+
 ---
 
 ## 3. 資料模型（`platform` schema）
@@ -159,12 +161,19 @@ type Counter interface {
 | 方案／override 未含該功能（`Allows` 為 false） | `PLAT-5002` `PlatformFeatureNotInPlan` → `failed_precondition`（details：`feature`） |
 | 訂閱狀態不允許此操作（`suspended`／`cancelled`，非權限問題） | `PLAT-3001` `PlatformSubscriptionInactive` → `failed_precondition` |
 | 收款衝突（金額與期別快照不符、期別已付款的衝突分支） | `PLAT-3002` `PlatformPaymentConflict` → `failed_precondition`（details：`reason`） |
+| 操作者治理不變式被違反（停用自己／最後一位 admin） | `PLAT-3003` `PlatformOperatorGovernance` → `failed_precondition`（details：`reason`；Plan C 新增，見 §2.4 待辦） |
 | `trialing` | 允許使用；投影帶 `trial_ends_at` 供 UI 提醒 |
 | 平台層身分（`super` / `developer`，`data_scope=all`） | **略過 entitlement 判斷**（平台方不受租戶合約限制）；寫死在守衛入口並有測試 |
 | 授權**檢查**失敗（角色／範圍不足） | `SYS-4001` `SysPermissionDenied` → `permission_denied`（前端導向「請管理員開權」） |
 | 跨租戶／不存在（含 RLS 過濾，防 oracle 探測） | `SYS-4002` `SysNotFound` → `not_found` |
 
 **配額與權限必須可區分**：前端要據碼導向升級方案或收款處理，那不是「缺權限」；因此額度問題**不得**用 `PermissionDenied` 表示（`PLAT-*` 的 details 供前端顯示用量）。`PLAT-*` 四碼已註冊、落地點見 `docs/superpowers/plans/2026-09-20-error-codes-plan.md` 的 **Task 5b**（`errcode` 已可用）。
+
+> **更正（2026-09-21 補記，Plan C Task 14）：`PLAT-3002` 承載多種語意，不得據此放棄重試。**
+>
+> 實際落點有三種來源：①輸入金額與期別快照不符（`billing.go:185`）②期別已付款但交易號不同（`billing.go:153`）③`MarkPeriodPaidTx` 的殘餘錯誤一律被 `Wrap` 成它（`billing.go:198`）——**第三種包含基礎設施失敗**（死鎖、序化失敗、連線中斷）。後端只能用 `details.reason` 的中文關鍵詞分辨前兩者；第三種的 `reason` 為空。
+>
+> **因此：`PLAT-3002` 一律視為「可能有衝突、需要人看」，但不得據此判定「不可重試」。** 前端的行動指引在無法分辨時退回通用說法（console 現況即是：兩種已知語意給不同指引、其餘給通用指引，**永不呈現「不可重試」**）。要結構化分流得在 `ErrorInfo.details` 加專屬鍵（例 `details.conflict`），那會動 proto，列為後續項。
 
 **已知不一致（未解，歸屬 auth／spec 擁有者，Plan D 不單方面改）**：
 
@@ -177,9 +186,11 @@ type Counter interface {
 
 ### 4.4 快取
 
-Valkey key `ent:{companyID}`；方案變更／override／訂閱狀態異動即 **delete**（不靠 TTL 正確性），TTL 60s 僅保底（與既有 ability 60s 慣例一致）。
+Valkey key `ent:{companyID}`；方案變更／override／訂閱狀態異動即 **delete**（失效不靠 TTL 的正確性），TTL 60s 是**最長收斂上界**（與既有 ability 60s 慣例一致）。
 
-**實作現況（Plan B）**：介面 `entitlements.Cache` 已就位且 `MemoryCache` **真的實現 TTL**（`ttl<=0` 表示不快取，兩端語意一致）；server 目前注入的是**行程內 `MemoryCache`**（`domains.go` 的 `entitlementCacheTTL = 60s`），Valkey 實作與「寫入後 `Delete`」屬 Plan C 的訂閱寫入路徑。單實例下兩者判定結果等價，差別只在多實例時各自過期。
+> **措辭更正（2026-09-21 補記，Plan C Task 14）**：原文「不靠 TTL 正確性」容易被讀成「TTL 以內一定不會讀到舊值」——**不是**。這是 cache-aside，存在一個窄競態：某請求在**提交前** miss、寫入方提交後 `Delete`、該請求才把**舊快照** `Set` 回去（`SCAN` 前也沒有全域鎖）→ 該 key 最長 **一個 TTL** 內仍是舊值。因此正確的敘述是「**失效由寫入方驅動；TTL 是最長收斂上界**」。程式碼註解（`entitlements/valkey.go:20`／`cache.go:10`）仍寫「正確性不依賴 TTL」，屬同一措辭問題，未動（Plan C Task 14 的範圍不含程式碼）。
+
+**實作現況（Plan B ＋ Plan C Task 8）**：介面 `entitlements.Cache` 已就位且 `MemoryCache` **真的實現 TTL**（`ttl<=0` 表示不快取，兩端語意一致）；Valkey 實作（`entitlements/valkey.go`）與「寫入後 `Delete`／`InvalidateAll`」已隨 Plan C 落地——**三個寫入來源**（billing 的四支寫入、consumer 的凍結／復原、服務層的營運寫入）都在**交易提交成功之後**才失效，且快取故障時**回源 ＋ loud log**（不拒絕判定）。單實例下兩者判定結果等價，差別只在多實例時各自過期。
 
 ### 4.5 守衛掛點清單（v1，spec 為準，漏掛即測試紅）
 
@@ -224,13 +235,38 @@ Valkey key `ent:{companyID}`；方案變更／override／訂閱狀態異動即 *
 | 轉移 | 觸發者 |
 |---|---|
 | `trialing → active` | `RecordPayment`（人工記收款；日後金流 webhook 打**同一入口**） |
-| `active → past_due` | 每日排程：`period_end` 已過且未付 |
+| `active → past_due` | 每日排程：**最新一期仍是 `open`（未付／未作廢）且已過 `period_end`** |
 | `past_due → active` | `RecordPayment`（補款） |
 | `past_due → suspended` | 排程：逾 `grace_until`（預設 7 天） |
 | `suspended → active` | `RecordPayment`（復原公司狀態） |
 | 任意 `→ cancelled` | 營運後台 `CancelSubscription`（期末終止，當期不退，資料不刪；**必填原因**） |
 
 每次轉移寫 `platform.events`。**v1 人工收款與日後金流的差別只在「誰呼叫 `RecordPayment`」。**
+
+> **更正（2026-09-21 補記，Plan C Task 14）——逾期掃描的謂詞必須包含「當期仍是 open」：**
+>
+> 本表的 `active → past_due` 由 `store.ActiveSubscriptionsWithDueOpenPeriod` 實作，正確謂詞是
+> `s.status = 'active' AND cur.status = 'open' AND cur.period_end < $1`（`postgres/billing.go:310`）。
+> **少了 `cur.status = 'open'` 這一項是 Plan C Task 5 的 Critical（C-1）**：逾期後才繳清的客戶（催收主線）
+> 會被重新催收、寬限期被重置，最後被 `SuspendOverdue` 凍結，而 `EnsureNextPeriod` 只認服務中的訂閱
+> 又不會替他開下一期 → **客戶從此停止被開帳**。`MarkPastDue` 另有第二層防線（取當前期別，非 `open` 即 skip）。
+> 另註：`cancelled` 的 G7 掃描（`postgres/billing.go:328`）**不**比對期別狀態——取消是期末終止，期末前照算、
+> 期末後才凍結，那是刻意的不對稱。
+>
+> 舊謂詞（`s.status='active' AND cur.period_end < $1`）以字面出現在本計畫的任務樣板碼
+> （`docs/superpowers/plans/2026-09-20-platform-lifecycle-console-plan.md` 的 Task 5 段），**該樣板已被實作取代**
+> ——本 spec 的 §3.2／§4.5 經 `grep -n "period_end" ` 查證**不含**任何排程 SQL（只有 §5.2／§5.4／§5.5／§5.6 描述此行為）。
+
+### 5.2.1 排程事件的 `reason` 契約（Plan C Task 5 落地；四個事件必帶 `company_id`）
+
+| 事件 | `reason` | 觸發 |
+|---|---|---|
+| `period.opened` | `scheduled_next_period` | `EnsureNextPeriod` 開出下一期（`lifecycle.go:115`） |
+| `subscription.past_due` | `period_end_passed_unpaid` | `MarkPastDue`：當期 open 且已過期末（`lifecycle.go:165`） |
+| `subscription.suspended` | `overdue` | `SuspendOverdue`：逾 `grace_until`（`lifecycle.go:206`） |
+| `subscription.expired` | `cancelled_at_period_end` | `ExpireCancelled`：`cancelled` 且期末已過（`lifecycle.go:249`） |
+
+**為什麼是 payload 自帶（而不是查表／查稽核）**：排程**不寫 `platform.audit_logs`**（schema 上不可滿足：`operator_id` 是 `NOT NULL REFERENCES platform.operators`，而 `settings.system_actor_user_id` 是租戶 `users.id`），所以事件的 payload 就是唯一的「為什麼」；consumer 也不得為了補欄位再查一次 DB。
 
 ### 5.3 凍結／復原走事件（前置重構）
 
@@ -242,6 +278,8 @@ Valkey key `ent:{companyID}`；方案變更／override／訂閱狀態異動即 *
 ### 5.4 排程（新增件）
 
 repo 目前**完全沒有** ticker／cron。新增 `cmd/platform-cron`（獨立 binary、可重跑、不與 API 生命週期綁，日後即 k8s CronJob）。冪等：同一 `(subscription_id, period_no)` 只會有一個 open 期別；轉移前檢查當前狀態，重跑不產生第二次事件。
+
+> **實作現況（2026-09-21 補記，Plan C Task 7／14）**：`cron.RunOnce(ctx, deps, now)` 是**單趟**入口（不內建迴圈；`now` 由 `--date` 覆寫，重複執行由觸發器負責）；單飛鎖 `pg_try_advisory_lock(0x504C415443524F4E)`（取不到即跳過並 `exit 0`）；`--timeout` 預設 10m（逾時仍解鎖、不把鎖留在連線上）；`RunGuarded` 復原 panic 並保留已累積的摘要。順序＝**逾期 → 凍結 → 取消到期 → 產生期別 → 事件派送**；前三段掃描失敗即中止，產生期別的**單一租戶**失敗不阻止派送（累積首錯、跑完仍派送、最後回傳）。四個事件與它們的 `reason` 見 §5.2.1；排程不寫平台稽核的理由見 §5.2.1 與 `backend/AGENTS.md` §11-19。
 
 ### 5.5 期別產生與催收提醒
 

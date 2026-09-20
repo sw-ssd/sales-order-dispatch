@@ -21,6 +21,8 @@ pnpm -C platform-console build      # tsc --noEmit && vite build
 
 `task console:dev|build|typecheck|lint|test` 是同一組指令（root Taskfile 的 include）。
 
+CI：`.github/workflows/ci.yml` 的 **`platform-console` job** 跑同一組四條（`typecheck`／`lint`／`test`／`build`）；兩個產生檔（`src/lib/proto/**`、`src/lib/errcode.ts`）的冪等閘門在 **`go` job**（`go generate`／`buf generate` 後比對 `git diff` ＋ `git status --porcelain`，路徑清單已含本目錄）。
+
 ## 認證（operator session，沿用後端既有機制，不另立一套）
 
 後端實作見 `backend/internal/platform/operatorauth`：
@@ -45,6 +47,13 @@ pnpm -C platform-console build      # tsc --noEmit && vite build
    前端 `src/lib/api.test.ts`。
 
 ### 跨來源部署：**目前不支援**（console 必須與 API 同 origin）
+
+**部署前提（四件事，缺一即「登入完又被導回 `/login`」）**：
+
+1. **同 origin**（或至少同 site）：正式環境由反代把 **`/platform`**（含登入端點與 RPC）指到 API；dev 用 Vite proxy（見下節）。
+2. **不要跨來源直連 API**：後端 CORS 允許清單只有 `http://localhost:3000`（`server.go:112`），console 的 dev port 是 5173；cookie 是 `SameSite=Lax`（`operatorauth/service.go:282`）。
+3. **`VITE_API_BASE_URL` 是 build-time**：`api.ts:18` 讀 `import.meta.env.VITE_API_BASE_URL`，Vite 在 `pnpm build` 時**內聯**字串 → **換環境要重建**；留空＝同 origin（反代情境就該留空）。
+4. **兩個產生檔要在 commit 內**：`src/lib/proto/**` 與 `src/lib/errcode.ts` 由後端產生器產出（CI 的 `go` job 有冪等閘門），**手改會在 CI 紅**。
 
 `VITE_API_BASE_URL` 是為了「同一個反代後面、但 console 由不同路徑／服務提供」這類彈性，
 **不是**拿來跨來源直連 API 的：

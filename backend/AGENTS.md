@@ -148,8 +148,8 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
 6. **配額與訂閱用 `PLAT-*`，不得以 `PermissionDenied` 表示額度問題**：`PLAT-5001`（`PlatformLimitExceeded`，details 帶 `feature`／`used`／`limit`）／`PLAT-5002`（`PlatformFeatureNotInPlan`，details 帶 `feature`）／`PLAT-3001`（`PlatformSubscriptionInactive`）／`PLAT-3002`（`PlatformPaymentConflict`，details 帶 `reason`）。前端據碼導向升級方案或收款處理，與「缺權限」是不同操作。**落點現況**：`PLAT-5001`／`PLAT-5002`／`PLAT-3001` 已隨 Plan B 落在 `internal/platform/entitlements` 的判定層（見 §11-4）；`PLAT-3002` 待 Plan C 的收款路徑（`RecordPayment`）。計畫 `docs/superpowers/plans/2026-09-20-error-codes-plan.md` 的 **Task 5b** 即為此而留。
 7. **`Error`／`Wrap` 不收 ctx**：`trace_id` 由邊界補，`internal/errcode` 因此是**葉節點**（不 import `internal/obs` 或任何服務層套件），任何層都能直接引用。`Wrap` 保留根因供 log／`errors.Is` 追查（自訂型別的 `Unwrap`），但 cause 文字**不進對外訊息**——connect 對任何碼都逐字轉送 `Message()`，所以絕不用 `fmt.Errorf("%s: %w", …)` 當訊息。
    **實測（connect-go v1.21.0）**：`(*connect.Error).Details()` 回傳的 `ErrorDetail.Value()` 是 `proto.Clone`，序列化走 `NewErrorDetail` 當下 marshal 的 `pbAny` → **就地修改既有的 `ErrorInfo` 不會生效，必須重建錯誤**（`connect.NewError` ＋其餘 detail 依序 `AddDetail` ＋ `Meta()` 逐鍵複製）；實作見 `internal/obs/requestid.stampTraceID`。
-8. **產生檔必須與 registry 同步**：`go generate ./internal/errcode`（產生器在 `cmd/gen-errcodes`）輸出 `docs/error-codes.md` 與三端常數，產物一律入 commit；CI 的「Error codes up to date」步驟重跑產生後以 `git diff --exit-code` ＋ `git status --porcelain` 驗同步（**未 commit 的新產物也會擋**）。`platform-console/src/lib/errcode.ts` 只在該目錄存在時才寫（Plan C 落地後自動納管，目前為 no-op）。
-   現況：**21 碼**（SYS 7／AUTH 7／PLAT 4／CUST 3），其中 **17 碼已實際落點**（Plan B 之後新增 `PLAT-3001`／`PLAT-5001`／`PLAT-5002` 三個落點，見 §11-4）；未落點者（`PLAT-3002`、`AUTH-3001`、`CUST-2001`／`CUST-3001`）的現況、選項與歸屬見計畫 `docs/superpowers/plans/2026-09-20-error-codes-plan.md` Progress 的「未結項」（`CUST-*` 另見 `codes_customer.go` 的註解）。
+8. **產生檔必須與 registry 同步**：`go generate ./internal/errcode`（產生器在 `cmd/gen-errcodes`）輸出 `docs/error-codes.md` 與三端常數，產物一律入 commit；CI 的「Error codes up to date」步驟重跑產生後以 `git diff --exit-code` ＋ `git status --porcelain` 驗同步（**未 commit 的新產物也會擋**）。`platform-console/src/lib/errcode.ts` 只在該目錄存在時才寫（**已落地並在 CI 清單內**：2026-09-21 實測產生器對它回報「未變更」）。
+   現況（2026-09-21 以指令重數，見 Plan C Task 14）：**22 碼**（SYS 7／AUTH 7／PLAT 5／CUST 3），其中 **19 碼已實際落點**（SYS 7／AUTH 6／PLAT 5／CUST 1）——Plan B 落點 `PLAT-3001`／`PLAT-5001`／`PLAT-5002`（§11-4），**Plan C 落點 `PLAT-3002`**（收款路徑，`internal/platform/billing/billing.go:153`／`:185`／`:198`）與新增碼 `PLAT-3003`（操作者治理，`platform_admin_service.go`）；未落點者（`AUTH-3001`、`CUST-2001`／`CUST-3001`）的現況、選項與歸屬見計畫 `docs/superpowers/plans/2026-09-20-error-codes-plan.md` Progress 的「未結項」（`CUST-*` 另見 `codes_customer.go` 的註解）。
 
 ## 11. 平台域（SaaS 訂閱與權益，D34–D39；2026-09-20 起）
 
@@ -178,8 +178,9 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
    為什麼：共用 secret 或共用 cookie 路徑，等於任何租戶 token 都能通過平台 RPC 的驗證——而平台 RPC 跨租戶讀寫，是全系統權限最高的一條路徑。
 10. **`platform.*` 能力不得出現在租戶 `GetAbility`／角色權限矩陣**（S11）。
     為什麼：`platform.*` 屬 operator 的世界，一旦下發給租戶前端就會被當成「租戶也有這些權限」；前端守衛雖不構成授權（§3），但會誤導下一個實作者把平台能力掛到租戶路徑。
-11. **平台稽核不寫租戶 `audit_logs`**：一律寫 `platform.audit_logs`（唯一入口 `recordPlatformAudit`）。
+11. **平台稽核不寫租戶 `audit_logs`**：一律寫 `platform.audit_logs`，且**只有兩條入口**——`internal/platform/billing` 的 `RecordAuditTx`（`RecordPayment`，`billing.go:245`）與 `billing.audit`（三支訂閱寫入，`subscription.go:58`／`:115`／`:191`），以及服務層的 `PlatformAdminService.writeTx`（`platform_admin_service.go:957`，七支營運 RPC）。**十一條**寫入都在**該次寫入的同一個交易內**。
     為什麼：租戶稽核的 `company_id`／`user_id` 非零且 FK 到租戶 `users`，而平台操作者兩者皆無——硬寫會被 FK 擋下，或更糟：在稽核裡留下一個不存在的租戶 actor。
+    **更正（2026-09-21）**：本條原寫「唯一入口 `recordPlatformAudit`」——該函式是唯讀時期的暫置物，已於 Plan C Task 9 **刪除**（全 repo 只剩該檔一行歷史註解）。留著它等於允許「稽核說改了、其實沒動」。**排程**不寫本表是唯一例外，見第 19 條。
 12. **寫入平台表用 admin 連線；任何需要跨租戶讀業務表的平台查詢，必須在同一交易內 `SET LOCAL app.current_data_scope='all'`**（例：租戶列表投影的 LATERAL 查詢）。
     為什麼：`companies` 等業務表是 `ENABLE`＋**`FORCE`** RLS，`FORCE` 讓 **table owner（admin 連線）也受 policy 約束** → 少了這個 `SET LOCAL`，平台端的租戶列表會**靜默回 0 列**（真容器實測；用容器預設的 superuser 連線測不出來）。
 13. **seed 的「冪等」定義**：重跑 `task seed` 不新增列、不覆寫營運已調整的值；**`updated_at` 與 sequence 跳號不算變更**。
@@ -188,4 +189,56 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
 14. **訂閱列的生命週期：沒有訂閱列＝尚未開通計費 → 不施加限制；停用租戶一律改 `status`，不得刪列**（spec §4.5「訂閱列的生命週期語意」）。
    為什麼：`Allows`／`CheckLimit` 對「沒有訂閱列」不施加任何配額／功能限制（只記一行 log）—— Plan C 的訂閱指派／onboarding 落地前沒有任何程式會建立訂閱列，在那裡 fail-closed 會讓員工自助註冊與首次 OIDC 登入全被硬擋，而只有進得去的管理員才能補訂閱（上線即癱瘓）。因此 **`DELETE FROM platform.subscriptions` 等於送一個不限額方案**：要停用必須設 `cancelled`／`suspended`（→ `PLAT-3001`）。fail-closed 針對的是**已知不可用**與**未列舉**的狀態，不是「還沒有計費紀錄」。
    註：`PLAT-5002` 仍是「已訂閱、但方案不含該 feature」；`guardSeats` 等**無租戶身分**的守衛必須在系統範圍（scope=all）內計數，否則 00028 的 FORCE RLS 會把 `users` 濾成 0 列 → `used=0` → 上限永不觸發（見 §9-6 與 `counters.go` 的 `Count`）。
+
+15. **平台寫入一律單一交易：資料＋事件＋稽核同一個 commit，`reason` 必填，每次寫入恰一筆稽核**。
+    骨架：`internal/platform/billing` 的 `BillingStore.WithTx`（admin 連線）內完成「讀現況（需要時 `FOR UPDATE` 鎖訂閱列）→ 寫期別／訂閱狀態 → 寫 `platform.events` → 寫 `platform.audit_logs`」；服務層的營運寫入走 `PlatformAdminService.writeTx`（`apply` 之後才寫稽核，**同一個交易**）。
+    - `reason` 必填是**每一個寫入點**的守衛，不是只有 RPC 層：`billing.RecordPayment`（`billing.go:112`）與 `store.RecordAuditTx`（`postgres/billing.go:454`／`admin_writes.go:60`）都以 `TrimSpace(reason) == ""` 拒絕，**不寫半筆**。
+    - 「恰一筆稽核」是**結構保證**而非紀律：billing 路徑自己寫（服務層對它不再寫第二筆，測試以 `writes.audits == 0` 反向斷言）；營運 RPC 由 `writeTx` 的單一 `RecordAuditTx` 寫。
+    為什麼：`platform` 與業務表**同一個 PostgreSQL 資料庫**，跨域副作用（`companies.status`）因此可同交易完成 → **不使用補償式設計**。任何「先 commit 再補寫」的形狀都會產生「帳改了、稽核沒寫」或「稽核說改了、其實沒動」。
+
+16. **operator 治理：`requireAdmin` ＋「不得停用自己／最後一位 admin」，且那股保證依附 isolation level**。
+    只有**操作者管理**兩支 RPC（`CreateOperator`／`DisableOperator`）要求 `role = 'admin'`（`requireAdmin`，`platform_admin_service.go:1002`）；**建立 admin 也算治理動作**（否則任何 operator 都能憑空替自己加一個 admin）。`DisableOperatorTx` 以 SQL 的 `WHERE … (o.role <> 'admin' OR EXISTS(其他 active admin))` **原子判定**「不得停用最後一位 admin」，並以**交易級** `pg_advisory_xact_lock(key = 0x504C41544F504552 "PLATOPER")` 序列化兩個 admin 互相停用的請求。
+    - **隔離等級前提**：「兩個 admin 同時停用對方不可能雙雙通過」的推理**只在 READ COMMITTED 成立**（Postgres 預設，且本 repo 的 `sql.TxOptions` 未指定）。若以 `default_transaction_isolation=repeatable read` 或更高啟動，兩條交易會各自用**等鎖前的快照**判定「還有另一位 admin」而雙雙通過 → **改 DSN／isolation 前必須先重驗這一條**（`PLATOPER` 與 cron 的 `PLATCRON` 不撞號，且交易鎖在交易結束時自動釋放）。
+    為什麼：`role` 曾經全 repo 零處被檢查 → 任何 operator 都能新增 admin 或停用最後一位 admin，而「一個 admin 都不剩」是唯一無法由 UI 回復的狀態。
+
+17. **`internal/platform/billing` 是訂閱狀態的唯一入口**：`allowedTransitions` 是唯一轉移表（**未列舉的狀態一律拒絕**，fail-closed），而**收款只有 `Billing.RecordPayment` 一個入口**——人工記帳與日後金流 webhook 的差別只在「誰呼叫它」。新增金流商＝新增 adapter 呼叫同一支，**不得新增第二條改變訂閱狀態的路徑**。
+    為什麼：`subscriptions.status` 一旦有第二個寫入點，「一轉移一事件」就不再成立，帳面、事件流與 console 會各自說不同的話；`reactivated` 只在原本非 active 時才發，也是同一個不變式的延伸。
+
+18. **金額一律 `int64` 分，且只走 `internal/platform/money`**：禁止 `float32`／`float64` 參與任何金額運算；DB 邊界（`numeric(12,2)`）一律以 `money.ParseCents`／`FormatCents` 轉換；期別金額與年繳折扣用 `money.PeriodAmount`／`YearlyFromMonthly`（**折扣基點在乘法前就夾住 `0..10000`**）。金額路徑必附測試。
+    為什麼：浮點是尾差與對帳爭議的來源；而年繳折扣的基點不夾住會**靜默算出負年費**（Plan C Task 2 實測 `(1200000, 10001) = -1439`、`(1200000, 20000) = -14399999`），帳面上只看到一個負數、看不出是誰算錯。
+
+19. **排程（`cmd/platform-cron`）不寫 `platform.audit_logs`——這是「每個平台寫入都寫稽核」的唯一例外**。
+    事實（schema）：`platform.audit_logs.operator_id` 是 `NOT NULL REFERENCES platform.operators(id)`，而排程沒有 operator；`platform.settings.system_actor_user_id` 存的是**租戶 `users.id`**（`store.SystemActor`，是給 consumer 落**租戶**稽核用的）→ 拿它去填 `operator_id` 必然 FK `23503`。
+    因此排程的問責紀錄是：**同交易的 `platform.events`（每次轉移一筆）＋ consumer 經 `services.SetCompanyStatus` 落的租戶稽核**（actor＝系統 actor、reason＝欠費）。
+    **營運者驅動的寫入仍必須寫平台稽核並帶真實 `operator_id`**——那才是本約束的意圖。
+    為什麼：這個例外不是「方便」，是 schema 上不可滿足；硬寫的結果不是更安全，而是交易直接失敗或留下一列不存在的 actor。
+
+20. **排程事件的 payload 必須自帶 `company_id` 與 `reason`**——四個事件的 `reason` 契約（`lifecycle.go:115`／`:165`／`:206`／`:249`）：
+
+    | 事件 | `reason` |
+    |---|---|
+    | `period.opened` | `scheduled_next_period` |
+    | `subscription.past_due` | `period_end_passed_unpaid` |
+    | `subscription.suspended` | `overdue` |
+    | `subscription.expired` | `cancelled_at_period_end` |
+
+    為什麼：排程不寫平台稽核（第 19 條），事件的 payload 就是補繳／催收／客服追查時唯一的「為什麼」；`company_id` 也讓 consumer **不必為了補一個欄位再查一次 DB**（事件與查詢之間狀態可能已經變了）。
+
+21. **consumer 的交易形狀與冪等認領**：`internal/platform/consumer` 在**一個系統範圍（scope=all）的 ent 交易**內依序做「**條件式認領** `UPDATE platform.events … WHERE id = $1 AND dispatched_at IS NULL`（0 列＝別的執行已處理，跳過且**不算失敗**）→ `services.SetCompanyStatus`（產品域唯一入口）→ commit」。
+    - **未對應的事件型別**：記一行 log 後**認領**（不認領＝排程每趟重掃同一筆，無限循環）；目前對應表只有三個型別（`subscription.suspended`／`subscription.expired` → `suspended`，`subscription.reactivated` → `active`）。
+    - **單筆失敗不認領**（`dispatched_at` 留 NULL、下趟重試）且**不阻塞後續事件**：記錯後 `continue`、迴圈結束才 `errors.Join` 外傳。
+    為什麼：`platform.events` 是 outbox，認領與副作用若不在同一交易，就會出現「事件說已派送、公司沒被凍結」；而「頭部一筆永遠失敗的事件」曾讓**後面所有租戶**的凍結全部卡住（Plan C Task 6 的 I-1）。
+
+22. **`cmd/platform-cron` 是 CLI：錯誤只進 log，`errcode` 不字面適用**。
+    - 它是**單趟**執行、不內建迴圈：`cron.RunOnce(ctx, deps, now)`，`now` 由呼叫端給（`--date` 可覆寫），重複執行由觸發器負責（**正式環境＝k8s CronJob**）。
+    - **單飛鎖**：`pg_try_advisory_lock(LockKey = 0x504C415443524F4E "PLATCRON")`，取不到即跳過並 `exit 0`（排程不該為了鎖排隊）；解鎖失敗時那條連線會被丟棄（不還池），避免鎖留在池化連線上。
+    - **`--timeout`（預設 10m）**：卡住時仍會解鎖並結束，不會永遠握著單飛鎖（逾時仍解鎖，`context.WithoutCancel` 覆蓋整條解鎖路徑）；panic 由 `RunGuarded` 復原、保留已累積的摘要並回報。
+    - **可重跑**：期別靠 `UNIQUE (subscription_id, period_no)` ＋ 先查後建、事件靠 `NOT EXISTS` 謂詞 → 失敗直接再跑一趟即可（不會產生重複期別或重複事件）。
+    為什麼「`errcode` 不字面適用」：全域約束的用意是**穩定的對外錯誤碼**（跨網路契約）；CLI 的錯誤只進 log、不跨網路，套碼只是多一層翻譯（基線未加寬，Plan C Task 7 已核准此偏離）。
+
+23. **`platform-console` 只走 `platform/v1`，不共用租戶 SPA 的路由與守衛（S11）**。
+    - RPC 路徑是 `/platform/platform.v1.…`：**掛載前綴（`Mount("/platform", …)`）與 cookie 的 `Path=/platform` 是同一段**，少一段即 404 且 cookie 不送出（§11-8）；console 也不得呼叫 `/api/v1`。
+    - 路由與守衛自帶（`platform-console/src/router.tsx`、`src/lib/guard.ts`）；租戶 SPA 不得引入任何 `platform.*` 能力或平台路由，console 也不得引入租戶路由。
+    - 兩個產生檔不手改：`src/lib/proto/**`（`task proto:gen`）與 `src/lib/errcode.ts`（`go generate ./internal/errcode`），CI 各有冪等閘門（`.github/workflows/ci.yml` 的兩個「up to date」步驟已把路徑列入）。顯示錯誤一律依 `ErrorInfo`（碼 ＋ 已渲染訊息），`src/lib/errcode.ts` 只當碼表投影補位。
+    為什麼：平台 RPC 跨租戶讀寫，是全系統權限最高的一條路徑；共用路由或守衛會讓「租戶身分」與「operator 身分」在同一條路徑上混用（§11-9）。
 
