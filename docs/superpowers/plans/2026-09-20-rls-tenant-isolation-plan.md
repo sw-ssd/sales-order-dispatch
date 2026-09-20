@@ -16,6 +16,8 @@
 - policy 一律 `FOR ALL … USING (…) WITH CHECK (…)`；`WITH CHECK` 必須**等於或嚴於**原 `USING`，`core_metadicts_scope` 沿用原樣不得放寬
 - 服務層 DB 存取一律經 `dbtenant.Client(ctx, s.db)`；`db.Tx(ctx)` 不得再自行開交易（42 處全數改為使用請求交易）
 - RLS 相關測試一律 `//go:build integration` + `internal/testsupport`；**不得以 sqlite（enttest）測 RLS**（enttest 不支援 `SET`／`FORCE`）
+- **RLS 的驗證必須以非 superuser 連線**（T5 實測更正）：測試容器的 `postgres` 是 superuser，而 PostgreSQL superuser **恆繞過 RLS（`FORCE` 亦然）** → 以它連線的測試全綠**不能**當作「RLS 生效」的證據（只能當 regression gate）。凡宣稱驗 RLS 的測試，必須以 `app_rw`（或專用非 superuser 角色）建立連線／client。
+- 建 `companies` fixture 時**不得**寫 `created_at`／`updated_at`（該表無此欄位，見 `00005`；T5 實測踩過）。
 - 每個 migration 必含 `Up`/`Down`；ENABLE 的 `Down` 必含 `NO FORCE` + `DISABLE`
 - **對已 ENABLE（且 FORCE）的表做資料回填**的 migration 與 `cmd/seed`：交易內先執行 `SET LOCAL app.current_data_scope = 'all'`（FORCE 也會擋 owner）
 - 錯誤一律經既有 `toConnectError` 映射，不得回傳 SQLSTATE 或 constraint 名
@@ -2476,15 +2478,28 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 	testsupport.RequiresContainer(t)
 	adminDSN := testsupport.Postgres(t)
 	migrateBusinessUp(t, adminDSN)
-	_, db := openPGEntClientFromGoose(t, adminDSN)
+	_, adminClient := openPGEntClientFromGoose(t, adminDSN)
 	ctx := t.Context()
 
-	coA, coB := seedRLSCrossTenant(t, ctx, db)
+	// fixture 用 admin（superuser）建立即可：superuser 恆繞過 RLS，不受 WITH CHECK 影響。
+	coA, coB := seedRLSCrossTenant(t, ctx, adminClient)
 	if coA == coB {
 		t.Fatal("兩家公司的 id 不得相同")
 	}
 
-	clientsA := newListScanServerWithScope(t, db, auth.RLSScope{
+	// ⚠️ 受測的 server **必須**用 app_rw 連線建立 —— 這是本探針唯一有意義的設定：
+	// 測試容器的 postgres 是 superuser，而 superuser 恆繞過 RLS（FORCE 亦然），
+	// 用它建的 server 不管路徑有沒有漏掛都會全綠（T5 實測）。
+	// 且必須經 dbtenant.NewClient：SET LOCAL 是 driver 裝飾器在 Tx(ctx) 內套的。
+	appSQL, err := sql.Open("pgx", testsupport.AppRoleDSN(t, adminDSN))
+	if err != nil {
+		t.Fatalf("app_rw 連線: %v", err)
+	}
+	t.Cleanup(func() { _ = appSQL.Close() })
+	appClient := dbtenant.NewClient(appSQL)
+	t.Cleanup(func() { _ = appClient.Close() })
+
+	clientsA := newListScanServerWithScope(t, appClient, auth.RLSScope{
 		UserID: "1", CompanyID: strconv.Itoa(coA),
 		DataScope: auth.DataScopeCompany, CompanyActive: true,
 	})
