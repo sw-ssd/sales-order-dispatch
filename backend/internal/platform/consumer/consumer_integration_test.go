@@ -49,7 +49,7 @@ func TestIntegrationDispatchOutboxEvents(t *testing.T) {
 		t.Fatalf("goose up: %v", err)
 	}
 
-	companyID, actorID := seedTenant(t, ctx, adminDB)
+	companyID, actorID := seedTenant(t, ctx, adminDB, "T6-EXPIRED")
 	if _, err := adminDB.ExecContext(ctx, `
 		INSERT INTO platform.settings (key, value) VALUES ('system_actor_user_id', $1)
 		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
@@ -177,6 +177,106 @@ func TestIntegrationDispatchOutboxEvents(t *testing.T) {
 	}
 }
 
+// TestIntegrationDispatchContinuesPastPermanentlyFailingEvent:一筆**永遠不會成功**的事件不得堵住
+// 後面的事件。事件依 id 排序、每趟從第一筆未派送者開始,若一失敗就中斷整趟,排在它後面的租戶
+// (含 G7 的期末停用)永遠不會被處理,而症狀只有「排程回錯誤」。
+//
+// 可達的觸發(真 PG 才驗得到):排程的 G7 選取器只查 platform.subscriptions、不查公司是否存在,
+// 公司被軟刪除後仍會發 subscription.expired;而 SetCompanyStatus 帶 company.DeletedAtIsNil()
+// → 對已軟刪除的公司一律 NotFound ⇒ 每趟失敗。
+func TestIntegrationDispatchContinuesPastPermanentlyFailingEvent(t *testing.T) {
+	testsupport.RequiresContainer(t)
+	ctx := t.Context()
+	adminDB, err := sql.Open("pgx", testsupport.Postgres(t))
+	if err != nil {
+		t.Fatalf("連線: %v", err)
+	}
+	defer func() { _ = adminDB.Close() }()
+	if err := goose.SetDialect("postgres"); err != nil {
+		t.Fatalf("goose dialect: %v", err)
+	}
+	if err := goose.RunContext(ctx, "up", adminDB, consumerMigrationsDir); err != nil {
+		t.Fatalf("goose up: %v", err)
+	}
+
+	gone := seedCompany(t, ctx, adminDB, "T6-GONE")
+	victim, actorID := seedTenant(t, ctx, adminDB, "T6-VICTIM")
+	if _, err := adminDB.ExecContext(ctx, `
+		INSERT INTO platform.settings (key, value) VALUES ('system_actor_user_id', $1)
+		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+		strconv.Itoa(actorID)); err != nil {
+		t.Fatalf("寫 platform.settings: %v", err)
+	}
+	// 公司被軟刪除:它的事件從此永遠失敗(SetCompanyStatus 一律 NotFound)。
+	if _, err := adminDB.ExecContext(ctx,
+		`UPDATE companies SET deleted_at = now() WHERE id = $1`, gone); err != nil {
+		t.Fatalf("軟刪除公司: %v", err)
+	}
+
+	var stuckID, victimEventID int64
+	if err := adminDB.QueryRowContext(ctx, `
+		INSERT INTO platform.events (aggregate_type, aggregate_id, event_type, payload)
+		VALUES ('subscription', 1, 'subscription.expired',
+		        jsonb_build_object('company_id', $1::bigint, 'subscription_id', 1,
+		                           'reason', 'cancelled_at_period_end'))
+		RETURNING id`, gone).Scan(&stuckID); err != nil {
+		t.Fatalf("寫註定失敗的事件: %v", err)
+	}
+	if err := adminDB.QueryRowContext(ctx, `
+		INSERT INTO platform.events (aggregate_type, aggregate_id, event_type, payload)
+		VALUES ('subscription', 2, 'subscription.expired',
+		        jsonb_build_object('company_id', $1::bigint, 'subscription_id', 2,
+		                           'reason', 'cancelled_at_period_end'))
+		RETURNING id`, victim).Scan(&victimEventID); err != nil {
+		t.Fatalf("寫後續事件: %v", err)
+	}
+
+	c := consumer.New(postgres.New(adminDB), consumer.NewDBSystemTx(adminDB), consumer.ProductDomain{})
+	n, err := c.DispatchOnce(ctx, 100)
+	if err == nil {
+		t.Fatal("沒做成的事件必須回報(errors.Join),不得靜默")
+	}
+	if n != 1 {
+		t.Fatalf("排在後面的租戶仍必須被派送,got %d", n)
+	}
+
+	// ① 失敗的那筆維持未派送:不認領(不吞掉副作用)、下趟重試。
+	if dispatched, attempts := eventState(t, ctx, adminDB, stuckID); dispatched || attempts != 0 {
+		t.Fatalf("失敗的事件應維持未派送(dispatched=%v attempts=%d),否則那家公司的凍結永遠不會發生",
+			dispatched, attempts)
+	}
+	// ② 失敗的事件不得有任何副作用(公司狀態與稽核都不動)。
+	if got := companyStatus(t, ctx, adminDB, gone); got != string(company.StatusActive) {
+		t.Fatalf("失敗的事件不得改變任何狀態,got %q", got)
+	}
+	var goneAudits int
+	if err := adminDB.QueryRowContext(ctx,
+		`SELECT count(*) FROM audit_logs WHERE company_id = $1`, gone).Scan(&goneAudits); err != nil {
+		t.Fatalf("查失敗事件的稽核: %v", err)
+	}
+	if goneAudits != 0 {
+		t.Fatalf("失敗的事件不得留稽核,got %d 筆", goneAudits)
+	}
+	// ③ 排在它後面的事件仍被派送(不是被跳過,也真的落到產品域)。
+	if dispatched, attempts := eventState(t, ctx, adminDB, victimEventID); !dispatched || attempts != 1 {
+		t.Fatalf("後續事件應被認領一次(dispatched=%v attempts=%d)", dispatched, attempts)
+	}
+	if got := companyStatus(t, ctx, adminDB, victim); got != string(company.StatusSuspended) {
+		t.Fatalf("後續租戶的 G7 凍結必須真的生效,got %q", got)
+	}
+	var victimAudits, auditUser int
+	if err := adminDB.QueryRowContext(ctx, `
+		SELECT count(*) OVER (), user_id FROM audit_logs
+		 WHERE company_id = $1 AND resource_type = 'company'`, victim).
+		Scan(&victimAudits, &auditUser); err != nil {
+		t.Fatalf("查後續租戶的稽核: %v", err)
+	}
+	if victimAudits != 1 || auditUser != actorID {
+		t.Fatalf("後續租戶應留 1 筆稽核且 actor 為系統 actor(%d): audits=%d user=%d",
+			actorID, victimAudits, auditUser)
+	}
+}
+
 // staleEvents 只回一次指定事件:模擬「讀取之後、認領之前被別的執行搶先」的競態
 // (真實的 store 不會回已派送的事件,故這條路徑只能在這裡人造)。actor 直接給定,不必查 DB。
 type staleEvents struct {
@@ -206,29 +306,44 @@ func companyStatus(t *testing.T, ctx context.Context, db *sql.DB, companyID int)
 	return status
 }
 
-// seedTenant 建立一名租戶與其系統 actor 使用者,回傳 (companyID, actorID)。
-// companies／users 是 FORCE RLS 的業務表(00028),故走 dbtenant.NewClient ＋ SystemScopeTx
-// (scope=all)—— 與生產的排程同一條路;少了這一層會以 42501 失敗。
-func seedTenant(t *testing.T, ctx context.Context, adminDB *sql.DB) (companyID, actorID int) {
+// seedCompany 建立一名 active 的租戶,回傳 companyID。
+// companies 是 FORCE RLS 的業務表(00028),故走 dbtenant.NewClient ＋ SystemScopeTx(scope=all)
+// —— 與生產的排程同一條路;少了這一層會以 42501 失敗。
+func seedCompany(t *testing.T, ctx context.Context, adminDB *sql.DB, identifier string) int {
 	t.Helper()
 	admin := dbtenant.NewClient(adminDB)
+	var companyID int
 	err := dbtenant.SystemScopeTx(ctx, admin, func(tx *ent.Tx) error {
 		co, err := tx.Client().Company.Create().
-			SetName("期末凍結測試").
-			SetIdentifier("T6-EXPIRED").
+			SetName(identifier).
+			SetIdentifier(identifier).
 			SetStatus(company.StatusActive).
 			Save(ctx)
 		if err != nil {
 			return err
 		}
 		companyID = co.ID
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("建立租戶 %s: %v", identifier, err)
+	}
+	return companyID
+}
+
+// seedTenant 建立一名租戶與其系統 actor 使用者(同一個事務的兩張業務表),回傳 (companyID, actorID)。
+func seedTenant(t *testing.T, ctx context.Context, adminDB *sql.DB, identifier string) (companyID, actorID int) {
+	t.Helper()
+	companyID = seedCompany(t, ctx, adminDB, identifier)
+	admin := dbtenant.NewClient(adminDB)
+	err := dbtenant.SystemScopeTx(ctx, admin, func(tx *ent.Tx) error {
 		u, err := tx.Client().User.Create().
-			SetEmail("t6-system@example.invalid").
+			SetEmail(identifier + "@example.invalid").
 			SetName("系統排程").
 			SetRole("super").
 			SetStatus("active").
 			SetPasswordHash("!").
-			SetCompanyID(co.ID).
+			SetCompanyID(companyID).
 			Save(ctx)
 		if err != nil {
 			return err
@@ -237,7 +352,19 @@ func seedTenant(t *testing.T, ctx context.Context, adminDB *sql.DB) (companyID, 
 		return nil
 	})
 	if err != nil {
-		t.Fatalf("建立租戶與系統 actor: %v", err)
+		t.Fatalf("建立租戶 %s 的系統 actor: %v", identifier, err)
 	}
 	return companyID, actorID
+}
+
+// eventState 讀事件的認領狀態:dispatched(= dispatched_at IS NOT NULL)與 attempts。
+func eventState(t *testing.T, ctx context.Context, db *sql.DB, eventID int64) (dispatched bool, attempts int) {
+	t.Helper()
+	var at sql.NullTime
+	if err := db.QueryRowContext(ctx,
+		`SELECT dispatched_at, attempts FROM platform.events WHERE id = $1`, eventID).
+		Scan(&at, &attempts); err != nil {
+		t.Fatalf("查事件 %d: %v", eventID, err)
+	}
+	return at.Valid, attempts
 }

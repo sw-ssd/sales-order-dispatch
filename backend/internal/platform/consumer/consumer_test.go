@@ -116,12 +116,14 @@ type fakeSetter struct {
 	tx    *fakeSystemTx
 	calls []statusCall
 	err   error
+	// failFor > 0 時只讓該公司的變更失敗(模擬「這一家永遠不會成功」:例公司已軟刪除)。
+	failFor int
 }
 
 func (f *fakeSetter) SetStatus(_ context.Context, _ *ent.Client, companyID int,
 	status company.Status, reason string, actor authz.Identity) error {
-	if f.err != nil {
-		return f.err
+	if f.err != nil || companyID == f.failFor {
+		return errors.New("模擬產品域失敗")
 	}
 	f.calls = append(f.calls, statusCall{
 		companyID: companyID, status: status, reason: reason, actor: actor, inTx: f.tx.active,
@@ -316,6 +318,60 @@ func TestDispatchOnceRejectsEventWithoutCompanyID(t *testing.T) {
 				t.Fatalf("壞 payload 不得有副作用,got %+v", setter.calls)
 			}
 		})
+	}
+}
+
+// ⑩ 佇列頭部有一筆**永遠不會成功**的事件時,不得堵住後面的事件:單筆失敗只記下錯誤,
+// 迴圈跑完再一次往外傳(errors.Join)。事件依 id 排序、每趟從第一筆未派送者開始,若一失敗就 return,
+// 後面所有租戶的凍結／復原(含 G7 的期末停用)永遠不會被處理,而症狀只有「排程回錯誤」。
+func TestDispatchOnceContinuesPastPermanentlyFailingEvent(t *testing.T) {
+	c, _, tx, setter := newConsumer(t,
+		store.Event{ID: 1, EventType: "subscription.suspended", Payload: []byte(`{"company_id":42}`)},
+		store.Event{ID: 2, EventType: "subscription.suspended", Payload: []byte(`{"company_id":43}`)})
+	setter.failFor = 42 // 公司 42 永遠失敗(例:已軟刪除 → SetCompanyStatus 一律 NotFound)
+
+	n, err := c.DispatchOnce(context.Background(), 100)
+	if err == nil {
+		t.Fatal("沒做成的事件必須回報(排程要看得見),不得靜默")
+	}
+	if n != 1 {
+		t.Fatalf("後面的公司 43 仍必須被派送,got %d", n)
+	}
+	if len(setter.calls) != 1 || setter.calls[0].companyID != 43 {
+		t.Fatalf("只有公司 43 該被變更,got %+v", setter.calls)
+	}
+	if tx.claimed[1] {
+		t.Fatal("失敗的事件不得被認領(不得吞掉凍結)")
+	}
+	if !tx.claimed[2] {
+		t.Fatal("公司 43 的事件應被認領")
+	}
+
+	// 下趟重試頭部那筆:仍然失敗、仍然不阻塞、也不重複副作用(43 已派送故不再出現)。
+	n, err = c.DispatchOnce(context.Background(), 100)
+	if err == nil {
+		t.Fatal("永久失敗的事件下趟仍應回報錯誤")
+	}
+	if n != 0 || len(setter.calls) != 1 {
+		t.Fatalf("重試不得重複副作用: n=%d calls=%d", n, len(setter.calls))
+	}
+}
+
+// ⑪ payload 壞掉的那筆同樣不得堵住後面(它自己留在待派送清單,後面照常派送)。
+func TestDispatchOnceContinuesPastBrokenPayload(t *testing.T) {
+	c, _, tx, setter := newConsumer(t,
+		store.Event{ID: 1, EventType: "subscription.suspended", Payload: []byte(`{}`)},
+		store.Event{ID: 2, EventType: "subscription.suspended", Payload: []byte(`{"company_id":43}`)})
+
+	n, err := c.DispatchOnce(context.Background(), 100)
+	if err == nil {
+		t.Fatal("壞 payload 必須回報")
+	}
+	if n != 1 || len(setter.calls) != 1 || setter.calls[0].companyID != 43 {
+		t.Fatalf("壞 payload 只該擋住自己: n=%d calls=%+v", n, setter.calls)
+	}
+	if tx.claimed[1] {
+		t.Fatal("壞 payload 不得被認領")
 	}
 }
 

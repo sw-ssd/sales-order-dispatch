@@ -120,42 +120,56 @@ func New(events EventStore, sysTx SystemTx, setter CompanyStatusSetter) *Consume
 
 // DispatchOnce 依序派送未處理事件,回傳**本趟認領**的事件數。
 //
-// 未對應型別也算已派送(它已被認領,不再重掃);被其他執行搶先認領者不計。單筆失敗即停
-// (回已完成數與錯誤):事件依 id 排序、先寫先派送,壞掉的那筆留待下趟重試,不吞掉錯誤,
-// 也不讓後續事件被靜默跳過。
+// 未對應型別也算已派送(它已被認領,不再重掃);被其他執行搶先認領者不計。
+//
+// **單筆失敗不停下整趟**:記下錯誤後繼續下一筆,最後以 errors.Join 一次往外傳。事件依 id 排序、
+// 每趟都從第一筆未派送者開始,失敗即中斷的話,只要佇列頭部有一筆**永遠不會成功**的事件
+// (例:公司已軟刪除 → SetCompanyStatus 一律 NotFound;或 payload 壞掉),後面所有租戶的凍結／
+// 復原(含 G7 的期末停用)**永遠不會被處理**,而症狀只有「排程回錯誤」。
+//
+// 失敗的那筆維持 dispatched_at IS NULL:不認領(不吞掉副作用)、下趟重試,且不阻塞後續。
+// 回傳的錯誤是「本趟沒做成的事」的集合,不是「本趟壞了」——done 仍為已完成數。
 func (c *Consumer) DispatchOnce(ctx context.Context, limit int) (int, error) {
 	events, err := c.events.UndispatchedEvents(ctx, limit)
 	if err != nil {
 		return 0, errcode.SysInternal.Wrap(err)
 	}
 	// actor 只在**真的要寫產品域**時解析:未設定的 platform.settings 不該讓「整批都是未對應型別」
-	// 的一趟失敗(那會讓那些事件每趟被重掃)。零值代表還沒解析過。
+	// 的一趟失敗(那會讓那些事件每趟被重掃)。零值代表還沒解析過;actorErr 記住壞掉的原因,
+	// 同一趟內平台設定不會自己變好,故只查一次。
 	var actor authz.Identity
+	var actorErr error
+	var errs []error
 	done := 0
 	for _, ev := range events {
 		act, mapped := actions[ev.EventType]
 		var companyID int
 		if mapped {
 			if companyID, err = companyIDOf(ev); err != nil {
-				return done, err
+				errs = append(errs, err)
+				continue
 			}
-			if actor.UserID == "" {
-				if actor, err = c.systemActor(ctx); err != nil {
-					return done, err
-				}
+			if actor.UserID == "" && actorErr == nil {
+				actor, actorErr = c.systemActor(ctx)
+			}
+			if actorErr != nil {
+				errs = append(errs, fmt.Errorf("事件 %d(%s) 無法派送: %w", ev.ID, ev.EventType, actorErr))
+				continue
 			}
 		} else {
 			log.Printf("platform consumer: 事件 %d 型別 %q 沒有產品域動作(僅認領)", ev.ID, ev.EventType)
 		}
 		claimed, err := c.dispatch(ctx, ev, act, mapped, companyID, actor)
 		if err != nil {
-			return done, err
+			errs = append(errs, fmt.Errorf("事件 %d(%s): %w", ev.ID, ev.EventType, err))
+			continue
 		}
 		if claimed {
 			done++
 		}
 	}
-	return done, nil
+	// errors.Join 對空集合回 nil:全數成功時仍是乾淨的 nil。
+	return done, errors.Join(errs...)
 }
 
 // dispatch 在同一交易內認領事件,並(對應型別時)變更公司狀態。回傳本筆是否由這趟認領。
@@ -219,6 +233,12 @@ type DBSystemTx struct{ db *sql.DB }
 func NewDBSystemTx(db *sql.DB) *DBSystemTx { return &DBSystemTx{db: db} }
 
 // Run 見 SystemTx.Run。每趟自建 ent client 與 driver:見 txTracker 的說明。
+//
+// **這個 ent client(以及它底下的 driver)不擁有 s.db**:entsql.OpenDB 只是把既有的 admin
+// handle 包成 driver,driver 的 Close() 會關掉那個 *sql.DB(與平台 store 共用的同一個 handle)。
+// 故 `Run` 內**不得** `defer client.Close()` —— 那會在執行期打死整個行程的 admin 連線池,
+// 而且症狀是後續所有平台查詢突然失敗。交易的結束一律由 dbtenant.SystemScopeTx 的
+// commit／rollback 負責,不需要(也不該)關閉 client。
 func (s *DBSystemTx) Run(ctx context.Context, fn func(context.Context, Tx) error) error {
 	track := &txTracker{inner: entsql.OpenDB(dialect.Postgres, s.db)}
 	client := ent.NewClient(ent.Driver(dbtenant.Wrap(track)))
@@ -297,7 +317,13 @@ func (t *txTracker) Exec(ctx context.Context, query string, args, v any) error {
 func (t *txTracker) Query(ctx context.Context, query string, args, v any) error {
 	return t.inner.Query(ctx, query, args, v)
 }
-func (t *txTracker) Close() error    { return t.inner.Close() }
+
+// Close 刻意是 no-op:這個 driver 只是把**共用的** admin handle 包起來(entsql.OpenDB),
+// 轉呼叫 inner.Close() 會關掉那個 *sql.DB —— 平台 store 與本套件都在用它,整個行程的平台
+// 查詢會一起死。ent client 的生命週期由 Run 自己掌握(不交給呼叫端),故沒有任何合法路徑
+// 需要關它;真的要關掉連線池,請關建立它的那個 *sql.DB。
+func (t *txTracker) Close() error { return nil }
+
 func (t *txTracker) Dialect() string { return t.inner.Dialect() }
 
 // wrapUncoded 對未帶碼的錯誤補上系統碼;產品域已帶碼的錯誤原樣往外(蓋掉專碼等於丟失語意)。
