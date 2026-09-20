@@ -2149,6 +2149,9 @@ git commit -m "feat(backend): 字典與稽核啟用 RLS 並收斂路徑（00027�
 - Modify: `internal/handlers/auth_password.go`（改密碼／臨時密碼路徑；`h.deps.DB.User.Query()` 等未以傳入 `tx` 進行的存取）
 - Modify: `internal/auth/token.go`（`BumpTokenVersion` 的 `m.db.User.UpdateOneID` — refresh 輪替路徑）
 - Modify: `internal/authz/provision.go`（讀 `role_permissions`／`users`／`roles` — 系統範圍工作）
+- **呼叫端一併處理**：`internal/server/domains.go:142` 目前以 `authz.Provision(context.Background(), engine, db)` 呼叫，`db` 是**已裝飾的業務 client** → 核心表 ENABLE 後這次讀取會回 **0 列**，於是 **OpenFGA 開機佈建靜默變成「什麼都沒授權」**（不是報錯，比報錯更危險）。必須讓它跑在系統範圍（`dbtenant.SystemScopeTx` 或等價）——在 `Provision` 內處理或改呼叫端皆可，但**要有一個測試會因「佈建 0 筆」而紅**。
+
+**API 備忘（實測）**：`dbtenant.SystemScopeTx(ctx, client, fn func(*ent.Tx) error) error`；`dbtenant.TxFrom(ctx) (*ent.Tx, bool)`（**兩個回傳值**）；`dbtenant.Client(ctx, fallback *ent.Client) *ent.Client`；`dbtenant.Wrap(inner dialect.Driver) dialect.Driver`。
 
 **[MUST] 收斂掃描是路徑級且窮盡**：上列行號只是盤點快照，**以你實際 grep 到的為準**。動手前先跑：
 
