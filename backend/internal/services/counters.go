@@ -61,24 +61,29 @@ func (c *entitlementCounter) Count(ctx context.Context, companyID int, feature s
 
 // countFeature 在指定 client 上依 feature 計數。company_id 條件一律明示（不靠 RLS 兜底），
 // 這樣在 scope=all 的系統範圍交易內也只數該公司。
+//
+// **一律沿用呼叫端的 ctx**（不得用 context.Background()）：department／self scope 的守衛會經
+// SystemScopeTx 開第二條連線，交易若綁在 background ctx 上就不隨請求取消／逾時結束 ——
+// 客戶端早已放棄，慢查詢仍握著請求交易與一條額外連線（F-4）。ctx 上的值不影響本查詢：
+// 可見範圍由**傳入的 client** 決定，不是 ctx。
 func countFeature(ctx context.Context, db *ent.Client, companyID int, feature string) (int, error) {
 	switch feature {
 	case entitlements.LimitSeats:
 		return db.User.Query().
 			Where(user.HasCompanyWith(company.ID(companyID)), user.StatusNEQ(user.StatusInactive)).
-			Count(context.Background())
+			Count(ctx)
 	case entitlements.LimitCustomers:
 		return db.Customer.Query().
 			Where(customer.CompanyIDEQ(companyID), customer.DeletedAtIsNil()).
-			Count(context.Background())
+			Count(ctx)
 	case entitlements.LimitProducts:
 		return db.Product.Query().
 			Where(product.CompanyIDEQ(companyID), product.DeletedAtIsNil()).
-			Count(context.Background())
+			Count(ctx)
 	case entitlements.LimitDepartments:
 		return db.Department.Query().
 			Where(department.HasCompanyWith(company.ID(companyID)), department.DeletedAtIsNil()).
-			Count(context.Background())
+			Count(ctx)
 	default:
 		// 不得回 0：0 等於「用量為零」，判定層會誤判為未超額而放行。
 		return 0, fmt.Errorf("未定義的計數 feature: %s", feature)

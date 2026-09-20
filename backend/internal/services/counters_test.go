@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -109,5 +110,23 @@ func TestEntitlementCounterUnknownFeatureErrors(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "limit.nonexistent") {
 		t.Fatalf("錯誤訊息應點名該 feature，got %q", err.Error())
+	}
+}
+
+// F-4：計數查詢必須沿用**請求的 ctx**，而不是 context.Background()。
+//
+// 為什麼重要：department／self scope 的守衛會走 dbtenant.SystemScopeTx 開**第二條連線**；交易
+// 若綁在 background ctx 上，就不隨請求取消／逾時結束 —— 客戶端早已放棄，慢查詢仍握著請求交易與
+// 一條額外連線。這裡用「已取消的請求 ctx」當探針：修復前查詢照跑並成功（fail-open 於取消語意），
+// 修復後必須立刻以 context.Canceled 結束。
+func TestEntitlementCounterHonorsRequestContext(t *testing.T) {
+	db := newCounterTestDB(t)
+	co := db.Company.Create().SetName("公司A").SetIdentifier("CNT-CTX").SaveX(context.Background())
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	if _, err := NewEntitlementCounter(db).Count(ctx, co.ID, entitlements.LimitCustomers); !errors.Is(err, context.Canceled) {
+		t.Fatalf("請求 ctx 已取消 → 計數必須以 context.Canceled 結束（不得改用 background 照跑），got %v", err)
 	}
 }
