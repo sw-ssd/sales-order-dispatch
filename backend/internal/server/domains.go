@@ -13,6 +13,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	authzopenfga "github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
+	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	domainauth "github.com/salesorder/sales-order-1.0/backend/internal/domain/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/handlers"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
@@ -66,11 +67,11 @@ func (s *Server) mountAuth() {
 	// r.URL.Path 全路徑分派,掛載時剝除 /api/v1 前綴(與 RegisterCompanyServices 慣例一致)。
 	// LoadAndSave + authzMiddleware 包在最外層:session 身分 → authz.Identity/RLS ctx(T14 Step 4)。
 	apiMux := http.NewServeMux()
-	authPath, authHandler := salesorderv1connect.NewAuthServiceHandler(h)
+	authPath, authHandler := salesorderv1connect.NewAuthServiceHandler(h, dbtenant.HandlerOption(entClient))
 	apiMux.Handle(authPath, authHandler)
 	handlers.RegisterRoleHandler(apiMux, entClient) // RoleService(T18)
 	// AbilityService(T9/D30):CASL 規則下發給前端 @casl/ability 初始化。
-	abilityPath, abilityHandler := salesorderv1connect.NewAbilityServiceHandler(domainauth.NewAbilityHandler(entClient, domainauth.Config{DeveloperAccountEnabled: s.cfg.API.DeveloperAccountEnabled}))
+	abilityPath, abilityHandler := salesorderv1connect.NewAbilityServiceHandler(domainauth.NewAbilityHandler(entClient, domainauth.Config{DeveloperAccountEnabled: s.cfg.API.DeveloperAccountEnabled}), dbtenant.HandlerOption(entClient))
 	apiMux.Handle(abilityPath, abilityHandler)
 	services.RegisterCompanyServices(apiMux, entClient)                          // CompanyService/DepartmentService(T20)
 	services.RegisterUserServices(apiMux, entClient)                             // UserService(02 Task 3)
@@ -106,9 +107,15 @@ func (s *Server) mountAuth() {
 	})
 }
 
-// openEntClient 開啟 PostgreSQL ent client（委派 third_party/database，統一初始化路徑，D31）。
+// openEntClient 開啟業務 PostgreSQL ent client:連線仍委派 third_party/database(D31),
+// 但業務 client **必須**經 dbtenant.NewClient 建立,RLS driver 裝飾器才會生效
+// (請求交易的 SET LOCAL 就在 driver.Tx 內套用)。測試/CLI/seed 不經此路徑。
 func (s *Server) openEntClient() (*ent.Client, error) {
-	return database.OpenEnt(s.cfg.Database.DatabaseURL)
+	db, err := database.OpenSQL(s.cfg.Database.DatabaseURL)
+	if err != nil {
+		return nil, err
+	}
+	return dbtenant.NewClient(db), nil
 }
 
 // mountOpenFGA 建立內嵌 OpenFGA 授權引擎(D32)並注入 Server。

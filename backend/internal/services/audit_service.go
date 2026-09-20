@@ -19,6 +19,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/auditlog"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
+	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	auditv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/audit/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/audit/v1/auditv1connect"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
@@ -46,7 +47,7 @@ func NewAuditService(db *ent.Client) *AuditService {
 
 // RegisterAuditServices 將 AuditService 的 Connect handler 掛到 mux。
 func RegisterAuditServices(mux *http.ServeMux, db *ent.Client) {
-	path, handler := auditv1connect.NewAuditServiceHandler(NewAuditService(db))
+	path, handler := auditv1connect.NewAuditServiceHandler(NewAuditService(db), dbtenant.HandlerOption(db))
 	mux.Handle(path, handler)
 }
 

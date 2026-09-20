@@ -19,6 +19,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz/casl"
+	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 
@@ -42,7 +43,7 @@ func NewRoleService(db *ent.Client) *RoleService {
 // RegisterRoleServices 將 RoleService 的 Connect handler 掛到 mux(以自然路徑
 // "/salesorder.v1.RoleService/")。server 以 http.StripPrefix("/api/v1", mux) 掛載。
 func RegisterRoleServices(mux *http.ServeMux, db *ent.Client) {
-	path, handler := salesorderv1connect.NewRoleServiceHandler(NewRoleService(db))
+	path, handler := salesorderv1connect.NewRoleServiceHandler(NewRoleService(db), dbtenant.HandlerOption(db))
 	mux.Handle(path, handler)
 }
 

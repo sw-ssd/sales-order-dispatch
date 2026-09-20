@@ -14,6 +14,7 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/route"
+	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	mastersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/masters/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/masters/v1/mastersv1connect"
 )
@@ -29,7 +30,7 @@ func NewRouteService(db *ent.Client) *RouteService { return &RouteService{db: db
 
 // RegisterRouteService 將 RouteService 掛到 mux。
 func RegisterRouteService(mux *http.ServeMux, db *ent.Client) {
-	path, handler := mastersv1connect.NewRouteServiceHandler(NewRouteService(db))
+	path, handler := mastersv1connect.NewRouteServiceHandler(NewRouteService(db), dbtenant.HandlerOption(db))
 	mux.Handle(path, handler)
 }
 

@@ -16,6 +16,7 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/processingspec"
+	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	mastersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/masters/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/masters/v1/mastersv1connect"
 )
@@ -33,7 +34,7 @@ func NewProcessingSpecService(db *ent.Client) *ProcessingSpecService {
 
 // RegisterProcessingSpecService 掛載。
 func RegisterProcessingSpecService(mux *http.ServeMux, db *ent.Client) {
-	path, handler := mastersv1connect.NewProcessingSpecServiceHandler(NewProcessingSpecService(db))
+	path, handler := mastersv1connect.NewProcessingSpecServiceHandler(NewProcessingSpecService(db), dbtenant.HandlerOption(db))
 	mux.Handle(path, handler)
 }
 

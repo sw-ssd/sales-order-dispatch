@@ -24,6 +24,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
+	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 )
@@ -111,7 +112,7 @@ func NewUserService(db *ent.Client) *UserService {
 
 // RegisterUserServices 將 UserService 的 Connect handler 掛到 mux。
 func RegisterUserServices(mux *http.ServeMux, db *ent.Client) {
-	path, handler := salesorderv1connect.NewUserServiceHandler(NewUserService(db))
+	path, handler := salesorderv1connect.NewUserServiceHandler(NewUserService(db), dbtenant.HandlerOption(db))
 	mux.Handle(path, handler)
 }
 

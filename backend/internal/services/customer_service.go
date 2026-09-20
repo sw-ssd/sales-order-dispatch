@@ -23,6 +23,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
+	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1/customersv1connect"
 )
@@ -50,7 +51,7 @@ func NewCustomerService(db *ent.Client, accountManageBaseURL string) *CustomerSe
 
 // RegisterCustomerServices 將 CustomerService 掛到 mux。
 func RegisterCustomerServices(mux *http.ServeMux, db *ent.Client, accountManageBaseURL string) {
-	path, handler := customersv1connect.NewCustomerServiceHandler(NewCustomerService(db, accountManageBaseURL))
+	path, handler := customersv1connect.NewCustomerServiceHandler(NewCustomerService(db, accountManageBaseURL), dbtenant.HandlerOption(db))
 	mux.Handle(path, handler)
 }
 
