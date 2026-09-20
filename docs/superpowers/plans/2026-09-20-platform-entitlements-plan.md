@@ -17,7 +17,7 @@
 - **平台域不與業務域 JOIN**：`platform.*` 只以 `company_id` 對照業務資料；跨域副作用一律經 `platform.events`（outbox）
 - **`app_rw` 對 `platform` schema 零權限**：平台域只用 admin 連線（`cfg.Database.AdminDSN()`）；業務連線連 `SELECT` 都不行（Plan A 已建立角色）
 - **平台表不用 ent**、不得對 `platform` schema 跑 `client.Schema.Create`
-- **權益判定 fail-closed**：無訂閱／查無方案 → 全部 `false` / `0`；額度不足與訂閱不可用一律回 `FailedPrecondition`（非 `PermissionDenied`——那是「缺權限」的語意）
+- **權益判定 fail-closed**：無訂閱／查無方案 → 全部 `false` / `0`；額度不足與訂閱不可用一律回 `FailedPrecondition`（非 `PermissionDenied`——那是「缺權限」的語意），且**用註冊碼**：`PLAT-5001`／`PLAT-5002`／`PLAT-3001`（見 Task 4 開頭的錯誤碼表、Plan D Task 5b）
 - **守衛掛點必須可機械驗證**：RPC → feature 對應表（見 Task 6），表驅動測試漏一項即紅
 - **平台稽核不寫租戶 `audit_logs`**：`audit.Record` 要求 `company_id`／`user_id` 非零，平台操作者兩者皆無 → 一律寫 `platform.audit_logs`（S9）
 - **`platform.*` 能力不得出現在租戶 `GetAbility`／角色權限矩陣**（S11）
@@ -904,6 +904,16 @@ git commit -m "feat(backend): 平台 store（介面＋假實作＋PostgreSQL 實
 
 ### Task 4: 權益判定（`entitlements.Service`）
 
+**錯誤碼（對外契約；由 Plan D 提供，`internal/errcode` 已可用——Plan D T1–T6 已完成，碼表見 `docs/error-codes.md`）**：本任務的 `FailedPrecondition` 一律換成註冊碼，**不得**自建 `connect.NewError(connect.CodeFailedPrecondition, …)`：
+
+| 情境 | 碼（connect 碼不變） |
+|---|---|
+| `Allows` 判定「方案／override 未含此功能」 | `errcode.PlatformFeatureNotInPlan`（`PLAT-5002`，details `feature`） |
+| `CheckLimit` 判定超過上限 | `errcode.PlatformLimitExceeded`（`PLAT-5001`，details `feature`／`used`／`limit`） |
+| 訂閱 `suspended`／`cancelled`（合約不可用） | `errcode.PlatformSubscriptionInactive`（`PLAT-3001`） |
+
+落地本身列在 Plan D 的 **Task 5b**（該任務負責讓四個 `PLAT-*` 在 Plan B／C 的路徑上真的被回傳並有測試斷言）——若本任務先實作，請直接照上表寫碼，避免事後再改一次。本任務下方的 `CheckLimit`／`Allows` 片段已按上表寫；若實作時仍看到任何自建的 `connect.NewError(connect.CodeFailedPrecondition, …)`，一律換成上表的碼。
+
 **Files:**
 - Create: `internal/platform/entitlements/service.go`、`internal/platform/entitlements/cache.go`
 - Create: `internal/platform/entitlements/service_test.go`
@@ -953,9 +963,27 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
+	commonv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 )
 
 const seats = entitlements.LimitSeats
+
+// errorCodeOf 由 connect error 取 ErrorInfo.code（本套件的唯一解析點；與 internal/services 的
+// errorInfoOf 同構——對外碼才是前端據以導向升級方案的依據）。
+func errorCodeOf(t *testing.T, err error) string {
+	t.Helper()
+	var ce *connect.Error
+	if !errors.As(err, &ce) {
+		t.Fatalf("非 connect error: %v", err)
+	}
+	for _, d := range ce.Details() {
+		if info, ok := d.Value().(*commonv1.ErrorInfo); ok {
+			return info.GetCode()
+		}
+	}
+	t.Fatalf("錯誤未帶 ErrorInfo（碼到不了客戶端）: %v", err)
+	return ""
+}
 
 func newSvc(f *store.Fake, counts map[string]int) *entitlements.Service {
 	return entitlements.New(f, counting(counts), entitlements.NewMemoryCache(), 0)
@@ -992,6 +1020,10 @@ func TestLimitBlockedReturnsFailedPrecondition(t *testing.T) {
 	var cerr *connect.Error
 	if !errors.As(err, &cerr) || cerr.Code() != connect.CodeFailedPrecondition {
 		t.Fatalf("額度不足必須回 FailedPrecondition（引導升級方案），got %v", err)
+	}
+	// 對外碼才是前端據以導向升級方案的依據（connect 碼不足以區分額度與權限）。
+	if got := errorCodeOf(t, err); got != "PLAT-5001" {
+		t.Fatalf("額度不足必須帶 ErrorInfo.code=PLAT-5001，got %q", got)
 	}
 
 	ok := newSvc(f, counting{seats: 9})
@@ -1232,8 +1264,8 @@ func (s *Service) CheckLimit(ctx context.Context, companyID int, feature string,
 	}
 	r, known := resolveFeature(st, feature, s.now())
 	if !known || !r.enabled {
-		return connect.NewError(connect.CodeFailedPrecondition,
-			errors.New("此功能未包含在目前方案中，請升級方案"))
+		// PLAT-5002：方案／override 未含此功能（碼見本任務開頭的錯誤碼表）
+		return errcode.PlatformFeatureNotInPlan.Error(map[string]string{"feature": feature})
 	}
 	if r.limit == nil {
 		return nil // 不限
@@ -1246,8 +1278,12 @@ func (s *Service) CheckLimit(ctx context.Context, companyID int, feature string,
 		return connect.NewError(connect.CodeInternal, fmt.Errorf("計算用量失敗: %w", err))
 	}
 	if cur+delta > int(*r.limit) {
-		return connect.NewError(connect.CodeFailedPrecondition,
-			fmt.Errorf("已達方案上限（%d/%d），請升級方案或加購席位", cur, *r.limit))
+		// PLAT-5001：已達上限；used／limit 進 details 供前端顯示用量（碼見本任務開頭的錯誤碼表）
+		return errcode.PlatformLimitExceeded.Error(map[string]string{
+			"feature": feature,
+			"used":    strconv.Itoa(cur),
+			"limit":   strconv.FormatInt(*r.limit, 10),
+		})
 	}
 	return nil
 }
@@ -1712,6 +1748,10 @@ func TestCreateUserBlockedAtSeatLimit(t *testing.T) {
 	}))
 	if connect.CodeOf(err) != connect.CodeFailedPrecondition {
 		t.Fatalf("已達席位上限應回 failed_precondition（引導升級方案），got %v", err)
+	}
+	// 斷言**碼**而非只有 connect 碼：前端據 ErrorInfo.code 導向升級方案（Plan D T5b）。
+	if got := errorInfoOf(t, err).GetCode(); got != "PLAT-5001" {
+		t.Fatalf("席位超限必須帶 ErrorInfo.code=PLAT-5001，got %q", got)
 	}
 	if n, _ := db.User.Query().Where(user.CompanyIDEQ(coID)).Count(ctx); n != 10 {
 		t.Fatalf("被擋後不得新增帳號，got %d", n)
@@ -3078,8 +3118,10 @@ git commit -m "feat(backend): 平台域 seeder（8 features、3 方案與價目�
 
 - [ ] **Step 1: `backend/AGENTS.md` 新增平台域小節**
 
+（**編號**：`backend/AGENTS.md` §10 已由 Plan D 的「錯誤碼」佔用，故本節為 **§11**。）
+
 ```markdown
-## 10. 平台域（SaaS 訂閱與權益，D34–D39）
+## 11. 平台域（SaaS 訂閱與權益，D34–D39）
 
 1. **`platform` schema 與業務域不 JOIN**：只以 `company_id` 對照；跨域副作用一律經 `platform.events`。
 2. **`app_rw` 對 `platform` schema 零權限**：平台域只走 `cfg.Database.AdminDSN()`。新增平台表時**不得**授權給 `app_rw`。
@@ -3115,7 +3157,7 @@ git commit -m "docs(backend): 平台域慣例（schema 邊界／fail-closed／�
 |---|---|
 | `platform` schema 與 10 張表、`app_rw` 零權限（§3、§3.3） | Task 2 |
 | 方案／權益／override／訂閱的資料存取（§3.1） | Task 3 |
-| `Allows`/`CheckLimit`、優先序、fail-closed、`FailedPrecondition`（§4.1–4.3） | Task 4 |
+| `Allows`/`CheckLimit`、優先序、fail-closed、`FailedPrecondition`＋碼（`PLAT-5001`／`PLAT-5002`／`PLAT-3001`）（§4.1–4.3） | Task 4 |
 | `Counter` 由業務域提供並注入（§4.2） | Task 5 |
 | 守衛掛點清單與表驅動驗證（§4.5，含復原路徑） | Task 6 |
 | `platform/v1`（平台工具與租戶端投影）（§2.2、§4.6） | Task 7、9、10 |

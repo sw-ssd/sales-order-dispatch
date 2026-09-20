@@ -1148,6 +1148,14 @@ git commit -m "feat(backend): 平台帳務的交易版 store 寫入與 settings�
 
 ### Task 4: `RecordPayment`（收款的唯一入口）
 
+**錯誤碼（Plan D 提供；`internal/errcode` 已可用，碼表見 `docs/error-codes.md`）**：本任務的 `FailedPrecondition` 一律換成註冊碼，落地歸屬 Plan D **Task 5b**：
+
+| 情境 | 碼（connect 碼不變：`failed_precondition`） |
+|---|---|
+| 狀態機拒絕（`cancelled` 終態、無有效訂閱、找不到可收款期別、不可轉 `active`） | `errcode.PlatformSubscriptionInactive`（`PLAT-3001`） |
+| 收款衝突（輸入金額與期別快照不符；其他無法 no-op 的衝突） | `errcode.PlatformPaymentConflict`（`PLAT-3002`，details `reason`） |
+| 同一期別、同一交易號的重送 | **no-op（不是錯誤）** —— G3 的冪等設計，金流 webhook 重送依賴它，**不得**改成錯誤 |
+
 **Files:**
 - Create: `internal/platform/billing/billing.go`、`internal/platform/billing/billing_test.go`
 - Create: `internal/platform/billing/billing_integration_test.go`
@@ -1398,6 +1406,7 @@ func (b *Billing) RecordPayment(ctx context.Context, in RecordPaymentInput) (*st
 		// 重複入帳判定（G3）：期別已 paid → 一律 no-op。
 		// 為什麼不看交易號：人工收款多數沒有交易號，若要求 external_ref 非空才 no-op，
 		// 空交易號的重送會再寫一次 period.payment_recorded 事件與稽核（帳面與事件流失真）。
+		// 注意：**這裡刻意不回 PLAT-3002** —— 重送是冪等（不是衝突），webhook 重送依賴它。
 		if period.Status == "paid" {
 			if in.ExternalRef != period.ExternalRef {
 				log.Printf("platform payment: 期別 %d 已付款，本次交易號 %q 與原 %q 不同（可能為溢收，請人工確認）",
@@ -1410,9 +1419,10 @@ func (b *Billing) RecordPayment(ctx context.Context, in RecordPaymentInput) (*st
 		// 金額驗證（G4）：未填 → 採期別快照；填了但與快照不符 → 拒絕。
 		// v1 不支援部分付款：短收／溢收以 note 記錄，不改變期別金額。
 		if in.AmountCents != 0 && in.AmountCents != period.AmountCents {
-			return connect.NewError(connect.CodeFailedPrecondition,
-				fmt.Errorf("輸入金額 %s 與期別金額 %s 不符（不支援部分付款；差異請記於備註）",
-					money.FormatCents(in.AmountCents), money.FormatCents(period.AmountCents)))
+			return errcode.PlatformPaymentConflict.Error(map[string]string{
+				"reason": fmt.Sprintf("輸入金額 %s 與期別金額 %s 不符（不支援部分付款；差異請記於備註）",
+					money.FormatCents(in.AmountCents), money.FormatCents(period.AmountCents)),
+			})
 		}
 
 		if err := b.st.MarkPeriodPaidTx(ctx, tx, period.ID, in.PaidAt,
@@ -1674,6 +1684,8 @@ git commit -m "feat(backend): RecordPayment 為唯一收款入口（狀態機、
 ---
 
 ### Task 5: 生命週期排程邏輯（`EnsureNextPeriod`／`MarkPastDue`／`SuspendOverdue`）
+
+**錯誤碼**：本任務的非法狀態轉移一律 `PLAT-3001` `PlatformSubscriptionInactive`（承 Task 4 開頭的錯誤碼表；不得自建裸 `FailedPrecondition`）。
 
 **Files:**
 - Create: `internal/platform/billing/lifecycle.go`、`internal/platform/billing/lifecycle_test.go`
@@ -3032,7 +3044,7 @@ message ChangePlanResponse { string plan_code = 1; string effective_from = 2; }
 
 message CancelSubscriptionRequest {
   string company_id = 1;
-  bool   at_period_end = 2; // v1 僅支援 true（期末終止）；false 屬特殊處理，回 FailedPrecondition
+  bool   at_period_end = 2; // v1 僅支援 true（期末終止）；false 屬特殊處理，回 PLAT-3001
   string reason = 3;        // 必填
 }
 message CancelSubscriptionResponse { string cancelled_at = 1; string service_until = 2; }
@@ -3053,13 +3065,13 @@ message Receivable {
 }
 ```
 
-**語意與邊界（實作時照此實作，不得自行放寬）**：
+**語意與邊界（實作時照此實作，不得自行放寬）**——拒絕條件一律回**註冊碼**（Plan D；`internal/errcode` 已可用，落地歸屬 Task 5b）：
 
-| RPC | 行為 | 拒絕條件 |
+| RPC | 行為 | 拒絕條件（碼） |
 |---|---|---|
-| `SetSeatCount` | 更新 `subscriptions.seat_count`（下一次產期即用新席位數計價） | `seat_count < 使用中席次`（以計數器查）→ `FailedPrecondition`；`<= 0` → `InvalidArgument` |
-| `ChangePlan` | 只改 `subscriptions.plan_id`；**當期期別不動**（價格快照已寫死），下一期起用新方案與新價 | 目標方案不存在／已歸檔 → `FailedPrecondition`；與現行方案相同 → no-op（不寫稽核） |
-| `CancelSubscription` | `status → cancelled`（`allowedTransitions` 檢查）＋發 `subscription.cancelled`；期末後由 `ExpireCancelled` 轉 `suspended` | 已 `cancelled` → no-op；`at_period_end=false` → `FailedPrecondition`（v1 不支援立即終止） |
+| `SetSeatCount` | 更新 `subscriptions.seat_count`（下一次產期即用新席位數計價） | `seat_count < 使用中席次`（以計數器查）→ `PLAT-5001` `PlatformLimitExceeded`（details `feature=limit.seats`／`used`／`limit`）；`<= 0` → `SYS-1001` `SysInvalidArgument` |
+| `ChangePlan` | 只改 `subscriptions.plan_id`；**當期期別不動**（價格快照已寫死），下一期起用新方案與新價 | 目標方案不存在／已歸檔 → `SYS-4002` `SysNotFound`（不存在語意，不另立碼）；與現行方案相同 → no-op（不寫稽核） |
+| `CancelSubscription` | `status → cancelled`（`allowedTransitions` 檢查）＋發 `subscription.cancelled`；期末後由 `ExpireCancelled` 轉 `suspended` | 已 `cancelled` → no-op；`at_period_end=false` → `PLAT-3001` `PlatformSubscriptionInactive`（v1 不支援立即終止）；狀態機拒絕 → 同碼 |
 | `ListReceivables` | 列出所有 `open` 期別（含已逾期者）＋公司名；供 console 匯出 CSV | 無（唯讀） |
 
 - [ ] **Step 1: proto 與生成**
@@ -3827,14 +3839,17 @@ git commit -m "feat(frontend): 租戶後台唯讀權益卡片（用量提示，�
       - run: pnpm -C platform-console build
 ```
 
-- [ ] **Step 2: 慣例文件（`backend/AGENTS.md` §10 追加）**
+- [ ] **Step 2: 慣例文件（`backend/AGENTS.md` §11 追加）**
+
+（Plan B 的 Task 12 已把平台域寫成 §11；§10 是 Plan D 的「錯誤碼」。）
 
 ```markdown
 9. **金額一律 `int64` 分**：禁止 float 參與金額運算；DB 邊界用 `internal/platform/money`；金額路徑必附測試。
 10. **平台寫入單一交易**：期別／訂閱狀態／事件／稽核同一 commit；因 `platform` 與業務表同庫，跨域副作用（`companies.status`）可同交易完成，**不使用補償式設計**。
 11. **收款只有一個入口**：`billing.RecordPayment`。新增金流商＝新增 adapter 呼叫它，不得新增改變訂閱狀態的路徑。
 12. **排程單趟可重跑**：`cron.RunOnce(ctx, deps, now)`；`now` 由呼叫端給（`cmd/platform-cron --date`）。重跑不得產生重複期別或事件。
-13. **平台操作者與租戶身分不互通**（承 §10-8）：console 只走 `platform/v1`；租戶 SPA 不得掛平台路由或 `platform.*` 能力。
+13. **平台操作者與租戶身分不互通**（承 §11-8）：console 只走 `platform/v1`；租戶 SPA 不得掛平台路由或 `platform.*` 能力。
+14. **console 不手抄錯誤碼**：`platform-console/src/lib/errcode.ts` 由 `go generate ./internal/errcode` 產生（Plan D T6 的產生器在該目錄存在時即輸出，CI 的「Error codes up to date」已把此路徑納管）。顯示錯誤一律依 `ErrorInfo.code`（`docs/error-codes.md` 為碼表來源），不得硬編訊息字串。
 ```
 
 - [ ] **Step 3: 更新計畫索引與 `.env.example`**

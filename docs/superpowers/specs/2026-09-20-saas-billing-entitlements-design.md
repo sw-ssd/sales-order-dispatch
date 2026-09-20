@@ -50,7 +50,7 @@ flowchart LR
 ### 2.2 三種接觸面（其他一律禁止）
 
 1. **同 process Go 介面**：`entitlement.Service{ Allows(ctx, companyID, feature); CheckLimit(ctx, companyID, feature, delta) }` —— 服務層守衛用，零延遲
-2. **proto RPC**：`platform/v1` 供獨立內部工具（`platform-console/`，僅 `platform.operators`）；租戶端只能讀自己的權益投影（見 §4.5）。**租戶 SPA 不掛任何 `platform.*` 能力、也沒有平台路由**
+2. **proto RPC**：`platform/v1` 供獨立內部工具（`platform-console/`，僅 `platform.operators`）；租戶端只能讀自己的權益投影（見 §4.5）。**租戶 SPA 不掛任何 `platform.*` 能力、也沒有平台路由**。跨這三種接觸面的**錯誤一律經錯誤碼錶**（`docs/error-codes.md`；唯一真相來源是 `backend/internal/errcode`）：對外錯誤帶 `common.v1.ErrorInfo{code, message, details, trace_id}`，碼的區段與 connect 碼的對應是硬規則（Plan D／P0-5 已落地，見 §4.3）
 3. **事件 outbox**：`platform.events`；同 process consumer 執行跨域副作用。**平台域不直接寫產品域資料**（凍結公司是事件驅動，見 §5.3）
 
 ### 2.3 RLS 前置（與平台域同批做，因為它決定查詢邊界）
@@ -146,13 +146,27 @@ type Counter interface {
 }
 ```
 
-### 4.3 錯誤語意
+### 4.3 錯誤語意與失敗碼分工
 
-| 情況 | 回應 |
+碼的唯一真相來源是 `backend/internal/errcode`（`docs/error-codes.md` 是它的產生檔）；區段與 connect 碼的對應由 `MustRegister` 於啟動時硬驗證。
+
+| 情況 | 回應（對外碼 → connect 碼） |
 |---|---|
-| 額度不足 / 訂閱 `suspended` / `cancelled` | **`FailedPrecondition`**（合約狀態問題，非 `PermissionDenied`） |
+| 額度不足（`CheckLimit` 已達上限） | `PLAT-5001` `PlatformLimitExceeded` → `failed_precondition`（details：`feature`／`used`／`limit`） |
+| 方案／override 未含該功能（`Allows` 為 false） | `PLAT-5002` `PlatformFeatureNotInPlan` → `failed_precondition`（details：`feature`） |
+| 訂閱狀態不允許此操作（`suspended`／`cancelled`，非權限問題） | `PLAT-3001` `PlatformSubscriptionInactive` → `failed_precondition` |
+| 收款衝突（金額與期別快照不符、期別已付款的衝突分支） | `PLAT-3002` `PlatformPaymentConflict` → `failed_precondition`（details：`reason`） |
 | `trialing` | 允許使用；投影帶 `trial_ends_at` 供 UI 提醒 |
 | 平台層身分（`super` / `developer`，`data_scope=all`） | **略過 entitlement 判斷**（平台方不受租戶合約限制）；寫死在守衛入口並有測試 |
+| 授權**檢查**失敗（角色／範圍不足） | `SYS-4001` `SysPermissionDenied` → `permission_denied`（前端導向「請管理員開權」） |
+| 跨租戶／不存在（含 RLS 過濾，防 oracle 探測） | `SYS-4002` `SysNotFound` → `not_found` |
+
+**配額與權限必須可區分**：前端要據碼導向升級方案或收款處理，那不是「缺權限」；因此額度問題**不得**用 `PermissionDenied` 表示（`PLAT-*` 的 details 供前端顯示用量）。`PLAT-*` 四碼已註冊、落地點見 `docs/superpowers/plans/2026-09-20-error-codes-plan.md` 的 **Task 5b**（`errcode` 已可用）。
+
+**已知不一致（未解，歸屬 auth／spec 擁有者，Plan D 不單方面改）**：
+
+1. **公司停用的對外碼兩個路徑不同**：middleware 閘門（`internal/server/server.go` 的 `authzMiddleware`）回**裸 `unauthenticated`／HTTP 401**（`internal/server/server_test.go` 明文釘住 401，且該處註解說明「不刪 session、公司恢復後可續用」的設計），登入路徑則回 `AUTH-4002` `AuthCompanyInactive`／`permission_denied`／HTTP 403。選項：(a) 改閘門＋測試（動既有對外 HTTP 狀態與前端 401 處理）；(b) 另立一個 Unauthenticated 語意的公司停用碼（會把這個不一致固化成兩個碼）。**需 auth／spec 擁有者裁定**，不宜由文件對齊單方面決定。
+2. **`httpStatusForCode` 缺 `failed_precondition`**（`internal/server/server.go`）：middleware 閘門的 HTTP 狀態只映射 unauthenticated→401／permission_denied→403／invalid_argument→400，其餘（含 `failed_precondition`）**一律 500**，而 connect 規格是 **412**。故「首登受限」閘門（`AUTH-3004`）目前實際回 HTTP 500（碼與訊息正確，僅 HTTP 狀態不符規格）。改它會動既有對外 HTTP 狀態，故與上一項一併待裁定。
 
 ### 4.4 快取
 
@@ -319,7 +333,7 @@ spec 內建表（§4.5）「RPC → 需要的 feature/限額 → 對應測試」
 
 ## 9. 範圍邊界
 
-**In**：① RLS 前置（角色/DSN、14 個 policy 補 `WITH CHECK`、三張漏網表補 policy、ENABLE + FORCE、請求層租戶交易 `dbtenant.Client` 遷移）② `platform` schema ＋ entitlement ＋ 服務層守衛 ③ **平台營運工具**（`platform/v1` RPC ＋ `platform-console/` 六頁 ＋ `platform.operators` ＋ `platform.audit_logs`）④ 租戶後台的唯讀權益卡片（`GetTenantEntitlements`）⑤ 05 訂單**只需**守衛介面接點
+**In**：① RLS 前置（角色/DSN、14 個 policy 補 `WITH CHECK`、三張漏網表補 policy、ENABLE + FORCE、請求層租戶交易 `dbtenant.Client` 遷移）② `platform` schema ＋ entitlement ＋ 服務層守衛 ③ **平台營運工具**（`platform/v1` RPC ＋ `platform-console/` 六頁 ＋ `platform.operators` ＋ `platform.audit_logs`）④ 租戶後台的唯讀權益卡片（`GetTenantEntitlements`）⑤ 05 訂單**只需**守衛介面接點 ⑥ **錯誤碼骨架（Plan D，P0-5；已完成）**：`common.v1.ErrorInfo`（code／message／details／trace_id）、`internal/errcode` registry（常數即註冊、啟動驗證區段規則）、`trace_id` 於回應邊界注入、`toConnectError` 集中映射、基線守門（只減不增）、碼表與三端常數產生＋CI 同步；本 spec 的 §4.3 失敗碼分工即建立在此骨架上
 
 **Out（本 spec 不含）**：05 訂單本體（依原 05 計畫）、08 派車、09 列印、07 通知、04 殘項（3.5/3.6/3.8）、電子發票實作、金流 adapter 實作、自助註冊與試用申請流程（v1 由營運開通）、k8s 部署與備份（D19）、`app/` 任何改動（客戶子帳號自助管理屬 D28／app 範圍，不在本 spec）
 

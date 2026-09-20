@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 建立跨三端穩定的錯誤碼契約：單一 registry（常數即註冊、啟動即驗證）、結構化回應（`code`／`details`／`trace_id`）、集中映射（ent → 碼）、守門測試（既有 282 處「只減不增」的基線）、自動產生三端常數與客服可查的碼表。
+**Goal:** 建立跨三端穩定的錯誤碼契約：單一 registry（常數即註冊、啟動即驗證）、結構化回應（`code`／`details`／`trace_id`）、集中映射（ent → 碼）、守門測試（既有 **233 處**「只減不增」的基線）、自動產生三端常數與客服可查的碼表。
 
-**Architecture:** `internal/errcode` 為唯一真相來源（Go 常數 + `register()` 於 init 驗證格式／唯一性／區段與 connect code 的對應規則，違反即 panic）。回應以 connect error detail 帶 `common.v1.ErrorInfo`（不引入 googleapis 依賴）。`trace_id` 由 `internal/obs/requestid` 的 interceptor 產生並貫穿 ctx。既有 282 處 `connect.NewError(` 以**基線檔 + 掃描測試**限制「只減不增」，不要求一次改完。
+**Architecture:** `internal/errcode` 為唯一真相來源（Go 常數 + `register()` 於 init 驗證格式／唯一性／區段與 connect code 的對應規則，違反即 panic）。回應以 connect error detail 帶 `common.v1.ErrorInfo`（不引入 googleapis 依賴）。`trace_id` 由 `internal/obs/requestid` 的 interceptor 在回應邊界補進 `ErrorInfo`（`Error`／`Wrap` 不收 ctx）。既有 **233 處** `connect.NewError(`（**98 行基線**，鍵為 `path:歸屬名:筆數`）以**基線檔 + 掃描測試**限制「只減不增」，不要求一次改完。
 
 **Tech Stack:** Go 1.25、connect-go、google/uuid、protobuf（自有 `common.v1.ErrorInfo`）、Vitest/Dart 常數產生
 
@@ -31,7 +31,7 @@
 - **訊息與參數分離**：後端回 `code` + `message`（繁中樣板渲染後，給 log／fallback）+ `details`（結構化參數，供前端與客服）；**缺參數不得讓錯誤處理爆掉**（回樣板原文 + log warn）
 - **5xx 一律 `SYS-9000`**：內部細節（SQLSTATE、constraint 名、stack）只進 log，永不進 message；`trace_id` 同時回給客戶端
 - **跨租戶與不存在一律 `SYS-4002`（NotFound）**：不洩漏資源是否存在（防 oracle 探測）。授權**檢查**失敗（角色/範圍不足）才是 `SYS-4001`（PermissionDenied）
-- **守門是基線制**：`connect.NewError(` 的既有 282 處列入 `errcode_baseline.txt`；**新增未帶註冊碼者即測試紅**，且基線只能縮小（測試同時斷言「基線不得殘留已消失的行」）
+- **守門是基線制**：`connect.NewError(` 的既有 **233 處**（98 行基線）列入 `errcode_baseline.txt`；**新增未帶註冊碼者即測試紅**，且基線只能縮小（測試同時斷言「基線不得殘留已消失的呼叫點」）
 - 產生檔（碼表與三端常數）**必須與 registry 同步**：CI 跑 generate 後 `git diff --exit-code`
 - 註解與 commit message 一律繁體中文
 
@@ -1397,7 +1397,7 @@ git commit -m "docs: 錯誤碼慣例（含跨租戶 NotFound）、spec 與 Plan 
 | `trace_id` 貫穿 ctx／log／回應 | Task 3 |
 | 集中映射（ent → 碼、5xx → `SYS-9000`） | Task 4 |
 | 首批碼覆蓋 auth／權限／配額／樣板域 | Task 5 |
-| 282 處既有錯誤「只減不增」基線守門 | Task 6 |
+| 233 呼叫點（98 行基線）既有錯誤「只減不增」基線守門 | Task 6 |
 | 碼表與三端常數自動產生、CI 同步 | Task 6 |
 | 跨租戶一律 `NotFound`（不洩漏存在性） | Task 2（`SYS-4002`）、Task 5、Task 7 |
 | 配額錯誤可與權限錯誤區分（前端導向不同） | Task 5、Task 7 |
@@ -1407,8 +1407,8 @@ git commit -m "docs: 錯誤碼慣例（含跨租戶 NotFound）、spec 與 Plan 
 | # | 風險 | 對策 |
 |---|---|---|
 | E1 | 語意（碼）與傳輸碼（connect code）漂移 | 區段規則於 `register()` 硬驗證；測試斷言每個碼的 connect 碼符合區段 |
-| E2 | 282 處基線腐化成「永久豁免清單」 | 守門測試**同時**斷言「基線不得含已消失的呼叫點」→ 基線只能縮小 |
-| E3 | 守門以原始碼掃描實作（非行為斷言） | 是不得已的取捨（型別安全需改 282 處）；以「用函式名而非行號」降低偽陽性，並在 AGENTS.md 明寫 |
+| E2 | 233 呼叫點的基線腐化成「永久豁免清單」 | 守門測試**同時**斷言「基線不得含已消失的呼叫點」→ 基線只能縮小 |
+| E3 | 守門以原始碼掃描實作（非行為斷言） | 是不得已的取捨（型別安全需改 233 處）；以「用函式名＋筆數而非行號」降低偽陽性，並在 AGENTS.md 明寫 |
 | E4 | `trace_id` 讓 log 量增加 | 每請求一行；必要時改為 `log/slog` 結構化欄位並調整 level |
 | E5 | 錯誤訊息洩漏內部細節 | 5xx 一律 `SYS-9000`；`Wrap` 保留 cause 但訊息不含 cause 內容（測試斷言） |
 | E6 | 跨租戶改 `NotFound` 後，前端把「無權限」誤判為「不存在」 | `SYS-4002` 的訊息同時含兩種可能（「資源不存在或無權存取」）；需要區分時由服務層主動回 `SYS-4001`（授權檢查失敗） |
