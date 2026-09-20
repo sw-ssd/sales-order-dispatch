@@ -2487,6 +2487,7 @@ git commit -m "feat(backend): 核心域啟用 RLS，未登入路徑改系統範�
 9. **收斂掃描是路徑級且窮盡**（不限 `internal/services`：`internal/server`／`handlers`／`auth`／`authz`／`audit` 都要查）。
 10. **已知待收斂項**：`internal/auth` 因 import cycle 自帶第二份 `systemScopeTx`（與 `dbtenant.SystemScopeTx` 等價）；後續應把 RLS 原語下沉到 `auth` 後改為委派，避免兩份實作漂移。
 11. **外部系統的副作用必須在 DB commit 之後執行**（`dbtenant.AfterCommit` 的 post-commit 掛鉤）：在交易內同步外部狀態（OpenFGA tuple、未來的 FCM 推播／派車串流）會在交易回滾時留下不一致，且**授權類同步是 fail-open 方向**（多授權）；掛鉤在 rollback 時丟棄不執行，並避免交易持列鎖跨越外部 I/O。適用範圍不限 OpenFGA。
+12. **`SystemScopeTx` 必須搭配 `dbtenant.NewClient` 建立的 client**（T10 實測）：`SET LOCAL` 是由 driver 裝飾器在 `Tx(ctx)` 內套用，餵裸 client（`entsql.OpenDB`／`ent.NewClient` 直接建）時**沒有任何 scope 被設定**，寫入會以 42501 被 WITH CHECK 擋下——也就是「包了 `SystemScopeTx`」不等於「有系統範圍」。同理，`dbtenant.Client(ctx, fallback)` 的 fallback 也必須是裝飾過的 client。
 
 **Interfaces:**
 - Consumes: 前九個任務的全部產物
