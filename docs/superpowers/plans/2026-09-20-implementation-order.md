@@ -74,7 +74,7 @@ flowchart LR
 | P1-2 | **Plan B T7–T12**（platform/v1、operator 認證、唯讀 RPC、投影、seeds） | 與 P1-1 同計畫；seeds 必須含 G5 的系統 actor |
 | P1-3 | **Plan C T1–T7**（狀態入口、money、帳務 store、`RecordPayment`、生命週期、consumer、cron） | 依賴 P1-1／P1-2 的 store 與 seeds |
 | P1-4 | **Plan C 的 G6／G7 三支 RPC ＋ cancelled 到期排程** | 收費能力的一部分（沒有「取消」就無法處理解約） |
-| P1-5 | **排程執行環境**：`docker-compose.dev.yml` 加 cron 容器（每日跑一次 `cmd/platform-cron`；k8s CronJob 待 D19 接手） | **沒有部署就沒有排程**——P1 的「逾期自動凍結」若只靠人工 `task platform:cron`，等於不會發生 |
+| P1-5 | **排程執行環境**：`docker-compose.dev.yml` 加 cron 容器（每日跑一次 `cmd/platform-cron`；k8s CronJob 待 D19 接手）。**觸發器兩條路徑**：先做單趟 binary（本項）＋**心跳落 DB**；HTTP 端點（token 認證）為後加項——七條不變式見 Plan C Task 7 | **沒有部署就沒有排程**——P1 的「逾期自動凍結」若只靠人工 `task platform:cron`，等於不會發生 |
 | P1-6 | **最小告警**：cron 每日摘要落固定 log ＋「連續 N 天無摘要即告警」（v1 用郵件或 webhook，或最小可用的 log 檢查） | 收費上線後「排程沒跑」「凍結沒生效」是**無聲故障**，直接漏錢；Prometheus 在 P4，但這條不能等 |
 | P1-7 | **帳務備份演練**：`platform` schema 的還原演練**至少一次**（證明救得回 `subscription_periods` 與 `platform.audit_logs`） | D19 的 RTO 4h／RPO 1h 是整體指標、未分辨帳務；這兩個表遺失＝**無法證明收過錢** |
 

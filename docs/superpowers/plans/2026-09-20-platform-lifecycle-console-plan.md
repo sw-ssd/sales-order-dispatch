@@ -2437,6 +2437,21 @@ git commit -m "feat(backend): outbox consumer 以事件驅動租戶凍結/復原
 
 ### Task 7: `cmd/platform-cron`（單趟排程）
 
+**觸發器設計（controller 裁定，2026-09-20）：支援兩條路徑，但只有一份工作單元**
+
+`RunOnce` 仍是唯一工作單元；觸發方式只是**薄適配器**。落地順序：**(a) 本任務先做 `RunGuarded` ＋ 心跳落 DB ＋ binary**；**(b) HTTP 端點是後加項**（約 40 行；環境只能走 HTTP 時再加）。因為 (a) 的不變式已就位，(b) 是**純新增**，不需回頭改任何東西。
+
+**七條不變式（兩條路徑都必須滿足）**：
+1. 都呼叫**同一個** `RunGuarded(ctx, deps, now)`（＝`RunOnce` ＋ 單飛鎖），不得各寫一點邏輯。
+2. 都走**系統範圍**（`dbtenant.NewClient` ＋ `SystemScopeTx`，scope=all）——它要改 `companies.status` 與寫租戶稽核（RLS 已 `ENABLE`+`FORCE`）；**裸 client 包 `SystemScopeTx` 一樣 42501**（Plan A T10 實測）。
+3. `now` 由呼叫端給；`RunOnce` 內**不得** `time.Now()`。
+4. **共用同一顆單飛鎖**（`pg_try_advisory_lock(常數 key)`，不新增表）：鎖拿不到 → 記 log 回「跳過」（HTTP 路徑回 409），**不是錯誤**。
+5. **同一稽核主體**（`platform.settings` 的系統 actor，G5）——否則同一件事在稽核裡會有兩種 actor。
+6. **同一份 `Summary` struct**（log 行與 JSON 兩種呈現），不得各自定義。
+7. **心跳落 DB**（`platform.audit_logs` 一筆 `cron_run`，或 `platform.settings` 的 `cron_last_summary`）：讓「有沒有跑」是**資料**問題、與觸發路徑無關 → P1-6 只需盯一個地方。
+
+**HTTP 端點（後加項）的硬要求**：token 由環境變數提供（不入版控）＋ **constant-time 比對**；限制來源網段；請求逾時 ≥ 一趟正常執行時間；那筆心跳要記**觸發者**（token 身分／IP）——該端點能停掉租戶，必須留痕。**驗收**：一條測試用同一組 fake deps 分別走 binary 與端點 handler，斷言兩者 `Summary` 完全相同（這是「不得漂移」的守門）。
+
 **Files:**
 - Create: `internal/platform/cron/run.go`、`internal/platform/cron/run_test.go`
 - Create: `cmd/platform-cron/main.go`
