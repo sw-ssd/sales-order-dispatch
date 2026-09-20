@@ -16,9 +16,16 @@ type Platform struct {
 
 	// --- seed 與排程的預設值（上線前請改為真實值；**執行期以 platform.settings 為準**）---
 	// 這些只是「首次建立時寫入 settings」的來源；之後由營運工具調整，重跑 seed 不覆寫。
-	SeedOperatorEmail    string `envconfig:"PLATFORM_SEED_OPERATOR_EMAIL" default:"ssd@sowinsoft.com"`
-	SeedOperatorName     string `envconfig:"PLATFORM_SEED_OPERATOR_NAME" default:"ssd"`
-	SeedSystemActorEmail string `envconfig:"PLATFORM_SEED_SYSTEM_ACTOR_EMAIL" default:"system@sowinsoft.com"`
+	//
+	// SeedOperatorEmail **無預設值**：它是 platform.operators 白名單（＝能登入平台工具的人），
+	// 未設時 seed 跳過該步並印提示 —— 版控裡不得有任何真實 email 被種成可登入帳號。
+	// SeedOperatorName 同理（與 email 一起設）。
+	SeedOperatorEmail string `envconfig:"PLATFORM_SEED_OPERATOR_EMAIL"`
+	SeedOperatorName  string `envconfig:"PLATFORM_SEED_OPERATOR_NAME"`
+	// SeedSystemActorEmail 為排程／consumer 的稽核 actor（password_hash='!'，不可登入）。
+	// 預設用 RFC 2606 保留的 `.invalid`：它會落成一個 users 列（tenant 登入以 email 對應帳號），
+	// 用不可能存在的信箱可確保沒有任何 Google 帳號能對上它。
+	SeedSystemActorEmail string `envconfig:"PLATFORM_SEED_SYSTEM_ACTOR_EMAIL" default:"system@platform.invalid"`
 	DefaultTrialDays     int    `envconfig:"PLATFORM_DEFAULT_TRIAL_DAYS" default:"14"`
 	DefaultGraceDays     int    `envconfig:"PLATFORM_DEFAULT_GRACE_DAYS" default:"7"`
 	DefaultLeadDays      int    `envconfig:"PLATFORM_DEFAULT_LEAD_DAYS" default:"14"`

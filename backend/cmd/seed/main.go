@@ -43,5 +43,17 @@ func main() {
 		log.Fatalf("seed: %v", err)
 	}
 	log.Println("seed: 7 內建角色與 role_permissions 已確保（冪等）")
+
+	// 平台域基礎資料(D34／G5)。連線分兩段,SeedPlatform 內註解有完整說明:
+	//   - platform.*(features／方案／價目／權益／operator／settings)**不套 RLS**,走上面這條
+	//     owner 連線 sqlDB;
+	//   - 平台自營公司與系統使用者是業務表(companies／users,00028 FORCE RLS)→ SeedPlatform
+	//     自己開系統範圍交易,故必須把 dbtenant.NewClient 建立的 client 傳進去
+	//     (裸 client 包 SystemScopeTx 一樣 42501,已實測)。
+	// 排在 roles／developer 之後:新庫的 developer 帳號錨點(firstCompanyID)才不會挑到平台自營公司。
+	if err := SeedPlatform(ctx, sqlDB, client, cfg.Platform); err != nil {
+		log.Fatalf("seed 平台域: %v", err)
+	}
+	log.Println("seed: 平台域已確保（8 features／3 方案與價目／首位 operator 依 env／平台自營公司與系統使用者，冪等）")
 	log.Println("seed: 完成")
 }
