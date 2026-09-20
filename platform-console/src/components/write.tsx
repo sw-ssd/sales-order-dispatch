@@ -50,7 +50,8 @@ export function WriteForm(props: {
     setFieldError(invalid ?? "");
     if (missingReason || invalid) return;
 
-    props.onSubmit(reason());
+    // reason 一律 trim 後才送出：後端只以 TrimSpace 判必填，但**原樣入庫**（稽核文字不該帶空白）。
+    props.onSubmit(reason().trim());
   };
 
   return (

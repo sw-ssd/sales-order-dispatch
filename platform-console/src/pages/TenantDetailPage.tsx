@@ -33,13 +33,14 @@ function describeValue(enabled: boolean, limitSet: boolean, limitValue: bigint):
   return limitSet ? `啟用（上限 ${limitValue}）` : "啟用（不限）";
 }
 
-/** 例外的新增（SetTenantOverride）：兩個維度都用 `*_set` 表達，未勾＝不覆寫該維度。 */
-function SetOverrideDialog(props: {
-  companyId: string;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onDone: () => void;
-}) {
+/**
+ * 例外的新增（SetTenantOverride）：兩個維度都用 `*_set` 表達，未勾＝不覆寫該維度。
+ *
+ * 欄位狀態放在**對話框內容的子元件**裡：`DialogContent` 關閉時整棵子樹卸載（`lazyMount` ＋
+ * `unmountOnExit`），欄位自然清空。signal 若放在外層包裝元件就會殘留——那個元件不隨內容卸載，
+ * 於是「對甲租戶填到一半按取消、再對乙租戶開」會看到甲的承諾。
+ */
+function SetOverrideForm(props: { companyId: string; onClose: () => void; onDone: () => void }) {
   const [featureCode, setFeatureCode] = createSignal("");
   const [enabledSet, setEnabledSet] = createSignal(false);
   const [enabled, setEnabled] = createSignal(true);
@@ -60,7 +61,7 @@ function SetOverrideDialog(props: {
       reason: string;
     }) => platform.setTenantOverride({ companyId: props.companyId, ...input }),
     onSuccess: () => {
-      props.onOpenChange(false);
+      props.onClose();
       props.onDone();
     },
   }));
@@ -78,11 +79,94 @@ function SetOverrideDialog(props: {
       return "上限不得為負：請填不小於 0 的整數（負的上限在判定上等於任何用量都超額；不限額請不要勾「指定上限」）。";
     }
     if (expiresAt().trim() !== "" && Number.isNaN(new Date(expiresAt().trim()).getTime())) {
-      return "到期日格式須為 RFC3339（例：2027-01-01T00:00:00Z），或留空表示不過期。";
+      return "到期日請填 RFC3339（例：2027-01-01T00:00:00Z），或留空表示不過期（只填日期後端會擋）。";
     }
     return undefined;
   };
 
+  return (
+    <WriteForm
+      submitLabel="建立例外"
+      validate={validate}
+      pending={mutation.isPending}
+      error={mutation.isError ? describeError(mutation.error) : undefined}
+      onSubmit={(reason) =>
+        mutation.mutate({
+          featureCode: featureCode().trim(),
+          enabledSet: enabledSet(),
+          // 沒指定啟用維度時送 proto 的零值：不要讓線路上出現一個「沒被指定」的真值。
+          enabled: enabledSet() ? enabled() : false,
+          limitSet: limitSet(),
+          limitValue: limitSet() ? BigInt(limitValue().trim()) : 0n,
+          owner: owner().trim(),
+          expiresAt: expiresAt().trim(),
+          reason,
+        })
+      }
+    >
+      <Field>
+        <FieldLabel for="override-feature">功能代碼 *</FieldLabel>
+        <Input
+          id="override-feature"
+          value={featureCode()}
+          placeholder="limit.seats"
+          onInput={(e) => setFeatureCode(e.currentTarget.value)}
+        />
+      </Field>
+
+      <div class="flex flex-wrap gap-4">
+        <LabelledCheckbox label="指定啟用" checked={enabledSet()} onCheckedChange={setEnabledSet} />
+        <Show when={enabledSet()}>
+          <LabelledCheckbox label="啟用" checked={enabled()} onCheckedChange={setEnabled} />
+        </Show>
+      </div>
+
+      <LabelledCheckbox label="指定上限" checked={limitSet()} onCheckedChange={setLimitSet} />
+
+      <Show when={limitSet()}>
+        <Field>
+          <FieldLabel for="override-limit">上限值 *</FieldLabel>
+          <Input
+            id="override-limit"
+            inputmode="numeric"
+            value={limitValue()}
+            placeholder="30"
+            onInput={(e) => setLimitValue(e.currentTarget.value)}
+          />
+          <FieldDescription>0 是有效上限（等於不能用）；不限額請不要勾「指定上限」。</FieldDescription>
+        </Field>
+      </Show>
+
+      <Field>
+        <FieldLabel for="override-owner">負責人（平台側承諾者）*</FieldLabel>
+        <Input
+          id="override-owner"
+          value={owner()}
+          placeholder="ops@example.com"
+          onInput={(e) => setOwner(e.currentTarget.value)}
+        />
+      </Field>
+
+      <Field>
+        <FieldLabel for="override-expires">到期日（選填）</FieldLabel>
+        <Input
+          id="override-expires"
+          value={expiresAt()}
+          placeholder="2027-01-01T00:00:00Z"
+          onInput={(e) => setExpiresAt(e.currentTarget.value)}
+        />
+        <FieldDescription>留空＝不過期；已過期的例外不列入生效值。</FieldDescription>
+      </Field>
+    </WriteForm>
+  );
+}
+
+function SetOverrideDialog(props: {
+  companyId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onDone: () => void;
+}) {
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange} lazyMount unmountOnExit>
       <DialogContent>
@@ -94,83 +178,11 @@ function SetOverrideDialog(props: {
           </DialogDescription>
         </DialogHeader>
 
-        <WriteForm
-          submitLabel="建立例外"
-          validate={validate}
-          pending={mutation.isPending}
-          error={mutation.isError ? describeError(mutation.error) : undefined}
-          onSubmit={(reason) =>
-            mutation.mutate({
-              featureCode: featureCode().trim(),
-              enabledSet: enabledSet(),
-              // 沒指定啟用維度時送 proto 的零值：不要讓線路上出現一個「沒被指定」的真值。
-              enabled: enabledSet() ? enabled() : false,
-              limitSet: limitSet(),
-              limitValue: limitSet() ? BigInt(limitValue().trim()) : 0n,
-              owner: owner().trim(),
-              expiresAt: expiresAt().trim(),
-              reason,
-            })
-          }
-        >
-          <Field>
-            <FieldLabel for="override-feature">功能代碼 *</FieldLabel>
-            <Input
-              id="override-feature"
-              value={featureCode()}
-              placeholder="limit.seats"
-              onInput={(e) => setFeatureCode(e.currentTarget.value)}
-            />
-          </Field>
-
-          <div class="flex flex-wrap gap-4">
-            <LabelledCheckbox
-              label="指定啟用"
-              checked={enabledSet()}
-              onCheckedChange={setEnabledSet}
-            />
-            <Show when={enabledSet()}>
-              <LabelledCheckbox label="啟用" checked={enabled()} onCheckedChange={setEnabled} />
-            </Show>
-          </div>
-
-          <LabelledCheckbox label="指定上限" checked={limitSet()} onCheckedChange={setLimitSet} />
-
-          <Show when={limitSet()}>
-            <Field>
-              <FieldLabel for="override-limit">上限值 *</FieldLabel>
-              <Input
-                id="override-limit"
-                inputmode="numeric"
-                value={limitValue()}
-                placeholder="30"
-                onInput={(e) => setLimitValue(e.currentTarget.value)}
-              />
-              <FieldDescription>0 是有效上限（等於不能用）；不限額請不要勾「指定上限」。</FieldDescription>
-            </Field>
-          </Show>
-
-          <Field>
-            <FieldLabel for="override-owner">負責人（平台側承諾者）*</FieldLabel>
-            <Input
-              id="override-owner"
-              value={owner()}
-              placeholder="ops@example.com"
-              onInput={(e) => setOwner(e.currentTarget.value)}
-            />
-          </Field>
-
-          <Field>
-            <FieldLabel for="override-expires">到期日（選填）</FieldLabel>
-            <Input
-              id="override-expires"
-              value={expiresAt()}
-              placeholder="2027-01-01T00:00:00Z"
-              onInput={(e) => setExpiresAt(e.currentTarget.value)}
-            />
-            <FieldDescription>留空＝不過期；已過期的例外不列入生效值。</FieldDescription>
-          </Field>
-        </WriteForm>
+        <SetOverrideForm
+          companyId={props.companyId}
+          onClose={() => props.onOpenChange(false)}
+          onDone={props.onDone}
+        />
       </DialogContent>
     </Dialog>
   );
@@ -349,7 +361,15 @@ export default function TenantDetailPage() {
                   });
 
                   return (
-                    <Table aria-label="權益現況（投影）">
+                    <div class="space-y-3">
+                      <Show when={rows.some((row) => row.ambiguous)}>
+                        <p class="text-sm font-medium text-foreground">
+                          同一功能有多筆未逾期的例外：例外的新舊順序（created_at）不在 RPC 的回應裡，
+                          前端重建不出後端的判定順序 → 生效值僅供參考，最終以後端判定為準。
+                          要確認實際結果，請看該租戶端顯示的權益或請平台端查判定。
+                        </p>
+                      </Show>
+                      <Table aria-label="權益現況（投影）">
                       <TableHeader>
                         <TableRow>
                           <TableHead scope="col">功能</TableHead>
@@ -373,7 +393,7 @@ export default function TenantDetailPage() {
                                   : "未設定"}
                               </TableCell>
                               <TableCell>
-                                {row.override
+                                {(row.override
                                   ? [
                                       row.override.enabledSet
                                         ? row.override.enabled
@@ -386,18 +406,22 @@ export default function TenantDetailPage() {
                                     ]
                                       .filter(Boolean)
                                       .join("・")
-                                  : "—"}
+                                  : "—") +
+                                  (row.ambiguous ? `（多筆例外，共 ${row.overrideCount} 筆）` : "")}
                               </TableCell>
                               <TableCell>
-                                {row.planConfigured || row.override
-                                  ? describeValue(row.enabled, row.limitSet, row.limitValue)
-                                  : "未開通"}
+                                {row.ambiguous
+                                  ? "多筆例外：以後端判定為準"
+                                  : row.planConfigured || row.override
+                                    ? describeValue(row.enabled, row.limitSet, row.limitValue)
+                                    : "未開通"}
                               </TableCell>
                             </TableRow>
                           )}
                         </For>
-                      </TableBody>
-                    </Table>
+                        </TableBody>
+                        </Table>
+                    </div>
                   );
                 })}
               </Show>

@@ -106,12 +106,15 @@ describe("PlansPage", () => {
     expect(screen.getByText(/尚未設定價目/)).toBeTruthy();
   });
 
-  it("明說生效語意：調價下一期生效，既有期別已快照不回溯", async () => {
+  it("明說生效語意：金額下一期生效、配額與開關立即生效", async () => {
     renderPage();
     await ready();
 
+    // 金額／期別：新增一列價格史，已開立的期別金額有快照 → 不回溯。
     expect(screen.getByText(/下一期生效/)).toBeTruthy();
     expect(screen.getByText(/不會被回溯改帳/)).toBeTruthy();
+    // 權益（配額與功能開關）：後端 SetPlanEntitlement 會 invalidateAll → 立即改變判定。
+    expect(screen.getByText(/立即生效/)).toBeTruthy();
   });
 
   it("載入中顯示載入狀態（不是白屏）", () => {
@@ -143,6 +146,24 @@ describe("PlansPage", () => {
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("SYS-4001");
     expect(alert.textContent).toMatch(/operator 帳號/);
+  });
+
+  it("調價對話框關閉後重開：欄位不殘留（A 方案的金額不得帶到 B 方案）", async () => {
+    renderPage();
+    await ready();
+
+    fireEvent.click(screen.getByRole("button", { name: "調價：標準" }));
+    fireEvent.input(await screen.findByLabelText(/基本價/), { target: { value: "1500.00" } });
+    fireEvent.input(screen.getByLabelText(/單席價/), { target: { value: "200.00" } });
+    fireEvent.input(screen.getByLabelText(/原因/), { target: { value: "年度調價" } });
+    fireEvent.click(screen.getByRole("button", { name: "取消" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "儲存價目" })).toBeNull());
+
+    fireEvent.click(screen.getByRole("button", { name: "調價：免費" }));
+    const base = await screen.findByLabelText(/基本價/);
+    expect((base as HTMLInputElement).value).toBe("");
+    expect((screen.getByLabelText(/單席價/) as HTMLInputElement).value).toBe("");
+    expect((screen.getByLabelText(/原因/) as HTMLInputElement).value).toBe("");
   });
 
   it("調價：reason 空白與金額格式錯誤都先擋；成功後價目重查", async () => {

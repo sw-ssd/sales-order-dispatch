@@ -6,6 +6,13 @@
  * 本檔只把「設定值」攤開給 operator 看——尤其**已逾期的例外不生效**這件事，
  * 不投影出來的話，營運會看到一筆躺在清單裡的承諾而誤以為它還在生效。
  *
+ * **同功能多筆例外時，這裡算不出後端的答案**（`ambiguous`）：
+ * 後端判定用的例外順序是 `Store.Overrides` 的 `ORDER BY created_at DESC` 逐筆覆寫（最後一筆＝最舊者勝），
+ * 而 console 拿到的清單是 `Admin.GetTenant` 的 `ORDER BY feature_code`，且 proto 的 `TenantOverride`
+ * **沒有 created_at**（不為此加欄位）。前端因此不可能重建判定順序 —— 這種情況一律標示
+ * `ambiguous`，由畫面說「最終以後端判定為準」，**不靜默挑一筆當答案**。
+ * 情境真實：撤銷是單向的，同一功能的承諾會有第二筆（見 TenantDetailPage 的文案）。
+ *
  * 與後端一致的兩條語意（少一條就會顯示錯的值）：
  * 1. `limit_set=false` 對**例外**是「不覆寫限額」，對**方案權益**是「不限額」——proto 的註解如此定義。
  * 2. 未設定的功能一律視為未開通（fail-closed），不是放行。
@@ -50,9 +57,13 @@ export type ProjectedEntitlement = {
   planEnabled: boolean;
   planLimitSet: boolean;
   planLimitValue: bigint;
-  /** 生效中的例外（未逾期）；已逾期的例外不列入。 */
+  /** 生效中的例外（未逾期）；已逾期的例外不列入。同功能多筆時是最後被套用的一筆，見 `ambiguous`。 */
   override?: TenantOverride;
-  /** 方案 ⊕ 例外後的設定值。 */
+  /** 未逾期的例外筆數（同一功能）。 */
+  overrideCount: number;
+  /** 同一功能有 >1 筆未逾期的例外＝前端重建不出後端的判定順序，畫面必須說出「以後端為準」。 */
+  ambiguous: boolean;
+  /** 方案 ⊕ 例外後的設定值（`ambiguous` 時只是一種可能，不是答案）。 */
   enabled: boolean;
   limitSet: boolean;
   limitValue: bigint;
@@ -71,8 +82,10 @@ export function isExpired(expiresAt: string | undefined, now: Date): boolean {
 }
 
 /**
- * 逐功能算出投影。同一功能有多筆未逾期的例外時**後一筆勝**（與後端逐筆覆寫的迴圈同序；
- * `GetTenant` 回傳的順序即後端的順序）。
+ * 逐功能算出投影。
+ *
+ * 同一功能有多筆未逾期的例外時，套用順序只是「清單順序」——**那不是後端判定的順序**（見檔頭），
+ * 故標示 `ambiguous`；呼叫端必須把這件事顯示出來，不能拿算出來的值當答案。
  */
 export function projectTenantEntitlements(input: {
   features: Feature[];
@@ -90,6 +103,7 @@ export function projectTenantEntitlements(input: {
     let limitSet = plan?.limitSet ?? false;
     let limitValue = plan?.limitValue ?? 0n;
     let applied: TenantOverride | undefined;
+    let appliedCount = 0;
 
     for (const override of input.overrides) {
       if (override.featureCode !== feature.code) continue;
@@ -100,6 +114,7 @@ export function projectTenantEntitlements(input: {
         limitValue = override.limitValue;
       }
       applied = override;
+      appliedCount += 1;
     }
 
     return {
@@ -110,6 +125,8 @@ export function projectTenantEntitlements(input: {
       planLimitSet: plan?.limitSet ?? false,
       planLimitValue: plan?.limitValue ?? 0n,
       override: applied,
+      overrideCount: appliedCount,
+      ambiguous: appliedCount > 1,
       enabled,
       limitSet,
       limitValue,

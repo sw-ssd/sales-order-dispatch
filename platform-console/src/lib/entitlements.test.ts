@@ -121,7 +121,11 @@ describe("projectTenantEntitlements", () => {
     expect(seats?.limitValue).toBe(10n);
   });
 
-  it("同一功能多筆未逾期的例外：後一筆勝（與後端逐筆覆寫的順序一致）", () => {
+  it("同一功能多筆未逾期的例外：標示為不明確，不宣稱「生效值＝後端判定」", () => {
+    // 後端判定的例外順序是 `ORDER BY created_at DESC`（store.go）＋迴圈後者勝＝**最舊者勝**，
+    // 而 console 拿到的清單是 `ORDER BY feature_code`（admin.go）、proto 的 TenantOverride 沒有
+    // created_at（也不得為此加欄位）→ 前端**不可能**重建判定順序。因此這裡只標示「有多筆」，
+    // 由畫面說出「最終以後端判定為準」，不靜默挑一筆當答案。
     const rows = projectTenantEntitlements({
       features,
       entitlements: planEntitlements,
@@ -151,7 +155,11 @@ describe("projectTenantEntitlements", () => {
     });
 
     const seats = rows.find((r) => r.featureCode === "limit.seats");
-    expect(seats?.limitValue).toBe(40n);
-    expect(seats?.override?.reason).toBe("第二次承諾");
+    expect(seats?.ambiguous).toBe(true);
+    expect(seats?.overrideCount).toBe(2);
+    // 只有一筆（或零筆）時不得無故示警。
+    const printing = rows.find((r) => r.featureCode === "feature.printing");
+    expect(printing?.ambiguous).toBe(false);
+    expect(printing?.overrideCount).toBe(0);
   });
 });

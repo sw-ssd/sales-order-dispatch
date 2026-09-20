@@ -138,6 +138,42 @@ describe("TenantDetailPage", () => {
     expect(within(projection).getAllByRole("row")).toHaveLength(3);
   });
 
+  it("同一功能有兩筆未逾期的例外：標示多筆、不挑一筆當答案", async () => {
+    getTenant.mockResolvedValue({
+      tenant,
+      overrides: [
+        activeOverride,
+        { ...activeOverride, id: "13", limitValue: 45n, reason: "第二次承諾" },
+      ],
+    });
+    renderAt();
+    const projection = await ready();
+
+    // 前端拿不到 created_at，重建不出後端的判定順序 → 只能說「有多筆、以後端為準」：
+    // 生效欄不給答案、例外欄標出筆數，區塊上方再說明一次。
+    await waitFor(() =>
+      expect(within(projection).getAllByText(/多筆例外/)).toHaveLength(2),
+    );
+    expect(within(projection).getByText("多筆例外：以後端判定為準")).toBeTruthy();
+    expect(screen.getByText(/最終以後端判定為準/)).toBeTruthy();
+  });
+
+  it("新增例外關閉後重開：欄位不殘留（上一筆的承諾不得帶到下一筆）", async () => {
+    renderAt();
+    await ready();
+
+    fireEvent.click(screen.getByRole("button", { name: "新增例外" }));
+    fireEvent.input(await screen.findByLabelText(/功能代碼/), { target: { value: "limit.seats" } });
+    fireEvent.input(screen.getByLabelText(/負責人/), { target: { value: "ops@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: "取消" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "建立例外" })).toBeNull());
+
+    fireEvent.click(screen.getByRole("button", { name: "新增例外" }));
+    const featureCode = await screen.findByLabelText(/功能代碼/);
+    expect((featureCode as HTMLInputElement).value).toBe("");
+    expect((screen.getByLabelText(/負責人/) as HTMLInputElement).value).toBe("");
+  });
+
   it("沒有例外時顯示空狀態（不是空表格）", async () => {
     getTenant.mockResolvedValue({ tenant, overrides: [] });
     renderAt();
@@ -179,7 +215,8 @@ describe("TenantDetailPage", () => {
     await waitFor(() => expect(screen.getByText(/原因必填/)).toBeTruthy());
     expect(setTenantOverride).not.toHaveBeenCalled();
 
-    fireEvent.input(screen.getByLabelText(/原因/), { target: { value: "簽約承諾" } });
+    // 前後空白要 trim 後才送出：稽核文字不該帶空白（後端原樣入庫）。
+    fireEvent.input(screen.getByLabelText(/原因/), { target: { value: "  簽約承諾  " } });
     fireEvent.click(screen.getByRole("button", { name: "建立例外" }));
 
     await waitFor(() => expect(setTenantOverride).toHaveBeenCalledTimes(1));
@@ -229,7 +266,7 @@ describe("TenantDetailPage", () => {
     await waitFor(() => expect(screen.getByText(/原因必填/)).toBeTruthy());
     expect(revokeTenantOverride).not.toHaveBeenCalled();
 
-    fireEvent.input(screen.getByLabelText(/原因/), { target: { value: "承諾到期" } });
+    fireEvent.input(screen.getByLabelText(/原因/), { target: { value: " 承諾到期 " } });
     fireEvent.click(screen.getByRole("button", { name: "確認撤銷" }));
 
     await waitFor(() =>
