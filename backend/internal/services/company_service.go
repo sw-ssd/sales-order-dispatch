@@ -277,9 +277,11 @@ func (s *CompanyService) UpdateCompany(ctx context.Context, req *connect.Request
 	db := tx.Client()
 
 	build := db.Company.UpdateOneID(id)
+	// changed 只涵蓋 name/tax_id 的一般更新稽核:status 變更由 SetCompanyStatus 自己留痕,
+	// 這裡再算一次會讓一次請求寫出兩筆稽核(且兩份 before/after 語意互相重疊)。
 	changed := false
-	before := map[string]any{"name": exists.Name, "tax_id": exists.TaxID, "status": string(exists.Status)}
-	after := map[string]any{"name": exists.Name, "tax_id": exists.TaxID, "status": string(exists.Status)}
+	before := map[string]any{"name": exists.Name, "tax_id": exists.TaxID}
+	after := map[string]any{"name": exists.Name, "tax_id": exists.TaxID}
 	if msg.Name != nil {
 		if strings.TrimSpace(msg.GetName()) == "" {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("公司名稱不可為空"))
@@ -301,12 +303,15 @@ func (s *CompanyService) UpdateCompany(ctx context.Context, req *connect.Request
 		}
 		st := company.Status(*msg.Status)
 		if st != exists.Status {
-			build = build.SetStatus(st)
-			after["status"] = string(st)
-			changed = true
+			// 狀態變更走唯一入口(與平台域的凍結／復原同一份語意與稽核格式)。
+			if err := SetCompanyStatus(ctx, s.db, id, st, companyStatusReasonManual, authz.IdentityFrom(ctx)); err != nil {
+				return nil, err
+			}
 		}
 	}
 
+	// 狀態改變時 build 沒有欄位可設(空更新),ent 仍會回讀現列 —— 回應因此帶得到新狀態,
+	// 不必為 status 這條路再補一次查詢。
 	updated, err := build.Save(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
