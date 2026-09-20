@@ -17,6 +17,7 @@ package postgres_test
 import (
 	"database/sql"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -468,6 +469,75 @@ func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 	if again := currentPeriod(t, db, st, subID); again.ExternalRef != "REF-1" {
 		t.Fatalf("被拒絕的收款不得改動原交易號，got %q", again.ExternalRef)
 	}
+	// 重播（webhook 重送／T4 重試）是 **no-op**：同交易號、但沒重帶發票號與 provider、時間點也不同，
+	// 已入帳的憑據一個都不得被改掉 —— 發票號與 provider 是稅務與對帳憑據，被空字串清成 NULL
+	// 等於把帳抹掉（G8）。
+	later := paidAt.Add(time.Hour)
+	if err := st.WithTx(ctx, func(tx *sql.Tx) error {
+		return st.MarkPeriodPaidTx(ctx, tx, opened.ID, later, "", "", "REF-1", "")
+	}); err != nil {
+		t.Fatalf("同交易號重播應為 no-op，got %v", err)
+	}
+	if again := currentPeriod(t, db, st, subID); again.InvoiceNo != "INV-2026-001" ||
+		again.PaymentProvider != "manual" || again.ExternalRef != "REF-1" ||
+		again.PaidAt == nil || !again.PaidAt.Equal(paidAt) || again.Note != "短收 100 元" {
+		t.Fatalf("重播不得改動已入帳的憑據（發票號／provider／paid_at／交易號／note），got %+v", *again)
+	}
+	if n := countPaid(t, db, subID); n != 1 {
+		t.Fatalf("重播後仍應只有 1 筆已付款期別，got %d", n)
+	}
+	// 同一筆交易號不得入帳**兩期**（00029 的 periods_provider_ref_unique）：webhook 對錯期別時
+	// 必須失敗，而不是把同一筆錢記在兩期上。
+	//
+	// fixture 用自己的第二個訂閱（狀態 suspended，故不會出現在任何排程查詢的集合裡）：subID(42)
+	// 只能有那一期，否則下面的期別清單與「最新一期」斷言會被這裡的 fixture 汙染。
+	var otherSubID int64
+	if err := db.QueryRowContext(ctx, `
+		INSERT INTO platform.subscriptions (company_id, plan_id, status, seat_count)
+		VALUES (45, $1, 'suspended', 3) RETURNING id`, planID).Scan(&otherSubID); err != nil {
+		t.Fatalf("第二個訂閱: %v", err)
+	}
+	second := withTx(t, db, func(tx *sql.Tx) (*store.Period, error) {
+		return st.OpenPeriodTx(ctx, tx, store.OpenPeriodInput{
+			SubscriptionID: otherSubID, PeriodNo: 1,
+			PeriodStart: now, PeriodEnd: periodEnd,
+			PlanID: planID, UnitPriceCents: 150000, SeatPriceCents: 15000, SeatCount: 3,
+			AmountCents: 195000, Currency: "TWD",
+		})
+	})
+	if err := st.WithTx(ctx, func(tx *sql.Tx) error {
+		return st.MarkPeriodPaidTx(ctx, tx, second.ID, paidAt, "INV-2026-002", "manual", "REF-1", "")
+	}); err == nil {
+		t.Fatal("同一 provider＋交易號不得入帳兩期（唯一索引）")
+	}
+	if n := countPaid(t, db, subID); n != 1 {
+		t.Fatalf("被拒絕的跨期入帳不得改動任何一期的狀態，42 的已付款期數應仍為 1，got %d", n)
+	}
+	if n := countPaid(t, db, otherSubID); n != 0 {
+		t.Fatalf("被拒絕的跨期入帳不得把第二期記成已付款，got %d", n)
+	}
+	// 作廢（void）的期別不得入帳，且錯誤要說出真正的原因（不是「已付款」）。
+	if _, err := db.ExecContext(ctx,
+		`UPDATE platform.subscription_periods SET status = 'void' WHERE id = $1`, second.ID); err != nil {
+		t.Fatalf("作廢期別: %v", err)
+	}
+	err = st.WithTx(ctx, func(tx *sql.Tx) error {
+		return st.MarkPeriodPaidTx(ctx, tx, second.ID, paidAt, "INV-2026-002", "manual", "", "")
+	})
+	if err == nil {
+		t.Fatal("作廢期別不得入帳")
+	}
+	if !strings.Contains(err.Error(), "void") {
+		t.Fatalf("作廢期別的錯誤訊息必須說出狀態（不得講成「已付款」），got %v", err)
+	}
+	var voidStatus string
+	if err := db.QueryRowContext(ctx,
+		`SELECT status FROM platform.subscription_periods WHERE id = $1`, second.ID).Scan(&voidStatus); err != nil {
+		t.Fatalf("查作廢期別狀態: %v", err)
+	}
+	if voidStatus != "void" {
+		t.Fatalf("被拒絕的入帳不得改動期別狀態，got %q", voidStatus)
+	}
 
 	// ⑥ 訂閱狀態變更（收款復原／逾期轉移用）。
 	grace := now.Add(48 * time.Hour)
@@ -503,6 +573,30 @@ func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 	if !cancelledAt.Valid {
 		t.Fatal("轉為 cancelled 時必須寫入 cancelled_at")
 	}
+	// 重複取消（排程重跑／重送的取消請求）不得推進 cancelled_at：它記的是**取消發生的時間**，
+	// 被每次重跑推進去就不再是事實。
+	firstCancelledAt := cancelledAt.Time
+	time.Sleep(2 * time.Millisecond)
+	if err := st.WithTx(ctx, func(tx *sql.Tx) error {
+		return st.SetSubscriptionStatusTx(ctx, tx, sub43.ID, "cancelled", nil)
+	}); err != nil {
+		t.Fatalf("重複取消: %v", err)
+	}
+	var againAt sql.NullTime
+	if err := db.QueryRowContext(ctx,
+		`SELECT cancelled_at FROM platform.subscriptions WHERE id = $1`, sub43.ID).Scan(&againAt); err != nil {
+		t.Fatalf("重複取消後查 cancelled_at: %v", err)
+	}
+	if !againAt.Valid || !againAt.Time.Equal(firstCancelledAt) {
+		t.Fatalf("重複取消不得推進 cancelled_at，got %v → %v", firstCancelledAt, againAt.Time)
+	}
+	// 訂閱不存在時**不得靜默成功**：0 列被改到卻回 nil，呼叫端（T4 復原、T5 逾期／取消）會以為
+	// 狀態已改，並在同一交易內照樣 commit 事件與稽核 → 留下「稽核說 suspended、DB 仍是 active」。
+	if err := st.WithTx(ctx, func(tx *sql.Tx) error {
+		return st.SetSubscriptionStatusTx(ctx, tx, subID+1000, "suspended", nil)
+	}); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("對不存在的訂閱改狀態應回 sql.ErrNoRows，got %v", err)
+	}
 
 	// ⑦ 排程的三個查詢：集合邊界比對（集合錯一邊就會漏收或誤凍結）。
 	// 50 逾期未付、51 期末未到、52 寬限已過、53 寬限未到、54 past_due 無寬限期、
@@ -529,11 +623,11 @@ func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 	pastGrace := now.Add(-24 * time.Hour)
 	seedPeriod(seedSub(50, "active", "monthly", nil), 1, now.Add(-24*time.Hour))
 	seedPeriod(seedSub(51, "active", "monthly", nil), 3, now.Add(24*time.Hour))
-	seedPeriod(seedSub(52, "past_due", "monthly", &pastGrace), 1, now.Add(-24*time.Hour))
+	seedPeriod(seedSub(52, "past_due", "yearly", &pastGrace), 1, now.Add(-24*time.Hour))
 	graceFuture := now.Add(24 * time.Hour)
-	seedPeriod(seedSub(53, "past_due", "monthly", &graceFuture), 1, now.Add(-24*time.Hour))
+	seedPeriod(seedSub(53, "past_due", "yearly", &graceFuture), 1, now.Add(-24*time.Hour))
 	seedPeriod(seedSub(54, "past_due", "monthly", nil), 1, now.Add(-24*time.Hour))
-	cancelledSub := seedSub(55, "cancelled", "monthly", nil)
+	cancelledSub := seedSub(55, "cancelled", "yearly", nil)
 	seedPeriod(cancelledSub, 1, now.Add(-24*time.Hour))
 	seedPeriod(seedSub(56, "cancelled", "monthly", nil), 1, now.Add(24*time.Hour))
 	trialingSub := seedSub(57, "trialing", "yearly", nil)
@@ -544,6 +638,11 @@ func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 	if !containsCompany(due, 50) || containsCompany(due, 42) || containsCompany(due, 51) || containsCompany(due, 52) {
 		t.Fatalf("逾期未付應只含 50（active 且最新期別已過期末；42／51 期末未到、52 非 active），got %v", companyIDs(due))
 	}
+	// 排程拿到的訂閱必須帶得動期別產生的欄位：漏帶 billing_cycle 就是 G1（年繳只加一個月、
+	// 少收 11 個月）。三條查詢都逐一驗，因為它們各自是不同的一段 SQL。
+	if got := subscription(t, due, 50); got.BillingCycle != "monthly" || got.SeatCount != 2 || got.PlanID != planID {
+		t.Fatalf("逾期未付的列必須帶出週期／席次／方案，got %+v", got)
+	}
 	graceExpired := withTx(t, db, func(tx *sql.Tx) ([]store.Subscription, error) {
 		return st.PastDueSubscriptionsExpiredGrace(ctx, tx, now)
 	})
@@ -551,17 +650,30 @@ func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 	if !containsCompany(graceExpired, 52) || containsCompany(graceExpired, 53) || containsCompany(graceExpired, 54) {
 		t.Fatalf("寬限已過應只含 52（53 未到、54 無寬限期），got %v", companyIDs(graceExpired))
 	}
+	if got := subscription(t, graceExpired, 52); got.BillingCycle != "yearly" || got.SeatCount != 2 || got.PlanID != planID {
+		t.Fatalf("寬限已過的列必須帶出 billing_cycle=yearly（G1），got %+v", got)
+	}
 	expired := withTx(t, db, func(tx *sql.Tx) ([]store.Subscription, error) {
 		return st.CancelledSubscriptionsPastPeriodEnd(ctx, tx, now)
 	})
 	if !containsCompany(expired, 55) || containsCompany(expired, 56) {
 		t.Fatalf("已取消且期末已過應只含 55（56 期末未到），got %v", companyIDs(expired))
 	}
+	if got := subscription(t, expired, 55); got.BillingCycle != "yearly" || got.SeatCount != 2 || got.PlanID != planID {
+		t.Fatalf("已取消期末已過的列必須帶出 billing_cycle=yearly（G1），got %+v", got)
+	}
 	// 排程可重跑：已發過 subscription.expired 者不得再被選中。
 	if err := st.WithTx(ctx, func(tx *sql.Tx) error {
 		return st.EmitEventTx(ctx, tx, "subscription", cancelledSub, "subscription.expired", []byte(`{}`))
 	}); err != nil {
 		t.Fatalf("EmitEventTx(expired): %v", err)
+	}
+	// 不帶資料的事件（nil／空 payload，例：subscription.suspended）必須寫得進去：送 ''::jsonb 會
+	// 22P02，而表的 DEFAULT '{}' 永遠不會生效 —— 單元測試（假實作）擋不住這一條，只有真 store 會炸。
+	if err := st.WithTx(ctx, func(tx *sql.Tx) error {
+		return st.EmitEventTx(ctx, tx, "subscription", cancelledSub, "subscription.suspended", nil)
+	}); err != nil {
+		t.Fatalf("無 payload 的事件必須寫得進去（payload 為 '{}'），got %v", err)
 	}
 	expiredAgain := withTx(t, db, func(tx *sql.Tx) ([]store.Subscription, error) {
 		return st.CancelledSubscriptionsPastPeriodEnd(ctx, tx, now)
@@ -620,20 +732,39 @@ func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UndispatchedEvents: %v", err)
 	}
-	if len(events) != 1 || events[0].AggregateType != "subscription" || events[0].AggregateID != cancelledSub ||
-		events[0].EventType != "subscription.expired" {
-		t.Fatalf("未派送事件應只有 subscription.expired（WithTx 回錯誤者已回滾），got %+v", events)
+	if len(events) != 2 || events[0].AggregateType != "subscription" || events[0].AggregateID != cancelledSub ||
+		events[0].EventType != "subscription.expired" || events[1].EventType != "subscription.suspended" {
+		t.Fatalf("未派送事件應照 id 序為 expired→suspended（WithTx 回錯誤者已回滾），got %+v", events)
 	}
-	if string(events[0].Payload) != "{}" {
-		t.Fatalf("事件 payload 未帶出，got %q", events[0].Payload)
+	// 無 payload 的事件讀回來是 '{}'（不是 NULL、也不是空字串）——consumer 解 payload 時不必分兩條路。
+	if string(events[0].Payload) != "{}" || string(events[1].Payload) != "{}" {
+		t.Fatalf("事件 payload 應為 '{}'（含無 payload 者），got %q／%q", events[0].Payload, events[1].Payload)
 	}
-	if err := st.WithTx(ctx, func(tx *sql.Tx) error {
-		return st.MarkEventDispatchedTx(ctx, tx, events[0].ID)
-	}); err != nil {
-		t.Fatalf("MarkEventDispatchedTx: %v", err)
+	for _, e := range events {
+		if err := st.WithTx(ctx, func(tx *sql.Tx) error {
+			return st.MarkEventDispatchedTx(ctx, tx, e.ID)
+		}); err != nil {
+			t.Fatalf("MarkEventDispatchedTx(%d): %v", e.ID, err)
+		}
 	}
 	if left, err := st.UndispatchedEvents(ctx, 10); err != nil || len(left) != 0 {
 		t.Fatalf("已派送的事件不得再出現，got %+v err=%v", left, err)
+	}
+
+	// WithTx 的 panic 路徑必須放掉連線（fn 內 panic 時也要 Rollback）：少了它，交易會懸著佔住
+	// 連線（production 是排程 goroutine 的 panic 被 RunGuarded 復原，連線會一路漏到 GC）。
+	inUseBefore := db.Stats().InUse
+	func() {
+		defer func() {
+			if recover() == nil {
+				t.Error("WithTx 應讓 fn 的 panic 繼續往外傳（由呼叫端復原）")
+			}
+		}()
+		_ = st.WithTx(ctx, func(*sql.Tx) error { panic("排程 panic（處理程序復原）") })
+	}()
+	if inUse := db.Stats().InUse; inUse > inUseBefore {
+		t.Fatalf("WithTx 的 fn panic 後連線未放回池中（InUse %d → %d）：交易必須 defer Rollback",
+			inUseBefore, inUse)
 	}
 }
 
@@ -682,6 +813,31 @@ func companyIDs(subs []store.Subscription) []int {
 		out = append(out, s.CompanyID)
 	}
 	return out
+}
+
+// subscription 取集合中該公司的那一列（找不到即測試失敗）——排程查詢回傳的欄位要逐欄驗，
+// 只驗集合成員會漏掉「欄位沒帶出來」（billing_cycle 空字串就是少收 11 個月的 G1）。
+func subscription(t *testing.T, subs []store.Subscription, company int) store.Subscription {
+	t.Helper()
+	for _, s := range subs {
+		if s.CompanyID == company {
+			return s
+		}
+	}
+	t.Fatalf("集合中應有 company %d，got %v", company, companyIDs(subs))
+	return store.Subscription{}
+}
+
+// countPaid 數該訂閱的已付款期別（交易號冪等與跨期拒絕都要確認「沒有多記一筆帳」）。
+func countPaid(t *testing.T, db *sql.DB, subID int64) int {
+	t.Helper()
+	var n int
+	if err := db.QueryRowContext(t.Context(),
+		`SELECT count(*) FROM platform.subscription_periods WHERE subscription_id = $1 AND status = 'paid'`,
+		subID).Scan(&n); err != nil {
+		t.Fatalf("數已付款期別: %v", err)
+	}
+	return n
 }
 
 // containsCompany 回報集合內是否有該公司。

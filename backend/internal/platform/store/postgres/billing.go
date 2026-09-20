@@ -65,15 +65,32 @@ func (s *Store) OpenSubscriptionTx(ctx context.Context, tx *sql.Tx, companyID in
 	return &sub, nil
 }
 
-// SetSubscriptionStatusTx 更新訂閱狀態與寬限期(cancelled 時一併記下 cancelled_at)。
+// SetSubscriptionStatusTx 更新訂閱狀態與寬限期。**訂閱不存在時回 sql.ErrNoRows**(不得靜默成功:
+// 0 列被改到卻回 nil,呼叫端會在同一交易內照樣 commit 事件與稽核,留下「稽核說 suspended、
+// DB 仍是 active」的帳實不符;與 MarkPeriodPaidTx 同一個形狀)。
+//
+// cancelled_at 只在「轉為 cancelled」時蓋上當下時間:由非 cancelled 轉過來、或該欄仍是 NULL
+// (狀態被直接改成 cancelled 而沒留下時間的列,由這裡自癒)才寫;重複取消／排程重跑不得推進它 ——
+// 它記的是取消發生的時間點,被重跑推進去就不再是事實。
 func (s *Store) SetSubscriptionStatusTx(ctx context.Context, tx *sql.Tx, subID int64,
 	status string, graceUntil *time.Time) error {
-	_, err := tx.ExecContext(ctx, `
+	res, err := tx.ExecContext(ctx, `
 		UPDATE platform.subscriptions
 		   SET status = $2, grace_until = $3, updated_at = now(),
-		       cancelled_at = CASE WHEN $2 = 'cancelled' THEN now() ELSE cancelled_at END
+		       cancelled_at = CASE WHEN $2 = 'cancelled' AND (status <> 'cancelled' OR cancelled_at IS NULL)
+		                           THEN now() ELSE cancelled_at END
 		 WHERE id = $1`, subID, status, graceUntil)
-	return err
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return fmt.Errorf("訂閱 %d 不存在: %w", subID, sql.ErrNoRows)
+	}
+	return nil
 }
 
 // OpenPeriodTx 建立一期(open)。unique(subscription_id, period_no) 讓排程可重跑:
@@ -145,17 +162,23 @@ func (s *Store) CurrentPriceTx(ctx context.Context, tx *sql.Tx, planID int64, cy
 
 // MarkPeriodPaidTx 標記期別為已付款。三種情境各自有明確結果:
 //   - status='open' → 入帳;
-//   - 已是 paid 且**交易號相同** → 視為重複入帳(webhook 重播),no-op 且不報錯;
-//   - 已是 paid 但交易號不同 → 錯誤(不得覆蓋別筆收款)。
+//   - 已是 paid 且**交易號相同** → 視為重複入帳(webhook 重播／呼叫端重試),**完全 no-op**:
+//     付款憑據(paid_at／invoice_no／payment_provider／external_ref)只有在第一次入帳時才寫 ——
+//     重播若沒重帶發票號(空字串),把已存的發票號清成 NULL 就是把稅務與對帳憑據抹掉;
+//   - 已是 paid 但交易號不同 → 錯誤(不得覆蓋別筆收款);
+//   - 其他狀態(status='void' 等) → 錯誤並說出實際狀態(不得講成「已付款」)。
 //
-// note(G8)為短收／溢收的人工註記:未提供(空字串)時**保留原值** —— 用空字串清掉既有註記
-// 等於抹掉對帳線索。
+// note(G8)為短收／溢收的人工註記:未提供(空字串)時**保留原值**;入帳與重播都可以補寫它
+// (它描述的是這筆收款的事實,不是入帳當下的快照)。
 func (s *Store) MarkPeriodPaidTx(ctx context.Context, tx *sql.Tx, id int64, paidAt time.Time,
 	invoiceNo, provider, externalRef, note string) error {
 	res, err := tx.ExecContext(ctx, `
 		UPDATE platform.subscription_periods
-		   SET status = 'paid', paid_at = $2, invoice_no = NULLIF($3,''),
-		       payment_provider = $4, external_ref = NULLIF($5,''),
+		   SET status = 'paid',
+		       paid_at = CASE WHEN status = 'open' THEN $2 ELSE paid_at END,
+		       invoice_no = CASE WHEN status = 'open' THEN NULLIF($3,'') ELSE invoice_no END,
+		       payment_provider = CASE WHEN status = 'open' THEN $4 ELSE payment_provider END,
+		       external_ref = CASE WHEN status = 'open' THEN NULLIF($5,'') ELSE external_ref END,
 		       note = COALESCE(NULLIF($6,''), note)
 		 WHERE id = $1 AND (
 		    status = 'open'
@@ -169,7 +192,7 @@ func (s *Store) MarkPeriodPaidTx(ctx context.Context, tx *sql.Tx, id int64, paid
 		return err
 	}
 	if n == 0 {
-		// 沒有任何列被改到:分開「期別不存在」與「交易號衝突」,呼叫端才知道該顯示什麼。
+		// 沒有任何列被改到:分開「期別不存在」「狀態不得入帳」與「交易號衝突」,呼叫端才知道該顯示什麼。
 		var status string
 		var ref sql.NullString
 		err := tx.QueryRowContext(ctx,
@@ -180,6 +203,9 @@ func (s *Store) MarkPeriodPaidTx(ctx context.Context, tx *sql.Tx, id int64, paid
 		}
 		if err != nil {
 			return err
+		}
+		if status != "paid" {
+			return fmt.Errorf("期別 %d 狀態為 %q，不得入帳", id, status)
 		}
 		return fmt.Errorf("期別 %d 已付款（交易號 %q）且交易號不同（%q），拒絕覆蓋",
 			id, ref.String, externalRef)
@@ -210,9 +236,12 @@ func (s *Store) PeriodsByStatus(ctx context.Context, status string) ([]store.Per
 }
 
 // ActiveSubscriptionsWithDueOpenPeriod 回 active 且最新一期已過期末者(排程轉 past_due)。
+//
+// 三個排程查詢都必須帶出 plan_id／seat_count／billing_cycle:排程據以開啟下一期,而 **billing_cycle
+// 漏帶等於 G1**(年繳被當月繳、只加一個月 → 少收 11 個月);store 這端少帶,呼叫端只會拿到空字串。
 func (s *Store) ActiveSubscriptionsWithDueOpenPeriod(ctx context.Context, tx *sql.Tx, now time.Time) ([]store.Subscription, error) {
 	return s.scanSubscriptions(ctx, tx, `
-		SELECT s.id, s.company_id, s.status
+		SELECT s.id, s.company_id, s.status, s.plan_id, s.seat_count, s.billing_cycle
 		  FROM platform.subscriptions s
 		  JOIN LATERAL (
 			SELECT period_end FROM platform.subscription_periods p
@@ -227,7 +256,7 @@ func (s *Store) ActiveSubscriptionsWithDueOpenPeriod(ctx context.Context, tx *sq
 // grace_until IS NULL 不算「已過」:沒有設定寬限期不等於寬限期已到期。
 func (s *Store) PastDueSubscriptionsExpiredGrace(ctx context.Context, tx *sql.Tx, now time.Time) ([]store.Subscription, error) {
 	return s.scanSubscriptions(ctx, tx, `
-		SELECT id, company_id, status
+		SELECT id, company_id, status, plan_id, seat_count, billing_cycle
 		  FROM platform.subscriptions
 		 WHERE status = 'past_due' AND grace_until IS NOT NULL AND grace_until < $1`, now)
 }
@@ -236,7 +265,7 @@ func (s *Store) PastDueSubscriptionsExpiredGrace(ctx context.Context, tx *sql.Tx
 // EXISTS 排除「已發過 subscription.expired」者 → 排程可重跑且不重複發事件。
 func (s *Store) CancelledSubscriptionsPastPeriodEnd(ctx context.Context, tx *sql.Tx, now time.Time) ([]store.Subscription, error) {
 	return s.scanSubscriptions(ctx, tx, `
-		SELECT s.id, s.company_id, s.status
+		SELECT s.id, s.company_id, s.status, s.plan_id, s.seat_count, s.billing_cycle
 		  FROM platform.subscriptions s
 		  JOIN LATERAL (
 			SELECT period_end FROM platform.subscription_periods p
@@ -276,7 +305,8 @@ func (s *Store) ActiveOrTrialingSubscriptions(ctx context.Context) ([]store.Subs
 	return out, rows.Err()
 }
 
-// scanSubscriptions 為三個排程查詢的共用列掃描(欄位形狀相同:id, company_id, status)。
+// scanSubscriptions 為三個排程查詢的共用列掃描(欄位形狀相同:
+// id, company_id, status, plan_id, seat_count, billing_cycle)。
 func (s *Store) scanSubscriptions(ctx context.Context, tx *sql.Tx, query string, args ...any) ([]store.Subscription, error) {
 	rows, err := tx.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -286,7 +316,8 @@ func (s *Store) scanSubscriptions(ctx context.Context, tx *sql.Tx, query string,
 	var out []store.Subscription
 	for rows.Next() {
 		var sub store.Subscription
-		if err := rows.Scan(&sub.ID, &sub.CompanyID, &sub.Status); err != nil {
+		if err := rows.Scan(&sub.ID, &sub.CompanyID, &sub.Status,
+			&sub.PlanID, &sub.SeatCount, &sub.BillingCycle); err != nil {
 			return nil, err
 		}
 		out = append(out, sub)
@@ -296,11 +327,14 @@ func (s *Store) scanSubscriptions(ctx context.Context, tx *sql.Tx, query string,
 
 // EmitEventTx 寫入 outbox 事件(必須與期別／狀態的變更同一個交易,否則會出現
 // 「改了狀態卻沒有事件」或反之的孤兒)。
+//
+// 空的 payload(nil／空切片,例:不帶資料的 subscription.expired)寫成 '{}':直接送 ”::jsonb
+// 會被 PostgreSQL 以 22P02 拒絕,而欄位的 DEFAULT '{}' 對「有給值但值是空字串」不生效。
 func (s *Store) EmitEventTx(ctx context.Context, tx *sql.Tx, aggregateType string,
 	aggregateID int64, eventType string, payload []byte) error {
 	_, err := tx.ExecContext(ctx, `
 		INSERT INTO platform.events (aggregate_type, aggregate_id, event_type, payload)
-		VALUES ($1,$2,$3,$4::jsonb)`, aggregateType, aggregateID, eventType, string(payload))
+		VALUES ($1,$2,$3,$4::jsonb)`, aggregateType, aggregateID, eventType, jsonOrEmptyObject(payload))
 	return err
 }
 
@@ -350,6 +384,8 @@ func (s *Store) RecordAuditTx(ctx context.Context, tx *sql.Tx, operatorID int64,
 }
 
 // WithTx 在**admin 連線**上開一個交易並把 *sql.Tx 交給 fn;fn 回錯誤即回滾,否則提交。
+// fn 內 panic 時也 rollback(defer):少了它交易會懸著佔住連線,直到 GC 才放掉 ——
+// 排程 goroutine 的 panic 由 RunGuarded 復原,這條路徑是真的會走到的。
 //
 // 這裡的交易是平台寫入的交易(platform schema 不套 RLS、不經租戶連線),與業務表的請求交易
 // (dbtenant 的 interceptor 交易、帶 app.current_data_scope)是兩回事,不可互相混用。
@@ -358,8 +394,9 @@ func (s *Store) WithTx(ctx context.Context, fn func(*sql.Tx) error) error {
 	if err != nil {
 		return err
 	}
+	// 提交或回滾之後再呼叫 Rollback 會回 sql.ErrTxDone,是無害的 no-op。
+	defer func() { _ = tx.Rollback() }()
 	if err := fn(tx); err != nil {
-		_ = tx.Rollback()
 		return err
 	}
 	return tx.Commit()
@@ -431,6 +468,14 @@ func (s *Store) periodByIDTx(ctx context.Context, tx *sql.Tx, id int64) (*store.
 func nullJSON(b []byte) any {
 	if len(b) == 0 {
 		return nil
+	}
+	return string(b)
+}
+
+// jsonOrEmptyObject 把空的 payload 轉成 '{}'(jsonb 欄位不接受空字串;見 EmitEventTx)。
+func jsonOrEmptyObject(b []byte) string {
+	if len(b) == 0 {
+		return "{}"
 	}
 	return string(b)
 }

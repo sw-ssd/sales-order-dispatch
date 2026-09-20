@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -102,18 +103,42 @@ func TestFakeBillingMarkPeriodPaidSemantics(t *testing.T) {
 		p.Note != "短收 100 元" || p.PaidAt == nil || !p.PaidAt.Equal(paidAt) {
 		t.Fatalf("付款欄位未寫入,got %+v", *p)
 	}
-	// webhook 重播:同交易號不報錯,且空字串的 note 不得清掉既有註記(G8)。
-	if err := f.MarkPeriodPaidTx(ctx, nil, id, paidAt, "INV-1", "manual", "REF-1", ""); err != nil {
+	// webhook 重播:同交易號不報錯,且**憑據不得被改動**(發票號／provider／paid_at 都要留著),
+	// 空字串的 note 也不得清掉既有註記(G8)。
+	if err := f.MarkPeriodPaidTx(ctx, nil, id, paidAt.Add(time.Hour), "", "", "REF-1", ""); err != nil {
 		t.Fatalf("同交易號重送應為 no-op,got %v", err)
 	}
-	if p, _ := f.OpenPeriodByNoTx(ctx, nil, subID, 1); p.Note != "短收 100 元" {
-		t.Fatalf("note 為空字串時必須保留原值,got %q", p.Note)
+	if p, _ := f.OpenPeriodByNoTx(ctx, nil, subID, 1); p.Note != "短收 100 元" ||
+		p.InvoiceNo != "INV-1" || p.PaymentProvider != "manual" ||
+		p.PaidAt == nil || !p.PaidAt.Equal(paidAt) {
+		t.Fatalf("重播不得改動已入帳的憑據,got %+v", *p)
 	}
 	if err := f.MarkPeriodPaidTx(ctx, nil, id, paidAt, "INV-2", "manual", "REF-2", ""); err == nil {
 		t.Fatal("已付款且交易號不同時必須拒絕覆蓋")
 	}
 	if p, _ := f.OpenPeriodByNoTx(ctx, nil, subID, 1); p.ExternalRef != "REF-1" {
 		t.Fatalf("被拒絕的收款不得改動原交易號,got %q", p.ExternalRef)
+	}
+	// 同一 provider＋交易號不得入帳**兩期**(00029 的 periods_provider_ref_unique,部分唯一索引):
+	// 少了這一條,T4 的「同一筆交易號不得重複入帳」在假實作上會假綠。
+	other := f.PutPeriod(store.Period{SubscriptionID: subID, PeriodNo: 2, Status: "open", AmountCents: 195000})
+	if err := f.MarkPeriodPaidTx(ctx, nil, other, paidAt, "INV-3", "manual", "REF-1", ""); err == nil {
+		t.Fatal("同一交易號已入帳於另一期時必須拒絕(唯一索引)")
+	}
+	if p, _ := f.OpenPeriodByNoTx(ctx, nil, subID, 2); p.Status != "open" {
+		t.Fatalf("被拒絕的跨期入帳不得改動期別,got %+v", *p)
+	}
+	// 作廢(void)的期別不得入帳,且錯誤要說出狀態(不得講成「已付款」)。
+	void := f.PutPeriod(store.Period{SubscriptionID: subID, PeriodNo: 3, Status: "void"})
+	err = f.MarkPeriodPaidTx(ctx, nil, void, paidAt, "INV-4", "manual", "", "")
+	if err == nil {
+		t.Fatal("作廢期別不得入帳")
+	}
+	if !strings.Contains(err.Error(), "void") {
+		t.Fatalf("作廢期別的錯誤訊息必須說出狀態(不得講成「已付款」),got %v", err)
+	}
+	if p, _ := f.OpenPeriodByNoTx(ctx, nil, subID, 3); p.Status != "void" {
+		t.Fatalf("被拒絕的入帳不得改動期別狀態,got %+v", *p)
 	}
 	if err := f.MarkPeriodPaidTx(ctx, nil, 404, paidAt, "", "", "", ""); !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("期別不存在應回 sql.ErrNoRows,got %v", err)
@@ -193,16 +218,24 @@ func TestFakeBillingAuditPriceAndDueQueries(t *testing.T) {
 	if err := f.EmitEventTx(ctx, nil, "subscription", due, "subscription.past_due", []byte(`{}`)); err != nil {
 		t.Fatalf("EmitEventTx: %v", err)
 	}
+	// 無 payload（nil）的事件在真 store 會被存成 '{}'（''::jsonb 會 22P02），假實作必須一致,
+	// 否則 consumer 的單元測試拿到的 payload 與真環境不同。
+	if err := f.EmitEventTx(ctx, nil, "subscription", due, "subscription.suspended", nil); err != nil {
+		t.Fatalf("EmitEventTx(nil payload): %v", err)
+	}
 	events, err := f.UndispatchedEvents(ctx, 1)
 	if err != nil || len(events) != 1 || events[0].AggregateID != due ||
 		events[0].EventType != "subscription.past_due" || events[0].ID != 2 {
 		t.Fatalf("UndispatchedEvents 應照 id 序回一筆(且 limit 生效),got %+v err=%v", events, err)
 	}
+	if pending, _ := f.UndispatchedEvents(ctx, 10); len(pending) != 2 || string(pending[1].Payload) != "{}" {
+		t.Fatalf("無 payload 的事件應以 '{}' 儲存(與 SQL 的 DEFAULT 一致),got %+v", pending)
+	}
 	if err := f.MarkEventDispatchedTx(ctx, nil, events[0].ID); err != nil {
 		t.Fatalf("MarkEventDispatchedTx: %v", err)
 	}
-	if left, _ := f.UndispatchedEvents(ctx, 10); len(left) != 0 {
-		t.Fatalf("標記後該事件不得再出現,got %+v", left)
+	if left, _ := f.UndispatchedEvents(ctx, 10); len(left) != 1 || left[0].EventType != "subscription.suspended" {
+		t.Fatalf("已標記者不得再出現,got %+v", left)
 	}
 }
 

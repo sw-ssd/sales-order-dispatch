@@ -22,7 +22,10 @@ import (
 //   - OpenSubscriptionTx **不預先濾掉 cancelled**(F-8/C-02):優先未取消,只有全是 cancelled
 //     時才取它;完全沒有列回 (nil, nil);
 //   - OpenPeriodTx 以 (subscription_id, period_no) 為冪等鍵:已存在即回既有期別,不新增不覆寫;
-//   - MarkPeriodPaidTx:同交易號重送 no-op、交易號不同即拒絕、note 為空字串時保留原值;
+//   - MarkPeriodPaidTx:同交易號重送是完全 no-op(既有付款憑據一個都不動)、交易號不同即拒絕、
+//     **同一 provider ＋ 交易號不得入帳兩期**(00029 的 periods_provider_ref_unique)、
+//     note 為空字串時保留原值、狀態為 void 等一律拒絕並說出狀態;
+//   - EmitEventTx:空 payload 存成 '{}'(SQL 的 jsonb 欄位不接受空字串);
 //   - RecordAuditTx 的 reason 必填(空字串即拒絕);
 //   - 排程三個查詢的集合邊界(期末 < now、grace_until IS NOT NULL、已發過 subscription.expired
 //     者不再選中)逐一照 SQL 的謂詞寫。
@@ -260,8 +263,8 @@ func (f *FakeBilling) CurrentPriceTx(_ context.Context, _ *sql.Tx, planID int64,
 	return p, nil
 }
 
-// MarkPeriodPaidTx 標記期別已付款(見型別說明:同交易號重送 no-op、不同交易號拒絕、
-// note 空字串保留原值)。
+// MarkPeriodPaidTx 標記期別已付款(見型別說明:同交易號重送 no-op 且不動既有憑據、不同交易號
+// 拒絕、同一交易號不得入帳兩期、note 空字串保留原值、其他狀態一律拒絕)。
 func (f *FakeBilling) MarkPeriodPaidTx(_ context.Context, _ *sql.Tx, id int64, paidAt time.Time,
 	invoiceNo, provider, externalRef, note string) error {
 	f.mu.Lock()
@@ -271,6 +274,16 @@ func (f *FakeBilling) MarkPeriodPaidTx(_ context.Context, _ *sql.Tx, id int64, p
 		return fmt.Errorf("期別 %d 不存在: %w", id, sql.ErrNoRows)
 	}
 	p := &f.periods[i]
+	// 00029 的 periods_provider_ref_unique(部分唯一索引):同一 provider ＋ 交易號只能入帳一期。
+	// 少了這一條,T4 的「同一筆交易號不得重複入帳」會在假實作上假綠。
+	if externalRef != "" && p.ExternalRef != externalRef {
+		for j := range f.periods {
+			if j != i && f.periods[j].ExternalRef == externalRef && f.periods[j].PaymentProvider == provider {
+				return fmt.Errorf("交易號 %q（provider %q）已入帳於期別 %d，不得重複入帳",
+					externalRef, provider, f.periods[j].ID)
+			}
+		}
+	}
 	switch {
 	case p.Status == "open":
 		p.Status = "paid"
@@ -279,11 +292,14 @@ func (f *FakeBilling) MarkPeriodPaidTx(_ context.Context, _ *sql.Tx, id int64, p
 		p.PaymentProvider = provider
 		p.ExternalRef = externalRef
 	case p.Status == "paid" && p.ExternalRef == externalRef:
-		// 重複入帳(webhook 重播):不報錯;SQL 端會把同一組值再寫一次，呼叫端無從分辨。
-		// note 仍照 SQL 的 `COALESCE(NULLIF($6,''), note)` 語意處理。
-	default:
+		// 重複入帳(webhook 重播／呼叫端重試):完全 no-op,已入帳的憑據一個都不動
+		// (SQL 端同樣只在 status='open' 時寫那四個欄位)。
+	case p.Status == "paid":
 		return fmt.Errorf("期別 %d 已付款（交易號 %q）且交易號不同（%q），拒絕覆蓋",
 			id, p.ExternalRef, externalRef)
+	default:
+		// void 等狀態:說出真正的狀態,不得講成「已付款」。
+		return fmt.Errorf("期別 %d 狀態為 %q，不得入帳", id, p.Status)
 	}
 	if note != "" {
 		p.Note = note
@@ -358,11 +374,15 @@ func (f *FakeBilling) ActiveOrTrialingSubscriptions(context.Context) ([]Subscrip
 	return out, nil
 }
 
-// EmitEventTx 寫入 outbox 事件(未派送)。
+// EmitEventTx 寫入 outbox 事件(未派送)。空 payload(nil／空切片)存成 '{}':真 store 的
+// jsonb 欄位不接受空字串,不這樣對齊的話 consumer 的單元測試拿到的 payload 會與真環境不同。
 func (f *FakeBilling) EmitEventTx(_ context.Context, _ *sql.Tx, aggregateType string,
 	aggregateID int64, eventType string, payload []byte) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if len(payload) == 0 {
+		payload = []byte("{}")
+	}
 	f.nextEventID++
 	f.events = append(f.events, Event{
 		ID:            f.nextEventID,
