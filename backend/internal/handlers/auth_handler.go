@@ -22,6 +22,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
+	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 )
@@ -101,12 +102,12 @@ func (h *AuthHandler) Login(ctx context.Context, req *connect.Request[v1.LoginRe
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("客戶編號與密碼不可為空"))
 	}
 
-	locked, err := h.deps.Lockout.IsLocked(ctx, customerCode)
+	unlockAt, err := h.deps.Lockout.LockedUntil(ctx, customerCode)
 	if err != nil {
 		return nil, internal(err)
 	}
-	if locked {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("帳號已鎖定,請 30 分鐘後再試"))
+	if !unlockAt.IsZero() {
+		return nil, errcode.AuthLocked.Error(map[string]string{"until": unlockAt.Format("15:04")})
 	}
 
 	var u *ent.User
@@ -122,10 +123,10 @@ func (h *AuthHandler) Login(ctx context.Context, req *connect.Request[v1.LoginRe
 		h.recordFailure(ctx, customerCode)
 		return nil, invalidCredentials()
 	}
-	// A2 公司停用連鎖(2.1.3):公司非 active → permission_denied,不核發憑證、不計失敗。
+	// A2 公司停用連鎖(2.1.3):公司非 active → permission_denied(AUTH-4002),不核發憑證、不計失敗。
 	// 軟刪除的公司(P2-A)一併視同停用:已刪租戶不得再換發憑證。
 	if u.Edges.Company != nil && (u.Edges.Company.Status != company.StatusActive || u.Edges.Company.DeletedAt != nil) {
-		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("公司已停用,無法登入"))
+		return nil, errcode.AuthCompanyInactive.Error(nil)
 	}
 	if u.Status != user.StatusActive {
 		h.recordFailure(ctx, customerCode)
@@ -622,8 +623,10 @@ func emailLocalPart(email string) string {
 	return email
 }
 
+// invalidCredentials 為登入／改密碼的憑證錯誤:AUTH-4003(對外仍 Unauthenticated)。
+// 刻意不區分「帳號不存在」與「密碼錯誤」(防帳號列舉),故所有呼叫點共用此碼。
 func invalidCredentials() error {
-	return connect.NewError(connect.CodeUnauthenticated, errors.New("客戶編號或密碼錯誤"))
+	return errcode.AuthBadCredentials.Error(nil)
 }
 
 func internal(err error) error {

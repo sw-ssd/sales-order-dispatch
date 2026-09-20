@@ -24,6 +24,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
+	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
 	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1/customersv1connect"
@@ -309,7 +310,7 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *connect.Reque
 	}
 	name := strings.TrimSpace(req.Msg.GetName())
 	if name == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("name 必填"))
+		return nil, errcode.CustomerNameRequired.Error(nil)
 	}
 	// 由 ctx 取請求交易:稽核寫入需要 *ent.Tx(audit.Record 的簽章),且 D18「業務寫入與稽核
 	// 同一交易」正是靠它維持。無請求交易(CLI/seed/未掛 interceptor 的路徑)即回明確錯誤,
@@ -522,7 +523,7 @@ func (s *CustomerService) UpdateCustomer(ctx context.Context, req *connect.Reque
 	if req.Msg.Name != nil {
 		n := strings.TrimSpace(*req.Msg.Name)
 		if n == "" {
-			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("name 不可為空"))
+			return nil, errcode.CustomerNameRequired.Error(nil)
 		}
 		upd = upd.SetName(n)
 	}

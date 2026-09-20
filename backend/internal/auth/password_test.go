@@ -97,6 +97,42 @@ func TestLoginLockTTLExpiry(t *testing.T) {
 	}
 }
 
+// TestLoginLockLockedUntil 釘住「解鎖時間」契約：未鎖定 → 零值時間；已鎖定 → 落在
+// (now, now+LockDuration] 內，且隨剩餘 TTL 縮短而提前（details.until 要顯示的是真實解鎖
+// 時間，不是固定的「30 分鐘後」）。
+func TestLoginLockLockedUntil(t *testing.T) {
+	ctx := context.Background()
+	kv := NewMemoryStore()
+	lock := NewLoginLock(kv)
+
+	if until, err := lock.LockedUntil(ctx, "C003"); err != nil || !until.IsZero() {
+		t.Fatalf("未鎖定時應回零值時間: until=%v err=%v", until, err)
+	}
+	for range MaxLoginFailures {
+		if _, err := lock.RecordFailure(ctx, "C003"); err != nil {
+			t.Fatalf("RecordFailure: %v", err)
+		}
+	}
+	until, err := lock.LockedUntil(ctx, "C003")
+	if err != nil {
+		t.Fatalf("LockedUntil: %v", err)
+	}
+	if remaining := time.Until(until); remaining <= 0 || remaining > LockDuration {
+		t.Fatalf("解鎖時間應落在 (now, now+%v] 內,得到 remaining=%v", LockDuration, remaining)
+	}
+	// 剩餘 TTL 縮短(首次失敗已過一段時間)→ 解鎖時間必須跟著提前。
+	if err := kv.Expire(ctx, loginFailKey("C003"), time.Minute); err != nil {
+		t.Fatalf("Expire: %v", err)
+	}
+	until2, err := lock.LockedUntil(ctx, "C003")
+	if err != nil {
+		t.Fatalf("LockedUntil(縮短後): %v", err)
+	}
+	if remaining := time.Until(until2); remaining <= 0 || remaining > time.Minute {
+		t.Fatalf("剩餘 TTL 縮短後解鎖時間應提前,得到 remaining=%v", remaining)
+	}
+}
+
 func TestHashPasswordArgon2id(t *testing.T) {
 	hash, err := HashPassword("secret-123")
 	if err != nil {

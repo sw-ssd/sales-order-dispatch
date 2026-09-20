@@ -148,6 +148,24 @@ func (l *LoginLock) IsLocked(ctx context.Context, account string) (bool, error) 
 	return n >= MaxLoginFailures, nil
 }
 
+// LockedUntil 回傳鎖定解除時間;未鎖定 → 零值時間(呼叫端以 IsZero 判定未鎖定)。
+// 解鎖時間＝失敗計數鍵的剩餘 TTL(自首次失敗起算 LockDuration),前端據此顯示「請於 … 後再試」;
+// TTL 無從得知(0)時以「現在 + LockDuration」保守回報——寧可多報剩餘時間,不可少報。
+func (l *LoginLock) LockedUntil(ctx context.Context, account string) (time.Time, error) {
+	locked, err := l.IsLocked(ctx, account)
+	if err != nil || !locked {
+		return time.Time{}, err
+	}
+	ttl, err := l.kv.TTL(ctx, loginFailKey(account))
+	if err != nil {
+		return time.Time{}, err
+	}
+	if ttl <= 0 {
+		ttl = LockDuration
+	}
+	return time.Now().Add(ttl), nil
+}
+
 // Clear 清除失敗記錄(登入成功時)。
 func (l *LoginLock) Clear(ctx context.Context, account string) error {
 	return l.kv.Delete(ctx, loginFailKey(account))

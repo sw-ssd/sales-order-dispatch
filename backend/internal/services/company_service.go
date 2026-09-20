@@ -83,7 +83,10 @@ func RegisterCompanyServices(mux *http.ServeMux, db *ent.Client) {
 }
 
 // requireScope 檢查 ctx 身分具備 resource 資源的指定動作(Casbin EnforceAny,T14)。
-// 未登入 → Unauthenticated;無權 → PermissionDenied。
+// 未登入 → AUTH-4001(Unauthenticated);無權 → SYS-4001(PermissionDenied)。
+//
+// SYS-4001 的訊息樣板只有「缺少權限」,資源／動作用 details 帶(resource／action):
+// 前端要顯示「缺 company 的 delete 權限」靠 details,樣板文字不為個別呼叫點改動。
 func requireScope(ctx context.Context, resource, action string) error {
 	id, err := requireAuth(ctx)
 	if err != nil {
@@ -94,7 +97,7 @@ func requireScope(ctx context.Context, resource, action string) error {
 		return connect.NewError(connect.CodeInternal, err)
 	}
 	if !ok {
-		return connect.NewError(connect.CodePermissionDenied, fmt.Errorf("無%s資源的%s權限", resource, action))
+		return errcode.SysPermissionDenied.Error(map[string]string{"resource": resource, "action": action})
 	}
 	return nil
 }

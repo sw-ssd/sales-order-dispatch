@@ -31,6 +31,9 @@ type KVStore interface {
 	SetRemove(ctx context.Context, key, member string) error
 	// SetMembers 列出集合全部 member。
 	SetMembers(ctx context.Context, key string) ([]string, error)
+	// TTL 回傳 key 的剩餘存活時間;key 不存在或未設 TTL 時回 0(呼叫端視為「無從得知」,
+	// 例:登入鎖定要顯示解鎖時間,但計數鍵已無 TTL 時只能保守回報)。
+	TTL(ctx context.Context, key string) (time.Duration, error)
 }
 
 // RedisStore 以 go-redis(Valkey 相容)實作 KVStore。
@@ -80,6 +83,18 @@ func (s *RedisStore) SetRemove(ctx context.Context, key, member string) error {
 
 func (s *RedisStore) SetMembers(ctx context.Context, key string) ([]string, error) {
 	return s.c.SMembers(ctx, key).Result()
+}
+
+// TTL 實作 KVStore;Valkey 對不存在(-2)與無 TTL(-1)皆回負值 → 統一收斂為 0。
+func (s *RedisStore) TTL(ctx context.Context, key string) (time.Duration, error) {
+	ttl, err := s.c.TTL(ctx, key).Result()
+	if err != nil {
+		return 0, err
+	}
+	if ttl <= 0 {
+		return 0, nil
+	}
+	return ttl, nil
 }
 
 // consumeRefreshScript 原子「讀取並作廢」refresh token:Lua 內 GET + DEL + SREM 一氣呵成,
@@ -224,6 +239,21 @@ func (s *MemoryStore) SetMembers(ctx context.Context, key string) ([]string, err
 		out = append(out, m)
 	}
 	return out, nil
+}
+
+// TTL 實作 KVStore;不存在、無 TTL 或已過期皆回 0。
+func (s *MemoryStore) TTL(ctx context.Context, key string) (time.Duration, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	e, ok := s.m[key]
+	if !ok || e.expires.IsZero() {
+		return 0, nil
+	}
+	ttl := time.Until(e.expires)
+	if ttl <= 0 {
+		return 0, nil
+	}
+	return ttl, nil
 }
 
 // ConsumeRefresh 原子讀取並刪除 refresh token 記錄(鎖保護,與 Redis Lua 等價);

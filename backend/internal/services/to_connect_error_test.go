@@ -12,7 +12,6 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
-	commonv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 )
 
 // TestToConnectErrorMapsToRegisteredCodes 釘住 toConnectError 的「輸入錯誤型別 → 註冊碼」映射。
@@ -137,18 +136,5 @@ func TestToConnectErrorPassesThroughConnectError(t *testing.T) {
 // errcodeIDOf 由 connect error 的 ErrorInfo detail 取錯誤碼(測試輔助)。
 func errcodeIDOf(t *testing.T, err error) string {
 	t.Helper()
-	ce, ok := err.(*connect.Error)
-	if !ok {
-		t.Fatalf("應為 *connect.Error,got %T", err)
-	}
-	for _, d := range ce.Details() {
-		v, derr := d.Value()
-		if derr != nil {
-			t.Fatalf("detail 取值失敗: %v", derr)
-		}
-		if info, ok := v.(*commonv1.ErrorInfo); ok {
-			return info.GetCode()
-		}
-	}
-	return ""
+	return errorInfoOf(t, err).GetCode()
 }

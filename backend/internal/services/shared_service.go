@@ -14,6 +14,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
+	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 )
 
@@ -22,11 +23,15 @@ const (
 	maxPageSize     = 100
 )
 
-// requireAuth 取得已登入身分;未登入 → unauthenticated(所有主檔方法共用)。
+// requireAuth 取得已登入身分;未登入 → AUTH-4001(對外 Unauthenticated,所有主檔方法共用)。
+//
+// 「未登入」的判定沿用既有語意(無任何角色):注入工具的測試以 Roles-only 身分驗「缺租戶範圍」
+// (例:rls_metadict_audit_integration_test.go 的 noScope),改判 UserID 空值會把那條路徑
+// 變成未登入 —— 本任務只換錯誤的產生方式,不動判定。
 func requireAuth(ctx context.Context) (authz.Identity, error) {
 	id := authz.IdentityFrom(ctx)
 	if len(id.Roles) == 0 {
-		return authz.Identity{}, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+		return authz.Identity{}, errcode.AuthUnauthenticated.Error(nil)
 	}
 	return id, nil
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
+	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 )
 
@@ -33,7 +34,7 @@ const minNewPasswordLen = 8
 func (h *AuthHandler) ChangePassword(ctx context.Context, req *connect.Request[v1.ChangePasswordRequest]) (*connect.Response[v1.ChangePasswordResponse], error) {
 	id := authz.IdentityFrom(ctx)
 	if id.UserID == "" {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+		return nil, errcode.AuthUnauthenticated.Error(nil)
 	}
 	uid, err := parseID(id.UserID)
 	if err != nil {
@@ -53,9 +54,9 @@ func (h *AuthHandler) ChangePassword(ctx context.Context, req *connect.Request[v
 		}
 		return nil, internal(err)
 	}
-	// 臨時密碼過期:must_change 且已過效期 → 僅能由管理員重置(1.5.2)。
+	// 臨時密碼過期:must_change 且已過效期 → 僅能由管理員重置(1.5.2) → AUTH-3002。
 	if u.MustChangePassword && u.TempPasswordExpiresAt != nil && time.Now().After(*u.TempPasswordExpiresAt) {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("臨時密碼已過期,請聯繫管理員重置"))
+		return nil, errcode.AuthTempPasswordExpired.Error(nil)
 	}
 	if !auth.VerifyPassword(u.PasswordHash, old) {
 		return nil, invalidCredentials()
@@ -92,7 +93,7 @@ func (h *AuthHandler) ChangePassword(ctx context.Context, req *connect.Request[v
 func (h *AuthHandler) ResetCustomerPassword(ctx context.Context, req *connect.Request[v1.ResetCustomerPasswordRequest]) (*connect.Response[v1.ResetCustomerPasswordResponse], error) {
 	id := authz.IdentityFrom(ctx)
 	if id.UserID == "" {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("未登入"))
+		return nil, errcode.AuthUnauthenticated.Error(nil)
 	}
 	targetID, err := parseID(req.Msg.GetUserId())
 	if err != nil {
