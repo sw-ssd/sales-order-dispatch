@@ -16,6 +16,7 @@ package postgres_test
 import (
 	"database/sql"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -119,11 +120,26 @@ func TestIntegrationPlatformSchema(t *testing.T) {
 	}
 	defer func() { _ = app.Close() }()
 	var n int
-	assertDenied(t, app.QueryRow(`SELECT count(*) FROM platform.plans`).Scan(&n), "app_rw 讀 platform.plans")
-	// 對照組:同一條連線讀業務表必須成功(00022 有授權)—— 否則上面的「被拒」可能只是連線壞掉。
+	// 探針 SQL 只寫一次:先以 owner 跑同一句話(必須成功,證明物件名與語法正確),再用 app_rw
+	// 跑同一句話(必須被拒)。少了 owner 這一步,把 `platform.plans` 打成 `platform.planx`
+	// 也照樣綠 —— app_rw 沒有 platform 的 USAGE,PG 在解析階段就先回 42501,物件名錯永遠
+	// 不會浮出來(實測:改壞名字仍 PASS)。
+	const platformProbe = `SELECT count(*) FROM platform.plans`
+	if err := admin.QueryRow(platformProbe).Scan(&n); err != nil {
+		t.Fatalf("前置失敗:owner 跑被拒探針必須成功(證明探針指到存在的物件),got %v", err)
+	}
+	assertDenied(t, app.QueryRow(platformProbe).Scan(&n), "app_rw 讀 platform.plans")
+	// 對照組一:同一條連線讀業務表必須成功(00022 有授權)—— 否則上面的「被拒」可能只是連線壞掉。
 	if err := app.QueryRow(`SELECT count(*) FROM companies`).Scan(&n); err != nil {
 		t.Fatalf("對照組失敗:app_rw 應可讀 public 業務表 companies,got %v", err)
 	}
+	// 對照組二(反向控制):同一條連線查 public 的不存在表必須是 42P01。少了它無法排除
+	// 「app_rw 的所有錯誤都被當成 42501」—— 42501 本身分不出「權限不足」與「物件名不對」:
+	// platform 下的錯字表名也會先撞 schema USAGE 而回 42501,故需要一條能真的拿到 42P01 的
+	// 探針,證明錯誤碼判別力存在。物件名正確性則由 ②a 以 pg_class 的 OID 列舉證明
+	// (那裡逐一點名 10 張表),不依賴本查詢的字串。
+	assertUndefinedTable(t, app.QueryRow(`SELECT count(*) FROM public.no_such_table_platform_probe`).Scan(&n),
+		"app_rw 查 public 的不存在表")
 }
 
 // TestIntegrationPlatformSchemaDown 驗證 00029 的回滾完整:`down-to 0` 之後 platform schema
@@ -173,48 +189,58 @@ func TestIntegrationPlatformSchemaDown(t *testing.T) {
 	assertPlatformTables(t, admin)
 }
 
-// platformIndexes 為 00029 的索引契約:名稱、所在表、以及 partial／unique 語意。
-// partial index 少了 WHERE 就不是同一個索引 —— 例如 subscriptions 少了 `status <> 'cancelled'`,
-// 同一租戶只要有一筆取消過的訂閱就再也簽不了新約(而錯誤要到上線後才出現),故一併釘住。
+// platformIndexes 為 00029 的索引契約:名稱、所在表、partial／unique 語意、以及**謂詞本身**。
+// 謂詞是這幾個索引唯一的閘門,光驗「是不是 partial」不夠:把 `status <> 'cancelled'` 打成
+// `'canceled'`(或 `= 'cancelled'`、換欄位)仍是 partial、仍是 unique,卻讓
+// 「一租戶一有效訂閱／webhook 冪等／override 唯一」全部失效 —— 而且要到上線後才看得出來。
+// pred 為 PostgreSQL 反解譯(pg_get_expr)後的期望字串,比對前先正規化空白。
 var platformIndexes = []struct {
-	name, table     string
-	partial, unique bool
+	name, table, pred string
+	unique            bool
 }{
-	{"plan_prices_plan_effective_idx", "plan_prices", false, false},
-	{"subscriptions_active_company_unique", "subscriptions", true, true},
-	{"periods_provider_ref_unique", "subscription_periods", true, true},
-	{"tenant_overrides_active_unique", "tenant_overrides", true, true},
-	{"events_undispatched_idx", "events", true, false},
-	{"platform_audit_created_idx", "audit_logs", false, false},
+	{"plan_prices_plan_effective_idx", "plan_prices", "", false},
+	{"subscriptions_active_company_unique", "subscriptions", `(status <> 'cancelled'::text)`, true},
+	{"periods_provider_ref_unique", "subscription_periods", `(external_ref IS NOT NULL)`, true},
+	{"tenant_overrides_active_unique", "tenant_overrides", `(revoked_at IS NULL)`, true},
+	{"events_undispatched_idx", "events", `(dispatched_at IS NULL)`, false},
+	{"platform_audit_created_idx", "audit_logs", "", false},
 }
 
-// assertPlatformIndexes 斷言每個索引都落在正確的表上,且 partial／unique 語意正確。
+// assertPlatformIndexes 斷言每個索引都落在正確的表上,且 partial／unique／謂詞語意正確。
 func assertPlatformIndexes(t *testing.T, db *sql.DB) {
 	t.Helper()
 	for _, idx := range platformIndexes {
-		var table string
-		var partial, unique bool
+		var table, pred string
+		var unique bool
 		err := db.QueryRow(
-			`SELECT t.relname, pg_get_expr(i.indpred, i.indrelid) IS NOT NULL, i.indisunique
+			`SELECT t.relname, COALESCE(pg_get_expr(i.indpred, i.indrelid), ''), i.indisunique
 			   FROM pg_index i
 			   JOIN pg_class ix ON ix.oid = i.indexrelid
 			   JOIN pg_class t  ON t.oid  = i.indrelid
 			   JOIN pg_namespace n ON n.oid = t.relnamespace
 			  WHERE n.nspname = 'platform' AND ix.relname = $1`, idx.name,
-		).Scan(&table, &partial, &unique)
+		).Scan(&table, &pred, &unique)
 		if err != nil {
 			t.Fatalf("索引 %s 不存在(或查詢失敗): %v", idx.name, err)
 		}
 		if table != idx.table {
 			t.Fatalf("索引 %s 應在 platform.%s,got platform.%s", idx.name, idx.table, table)
 		}
-		if partial != idx.partial {
-			t.Fatalf("索引 %s 的 partial 語意應為 %v,got %v", idx.name, idx.partial, partial)
-		}
 		if unique != idx.unique {
 			t.Fatalf("索引 %s 的 unique 語意應為 %v,got %v", idx.name, idx.unique, unique)
 		}
+		// pred 為空字串等價於 indpred IS NULL(非 partial):退化謂詞(恆真)會被 PG 存成 NULL,
+		// 這裡以同一欄位同時擋下「該 partial 卻不是」與「不是 partial 卻有謂詞」。
+		if got, want := normalizeExpr(pred), normalizeExpr(idx.pred); got != want {
+			t.Fatalf("索引 %s 的謂詞應為 %q,got %q", idx.name, want, got)
+		}
 	}
+}
+
+// normalizeExpr 正規化 pg_get_expr 的輸出:解析器可能加入無語意的空白與括號,
+// 比對只看語意(欄位、運算子、字面值)相同。
+func normalizeExpr(s string) string {
+	return strings.Join(strings.Fields(strings.NewReplacer("(", " ", ")", " ").Replace(s)), " ")
 }
 
 // assertPlatformTables 斷言 10 張表都在 platform schema。
@@ -240,5 +266,15 @@ func assertDenied(t *testing.T, err error, what string) {
 	var pgErr *pgconn.PgError
 	if !errors.As(err, &pgErr) || pgErr.Code != "42501" {
 		t.Fatalf("%s 必須以權限不足(42501)被拒,got %v", what, err)
+	}
+}
+
+// assertUndefinedTable 斷言操作因物件不存在失敗(SQLSTATE 42P01):作為 assertDenied 的
+// 反向控制 —— 證明這條連線的錯誤碼判別力存在,42501 不是「什麼錯都當成權限問題」。
+func assertUndefinedTable(t *testing.T, err error, what string) {
+	t.Helper()
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) || pgErr.Code != "42P01" {
+		t.Fatalf("%s 必須以物件不存在(42P01)失敗,got %v", what, err)
 	}
 }
