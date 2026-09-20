@@ -87,10 +87,11 @@ func PeriodAmount(baseCents, seatCents int64, seats int) (int64, error) {
 // YearlyFromMonthly 由月費推導年費：月費 × 12 後套用折扣基點（1000 = 9 折），
 // 結果四捨五入到分（月費 ×12 恆為偶數，故 num 的餘數不可能正好是 5000，無平手情形）。
 //
-// **目前無生產呼叫端**：全 repo 只有本檔的定義與測試（`grep -rn YearlyFromMonthly backend` 只
-// 命中 `internal/platform/money`）。proto 與 DB 都還沒有 `discount_bps`（方案價目的寫入路徑
-// 目前只收 base／seat 價），年繳折價因此還沒有地方可填。保留本函式是為了「價目加上折扣」那一天
-// —— 屆時由方案價目寫入路徑呼叫它，不要再手寫一份折扣算術。
+// **目前無生產呼叫端**：全 repo 只有本檔的定義與測試（`grep -rn YearlyFromMonthly backend
+// --include=*.go` 只命中 `internal/platform/money`；非 Go 檔另有 AGENTS.md §11-18 與計畫文件
+// 提到它）。proto 與 DB 都還沒有 `discount_bps`（方案價目的寫入路徑目前只收 base／seat 價），
+// 年繳折價因此還沒有地方可填。保留本函式是為了「價目加上折扣」那一天 —— 屆時由方案價目寫入
+// 路徑呼叫它，不要再手寫一份折扣算術。
 //
 // **本函式夾住折扣基點 0..10000**：<= 0 視為不打折；>= 10000 視為 100% 折扣（年費 0）。
 // 折扣基點由方案價目寫入路徑提供（營運可編輯，屬外部輸入），夾住是為了不讓 10000-bps
