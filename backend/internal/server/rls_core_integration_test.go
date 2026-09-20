@@ -85,8 +85,14 @@ func coreOpenDB(t *testing.T, dsn string) *sql.DB {
 // 而不是把測試無聲掛住。
 func coreAppRoleClient(t *testing.T, adminDSN string) *ent.Client {
 	t.Helper()
+	return coreAppRoleClientN(t, adminDSN, 4)
+}
+
+// coreAppRoleClientN 以指定連線池上限建立 app_rw 業務 client(供「連線數即斷言」的探針使用)。
+func coreAppRoleClientN(t *testing.T, adminDSN string, maxConns int) *ent.Client {
+	t.Helper()
 	pool := coreOpenDB(t, testsupport.AppRoleDSN(t, adminDSN))
-	pool.SetMaxOpenConns(4)
+	pool.SetMaxOpenConns(maxConns)
 	client := dbtenant.NewClient(pool)
 	t.Cleanup(func() { _ = client.Close() })
 	return client
@@ -194,7 +200,7 @@ func TestIntegrationLoginChainUnderAppRole(t *testing.T) {
 	if err != nil {
 		t.Fatalf("簽發 access token: %v", err)
 	}
-	bearerClient := salesorderv1connect.NewUserServiceClient(coreBearerHTTPClient(access), ts.URL+"/api/v1")
+	bearerClient := salesorderv1connect.NewUserServiceClient(coreHeaderHTTPClient("Authorization", "Bearer "+access), ts.URL+"/api/v1")
 	for _, u := range coreCall(t, bearerClient.ListUsers, &v1.ListUsersRequest{}).Users {
 		if u.GetDepartmentId() != strconv.Itoa(deptA) {
 			t.Fatalf("Bearer 路徑看到不在自己部門的成員:%+v", u)
@@ -260,11 +266,84 @@ func TestIntegrationLoginChainUnderAppRole(t *testing.T) {
 	}
 	// 舊 access token(登入時核發,tv=0)亦以 tv 為憑 → 改密碼後不得再通過(D5 立即失效)。
 	authAsCustomerBearer := salesorderv1connect.NewAuthServiceClient(
-		coreBearerHTTPClient(login.AccessToken), ts.URL+"/api/v1")
+		coreHeaderHTTPClient("Authorization", "Bearer "+login.AccessToken), ts.URL+"/api/v1")
 	if err := coreCallErr(t, authAsCustomerBearer.ChangePassword, &v1.ChangePasswordRequest{
 		OldPassword: "NewPass456", NewPassword: "ThirdPass789",
 	}); connect.CodeOf(err) != connect.CodeUnauthenticated {
 		t.Fatalf("tv 已變更的舊 access token 應 unauthenticated,got %v", err)
+	}
+}
+
+// TestIntegrationRegisterGuestUnderAppRole guest 註冊的兩條寫入路徑在 RLS 生效下以 app_rw 走過:
+//
+//	① registration token 建 guest(registerWithToken:去重 + Create 同一條系統交易);
+//	② 既有 guest 完成註冊(completeGuest:資料更新與 token_version+1 併成**同一個敘述**)。
+//
+// **連線池上限 2 + 每 RPC deadline 是本測試的第二個斷言**:這兩條路徑合法地需要 2 條連線
+// (interceptor 的請求交易 + 未登入路徑的系統範圍交易),池設 2 時正確的實作會完成;若把
+// token_version bump 拆成第三條交易(例如改回 Tokens.BumpTokenVersion,而外層系統交易已 UPDATE
+// 同一列),PG 上會互鎖死結 → 這裡以逾時紅。上限刻意**不是 1**:1 條會讓合法的系統範圍交易也逾時,
+// 分不出對錯(brief 的池限制即為此)。
+func TestIntegrationRegisterGuestUnderAppRole(t *testing.T) {
+	testsupport.RequiresContainer(t)
+	adminDSN := testsupport.Postgres(t)
+	migrateCoreUp(t, adminDSN)
+	admin := coreOpenDB(t, adminDSN)
+
+	coA := coreInsertCompany(t, admin, "A", "CORE-GUEST-A")
+	coB := coreInsertCompany(t, admin, "B", "CORE-GUEST-B")
+	// 既有 guest(路徑 ②):status=active、role=guest、已歸屬 coA、tv=0。
+	guestID := coreInsertUser(t, admin, coA, "core-guest-existing@example.com", "guest", 0)
+
+	client := coreAppRoleClientN(t, adminDSN, 2)
+	kv := auth.NewMemoryStore()
+	ts, _, sessions := newCoreHTTPServer(t, client, coreConfig(), kv)
+
+	// ① registration token 路徑:OneTime store 預先放入 token(email)→ RegisterComplete 建 guest。
+	const regToken = "t9-registration-token"
+	newGuestEmail := "core-guest-new@example.com"
+	if err := kv.Set(t.Context(), auth.RegistrationKey(regToken), newGuestEmail, auth.RegistrationTokenTTL); err != nil {
+		t.Fatalf("預置 registration token: %v", err)
+	}
+	tokenClient := salesorderv1connect.NewAuthServiceClient(
+		coreHeaderHTTPClient("X-Registration-Token", regToken), ts.URL+"/api/v1")
+	if err := coreCallDeadline(t, 20*time.Second, tokenClient.RegisterComplete, &v1.RegisterCompleteRequest{
+		Name: "新 guest", CompanyId: strconv.Itoa(coB),
+	}); err != nil {
+		t.Fatalf("RegisterComplete(registration token): %v", err)
+	}
+	var role, status, name string
+	var companyID int
+	if err := admin.QueryRow(
+		`SELECT role, status, name, company_users FROM users WHERE email = $1`, newGuestEmail).
+		Scan(&role, &status, &name, &companyID); err != nil {
+		t.Fatalf("registration token 路徑應建立 guest 帳號: %v", err)
+	}
+	if role != "guest" || status != "pending" || name != "新 guest" || companyID != coB {
+		t.Fatalf("新建 guest 應為 role=guest/status=pending/name=新 guest/company=%d,got role=%q status=%q name=%q company=%d",
+			coB, role, status, name, companyID)
+	}
+
+	// ② 既有 guest 路徑:以 session 身分完成註冊 → 更新 + token_version+1(同一敘述/同一交易)。
+	guestClient := salesorderv1connect.NewAuthServiceClient(
+		coreCookieHTTPClient(testSessionCookie(t, sessions, guestID, "guest")), ts.URL+"/api/v1")
+	if err := coreCallDeadline(t, 20*time.Second, guestClient.RegisterComplete, &v1.RegisterCompleteRequest{
+		Name: "改名後", CompanyId: strconv.Itoa(coB),
+	}); err != nil {
+		t.Fatalf("RegisterComplete(session guest): %v", err)
+	}
+	var tv int
+	if err := admin.QueryRow(
+		`SELECT role, status, name, company_users, token_version FROM users WHERE id = $1`, guestID).
+		Scan(&role, &status, &name, &companyID, &tv); err != nil {
+		t.Fatalf("讀 guest: %v", err)
+	}
+	if name != "改名後" || status != "pending" || companyID != coB {
+		t.Fatalf("完成註冊後應 name=改名後/status=pending/company=%d,got name=%q status=%q company=%d",
+			coB, name, status, companyID)
+	}
+	if tv != 1 {
+		t.Fatalf("完成註冊須在同一交易內 bump token_version(舊憑證失效),got tv=%d", tv)
 	}
 }
 
@@ -358,9 +437,9 @@ func coreCookieHTTPClient(cookie *http.Cookie) *http.Client {
 	return &http.Client{Transport: &coreCookieTransport{cookie: cookie}}
 }
 
-// coreBearerHTTPClient 回傳每個請求都帶上 Bearer token 的 http.Client。
-func coreBearerHTTPClient(token string) *http.Client {
-	return &http.Client{Transport: &coreBearerTransport{token: token}}
+// coreHeaderHTTPClient 回傳每個請求都帶上指定標頭的 http.Client(Bearer／registration token 共用)。
+func coreHeaderHTTPClient(name, value string) *http.Client {
+	return &http.Client{Transport: &coreHeaderTransport{name: name, value: value}}
 }
 
 type coreCookieTransport struct{ cookie *http.Cookie }
@@ -371,11 +450,11 @@ func (t *coreCookieTransport) RoundTrip(req *http.Request) (*http.Response, erro
 	return http.DefaultTransport.RoundTrip(clone)
 }
 
-type coreBearerTransport struct{ token string }
+type coreHeaderTransport struct{ name, value string }
 
-func (t *coreBearerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+func (t *coreHeaderTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	clone := req.Clone(req.Context())
-	clone.Header.Set("Authorization", "Bearer "+t.token)
+	clone.Header.Set(t.name, t.value)
 	return http.DefaultTransport.RoundTrip(clone)
 }
 
@@ -387,6 +466,16 @@ func coreCall[M, T any](t *testing.T, call func(context.Context, *connect.Reques
 		t.Fatalf("RPC 失敗: %v", err)
 	}
 	return resp.Msg
+}
+
+// coreCallDeadline 以 ctx deadline 執行單一 RPC:供「連線池上限受限」的探針把「卡在第三條交易」
+// 收斂成可讀的逾時(逾時本身就是死結的證據)。
+func coreCallDeadline[M, T any](t *testing.T, d time.Duration, call func(context.Context, *connect.Request[M]) (*connect.Response[T], error), msg *M) error {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(t.Context(), d)
+	defer cancel()
+	_, err := call(ctx, connect.NewRequest(msg))
+	return err
 }
 
 // coreCallErr 執行單一 RPC,錯誤交由呼叫端斷言。
