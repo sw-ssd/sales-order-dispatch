@@ -1,0 +1,164 @@
+syntax = "proto3";
+
+package platform.v1;
+option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/proto/platform/v1;platformv1";
+
+// 平台域(v1;D34–D39):平台營運工具(operator 身分)與租戶端權益投影。
+// 硬規則:platform.* 能力不得出現在租戶 GetAbility(S11);租戶身分不得呼叫 PlatformAdminService。
+
+// TenantSummary:平台視角的租戶概況(跨租戶,僅 operator 可讀)。
+message TenantSummary {
+  string company_id = 1;
+  string company_name = 2;
+  string plan_code = 3;
+  string plan_name = 4;
+  string subscription_status = 5;  // trialing | active | past_due | suspended | cancelled | none
+  int32  seat_count = 6;
+  string current_period_end = 7;   // RFC3339,可空
+  bool   overdue = 8;              // 有未付期別
+}
+
+// PlatformPagination:平台查詢統一分頁結果。
+message PlatformPagination {
+  int32 page = 1;
+  int32 page_size = 2;
+  int32 total = 3;
+}
+
+message ListTenantsRequest {
+  int32  page = 1;
+  int32  page_size = 2;
+  string keyword = 3;              // 公司名稱/識別碼模糊
+  string status = 4;               // 訂閱狀態篩選,可空
+}
+
+message ListTenantsResponse {
+  repeated TenantSummary tenants = 1;
+  PlatformPagination pagination = 2;
+}
+
+message GetTenantRequest {
+  string company_id = 1;
+}
+
+message GetTenantResponse {
+  TenantSummary tenant = 1;
+  repeated TenantOverride overrides = 2;
+}
+
+// TenantOverride:平台對單一租戶的功能覆寫。
+message TenantOverride {
+  string id = 1;
+  string feature_code = 2;
+  bool   enabled_set = 3;          // 是否指定 enabled
+  bool   enabled = 4;
+  bool   limit_set = 5;
+  int64  limit_value = 6;
+  string reason = 7;
+  string owner = 8;
+  string expires_at = 9;
+}
+
+message ListPlansRequest {}
+
+message ListPlansResponse {
+  repeated Plan plans = 1;
+}
+
+// Plan:方案(含各計費週期價格)。
+message Plan {
+  string id = 1;
+  string code = 2;
+  string name = 3;
+  string status = 4;
+  int32  sort_order = 5;
+  repeated PlanPrice prices = 6;
+}
+
+message PlanPrice {
+  string billing_cycle = 1;
+  string base_price = 2;
+  string seat_price = 3;
+  string currency = 4;
+  string effective_from = 5;
+}
+
+message GetPlanEntitlementsRequest {
+  string plan_code = 1;
+}
+
+message GetPlanEntitlementsResponse {
+  repeated FeatureEntitlement entitlements = 1;
+  repeated Feature features = 2;   // 完整功能清單(供矩陣顯示未設定的格)
+}
+
+// Feature:可授權功能定義。
+message Feature {
+  string code = 1;
+  string type = 2;                 // boolean | integer
+  string unit = 3;
+  string description = 4;
+}
+
+message FeatureEntitlement {
+  string feature_code = 1;
+  bool   enabled = 2;
+  bool   limit_set = 3;
+  int64  limit_value = 4;
+}
+
+message ListPlatformAuditRequest {
+  int32  page = 1;
+  int32  page_size = 2;
+  string target_type = 3;
+  string target_id = 4;
+}
+
+message ListPlatformAuditResponse {
+  repeated PlatformAuditEntry entries = 1;
+  PlatformPagination pagination = 2;
+}
+
+message PlatformAuditEntry {
+  string id = 1;
+  string operator_email = 2;
+  string action = 3;
+  string target_type = 4;
+  string target_id = 5;
+  string reason = 6;
+  string created_at = 7;
+}
+
+// PlatformAdminService:平台營運(operator session;租戶身分一律拒絕)。
+service PlatformAdminService {
+  rpc ListTenants(ListTenantsRequest) returns (ListTenantsResponse);
+  rpc GetTenant(GetTenantRequest) returns (GetTenantResponse);
+  rpc ListPlans(ListPlansRequest) returns (ListPlansResponse);
+  rpc GetPlanEntitlements(GetPlanEntitlementsRequest) returns (GetPlanEntitlementsResponse);
+  rpc ListPlatformAudit(ListPlatformAuditRequest) returns (ListPlatformAuditResponse);
+}
+
+// GetTenantEntitlementsRequest:租戶端唯讀投影(自己的公司;前端據此 disable 按鈕與顯示用量)。
+message GetTenantEntitlementsRequest {}
+
+message GetTenantEntitlementsResponse {
+  string plan_code = 1;
+  string plan_name = 2;
+  string status = 3;
+  string trial_ends_at = 4;
+  repeated Usage usage = 5;
+}
+
+// Usage:單一功能的使用量投影。
+message Usage {
+  string feature_code = 1;
+  bool   enabled = 2;
+  bool   limit_set = 3;
+  int64  limit_value = 4;
+  int64  used = 5;
+}
+
+// TenantEntitlementService:租戶端權益投影(租戶 session;唯讀)。
+service TenantEntitlementService {
+  rpc GetTenantEntitlements(GetTenantEntitlementsRequest) returns (GetTenantEntitlementsResponse);
+}
