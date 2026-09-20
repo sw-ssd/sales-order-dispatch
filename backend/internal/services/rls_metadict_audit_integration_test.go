@@ -83,7 +83,7 @@ func TestIntegrationRLSMetadictAuditIsolation(t *testing.T) {
 		// 寫入:未設 scope 的稽核寫入必須被 WITH CHECK 擋(這是本波之前 auth_password 的處境)。
 		if err := appExecScoped(t, app, nil,
 			`INSERT INTO audit_logs (company_id, user_id, action, resource_type, resource_id)
-			 VALUES ($1,$2,'update','scratch','0')`, coA, userA); !isRLSViolation(err) {
+			 VALUES ($1,$2,'update','scratch','0')`, coA, userA); !isRLSPolicyViolation(err) {
 			t.Fatalf("未設 scope 時寫稽核必須被擋(SQLSTATE 42501),got %v", err)
 		}
 	})
@@ -188,7 +188,7 @@ func TestIntegrationRLSMetadictAuditIsolation(t *testing.T) {
 		err := appExecScoped(t, app, companyScope(coA),
 			`INSERT INTO metadicts (type, code, display_name, department_id, sort_order, is_active)
 			 VALUES ('unit','X-SYS','別名',NULL,0,true)`)
-		if !isRLSViolation(err) {
+		if !isRLSPolicyViolation(err) {
 			t.Fatalf("以公司身分寫入系統預設字典必須被 WITH CHECK 擋(SQLSTATE 42501),got %v", err)
 		}
 		// 公司級身分的稽核寫自己公司 → 必須可寫(生產路徑:company_admin 的每個寫入都落稽核)。
@@ -207,12 +207,12 @@ func TestIntegrationRLSMetadictAuditIsolation(t *testing.T) {
 		// 跨租戶:寫公司 B 的稽核 → 被擋(PLAIN 與 RETURNING 都要擋)。
 		if err := appExecScoped(t, app, companyScope(coA),
 			`INSERT INTO audit_logs (company_id, user_id, action, resource_type, resource_id)
-			 VALUES ($1,$2,'update','scratch','2')`, coB, userA); !isRLSViolation(err) {
+			 VALUES ($1,$2,'update','scratch','2')`, coB, userA); !isRLSPolicyViolation(err) {
 			t.Fatalf("以公司 A 的身分寫公司 B 的稽核必須被擋(SQLSTATE 42501),got %v", err)
 		}
 		if err := appExecScoped(t, app, companyScope(coA),
 			`INSERT INTO audit_logs (company_id, user_id, action, resource_type, resource_id)
-			 VALUES ($1,$2,'update','scratch','2r') RETURNING id`, coB, userA); !isRLSViolation(err) {
+			 VALUES ($1,$2,'update','scratch','2r') RETURNING id`, coB, userA); !isRLSPolicyViolation(err) {
 			t.Fatalf("以公司 A 的身分寫公司 B 的稽核(RETURNING)必須被擋(SQLSTATE 42501),got %v", err)
 		}
 	})
@@ -245,7 +245,7 @@ func TestIntegrationRLSMetadictAuditIsolation(t *testing.T) {
 		// 寫他部門的擴充列 → 被擋。
 		if err := appExecScoped(t, app, departmentScope(coA, deptA),
 			`INSERT INTO metadicts (type, code, display_name, department_id, sort_order, is_active)
-			 VALUES ('unit','D-B2','部門B新單位',$1,0,true)`, deptB); !isRLSViolation(err) {
+			 VALUES ('unit','D-B2','部門B新單位',$1,0,true)`, deptB); !isRLSPolicyViolation(err) {
 			t.Fatalf("以部門 A 的身分寫部門 B 的字典必須被 WITH CHECK 擋(SQLSTATE 42501),got %v", err)
 		}
 		// 稽核:部門層級的請求同樣會落稽核(D18)→ 寫自己公司可、寫他公司被擋。
@@ -258,7 +258,7 @@ func TestIntegrationRLSMetadictAuditIsolation(t *testing.T) {
 		}
 		if err := appExecScoped(t, app, departmentScope(coA, deptA),
 			`INSERT INTO audit_logs (company_id, user_id, action, resource_type, resource_id)
-			 VALUES ($1,$2,'update','scratch','4') RETURNING id`, coB, userA); !isRLSViolation(err) {
+			 VALUES ($1,$2,'update','scratch','4') RETURNING id`, coB, userA); !isRLSPolicyViolation(err) {
 			t.Fatalf("以部門 A 的身分寫公司 B 的稽核必須被擋(SQLSTATE 42501),got %v", err)
 		}
 	})
@@ -273,7 +273,7 @@ func TestIntegrationRLSMetadictAuditIsolation(t *testing.T) {
 		}
 		if err := appExecScoped(t, app, selfScope(coA, userA),
 			`INSERT INTO audit_logs (company_id, user_id, action, resource_type, resource_id)
-			 VALUES ($1,$2,'update','user','8') RETURNING id`, coB, userA); !isRLSViolation(err) {
+			 VALUES ($1,$2,'update','user','8') RETURNING id`, coB, userA); !isRLSPolicyViolation(err) {
 			t.Fatalf("以 self 身分寫公司 B 的稽核必須被 WITH CHECK 擋(SQLSTATE 42501),got %v", err)
 		}
 	})

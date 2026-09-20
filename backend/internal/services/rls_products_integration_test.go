@@ -5,13 +5,11 @@ package services
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"connectrpc.com/connect"
-	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
@@ -145,19 +143,11 @@ func TestIntegrationRLSProductsIsolation(t *testing.T) {
 			setAppScope(t, tx, coA)
 			_, err = tx.Exec(tc.sql, tc.args...)
 			_ = tx.Rollback()
-			if !isRLSViolation(err) {
+			if !isRLSPolicyViolation(err) {
 				t.Errorf("以 A 的身分寫入 %s 應以 RLS 違反(SQLSTATE 42501)被擋,got %v", tc.name, err)
 			}
 		}
 	})
-}
-
-// isRLSViolation 判斷錯誤是否為 PostgreSQL 的 RLS 違反(42501 insufficient_privilege,
-// 「new row violates row-level security policy」)。斷言錯誤碼而非只斷「有錯」,是為了讓
-// 「被 FK／唯一索引擋下」不會冒充「被 policy 擋下」。
-func isRLSViolation(err error) bool {
-	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && pgErr.Code == "42501"
 }
 
 // TestIntegrationProductServiceUnderAppRole 以 app_rw + 請求層租戶交易跑**真 handler**,逐條走過

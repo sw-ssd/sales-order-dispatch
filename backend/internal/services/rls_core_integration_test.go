@@ -83,7 +83,7 @@ func TestIntegrationRLSCoreIsolation(t *testing.T) {
 		}
 		// 未設 scope 的寫入也必須被擋:不是「查不到」而是根本寫不進去。
 		if err := appExecScoped(t, app, nil,
-			`INSERT INTO companies (name, identifier, status) VALUES ('X', 'CORE-X', 'active')`); !isRLSViolation(err) {
+			`INSERT INTO companies (name, identifier, status) VALUES ('X', 'CORE-X', 'active')`); !isRLSPolicyViolation(err) {
 			t.Fatalf("未設 scope 的公司寫入必須被 WITH CHECK 擋下(42501),got %v", err)
 		}
 	})
@@ -143,11 +143,11 @@ func TestIntegrationRLSCoreIsolation(t *testing.T) {
 	t.Run("跨租戶寫入 → 被 WITH CHECK 擋下", func(t *testing.T) {
 		if err := appExecScoped(t, app, companyScope(coA),
 			`INSERT INTO users (email, name, role, password_hash, company_users)
-			 VALUES ('core-cross@example.com', '跨租戶', 'staff', 'x', $1)`, coB); !isRLSViolation(err) {
+			 VALUES ('core-cross@example.com', '跨租戶', 'staff', 'x', $1)`, coB); !isRLSPolicyViolation(err) {
 			t.Fatalf("以 A 的身分新增 B 公司的使用者必須被擋(42501),got %v", err)
 		}
 		if err := appExecScoped(t, app, companyScope(coA),
-			`INSERT INTO companies (name, identifier, status) VALUES ('新公司', 'CORE-NEW', 'active')`); !isRLSViolation(err) {
+			`INSERT INTO companies (name, identifier, status) VALUES ('新公司', 'CORE-NEW', 'active')`); !isRLSPolicyViolation(err) {
 			t.Fatalf("以 A 的身分新增別家公司必須被擋(42501),got %v", err)
 		}
 		// 自己公司的寫入必須成功 —— 否則上面兩條只是「全部都寫不進去」的假證據。
@@ -164,7 +164,7 @@ func TestIntegrationRLSCoreIsolation(t *testing.T) {
 		}
 		if err := appExecScoped(t, app, departmentScope(coA, deptA),
 			`INSERT INTO users (email, name, role, password_hash, company_users, department_users)
-			 VALUES ('core-dept-x@example.com', '他部門', 'staff', 'x', $1, $2)`, coA, deptB); !isRLSViolation(err) {
+			 VALUES ('core-dept-x@example.com', '他部門', 'staff', 'x', $1, $2)`, coA, deptB); !isRLSPolicyViolation(err) {
 			t.Fatalf("以 A 部門身分新增他部門使用者必須被擋(42501),got %v", err)
 		}
 		// self:UPDATE 自己那列可過;INSERT(新列 id ≠ user_id)必被擋。
@@ -174,7 +174,7 @@ func TestIntegrationRLSCoreIsolation(t *testing.T) {
 		}
 		if err := appExecScoped(t, app, selfScope(coA, userA),
 			`INSERT INTO users (email, name, role, password_hash, company_users)
-			 VALUES ('core-self@example.com', 'self 新增', 'staff', 'x', $1)`, coA); !isRLSViolation(err) {
+			 VALUES ('core-self@example.com', 'self 新增', 'staff', 'x', $1)`, coA); !isRLSPolicyViolation(err) {
 			t.Fatalf("self 範圍不得新增使用者(新列 id ≠ user_id,42501),got %v", err)
 		}
 	})

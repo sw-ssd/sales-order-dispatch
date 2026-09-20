@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
@@ -613,6 +614,11 @@ func parseID(s string) (int, error) {
 // 訊息表示「資料現況不允許此操作」(P2-A 的原始缺陷正是 FK 阻擋被當成識別碼重複回
 // AlreadyExists 並附上整句 SQL)。需要 AlreadyExists 語意者由呼叫端自行判別(如
 // CreateCompany 以 DeletedAtIsNil 前置查詢判斷識別碼重複),語意明確且訊息不含 DB 細節。
+//
+// RLS 違反(SQLSTATE 42501)是同一類「驅動層原文」,卻**不在** ent 的 constraint 判定內:
+// ent v0.14.6 的 sqlgraph.IsConstraintError 只認唯一鍵／FK／CHECK 的字串特徵,而 PG 的 RLS
+// 訊息是 `new row violates row-level security policy for table "x"` → 會落到 default 分支把
+// SQLSTATE 與表名逐字回給客戶端(違反本計畫 Global Constraints)。故在此明示攔下。
 func toConnectError(err error) error {
 	if err == nil {
 		return nil
@@ -622,6 +628,11 @@ func toConnectError(err error) error {
 		return connect.NewError(connect.CodeNotFound, err)
 	case ent.IsValidationError(err):
 		return connect.NewError(connect.CodeInvalidArgument, err)
+	case isRLSPolicyViolation(err):
+		// 根因(含 SQLSTATE 與 policy 原文,可看出是哪張表被擋)只進 log;對外固定訊息。
+		log.Printf("services: RLS 違反(已映射為 failed_precondition,不對外揭露細節): %v", err)
+		return connect.NewError(connect.CodeFailedPrecondition,
+			errors.New("資料超出目前的存取範圍,無法完成此操作"))
 	case ent.IsConstraintError(err):
 		// 原始錯誤(含 SQLSTATE/約束名/欄位名)仍必須落 server log 才能追查;只對客戶端隱藏。
 		log.Printf("services: 資料庫約束錯誤(已映射為 failed_precondition,不對外揭露細節): %v", err)
@@ -632,6 +643,14 @@ func toConnectError(err error) error {
 	default:
 		return connect.NewError(connect.CodeInternal, err)
 	}
+}
+
+// isRLSPolicyViolation 判斷錯誤是否為 PostgreSQL 的 RLS 違反(SQLSTATE 42501 insufficient_privilege,
+// 訊息為 `new row violates row-level security policy for table "x"`)。以 SQLSTATE 判斷而非字串
+// 比對:被 FK／唯一鍵擋下的錯誤不會冒充成 policy 違反。
+func isRLSPolicyViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "42501"
 }
 
 // companyToProto 將 ent.Company 轉為 proto Company。
