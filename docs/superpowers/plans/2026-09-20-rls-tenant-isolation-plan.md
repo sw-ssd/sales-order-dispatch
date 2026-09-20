@@ -17,6 +17,7 @@
 - 服務層 DB 存取一律經 `dbtenant.Client(ctx, s.db)`；`db.Tx(ctx)` 不得再自行開交易（42 處全數改為使用請求交易）
 - RLS 相關測試一律 `//go:build integration` + `internal/testsupport`；**不得以 sqlite（enttest）測 RLS**（enttest 不支援 `SET`／`FORCE`）
 - **RLS 的驗證必須以非 superuser 連線**（T5 實測更正）：測試容器的 `postgres` 是 superuser，而 PostgreSQL superuser **恆繞過 RLS（`FORCE` 亦然）** → 以它連線的測試全綠**不能**當作「RLS 生效」的證據（只能當 regression gate）。凡宣稱驗 RLS 的測試，必須以 `app_rw`（或專用非 superuser 角色）建立連線／client。
+- **每個 domain 的 app_rw 探針必須走過該域所有已遷移的寫入路徑**（T5 review 教訓）：至少各一支 `Create`／`Update`／`Delete`／`Restore` ＋ 子資源（地址／聯絡人）三支，並斷言回傳資料的 `company_id` 等於身分所屬公司；**只驗 2–3 條讀取路徑不足以證明收斂**（漏掛 `dbtenant.Client` 仍會全綠）。另需一條**負向對照**：以 `app_rw` 建 server 但**不注入 scope** 時，寫入應失敗、清單應回 0 筆。
 - 建 `companies` fixture 時**不得**寫 `created_at`／`updated_at`（該表無此欄位，見 `00005`；T5 實測踩過）。
 - 每個 migration 必含 `Up`/`Down`；ENABLE 的 `Down` 必含 `NO FORCE` + `DISABLE`
 - **對已 ENABLE（且 FORCE）的表做資料回填**的 migration 與 `cmd/seed`：交易內先執行 `SET LOCAL app.current_data_scope = 'all'`（FORCE 也會擋 owner）
