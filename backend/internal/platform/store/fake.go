@@ -2,7 +2,6 @@ package store
 
 import (
 	"context"
-	"slices"
 	"sync"
 )
 
@@ -11,7 +10,9 @@ import (
 // 它必須與 SQL 實作**語意一致**,否則判定層的單元測試會失真:
 //   - Subscription 只回未取消者,無則 (nil, nil);
 //   - Overrides 不過濾到期 —— 到期與否是判定層的職責。至於「已撤銷」,在記憶體裡無從
-//     表達:撤銷是資料庫的事(revoked_at),放進來的即視為有效。
+//     表達:撤銷是資料庫的事(revoked_at),放進來的即視為有效;
+//   - Put 與 getter 兩端都不別名(alias)呼叫端的指標:PG 每次掃描都配置新的指標,
+//     呼叫端改動不到 store,共用一份假實作的測試案例之間也不得互相汙染。
 type Fake struct {
 	mu       sync.Mutex
 	features map[string]Feature
@@ -40,19 +41,19 @@ func (f *Fake) PutFeature(x Feature) {
 func (f *Fake) PutPlan(planCode string, ents []Entitlement) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.plans[planCode] = ents
+	f.plans[planCode] = cloneEntitlements(ents)
 }
 
 func (f *Fake) PutSubscription(s Subscription) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.subs[s.CompanyID] = s
+	f.subs[s.CompanyID] = cloneSubscription(s)
 }
 
 func (f *Fake) PutOverride(o Override) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.overs[o.CompanyID] = append(f.overs[o.CompanyID], o)
+	f.overs[o.CompanyID] = append(f.overs[o.CompanyID], cloneOverride(o))
 }
 
 // Features 回傳副本:呼叫端(或另一個測試)改動不得汙染後續讀取。
@@ -69,13 +70,13 @@ func (f *Fake) Features(context.Context) (map[string]Feature, error) {
 func (f *Fake) PlanEntitlements(_ context.Context, planCode string) ([]Entitlement, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	return slices.Clone(f.plans[planCode]), nil
+	return cloneEntitlements(f.plans[planCode]), nil
 }
 
 func (f *Fake) Overrides(_ context.Context, companyID int) ([]Override, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	return slices.Clone(f.overs[companyID]), nil
+	return cloneOverrides(f.overs[companyID]), nil
 }
 
 func (f *Fake) Subscription(_ context.Context, companyID int) (*Subscription, error) {
@@ -85,5 +86,47 @@ func (f *Fake) Subscription(_ context.Context, companyID int) (*Subscription, er
 	if !ok || s.Status == "cancelled" {
 		return nil, nil
 	}
+	s = cloneSubscription(s)
 	return &s, nil
+}
+
+// 以下為深拷貝:PG 實作的每一列都是掃描出來的新配置,呼叫端與 store 之間沒有共享記憶體;
+// 假實作若只複製切片,元素內的指標仍與 store 共用,`*ov[0].Limit = 1` 就會靜默改到之後
+// 所有讀取。
+func clonePtr[T any](v *T) *T {
+	if v == nil {
+		return nil
+	}
+	c := *v
+	return &c
+}
+
+func cloneEntitlements(in []Entitlement) []Entitlement {
+	out := make([]Entitlement, len(in))
+	for i, e := range in {
+		e.Limit = clonePtr(e.Limit)
+		out[i] = e
+	}
+	return out
+}
+
+func cloneOverride(o Override) Override {
+	o.Enabled = clonePtr(o.Enabled)
+	o.Limit = clonePtr(o.Limit)
+	o.ExpiresAt = clonePtr(o.ExpiresAt)
+	return o
+}
+
+func cloneOverrides(in []Override) []Override {
+	out := make([]Override, len(in))
+	for i, o := range in {
+		out[i] = cloneOverride(o)
+	}
+	return out
+}
+
+func cloneSubscription(s Subscription) Subscription {
+	s.TrialEnds = clonePtr(s.TrialEnds)
+	s.GraceUntil = clonePtr(s.GraceUntil)
+	return s
 }
