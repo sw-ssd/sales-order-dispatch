@@ -1,6 +1,6 @@
 // Package errcode 為對外錯誤碼的唯一真相來源。
 // 設計要點：常數即註冊（MustRegister 於套件 init 驗證格式／唯一性／區段與 connect 碼的一致性，
-// 違反即 panic → 啟動就失敗，而非上線後才發現）；碼發佈後不得重用或改義，廢止只標 Deprecated。
+// 違反即 panic → 啟動就失敗，而非上線後才發現）；碼發佈後不得重用或改義，廢止只標 deprecated。
 //
 // 本套件是葉節點：不 import internal/obs 或任何服務層套件，任何層皆可直接引用。
 package errcode
@@ -31,17 +31,38 @@ const (
 )
 
 // Code 為一筆錯誤碼定義。
+//
+// 欄位刻意**未匯出**（型別即約束）：合法的碼只能由 MustRegister 產生，外部套件連複合字面值都
+// 建不出來，因此不可能繞過 registry 的啟動驗證（格式／區段／重複）造出未註冊的碼。
+// 外部只取用匯出的存取子；Code 仍是可比對、可放 map 的值型別。
 type Code struct {
-	ID          string
-	Domain      Domain
-	ConnectCode connect.Code // 對外 connect 碼（由區段決定，MustRegister 驗證）
-	Message     string       // 繁中樣板，可含 {name} 參數
-	Deprecated  bool
+	id          string
+	domain      Domain
+	connectCode connect.Code // 對外 connect 碼（由區段決定，MustRegister 驗證）
+	message     string       // 繁中樣板，可含 {name} 參數
+	deprecated  bool
 }
+
+// ID 回傳對外錯誤碼，例 "CUST-2001"。
+func (c Code) ID() string { return c.id }
+
+// Domain 回傳碼的域。
+func (c Code) Domain() Domain { return c.domain }
+
+// ConnectCode 回傳對外 connect 碼（由區段規則決定）。
+func (c Code) ConnectCode() connect.Code { return c.connectCode }
+
+// Message 回傳未渲染的繁中訊息樣板。
+func (c Code) Message() string { return c.message }
+
+// IsDeprecated 回報此碼是否已廢止（廢止只標記，不得重用或改義）。
+func (c Code) IsDeprecated() bool { return c.deprecated }
 
 var (
 	idPattern = regexp.MustCompile(`^[A-Z]{2,6}-(\d{4})$`)
-	registry  = map[string]Code{}
+	// placeholderPattern 比對訊息樣板中的 {name} 佔位符。
+	placeholderPattern = regexp.MustCompile(`\{(\w+)\}`)
+	registry           = map[string]Code{}
 )
 
 // sectionRules 為「區段 → 允許的 connect 碼」硬規則。碼的分類必須與對外 connect 碼一致，
@@ -56,26 +77,27 @@ var sectionRules = map[int][]connect.Code{
 	9: {connect.CodeInternal},
 }
 
-// MustRegister 註冊一個碼；違反下列任一即 panic（啟動時暴露，而非上線後才發現）：
-// 格式不符、ID 重複、缺訊息、domain 與前綴不符、connect 碼與區段規則不符。
+// MustRegister 註冊一個碼（只能在碼的宣告處呼叫）；違反下列任一即 panic
+// （啟動時暴露，而非上線後才發現）：格式不符、ID 重複、缺訊息、domain 與前綴不符、
+// connect 碼與區段規則不符。
 func MustRegister(c Code) Code {
-	if !idPattern.MatchString(c.ID) {
-		panic(fmt.Sprintf("errcode: 碼格式錯誤 %q（應為 域-4位數）", c.ID))
+	if !idPattern.MatchString(c.id) {
+		panic(fmt.Sprintf("errcode: 碼格式錯誤 %q（應為 域-4位數）", c.id))
 	}
-	if _, dup := registry[c.ID]; dup {
-		panic(fmt.Sprintf("errcode: 碼重複註冊 %q", c.ID))
+	if _, dup := registry[c.id]; dup {
+		panic(fmt.Sprintf("errcode: 碼重複註冊 %q", c.id))
 	}
-	if strings.TrimSpace(c.Message) == "" {
-		panic(fmt.Sprintf("errcode: %q 缺訊息", c.ID))
+	if strings.TrimSpace(c.message) == "" {
+		panic(fmt.Sprintf("errcode: %q 缺訊息", c.id))
 	}
-	if !strings.HasPrefix(c.ID, string(c.Domain)+"-") {
-		panic(fmt.Sprintf("errcode: %q 與 domain %q 不符", c.ID, c.Domain))
+	if !strings.HasPrefix(c.id, string(c.domain)+"-") {
+		panic(fmt.Sprintf("errcode: %q 與 domain %q 不符", c.id, c.domain))
 	}
-	if !SectionAllows(c.ID, c.ConnectCode) {
+	if !SectionAllows(c.id, c.connectCode) {
 		panic(fmt.Sprintf("errcode: %q 的 connect 碼 %v 與區段 %s 的允許集合不符",
-			c.ID, c.ConnectCode, c.ID[:1]))
+			c.id, c.connectCode, c.id[:1]))
 	}
-	registry[c.ID] = c
+	registry[c.id] = c
 	return c
 }
 
@@ -106,18 +128,34 @@ func All() []Code {
 	for _, c := range registry {
 		out = append(out, c)
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	sort.Slice(out, func(i, j int) bool { return out[i].id < out[j].id })
 	return out
 }
 
-// Render 以參數渲染訊息樣板；缺參數時回樣板原文並記 log（不得讓錯誤處理本身爆掉）。
+// Render 以參數渲染訊息樣板；缺參數時該佔位符保留樣板原文並記 log warn
+// （不得讓錯誤處理本身爆掉）。
+//
+// 缺參數的判定以**樣板中的佔位符**為準（渲染前抽一次），不看渲染結果——否則參數值本身
+// 帶大括號（例：{code} 帶入 "{x}"）會被誤判成缺參數；且逐佔位符替換不會二次替換剛帶入的值。
 func (c Code) Render(params map[string]string) string {
-	msg := c.Message
-	for k, v := range params {
-		msg = strings.ReplaceAll(msg, "{"+k+"}", v)
+	// 零值是外部唯一能造出的 Code（欄位未匯出）；濫用是程式錯誤，立刻爆掉而不是回一個
+	// 沒有碼、沒有訊息的錯誤回應（「未註冊的碼不可用」要能成立，不能只是不建議）。
+	if c.id == "" {
+		panic("errcode: 使用了未經 MustRegister 的零值 Code（未註冊的碼不得建構錯誤）")
 	}
-	if strings.Contains(msg, "{") {
-		log.Printf("errcode: %s 訊息缺參數(已回樣板原文): %q params=%v", c.ID, c.Message, params)
+	msg := c.Message()
+	var missing []string
+	for _, m := range placeholderPattern.FindAllStringSubmatch(c.Message(), -1) {
+		v, ok := params[m[1]]
+		if !ok {
+			missing = append(missing, m[0])
+			continue
+		}
+		msg = strings.ReplaceAll(msg, m[0], v)
+	}
+	if len(missing) > 0 {
+		log.Printf("errcode: %s 訊息缺參數(已回樣板原文): %q 缺=%v params=%v",
+			c.id, c.Message(), missing, params)
 	}
 	return msg
 }
@@ -128,7 +166,7 @@ func (c Code) Render(params map[string]string) string {
 // 故本套件不依賴 internal/obs；「當前請求的 trace_id」本來就只有邊界知道。
 func (c Code) Error(params map[string]string) *connect.Error {
 	msg := c.Render(params)
-	return c.attachInfo(connect.NewError(c.ConnectCode, errors.New(msg)), msg, params)
+	return c.attachInfo(connect.NewError(c.connectCode, errors.New(msg)), msg, params)
 }
 
 // Wrap 同 Error，但保留底層錯誤（Unwrap）供 log 追查；**cause 的文字不進對外 message**。
@@ -140,20 +178,20 @@ func (c Code) Wrap(cause error, params ...map[string]string) *connect.Error {
 		p = params[0]
 	}
 	msg := c.Render(p)
-	err := connect.NewError(c.ConnectCode, &wrapped{msg: msg, cause: cause})
+	err := connect.NewError(c.connectCode, &wrapped{msg: msg, cause: cause})
 	return c.attachInfo(err, msg, p)
 }
 
 // attachInfo 附掛 ErrorInfo detail。附掛失敗不得讓錯誤處理本身失效（記 log，仍回 connect 碼與訊息）——
 // 錯誤路徑上的二次失敗最難追。
 func (c Code) attachInfo(err *connect.Error, msg string, params map[string]string) *connect.Error {
-	info := &commonv1.ErrorInfo{Code: c.ID, Message: msg}
+	info := &commonv1.ErrorInfo{Code: c.id, Message: msg}
 	if len(params) > 0 {
 		info.Details = params
 	}
 	detail, derr := connect.NewErrorDetail(info)
 	if derr != nil {
-		log.Printf("errcode: %s 附掛 ErrorInfo 失敗（回應仍帶 connect 碼）: %v", c.ID, derr)
+		log.Printf("errcode: %s 附掛 ErrorInfo 失敗（回應仍帶 connect 碼）: %v", c.id, derr)
 		return err
 	}
 	err.AddDetail(detail)
