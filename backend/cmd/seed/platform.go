@@ -48,8 +48,9 @@ var platformFeatures = []struct{ Code, Type, Unit, Desc string }{
 	{"feature.returns", "boolean", "", "退貨申請與審核"},
 }
 
-// platformPlan 為一個起始方案：Entitle 列出即 enabled；值 > 0 = 上限、-1 = enabled 但不限
-// （limit_value 為 NULL）。未列出的 feature 即未含（判定層對缺席者 fail-closed）。
+// platformPlan 為一個起始方案。Entitle 的值域（由 entitlementValues 定義、validatePlanEntitlements
+// 在寫入前檢查）：> 0 = 上限；-1 = enabled 但不限（limit_value 為 NULL）；0 = 未含（enabled=false）；
+// 其他負值＝錯誤。未列出的 feature 即未含（判定層對缺席者 fail-closed）。
 type platformPlan struct {
 	Code, Name string
 	SortOrder  int
@@ -71,6 +72,39 @@ var platformPlans = []platformPlan{
 		"limit.departments": 20,
 		"feature.printing":  -1, "feature.dispatch": -1, "feature.returns": -1,
 	}},
+}
+
+// entitlementValues 依 limit 的**值域**決定方案權益的 (enabled, limit_value)：
+//
+//	> 0 → enabled、limit_value = 上限
+//	-1  → enabled、limit_value 為 NULL（不限）
+//	 0  → **未含**（enabled=false、無上限）—— 多數人對「上限 0」的直覺是「不可用」，
+//	      若當成「enabled 且不限」就是靜默 fail-open（審查 M-3）
+//	其他負值 → 錯誤（打錯的 -2 不得變成「不限」）
+func entitlementValues(limit int64) (bool, any, error) {
+	switch {
+	case limit > 0:
+		return true, limit, nil
+	case limit == -1:
+		return true, nil, nil
+	case limit == 0:
+		return false, nil, nil
+	default:
+		return false, nil, fmt.Errorf("limit 值 %d 不在支援值域（只能是 -1＝不限、0＝未含、或正整數上限）", limit)
+	}
+}
+
+// validatePlanEntitlements 在任何寫入**之前**檢查整份方案表的權益值域：壞值必須 fail-fast，
+// 不得先寫一半（features／方案）才在迴圈裡失敗。
+func validatePlanEntitlements() error {
+	for _, p := range platformPlans {
+		for code, limit := range p.Entitle {
+			if _, _, err := entitlementValues(limit); err != nil {
+				return fmt.Errorf("方案 %s 的 %s: %w", p.Code, code, err)
+			}
+		}
+	}
+	return nil
 }
 
 // planPrice 為方案的月繳預設價（字串原樣交給 numeric，避免浮點誤差進定價）。
@@ -111,8 +145,12 @@ func yearlyPrice(monthly string) string {
 //
 // 連線分工見檔頭：platform.* 走 db；companies／users 走 client＋SystemScopeTx。
 func SeedPlatform(ctx context.Context, db *sql.DB, client *ent.Client, cfg config.Platform) error {
+	// 任何寫入之前先驗證設定與內建表：壞值不得留下半套 seed。
 	prices, err := planPriceDefaults(cfg)
 	if err != nil {
+		return err
+	}
+	if err := validatePlanEntitlements(); err != nil {
 		return err
 	}
 	if err := seedPlatformCatalog(ctx, db, cfg, prices); err != nil {
@@ -140,6 +178,10 @@ func seedPlatformCatalog(ctx context.Context, db *sql.DB, cfg config.Platform, p
 
 	for _, p := range platformPlans {
 		var planID int64
+		// 重跑副作用（審查 M-4）：`INSERT ... ON CONFLICT DO UPDATE` 每次執行都會先取得一個
+		// nextval（plans_id_seq 每方案 +1／次），即使最終走的是 UPDATE 分支、id 不變 ——
+		// 序列跳號無實害（不是「重複列」），故不為了漂亮改成先 SELECT 再 INSERT/UPDATE
+		// （那會多一次往返與競態，且 seed 是單執行緒）。
 		if err := db.QueryRowContext(ctx, `
 			INSERT INTO platform.plans (code, name, sort_order)
 			VALUES ($1,$2,$3)
@@ -167,17 +209,16 @@ func seedPlatformCatalog(ctx context.Context, db *sql.DB, cfg config.Platform, p
 		}
 
 		for code, limit := range p.Entitle {
-			// 列出即 enabled；-1 = 不限（limit_value NULL）。
-			var limitValue any
-			if limit > 0 {
-				limitValue = limit
+			enabled, limitValue, err := entitlementValues(limit) // 值域已於 validatePlanEntitlements 檢查過
+			if err != nil {
+				return fmt.Errorf("seed entitlement %s/%s: %w", p.Code, code, err)
 			}
 			if _, err := db.ExecContext(ctx, `
 				INSERT INTO platform.plan_entitlements (plan_id, feature_code, enabled, limit_value)
-				VALUES ($1,$2,true,$3)
+				VALUES ($1,$2,$3,$4)
 				ON CONFLICT (plan_id, feature_code)
 				DO UPDATE SET enabled = EXCLUDED.enabled, limit_value = EXCLUDED.limit_value`,
-				planID, code, limitValue); err != nil {
+				planID, code, enabled, limitValue); err != nil {
 				return fmt.Errorf("seed entitlement %s/%s: %w", p.Code, code, err)
 			}
 		}
@@ -305,9 +346,13 @@ func seedPlatformSettings(ctx context.Context, db *sql.DB, cfg config.Platform, 
 		return nil
 	}
 	// 系統 actor 的 id 由 seed 決定 → 可覆寫（自癒：值被改壞時重跑 seed 會修正）。
+	// `WHERE value IS DISTINCT FROM EXCLUDED.value`（審查 M-4）：值相同時**不寫入**，
+	// 因此重跑 seed 不會推進 updated_at —— 該欄對 Plan C 的 console 是「最後修改時間」，
+	// 被 seed 每次重跑推進去會誤導營運（同時讓「重跑不改任何欄位」成為可斷言的事實）。
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO platform.settings (key, value) VALUES ('system_actor_user_id', $1)
-		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
+		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()
+		 WHERE platform.settings.value IS DISTINCT FROM EXCLUDED.value`,
 		strconv.FormatInt(actorID, 10)); err != nil {
 		return fmt.Errorf("seed system_actor_user_id: %w", err)
 	}

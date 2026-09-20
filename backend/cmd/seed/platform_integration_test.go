@@ -112,8 +112,14 @@ func TestIntegrationSeedPlatformIdempotent(t *testing.T) {
 		t.Fatalf("第 1 次 seed：%v", err)
 	}
 	first := platformSeedCountsOf(t, admin)
+	// 重跑不得推進 settings.updated_at（審查 M-4）：該欄是 console 的「最後修改時間」，
+	// 值沒變就不該改（實作以 `WHERE value IS DISTINCT FROM EXCLUDED.value` 保證）。
+	actorUpdatedAt := seedString(t, admin, `SELECT updated_at::text FROM platform.settings WHERE key = 'system_actor_user_id'`)
 	if err := SeedPlatform(ctx, admin, client, cfg); err != nil {
 		t.Fatalf("第 2 次 seed（冪等）：%v", err)
+	}
+	if again := seedString(t, admin, `SELECT updated_at::text FROM platform.settings WHERE key = 'system_actor_user_id'`); again != actorUpdatedAt {
+		t.Fatalf("值未變時重跑 seed 不得推進 updated_at：%s → %s", actorUpdatedAt, again)
 	}
 	if second := platformSeedCountsOf(t, admin); second != first {
 		t.Fatalf("重跑 seed 不得改變列數：\n第一次 %+v\n第二次 %+v", first, second)
