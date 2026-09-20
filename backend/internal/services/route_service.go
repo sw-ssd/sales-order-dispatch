@@ -80,7 +80,7 @@ func (s *RouteService) ListRoutes(ctx context.Context, req *connect.Request[mast
 	if err != nil {
 		return nil, err
 	}
-	q := routeScopeQuery(s.db.Route.Query(), cid, did)
+	q := routeScopeQuery(dbtenant.Client(ctx, s.db).Route.Query(), cid, did)
 	if !req.Msg.GetIncludeDeleted() {
 		q = q.Where(route.DeletedAtIsNil())
 	}
@@ -107,13 +107,15 @@ func (s *RouteService) CreateRoute(ctx context.Context, req *connect.Request[mas
 	if err != nil {
 		return nil, err
 	}
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見 customer_service.CreateCustomer:
+	// 主檔域 ENABLE+FORCE 後,自開交易(池化連線、未帶 scope)會被 policy 過濾成 0 列/WITH CHECK 擋下。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 	actor, _ := parseID(id.UserID)
-	build := tx.Route.Create().
+	build := db.Route.Create().
 		SetCompanyID(cid).SetCode(code).SetName(name).
 		SetSortOrder(int(req.Msg.GetSortOrder())).SetIsActive(req.Msg.GetIsActive()).
 		SetCreatedBy(actor).SetUpdatedBy(actor)
@@ -128,9 +130,6 @@ func (s *RouteService) CreateRoute(ctx context.Context, req *connect.Request[mas
 		return nil, toConnectError(err)
 	}
 	if err := recordAudit(ctx, tx, "route", "create", created.ID, cid, created.DepartmentID, actor, map[string]any{"code": created.Code, "name": created.Name}); err != nil {
-		return nil, toConnectError(err)
-	}
-	if err := tx.Commit(); err != nil {
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&mastersv1.CreateRouteResponse{Route: routeToProto(created)}), nil
@@ -149,15 +148,17 @@ func (s *RouteService) UpdateRoute(ctx context.Context, req *connect.Request[mas
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("route id 格式錯誤"))
 	}
-	if _, err := routeScopeQuery(s.db.Route.Query(), cid, did).Where(route.ID(rid), route.DeletedAtIsNil()).Only(ctx); err != nil {
+	if _, err := routeScopeQuery(dbtenant.Client(ctx, s.db).Route.Query(), cid, did).Where(route.ID(rid), route.DeletedAtIsNil()).Only(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見 customer_service.CreateCustomer:
+	// 主檔域 ENABLE+FORCE 後,自開交易(池化連線、未帶 scope)會被 policy 過濾成 0 列/WITH CHECK 擋下。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
-	upd := tx.Route.UpdateOneID(rid)
+	db := tx.Client()
+	upd := db.Route.UpdateOneID(rid)
 	if req.Msg.Code != nil {
 		c, err := trimNonEmpty(*req.Msg.Code, "code 不可為空")
 		if err != nil {
@@ -189,9 +190,6 @@ func (s *RouteService) UpdateRoute(ctx context.Context, req *connect.Request[mas
 	if err := recordAudit(ctx, tx, "route", "update", rid, cid, updated.DepartmentID, actor, map[string]any{"name": updated.Name}); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := tx.Commit(); err != nil {
-		return nil, toConnectError(err)
-	}
 	return connect.NewResponse(&mastersv1.UpdateRouteResponse{Route: routeToProto(updated)}), nil
 }
 
@@ -208,23 +206,22 @@ func (s *RouteService) DeleteRoute(ctx context.Context, req *connect.Request[mas
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("route id 格式錯誤"))
 	}
-	cur, err := routeScopeQuery(s.db.Route.Query(), cid, did).Where(route.ID(rid), route.DeletedAtIsNil()).Only(ctx)
+	cur, err := routeScopeQuery(dbtenant.Client(ctx, s.db).Route.Query(), cid, did).Where(route.ID(rid), route.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見 customer_service.CreateCustomer:
+	// 主檔域 ENABLE+FORCE 後,自開交易(池化連線、未帶 scope)會被 policy 過濾成 0 列/WITH CHECK 擋下。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 	actor, _ := parseID(id.UserID)
-	if err := tx.Route.UpdateOneID(rid).SetDeletedAt(time.Now().UTC()).SetUpdatedBy(actor).Exec(ctx); err != nil {
+	if err := db.Route.UpdateOneID(rid).SetDeletedAt(time.Now().UTC()).SetUpdatedBy(actor).Exec(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := recordAudit(ctx, tx, "route", "delete", rid, cid, cur.DepartmentID, actor, map[string]any{"code": cur.Code, "name": cur.Name}); err != nil {
-		return nil, toConnectError(err)
-	}
-	if err := tx.Commit(); err != nil {
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&mastersv1.DeleteRouteResponse{}), nil
@@ -243,27 +240,26 @@ func (s *RouteService) RestoreRoute(ctx context.Context, req *connect.Request[ma
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("route id 格式錯誤"))
 	}
-	cur, err := routeScopeQuery(s.db.Route.Query(), cid, did).Where(route.ID(rid)).Only(ctx)
+	cur, err := routeScopeQuery(dbtenant.Client(ctx, s.db).Route.Query(), cid, did).Where(route.ID(rid)).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
 	if cur.DeletedAt == nil {
 		return connect.NewResponse(&mastersv1.RestoreRouteResponse{Route: routeToProto(cur)}), nil
 	}
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見 customer_service.CreateCustomer:
+	// 主檔域 ENABLE+FORCE 後,自開交易(池化連線、未帶 scope)會被 policy 過濾成 0 列/WITH CHECK 擋下。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 	actor, _ := parseID(id.UserID)
-	restored, err := tx.Route.UpdateOneID(rid).ClearDeletedAt().SetUpdatedBy(actor).Save(ctx)
+	restored, err := db.Route.UpdateOneID(rid).ClearDeletedAt().SetUpdatedBy(actor).Save(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := recordAudit(ctx, tx, "route", "update", rid, cid, restored.DepartmentID, actor, map[string]any{"restored": true, "code": restored.Code}); err != nil {
-		return nil, toConnectError(err)
-	}
-	if err := tx.Commit(); err != nil {
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&mastersv1.RestoreRouteResponse{Route: routeToProto(restored)}), nil

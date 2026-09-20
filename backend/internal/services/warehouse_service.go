@@ -88,7 +88,7 @@ func (s *WarehouseService) ListWarehouses(ctx context.Context, req *connect.Requ
 	if err != nil {
 		return nil, err
 	}
-	q := warehouseScopeQuery(s.db.Warehouse.Query(), cid, did)
+	q := warehouseScopeQuery(dbtenant.Client(ctx, s.db).Warehouse.Query(), cid, did)
 	if !req.Msg.GetIncludeDeleted() {
 		q = q.Where(warehouse.DeletedAtIsNil())
 	}
@@ -116,13 +116,15 @@ func (s *WarehouseService) CreateWarehouse(ctx context.Context, req *connect.Req
 	if err != nil {
 		return nil, err
 	}
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見 customer_service.CreateCustomer:
+	// 主檔域 ENABLE+FORCE 後,自開交易(池化連線、未帶 scope)會被 policy 過濾成 0 列/WITH CHECK 擋下。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 	actor, _ := parseID(id.UserID)
-	build := tx.Warehouse.Create().
+	build := db.Warehouse.Create().
 		SetCompanyID(cid).SetCode(code).SetName(name).
 		SetIsActive(req.Msg.GetIsActive()).SetCreatedBy(actor).SetUpdatedBy(actor)
 	if did != nil {
@@ -136,9 +138,6 @@ func (s *WarehouseService) CreateWarehouse(ctx context.Context, req *connect.Req
 		return nil, toConnectError(err)
 	}
 	if err := recordAudit(ctx, tx, "warehouse", "create", created.ID, cid, created.DepartmentID, actor, map[string]any{"code": created.Code, "name": created.Name}); err != nil {
-		return nil, toConnectError(err)
-	}
-	if err := tx.Commit(); err != nil {
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&mastersv1.CreateWarehouseResponse{Warehouse: warehouseToProto(created)}), nil
@@ -158,15 +157,17 @@ func (s *WarehouseService) UpdateWarehouse(ctx context.Context, req *connect.Req
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("warehouse id 格式錯誤"))
 	}
-	if _, err := warehouseScopeQuery(s.db.Warehouse.Query(), cid, did).Where(warehouse.ID(wid), warehouse.DeletedAtIsNil()).Only(ctx); err != nil {
+	if _, err := warehouseScopeQuery(dbtenant.Client(ctx, s.db).Warehouse.Query(), cid, did).Where(warehouse.ID(wid), warehouse.DeletedAtIsNil()).Only(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見 customer_service.CreateCustomer:
+	// 主檔域 ENABLE+FORCE 後,自開交易(池化連線、未帶 scope)會被 policy 過濾成 0 列/WITH CHECK 擋下。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
-	upd := tx.Warehouse.UpdateOneID(wid)
+	db := tx.Client()
+	upd := db.Warehouse.UpdateOneID(wid)
 	if req.Msg.Code != nil {
 		c, err := trimNonEmpty(*req.Msg.Code, "code 不可為空")
 		if err != nil {
@@ -195,9 +196,6 @@ func (s *WarehouseService) UpdateWarehouse(ctx context.Context, req *connect.Req
 	if err := recordAudit(ctx, tx, "warehouse", "update", wid, cid, updated.DepartmentID, actor, map[string]any{"name": updated.Name}); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := tx.Commit(); err != nil {
-		return nil, toConnectError(err)
-	}
 	return connect.NewResponse(&mastersv1.UpdateWarehouseResponse{Warehouse: warehouseToProto(updated)}), nil
 }
 
@@ -215,23 +213,22 @@ func (s *WarehouseService) DeleteWarehouse(ctx context.Context, req *connect.Req
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("warehouse id 格式錯誤"))
 	}
-	cur, err := warehouseScopeQuery(s.db.Warehouse.Query(), cid, did).Where(warehouse.ID(wid), warehouse.DeletedAtIsNil()).Only(ctx)
+	cur, err := warehouseScopeQuery(dbtenant.Client(ctx, s.db).Warehouse.Query(), cid, did).Where(warehouse.ID(wid), warehouse.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見 customer_service.CreateCustomer:
+	// 主檔域 ENABLE+FORCE 後,自開交易(池化連線、未帶 scope)會被 policy 過濾成 0 列/WITH CHECK 擋下。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 	actor, _ := parseID(id.UserID)
-	if err := tx.Warehouse.UpdateOneID(wid).SetDeletedAt(time.Now().UTC()).SetUpdatedBy(actor).Exec(ctx); err != nil {
+	if err := db.Warehouse.UpdateOneID(wid).SetDeletedAt(time.Now().UTC()).SetUpdatedBy(actor).Exec(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := recordAudit(ctx, tx, "warehouse", "delete", wid, cid, cur.DepartmentID, actor, map[string]any{"code": cur.Code, "name": cur.Name}); err != nil {
-		return nil, toConnectError(err)
-	}
-	if err := tx.Commit(); err != nil {
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&mastersv1.DeleteWarehouseResponse{}), nil
@@ -251,27 +248,26 @@ func (s *WarehouseService) RestoreWarehouse(ctx context.Context, req *connect.Re
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("warehouse id 格式錯誤"))
 	}
-	cur, err := warehouseScopeQuery(s.db.Warehouse.Query(), cid, did).Where(warehouse.ID(wid)).Only(ctx)
+	cur, err := warehouseScopeQuery(dbtenant.Client(ctx, s.db).Warehouse.Query(), cid, did).Where(warehouse.ID(wid)).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
 	if cur.DeletedAt == nil {
 		return connect.NewResponse(&mastersv1.RestoreWarehouseResponse{Warehouse: warehouseToProto(cur)}), nil
 	}
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見 customer_service.CreateCustomer:
+	// 主檔域 ENABLE+FORCE 後,自開交易(池化連線、未帶 scope)會被 policy 過濾成 0 列/WITH CHECK 擋下。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 	actor, _ := parseID(id.UserID)
-	restored, err := tx.Warehouse.UpdateOneID(wid).ClearDeletedAt().SetUpdatedBy(actor).Save(ctx)
+	restored, err := db.Warehouse.UpdateOneID(wid).ClearDeletedAt().SetUpdatedBy(actor).Save(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := recordAudit(ctx, tx, "warehouse", "update", wid, cid, restored.DepartmentID, actor, map[string]any{"restored": true, "code": restored.Code}); err != nil {
-		return nil, toConnectError(err)
-	}
-	if err := tx.Commit(); err != nil {
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&mastersv1.RestoreWarehouseResponse{Warehouse: warehouseToProto(restored)}), nil

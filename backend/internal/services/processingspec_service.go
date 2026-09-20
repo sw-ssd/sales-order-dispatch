@@ -98,7 +98,7 @@ func (s *ProcessingSpecService) ListProcessingSpecs(ctx context.Context, req *co
 	if err != nil {
 		return nil, err
 	}
-	q := specScopeQuery(s.db.ProcessingSpec.Query(), cid, did)
+	q := specScopeQuery(dbtenant.Client(ctx, s.db).ProcessingSpec.Query(), cid, did)
 	if !req.Msg.GetIncludeDeleted() {
 		q = q.Where(processingspec.DeletedAtIsNil())
 	}
@@ -132,13 +132,15 @@ func (s *ProcessingSpecService) CreateProcessingSpec(ctx context.Context, req *c
 	if kind == "" {
 		kind = "other"
 	}
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見 customer_service.CreateCustomer:
+	// 主檔域 ENABLE+FORCE 後,自開交易(池化連線、未帶 scope)會被 policy 過濾成 0 列/WITH CHECK 擋下。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 	actor, _ := parseID(id.UserID)
-	build := tx.ProcessingSpec.Create().
+	build := db.ProcessingSpec.Create().
 		SetCompanyID(cid).SetCode(code).SetName(name).SetKind(kind).
 		SetAppliesToProcessing(req.Msg.GetAppliesToProcessing()).
 		SetAppliesToPicking(req.Msg.GetAppliesToPicking()).
@@ -157,9 +159,6 @@ func (s *ProcessingSpecService) CreateProcessingSpec(ctx context.Context, req *c
 	if err := recordAudit(ctx, tx, "processing_spec", "create", created.ID, cid, created.DepartmentID, actor, map[string]any{"code": created.Code, "name": created.Name, "kind": created.Kind}); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := tx.Commit(); err != nil {
-		return nil, toConnectError(err)
-	}
 	return connect.NewResponse(&mastersv1.CreateProcessingSpecResponse{ProcessingSpec: specToProto(created)}), nil
 }
 
@@ -176,16 +175,18 @@ func (s *ProcessingSpecService) UpdateProcessingSpec(ctx context.Context, req *c
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("processing_spec id 格式錯誤"))
 	}
-	cur, err := specScopeQuery(s.db.ProcessingSpec.Query(), cid, did).Where(processingspec.ID(sid), processingspec.DeletedAtIsNil()).Only(ctx)
+	cur, err := specScopeQuery(dbtenant.Client(ctx, s.db).ProcessingSpec.Query(), cid, did).Where(processingspec.ID(sid), processingspec.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見 customer_service.CreateCustomer:
+	// 主檔域 ENABLE+FORCE 後,自開交易(池化連線、未帶 scope)會被 policy 過濾成 0 列/WITH CHECK 擋下。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
-	upd := tx.ProcessingSpec.UpdateOneID(sid)
+	db := tx.Client()
+	upd := db.ProcessingSpec.UpdateOneID(sid)
 	if req.Msg.Code != nil {
 		c, err := trimNonEmpty(*req.Msg.Code, "code 不可為空")
 		if err != nil {
@@ -239,9 +240,6 @@ func (s *ProcessingSpecService) UpdateProcessingSpec(ctx context.Context, req *c
 	if err := recordAudit(ctx, tx, "processing_spec", "update", sid, cid, updated.DepartmentID, actor, map[string]any{"name": updated.Name}); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := tx.Commit(); err != nil {
-		return nil, toConnectError(err)
-	}
 	return connect.NewResponse(&mastersv1.UpdateProcessingSpecResponse{ProcessingSpec: specToProto(updated)}), nil
 }
 
@@ -258,23 +256,22 @@ func (s *ProcessingSpecService) DeleteProcessingSpec(ctx context.Context, req *c
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("processing_spec id 格式錯誤"))
 	}
-	cur, err := specScopeQuery(s.db.ProcessingSpec.Query(), cid, did).Where(processingspec.ID(sid), processingspec.DeletedAtIsNil()).Only(ctx)
+	cur, err := specScopeQuery(dbtenant.Client(ctx, s.db).ProcessingSpec.Query(), cid, did).Where(processingspec.ID(sid), processingspec.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見 customer_service.CreateCustomer:
+	// 主檔域 ENABLE+FORCE 後,自開交易(池化連線、未帶 scope)會被 policy 過濾成 0 列/WITH CHECK 擋下。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 	actor, _ := parseID(id.UserID)
-	if err := tx.ProcessingSpec.UpdateOneID(sid).SetDeletedAt(time.Now().UTC()).SetUpdatedBy(actor).Exec(ctx); err != nil {
+	if err := db.ProcessingSpec.UpdateOneID(sid).SetDeletedAt(time.Now().UTC()).SetUpdatedBy(actor).Exec(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := recordAudit(ctx, tx, "processing_spec", "delete", sid, cid, cur.DepartmentID, actor, map[string]any{"code": cur.Code, "name": cur.Name}); err != nil {
-		return nil, toConnectError(err)
-	}
-	if err := tx.Commit(); err != nil {
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&mastersv1.DeleteProcessingSpecResponse{}), nil
@@ -293,27 +290,26 @@ func (s *ProcessingSpecService) RestoreProcessingSpec(ctx context.Context, req *
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("processing_spec id 格式錯誤"))
 	}
-	cur, err := specScopeQuery(s.db.ProcessingSpec.Query(), cid, did).Where(processingspec.ID(sid)).Only(ctx)
+	cur, err := specScopeQuery(dbtenant.Client(ctx, s.db).ProcessingSpec.Query(), cid, did).Where(processingspec.ID(sid)).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
 	if cur.DeletedAt == nil {
 		return connect.NewResponse(&mastersv1.RestoreProcessingSpecResponse{ProcessingSpec: specToProto(cur)}), nil
 	}
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見 customer_service.CreateCustomer:
+	// 主檔域 ENABLE+FORCE 後,自開交易(池化連線、未帶 scope)會被 policy 過濾成 0 列/WITH CHECK 擋下。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 	actor, _ := parseID(id.UserID)
-	restored, err := tx.ProcessingSpec.UpdateOneID(sid).ClearDeletedAt().SetUpdatedBy(actor).Save(ctx)
+	restored, err := db.ProcessingSpec.UpdateOneID(sid).ClearDeletedAt().SetUpdatedBy(actor).Save(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := recordAudit(ctx, tx, "processing_spec", "update", sid, cid, restored.DepartmentID, actor, map[string]any{"restored": true, "code": restored.Code}); err != nil {
-		return nil, toConnectError(err)
-	}
-	if err := tx.Commit(); err != nil {
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&mastersv1.RestoreProcessingSpecResponse{ProcessingSpec: specToProto(restored)}), nil
