@@ -27,7 +27,7 @@
 ## 3. 授權與安全(不可妥協)
 
 - 任何新 Connect 方法**必須**有授權門檻(Casbin `requireScope`/`requireRole` 模式),未登入 → `Unauthenticated`、越權 → `PermissionDenied`;前端守衛不算授權。
-- 跨租戶資料存取失敗的錯誤碼分兩層:**服務層 ACL 判定的越權** → `PermissionDenied`(非 `invalid_argument`;輸入驗證失敗才回 `InvalidArgument`);**被 RLS 過濾掉的目標**(查詢根本看不到該列)→ `NotFound`,不得回 `PermissionDenied` 洩漏「該資源存在」(見 §9-8)。
+- 跨租戶資料存取失敗的錯誤碼分兩層:**服務層 ACL 判定的越權** → `PermissionDenied`(碼 `SYS-4001`;非 `invalid_argument`,輸入驗證失敗才回 `InvalidArgument`);**被 RLS 過濾掉的目標**(查詢根本看不到該列)→ `NotFound`(碼 `SYS-4002`),不得回 `PermissionDenied` 洩漏「該資源存在」(見 §9-8、§10-5)。
 - `role_permissions` 異動前必跑條件驗證 + 防鎖死(含 `all`/`*` subject);company_admin 的 id 欄位值須為自身公司或佔位符(以 `casl.ParseConditions` 展開驗證)。
 - 設定密鑰(JWT_SECRET 等)production 下空值/預設值 → `Init()` fail-fast 拒絕啟動;驗證端對空密鑰 fail-closed。
 - **平台側授權只有一層（G15，2026-09-20）**：`platform` schema 的表**不套 RLS**（設計如此；`app_rw` 對其為零權限，這是唯一的 DB 層緩解）。因此 console／平台 RPC 的 operator 授權**全靠服務層檢查**：任何新增的平台路徑都**必須**有服務層授權檢查與對應測試，沒有第二道防線會在事後擋下來。
@@ -82,7 +82,7 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
    - 軟刪除的識別碼唯一性要用 **partial unique index**(`WHERE deleted_at IS NULL`),並移除舊的表層 UNIQUE。
    - 「刪除前的前置檢查」與「掛載資料到該列」之間有競態:需**兩側對同一列取互斥鎖**(掛載端 `FOR SHARE`、刪除端先 `FOR UPDATE` 再條件式 `UPDATE`)。**單側鎖不足**:READ COMMITTED 只重評目標列,`NOT EXISTS` 子查詢仍用敘述開始的快照。方言判斷用 `sql.Selector.Dialect()`(sqlite 不支援 `FOR ...`,不可寫入鎖子句)。
 3. **RLS 已全站生效**(2026-09-20:`00024`–`00028` 對 18 張業務表 `ENABLE` + `FORCE`;policy 由 `00007`/`00011`/`00023` 定義、`00025` 正規化為 `NULLIF` 形式)。RLS 是跨公司隔離的**最後一道防線**,授權仍以服務層門檻為準(§9);未帶 scope 的查詢一律 fail-closed(0 列)。
-4. **`toConnectError` 之類的全域錯誤映射**:不要把 DB 原始訊息(含 `SQLSTATE`/constraint 名)回給客戶端;約束類錯誤回 `FailedPrecondition` 並落 server log,`AlreadyExists` 僅用於真正的「已存在」語意(需在建立路徑自行前置判別)。
+4. **`toConnectError` 之類的全域錯誤映射**:不要把 DB 原始訊息(含 `SQLSTATE`/constraint 名)回給客戶端;約束類錯誤回 `FailedPrecondition` 並落 server log,`AlreadyExists` 僅用於真正的「已存在」語意(需在建立路徑自行前置判別)。映射的**碼**與規則見 §10。
 
 ## 9. RLS 與租戶交易（D36；2026-09-20 起全站生效）
 
@@ -134,4 +134,20 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
 2. **不是跨公司洩漏**（`company_id` 條件仍在），且目前**不可達**：服務層對 customer/guest 一律 `permission_denied`（`deptScope` 的 default 分支），客戶 App 頁面亦尚未實作（見功能對照表）。
 3. 修法材料齊備且範圍明確，但屬 **policy ＋ 服務層語意變更**：①`identityFor` 把該列的 `users.customer_id` 填進 `RLSScope.CustomerID`（→ 交易內 `SET LOCAL app.current_customer_id`）；②`core_customers_scope` 補 `self` 分支（`id = NULLIF(current_setting('app.current_customer_id', true), '')::bigint`）；③**同一缺口的表不只 `customers`** —— `core_customer_addresses_scope`／`core_customer_contacts_scope` 也沒有 `self` 分支，客戶 App 未來要讀的新表（訂單等）同理，必須成組處理，否則 App 只是在別的端點又看到整個公司。
 4. **歸屬**：不在 RLS 啟用計畫（T10 明文「不要改 policy」）內。此缺口應由「**客戶 App 業務頁面**」的實作計畫處理：先在該計畫確認產品語意（客戶端是否真的只能看自己那一筆，抑或公司層共用本就允許），再落 ①②③ ＋ 對應 ACL，並附一條以 `app_rw` 跑的 self-範圍探針（樣板：`internal/services/rls_cross_tenant_integration_test.go`）。在此之前的任何「客戶 App 讀自己的資料」實作都不可依賴 RLS。
+
+## 10. 錯誤碼（Plan D，2026-09-20 起）
+
+唯一真相來源是 `internal/errcode`（Go 常數即註冊）；`docs/error-codes.md`、`frontend/src/lib/errcode.ts`、`app/lib/gen/errcode.dart` 都是它的**產生檔**，要改碼表只改 `codes_*.go`。
+
+1. **一律使用註冊碼**：對外錯誤不得直接 `connect.NewError(code, errors.New("…"))`（`internal/services`、`internal/handlers`、`internal/server` 的 middleware 閘門皆同）。既有未帶碼的呼叫點列於基線檔 `internal/services/errcode_baseline.txt`（**現況 98 行／233 呼叫點**，鍵為 `path:歸屬名:筆數`），受 `internal/services/errcode_guard_test.go` 的 `TestNoUnregisteredErrorConstruction` 守門：**基線只能縮小** —— 新增未註冊碼、同一函式筆數不符、或基線殘留已消失的呼叫點都會紅。有意縮小時跑 `go test ./internal/services/ -run TestNoUnregisteredErrorConstruction -update-errcode-baseline`（並在 PR 說明）。
+   為什麼用掃描而非型別：要讓型別擋住需一次改完 233 處；掃描是不得已的取捨，以「函式名＋筆數、不含行號」降低偽陽性（行號會因無關編輯全數失效）。
+2. **碼發佈後不得重用或改義**；廢止只標 `Deprecated: true`（`IsDeprecated()`），且不得在新呼叫點使用。
+3. **區段規則是硬規則**：`1xxx`→`InvalidArgument`／`2xxx`→`AlreadyExists`／`3xxx`→`FailedPrecondition`／`4xxx`→`{PermissionDenied, Unauthenticated, NotFound}`／`5xxx`→`FailedPrecondition`／`9xxx`→`Internal`。ID 形態固定 `^[A-Z]{2,6}-\d{4}$`，且 domain 前綴須與 ID 相符；`MustRegister` 於套件 `init` 驗證（格式／重複／缺訊息／前綴／區段），違反即 **panic → 啟動就失敗**。**語意與 connect 碼衝突時改 ID、不改 connect 碼**（`AUTH-4003`／`AUTH-3003` 就是為此從 `1xxx` 移出的）。
+4. **5xx 一律 `SYS-9000`**（`SysInternal`）：內部細節（`SQLSTATE`、constraint 名、RLS policy 名、stack）只進 server log，永不進對外訊息。`trace_id` 由 `internal/obs/requestid` 的 interceptor 在**回應邊界**補進 `ErrorInfo.trace_id`（**不**寫進訊息樣板——否則每個呼叫點都得先注入參數，漏了就外洩字面 `{trace}`）；middleware 閘門（不走 connect handler）另由 `writeConnectError` 的 `requestid.Ensure`／`Stamp` 補。
+5. **跨租戶與不存在一律 `SYS-4002`**（`SysNotFound`，訊息「資源不存在或無權存取」）：不洩漏資源是否存在（防 oracle 探測）。授權**檢查**失敗（角色／範圍不足）才是 `SYS-4001`（`SysPermissionDenied`）—— 兩者語意不同，前端處理也不同（「請管理員開權」vs「找不到」）。第三種是**寫入被 RLS 的 `WITH CHECK` 擋下** → `SYS-3001`（`SysScopeViolation`，見 §9-13）。
+6. **配額與訂閱用 `PLAT-*`，不得以 `PermissionDenied` 表示額度問題**：`PLAT-5001`（`PlatformLimitExceeded`，details 帶 `feature`／`used`／`limit`）／`PLAT-5002`（`PlatformFeatureNotInPlan`，details 帶 `feature`）／`PLAT-3001`（`PlatformSubscriptionInactive`）／`PLAT-3002`（`PlatformPaymentConflict`，details 帶 `reason`）。前端據碼導向升級方案或收款處理，與「缺權限」是不同操作。這 4 碼**已註冊但尚未落點**（`internal/platform/` 是 Plan B／C 的產物），落地點見計畫 `docs/superpowers/plans/2026-09-20-error-codes-plan.md` 的 **Task 5b**。
+7. **`Error`／`Wrap` 不收 ctx**：`trace_id` 由邊界補，`internal/errcode` 因此是**葉節點**（不 import `internal/obs` 或任何服務層套件），任何層都能直接引用。`Wrap` 保留根因供 log／`errors.Is` 追查（自訂型別的 `Unwrap`），但 cause 文字**不進對外訊息**——connect 對任何碼都逐字轉送 `Message()`，所以絕不用 `fmt.Errorf("%s: %w", …)` 當訊息。
+   **實測（connect-go v1.21.0）**：`(*connect.Error).Details()` 回傳的 `ErrorDetail.Value()` 是 `proto.Clone`，序列化走 `NewErrorDetail` 當下 marshal 的 `pbAny` → **就地修改既有的 `ErrorInfo` 不會生效，必須重建錯誤**（`connect.NewError` ＋其餘 detail 依序 `AddDetail` ＋ `Meta()` 逐鍵複製）；實作見 `internal/obs/requestid.stampTraceID`。
+8. **產生檔必須與 registry 同步**：`go generate ./internal/errcode`（產生器在 `cmd/gen-errcodes`）輸出 `docs/error-codes.md` 與三端常數，產物一律入 commit；CI 的「Error codes up to date」步驟重跑產生後以 `git diff --exit-code` ＋ `git status --porcelain` 驗同步（**未 commit 的新產物也會擋**）。`platform-console/src/lib/errcode.ts` 只在該目錄存在時才寫（Plan C 落地後自動納管，目前為 no-op）。
+   現況：**21 碼**（SYS 7／AUTH 7／PLAT 4／CUST 3），其中 **14 碼已實際落點**；未落點者（`PLAT-*`×4、`AUTH-3001`、`CUST-2001`／`CUST-3001`）的現況、選項與歸屬見計畫 `docs/superpowers/plans/2026-09-20-error-codes-plan.md` Progress 的「未結項」（`CUST-*` 另見 `codes_customer.go` 的註解）。
 
