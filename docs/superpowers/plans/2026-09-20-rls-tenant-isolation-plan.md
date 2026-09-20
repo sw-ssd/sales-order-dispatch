@@ -98,6 +98,20 @@ grep -n 's\.db\.\|db.Tx(ctx)' internal/services/<file>.go   # 期望無輸出
 
 **全站 18 張表已 `ENABLE` + `FORCE` RLS**（00024／00025／00026／00027／00028 分批），18 個 policy 全部為 `NULLIF(current_setting(...), '')` 形式。
 
+### 收尾修正（Task 11，最終全分支審查之後）
+
+| # | 修正 | 產出（HEAD） | 理由 |
+|---|---|---|---|
+| 11-1 | `toConnectError` 遮蔽 RLS 違反原文（42501 → 固定訊息，根因入 log） | `9f1b20c` | 違反本計畫 Global Constraints「不得回傳 SQLSTATE」 |
+| 11-2 | production 啟動驗證業務連線**不得**繞過 RLS | `77ab5d9` | `DATABASE_URL` 預設即 superuser，誤設會讓整批租戶邊界靜默失效 |
+| 11-3 | 客戶域過時註解改為事實 | `de3bd83` | 舊敘述會誤導後人把「吞掉約束錯誤」加回來 |
+| 11-4 | `CreateCustomer` 的 `TxFrom` 守衛前移到第一個 DB 呼叫前 | `a352646` | 舊序會在無交易路徑先做一次未受 RLS 約束的寫入 |
+| 11-5 | 字典／稽核探針檔頭敘述改為事實 | `7a8eecb` | 00027 之後「讀取仍限 all/company」已不成立 |
+| 11-6 | Progress 表改用可核實的 commit（含 T4 更正） | `4c213e0`、`f6c636f` | 原本引用了不存在的 `01d7b57` |
+| 11-7 | 補永久斷言釘住 `CreateCustomer` 的守衛順序 | `568b99d` | 該契約變更原本只有拋棄式測試驗過 |
+
+`backend/AGENTS.md` §9 的 RLS 慣例現為 **14 條**（新增 13 錯誤遮蔽、14 production 角色守護）。
+
 ---
 
 ## File Structure

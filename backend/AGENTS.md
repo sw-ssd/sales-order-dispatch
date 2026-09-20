@@ -113,6 +113,10 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
     - `SET LOCAL` 是 driver 裝飾器在 `Tx(ctx)` 內套的，餵裸 client（`entsql.OpenDB`／`database.OpenEnt` 直接建）時**沒有任何 scope 被設定**，寫入會以 `42501` 被 `WITH CHECK` 擋下 ——「包了 `SystemScopeTx`」不等於「有系統範圍」。
     - `SystemScopeTx`（`dbtenant.go`）只做「`auth.WithRLS(scope=all)` ＋ `client.Tx(ctx)`」，**不會**呼叫 `WithTenantTx` 把交易放進 ctx → 在 callback 內用 `dbtenant.Client(ctx, s.db)` 會拿回 fallback（**即使它是裝飾過的 client 也是池上另一條連線**，那條連線上沒有 `SET LOCAL`）：讀取 fail-closed 回 0 列、寫入 `42501`。故 callback 內一律 `tx.Client()`（或自行 `dbtenant.WithTenantTx`）。
     為什麼：兩種錯法都不會編譯失敗、也不會在 sqlite 單元測試看得出來，症狀只有「查不到」或 42501（T10 實測，`cmd/seed` 的第一版修法就是第一種）。
+13. **RLS 違反（SQLSTATE `42501`）對外一律回固定訊息，根因只進 server log**：由 `toConnectError` 的 `isRLSPolicyViolation` 分支（`errors.As` 取 `*pgconn.PgError`）負責，對外 `FailedPrecondition`＋「資料超出目前的存取範圍,無法完成此操作」，SQLSTATE 與 policy 原文只落 log。**新增任何觸及 RLS 表的錯誤路徑時，不得把驅動原文直接 `connect.NewError(code, err)` 回出去。**
+    為什麼：policy 名稱與表名是內部資訊；且計畫的 Global Constraints 明定「錯誤一律經 `toConnectError` 映射，不得回傳 SQLSTATE 或 constraint 名」。
+14. **production 啟動會驗證業務連線不得繞過 RLS**：`Server.Init()` 的 `assertBusinessRoleNotSuperuser` 以業務 DSN 查 `SELECT rolsuper OR rolbypassrls FROM pg_roles WHERE rolname = current_user`，為真即拒絕啟動。
+    為什麼：`DATABASE_URL` 的**預設值就是 superuser**（`config/database.go`），而 PG superuser 恆繞過 RLS（含 `FORCE`）——部署誤設時 00024–00028 的租戶邊界會**靜默消失**，所有端點與測試照常綠。本機請依 `README.md` 啟動步驟把 `DATABASE_URL` 指向 `app_rw`。
 
 ### 9.1 已知設計缺口：客戶 App 的「只讀自己」在 RLS 下沒有 `self` 分支（T10 結論）
 
