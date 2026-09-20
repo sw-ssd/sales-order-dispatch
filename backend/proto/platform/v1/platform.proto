@@ -141,6 +141,7 @@ service PlatformAdminService {
   // actor 一律是 cookie 上的真實 operator;資料與稽核同一個交易(失敗不留半成品)。
   rpc ListReceivables(ListReceivablesRequest) returns (ListReceivablesResponse);
   rpc RecordPayment(RecordPaymentRequest) returns (RecordPaymentResponse);
+  rpc CreateSubscription(CreateSubscriptionRequest) returns (CreateSubscriptionResponse);
   rpc SetSeatCount(SetSeatCountRequest) returns (SetSeatCountResponse);
   rpc ChangePlan(ChangePlanRequest) returns (ChangePlanResponse);
   rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse);
@@ -194,6 +195,29 @@ message RecordPaymentRequest {
 message RecordPaymentResponse {
   int32  period_no = 1;
   string status = 2;
+}
+
+// --- 開通(建立訂閱與第一期;B-1:在此之前沒有任何程式路徑會建立訂閱列) ---
+
+message CreateSubscriptionRequest {
+  string company_id = 1;
+  string plan_code = 2;     // 必須是 active 的方案,且該計費週期在當下有生效價目
+  string billing_cycle = 3; // monthly | yearly
+  int32  seat_count = 4;    // 必須 > 0
+  string trial_ends_at = 5; // RFC3339 且必須是未來;空 = 不試用(直接 active)
+  string reason = 6;        // 必填
+}
+
+message CreateSubscriptionResponse {
+  string subscription_id = 1;
+  string status = 2;         // trialing(有試用)| active
+  string plan_code = 3;
+  string billing_cycle = 4;
+  int32  seat_count = 5;
+  string trial_ends_at = 6;  // 空 = 非試用
+  int32  first_period_no = 7;
+  string first_period_end = 8;    // RFC3339(依計費週期:月 +1 月、年 +1 年;月底夾擠見後端)
+  string first_period_amount = 9; // 兩位小數字串("1600.00");當期生效價的快照
 }
 
 // --- 訂閱生命週期(G6;v1 不做按日比例計費:變更一律下一期生效) ---

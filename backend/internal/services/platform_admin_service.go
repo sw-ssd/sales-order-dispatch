@@ -463,6 +463,62 @@ func (s *PlatformAdminService) RecordPayment(ctx context.Context,
 	}), nil
 }
 
+// CreateSubscription 為**開通**的營運入口:建立訂閱與第一期(同一個交易:訂閱＋期別＋事件＋
+// 稽核),v1 由營運開通(spec §9 的 Out:自助註冊與試用申請流程不在本版本)。
+//
+// **授權層級與 ChangePlan 相同(operator,不需要 admin)**:開通是日常營運,不是操作者治理
+// (只有 CreateOperator／DisableOperator 要求 admin);首行仍走 requireOperatorIdentity。
+//
+// 服務層只做「身分、參數驗證、快取失效」:狀態機、價格快照、期別長度與稽核都在
+// billing.CreateSubscription 內(唯一入口,不得在此另寫一條開通路徑)。
+func (s *PlatformAdminService) CreateSubscription(ctx context.Context,
+	req *connect.Request[platformv1.CreateSubscriptionRequest]) (*connect.Response[platformv1.CreateSubscriptionResponse], error) {
+	id, err := requireOperatorIdentity(ctx)
+	if err != nil {
+		return nil, err
+	}
+	companyID, err := platformCompanyID(req.Msg.GetCompanyId())
+	if err != nil {
+		return nil, err
+	}
+	if err := platformReason(req.Msg.GetReason()); err != nil {
+		return nil, err
+	}
+	in := billing.CreateSubscriptionInput{
+		CompanyID:       int(companyID),
+		PlanCode:        strings.TrimSpace(req.Msg.GetPlanCode()),
+		BillingCycle:    strings.TrimSpace(req.Msg.GetBillingCycle()),
+		SeatCount:       int(req.Msg.GetSeatCount()),
+		ActorOperatorID: id.OperatorID,
+		Reason:          req.Msg.GetReason(),
+	}
+	if raw := strings.TrimSpace(req.Msg.GetTrialEndsAt()); raw != "" {
+		trialEnds, err := time.Parse(time.RFC3339, raw)
+		if err != nil {
+			return nil, errcode.SysInvalidArgument.Error(map[string]string{"field": "trial_ends_at"})
+		}
+		in.TrialEnds = &trialEnds
+	}
+	created, err := s.billing.CreateSubscription(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	// 開通是判定層改變最大的一次寫入(開通前沒有訂閱列＝不施加限制)→ 提交後失效該租戶;
+	// 方案權益屬 `entitlements`／`plans` 家族,console 那側一併失效(見 TenantDetailPage)。
+	s.invalidate(ctx, int(companyID))
+	return connect.NewResponse(&platformv1.CreateSubscriptionResponse{
+		SubscriptionId:    strconv.FormatInt(created.SubscriptionID, 10),
+		Status:            created.Status,
+		PlanCode:          created.PlanCode,
+		BillingCycle:      created.BillingCycle,
+		SeatCount:         int32(created.SeatCount),
+		TrialEndsAt:       formatTime(created.TrialEnds),
+		FirstPeriodNo:     int32(created.FirstPeriod.PeriodNo),
+		FirstPeriodEnd:    created.FirstPeriod.PeriodEnd.UTC().Format(time.RFC3339),
+		FirstPeriodAmount: money.FormatCents(created.FirstPeriod.AmountCents),
+	}), nil
+}
+
 // SetSeatCount 調整席位數(下一期生效)。不得低於**目前使用中的席次**:降席位到使用量以下會讓
 // 既有帳號在下次判定時超額,而超額的症狀是「使用者突然不能建單」—— 那應該由營運先停用帳號。
 //

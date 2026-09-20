@@ -10,6 +10,7 @@ import { Input } from "@ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@ui/table";
 import { LabelledCheckbox } from "../components/labelled-checkbox";
 import { EmptyState, PageShell, queryBoundary } from "../components/page";
+import { Select } from "../components/select";
 import { SubscriptionBadge } from "../components/status";
 import { WriteForm } from "../components/write";
 import { platform } from "../lib/api";
@@ -231,6 +232,173 @@ function RevokeOverrideDialog(props: {
   );
 }
 
+/**
+ * 開通（CreateSubscription）：建立訂閱與第一期（後端同一個交易）。
+ *
+ * 為什麼要有這個表單：`RecordPayment` 對**沒有合約**的公司回 `PLAT-3001`、`EnsureNextPeriod`
+ * 沒有期別即 no-op、`SetSeatCount`／`ChangePlan` 都先要一份可服務的合約 —— 少了開通，收款、
+ * 期別、催收、凍結全部停擺（只能靠手工 SQL 開合約）。
+ *
+ * 方案清單用既有的 `ListPlans`（與方案頁同一個 `queryKey`，共用快取、不多打一趟）。
+ * 前端驗證不是授權，是**少跑一趟白工**：方案是否 active、該週期有沒有生效價目、金額一律以後端為準。
+ */
+function CreateSubscriptionForm(props: {
+  companyId: string;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const plans = createQuery(() => ({ queryKey: ["plans"], queryFn: () => platform.listPlans({}) }));
+  const [planCode, setPlanCode] = createSignal("");
+  const [billingCycle, setBillingCycle] = createSignal("monthly");
+  const [seatCount, setSeatCount] = createSignal("");
+  const [trialEndsAt, setTrialEndsAt] = createSignal("");
+
+  const mutation = createMutation(() => ({
+    mutationFn: (input: {
+      planCode: string;
+      billingCycle: string;
+      seatCount: number;
+      trialEndsAt: string;
+      reason: string;
+    }) => platform.createSubscription({ companyId: props.companyId, ...input }),
+    onSuccess: () => {
+      props.onClose();
+      props.onDone();
+    },
+  }));
+
+  // 只填日期（2027-01-01）在 JS 的 Date 是合法的，但後端用 time.Parse(time.RFC3339) 會擋 ——
+  // 前端若用 `new Date()` 判，就會放行一個註定失敗的輸入，所以要照 RFC3339 的形狀判。
+  const RFC3339 = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+
+  const validate = (): string | undefined => {
+    if (planCode() === "") {
+      return "請選擇方案：合約必須掛在一個賣得動（上架且有該週期價目）的方案上。";
+    }
+    if (!/^\d+$/.test(seatCount().trim()) || Number(seatCount().trim()) < 1) {
+      return "席位數必須是不小於 1 的整數：0 席的訂閱等於停用，那該走取消。";
+    }
+    if (trialEndsAt().trim() !== "" && !RFC3339.test(trialEndsAt().trim())) {
+      return "試用到期請填 RFC3339（例：2027-01-01T00:00:00Z），或留空表示不試用（只填日期後端會擋）。";
+    }
+    return undefined;
+  };
+
+  return (
+    <WriteForm
+      submitLabel="建立訂閱"
+      validate={validate}
+      pending={mutation.isPending}
+      error={mutation.isError ? describeError(mutation.error) : undefined}
+      onSubmit={(reason) =>
+        mutation.mutate({
+          planCode: planCode(),
+          billingCycle: billingCycle(),
+          seatCount: Number(seatCount().trim()),
+          trialEndsAt: trialEndsAt().trim(),
+          reason,
+        })
+      }
+    >
+      <Field>
+        <FieldLabel for="create-plan">方案 *</FieldLabel>
+        <Select
+          id="create-plan"
+          value={planCode()}
+          onChange={(e) => setPlanCode(e.currentTarget.value)}
+        >
+          <option value="">請選擇…</option>
+          <For each={plans.data?.plans ?? []}>
+            {(plan) => (
+              <option value={plan.code}>
+                {plan.name || plan.code}
+                {plan.status === "active" ? "" : `（${plan.status}）`}
+              </option>
+            )}
+          </For>
+        </Select>
+        <FieldDescription>
+          已歸檔的方案不得指派；該週期沒有生效價目時後端會拒絕（不會開出 0 元期別）。
+        </FieldDescription>
+        {/* 清單載不到時說清楚：空的下拉選單會被讀成「沒有方案可選」，那不是事實。 */}
+        <Show when={plans.isError}>
+          <p role="alert" class="text-sm font-medium text-destructive">
+            {describeError(plans.error)}（沒有方案清單就無法選擇方案）
+          </p>
+        </Show>
+      </Field>
+
+      <Field>
+        <FieldLabel for="create-cycle">計費週期 *</FieldLabel>
+        <Select
+          id="create-cycle"
+          value={billingCycle()}
+          onChange={(e) => setBillingCycle(e.currentTarget.value)}
+        >
+          <option value="monthly">月繳</option>
+          <option value="yearly">年繳</option>
+        </Select>
+        <FieldDescription>決定第一期的長度（月 ＋1 月、年 ＋1 年）與取用的價目。</FieldDescription>
+      </Field>
+
+      <Field>
+        <FieldLabel for="create-seats">席位數 *</FieldLabel>
+        <Input
+          id="create-seats"
+          inputmode="numeric"
+          value={seatCount()}
+          placeholder="3"
+          onInput={(e) => setSeatCount(e.currentTarget.value)}
+        />
+        <FieldDescription>
+          第一期金額＝方案基本價 ＋ 席位數 × 單席價（當期生效價的快照）。日後可用「調整席位」變更。
+        </FieldDescription>
+      </Field>
+
+      <Field>
+        <FieldLabel for="create-trial">試用到期（選填）</FieldLabel>
+        <Input
+          id="create-trial"
+          value={trialEndsAt()}
+          placeholder="2026-10-05T00:00:00Z"
+          onInput={(e) => setTrialEndsAt(e.currentTarget.value)}
+        />
+        <FieldDescription>
+          留空＝直接生效（active）；填了（必須是未來）→ 狀態為試用中（trialing），到期後由收款帶回
+          active。無論試用與否都會開出第一期。
+        </FieldDescription>
+      </Field>
+    </WriteForm>
+  );
+}
+
+function CreateSubscriptionDialog(props: {
+  companyId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onDone: () => void;
+}) {
+  return (
+    <Dialog open={props.open} onOpenChange={props.onOpenChange} lazyMount unmountOnExit>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>開通訂閱</DialogTitle>
+          <DialogDescription>
+            建立合約與第一期（訂閱、期別、事件與平台稽核在同一個交易）。同一家公司同時只能有一份
+            未取消的合約；已取消的合約要再服務是**新的一筆**合約，不是把舊的復活。
+          </DialogDescription>
+        </DialogHeader>
+
+        <CreateSubscriptionForm
+          companyId={props.companyId}
+          onClose={() => props.onOpenChange(false)}
+          onDone={props.onDone}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function TenantDetailPage() {
   const params = useParams({ from: "/tenants/$tenantId" });
   const companyId = () => params().tenantId;
@@ -250,12 +418,22 @@ export default function TenantDetailPage() {
 
   const [setOpen, setSetOpen] = createSignal(false);
   const [revokeTarget, setRevokeTarget] = createSignal<TenantOverride | undefined>(undefined);
+  const [createOpen, setCreateOpen] = createSignal(false);
 
   // 寫入後讓相關查詢失效：例外改變判定，方案權益決定投影，兩者都要重取，
   // 不靠 operator 自己按重新整理（那樣很容易看著舊值做下一個決定）。
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ["tenant", companyId()] });
     void queryClient.invalidateQueries({ queryKey: ["entitlements", planCode()] });
+  };
+
+  // 開通改變的比例外更多：租戶投影（方案／狀態／席位）、整個權益家族（方案權益與價目）與
+  // 租戶清單都跟著變 —— 只失效「這一個租戶」會讓下一頁還顯示舊的方案與狀態。
+  const refreshAfterCreate = () => {
+    refresh();
+    void queryClient.invalidateQueries({ queryKey: ["tenants"] });
+    void queryClient.invalidateQueries({ queryKey: ["entitlements"] });
+    void queryClient.invalidateQueries({ queryKey: ["plans"] });
   };
 
   const now = new Date();
@@ -268,8 +446,17 @@ export default function TenantDetailPage() {
         return (
           <div class="space-y-6">
             <Card>
-              <CardHeader>
+              <CardHeader class="flex flex-row flex-wrap items-center justify-between gap-2">
                 <CardTitle>{summary?.companyName || companyId()}</CardTitle>
+                {/* 只在「沒有可服務的合約」時提供開通：已經有生效中的合約時後端會回 SYS-2001
+                    （同一家公司只能有一份未取消的合約），按了只是白跑一趟。 */}
+                <Show
+                  when={["", "none", "cancelled"].includes(summary?.subscriptionStatus ?? "")}
+                >
+                  <Button size="sm" onClick={() => setCreateOpen(true)}>
+                    開通訂閱
+                  </Button>
+                </Show>
               </CardHeader>
               <CardContent class="grid gap-2 text-sm sm:grid-cols-2">
                 <p>方案：{summary?.planName || summary?.planCode || "—"}</p>
@@ -430,6 +617,12 @@ export default function TenantDetailPage() {
         );
       })}
 
+      <CreateSubscriptionDialog
+        companyId={companyId()}
+        open={createOpen()}
+        onOpenChange={setCreateOpen}
+        onDone={refreshAfterCreate}
+      />
       <SetOverrideDialog
         companyId={companyId()}
         open={setOpen()}

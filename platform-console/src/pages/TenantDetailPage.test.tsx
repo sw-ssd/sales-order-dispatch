@@ -10,6 +10,8 @@ const getTenant = vi.fn();
 const getPlanEntitlements = vi.fn();
 const setTenantOverride = vi.fn();
 const revokeTenantOverride = vi.fn();
+const listPlans = vi.fn();
+const createSubscription = vi.fn();
 vi.mock("../lib/api", () => ({
   loginUrl: "/platform/auth/google",
   platform: {
@@ -18,6 +20,8 @@ vi.mock("../lib/api", () => ({
     getPlanEntitlements: (...args: unknown[]) => getPlanEntitlements(...args),
     setTenantOverride: (...args: unknown[]) => setTenantOverride(...args),
     revokeTenantOverride: (...args: unknown[]) => revokeTenantOverride(...args),
+    listPlans: (...args: unknown[]) => listPlans(...args),
+    createSubscription: (...args: unknown[]) => createSubscription(...args),
   },
 }));
 
@@ -62,6 +66,16 @@ const expiredOverride = {
   reason: "去年的 POC",
   owner: "ops@example.com",
   expiresAt: "2025-01-01T00:00:00Z",
+};
+
+/** 開通表單的方案清單（`ListPlans`）:一個上架、一個已歸檔（歸檔不得指派,但仍列出來說明）。 */
+const stdPlan = {
+  id: "1",
+  code: "std",
+  name: "標準",
+  status: "active",
+  sortOrder: 1,
+  prices: [],
 };
 
 const planEntitlements = {
@@ -109,6 +123,8 @@ describe("TenantDetailPage", () => {
       getPlanEntitlements,
       setTenantOverride,
       revokeTenantOverride,
+      listPlans,
+      createSubscription,
     ]) {
       fn.mockReset();
     }
@@ -117,6 +133,8 @@ describe("TenantDetailPage", () => {
     getPlanEntitlements.mockResolvedValue(planEntitlements);
     setTenantOverride.mockResolvedValue({ id: "13" });
     revokeTenantOverride.mockResolvedValue({ companyId: "1", featureCode: "limit.seats" });
+    listPlans.mockResolvedValue({ plans: [stdPlan] });
+    createSubscription.mockResolvedValue({ subscriptionId: "7", status: "active" });
   });
 
   it("列出訂閱概況與例外；投影為方案 ⊕ 例外，且已過期的例外不列入生效值", async () => {
@@ -303,5 +321,95 @@ describe("TenantDetailPage", () => {
     expect(text).toContain("參數驗證失敗");
     // 失敗不得讓查詢失效（沒有成功的寫入就沒有要重查的資料）。
     expect(getTenant).toHaveBeenCalledTimes(1);
+  });
+
+  it("有生效中的合約時不提供開通（後端會回 SYS-2001：同一家公司只能有一份未取消的合約）", async () => {
+    renderAt();
+    await ready();
+
+    expect(screen.queryByRole("button", { name: "開通訂閱" })).toBeNull();
+  });
+
+  it("沒有合約的租戶可以開通：方案／席位／試用先在前端驗證，成功後相關查詢自動失效", async () => {
+    // 沒有訂閱列＝尚未開通計費（投影是 status=none、沒有方案可投影）。
+    getTenant.mockResolvedValue({
+      tenant: { ...tenant, planCode: "", planName: "", subscriptionStatus: "none", seatCount: 0 },
+      overrides: [],
+    });
+    renderAt();
+    await screen.findByText("甲公司");
+    expect(getPlanEntitlements).not.toHaveBeenCalled(); // 沒有方案就沒有可投影的權益
+
+    fireEvent.click(screen.getByRole("button", { name: "開通訂閱" }));
+    fireEvent.input(await screen.findByLabelText(/席位數/), { target: { value: "3" } });
+    fireEvent.input(screen.getByLabelText(/原因/), { target: { value: "  簽約開通  " } });
+
+    // 未選方案 → 擋下（不白跑一趟：後端會回「查無此方案／沒有價目」）
+    fireEvent.click(screen.getByRole("button", { name: "建立訂閱" }));
+    await waitFor(() => expect(screen.getByText(/請選擇方案/)).toBeTruthy());
+    expect(createSubscription).not.toHaveBeenCalled();
+
+    // 0 席 → 擋下（0 席的訂閱等於停用，後端回 SYS-1001）
+    // 方案清單是非同步載入的（ListPlans）：等選項真的出現再選，否則 change 會落在只有「請選擇…」
+    // 的 select 上（看似選了、其實送空值）。
+    await screen.findByRole("option", { name: "標準" });
+    fireEvent.change(screen.getByLabelText(/方案/), { target: { value: "std" } });
+    fireEvent.input(screen.getByLabelText(/席位數/), { target: { value: "0" } });
+    fireEvent.click(screen.getByRole("button", { name: "建立訂閱" }));
+    await waitFor(() => expect(screen.getByText(/不小於 1 的整數/)).toBeTruthy());
+
+    // 只填日期 → 擋下（`new Date("2026-10-05")` 在 JS 是合法的，但後端用 RFC3339 解析會拒）
+    fireEvent.input(screen.getByLabelText(/席位數/), { target: { value: "3" } });
+    fireEvent.input(screen.getByLabelText(/試用到期/), { target: { value: "2026-10-05" } });
+    fireEvent.click(screen.getByRole("button", { name: "建立訂閱" }));
+    await waitFor(() => expect(screen.getByText(/RFC3339/)).toBeTruthy());
+    expect(createSubscription).not.toHaveBeenCalled();
+
+    // 正確輸入 → 送出（reason 已 trim、席位是數字、試用原樣帶上）
+    fireEvent.input(screen.getByLabelText(/試用到期/), {
+      target: { value: "2026-10-05T00:00:00Z" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "建立訂閱" }));
+
+    await waitFor(() => expect(createSubscription).toHaveBeenCalledTimes(1));
+    expect(createSubscription).toHaveBeenCalledWith({
+      companyId: "1",
+      planCode: "std",
+      billingCycle: "monthly",
+      seatCount: 3,
+      trialEndsAt: "2026-10-05T00:00:00Z",
+      reason: "簽約開通",
+    });
+    // 開通成功 → 租戶投影重查（方案／狀態／席位都變了）
+    await waitFor(() => expect(getTenant).toHaveBeenCalledTimes(2));
+  });
+
+  it("開通表單預設月繳，可改年繳（週期決定第一期長度與取用的價目）", async () => {
+    getTenant.mockResolvedValue({
+      tenant: { ...tenant, planCode: "", planName: "", subscriptionStatus: "cancelled" },
+      overrides: [],
+    });
+    renderAt();
+    await screen.findByText("甲公司");
+
+    // 已取消的合約要再服務是**新合約**（唯一鍵不擋已取消者）→ 這個狀態也要能開通。
+    fireEvent.click(screen.getByRole("button", { name: "開通訂閱" }));
+    await screen.findByRole("option", { name: "標準" });
+    fireEvent.change(screen.getByLabelText(/方案/), { target: { value: "std" } });
+    fireEvent.change(screen.getByLabelText(/計費週期/), { target: { value: "yearly" } });
+    fireEvent.input(screen.getByLabelText(/席位數/), { target: { value: "5" } });
+    fireEvent.input(screen.getByLabelText(/原因/), { target: { value: "重新簽約" } });
+    fireEvent.click(screen.getByRole("button", { name: "建立訂閱" }));
+
+    await waitFor(() =>
+      expect(createSubscription).toHaveBeenCalledWith({
+        companyId: "1",
+        planCode: "std",
+        billingCycle: "yearly",
+        seatCount: 5,
+        trialEndsAt: "",
+        reason: "重新簽約",
+      }),
+    );
   });
 });

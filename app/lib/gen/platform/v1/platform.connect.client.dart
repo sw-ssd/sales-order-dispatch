@@ -130,6 +130,23 @@ extension type PlatformAdminServiceClient (connect.Transport _transport) {
     );
   }
 
+  Future<platformv1platform.CreateSubscriptionResponse> createSubscription(
+    platformv1platform.CreateSubscriptionRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.PlatformAdminService.createSubscription,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   Future<platformv1platform.SetSeatCountResponse> setSeatCount(
     platformv1platform.SetSeatCountRequest input, {
     connect.Headers? headers,

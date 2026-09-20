@@ -36,8 +36,9 @@ const (
 // cancelled／suspended，**不得刪列**；否則一次 DELETE 就等於送一個不限額方案。
 const (
 	// statusNone：沒有未取消的訂閱（Store 回 nil）。這是**尚未開通計費**，不是「已判定不可用」：
-	// Plan C 的訂閱指派／onboarding 落地前沒有任何程式會建立 platform.subscriptions 列（今天每個
-	// 真實公司都是這個狀態），所以在這裡 fail-closed 等於「員工自助註冊與首次 OIDC 登入全被硬擋，
+	// **尚未開通的公司是常態**（自助註冊、剛建好還沒簽約的公司）—— 開通要由營運經
+	// `PlatformAdminService.CreateSubscription` 執行（Plan C Task 15 起該路徑已存在；自助註冊與
+	// 試用申請仍不在範圍），所以在這裡 fail-closed 等於「員工自助註冊與首次 OIDC 登入全被硬擋，
 	// 只有進得去的管理員才能補訂閱」＝上線即癱瘓。
 	//
 	// 因此 Allows／CheckLimit 對它**不施加限制**（等同 Unlimited），只留一行 log 讓它可見
@@ -131,8 +132,8 @@ func (s *Service) state(ctx context.Context, companyID int) (*tenantState, error
 		Entitlements: map[string]store.Entitlement{}}
 	if sub == nil {
 		out.Status = statusNone
-		// 無訂閱列＝尚未開通計費 → 判定層不施加限制（見 statusNone）。留一行 log：這個狀態在
-		// Plan C 的訂閱指派落地前是常態，而「無聲地不限制」正是最該被看見的事（快取命中時不重記）。
+		// 無訂閱列＝尚未開通計費 → 判定層不施加限制（見 statusNone）。留一行 log：這個狀態是
+		// 常態（尚未開通的公司），而「無聲地不限制」正是最該被看見的事（快取命中時不重記）。
 		log.Printf("entitlements: 公司 %d 無訂閱列（尚未開通計費）→ 不施加配額限制"+
 			"（要停用租戶請設 status=suspended/cancelled，勿刪列）", companyID)
 	} else {

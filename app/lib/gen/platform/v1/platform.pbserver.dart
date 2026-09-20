@@ -35,6 +35,8 @@ abstract class PlatformAdminServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.ListReceivablesRequest request);
   $async.Future<$0.RecordPaymentResponse> recordPayment(
       $pb.ServerContext ctx, $0.RecordPaymentRequest request);
+  $async.Future<$0.CreateSubscriptionResponse> createSubscription(
+      $pb.ServerContext ctx, $0.CreateSubscriptionRequest request);
   $async.Future<$0.SetSeatCountResponse> setSeatCount(
       $pb.ServerContext ctx, $0.SetSeatCountRequest request);
   $async.Future<$0.ChangePlanResponse> changePlan(
@@ -74,6 +76,8 @@ abstract class PlatformAdminServiceBase extends $pb.GeneratedService {
         return $0.ListReceivablesRequest();
       case 'RecordPayment':
         return $0.RecordPaymentRequest();
+      case 'CreateSubscription':
+        return $0.CreateSubscriptionRequest();
       case 'SetSeatCount':
         return $0.SetSeatCountRequest();
       case 'ChangePlan':
@@ -119,6 +123,8 @@ abstract class PlatformAdminServiceBase extends $pb.GeneratedService {
         return listReceivables(ctx, request as $0.ListReceivablesRequest);
       case 'RecordPayment':
         return recordPayment(ctx, request as $0.RecordPaymentRequest);
+      case 'CreateSubscription':
+        return createSubscription(ctx, request as $0.CreateSubscriptionRequest);
       case 'SetSeatCount':
         return setSeatCount(ctx, request as $0.SetSeatCountRequest);
       case 'ChangePlan':

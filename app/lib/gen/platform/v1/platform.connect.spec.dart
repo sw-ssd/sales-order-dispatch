@@ -62,6 +62,13 @@ abstract final class PlatformAdminService {
     platformv1platform.RecordPaymentResponse.new,
   );
 
+  static const createSubscription = connect.Spec(
+    '/$name/CreateSubscription',
+    connect.StreamType.unary,
+    platformv1platform.CreateSubscriptionRequest.new,
+    platformv1platform.CreateSubscriptionResponse.new,
+  );
+
   static const setSeatCount = connect.Spec(
     '/$name/SetSeatCount',
     connect.StreamType.unary,

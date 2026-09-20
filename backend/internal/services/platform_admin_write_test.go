@@ -258,6 +258,8 @@ func newWriteHarness(used int) (*PlatformAdminService, *fakePlatformStore, *reco
 	book := platformstore.NewFakeBilling()
 	book.PutPlan("std", 1)
 	book.PutPlan("pro", 2)
+	// 價目:開通(CreateSubscription)的第一期金額由此快照而來(缺價目一律失敗,不得開 0 元期別)。
+	book.PutPlanPrice(1, "monthly", platformstore.Price{BaseCents: 100000, SeatCents: 20000, Currency: "TWD"})
 	book.PutSubscription(platformstore.Subscription{
 		ID: 5, CompanyID: 42, PlanID: 1, SeatCount: 5, BillingCycle: "monthly", Status: "active"})
 	book.PutPeriod(platformstore.Period{
@@ -289,7 +291,9 @@ type writeCall struct {
 	// billingBacked 為 true 表示資料由 billing 的狀態機寫入(服務層只帶參數過去),
 	// 故稽核與資料要在 FakeBilling 上看,而不是在假 store 上。
 	billingBacked bool
-	// invalidates 為這次寫入應失效的快取範圍。
+	// invalidates 為這次寫入應失效的快取範圍。單一租戶直接寫成 ent:{company}(見 cacheTenant):
+	// 開通(CreateSubscription)必須挑一個**還沒有合約**的公司(同一家公司只能有一份未取消的合約),
+	// 故它的鍵與其他條不同。
 	invalidates cacheScope
 }
 
@@ -301,6 +305,12 @@ func writeCalls() []writeCall {
 				CompanyId: "42", PeriodNo: 1, Reason: reason}))
 			return err
 		}, true, cacheTenant},
+		{"CreateSubscription", func(svc *PlatformAdminService, ctx context.Context, reason string) error {
+			// 公司 99:夾具沒有它的訂閱列(開通的前提是「這家公司還沒有合約」)。
+			_, err := svc.CreateSubscription(ctx, connect.NewRequest(&platformv1.CreateSubscriptionRequest{
+				CompanyId: "99", PlanCode: "std", BillingCycle: "monthly", SeatCount: 3, Reason: reason}))
+			return err
+		}, true, cacheScope("ent:99")}, // 公司 99:夾具沒有它的訂閱列,故失效鍵是 ent:99
 		{"SetSeatCount", func(svc *PlatformAdminService, ctx context.Context, reason string) error {
 			_, err := svc.SetSeatCount(ctx, connect.NewRequest(&platformv1.SetSeatCountRequest{
 				CompanyId: "42", SeatCount: 10, Reason: reason}))
@@ -446,9 +456,8 @@ func TestWriteRPCsInvalidateExpectedScope(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			svc, _, cache, _ := newWriteHarness(0)
 			if c.invalidates == cacheAll {
-				cache.scans = []string{"ent:1", "ent:2"}
 				// 同一個租戶的鍵也在掃描結果裡(全量失效的定義就是「連它一起刪」)。
-				cache.scans = append(cache.scans, string(cacheTenant))
+				cache.scans = []string{"ent:1", "ent:2", string(cacheTenant)}
 			}
 			if err := c.call(svc, withOperator(context.Background()), "合法原因"); err != nil {
 				t.Fatalf("呼叫失敗: %v", err)
@@ -598,6 +607,8 @@ func TestRecordPaymentSurfacesBillingRegisteredCode(t *testing.T) {
 func newPaidPeriodHarness() (*PlatformAdminService, *platformstore.FakeBilling) {
 	st := &fakePlatformStore{writes: &fakeWrites{}, settings: map[string]string{}}
 	book := platformstore.NewFakeBilling()
+	// 價目:開通(CreateSubscription)的第一期金額由此快照而來(缺價目一律失敗,不得開 0 元期別)。
+	book.PutPlanPrice(1, "monthly", platformstore.Price{BaseCents: 100000, SeatCents: 20000, Currency: "TWD"})
 	book.PutSubscription(platformstore.Subscription{
 		ID: 5, CompanyID: 42, PlanID: 1, SeatCount: 5, BillingCycle: "monthly", Status: "active"})
 	book.PutPeriod(platformstore.Period{
@@ -651,6 +662,48 @@ func TestChangePlanSamePlanIsNoOpWithoutAudit(t *testing.T) {
 	if len(cache.deleted) == 0 {
 		t.Fatal("成功路徑必須失效快取(no-op 亦同)")
 	}
+}
+
+// TestCreateSubscriptionRPCValidatesTrialEndsAt 驗 RPC 這一層的兩個參數決定:
+// trial_ends_at 必須是 RFC3339(只填日期會被擋 —— 那會被解析成「當天 00:00」而看起來像過期),
+// 以及成功的回應要帶得出 console 需要的東西(訂閱 id／狀態／方案／週期／席位／第一期)。
+func TestCreateSubscriptionRPCValidatesTrialEndsAt(t *testing.T) {
+	svc, st, cache, _ := newWriteHarness(0)
+	ctx := withOperator(context.Background())
+
+	for _, raw := range []string{"2027-01-01", "下個月", "2027-13-01T00:00:00Z"} {
+		_, err := svc.CreateSubscription(ctx, connect.NewRequest(&platformv1.CreateSubscriptionRequest{
+			CompanyId: "99", PlanCode: "std", BillingCycle: "monthly", SeatCount: 3,
+			TrialEndsAt: raw, Reason: "開通試用"}))
+		if got := errorInfoOf(t, err).GetCode(); got != "SYS-1001" {
+			t.Fatalf("trial_ends_at=%q 應 SYS-1001,got %q (%v)", raw, got, err)
+		}
+		if field := errorInfoOf(t, err).GetDetails()["field"]; field != "trial_ends_at" {
+			t.Fatalf("必須指出 trial_ends_at,got %q", field)
+		}
+	}
+	assertNoWrites(t, st)
+	if len(cache.deleted) != 0 {
+		t.Fatalf("失敗不得失效快取,got %v", cache.deleted)
+	}
+
+	trialEnds := time.Now().AddDate(0, 0, 14).UTC().Truncate(time.Second).Format(time.RFC3339)
+	resp, err := svc.CreateSubscription(ctx, connect.NewRequest(&platformv1.CreateSubscriptionRequest{
+		CompanyId: "99", PlanCode: "std", BillingCycle: "monthly", SeatCount: 3,
+		TrialEndsAt: trialEnds, Reason: "開通試用"}))
+	if err != nil {
+		t.Fatalf("開通: %v", err)
+	}
+	msg := resp.Msg
+	if msg.GetStatus() != "trialing" || msg.GetPlanCode() != "std" || msg.GetBillingCycle() != "monthly" ||
+		msg.GetSeatCount() != 3 || msg.GetTrialEndsAt() != trialEnds {
+		t.Fatalf("回應不符: %+v", msg)
+	}
+	if msg.GetSubscriptionId() == "" || msg.GetFirstPeriodNo() != 1 ||
+		msg.GetFirstPeriodAmount() != "1600.00" { // 1000.00 ＋ 3 × 200.00
+		t.Fatalf("回應必須帶第一期（1000.00 ＋ 3 × 200.00 = 1600.00）: %+v", msg)
+	}
+	assertInvalidated(t, cacheScope("ent:99"), cache)
 }
 
 // TestSetSeatCountRejectsBelowUsage 驗「不得降到使用中席次以下」→ PLAT-5001,且

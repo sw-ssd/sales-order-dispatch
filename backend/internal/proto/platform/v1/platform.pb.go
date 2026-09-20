@@ -1567,6 +1567,198 @@ func (x *RecordPaymentResponse) GetStatus() string {
 	return ""
 }
 
+type CreateSubscriptionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CompanyId     string                 `protobuf:"bytes,1,opt,name=company_id,json=companyId,proto3" json:"company_id,omitempty"`
+	PlanCode      string                 `protobuf:"bytes,2,opt,name=plan_code,json=planCode,proto3" json:"plan_code,omitempty"`             // 必須是 active 的方案,且該計費週期在當下有生效價目
+	BillingCycle  string                 `protobuf:"bytes,3,opt,name=billing_cycle,json=billingCycle,proto3" json:"billing_cycle,omitempty"` // monthly | yearly
+	SeatCount     int32                  `protobuf:"varint,4,opt,name=seat_count,json=seatCount,proto3" json:"seat_count,omitempty"`         // 必須 > 0
+	TrialEndsAt   string                 `protobuf:"bytes,5,opt,name=trial_ends_at,json=trialEndsAt,proto3" json:"trial_ends_at,omitempty"`  // RFC3339 且必須是未來;空 = 不試用(直接 active)
+	Reason        string                 `protobuf:"bytes,6,opt,name=reason,proto3" json:"reason,omitempty"`                                 // 必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateSubscriptionRequest) Reset() {
+	*x = CreateSubscriptionRequest{}
+	mi := &file_platform_v1_platform_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateSubscriptionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateSubscriptionRequest) ProtoMessage() {}
+
+func (x *CreateSubscriptionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateSubscriptionRequest.ProtoReflect.Descriptor instead.
+func (*CreateSubscriptionRequest) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *CreateSubscriptionRequest) GetCompanyId() string {
+	if x != nil {
+		return x.CompanyId
+	}
+	return ""
+}
+
+func (x *CreateSubscriptionRequest) GetPlanCode() string {
+	if x != nil {
+		return x.PlanCode
+	}
+	return ""
+}
+
+func (x *CreateSubscriptionRequest) GetBillingCycle() string {
+	if x != nil {
+		return x.BillingCycle
+	}
+	return ""
+}
+
+func (x *CreateSubscriptionRequest) GetSeatCount() int32 {
+	if x != nil {
+		return x.SeatCount
+	}
+	return 0
+}
+
+func (x *CreateSubscriptionRequest) GetTrialEndsAt() string {
+	if x != nil {
+		return x.TrialEndsAt
+	}
+	return ""
+}
+
+func (x *CreateSubscriptionRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type CreateSubscriptionResponse struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	SubscriptionId    string                 `protobuf:"bytes,1,opt,name=subscription_id,json=subscriptionId,proto3" json:"subscription_id,omitempty"`
+	Status            string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"` // trialing(有試用)| active
+	PlanCode          string                 `protobuf:"bytes,3,opt,name=plan_code,json=planCode,proto3" json:"plan_code,omitempty"`
+	BillingCycle      string                 `protobuf:"bytes,4,opt,name=billing_cycle,json=billingCycle,proto3" json:"billing_cycle,omitempty"`
+	SeatCount         int32                  `protobuf:"varint,5,opt,name=seat_count,json=seatCount,proto3" json:"seat_count,omitempty"`
+	TrialEndsAt       string                 `protobuf:"bytes,6,opt,name=trial_ends_at,json=trialEndsAt,proto3" json:"trial_ends_at,omitempty"` // 空 = 非試用
+	FirstPeriodNo     int32                  `protobuf:"varint,7,opt,name=first_period_no,json=firstPeriodNo,proto3" json:"first_period_no,omitempty"`
+	FirstPeriodEnd    string                 `protobuf:"bytes,8,opt,name=first_period_end,json=firstPeriodEnd,proto3" json:"first_period_end,omitempty"`          // RFC3339(依計費週期:月 +1 月、年 +1 年;月底夾擠見後端)
+	FirstPeriodAmount string                 `protobuf:"bytes,9,opt,name=first_period_amount,json=firstPeriodAmount,proto3" json:"first_period_amount,omitempty"` // 兩位小數字串("1600.00");當期生效價的快照
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *CreateSubscriptionResponse) Reset() {
+	*x = CreateSubscriptionResponse{}
+	mi := &file_platform_v1_platform_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateSubscriptionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateSubscriptionResponse) ProtoMessage() {}
+
+func (x *CreateSubscriptionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateSubscriptionResponse.ProtoReflect.Descriptor instead.
+func (*CreateSubscriptionResponse) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *CreateSubscriptionResponse) GetSubscriptionId() string {
+	if x != nil {
+		return x.SubscriptionId
+	}
+	return ""
+}
+
+func (x *CreateSubscriptionResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *CreateSubscriptionResponse) GetPlanCode() string {
+	if x != nil {
+		return x.PlanCode
+	}
+	return ""
+}
+
+func (x *CreateSubscriptionResponse) GetBillingCycle() string {
+	if x != nil {
+		return x.BillingCycle
+	}
+	return ""
+}
+
+func (x *CreateSubscriptionResponse) GetSeatCount() int32 {
+	if x != nil {
+		return x.SeatCount
+	}
+	return 0
+}
+
+func (x *CreateSubscriptionResponse) GetTrialEndsAt() string {
+	if x != nil {
+		return x.TrialEndsAt
+	}
+	return ""
+}
+
+func (x *CreateSubscriptionResponse) GetFirstPeriodNo() int32 {
+	if x != nil {
+		return x.FirstPeriodNo
+	}
+	return 0
+}
+
+func (x *CreateSubscriptionResponse) GetFirstPeriodEnd() string {
+	if x != nil {
+		return x.FirstPeriodEnd
+	}
+	return ""
+}
+
+func (x *CreateSubscriptionResponse) GetFirstPeriodAmount() string {
+	if x != nil {
+		return x.FirstPeriodAmount
+	}
+	return ""
+}
+
 type SetSeatCountRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	CompanyId     string                 `protobuf:"bytes,1,opt,name=company_id,json=companyId,proto3" json:"company_id,omitempty"`
@@ -1578,7 +1770,7 @@ type SetSeatCountRequest struct {
 
 func (x *SetSeatCountRequest) Reset() {
 	*x = SetSeatCountRequest{}
-	mi := &file_platform_v1_platform_proto_msgTypes[23]
+	mi := &file_platform_v1_platform_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1590,7 +1782,7 @@ func (x *SetSeatCountRequest) String() string {
 func (*SetSeatCountRequest) ProtoMessage() {}
 
 func (x *SetSeatCountRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[23]
+	mi := &file_platform_v1_platform_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1603,7 +1795,7 @@ func (x *SetSeatCountRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetSeatCountRequest.ProtoReflect.Descriptor instead.
 func (*SetSeatCountRequest) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{23}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *SetSeatCountRequest) GetCompanyId() string {
@@ -1636,7 +1828,7 @@ type SetSeatCountResponse struct {
 
 func (x *SetSeatCountResponse) Reset() {
 	*x = SetSeatCountResponse{}
-	mi := &file_platform_v1_platform_proto_msgTypes[24]
+	mi := &file_platform_v1_platform_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1648,7 +1840,7 @@ func (x *SetSeatCountResponse) String() string {
 func (*SetSeatCountResponse) ProtoMessage() {}
 
 func (x *SetSeatCountResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[24]
+	mi := &file_platform_v1_platform_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1661,7 +1853,7 @@ func (x *SetSeatCountResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetSeatCountResponse.ProtoReflect.Descriptor instead.
 func (*SetSeatCountResponse) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{24}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *SetSeatCountResponse) GetSeatCount() int32 {
@@ -1682,7 +1874,7 @@ type ChangePlanRequest struct {
 
 func (x *ChangePlanRequest) Reset() {
 	*x = ChangePlanRequest{}
-	mi := &file_platform_v1_platform_proto_msgTypes[25]
+	mi := &file_platform_v1_platform_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1694,7 +1886,7 @@ func (x *ChangePlanRequest) String() string {
 func (*ChangePlanRequest) ProtoMessage() {}
 
 func (x *ChangePlanRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[25]
+	mi := &file_platform_v1_platform_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1707,7 +1899,7 @@ func (x *ChangePlanRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChangePlanRequest.ProtoReflect.Descriptor instead.
 func (*ChangePlanRequest) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{25}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *ChangePlanRequest) GetCompanyId() string {
@@ -1741,7 +1933,7 @@ type ChangePlanResponse struct {
 
 func (x *ChangePlanResponse) Reset() {
 	*x = ChangePlanResponse{}
-	mi := &file_platform_v1_platform_proto_msgTypes[26]
+	mi := &file_platform_v1_platform_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1753,7 +1945,7 @@ func (x *ChangePlanResponse) String() string {
 func (*ChangePlanResponse) ProtoMessage() {}
 
 func (x *ChangePlanResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[26]
+	mi := &file_platform_v1_platform_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1766,7 +1958,7 @@ func (x *ChangePlanResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChangePlanResponse.ProtoReflect.Descriptor instead.
 func (*ChangePlanResponse) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{26}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ChangePlanResponse) GetPlanCode() string {
@@ -1794,7 +1986,7 @@ type CancelSubscriptionRequest struct {
 
 func (x *CancelSubscriptionRequest) Reset() {
 	*x = CancelSubscriptionRequest{}
-	mi := &file_platform_v1_platform_proto_msgTypes[27]
+	mi := &file_platform_v1_platform_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1806,7 +1998,7 @@ func (x *CancelSubscriptionRequest) String() string {
 func (*CancelSubscriptionRequest) ProtoMessage() {}
 
 func (x *CancelSubscriptionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[27]
+	mi := &file_platform_v1_platform_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1819,7 +2011,7 @@ func (x *CancelSubscriptionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelSubscriptionRequest.ProtoReflect.Descriptor instead.
 func (*CancelSubscriptionRequest) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{27}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *CancelSubscriptionRequest) GetCompanyId() string {
@@ -1853,7 +2045,7 @@ type CancelSubscriptionResponse struct {
 
 func (x *CancelSubscriptionResponse) Reset() {
 	*x = CancelSubscriptionResponse{}
-	mi := &file_platform_v1_platform_proto_msgTypes[28]
+	mi := &file_platform_v1_platform_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1865,7 +2057,7 @@ func (x *CancelSubscriptionResponse) String() string {
 func (*CancelSubscriptionResponse) ProtoMessage() {}
 
 func (x *CancelSubscriptionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[28]
+	mi := &file_platform_v1_platform_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1878,7 +2070,7 @@ func (x *CancelSubscriptionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelSubscriptionResponse.ProtoReflect.Descriptor instead.
 func (*CancelSubscriptionResponse) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{28}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *CancelSubscriptionResponse) GetCancelledAt() string {
@@ -1903,7 +2095,7 @@ type GetBillingSettingsRequest struct {
 
 func (x *GetBillingSettingsRequest) Reset() {
 	*x = GetBillingSettingsRequest{}
-	mi := &file_platform_v1_platform_proto_msgTypes[29]
+	mi := &file_platform_v1_platform_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1915,7 +2107,7 @@ func (x *GetBillingSettingsRequest) String() string {
 func (*GetBillingSettingsRequest) ProtoMessage() {}
 
 func (x *GetBillingSettingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[29]
+	mi := &file_platform_v1_platform_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1928,7 +2120,7 @@ func (x *GetBillingSettingsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBillingSettingsRequest.ProtoReflect.Descriptor instead.
 func (*GetBillingSettingsRequest) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{29}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{31}
 }
 
 type GetBillingSettingsResponse struct {
@@ -1940,7 +2132,7 @@ type GetBillingSettingsResponse struct {
 
 func (x *GetBillingSettingsResponse) Reset() {
 	*x = GetBillingSettingsResponse{}
-	mi := &file_platform_v1_platform_proto_msgTypes[30]
+	mi := &file_platform_v1_platform_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1952,7 +2144,7 @@ func (x *GetBillingSettingsResponse) String() string {
 func (*GetBillingSettingsResponse) ProtoMessage() {}
 
 func (x *GetBillingSettingsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[30]
+	mi := &file_platform_v1_platform_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1965,7 +2157,7 @@ func (x *GetBillingSettingsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBillingSettingsResponse.ProtoReflect.Descriptor instead.
 func (*GetBillingSettingsResponse) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{30}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *GetBillingSettingsResponse) GetSettings() []*BillingSetting {
@@ -1987,7 +2179,7 @@ type BillingSetting struct {
 
 func (x *BillingSetting) Reset() {
 	*x = BillingSetting{}
-	mi := &file_platform_v1_platform_proto_msgTypes[31]
+	mi := &file_platform_v1_platform_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1999,7 +2191,7 @@ func (x *BillingSetting) String() string {
 func (*BillingSetting) ProtoMessage() {}
 
 func (x *BillingSetting) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[31]
+	mi := &file_platform_v1_platform_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2012,7 +2204,7 @@ func (x *BillingSetting) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BillingSetting.ProtoReflect.Descriptor instead.
 func (*BillingSetting) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{31}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *BillingSetting) GetKey() string {
@@ -2046,7 +2238,7 @@ type UpdateBillingSettingsRequest struct {
 
 func (x *UpdateBillingSettingsRequest) Reset() {
 	*x = UpdateBillingSettingsRequest{}
-	mi := &file_platform_v1_platform_proto_msgTypes[32]
+	mi := &file_platform_v1_platform_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2058,7 +2250,7 @@ func (x *UpdateBillingSettingsRequest) String() string {
 func (*UpdateBillingSettingsRequest) ProtoMessage() {}
 
 func (x *UpdateBillingSettingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[32]
+	mi := &file_platform_v1_platform_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2071,7 +2263,7 @@ func (x *UpdateBillingSettingsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateBillingSettingsRequest.ProtoReflect.Descriptor instead.
 func (*UpdateBillingSettingsRequest) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{32}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *UpdateBillingSettingsRequest) GetSettings() []*BillingSetting {
@@ -2097,7 +2289,7 @@ type UpdateBillingSettingsResponse struct {
 
 func (x *UpdateBillingSettingsResponse) Reset() {
 	*x = UpdateBillingSettingsResponse{}
-	mi := &file_platform_v1_platform_proto_msgTypes[33]
+	mi := &file_platform_v1_platform_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2109,7 +2301,7 @@ func (x *UpdateBillingSettingsResponse) String() string {
 func (*UpdateBillingSettingsResponse) ProtoMessage() {}
 
 func (x *UpdateBillingSettingsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[33]
+	mi := &file_platform_v1_platform_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2122,7 +2314,7 @@ func (x *UpdateBillingSettingsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateBillingSettingsResponse.ProtoReflect.Descriptor instead.
 func (*UpdateBillingSettingsResponse) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{33}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *UpdateBillingSettingsResponse) GetSettings() []*BillingSetting {
@@ -2149,7 +2341,7 @@ type SetTenantOverrideRequest struct {
 
 func (x *SetTenantOverrideRequest) Reset() {
 	*x = SetTenantOverrideRequest{}
-	mi := &file_platform_v1_platform_proto_msgTypes[34]
+	mi := &file_platform_v1_platform_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2161,7 +2353,7 @@ func (x *SetTenantOverrideRequest) String() string {
 func (*SetTenantOverrideRequest) ProtoMessage() {}
 
 func (x *SetTenantOverrideRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[34]
+	mi := &file_platform_v1_platform_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2174,7 +2366,7 @@ func (x *SetTenantOverrideRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetTenantOverrideRequest.ProtoReflect.Descriptor instead.
 func (*SetTenantOverrideRequest) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{34}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *SetTenantOverrideRequest) GetCompanyId() string {
@@ -2249,7 +2441,7 @@ type SetTenantOverrideResponse struct {
 
 func (x *SetTenantOverrideResponse) Reset() {
 	*x = SetTenantOverrideResponse{}
-	mi := &file_platform_v1_platform_proto_msgTypes[35]
+	mi := &file_platform_v1_platform_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2261,7 +2453,7 @@ func (x *SetTenantOverrideResponse) String() string {
 func (*SetTenantOverrideResponse) ProtoMessage() {}
 
 func (x *SetTenantOverrideResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[35]
+	mi := &file_platform_v1_platform_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2274,7 +2466,7 @@ func (x *SetTenantOverrideResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetTenantOverrideResponse.ProtoReflect.Descriptor instead.
 func (*SetTenantOverrideResponse) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{35}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *SetTenantOverrideResponse) GetId() string {
@@ -2294,7 +2486,7 @@ type RevokeTenantOverrideRequest struct {
 
 func (x *RevokeTenantOverrideRequest) Reset() {
 	*x = RevokeTenantOverrideRequest{}
-	mi := &file_platform_v1_platform_proto_msgTypes[36]
+	mi := &file_platform_v1_platform_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2306,7 +2498,7 @@ func (x *RevokeTenantOverrideRequest) String() string {
 func (*RevokeTenantOverrideRequest) ProtoMessage() {}
 
 func (x *RevokeTenantOverrideRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[36]
+	mi := &file_platform_v1_platform_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2319,7 +2511,7 @@ func (x *RevokeTenantOverrideRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeTenantOverrideRequest.ProtoReflect.Descriptor instead.
 func (*RevokeTenantOverrideRequest) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{36}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *RevokeTenantOverrideRequest) GetOverrideId() string {
@@ -2346,7 +2538,7 @@ type RevokeTenantOverrideResponse struct {
 
 func (x *RevokeTenantOverrideResponse) Reset() {
 	*x = RevokeTenantOverrideResponse{}
-	mi := &file_platform_v1_platform_proto_msgTypes[37]
+	mi := &file_platform_v1_platform_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2358,7 +2550,7 @@ func (x *RevokeTenantOverrideResponse) String() string {
 func (*RevokeTenantOverrideResponse) ProtoMessage() {}
 
 func (x *RevokeTenantOverrideResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[37]
+	mi := &file_platform_v1_platform_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2371,7 +2563,7 @@ func (x *RevokeTenantOverrideResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeTenantOverrideResponse.ProtoReflect.Descriptor instead.
 func (*RevokeTenantOverrideResponse) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{37}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *RevokeTenantOverrideResponse) GetCompanyId() string {
@@ -2402,7 +2594,7 @@ type UpsertPlanPriceRequest struct {
 
 func (x *UpsertPlanPriceRequest) Reset() {
 	*x = UpsertPlanPriceRequest{}
-	mi := &file_platform_v1_platform_proto_msgTypes[38]
+	mi := &file_platform_v1_platform_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2414,7 +2606,7 @@ func (x *UpsertPlanPriceRequest) String() string {
 func (*UpsertPlanPriceRequest) ProtoMessage() {}
 
 func (x *UpsertPlanPriceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[38]
+	mi := &file_platform_v1_platform_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2427,7 +2619,7 @@ func (x *UpsertPlanPriceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpsertPlanPriceRequest.ProtoReflect.Descriptor instead.
 func (*UpsertPlanPriceRequest) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{38}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *UpsertPlanPriceRequest) GetPlanCode() string {
@@ -2480,7 +2672,7 @@ type UpsertPlanPriceResponse struct {
 
 func (x *UpsertPlanPriceResponse) Reset() {
 	*x = UpsertPlanPriceResponse{}
-	mi := &file_platform_v1_platform_proto_msgTypes[39]
+	mi := &file_platform_v1_platform_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2492,7 +2684,7 @@ func (x *UpsertPlanPriceResponse) String() string {
 func (*UpsertPlanPriceResponse) ProtoMessage() {}
 
 func (x *UpsertPlanPriceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[39]
+	mi := &file_platform_v1_platform_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2505,7 +2697,7 @@ func (x *UpsertPlanPriceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpsertPlanPriceResponse.ProtoReflect.Descriptor instead.
 func (*UpsertPlanPriceResponse) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{39}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{41}
 }
 
 type SetPlanEntitlementRequest struct {
@@ -2522,7 +2714,7 @@ type SetPlanEntitlementRequest struct {
 
 func (x *SetPlanEntitlementRequest) Reset() {
 	*x = SetPlanEntitlementRequest{}
-	mi := &file_platform_v1_platform_proto_msgTypes[40]
+	mi := &file_platform_v1_platform_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2534,7 +2726,7 @@ func (x *SetPlanEntitlementRequest) String() string {
 func (*SetPlanEntitlementRequest) ProtoMessage() {}
 
 func (x *SetPlanEntitlementRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[40]
+	mi := &file_platform_v1_platform_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2547,7 +2739,7 @@ func (x *SetPlanEntitlementRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetPlanEntitlementRequest.ProtoReflect.Descriptor instead.
 func (*SetPlanEntitlementRequest) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{40}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *SetPlanEntitlementRequest) GetPlanCode() string {
@@ -2600,7 +2792,7 @@ type SetPlanEntitlementResponse struct {
 
 func (x *SetPlanEntitlementResponse) Reset() {
 	*x = SetPlanEntitlementResponse{}
-	mi := &file_platform_v1_platform_proto_msgTypes[41]
+	mi := &file_platform_v1_platform_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2612,7 +2804,7 @@ func (x *SetPlanEntitlementResponse) String() string {
 func (*SetPlanEntitlementResponse) ProtoMessage() {}
 
 func (x *SetPlanEntitlementResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[41]
+	mi := &file_platform_v1_platform_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2625,7 +2817,7 @@ func (x *SetPlanEntitlementResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetPlanEntitlementResponse.ProtoReflect.Descriptor instead.
 func (*SetPlanEntitlementResponse) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{41}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{43}
 }
 
 type CreateOperatorRequest struct {
@@ -2640,7 +2832,7 @@ type CreateOperatorRequest struct {
 
 func (x *CreateOperatorRequest) Reset() {
 	*x = CreateOperatorRequest{}
-	mi := &file_platform_v1_platform_proto_msgTypes[42]
+	mi := &file_platform_v1_platform_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2652,7 +2844,7 @@ func (x *CreateOperatorRequest) String() string {
 func (*CreateOperatorRequest) ProtoMessage() {}
 
 func (x *CreateOperatorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[42]
+	mi := &file_platform_v1_platform_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2665,7 +2857,7 @@ func (x *CreateOperatorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateOperatorRequest.ProtoReflect.Descriptor instead.
 func (*CreateOperatorRequest) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{42}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *CreateOperatorRequest) GetEmail() string {
@@ -2705,7 +2897,7 @@ type CreateOperatorResponse struct {
 
 func (x *CreateOperatorResponse) Reset() {
 	*x = CreateOperatorResponse{}
-	mi := &file_platform_v1_platform_proto_msgTypes[43]
+	mi := &file_platform_v1_platform_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2717,7 +2909,7 @@ func (x *CreateOperatorResponse) String() string {
 func (*CreateOperatorResponse) ProtoMessage() {}
 
 func (x *CreateOperatorResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[43]
+	mi := &file_platform_v1_platform_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2730,7 +2922,7 @@ func (x *CreateOperatorResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateOperatorResponse.ProtoReflect.Descriptor instead.
 func (*CreateOperatorResponse) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{43}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *CreateOperatorResponse) GetId() string {
@@ -2750,7 +2942,7 @@ type DisableOperatorRequest struct {
 
 func (x *DisableOperatorRequest) Reset() {
 	*x = DisableOperatorRequest{}
-	mi := &file_platform_v1_platform_proto_msgTypes[44]
+	mi := &file_platform_v1_platform_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2762,7 +2954,7 @@ func (x *DisableOperatorRequest) String() string {
 func (*DisableOperatorRequest) ProtoMessage() {}
 
 func (x *DisableOperatorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[44]
+	mi := &file_platform_v1_platform_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2775,7 +2967,7 @@ func (x *DisableOperatorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DisableOperatorRequest.ProtoReflect.Descriptor instead.
 func (*DisableOperatorRequest) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{44}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *DisableOperatorRequest) GetOperatorId() string {
@@ -2800,7 +2992,7 @@ type DisableOperatorResponse struct {
 
 func (x *DisableOperatorResponse) Reset() {
 	*x = DisableOperatorResponse{}
-	mi := &file_platform_v1_platform_proto_msgTypes[45]
+	mi := &file_platform_v1_platform_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2812,7 +3004,7 @@ func (x *DisableOperatorResponse) String() string {
 func (*DisableOperatorResponse) ProtoMessage() {}
 
 func (x *DisableOperatorResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[45]
+	mi := &file_platform_v1_platform_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2825,7 +3017,7 @@ func (x *DisableOperatorResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DisableOperatorResponse.ProtoReflect.Descriptor instead.
 func (*DisableOperatorResponse) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{45}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{47}
 }
 
 // GetTenantEntitlementsRequest:租戶端唯讀投影(自己的公司;前端據此 disable 按鈕與顯示用量)。
@@ -2837,7 +3029,7 @@ type GetTenantEntitlementsRequest struct {
 
 func (x *GetTenantEntitlementsRequest) Reset() {
 	*x = GetTenantEntitlementsRequest{}
-	mi := &file_platform_v1_platform_proto_msgTypes[46]
+	mi := &file_platform_v1_platform_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2849,7 +3041,7 @@ func (x *GetTenantEntitlementsRequest) String() string {
 func (*GetTenantEntitlementsRequest) ProtoMessage() {}
 
 func (x *GetTenantEntitlementsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[46]
+	mi := &file_platform_v1_platform_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2862,7 +3054,7 @@ func (x *GetTenantEntitlementsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTenantEntitlementsRequest.ProtoReflect.Descriptor instead.
 func (*GetTenantEntitlementsRequest) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{46}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{48}
 }
 
 type GetTenantEntitlementsResponse struct {
@@ -2878,7 +3070,7 @@ type GetTenantEntitlementsResponse struct {
 
 func (x *GetTenantEntitlementsResponse) Reset() {
 	*x = GetTenantEntitlementsResponse{}
-	mi := &file_platform_v1_platform_proto_msgTypes[47]
+	mi := &file_platform_v1_platform_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2890,7 +3082,7 @@ func (x *GetTenantEntitlementsResponse) String() string {
 func (*GetTenantEntitlementsResponse) ProtoMessage() {}
 
 func (x *GetTenantEntitlementsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[47]
+	mi := &file_platform_v1_platform_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2903,7 +3095,7 @@ func (x *GetTenantEntitlementsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTenantEntitlementsResponse.ProtoReflect.Descriptor instead.
 func (*GetTenantEntitlementsResponse) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{47}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *GetTenantEntitlementsResponse) GetPlanCode() string {
@@ -2955,7 +3147,7 @@ type Usage struct {
 
 func (x *Usage) Reset() {
 	*x = Usage{}
-	mi := &file_platform_v1_platform_proto_msgTypes[48]
+	mi := &file_platform_v1_platform_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2967,7 +3159,7 @@ func (x *Usage) String() string {
 func (*Usage) ProtoMessage() {}
 
 func (x *Usage) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[48]
+	mi := &file_platform_v1_platform_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2980,7 +3172,7 @@ func (x *Usage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Usage.ProtoReflect.Descriptor instead.
 func (*Usage) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{48}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *Usage) GetFeatureCode() string {
@@ -3160,7 +3352,27 @@ const file_platform_v1_platform_proto_rawDesc = "" +
 	"\x06reason\x18\v \x01(\tR\x06reason\"L\n" +
 	"\x15RecordPaymentResponse\x12\x1b\n" +
 	"\tperiod_no\x18\x01 \x01(\x05R\bperiodNo\x12\x16\n" +
-	"\x06status\x18\x02 \x01(\tR\x06status\"k\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\"\xd7\x01\n" +
+	"\x19CreateSubscriptionRequest\x12\x1d\n" +
+	"\n" +
+	"company_id\x18\x01 \x01(\tR\tcompanyId\x12\x1b\n" +
+	"\tplan_code\x18\x02 \x01(\tR\bplanCode\x12#\n" +
+	"\rbilling_cycle\x18\x03 \x01(\tR\fbillingCycle\x12\x1d\n" +
+	"\n" +
+	"seat_count\x18\x04 \x01(\x05R\tseatCount\x12\"\n" +
+	"\rtrial_ends_at\x18\x05 \x01(\tR\vtrialEndsAt\x12\x16\n" +
+	"\x06reason\x18\x06 \x01(\tR\x06reason\"\xe4\x02\n" +
+	"\x1aCreateSubscriptionResponse\x12'\n" +
+	"\x0fsubscription_id\x18\x01 \x01(\tR\x0esubscriptionId\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\x12\x1b\n" +
+	"\tplan_code\x18\x03 \x01(\tR\bplanCode\x12#\n" +
+	"\rbilling_cycle\x18\x04 \x01(\tR\fbillingCycle\x12\x1d\n" +
+	"\n" +
+	"seat_count\x18\x05 \x01(\x05R\tseatCount\x12\"\n" +
+	"\rtrial_ends_at\x18\x06 \x01(\tR\vtrialEndsAt\x12&\n" +
+	"\x0ffirst_period_no\x18\a \x01(\x05R\rfirstPeriodNo\x12(\n" +
+	"\x10first_period_end\x18\b \x01(\tR\x0efirstPeriodEnd\x12.\n" +
+	"\x13first_period_amount\x18\t \x01(\tR\x11firstPeriodAmount\"k\n" +
 	"\x13SetSeatCountRequest\x12\x1d\n" +
 	"\n" +
 	"company_id\x18\x01 \x01(\tR\tcompanyId\x12\x1d\n" +
@@ -3266,7 +3478,7 @@ const file_platform_v1_platform_proto_rawDesc = "" +
 	"\tlimit_set\x18\x03 \x01(\bR\blimitSet\x12\x1f\n" +
 	"\vlimit_value\x18\x04 \x01(\x03R\n" +
 	"limitValue\x12\x12\n" +
-	"\x04used\x18\x05 \x01(\x03R\x04used2\xb5\r\n" +
+	"\x04used\x18\x05 \x01(\x03R\x04used2\x9c\x0e\n" +
 	"\x14PlatformAdminService\x12P\n" +
 	"\vListTenants\x12\x1f.platform.v1.ListTenantsRequest\x1a .platform.v1.ListTenantsResponse\x12J\n" +
 	"\tGetTenant\x12\x1d.platform.v1.GetTenantRequest\x1a\x1e.platform.v1.GetTenantResponse\x12J\n" +
@@ -3274,7 +3486,8 @@ const file_platform_v1_platform_proto_rawDesc = "" +
 	"\x13GetPlanEntitlements\x12'.platform.v1.GetPlanEntitlementsRequest\x1a(.platform.v1.GetPlanEntitlementsResponse\x12b\n" +
 	"\x11ListPlatformAudit\x12%.platform.v1.ListPlatformAuditRequest\x1a&.platform.v1.ListPlatformAuditResponse\x12\\\n" +
 	"\x0fListReceivables\x12#.platform.v1.ListReceivablesRequest\x1a$.platform.v1.ListReceivablesResponse\x12V\n" +
-	"\rRecordPayment\x12!.platform.v1.RecordPaymentRequest\x1a\".platform.v1.RecordPaymentResponse\x12S\n" +
+	"\rRecordPayment\x12!.platform.v1.RecordPaymentRequest\x1a\".platform.v1.RecordPaymentResponse\x12e\n" +
+	"\x12CreateSubscription\x12&.platform.v1.CreateSubscriptionRequest\x1a'.platform.v1.CreateSubscriptionResponse\x12S\n" +
 	"\fSetSeatCount\x12 .platform.v1.SetSeatCountRequest\x1a!.platform.v1.SetSeatCountResponse\x12M\n" +
 	"\n" +
 	"ChangePlan\x12\x1e.platform.v1.ChangePlanRequest\x1a\x1f.platform.v1.ChangePlanResponse\x12e\n" +
@@ -3302,7 +3515,7 @@ func file_platform_v1_platform_proto_rawDescGZIP() []byte {
 	return file_platform_v1_platform_proto_rawDescData
 }
 
-var file_platform_v1_platform_proto_msgTypes = make([]protoimpl.MessageInfo, 49)
+var file_platform_v1_platform_proto_msgTypes = make([]protoimpl.MessageInfo, 51)
 var file_platform_v1_platform_proto_goTypes = []any{
 	(*TenantSummary)(nil),                 // 0: platform.v1.TenantSummary
 	(*PlatformPagination)(nil),            // 1: platform.v1.PlatformPagination
@@ -3327,32 +3540,34 @@ var file_platform_v1_platform_proto_goTypes = []any{
 	(*Receivable)(nil),                    // 20: platform.v1.Receivable
 	(*RecordPaymentRequest)(nil),          // 21: platform.v1.RecordPaymentRequest
 	(*RecordPaymentResponse)(nil),         // 22: platform.v1.RecordPaymentResponse
-	(*SetSeatCountRequest)(nil),           // 23: platform.v1.SetSeatCountRequest
-	(*SetSeatCountResponse)(nil),          // 24: platform.v1.SetSeatCountResponse
-	(*ChangePlanRequest)(nil),             // 25: platform.v1.ChangePlanRequest
-	(*ChangePlanResponse)(nil),            // 26: platform.v1.ChangePlanResponse
-	(*CancelSubscriptionRequest)(nil),     // 27: platform.v1.CancelSubscriptionRequest
-	(*CancelSubscriptionResponse)(nil),    // 28: platform.v1.CancelSubscriptionResponse
-	(*GetBillingSettingsRequest)(nil),     // 29: platform.v1.GetBillingSettingsRequest
-	(*GetBillingSettingsResponse)(nil),    // 30: platform.v1.GetBillingSettingsResponse
-	(*BillingSetting)(nil),                // 31: platform.v1.BillingSetting
-	(*UpdateBillingSettingsRequest)(nil),  // 32: platform.v1.UpdateBillingSettingsRequest
-	(*UpdateBillingSettingsResponse)(nil), // 33: platform.v1.UpdateBillingSettingsResponse
-	(*SetTenantOverrideRequest)(nil),      // 34: platform.v1.SetTenantOverrideRequest
-	(*SetTenantOverrideResponse)(nil),     // 35: platform.v1.SetTenantOverrideResponse
-	(*RevokeTenantOverrideRequest)(nil),   // 36: platform.v1.RevokeTenantOverrideRequest
-	(*RevokeTenantOverrideResponse)(nil),  // 37: platform.v1.RevokeTenantOverrideResponse
-	(*UpsertPlanPriceRequest)(nil),        // 38: platform.v1.UpsertPlanPriceRequest
-	(*UpsertPlanPriceResponse)(nil),       // 39: platform.v1.UpsertPlanPriceResponse
-	(*SetPlanEntitlementRequest)(nil),     // 40: platform.v1.SetPlanEntitlementRequest
-	(*SetPlanEntitlementResponse)(nil),    // 41: platform.v1.SetPlanEntitlementResponse
-	(*CreateOperatorRequest)(nil),         // 42: platform.v1.CreateOperatorRequest
-	(*CreateOperatorResponse)(nil),        // 43: platform.v1.CreateOperatorResponse
-	(*DisableOperatorRequest)(nil),        // 44: platform.v1.DisableOperatorRequest
-	(*DisableOperatorResponse)(nil),       // 45: platform.v1.DisableOperatorResponse
-	(*GetTenantEntitlementsRequest)(nil),  // 46: platform.v1.GetTenantEntitlementsRequest
-	(*GetTenantEntitlementsResponse)(nil), // 47: platform.v1.GetTenantEntitlementsResponse
-	(*Usage)(nil),                         // 48: platform.v1.Usage
+	(*CreateSubscriptionRequest)(nil),     // 23: platform.v1.CreateSubscriptionRequest
+	(*CreateSubscriptionResponse)(nil),    // 24: platform.v1.CreateSubscriptionResponse
+	(*SetSeatCountRequest)(nil),           // 25: platform.v1.SetSeatCountRequest
+	(*SetSeatCountResponse)(nil),          // 26: platform.v1.SetSeatCountResponse
+	(*ChangePlanRequest)(nil),             // 27: platform.v1.ChangePlanRequest
+	(*ChangePlanResponse)(nil),            // 28: platform.v1.ChangePlanResponse
+	(*CancelSubscriptionRequest)(nil),     // 29: platform.v1.CancelSubscriptionRequest
+	(*CancelSubscriptionResponse)(nil),    // 30: platform.v1.CancelSubscriptionResponse
+	(*GetBillingSettingsRequest)(nil),     // 31: platform.v1.GetBillingSettingsRequest
+	(*GetBillingSettingsResponse)(nil),    // 32: platform.v1.GetBillingSettingsResponse
+	(*BillingSetting)(nil),                // 33: platform.v1.BillingSetting
+	(*UpdateBillingSettingsRequest)(nil),  // 34: platform.v1.UpdateBillingSettingsRequest
+	(*UpdateBillingSettingsResponse)(nil), // 35: platform.v1.UpdateBillingSettingsResponse
+	(*SetTenantOverrideRequest)(nil),      // 36: platform.v1.SetTenantOverrideRequest
+	(*SetTenantOverrideResponse)(nil),     // 37: platform.v1.SetTenantOverrideResponse
+	(*RevokeTenantOverrideRequest)(nil),   // 38: platform.v1.RevokeTenantOverrideRequest
+	(*RevokeTenantOverrideResponse)(nil),  // 39: platform.v1.RevokeTenantOverrideResponse
+	(*UpsertPlanPriceRequest)(nil),        // 40: platform.v1.UpsertPlanPriceRequest
+	(*UpsertPlanPriceResponse)(nil),       // 41: platform.v1.UpsertPlanPriceResponse
+	(*SetPlanEntitlementRequest)(nil),     // 42: platform.v1.SetPlanEntitlementRequest
+	(*SetPlanEntitlementResponse)(nil),    // 43: platform.v1.SetPlanEntitlementResponse
+	(*CreateOperatorRequest)(nil),         // 44: platform.v1.CreateOperatorRequest
+	(*CreateOperatorResponse)(nil),        // 45: platform.v1.CreateOperatorResponse
+	(*DisableOperatorRequest)(nil),        // 46: platform.v1.DisableOperatorRequest
+	(*DisableOperatorResponse)(nil),       // 47: platform.v1.DisableOperatorResponse
+	(*GetTenantEntitlementsRequest)(nil),  // 48: platform.v1.GetTenantEntitlementsRequest
+	(*GetTenantEntitlementsResponse)(nil), // 49: platform.v1.GetTenantEntitlementsResponse
+	(*Usage)(nil),                         // 50: platform.v1.Usage
 }
 var file_platform_v1_platform_proto_depIdxs = []int32{
 	0,  // 0: platform.v1.ListTenantsResponse.tenants:type_name -> platform.v1.TenantSummary
@@ -3367,10 +3582,10 @@ var file_platform_v1_platform_proto_depIdxs = []int32{
 	1,  // 9: platform.v1.ListPlatformAuditResponse.pagination:type_name -> platform.v1.PlatformPagination
 	20, // 10: platform.v1.ListReceivablesResponse.rows:type_name -> platform.v1.Receivable
 	1,  // 11: platform.v1.ListReceivablesResponse.pagination:type_name -> platform.v1.PlatformPagination
-	31, // 12: platform.v1.GetBillingSettingsResponse.settings:type_name -> platform.v1.BillingSetting
-	31, // 13: platform.v1.UpdateBillingSettingsRequest.settings:type_name -> platform.v1.BillingSetting
-	31, // 14: platform.v1.UpdateBillingSettingsResponse.settings:type_name -> platform.v1.BillingSetting
-	48, // 15: platform.v1.GetTenantEntitlementsResponse.usage:type_name -> platform.v1.Usage
+	33, // 12: platform.v1.GetBillingSettingsResponse.settings:type_name -> platform.v1.BillingSetting
+	33, // 13: platform.v1.UpdateBillingSettingsRequest.settings:type_name -> platform.v1.BillingSetting
+	33, // 14: platform.v1.UpdateBillingSettingsResponse.settings:type_name -> platform.v1.BillingSetting
+	50, // 15: platform.v1.GetTenantEntitlementsResponse.usage:type_name -> platform.v1.Usage
 	2,  // 16: platform.v1.PlatformAdminService.ListTenants:input_type -> platform.v1.ListTenantsRequest
 	4,  // 17: platform.v1.PlatformAdminService.GetTenant:input_type -> platform.v1.GetTenantRequest
 	7,  // 18: platform.v1.PlatformAdminService.ListPlans:input_type -> platform.v1.ListPlansRequest
@@ -3378,39 +3593,41 @@ var file_platform_v1_platform_proto_depIdxs = []int32{
 	15, // 20: platform.v1.PlatformAdminService.ListPlatformAudit:input_type -> platform.v1.ListPlatformAuditRequest
 	18, // 21: platform.v1.PlatformAdminService.ListReceivables:input_type -> platform.v1.ListReceivablesRequest
 	21, // 22: platform.v1.PlatformAdminService.RecordPayment:input_type -> platform.v1.RecordPaymentRequest
-	23, // 23: platform.v1.PlatformAdminService.SetSeatCount:input_type -> platform.v1.SetSeatCountRequest
-	25, // 24: platform.v1.PlatformAdminService.ChangePlan:input_type -> platform.v1.ChangePlanRequest
-	27, // 25: platform.v1.PlatformAdminService.CancelSubscription:input_type -> platform.v1.CancelSubscriptionRequest
-	29, // 26: platform.v1.PlatformAdminService.GetBillingSettings:input_type -> platform.v1.GetBillingSettingsRequest
-	32, // 27: platform.v1.PlatformAdminService.UpdateBillingSettings:input_type -> platform.v1.UpdateBillingSettingsRequest
-	34, // 28: platform.v1.PlatformAdminService.SetTenantOverride:input_type -> platform.v1.SetTenantOverrideRequest
-	36, // 29: platform.v1.PlatformAdminService.RevokeTenantOverride:input_type -> platform.v1.RevokeTenantOverrideRequest
-	38, // 30: platform.v1.PlatformAdminService.UpsertPlanPrice:input_type -> platform.v1.UpsertPlanPriceRequest
-	40, // 31: platform.v1.PlatformAdminService.SetPlanEntitlement:input_type -> platform.v1.SetPlanEntitlementRequest
-	42, // 32: platform.v1.PlatformAdminService.CreateOperator:input_type -> platform.v1.CreateOperatorRequest
-	44, // 33: platform.v1.PlatformAdminService.DisableOperator:input_type -> platform.v1.DisableOperatorRequest
-	46, // 34: platform.v1.TenantEntitlementService.GetTenantEntitlements:input_type -> platform.v1.GetTenantEntitlementsRequest
-	3,  // 35: platform.v1.PlatformAdminService.ListTenants:output_type -> platform.v1.ListTenantsResponse
-	5,  // 36: platform.v1.PlatformAdminService.GetTenant:output_type -> platform.v1.GetTenantResponse
-	8,  // 37: platform.v1.PlatformAdminService.ListPlans:output_type -> platform.v1.ListPlansResponse
-	12, // 38: platform.v1.PlatformAdminService.GetPlanEntitlements:output_type -> platform.v1.GetPlanEntitlementsResponse
-	16, // 39: platform.v1.PlatformAdminService.ListPlatformAudit:output_type -> platform.v1.ListPlatformAuditResponse
-	19, // 40: platform.v1.PlatformAdminService.ListReceivables:output_type -> platform.v1.ListReceivablesResponse
-	22, // 41: platform.v1.PlatformAdminService.RecordPayment:output_type -> platform.v1.RecordPaymentResponse
-	24, // 42: platform.v1.PlatformAdminService.SetSeatCount:output_type -> platform.v1.SetSeatCountResponse
-	26, // 43: platform.v1.PlatformAdminService.ChangePlan:output_type -> platform.v1.ChangePlanResponse
-	28, // 44: platform.v1.PlatformAdminService.CancelSubscription:output_type -> platform.v1.CancelSubscriptionResponse
-	30, // 45: platform.v1.PlatformAdminService.GetBillingSettings:output_type -> platform.v1.GetBillingSettingsResponse
-	33, // 46: platform.v1.PlatformAdminService.UpdateBillingSettings:output_type -> platform.v1.UpdateBillingSettingsResponse
-	35, // 47: platform.v1.PlatformAdminService.SetTenantOverride:output_type -> platform.v1.SetTenantOverrideResponse
-	37, // 48: platform.v1.PlatformAdminService.RevokeTenantOverride:output_type -> platform.v1.RevokeTenantOverrideResponse
-	39, // 49: platform.v1.PlatformAdminService.UpsertPlanPrice:output_type -> platform.v1.UpsertPlanPriceResponse
-	41, // 50: platform.v1.PlatformAdminService.SetPlanEntitlement:output_type -> platform.v1.SetPlanEntitlementResponse
-	43, // 51: platform.v1.PlatformAdminService.CreateOperator:output_type -> platform.v1.CreateOperatorResponse
-	45, // 52: platform.v1.PlatformAdminService.DisableOperator:output_type -> platform.v1.DisableOperatorResponse
-	47, // 53: platform.v1.TenantEntitlementService.GetTenantEntitlements:output_type -> platform.v1.GetTenantEntitlementsResponse
-	35, // [35:54] is the sub-list for method output_type
-	16, // [16:35] is the sub-list for method input_type
+	23, // 23: platform.v1.PlatformAdminService.CreateSubscription:input_type -> platform.v1.CreateSubscriptionRequest
+	25, // 24: platform.v1.PlatformAdminService.SetSeatCount:input_type -> platform.v1.SetSeatCountRequest
+	27, // 25: platform.v1.PlatformAdminService.ChangePlan:input_type -> platform.v1.ChangePlanRequest
+	29, // 26: platform.v1.PlatformAdminService.CancelSubscription:input_type -> platform.v1.CancelSubscriptionRequest
+	31, // 27: platform.v1.PlatformAdminService.GetBillingSettings:input_type -> platform.v1.GetBillingSettingsRequest
+	34, // 28: platform.v1.PlatformAdminService.UpdateBillingSettings:input_type -> platform.v1.UpdateBillingSettingsRequest
+	36, // 29: platform.v1.PlatformAdminService.SetTenantOverride:input_type -> platform.v1.SetTenantOverrideRequest
+	38, // 30: platform.v1.PlatformAdminService.RevokeTenantOverride:input_type -> platform.v1.RevokeTenantOverrideRequest
+	40, // 31: platform.v1.PlatformAdminService.UpsertPlanPrice:input_type -> platform.v1.UpsertPlanPriceRequest
+	42, // 32: platform.v1.PlatformAdminService.SetPlanEntitlement:input_type -> platform.v1.SetPlanEntitlementRequest
+	44, // 33: platform.v1.PlatformAdminService.CreateOperator:input_type -> platform.v1.CreateOperatorRequest
+	46, // 34: platform.v1.PlatformAdminService.DisableOperator:input_type -> platform.v1.DisableOperatorRequest
+	48, // 35: platform.v1.TenantEntitlementService.GetTenantEntitlements:input_type -> platform.v1.GetTenantEntitlementsRequest
+	3,  // 36: platform.v1.PlatformAdminService.ListTenants:output_type -> platform.v1.ListTenantsResponse
+	5,  // 37: platform.v1.PlatformAdminService.GetTenant:output_type -> platform.v1.GetTenantResponse
+	8,  // 38: platform.v1.PlatformAdminService.ListPlans:output_type -> platform.v1.ListPlansResponse
+	12, // 39: platform.v1.PlatformAdminService.GetPlanEntitlements:output_type -> platform.v1.GetPlanEntitlementsResponse
+	16, // 40: platform.v1.PlatformAdminService.ListPlatformAudit:output_type -> platform.v1.ListPlatformAuditResponse
+	19, // 41: platform.v1.PlatformAdminService.ListReceivables:output_type -> platform.v1.ListReceivablesResponse
+	22, // 42: platform.v1.PlatformAdminService.RecordPayment:output_type -> platform.v1.RecordPaymentResponse
+	24, // 43: platform.v1.PlatformAdminService.CreateSubscription:output_type -> platform.v1.CreateSubscriptionResponse
+	26, // 44: platform.v1.PlatformAdminService.SetSeatCount:output_type -> platform.v1.SetSeatCountResponse
+	28, // 45: platform.v1.PlatformAdminService.ChangePlan:output_type -> platform.v1.ChangePlanResponse
+	30, // 46: platform.v1.PlatformAdminService.CancelSubscription:output_type -> platform.v1.CancelSubscriptionResponse
+	32, // 47: platform.v1.PlatformAdminService.GetBillingSettings:output_type -> platform.v1.GetBillingSettingsResponse
+	35, // 48: platform.v1.PlatformAdminService.UpdateBillingSettings:output_type -> platform.v1.UpdateBillingSettingsResponse
+	37, // 49: platform.v1.PlatformAdminService.SetTenantOverride:output_type -> platform.v1.SetTenantOverrideResponse
+	39, // 50: platform.v1.PlatformAdminService.RevokeTenantOverride:output_type -> platform.v1.RevokeTenantOverrideResponse
+	41, // 51: platform.v1.PlatformAdminService.UpsertPlanPrice:output_type -> platform.v1.UpsertPlanPriceResponse
+	43, // 52: platform.v1.PlatformAdminService.SetPlanEntitlement:output_type -> platform.v1.SetPlanEntitlementResponse
+	45, // 53: platform.v1.PlatformAdminService.CreateOperator:output_type -> platform.v1.CreateOperatorResponse
+	47, // 54: platform.v1.PlatformAdminService.DisableOperator:output_type -> platform.v1.DisableOperatorResponse
+	49, // 55: platform.v1.TenantEntitlementService.GetTenantEntitlements:output_type -> platform.v1.GetTenantEntitlementsResponse
+	36, // [36:56] is the sub-list for method output_type
+	16, // [16:36] is the sub-list for method input_type
 	16, // [16:16] is the sub-list for extension type_name
 	16, // [16:16] is the sub-list for extension extendee
 	0,  // [0:16] is the sub-list for field type_name
@@ -3427,7 +3644,7 @@ func file_platform_v1_platform_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_platform_v1_platform_proto_rawDesc), len(file_platform_v1_platform_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   49,
+			NumMessages:   51,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

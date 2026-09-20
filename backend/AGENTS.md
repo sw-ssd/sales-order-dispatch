@@ -178,7 +178,7 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
    為什麼：共用 secret 或共用 cookie 路徑，等於任何租戶 token 都能通過平台 RPC 的驗證——而平台 RPC 跨租戶讀寫，是全系統權限最高的一條路徑。
 10. **`platform.*` 能力不得出現在租戶 `GetAbility`／角色權限矩陣**（S11）。
     為什麼：`platform.*` 屬 operator 的世界，一旦下發給租戶前端就會被當成「租戶也有這些權限」；前端守衛雖不構成授權（§3），但會誤導下一個實作者把平台能力掛到租戶路徑。
-11. **平台稽核不寫租戶 `audit_logs`**：一律寫 `platform.audit_logs`，且**只有兩條入口**——`internal/platform/billing` 的 `RecordAuditTx`（`RecordPayment`，`billing.go:245`）與 `billing.audit`（三支訂閱寫入，`subscription.go:58`／`:115`／`:191`），以及服務層的 `PlatformAdminService.writeTx`（`platform_admin_service.go:957`，七支營運 RPC）。**十一條**寫入都在**該次寫入的同一個交易內**。
+11. **平台稽核不寫租戶 `audit_logs`**：一律寫 `platform.audit_logs`，且**只有兩條入口**——`internal/platform/billing` 的 `RecordAuditTx`（`RecordPayment`，`billing.go:245`）與 `billing.audit`（**四支**訂閱寫入，`subscription.go` 的 `CreateSubscription`／`SetSeatCount`／`ChangePlan`／`CancelSubscription`），以及服務層的 `PlatformAdminService.writeTx`（七支營運 RPC）。**十二條**寫入都在**該次寫入的同一個交易內**。
     為什麼：租戶稽核的 `company_id`／`user_id` 非零且 FK 到租戶 `users`，而平台操作者兩者皆無——硬寫會被 FK 擋下，或更糟：在稽核裡留下一個不存在的租戶 actor。
     **更正（2026-09-21）**：本條原寫「唯一入口 `recordPlatformAudit`」——該函式是唯讀時期的暫置物，已於 Plan C Task 9 **刪除**（全 repo 只剩該檔一行歷史註解）。留著它等於允許「稽核說改了、其實沒動」。**排程**不寫本表是唯一例外，見第 19 條。
 12. **寫入平台表用 admin 連線；任何需要跨租戶讀業務表的平台查詢，必須在同一交易內 `SET LOCAL app.current_data_scope='all'`**（例：租戶列表投影的 LATERAL 查詢）。
@@ -187,17 +187,18 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
     為什麼：`platform.settings` 只寫「值真的不同」的那幾筆（`WHERE value IS DISTINCT FROM EXCLUDED.value`），否則每次重跑都推進 `updated_at`，「有沒有被改過」就失去意義；`plans` 的 `INSERT … ON CONFLICT DO UPDATE … RETURNING id` 即使走 UPDATE 分支也會消耗一次 `nextval`（id 不變、跳號無實害），把它算成變更只會逼出「先 SELECT 再 UPDATE」的複雜寫法。
     註：`limit.storage_gb` 目前**不在** v1 seed 清單（無計數器）。別把理由記成「種了會讓租戶端權益投影全面失敗」——缺計數器的 integer feature 在投影中是「**靜默略過該筆 ＋ 一行 log**」，不會擋整筆回應；換句話說沒有計數器時用量是**無聲消失**，不是大聲失敗。故日後要提供 storage 用量，必須**同時**補上計數器（見 spec §4.5 的註記）。
 14. **訂閱列的生命週期：沒有訂閱列＝尚未開通計費 → 不施加限制；停用租戶一律改 `status`，不得刪列**（spec §4.5「訂閱列的生命週期語意」）。
-   為什麼：`Allows`／`CheckLimit` 對「沒有訂閱列」不施加任何配額／功能限制（只記一行 log）—— Plan C 的訂閱指派／onboarding 落地前沒有任何程式會建立訂閱列，在那裡 fail-closed 會讓員工自助註冊與首次 OIDC 登入全被硬擋，而只有進得去的管理員才能補訂閱（上線即癱瘓）。因此 **`DELETE FROM platform.subscriptions` 等於送一個不限額方案**：要停用必須設 `cancelled`／`suspended`（→ `PLAT-3001`）。fail-closed 針對的是**已知不可用**與**未列舉**的狀態，不是「還沒有計費紀錄」。
+   為什麼：`Allows`／`CheckLimit` 對「沒有訂閱列」不施加任何配額／功能限制（只記一行 log）—— **尚未開通的公司是常態**（自助註冊、剛建好還沒簽約），在那裡 fail-closed 會讓員工自助註冊與首次 OIDC 登入全被硬擋，而只有進得去的管理員才能補訂閱（上線即癱瘓）。因此 **`DELETE FROM platform.subscriptions` 等於送一個不限額方案**：要停用必須設 `cancelled`／`suspended`（→ `PLAT-3001`）。fail-closed 針對的是**已知不可用**與**未列舉**的狀態，不是「還沒有計費紀錄」。
+   **開通路徑（2026-09-21，Plan C Task 15；本條原寫「Plan C 的訂閱指派／onboarding 落地前沒有任何程式會建立訂閱列」，已不成立）**：建立訂閱與第一期的入口是 `PlatformAdminService.CreateSubscription`（`platform/v1`）→ `billing.CreateSubscription`（`internal/platform/billing/subscription.go`，訂閱＋第一期＋事件＋稽核同一個 `WithTx`），console 在**租戶詳情頁**的「開通訂閱」；**同一公司同時只能有一份未取消的合約**（00029 的 `subscriptions_active_company_unique`，衝突回 SYS-2001；已取消者不佔這條鍵 —— 要再服務是**新合約**）。自助註冊與試用申請流程仍不在範圍（spec §9 的 Out），開通一律由營運執行。
    註：`PLAT-5002` 仍是「已訂閱、但方案不含該 feature」；`guardSeats` 等**無租戶身分**的守衛必須在系統範圍（scope=all）內計數，否則 00028 的 FORCE RLS 會把 `users` 濾成 0 列 → `used=0` → 上限永不觸發（見 §9-6 與 `counters.go` 的 `Count`）。
 
 15. **平台寫入一律單一交易：資料＋事件＋稽核同一個 commit，`reason` 必填，每次寫入恰一筆稽核**。
     骨架：`internal/platform/billing` 的 `BillingStore.WithTx`（admin 連線）內完成「讀現況（需要時 `FOR UPDATE` 鎖訂閱列）→ 寫期別／訂閱狀態 → 寫 `platform.events` → 寫 `platform.audit_logs`」；服務層的營運寫入走 `PlatformAdminService.writeTx`（`apply` 之後才寫稽核，**同一個交易**）。
-    - `reason` 必填是**進入點**的守衛：`billing.RecordPayment`（`billing.go:112`）、`billing.audit`（`subscription.go:263`）與服務層 `platformReason`（`platform_admin_service.go:1015`）都以 `strings.TrimSpace(reason) == ""` 拒絕（全空白也算空）。**store 層只擋空字串**：兩條入口共用的 `recordAuditTx`（`postgres/billing.go:453`、fake `fake_billing.go:477`，`admin_writes.go:60` 只是轉呼叫）檢查的是 `reason == ""` —— 因此**新增寫入點必須自己 trim**（`platform.audit_logs.reason` 是 NOT NULL 但**空字串合法**，`"   "` 會被寫成一列看起來有值、其實沒有理由的稽核）。
+    - `reason` 必填是**進入點**的守衛：`billing.RecordPayment`（`billing.go:112`）、`billing.audit`（`subscription.go`，四支訂閱寫入的稽核）與服務層 `platformReason`都以 `strings.TrimSpace(reason) == ""` 拒絕（全空白也算空）。**store 層只擋空字串**：兩條入口共用的 `recordAuditTx`（`postgres/billing.go:453`、fake `fake_billing.go:477`，`admin_writes.go:60` 只是轉呼叫）檢查的是 `reason == ""` —— 因此**新增寫入點必須自己 trim**（`platform.audit_logs.reason` 是 NOT NULL 但**空字串合法**，`"   "` 會被寫成一列看起來有值、其實沒有理由的稽核）。
     - 「恰一筆稽核」是**結構保證**而非紀律：billing 路徑自己寫（服務層對它不再寫第二筆，測試以 `writes.audits == 0` 反向斷言）；營運 RPC 由 `writeTx` 的單一 `RecordAuditTx` 寫。
     為什麼：`platform` 與業務表**同一個 PostgreSQL 資料庫**，跨域副作用（`companies.status`）因此可同交易完成 → **不使用補償式設計**。任何「先 commit 再補寫」的形狀都會產生「帳改了、稽核沒寫」或「稽核說改了、其實沒動」。
 
 16. **operator 治理：`requireAdmin` ＋「不得停用自己／最後一位 admin」，且那股保證依附 isolation level**。
-    只有**操作者管理**兩支 RPC（`CreateOperator`／`DisableOperator`）要求 `role = 'admin'`（`requireAdmin`，`platform_admin_service.go:1002`）；**建立 admin 也算治理動作**（否則任何 operator 都能憑空替自己加一個 admin）。`DisableOperatorTx` 以 SQL 的 `WHERE … (o.role <> 'admin' OR EXISTS(其他 active admin))` **原子判定**「不得停用最後一位 admin」，並以**交易級** `pg_advisory_xact_lock(key = 0x504C41544F504552 "PLATOPER")` 序列化兩個 admin 互相停用的請求。
+    只有**操作者管理**兩支 RPC（`CreateOperator`／`DisableOperator`）要求 `role = 'admin'`（`requireAdmin`）；**建立 admin 也算治理動作**（否則任何 operator 都能憑空替自己加一個 admin）。**開通訂閱**（`CreateSubscription`）與其他營運寫入同級：**operator 即可**（日常營運不是治理動作）。`DisableOperatorTx` 以 SQL 的 `WHERE … (o.role <> 'admin' OR EXISTS(其他 active admin))` **原子判定**「不得停用最後一位 admin」，並以**交易級** `pg_advisory_xact_lock(key = 0x504C41544F504552 "PLATOPER")` 序列化兩個 admin 互相停用的請求。
     - **隔離等級前提**：「兩個 admin 同時停用對方不可能雙雙通過」的推理**只在 READ COMMITTED 成立**（Postgres 預設，且本 repo 的 `sql.TxOptions` 未指定）。若以 `default_transaction_isolation=repeatable read` 或更高啟動，兩條交易會各自用**等鎖前的快照**判定「還有另一位 admin」而雙雙通過 → **改 DSN／isolation 前必須先重驗這一條**（`PLATOPER` 與 cron 的 `PLATCRON` 不撞號，且交易鎖在交易結束時自動釋放）。
     為什麼：`role` 曾經全 repo 零處被檢查 → 任何 operator 都能新增 admin 或停用最後一位 admin，而「一個 admin 都不剩」是唯一無法由 UI 回復的狀態。
 

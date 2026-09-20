@@ -23,6 +23,7 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/billing"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/cron"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/money"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
@@ -730,4 +731,271 @@ func loadPeriodCents(t *testing.T, rig *writeRig, companyID, periodNo int) int64
 		t.Fatalf("讀期別金額(%d/%d): %v", companyID, periodNo, err)
 	}
 	return cents
+}
+
+// noDispatch 為本測試的派送器替身:這一趟只驗「排程不會為剛開通的租戶再開一期」的編排路徑,
+// 事件的產品域副作用(凍結公司)由 cron 自己的整合測試以真 consumer 把關。
+type noDispatch struct{}
+
+func (noDispatch) DispatchOnce(context.Context, int) (int, error) { return 0, nil }
+
+// nextMonthSameDayIn 回「下個月的同一個日號」(該日不存在時取當月最後一日)= 月繳的期末規則。
+// 刻意在測試裡再算一次:若實作改用 time.AddDate,1/31 會被正規化成 3/3(跳過整個 2 月)而在此紅。
+func nextMonthSameDayIn(from time.Time) time.Time {
+	lastDay := time.Date(from.Year(), from.Month()+2, 0, 0, 0, 0, 0, from.Location()).Day()
+	day := from.Day()
+	if day > lastDay {
+		day = lastDay
+	}
+	return time.Date(from.Year(), from.Month()+1, day,
+		from.Hour(), from.Minute(), from.Second(), from.Nanosecond(), from.Location())
+}
+
+// TestIntegrationCreateSubscription 走完 B-1 的完整鏈(真 PostgreSQL):**開通 → 排程不重複開期
+// → 收款**。這是 spec §7.4 DoD 的前兩跳,而在本任務之前全 repo 沒有任何程式路徑會建立
+// platform.subscriptions 與第一期 —— 沒有它,收款／期別／催收／凍結全部 inert(測試都從手工
+// 種好的訂閱列起跑)。
+//
+// 驗七件事:
+//
+//	① 訂閱列(狀態／方案／計費週期／席位／試用到期);
+//	② 第一期(期別 1、金額＝基價＋席位×每席價、價格快照、期末依週期與月底錨點);
+//	③ subscription.created 事件的 payload;
+//	④ 恰一筆平台稽核(actor 是真的 operator、target 指向新訂閱);
+//	⑤ 同一公司的第二次開通被唯一鍵擋下(已註冊的 SYS-2001)且不留痕跡;
+//	⑥ 接著跑一趟 cron:不得再開第二個期別;
+//	⑦ 接著 RecordPayment 成功(開通前它對這家公司回 PLAT-3001)。
+//
+// 執行:task test:integration -- -count=1 -run TestIntegrationCreateSubscription -v
+func TestIntegrationCreateSubscription(t *testing.T) {
+	rig := newWriteRig(t)
+	// 完全沒有訂閱列的租戶:開通的前提。
+	company := int(rig.seed.noneID)
+	ctx := t.Context()
+
+	// ⓪ 開通前:沒有合約 → 不得記帳(B-1 的症狀:不靠手工 SQL 收不到一筆錢)。
+	_, err := rig.svc.RecordPayment(rig.ctx, connect.NewRequest(&platformv1.RecordPaymentRequest{
+		CompanyId: itoa(company), PeriodNo: 0, Reason: "開通前的收款"}))
+	if got := errorInfoOf(t, err).GetCode(); got != "PLAT-3001" {
+		t.Fatalf("沒有訂閱的公司收款應 PLAT-3001,got %q (%v)", got, err)
+	}
+
+	rig.seedCachedEntitlement(t, company)
+	auditsBefore := rig.auditCount(t, "subscription.create")
+
+	before := time.Now()
+	resp, err := rig.svc.CreateSubscription(rig.ctx, connect.NewRequest(&platformv1.CreateSubscriptionRequest{
+		CompanyId: itoa(company), PlanCode: "std", BillingCycle: "monthly", SeatCount: 3,
+		Reason: "客戶簽約開通"}))
+	if err != nil {
+		t.Fatalf("CreateSubscription: %v", err)
+	}
+	after := time.Now()
+	subID := resp.Msg.GetSubscriptionId()
+	if subID == "" || resp.Msg.GetStatus() != "active" || resp.Msg.GetPlanCode() != "std" ||
+		resp.Msg.GetBillingCycle() != "monthly" || resp.Msg.GetSeatCount() != 3 ||
+		resp.Msg.GetTrialEndsAt() != "" || resp.Msg.GetFirstPeriodNo() != 1 {
+		t.Fatalf("回應不符: %+v", resp.Msg)
+	}
+	// 1000.00(基價)＋ 3 × 200.00(席位)= 1600.00;seed 的月繳價目有兩次調價,取現行那一筆。
+	if got := resp.Msg.GetFirstPeriodAmount(); got != "1600.00" {
+		t.Fatalf("第一期金額應為當期生效價的快照(1600.00),got %q", got)
+	}
+
+	// ① 訂閱列
+	var (
+		status, cycle, planCode string
+		seats                   int
+		trialEnds               sql.NullTime
+	)
+	if err := rig.admin.QueryRowContext(ctx, `
+		SELECT s.status, s.billing_cycle, p.code, s.seat_count, s.trial_ends_at
+		  FROM platform.subscriptions s JOIN platform.plans p ON p.id = s.plan_id
+		 WHERE s.id = $1`, subID).
+		Scan(&status, &cycle, &planCode, &seats, &trialEnds); err != nil {
+		t.Fatalf("讀訂閱: %v", err)
+	}
+	if status != "active" || cycle != "monthly" || planCode != "std" || seats != 3 {
+		t.Fatalf("訂閱列不符: status=%q cycle=%q plan=%q seats=%d", status, cycle, planCode, seats)
+	}
+	if trialEnds.Valid {
+		t.Fatalf("未指定試用不得留下 trial_ends_at: %v", trialEnds.Time)
+	}
+
+	// ② 第一期:金額、價格快照、期末(月底錨點)
+	var (
+		periodNo, periodSeats  int
+		unitCents, seatCents   int64
+		amountCents            int64
+		periodStatus, currency string
+		periodStart, periodEnd time.Time
+		periodPlanID           int64
+	)
+	if err := rig.admin.QueryRowContext(ctx, `
+		SELECT period_no, (unit_price*100)::bigint, (seat_price*100)::bigint, seat_count,
+		       (amount*100)::bigint, currency, status, period_start, period_end, plan_id
+		  FROM platform.subscription_periods WHERE subscription_id = $1`, subID).
+		Scan(&periodNo, &unitCents, &seatCents, &periodSeats, &amountCents, &currency,
+			&periodStatus, &periodStart, &periodEnd, &periodPlanID); err != nil {
+		t.Fatalf("讀第一期: %v", err)
+	}
+	if periodNo != 1 || periodStatus != "open" {
+		t.Fatalf("應恰好一筆第 1 期且為 open: no=%d status=%q", periodNo, periodStatus)
+	}
+	if unitCents != 100000 || seatCents != 20000 || periodSeats != 3 || amountCents != 160000 ||
+		currency != "TWD" {
+		t.Fatalf("價格快照不符(1000.00／200.00／3 席／1600.00／TWD): unit=%d seat=%d seats=%d amount=%d cur=%q",
+			unitCents, seatCents, periodSeats, amountCents, currency)
+	}
+	var planID int64
+	if err := rig.admin.QueryRowContext(ctx,
+		`SELECT id FROM platform.plans WHERE code = 'std'`).Scan(&planID); err != nil {
+		t.Fatalf("讀方案 id: %v", err)
+	}
+	if periodPlanID != planID {
+		t.Fatalf("期別的快照方案應為 std(%d),got %d", planID, periodPlanID)
+	}
+	if periodStart.Before(before) || periodStart.After(after) {
+		t.Fatalf("第一期應自現在起算: %v（呼叫期間 %v..%v）", periodStart, before, after)
+	}
+	if want := nextMonthSameDayIn(periodStart); !periodEnd.Equal(want) {
+		t.Fatalf("月繳的期末應為下月同日（月底夾擠）: got %v want %v", periodEnd, want)
+	}
+
+	// ③ 事件(payload 真的進 jsonb;consumer 不得為了補欄位再查 DB)
+	var events int
+	var payloadCompany, payloadSub, payloadReason string
+	if err := rig.admin.QueryRowContext(ctx, `
+		SELECT count(*), COALESCE(max(payload->>'company_id'),''),
+		       COALESCE(max(payload->>'subscription_id'),''), COALESCE(max(payload->>'reason'),'')
+		  FROM platform.events
+		 WHERE event_type = 'subscription.created' AND aggregate_id = $1`, subID).
+		Scan(&events, &payloadCompany, &payloadSub, &payloadReason); err != nil {
+		t.Fatalf("查事件: %v", err)
+	}
+	if events != 1 || payloadCompany != itoa(company) || payloadSub != subID ||
+		payloadReason != "客戶簽約開通" {
+		t.Fatalf("subscription.created 不符: n=%d company=%q sub=%q reason=%q",
+			events, payloadCompany, payloadSub, payloadReason)
+	}
+
+	// ④ 恰一筆平台稽核(差量)
+	if got := rig.auditCount(t, "subscription.create"); got != auditsBefore+1 {
+		t.Fatalf("開通必須恰寫一筆稽核: %d → %d", auditsBefore, got)
+	}
+	opID, reason, ttype, extra := rig.lastAudit(t, "subscription.create")
+	if opID != rig.seed.operatorID || reason != "客戶簽約開通" {
+		t.Fatalf("稽核的 actor／原因錯誤: op=%d reason=%q", opID, reason)
+	}
+	if ttype != "subscription" || extra != subID+"|ops-a@example.com" {
+		t.Fatalf("稽核的目標／operator email 錯誤: %s %s", ttype, extra)
+	}
+	rig.assertCacheInvalidated(t, company) // 開通前是「沒有訂閱列」(不施加限制)→ 必須失效
+
+	// ⑤ 同一公司的第二次開通:唯一鍵擋下,且不得留下任何痕跡(訂閱／期別／事件／稽核都不變)。
+	// 方案與週期刻意都與第一次相同:讓「被擋下的原因」只可能是唯一鍵(方案 pro 沒有年繳價目,
+	// 用 pro+yearly 會先停在缺價目,那驗的是另一件事)。
+	_, err = rig.svc.CreateSubscription(rig.ctx, connect.NewRequest(&platformv1.CreateSubscriptionRequest{
+		CompanyId: itoa(company), PlanCode: "std", BillingCycle: "monthly", SeatCount: 9,
+		Reason: "誤按第二次"}))
+	if connect.CodeOf(err) != connect.CodeAlreadyExists {
+		t.Fatalf("重複開通應 AlreadyExists,got %v", err)
+	}
+	if got := errorInfoOf(t, err).GetCode(); got != "SYS-2001" {
+		t.Fatalf("必須是註冊碼 SYS-2001,got %q", got)
+	}
+	var subs, periods, audits int
+	if err := rig.admin.QueryRowContext(ctx, `
+		SELECT (SELECT count(*) FROM platform.subscriptions WHERE company_id = $1),
+		       (SELECT count(*) FROM platform.subscription_periods WHERE subscription_id = $2),
+		       (SELECT count(*) FROM platform.audit_logs WHERE action = 'subscription.create')`,
+		company, subID).Scan(&subs, &periods, &audits); err != nil {
+		t.Fatalf("查計數: %v", err)
+	}
+	if subs != 1 || periods != 1 || audits != auditsBefore+1 {
+		t.Fatalf("被拒絕的第二次開通不得留下痕跡: subs=%d periods=%d audits=%d", subs, periods, audits)
+	}
+
+	// ⑥ 排程不重複開期:剛開通的第一期期末還有一個月,不得被提前窗選中而開出第二期。
+	//    (排程的掃描會處理 seed 的其他租戶,故這裡斷言的是**這家公司的期別數**與 PeriodsOpened。)
+	summary, err := cron.RunOnce(ctx, cron.Deps{
+		Billing:  billing.NewBilling(platformstore.New(rig.admin)),
+		Consumer: noDispatch{},
+		Store:    platformstore.New(rig.admin),
+	}, time.Now(), cron.Params{GraceDays: 7, LeadDays: 14, EventBatch: cron.EventBatch})
+	if err != nil {
+		t.Fatalf("跑一趟排程: %v", err)
+	}
+	if summary.PeriodsOpened != 0 {
+		t.Fatalf("沒有訂閱落在提前窗內,不得開任何期別: %+v", summary)
+	}
+	var periodsAfterCron int
+	if err := rig.admin.QueryRowContext(ctx, `
+		SELECT count(*) FROM platform.subscription_periods WHERE subscription_id = $1`, subID).
+		Scan(&periodsAfterCron); err != nil {
+		t.Fatalf("查期別數: %v", err)
+	}
+	if periodsAfterCron != 1 {
+		t.Fatalf("排程不得為剛開通的租戶開第二期: %d 筆", periodsAfterCron)
+	}
+	if err := rig.admin.QueryRowContext(ctx,
+		`SELECT status FROM platform.subscriptions WHERE id = $1`, subID).Scan(&status); err != nil {
+		t.Fatalf("查訂閱狀態: %v", err)
+	}
+	if status != "active" {
+		t.Fatalf("期末未到不得改狀態,got %q", status)
+	}
+
+	// ⑦ 收款:開通前是 PLAT-3001,現在必須成功(DoD 的第一跳 → 第二跳真的閉環)
+	paid, err := rig.svc.RecordPayment(rig.ctx, connect.NewRequest(&platformv1.RecordPaymentRequest{
+		CompanyId: itoa(company), PeriodNo: 1, Provider: "manual", Reason: "匯款入帳"}))
+	if err != nil {
+		t.Fatalf("開通後收款: %v", err)
+	}
+	if paid.Msg.GetPeriodNo() != 1 || paid.Msg.GetStatus() != "paid" {
+		t.Fatalf("收款回應不符: %+v", paid.Msg)
+	}
+	if got := loadPeriodCents(t, rig, company, 1); got != 160000 {
+		t.Fatalf("期別金額不得被輸入金額改動: %d", got)
+	}
+	if err := rig.admin.QueryRowContext(ctx,
+		`SELECT status FROM platform.subscription_periods WHERE subscription_id = $1`, subID).
+		Scan(&periodStatus); err != nil {
+		t.Fatalf("查期別狀態: %v", err)
+	}
+	if periodStatus != "paid" {
+		t.Fatalf("收款後期別應為 paid,got %q", periodStatus)
+	}
+
+	// ⑧ 只有一份**已取消**合約的租戶:可以再開一份新合約(00029 的部分唯一索引
+	//    `WHERE status <> 'cancelled'` 不擋已取消者;要再服務是新合約,不是把舊的復活)。
+	//    這一步同時釘住 ON CONFLICT 的推斷條件真的對上那個部分索引(條件寫錯會直接報
+	//    「no unique or exclusion constraint matching the ON CONFLICT specification」)。
+	renew := int(rig.seed.cancelledID)
+	var oldSubID int64
+	if err := rig.admin.QueryRowContext(ctx,
+		`SELECT id FROM platform.subscriptions WHERE company_id = $1`, renew).Scan(&oldSubID); err != nil {
+		t.Fatalf("讀舊合約: %v", err)
+	}
+	again, err := rig.svc.CreateSubscription(rig.ctx, connect.NewRequest(&platformv1.CreateSubscriptionRequest{
+		CompanyId: itoa(renew), PlanCode: "std", BillingCycle: "monthly", SeatCount: 2,
+		Reason: "重新簽約"}))
+	if err != nil {
+		t.Fatalf("已取消的合約不得擋住新合約: %v", err)
+	}
+	if again.Msg.GetSubscriptionId() == itoa(int(oldSubID)) {
+		t.Fatalf("必須是**新**合約(不得復活舊的 %d)", oldSubID)
+	}
+	if got := again.Msg.GetFirstPeriodAmount(); got != "1400.00" { // 1000.00 ＋ 2 × 200.00
+		t.Fatalf("新合約的第一期金額應取當期生效價(1400.00),got %q", got)
+	}
+	var cancelled, live int
+	if err := rig.admin.QueryRowContext(ctx, `
+		SELECT count(*) FILTER (WHERE status = 'cancelled'), count(*) FILTER (WHERE status <> 'cancelled')
+		  FROM platform.subscriptions WHERE company_id = $1`, renew).Scan(&cancelled, &live); err != nil {
+		t.Fatalf("查合約: %v", err)
+	}
+	if cancelled != 1 || live != 1 {
+		t.Fatalf("舊合約必須保持 cancelled 且只多出一筆新的: cancelled=%d live=%d", cancelled, live)
+	}
 }

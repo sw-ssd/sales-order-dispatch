@@ -2114,6 +2114,285 @@ class RecordPaymentResponse extends $pb.GeneratedMessage {
   void clearStatus() => $_clearField(2);
 }
 
+class CreateSubscriptionRequest extends $pb.GeneratedMessage {
+  factory CreateSubscriptionRequest({
+    $core.String? companyId,
+    $core.String? planCode,
+    $core.String? billingCycle,
+    $core.int? seatCount,
+    $core.String? trialEndsAt,
+    $core.String? reason,
+  }) {
+    final result = CreateSubscriptionRequest._();
+    if (companyId != null) result.companyId = companyId;
+    if (planCode != null) result.planCode = planCode;
+    if (billingCycle != null) result.billingCycle = billingCycle;
+    if (seatCount != null) result.seatCount = seatCount;
+    if (trialEndsAt != null) result.trialEndsAt = trialEndsAt;
+    if (reason != null) result.reason = reason;
+    return result;
+  }
+
+  CreateSubscriptionRequest._();
+
+  factory CreateSubscriptionRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CreateSubscriptionRequest()..mergeFromBuffer(data, registry);
+  factory CreateSubscriptionRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CreateSubscriptionRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CreateSubscriptionRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: CreateSubscriptionRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'companyId')
+    ..aOS(2, _omitFieldNames ? '' : 'planCode')
+    ..aOS(3, _omitFieldNames ? '' : 'billingCycle')
+    ..aI(4, _omitFieldNames ? '' : 'seatCount')
+    ..aOS(5, _omitFieldNames ? '' : 'trialEndsAt')
+    ..aOS(6, _omitFieldNames ? '' : 'reason')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CreateSubscriptionRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CreateSubscriptionRequest copyWith(
+          void Function(CreateSubscriptionRequest) updates) =>
+      super.copyWith((message) => updates(message as CreateSubscriptionRequest))
+          as CreateSubscriptionRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use CreateSubscriptionRequest() / CreateSubscriptionRequest.new instead')
+  static CreateSubscriptionRequest create() => CreateSubscriptionRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      CreateSubscriptionRequest._();
+  @$core.override
+  CreateSubscriptionRequest createEmptyInstance() =>
+      CreateSubscriptionRequest._();
+  @$core.pragma('dart2js:noInline')
+  static CreateSubscriptionRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<CreateSubscriptionRequest>(
+          CreateSubscriptionRequest.$_createMessage);
+  static CreateSubscriptionRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get companyId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set companyId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasCompanyId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCompanyId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get planCode => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set planCode($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPlanCode() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPlanCode() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get billingCycle => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set billingCycle($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasBillingCycle() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearBillingCycle() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.int get seatCount => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set seatCount($core.int value) => $_setSignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasSeatCount() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearSeatCount() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get trialEndsAt => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set trialEndsAt($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasTrialEndsAt() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearTrialEndsAt() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get reason => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set reason($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasReason() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearReason() => $_clearField(6);
+}
+
+class CreateSubscriptionResponse extends $pb.GeneratedMessage {
+  factory CreateSubscriptionResponse({
+    $core.String? subscriptionId,
+    $core.String? status,
+    $core.String? planCode,
+    $core.String? billingCycle,
+    $core.int? seatCount,
+    $core.String? trialEndsAt,
+    $core.int? firstPeriodNo,
+    $core.String? firstPeriodEnd,
+    $core.String? firstPeriodAmount,
+  }) {
+    final result = CreateSubscriptionResponse._();
+    if (subscriptionId != null) result.subscriptionId = subscriptionId;
+    if (status != null) result.status = status;
+    if (planCode != null) result.planCode = planCode;
+    if (billingCycle != null) result.billingCycle = billingCycle;
+    if (seatCount != null) result.seatCount = seatCount;
+    if (trialEndsAt != null) result.trialEndsAt = trialEndsAt;
+    if (firstPeriodNo != null) result.firstPeriodNo = firstPeriodNo;
+    if (firstPeriodEnd != null) result.firstPeriodEnd = firstPeriodEnd;
+    if (firstPeriodAmount != null) result.firstPeriodAmount = firstPeriodAmount;
+    return result;
+  }
+
+  CreateSubscriptionResponse._();
+
+  factory CreateSubscriptionResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CreateSubscriptionResponse()..mergeFromBuffer(data, registry);
+  factory CreateSubscriptionResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CreateSubscriptionResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CreateSubscriptionResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: CreateSubscriptionResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'subscriptionId')
+    ..aOS(2, _omitFieldNames ? '' : 'status')
+    ..aOS(3, _omitFieldNames ? '' : 'planCode')
+    ..aOS(4, _omitFieldNames ? '' : 'billingCycle')
+    ..aI(5, _omitFieldNames ? '' : 'seatCount')
+    ..aOS(6, _omitFieldNames ? '' : 'trialEndsAt')
+    ..aI(7, _omitFieldNames ? '' : 'firstPeriodNo')
+    ..aOS(8, _omitFieldNames ? '' : 'firstPeriodEnd')
+    ..aOS(9, _omitFieldNames ? '' : 'firstPeriodAmount')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CreateSubscriptionResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CreateSubscriptionResponse copyWith(
+          void Function(CreateSubscriptionResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as CreateSubscriptionResponse))
+          as CreateSubscriptionResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use CreateSubscriptionResponse() / CreateSubscriptionResponse.new instead')
+  static CreateSubscriptionResponse create() => CreateSubscriptionResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      CreateSubscriptionResponse._();
+  @$core.override
+  CreateSubscriptionResponse createEmptyInstance() =>
+      CreateSubscriptionResponse._();
+  @$core.pragma('dart2js:noInline')
+  static CreateSubscriptionResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<CreateSubscriptionResponse>(
+          CreateSubscriptionResponse.$_createMessage);
+  static CreateSubscriptionResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get subscriptionId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set subscriptionId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSubscriptionId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSubscriptionId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get status => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set status($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasStatus() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearStatus() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get planCode => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set planCode($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasPlanCode() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearPlanCode() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get billingCycle => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set billingCycle($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasBillingCycle() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearBillingCycle() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.int get seatCount => $_getIZ(4);
+  @$pb.TagNumber(5)
+  set seatCount($core.int value) => $_setSignedInt32(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasSeatCount() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearSeatCount() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get trialEndsAt => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set trialEndsAt($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasTrialEndsAt() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearTrialEndsAt() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.int get firstPeriodNo => $_getIZ(6);
+  @$pb.TagNumber(7)
+  set firstPeriodNo($core.int value) => $_setSignedInt32(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasFirstPeriodNo() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearFirstPeriodNo() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.String get firstPeriodEnd => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set firstPeriodEnd($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasFirstPeriodEnd() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearFirstPeriodEnd() => $_clearField(8);
+
+  @$pb.TagNumber(9)
+  $core.String get firstPeriodAmount => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set firstPeriodAmount($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasFirstPeriodAmount() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearFirstPeriodAmount() => $_clearField(9);
+}
+
 class SetSeatCountRequest extends $pb.GeneratedMessage {
   factory SetSeatCountRequest({
     $core.String? companyId,
@@ -4134,6 +4413,10 @@ class PlatformAdminServiceApi {
           $pb.ClientContext? ctx, RecordPaymentRequest request) =>
       _client.invoke<RecordPaymentResponse>(ctx, 'PlatformAdminService',
           'RecordPayment', request, RecordPaymentResponse());
+  $async.Future<CreateSubscriptionResponse> createSubscription(
+          $pb.ClientContext? ctx, CreateSubscriptionRequest request) =>
+      _client.invoke<CreateSubscriptionResponse>(ctx, 'PlatformAdminService',
+          'CreateSubscription', request, CreateSubscriptionResponse());
   $async.Future<SetSeatCountResponse> setSeatCount(
           $pb.ClientContext? ctx, SetSeatCountRequest request) =>
       _client.invoke<SetSeatCountResponse>(ctx, 'PlatformAdminService',

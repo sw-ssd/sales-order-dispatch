@@ -502,6 +502,58 @@ final $typed_data.Uint8List recordPaymentResponseDescriptor = $convert.base64Dec
     'ChVSZWNvcmRQYXltZW50UmVzcG9uc2USGwoJcGVyaW9kX25vGAEgASgFUghwZXJpb2RObxIWCg'
     'ZzdGF0dXMYAiABKAlSBnN0YXR1cw==');
 
+@$core.Deprecated('Use createSubscriptionRequestDescriptor instead')
+const CreateSubscriptionRequest$json = {
+  '1': 'CreateSubscriptionRequest',
+  '2': [
+    {'1': 'company_id', '3': 1, '4': 1, '5': 9, '10': 'companyId'},
+    {'1': 'plan_code', '3': 2, '4': 1, '5': 9, '10': 'planCode'},
+    {'1': 'billing_cycle', '3': 3, '4': 1, '5': 9, '10': 'billingCycle'},
+    {'1': 'seat_count', '3': 4, '4': 1, '5': 5, '10': 'seatCount'},
+    {'1': 'trial_ends_at', '3': 5, '4': 1, '5': 9, '10': 'trialEndsAt'},
+    {'1': 'reason', '3': 6, '4': 1, '5': 9, '10': 'reason'},
+  ],
+};
+
+/// Descriptor for `CreateSubscriptionRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List createSubscriptionRequestDescriptor = $convert.base64Decode(
+    'ChlDcmVhdGVTdWJzY3JpcHRpb25SZXF1ZXN0Eh0KCmNvbXBhbnlfaWQYASABKAlSCWNvbXBhbn'
+    'lJZBIbCglwbGFuX2NvZGUYAiABKAlSCHBsYW5Db2RlEiMKDWJpbGxpbmdfY3ljbGUYAyABKAlS'
+    'DGJpbGxpbmdDeWNsZRIdCgpzZWF0X2NvdW50GAQgASgFUglzZWF0Q291bnQSIgoNdHJpYWxfZW'
+    '5kc19hdBgFIAEoCVILdHJpYWxFbmRzQXQSFgoGcmVhc29uGAYgASgJUgZyZWFzb24=');
+
+@$core.Deprecated('Use createSubscriptionResponseDescriptor instead')
+const CreateSubscriptionResponse$json = {
+  '1': 'CreateSubscriptionResponse',
+  '2': [
+    {'1': 'subscription_id', '3': 1, '4': 1, '5': 9, '10': 'subscriptionId'},
+    {'1': 'status', '3': 2, '4': 1, '5': 9, '10': 'status'},
+    {'1': 'plan_code', '3': 3, '4': 1, '5': 9, '10': 'planCode'},
+    {'1': 'billing_cycle', '3': 4, '4': 1, '5': 9, '10': 'billingCycle'},
+    {'1': 'seat_count', '3': 5, '4': 1, '5': 5, '10': 'seatCount'},
+    {'1': 'trial_ends_at', '3': 6, '4': 1, '5': 9, '10': 'trialEndsAt'},
+    {'1': 'first_period_no', '3': 7, '4': 1, '5': 5, '10': 'firstPeriodNo'},
+    {'1': 'first_period_end', '3': 8, '4': 1, '5': 9, '10': 'firstPeriodEnd'},
+    {
+      '1': 'first_period_amount',
+      '3': 9,
+      '4': 1,
+      '5': 9,
+      '10': 'firstPeriodAmount'
+    },
+  ],
+};
+
+/// Descriptor for `CreateSubscriptionResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List createSubscriptionResponseDescriptor = $convert.base64Decode(
+    'ChpDcmVhdGVTdWJzY3JpcHRpb25SZXNwb25zZRInCg9zdWJzY3JpcHRpb25faWQYASABKAlSDn'
+    'N1YnNjcmlwdGlvbklkEhYKBnN0YXR1cxgCIAEoCVIGc3RhdHVzEhsKCXBsYW5fY29kZRgDIAEo'
+    'CVIIcGxhbkNvZGUSIwoNYmlsbGluZ19jeWNsZRgEIAEoCVIMYmlsbGluZ0N5Y2xlEh0KCnNlYX'
+    'RfY291bnQYBSABKAVSCXNlYXRDb3VudBIiCg10cmlhbF9lbmRzX2F0GAYgASgJUgt0cmlhbEVu'
+    'ZHNBdBImCg9maXJzdF9wZXJpb2Rfbm8YByABKAVSDWZpcnN0UGVyaW9kTm8SKAoQZmlyc3RfcG'
+    'VyaW9kX2VuZBgIIAEoCVIOZmlyc3RQZXJpb2RFbmQSLgoTZmlyc3RfcGVyaW9kX2Ftb3VudBgJ'
+    'IAEoCVIRZmlyc3RQZXJpb2RBbW91bnQ=');
+
 @$core.Deprecated('Use setSeatCountRequestDescriptor instead')
 const SetSeatCountRequest$json = {
   '1': 'SetSeatCountRequest',
@@ -947,6 +999,11 @@ const $core.Map<$core.String, $core.dynamic> PlatformAdminServiceBase$json = {
       '3': '.platform.v1.RecordPaymentResponse'
     },
     {
+      '1': 'CreateSubscription',
+      '2': '.platform.v1.CreateSubscriptionRequest',
+      '3': '.platform.v1.CreateSubscriptionResponse'
+    },
+    {
       '1': 'SetSeatCount',
       '2': '.platform.v1.SetSeatCountRequest',
       '3': '.platform.v1.SetSeatCountResponse'
@@ -1030,6 +1087,8 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.platform.v1.Receivable': Receivable$json,
   '.platform.v1.RecordPaymentRequest': RecordPaymentRequest$json,
   '.platform.v1.RecordPaymentResponse': RecordPaymentResponse$json,
+  '.platform.v1.CreateSubscriptionRequest': CreateSubscriptionRequest$json,
+  '.platform.v1.CreateSubscriptionResponse': CreateSubscriptionResponse$json,
   '.platform.v1.SetSeatCountRequest': SetSeatCountRequest$json,
   '.platform.v1.SetSeatCountResponse': SetSeatCountResponse$json,
   '.platform.v1.ChangePlanRequest': ChangePlanRequest$json,
@@ -1071,26 +1130,28 @@ final $typed_data.Uint8List platformAdminServiceDescriptor = $convert.base64Deco
     'dGZvcm1BdWRpdFJlc3BvbnNlElwKD0xpc3RSZWNlaXZhYmxlcxIjLnBsYXRmb3JtLnYxLkxpc3'
     'RSZWNlaXZhYmxlc1JlcXVlc3QaJC5wbGF0Zm9ybS52MS5MaXN0UmVjZWl2YWJsZXNSZXNwb25z'
     'ZRJWCg1SZWNvcmRQYXltZW50EiEucGxhdGZvcm0udjEuUmVjb3JkUGF5bWVudFJlcXVlc3QaIi'
-    '5wbGF0Zm9ybS52MS5SZWNvcmRQYXltZW50UmVzcG9uc2USUwoMU2V0U2VhdENvdW50EiAucGxh'
-    'dGZvcm0udjEuU2V0U2VhdENvdW50UmVxdWVzdBohLnBsYXRmb3JtLnYxLlNldFNlYXRDb3VudF'
-    'Jlc3BvbnNlEk0KCkNoYW5nZVBsYW4SHi5wbGF0Zm9ybS52MS5DaGFuZ2VQbGFuUmVxdWVzdBof'
-    'LnBsYXRmb3JtLnYxLkNoYW5nZVBsYW5SZXNwb25zZRJlChJDYW5jZWxTdWJzY3JpcHRpb24SJi'
-    '5wbGF0Zm9ybS52MS5DYW5jZWxTdWJzY3JpcHRpb25SZXF1ZXN0GicucGxhdGZvcm0udjEuQ2Fu'
-    'Y2VsU3Vic2NyaXB0aW9uUmVzcG9uc2USZQoSR2V0QmlsbGluZ1NldHRpbmdzEiYucGxhdGZvcm'
-    '0udjEuR2V0QmlsbGluZ1NldHRpbmdzUmVxdWVzdBonLnBsYXRmb3JtLnYxLkdldEJpbGxpbmdT'
-    'ZXR0aW5nc1Jlc3BvbnNlEm4KFVVwZGF0ZUJpbGxpbmdTZXR0aW5ncxIpLnBsYXRmb3JtLnYxLl'
-    'VwZGF0ZUJpbGxpbmdTZXR0aW5nc1JlcXVlc3QaKi5wbGF0Zm9ybS52MS5VcGRhdGVCaWxsaW5n'
-    'U2V0dGluZ3NSZXNwb25zZRJiChFTZXRUZW5hbnRPdmVycmlkZRIlLnBsYXRmb3JtLnYxLlNldF'
-    'RlbmFudE92ZXJyaWRlUmVxdWVzdBomLnBsYXRmb3JtLnYxLlNldFRlbmFudE92ZXJyaWRlUmVz'
-    'cG9uc2USawoUUmV2b2tlVGVuYW50T3ZlcnJpZGUSKC5wbGF0Zm9ybS52MS5SZXZva2VUZW5hbn'
-    'RPdmVycmlkZVJlcXVlc3QaKS5wbGF0Zm9ybS52MS5SZXZva2VUZW5hbnRPdmVycmlkZVJlc3Bv'
-    'bnNlElwKD1Vwc2VydFBsYW5QcmljZRIjLnBsYXRmb3JtLnYxLlVwc2VydFBsYW5QcmljZVJlcX'
-    'Vlc3QaJC5wbGF0Zm9ybS52MS5VcHNlcnRQbGFuUHJpY2VSZXNwb25zZRJlChJTZXRQbGFuRW50'
-    'aXRsZW1lbnQSJi5wbGF0Zm9ybS52MS5TZXRQbGFuRW50aXRsZW1lbnRSZXF1ZXN0GicucGxhdG'
-    'Zvcm0udjEuU2V0UGxhbkVudGl0bGVtZW50UmVzcG9uc2USWQoOQ3JlYXRlT3BlcmF0b3ISIi5w'
-    'bGF0Zm9ybS52MS5DcmVhdGVPcGVyYXRvclJlcXVlc3QaIy5wbGF0Zm9ybS52MS5DcmVhdGVPcG'
-    'VyYXRvclJlc3BvbnNlElwKD0Rpc2FibGVPcGVyYXRvchIjLnBsYXRmb3JtLnYxLkRpc2FibGVP'
-    'cGVyYXRvclJlcXVlc3QaJC5wbGF0Zm9ybS52MS5EaXNhYmxlT3BlcmF0b3JSZXNwb25zZQ==');
+    '5wbGF0Zm9ybS52MS5SZWNvcmRQYXltZW50UmVzcG9uc2USZQoSQ3JlYXRlU3Vic2NyaXB0aW9u'
+    'EiYucGxhdGZvcm0udjEuQ3JlYXRlU3Vic2NyaXB0aW9uUmVxdWVzdBonLnBsYXRmb3JtLnYxLk'
+    'NyZWF0ZVN1YnNjcmlwdGlvblJlc3BvbnNlElMKDFNldFNlYXRDb3VudBIgLnBsYXRmb3JtLnYx'
+    'LlNldFNlYXRDb3VudFJlcXVlc3QaIS5wbGF0Zm9ybS52MS5TZXRTZWF0Q291bnRSZXNwb25zZR'
+    'JNCgpDaGFuZ2VQbGFuEh4ucGxhdGZvcm0udjEuQ2hhbmdlUGxhblJlcXVlc3QaHy5wbGF0Zm9y'
+    'bS52MS5DaGFuZ2VQbGFuUmVzcG9uc2USZQoSQ2FuY2VsU3Vic2NyaXB0aW9uEiYucGxhdGZvcm'
+    '0udjEuQ2FuY2VsU3Vic2NyaXB0aW9uUmVxdWVzdBonLnBsYXRmb3JtLnYxLkNhbmNlbFN1YnNj'
+    'cmlwdGlvblJlc3BvbnNlEmUKEkdldEJpbGxpbmdTZXR0aW5ncxImLnBsYXRmb3JtLnYxLkdldE'
+    'JpbGxpbmdTZXR0aW5nc1JlcXVlc3QaJy5wbGF0Zm9ybS52MS5HZXRCaWxsaW5nU2V0dGluZ3NS'
+    'ZXNwb25zZRJuChVVcGRhdGVCaWxsaW5nU2V0dGluZ3MSKS5wbGF0Zm9ybS52MS5VcGRhdGVCaW'
+    'xsaW5nU2V0dGluZ3NSZXF1ZXN0GioucGxhdGZvcm0udjEuVXBkYXRlQmlsbGluZ1NldHRpbmdz'
+    'UmVzcG9uc2USYgoRU2V0VGVuYW50T3ZlcnJpZGUSJS5wbGF0Zm9ybS52MS5TZXRUZW5hbnRPdm'
+    'VycmlkZVJlcXVlc3QaJi5wbGF0Zm9ybS52MS5TZXRUZW5hbnRPdmVycmlkZVJlc3BvbnNlEmsK'
+    'FFJldm9rZVRlbmFudE92ZXJyaWRlEigucGxhdGZvcm0udjEuUmV2b2tlVGVuYW50T3ZlcnJpZG'
+    'VSZXF1ZXN0GikucGxhdGZvcm0udjEuUmV2b2tlVGVuYW50T3ZlcnJpZGVSZXNwb25zZRJcCg9V'
+    'cHNlcnRQbGFuUHJpY2USIy5wbGF0Zm9ybS52MS5VcHNlcnRQbGFuUHJpY2VSZXF1ZXN0GiQucG'
+    'xhdGZvcm0udjEuVXBzZXJ0UGxhblByaWNlUmVzcG9uc2USZQoSU2V0UGxhbkVudGl0bGVtZW50'
+    'EiYucGxhdGZvcm0udjEuU2V0UGxhbkVudGl0bGVtZW50UmVxdWVzdBonLnBsYXRmb3JtLnYxLl'
+    'NldFBsYW5FbnRpdGxlbWVudFJlc3BvbnNlElkKDkNyZWF0ZU9wZXJhdG9yEiIucGxhdGZvcm0u'
+    'djEuQ3JlYXRlT3BlcmF0b3JSZXF1ZXN0GiMucGxhdGZvcm0udjEuQ3JlYXRlT3BlcmF0b3JSZX'
+    'Nwb25zZRJcCg9EaXNhYmxlT3BlcmF0b3ISIy5wbGF0Zm9ybS52MS5EaXNhYmxlT3BlcmF0b3JS'
+    'ZXF1ZXN0GiQucGxhdGZvcm0udjEuRGlzYWJsZU9wZXJhdG9yUmVzcG9uc2U=');
 
 const $core.Map<$core.String, $core.dynamic> TenantEntitlementServiceBase$json =
     {

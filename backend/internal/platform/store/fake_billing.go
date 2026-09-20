@@ -21,6 +21,8 @@ import (
 //     其他錯誤必須中止);
 //   - OpenSubscriptionTx **不預先濾掉 cancelled**(F-8/C-02):優先未取消,只有全是 cancelled
 //     時才取它;完全沒有列回 (nil, nil);
+//   - CreateSubscriptionTx:同一公司已有未取消的訂閱 → ErrConflict(部分唯一索引
+//     subscriptions_active_company_unique;已取消者不佔這條鍵);
 //   - OpenPeriodTx 以 (subscription_id, period_no) 為冪等鍵:已存在即回既有期別,不新增不覆寫;
 //   - MarkPeriodPaidTx:同交易號重送是完全 no-op(既有付款憑據一個都不動)、交易號不同即拒絕、
 //     **同一 provider ＋ 交易號不得入帳兩期**(00029 的 periods_provider_ref_unique)、
@@ -159,6 +161,30 @@ func (f *FakeBilling) Events() []Event {
 		out[i] = e
 	}
 	return out
+}
+
+// CreateSubscriptionTx 建立一筆訂閱。同一公司已有未取消的訂閱 → ErrConflict
+// (00029 的 subscriptions_active_company_unique:已取消的訂閱不佔這條鍵)。
+func (f *FakeBilling) CreateSubscriptionTx(_ context.Context, _ *sql.Tx,
+	in CreateSubscriptionInput) (int64, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for i := range f.subs {
+		if f.subs[i].CompanyID == in.CompanyID && f.subs[i].Status != "cancelled" {
+			return 0, ErrConflict
+		}
+	}
+	f.nextSubID++
+	f.subs = append(f.subs, Subscription{
+		ID:           f.nextSubID,
+		CompanyID:    in.CompanyID,
+		PlanID:       in.PlanID,
+		SeatCount:    in.SeatCount,
+		BillingCycle: in.BillingCycle,
+		Status:       in.Status,
+		TrialEnds:    clonePtr(in.TrialEnds),
+	})
+	return f.nextSubID, nil
 }
 
 // OpenSubscriptionTx 取該公司的現行訂閱(見型別說明:不預先濾掉 cancelled)。

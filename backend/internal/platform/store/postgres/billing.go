@@ -25,6 +25,34 @@ import (
 
 var _ store.BillingStore = (*Store)(nil)
 
+// CreateSubscriptionTx 建立一筆訂閱,回傳新列的 id。
+//
+// 衝突以 **ON CONFLICT 的 0 列**判定(部分唯一索引 subscriptions_active_company_unique)而不讓
+// 23505 冒上去:後者會被 toConnectError 收斂成 SYS-9000(5xx),而「這家公司已經有合約」是
+// operator 的輸入情境,console 要顯示得出來。ON CONFLICT 也比「先查再寫」少一個競態。
+//
+// 索引條件(status <> 'cancelled')即 ON CONFLICT 的推斷條件:因此**已取消的訂閱不佔這條唯一鍵**
+// —— 只有一份 cancelled 合約的公司可以再開一份新合約(與 CancelSubscription 的「要再服務是新
+// 合約」同一個語意)。trial_ends_at 為 NULL 即非試用。
+func (s *Store) CreateSubscriptionTx(ctx context.Context, tx *sql.Tx,
+	in store.CreateSubscriptionInput) (int64, error) {
+	var id int64
+	err := tx.QueryRowContext(ctx, `
+		INSERT INTO platform.subscriptions
+			(company_id, plan_id, seat_count, billing_cycle, status, trial_ends_at)
+		VALUES ($1,$2,$3,$4,$5,$6)
+		ON CONFLICT (company_id) WHERE status <> 'cancelled' DO NOTHING
+		RETURNING id`,
+		in.CompanyID, in.PlanID, in.SeatCount, in.BillingCycle, in.Status, in.TrialEnds).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) { // DO NOTHING 沒有 RETURNING 列 = 已有未取消的訂閱
+		return 0, store.ErrConflict
+	}
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
 // OpenSubscriptionTx 取該租戶的現行訂閱並以 FOR UPDATE 鎖住該列:併發的收款／逾期轉移必須互斥,
 // 否則兩個請求可能都通過「目前是 active」的檢查而寫出互相矛盾的狀態。
 //

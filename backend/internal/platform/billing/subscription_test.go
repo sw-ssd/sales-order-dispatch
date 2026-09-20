@@ -17,6 +17,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -375,5 +377,293 @@ func TestSubscriptionOpsRejectMissingSubscription(t *testing.T) {
 				t.Fatalf("沒有合約應 PLAT-3001，got %v", err)
 			}
 		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// 開通（CreateSubscription）：建立訂閱 ＋ 第一期 ＋ 事件 ＋ 稽核，同一個交易（B-1）。
+//
+// 這一組測試是 B-1 的契約面：在它之前**全 repo 沒有任何程式路徑會建立 platform.subscriptions**
+// （沒有訂閱就沒有可收款期別 → RecordPayment 回 PLAT-3001、EnsureNextPeriod 無期別即 no-op）。
+// ---------------------------------------------------------------------------
+
+// createFixture 種出可開通的假 store：方案 std（月繳 1000.00 ＋ 每席 200.00、年繳 10000.00 ＋
+// 每席 2000.00）與方案 pro（**刻意沒有價目**：驗「缺價目不得開出 0 元期別」）。
+func createFixture() *store.FakeBilling {
+	f := store.NewFakeBilling()
+	f.PutPlan("std", 1)
+	f.PutPlan("pro", 2)
+	f.PutPlanPrice(1, "monthly", store.Price{BaseCents: 100000, SeatCents: 20000, Currency: "TWD"})
+	f.PutPlanPrice(1, "yearly", store.Price{BaseCents: 1000000, SeatCents: 200000, Currency: "TWD"})
+	return f
+}
+
+// nextMonthSameDay 回「下個月的同一個日號」（該日不存在時取當月最後一日）—— addBillingPeriod 的
+// 月底錨點規則。測試自己算一次才驗得出「1/31 → 2/28」這類夾擠：若實作改用 time.AddDate，
+// 1/31 會被正規化成 3/3（跳過整個 2 月），這裡就會紅。
+func nextMonthSameDay(from time.Time) time.Time {
+	lastDay := time.Date(from.Year(), from.Month()+2, 0, 0, 0, 0, 0, from.Location()).Day()
+	day := from.Day()
+	if day > lastDay {
+		day = lastDay
+	}
+	return time.Date(from.Year(), from.Month()+1, day,
+		from.Hour(), from.Minute(), from.Second(), from.Nanosecond(), from.Location())
+}
+
+// TestCreateSubscriptionOpensFirstPeriodAndAudits 驗開通的落地：訂閱列（狀態／方案／週期／席位）、
+// 第一期（金額＝基價＋席位數×每席價、價格快照、period_no=1、期末依週期）、subscription.created
+// 事件（payload 帶得出識別欄位）、恰一筆平台稽核、提交後失效該租戶快取。
+func TestCreateSubscriptionOpensFirstPeriodAndAudits(t *testing.T) {
+	f := createFixture()
+	cache := &recordingCache{}
+
+	before := time.Now()
+	created, err := billing.NewBilling(f).WithCache(cache).CreateSubscription(context.Background(),
+		billing.CreateSubscriptionInput{
+			CompanyID: 42, PlanCode: "std", BillingCycle: "monthly", SeatCount: 3,
+			ActorOperatorID: 7, Reason: "客戶簽約開通"})
+	if err != nil {
+		t.Fatalf("CreateSubscription: %v", err)
+	}
+	if created.Status != "active" || created.TrialEnds != nil {
+		t.Fatalf("沒有 trial_ends_at 應直接 active，got %q (%v)", created.Status, created.TrialEnds)
+	}
+
+	// 訂閱列
+	sub := readSub(t, f, 42)
+	if sub.ID != created.SubscriptionID {
+		t.Fatalf("回傳的訂閱 id 必須是剛建立那筆: %d vs %d", created.SubscriptionID, sub.ID)
+	}
+	if sub.Status != "active" || sub.PlanID != 1 || sub.BillingCycle != "monthly" || sub.SeatCount != 3 {
+		t.Fatalf("訂閱列不符: %+v", sub)
+	}
+
+	// 第一期：金額 = 1000.00 ＋ 3 × 200.00 = 1600.00（快照齊備）
+	periods, err := f.PeriodsByStatus(context.Background(), "open")
+	if err != nil || len(periods) != 1 {
+		t.Fatalf("應恰好一期 open: %v (%d 筆)", err, len(periods))
+	}
+	p := periods[0]
+	if p.SubscriptionID != sub.ID || p.PeriodNo != 1 {
+		t.Fatalf("期別必須是該訂閱的第 1 期: %+v", p)
+	}
+	if p.PlanID != 1 || p.UnitPriceCents != 100000 || p.SeatPriceCents != 20000 ||
+		p.SeatCount != 3 || p.AmountCents != 160000 || p.Currency != "TWD" {
+		t.Fatalf("價格快照不符（基價 1000.00、每席 200.00、3 席、合計 1600.00）: %+v", p)
+	}
+	if p.PeriodStart.Before(before) || p.PeriodStart.After(time.Now()) {
+		t.Fatalf("第一期應自現在起算，got %v", p.PeriodStart)
+	}
+	if want := nextMonthSameDay(p.PeriodStart); !p.PeriodEnd.Equal(want) {
+		t.Fatalf("月繳的期末應為下月同日（月底夾擠）: got %v want %v", p.PeriodEnd, want)
+	}
+	if created.FirstPeriod == nil || created.FirstPeriod.PeriodNo != 1 || created.FirstPeriod.AmountCents != 160000 {
+		t.Fatalf("回傳值必須帶第一期（金額是已落地的快照）: %+v", created.FirstPeriod)
+	}
+
+	// 事件：consumer 不得為了補欄位再查一次 DB
+	var payload struct {
+		CompanyID      int    `json:"company_id"`
+		SubscriptionID int64  `json:"subscription_id"`
+		Reason         string `json:"reason"`
+	}
+	eventPayload(t, f, "subscription.created", &payload)
+	if payload.CompanyID != 42 || payload.SubscriptionID != sub.ID || payload.Reason != "客戶簽約開通" {
+		t.Fatalf("subscription.created 的 payload 不符: %+v", payload)
+	}
+	if types := eventTypes(f); len(types) != 1 {
+		t.Fatalf("開通只寫一個事件（第一期的 period.opened 不寫：那是產期的路徑）: %v", types)
+	}
+
+	// 稽核：恰一筆，actor 是真的 operator，after 帶得出開通後的狀態與金額
+	audits := f.Audits()
+	if len(audits) != 1 {
+		t.Fatalf("恰寫一筆稽核，got %d", len(audits))
+	}
+	a := audits[0]
+	if a.Action != "subscription.create" || a.TargetType != "subscription" ||
+		a.TargetID != strconv.FormatInt(sub.ID, 10) {
+		t.Fatalf("稽核的動作／目標錯誤: %+v", a)
+	}
+	if a.OperatorID != 7 || a.Reason != "客戶簽約開通" {
+		t.Fatalf("稽核的 actor（operator）／原因錯誤: %+v", a)
+	}
+	var nilBefore map[string]any
+	if err := json.Unmarshal(a.Before, &nilBefore); err != nil || len(nilBefore) != 0 {
+		t.Fatalf("開通沒有「之前」，before 應為空: %s (%v)", a.Before, err)
+	}
+	var after map[string]any
+	if err := json.Unmarshal(a.After, &after); err != nil {
+		t.Fatalf("after 不是 JSON: %v (%s)", err, a.After)
+	}
+	if after["status"] != "active" || after["amount_cents"] != float64(160000) ||
+		after["billing_cycle"] != "monthly" || after["seat_count"] != float64(3) ||
+		after["plan_code"] != "std" || after["period_no"] != float64(1) {
+		t.Fatalf("稽核必須記下開通的內容: %+v", after)
+	}
+
+	assertDeleted(t, cache, "ent:42")
+}
+
+// TestCreateSubscriptionWithTrialStartsTrialing 驗試用的狀態選擇與第一期：trial_ends_at 在未來
+// → trialing（且列上記下到期日），**第一期照開** —— 沒有期別時 EnsureNextPeriod 是 no-op
+// （沒有當前期別就不知道起訖與期別號），試用到期時排程不會替他開帳。
+func TestCreateSubscriptionWithTrialStartsTrialing(t *testing.T) {
+	f := createFixture()
+	trialEnds := time.Now().AddDate(0, 0, 14).Truncate(time.Second)
+
+	created, err := billing.NewBilling(f).CreateSubscription(context.Background(),
+		billing.CreateSubscriptionInput{
+			CompanyID: 42, PlanCode: "std", BillingCycle: "monthly", SeatCount: 2,
+			TrialEnds: &trialEnds, ActorOperatorID: 7, Reason: "POC 試用"})
+	if err != nil {
+		t.Fatalf("CreateSubscription（試用）: %v", err)
+	}
+	if created.Status != "trialing" {
+		t.Fatalf("有未來 trial_ends_at 應 trialing，got %q", created.Status)
+	}
+	sub := readSub(t, f, 42)
+	if sub.Status != "trialing" || sub.TrialEnds == nil || !sub.TrialEnds.Equal(trialEnds) {
+		t.Fatalf("試用到期日必須落在訂閱列上: %+v", sub)
+	}
+	periods, err := f.PeriodsByStatus(context.Background(), "open")
+	if err != nil || len(periods) != 1 || periods[0].PeriodNo != 1 {
+		t.Fatalf("試用也必須有第一期: %v (%d 筆)", err, len(periods))
+	}
+	if periods[0].AmountCents != 140000 { // 1000.00 ＋ 2 × 200.00
+		t.Fatalf("試用期的金額仍是價目快照（2 席 = 1400.00），got %d", periods[0].AmountCents)
+	}
+}
+
+// TestCreateSubscriptionRejectsInvalidInput 驗參數邊界：每一項都必須**什麼都不留**（沒有訂閱、
+// 沒有期別、沒有事件、沒有稽核、沒有失效）—— 開通是「一次寫入 = 一個交易」，失敗不得留半成品。
+func TestCreateSubscriptionRejectsInvalidInput(t *testing.T) {
+	past := time.Now().Add(-time.Hour)
+	cases := []struct {
+		name string
+		in   billing.CreateSubscriptionInput
+		code string
+	}{
+		{"reason 全空白", billing.CreateSubscriptionInput{
+			CompanyID: 42, PlanCode: "std", BillingCycle: "monthly", SeatCount: 3,
+			ActorOperatorID: 7, Reason: "   "}, "SYS-1001"},
+		{"plan_code 空", billing.CreateSubscriptionInput{
+			CompanyID: 42, PlanCode: " ", BillingCycle: "monthly", SeatCount: 3,
+			ActorOperatorID: 7, Reason: "開通"}, "SYS-1001"},
+		{"billing_cycle 空", billing.CreateSubscriptionInput{
+			CompanyID: 42, PlanCode: "std", SeatCount: 3, ActorOperatorID: 7, Reason: "開通"}, "SYS-1001"},
+		{"billing_cycle 未支援", billing.CreateSubscriptionInput{
+			CompanyID: 42, PlanCode: "std", BillingCycle: "weekly", SeatCount: 3,
+			ActorOperatorID: 7, Reason: "開通"}, "SYS-1001"},
+		{"席位 0", billing.CreateSubscriptionInput{
+			CompanyID: 42, PlanCode: "std", BillingCycle: "monthly", SeatCount: 0,
+			ActorOperatorID: 7, Reason: "開通"}, "SYS-1001"},
+		{"席位負數", billing.CreateSubscriptionInput{
+			CompanyID: 42, PlanCode: "std", BillingCycle: "monthly", SeatCount: -1,
+			ActorOperatorID: 7, Reason: "開通"}, "SYS-1001"},
+		{"試用期已過", billing.CreateSubscriptionInput{
+			CompanyID: 42, PlanCode: "std", BillingCycle: "monthly", SeatCount: 3,
+			TrialEnds: &past, ActorOperatorID: 7, Reason: "開通"}, "SYS-1001"},
+		{"方案不存在", billing.CreateSubscriptionInput{
+			CompanyID: 42, PlanCode: "ghost", BillingCycle: "monthly", SeatCount: 3,
+			ActorOperatorID: 7, Reason: "開通"}, "SYS-4002"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := createFixture()
+			cache := &recordingCache{}
+			_, err := billing.NewBilling(f).WithCache(cache).CreateSubscription(context.Background(), tc.in)
+			if got := errorCodeOf(t, err); got != tc.code {
+				t.Fatalf("應回 %s，got %q (%v)", tc.code, got, err)
+			}
+			assertNothingWritten(t, f, cache)
+		})
+	}
+
+	// 方案存在但該週期沒有價目：**不得**開出 0 元期別（那等於免費送方案）。
+	f := createFixture()
+	cache := &recordingCache{}
+	_, err := billing.NewBilling(f).WithCache(cache).CreateSubscription(context.Background(),
+		billing.CreateSubscriptionInput{
+			CompanyID: 42, PlanCode: "pro", BillingCycle: "monthly", SeatCount: 3,
+			ActorOperatorID: 7, Reason: "開通"})
+	if got := errorCodeOf(t, err); got != "PLAT-3001" {
+		t.Fatalf("缺價目應 PLAT-3001，got %q (%v)", got, err)
+	}
+	if reason := errorInfoOf(t, err).GetDetails()["reason"]; !strings.Contains(reason, "不得開出 0 元期別") {
+		t.Fatalf("錯誤必須說出「不得開出 0 元期別」，got %q", reason)
+	}
+	assertNothingWritten(t, f, cache)
+}
+
+// TestCreateSubscriptionRejectsSecondLiveSubscription 驗 00029 的
+// subscriptions_active_company_unique：同一公司不得同時有兩份未取消的合約 —— 兩份並行的合約
+// 沒有「哪一份生效」的定義。回**已註冊的** SYS-2001（不是裸 connect 錯誤、也不是 5xx）。
+//
+// 已取消的合約不佔這條唯一鍵：要再服務是**新合約**（與 CancelSubscription 同一立場）。
+func TestCreateSubscriptionRejectsSecondLiveSubscription(t *testing.T) {
+	f := createFixture()
+	f.PutSubscription(store.Subscription{
+		ID: 5, CompanyID: 42, PlanID: 1, SeatCount: 3, BillingCycle: "monthly", Status: "active"})
+	cache := &recordingCache{}
+
+	_, err := billing.NewBilling(f).WithCache(cache).CreateSubscription(context.Background(),
+		billing.CreateSubscriptionInput{
+			CompanyID: 42, PlanCode: "std", BillingCycle: "monthly", SeatCount: 9,
+			ActorOperatorID: 7, Reason: "誤按第二次"})
+	if connect.CodeOf(err) != connect.CodeAlreadyExists || errorCodeOf(t, err) != "SYS-2001" {
+		t.Fatalf("已有未取消的訂閱應 SYS-2001，got %v", err)
+	}
+	if sub := readSub(t, f, 42); sub.ID != 5 || sub.SeatCount != 3 {
+		t.Fatalf("失敗不得改動既有合約: %+v", sub)
+	}
+	assertNothingWrittenAfter(t, f, cache, 1) // 夾具那筆仍在服務中，且不得多出第二筆
+
+	// 已取消 → 允許開新合約（新的一筆列，舊的 cancelled 不動）。
+	f.PutSubscription(store.Subscription{
+		ID: 6, CompanyID: 43, PlanID: 1, SeatCount: 5, BillingCycle: "monthly", Status: "cancelled"})
+	created, err := billing.NewBilling(f).CreateSubscription(context.Background(),
+		billing.CreateSubscriptionInput{
+			CompanyID: 43, PlanCode: "std", BillingCycle: "monthly", SeatCount: 2,
+			ActorOperatorID: 7, Reason: "重新簽約"})
+	if err != nil {
+		t.Fatalf("已取消的合約不得擋住新合約: %v", err)
+	}
+	if created.SubscriptionID == 6 {
+		t.Fatalf("必須是**新**合約（不得復活舊的）: %d", created.SubscriptionID)
+	}
+	sub := readSub(t, f, 43)
+	if sub.ID != created.SubscriptionID || sub.Status != "active" {
+		t.Fatalf("現行訂閱應是新合約: %+v", sub)
+	}
+}
+
+// assertNothingWritten 斷言這次失敗沒有留下任何痕跡（沒有訂閱、沒有期別、沒有事件、沒有稽核、
+// 沒有失效）。假 store 的 WithTx 整份還原 + 前置檢查在任何寫入之前 ＝ 呼叫端看得到「什麼都沒動」。
+func assertNothingWritten(t *testing.T, f *store.FakeBilling, cache *recordingCache) {
+	t.Helper()
+	assertNothingWrittenAfter(t, f, cache, 0)
+}
+
+// assertNothingWrittenAfter 同 assertNothingWritten，但容許已經有 wantSubs 份訂閱列（夾具種的）。
+func assertNothingWrittenAfter(t *testing.T, f *store.FakeBilling, cache *recordingCache, wantSubs int) {
+	t.Helper()
+	subs, err := f.ActiveOrTrialingSubscriptions(context.Background())
+	if err != nil {
+		t.Fatalf("讀訂閱: %v", err)
+	}
+	if len(subs) != wantSubs {
+		t.Fatalf("失敗不得建立訂閱: 期望 %d 筆在服務中，got %d", wantSubs, len(subs))
+	}
+	periods, err := f.PeriodsByStatus(context.Background(), "open")
+	if err != nil || len(periods) != 0 {
+		t.Fatalf("失敗不得開期別: %v (%d 筆)", err, len(periods))
+	}
+	if len(f.Audits()) != 0 || len(f.Events()) != 0 {
+		t.Fatalf("失敗不得寫稽核／事件: audits=%+v events=%v", f.Audits(), eventTypes(f))
+	}
+	if len(cache.deleted) != 0 {
+		t.Fatalf("失敗不得失效快取: %v", cache.deleted)
 	}
 }

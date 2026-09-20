@@ -760,6 +760,121 @@ export declare type RecordPaymentResponse = Message<"platform.v1.RecordPaymentRe
 export declare const RecordPaymentResponseSchema: GenMessage<RecordPaymentResponse>;
 
 /**
+ * @generated from message platform.v1.CreateSubscriptionRequest
+ */
+export declare type CreateSubscriptionRequest = Message<"platform.v1.CreateSubscriptionRequest"> & {
+  /**
+   * @generated from field: string company_id = 1;
+   */
+  companyId: string;
+
+  /**
+   * 必須是 active 的方案,且該計費週期在當下有生效價目
+   *
+   * @generated from field: string plan_code = 2;
+   */
+  planCode: string;
+
+  /**
+   * monthly | yearly
+   *
+   * @generated from field: string billing_cycle = 3;
+   */
+  billingCycle: string;
+
+  /**
+   * 必須 > 0
+   *
+   * @generated from field: int32 seat_count = 4;
+   */
+  seatCount: number;
+
+  /**
+   * RFC3339 且必須是未來;空 = 不試用(直接 active)
+   *
+   * @generated from field: string trial_ends_at = 5;
+   */
+  trialEndsAt: string;
+
+  /**
+   * 必填
+   *
+   * @generated from field: string reason = 6;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message platform.v1.CreateSubscriptionRequest.
+ * Use `create(CreateSubscriptionRequestSchema)` to create a new message.
+ */
+export declare const CreateSubscriptionRequestSchema: GenMessage<CreateSubscriptionRequest>;
+
+/**
+ * @generated from message platform.v1.CreateSubscriptionResponse
+ */
+export declare type CreateSubscriptionResponse = Message<"platform.v1.CreateSubscriptionResponse"> & {
+  /**
+   * @generated from field: string subscription_id = 1;
+   */
+  subscriptionId: string;
+
+  /**
+   * trialing(有試用)| active
+   *
+   * @generated from field: string status = 2;
+   */
+  status: string;
+
+  /**
+   * @generated from field: string plan_code = 3;
+   */
+  planCode: string;
+
+  /**
+   * @generated from field: string billing_cycle = 4;
+   */
+  billingCycle: string;
+
+  /**
+   * @generated from field: int32 seat_count = 5;
+   */
+  seatCount: number;
+
+  /**
+   * 空 = 非試用
+   *
+   * @generated from field: string trial_ends_at = 6;
+   */
+  trialEndsAt: string;
+
+  /**
+   * @generated from field: int32 first_period_no = 7;
+   */
+  firstPeriodNo: number;
+
+  /**
+   * RFC3339(依計費週期:月 +1 月、年 +1 年;月底夾擠見後端)
+   *
+   * @generated from field: string first_period_end = 8;
+   */
+  firstPeriodEnd: string;
+
+  /**
+   * 兩位小數字串("1600.00");當期生效價的快照
+   *
+   * @generated from field: string first_period_amount = 9;
+   */
+  firstPeriodAmount: string;
+};
+
+/**
+ * Describes the message platform.v1.CreateSubscriptionResponse.
+ * Use `create(CreateSubscriptionResponseSchema)` to create a new message.
+ */
+export declare const CreateSubscriptionResponseSchema: GenMessage<CreateSubscriptionResponse>;
+
+/**
  * @generated from message platform.v1.SetSeatCountRequest
  */
 export declare type SetSeatCountRequest = Message<"platform.v1.SetSeatCountRequest"> & {
@@ -1488,6 +1603,14 @@ export declare const PlatformAdminService: GenService<{
     methodKind: "unary";
     input: typeof RecordPaymentRequestSchema;
     output: typeof RecordPaymentResponseSchema;
+  },
+  /**
+   * @generated from rpc platform.v1.PlatformAdminService.CreateSubscription
+   */
+  createSubscription: {
+    methodKind: "unary";
+    input: typeof CreateSubscriptionRequestSchema;
+    output: typeof CreateSubscriptionResponseSchema;
   },
   /**
    * @generated from rpc platform.v1.PlatformAdminService.SetSeatCount

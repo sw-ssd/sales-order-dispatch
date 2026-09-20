@@ -82,7 +82,7 @@ flowchart LR
 2. 租戶後台的訂閱資訊**唯讀且不吵**：僅在用量達 80/90% 或試用將到期時以 banner 提示，其餘收在「帳號／方案」頁。
 3. 平台工具與租戶系統**共用 proto 與 UI 元件庫，不共用路由與登入**；`platform.*` 能力不得出現在租戶 `GetAbility`（S11）。
 
-> **待辦（2026-09-21 補記，Plan C Task 14）**：**完整的「角色 × RPC」矩陣尚未定義**。v1 只實作了「操作者管理」的收緊：`CreateOperator`／`DisableOperator` 要求 `role = 'admin'`（含「建立 admin」本身），其餘 **9 支平台寫入 RPC**（收款、席位、改方案、取消、計費參數、override 設定／撤銷、方案價目、方案權益）**目前對 `operator` 與 `admin` 一視同仁**；且**兩支 RPC 都還無法在前端依角色隱藏按鈕**——console 沒有取得自身角色的 RPC（`GetOperatorSelf` 不存在，新增它會動 proto）。要收緊任何一支，必須先有本表（列的授權才是設計，逐支 `if` 會漂移）；歸屬：**platform/v1 的下一個計畫**（含 `GetOperatorSelf`）。
+> **待辦（2026-09-21 補記，Plan C Task 14）**：**完整的「角色 × RPC」矩陣尚未定義**。v1 只實作了「操作者管理」的收緊：`CreateOperator`／`DisableOperator` 要求 `role = 'admin'`（含「建立 admin」本身），其餘 **10 支平台寫入 RPC**（收款、**開通**、席位、改方案、取消、計費參數、override 設定／撤銷、方案價目、方案權益；`CreateSubscription` 於 Plan C Task 15 補上，與 `ChangePlan` 同級：日常營運，operator 即可）**目前對 `operator` 與 `admin` 一視同仁**；且**兩支 RPC 都還無法在前端依角色隱藏按鈕**——console 沒有取得自身角色的 RPC（`GetOperatorSelf` 不存在，新增它會動 proto）。要收緊任何一支，必須先有本表（列的授權才是設計，逐支 `if` 會漂移）；歸屬：**platform/v1 的下一個計畫**（含 `GetOperatorSelf`）。
 
 ---
 
@@ -190,7 +190,7 @@ Valkey key `ent:{companyID}`；方案變更／override／訂閱狀態異動即 *
 
 > **措辭更正（2026-09-21 補記，Plan C Task 14）**：原文「不靠 TTL 正確性」容易被讀成「TTL 以內一定不會讀到舊值」——**不是**。這是 cache-aside，存在一個窄競態：某請求在**提交前** miss、寫入方提交後 `Delete`、該請求才把**舊快照** `Set` 回去（`SCAN` 前也沒有全域鎖）→ 該 key 最長 **一個 TTL** 內仍是舊值。因此正確的敘述是「**失效由寫入方驅動；TTL 是最長收斂上界**」。程式碼註解（`entitlements/valkey.go:20`／`cache.go:10`）仍寫「正確性不依賴 TTL」，屬同一措辭問題，未動（Plan C Task 14 的範圍不含程式碼）。
 
-**實作現況（Plan B ＋ Plan C Task 8）**：介面 `entitlements.Cache` 已就位且 `MemoryCache` **真的實現 TTL**（`ttl<=0` 表示不快取，兩端語意一致）；Valkey 實作（`entitlements/valkey.go`）與「寫入後 `Delete`／`InvalidateAll`」已隨 Plan C 落地——**三個寫入來源**（billing 的四支寫入、consumer 的凍結／復原、服務層的營運寫入）都在**交易提交成功之後**才失效，且快取故障時**回源 ＋ loud log**（不拒絕判定）。單實例下兩者判定結果等價，差別只在多實例時各自過期。
+**實作現況（Plan B ＋ Plan C Task 8）**：介面 `entitlements.Cache` 已就位且 `MemoryCache` **真的實現 TTL**（`ttl<=0` 表示不快取，兩端語意一致）；Valkey 實作（`entitlements/valkey.go`）與「寫入後 `Delete`／`InvalidateAll`」已隨 Plan C 落地——**三個寫入來源**（billing 的五支寫入：收款與開通／席位／改方案／取消、consumer 的凍結／復原、服務層的營運寫入）都在**交易提交成功之後**才失效，且快取故障時**回源 ＋ loud log**（不拒絕判定）。單實例下兩者判定結果等價，差別只在多實例時各自過期。
 
 ### 4.5 守衛掛點清單（v1，spec 為準，漏掛即測試紅）
 
@@ -213,7 +213,8 @@ Valkey key `ent:{companyID}`；方案變更／override／訂閱狀態異動即 *
 **v1 `features` 清單**：`limit.seats`、`limit.customers`、`limit.products`、`limit.departments`（integer）；`feature.printing`、`feature.dispatch`、`feature.returns`（boolean）。
 **更正（Plan B Task 11，2026-09-20）**：`limit.storage_gb` **已自 v1 清單移除**（原「定案，不增不減」的 8 項現為 7 項）——計數器沒有檔案空間的來源可量。**移除理由的更正（最終全分支審查 F-3）**：不是「種了會讓租戶端權益投影對所有租戶失敗」——判定層的 `Snapshot` 對**沒有計數器**的 integer feature 是「略過該筆 ＋ 記一行 log」，**不會擋整筆回應**（T10 的整合測試正是種了它並斷言 200）；少了計數器的下場是那個 feature 的用量**無聲消失**。故日後要提供 storage 用量，必須**同時**補上計數器。`feature.printing`／`dispatch`／`returns` 隨 05/08/09 落地才有守衛掛點；`limit.storage_gb` 隨 04 §3.6 檔案資產（P2-1）落地並補上計數器後再加回 seed。
 
-**訂閱列的生命週期語意（F-7 裁定，2026-09-20）**：`platform.subscriptions` **沒有該公司的列＝尚未開通計費**，不是「已判定不可用」。判定層對它**不施加任何配額／功能限制**（等同 `Unlimited`），只記一行 log（`entitlements: 公司 N 無訂閱列（尚未開通計費）→ 不施加配額限制`）。理由：在 Plan C 的訂閱指派／onboarding 落地前，**沒有任何程式會建立訂閱列**（每個真實公司都是此狀態），若在此 fail-closed，員工自助註冊與首次 OIDC 登入會被硬擋，而只有進得去的管理員才能補訂閱 —— 上線即癱瘓。這與 fail-closed **不衝突**：fail-closed 針對的是**已知不可用**與**未列舉**的狀態（`suspended`／`cancelled`／任意未知字串 → `PLAT-3001`，見 F-1）。
+**訂閱列的生命週期語意（F-7 裁定，2026-09-20；2026-09-21 更正「尚未落地」的敘述）**：`platform.subscriptions` **沒有該公司的列＝尚未開通計費**，不是「已判定不可用」。判定層對它**不施加任何配額／功能限制**（等同 `Unlimited`），只記一行 log（`entitlements: 公司 N 無訂閱列（尚未開通計費）→ 不施加配額限制`）。理由：**尚未開通的公司是常態**（自助註冊的公司、剛建好還沒簽約的公司），若在此 fail-closed，員工自助註冊與首次 OIDC 登入會被硬擋，而只有進得去的管理員才能補訂閱 —— 上線即癱瘓。這與 fail-closed **不衝突**：fail-closed 針對的是**已知不可用**與**未列舉**的狀態（`suspended`／`cancelled`／任意未知字串 → `PLAT-3001`，見 F-1）。
+**開通路徑（B-1 修正，Plan C Task 15；原本「沒有任何程式會建立訂閱列」已不成立）**：建立訂閱與第一期的入口是 `PlatformAdminService.CreateSubscription`（`platform/v1`）→ `billing.CreateSubscription`（`internal/platform/billing/subscription.go`）→ `BillingStore.CreateSubscriptionTx` ＋ `OpenPeriodTx`（訂閱、第一期、`platform.events` 與 `platform.audit_logs` 同一個交易）。**開通仍然只由營運執行**：自助註冊與試用申請流程不在 Plan C 範圍（§9 的 Out），故「沒有訂閱列就等於不限制」對未開通的公司仍然是正確的語意。
 **契約警語（operator 必讀）：刪除訂閱列＝不施加限制，不得用來停用租戶** —— 要停用租戶必須把 `status` 設成 `cancelled`（或 `suspended`），否則一次 `DELETE` 等於送一個不限額方案。`PLAT-5002` 的用途不變：**已訂閱、但方案不含該 feature**。
 
 ### 4.6 UI 投影與守衛的分工

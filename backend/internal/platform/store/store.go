@@ -65,6 +65,20 @@ type Subscription struct {
 	GraceUntil   *time.Time
 }
 
+// CreateSubscriptionInput 為建立訂閱(開通)所需的欄位。第一期不在此 —— 期別是呼叫端在
+// 同一個交易內接著開的(它需要訂閱 id 與當期生效價)。
+//
+// Status 由呼叫端決定(trialing／active),store 不重複狀態機:哪些狀態可以用、怎麼轉移
+// 是業務判定,寫在 SQL 裡就會有第二份答案。
+type CreateSubscriptionInput struct {
+	CompanyID    int
+	PlanID       int64
+	SeatCount    int
+	BillingCycle string // monthly | yearly
+	Status       string // trialing | active
+	TrialEnds    *time.Time
+}
+
 // Store 為平台域的唯讀讀取介面。實作:postgres(admin 連線)、Fake(記憶體,供單元測試)。
 type Store interface {
 	// Features 回傳全部功能定義(一次載入,供型別判定與 UI 顯示)。
@@ -145,6 +159,13 @@ type Event struct {
 // 要一個交易」的地方)。這些交易是**平台寫入的交易**,與租戶請求的 interceptor 交易無關:業務表
 // 的交易帶 RLS 的 data_scope,平台表不套 RLS 也不經租戶連線(spec §3.3),兩者不可混用。
 type BillingStore interface {
+	// CreateSubscriptionTx 建立一筆訂閱(開通的第一步),回傳新列的 id。
+	//
+	// **同一公司已有未取消的訂閱時回 store.ErrConflict**(00029 的
+	// subscriptions_active_company_unique)—— 不得讓 23505 冒上去變成 SYS-9000:那是
+	// operator 的輸入情境(這家公司已經有合約),console 要顯示得出來、也才擋得住雙擊。
+	// 已取消的訂閱不佔這條唯一鍵:要再服務是**新合約**(見 CancelSubscription)。
+	CreateSubscriptionTx(ctx context.Context, tx *sql.Tx, in CreateSubscriptionInput) (int64, error)
 	// OpenSubscriptionTx 取該租戶的現行訂閱並以 FOR UPDATE 鎖住該列(併發的收款／逾期轉移必須互斥)。
 	// 無訂閱回 (nil, nil)。**不得**預先濾掉 cancelled:只有一筆已取消合約的租戶要拿得到它,
 	// 判定層才分得出「已取消」與「從未訂閱」(F-8;取法與平台投影同源)。

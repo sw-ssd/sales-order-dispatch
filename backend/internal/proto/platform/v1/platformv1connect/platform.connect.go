@@ -56,6 +56,9 @@ const (
 	// PlatformAdminServiceRecordPaymentProcedure is the fully-qualified name of the
 	// PlatformAdminService's RecordPayment RPC.
 	PlatformAdminServiceRecordPaymentProcedure = "/platform.v1.PlatformAdminService/RecordPayment"
+	// PlatformAdminServiceCreateSubscriptionProcedure is the fully-qualified name of the
+	// PlatformAdminService's CreateSubscription RPC.
+	PlatformAdminServiceCreateSubscriptionProcedure = "/platform.v1.PlatformAdminService/CreateSubscription"
 	// PlatformAdminServiceSetSeatCountProcedure is the fully-qualified name of the
 	// PlatformAdminService's SetSeatCount RPC.
 	PlatformAdminServiceSetSeatCountProcedure = "/platform.v1.PlatformAdminService/SetSeatCount"
@@ -105,6 +108,7 @@ type PlatformAdminServiceClient interface {
 	// actor 一律是 cookie 上的真實 operator;資料與稽核同一個交易(失敗不留半成品)。
 	ListReceivables(context.Context, *connect.Request[v1.ListReceivablesRequest]) (*connect.Response[v1.ListReceivablesResponse], error)
 	RecordPayment(context.Context, *connect.Request[v1.RecordPaymentRequest]) (*connect.Response[v1.RecordPaymentResponse], error)
+	CreateSubscription(context.Context, *connect.Request[v1.CreateSubscriptionRequest]) (*connect.Response[v1.CreateSubscriptionResponse], error)
 	SetSeatCount(context.Context, *connect.Request[v1.SetSeatCountRequest]) (*connect.Response[v1.SetSeatCountResponse], error)
 	ChangePlan(context.Context, *connect.Request[v1.ChangePlanRequest]) (*connect.Response[v1.ChangePlanResponse], error)
 	CancelSubscription(context.Context, *connect.Request[v1.CancelSubscriptionRequest]) (*connect.Response[v1.CancelSubscriptionResponse], error)
@@ -169,6 +173,12 @@ func NewPlatformAdminServiceClient(httpClient connect.HTTPClient, baseURL string
 			httpClient,
 			baseURL+PlatformAdminServiceRecordPaymentProcedure,
 			connect.WithSchema(platformAdminServiceMethods.ByName("RecordPayment")),
+			connect.WithClientOptions(opts...),
+		),
+		createSubscription: connect.NewClient[v1.CreateSubscriptionRequest, v1.CreateSubscriptionResponse](
+			httpClient,
+			baseURL+PlatformAdminServiceCreateSubscriptionProcedure,
+			connect.WithSchema(platformAdminServiceMethods.ByName("CreateSubscription")),
 			connect.WithClientOptions(opts...),
 		),
 		setSeatCount: connect.NewClient[v1.SetSeatCountRequest, v1.SetSeatCountResponse](
@@ -249,6 +259,7 @@ type platformAdminServiceClient struct {
 	listPlatformAudit     *connect.Client[v1.ListPlatformAuditRequest, v1.ListPlatformAuditResponse]
 	listReceivables       *connect.Client[v1.ListReceivablesRequest, v1.ListReceivablesResponse]
 	recordPayment         *connect.Client[v1.RecordPaymentRequest, v1.RecordPaymentResponse]
+	createSubscription    *connect.Client[v1.CreateSubscriptionRequest, v1.CreateSubscriptionResponse]
 	setSeatCount          *connect.Client[v1.SetSeatCountRequest, v1.SetSeatCountResponse]
 	changePlan            *connect.Client[v1.ChangePlanRequest, v1.ChangePlanResponse]
 	cancelSubscription    *connect.Client[v1.CancelSubscriptionRequest, v1.CancelSubscriptionResponse]
@@ -295,6 +306,11 @@ func (c *platformAdminServiceClient) ListReceivables(ctx context.Context, req *c
 // RecordPayment calls platform.v1.PlatformAdminService.RecordPayment.
 func (c *platformAdminServiceClient) RecordPayment(ctx context.Context, req *connect.Request[v1.RecordPaymentRequest]) (*connect.Response[v1.RecordPaymentResponse], error) {
 	return c.recordPayment.CallUnary(ctx, req)
+}
+
+// CreateSubscription calls platform.v1.PlatformAdminService.CreateSubscription.
+func (c *platformAdminServiceClient) CreateSubscription(ctx context.Context, req *connect.Request[v1.CreateSubscriptionRequest]) (*connect.Response[v1.CreateSubscriptionResponse], error) {
+	return c.createSubscription.CallUnary(ctx, req)
 }
 
 // SetSeatCount calls platform.v1.PlatformAdminService.SetSeatCount.
@@ -363,6 +379,7 @@ type PlatformAdminServiceHandler interface {
 	// actor 一律是 cookie 上的真實 operator;資料與稽核同一個交易(失敗不留半成品)。
 	ListReceivables(context.Context, *connect.Request[v1.ListReceivablesRequest]) (*connect.Response[v1.ListReceivablesResponse], error)
 	RecordPayment(context.Context, *connect.Request[v1.RecordPaymentRequest]) (*connect.Response[v1.RecordPaymentResponse], error)
+	CreateSubscription(context.Context, *connect.Request[v1.CreateSubscriptionRequest]) (*connect.Response[v1.CreateSubscriptionResponse], error)
 	SetSeatCount(context.Context, *connect.Request[v1.SetSeatCountRequest]) (*connect.Response[v1.SetSeatCountResponse], error)
 	ChangePlan(context.Context, *connect.Request[v1.ChangePlanRequest]) (*connect.Response[v1.ChangePlanResponse], error)
 	CancelSubscription(context.Context, *connect.Request[v1.CancelSubscriptionRequest]) (*connect.Response[v1.CancelSubscriptionResponse], error)
@@ -423,6 +440,12 @@ func NewPlatformAdminServiceHandler(svc PlatformAdminServiceHandler, opts ...con
 		PlatformAdminServiceRecordPaymentProcedure,
 		svc.RecordPayment,
 		connect.WithSchema(platformAdminServiceMethods.ByName("RecordPayment")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformAdminServiceCreateSubscriptionHandler := connect.NewUnaryHandler(
+		PlatformAdminServiceCreateSubscriptionProcedure,
+		svc.CreateSubscription,
+		connect.WithSchema(platformAdminServiceMethods.ByName("CreateSubscription")),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformAdminServiceSetSeatCountHandler := connect.NewUnaryHandler(
@@ -507,6 +530,8 @@ func NewPlatformAdminServiceHandler(svc PlatformAdminServiceHandler, opts ...con
 			platformAdminServiceListReceivablesHandler.ServeHTTP(w, r)
 		case PlatformAdminServiceRecordPaymentProcedure:
 			platformAdminServiceRecordPaymentHandler.ServeHTTP(w, r)
+		case PlatformAdminServiceCreateSubscriptionProcedure:
+			platformAdminServiceCreateSubscriptionHandler.ServeHTTP(w, r)
 		case PlatformAdminServiceSetSeatCountProcedure:
 			platformAdminServiceSetSeatCountHandler.ServeHTTP(w, r)
 		case PlatformAdminServiceChangePlanProcedure:
@@ -564,6 +589,10 @@ func (UnimplementedPlatformAdminServiceHandler) ListReceivables(context.Context,
 
 func (UnimplementedPlatformAdminServiceHandler) RecordPayment(context.Context, *connect.Request[v1.RecordPaymentRequest]) (*connect.Response[v1.RecordPaymentResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("platform.v1.PlatformAdminService.RecordPayment is not implemented"))
+}
+
+func (UnimplementedPlatformAdminServiceHandler) CreateSubscription(context.Context, *connect.Request[v1.CreateSubscriptionRequest]) (*connect.Response[v1.CreateSubscriptionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("platform.v1.PlatformAdminService.CreateSubscription is not implemented"))
 }
 
 func (UnimplementedPlatformAdminServiceHandler) SetSeatCount(context.Context, *connect.Request[v1.SetSeatCountRequest]) (*connect.Response[v1.SetSeatCountResponse], error) {
