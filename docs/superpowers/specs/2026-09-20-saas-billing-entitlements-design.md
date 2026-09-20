@@ -18,6 +18,11 @@
 | S4 | 時序 | RLS 前置 → platform 薄層（entitlement）→ 05 訂單 → 平台營運 → 08/09 → 金流/發票 |
 | S5 | 平台域邊界 | **邏輯分離、實體不拆**：獨立 package／proto／DB schema，介面形狀為跨服務（含 outbox 事件），同 process 實作 |
 | S6 | 守衛落點 | **服務層顯式守衛**（`Allows` / `CheckLimit`）＋ RLS 當底線；不採「依 RPC 全名集中攔截的中間件」、不以 DB trigger 為主機制 |
+| S7 | 平台營運介面 | **獨立內部工具**（monorepo 新 package `platform-console/`，SolidJS，重用 proto 生成與 UI 元件庫）：自有登入、自有 host、**只走 `platform/v1`**；不進租戶 SPA 的路由與守衛。六頁納入 v1（見 §2.4） |
+| S8 | 操作者身分 | 沿用 OIDC（限公司 Google Workspace 網域）＋ `platform.operators` 白名單（platform schema）；工具發自有 session。**平台操作者不需要、也不得使用租戶 `users` 那一列** → `users.company_id NOT NULL` 不動 |
+| S9 | 平台稽核 | 另立 `platform.audit_logs`（actor 為 `operator_id`，**不 FK 租戶 `users`**）。原設計「複用租戶 `audit_logs`」不可行：`audit_logs.user_id` 的 FK 會直接擋下無租戶列的操作者 |
+| S10 | 租戶 `super` 定位 | **保留**（7 內建角色、seed、矩陣、測試不動），但**降為支援用逃生門**：平台日常維運一律走獨立工具，不經租戶身分；`super` 的支援操作落租戶稽核且須填原因 |
+| S11 | 能力命名空間隔離 | `platform.*` 能力（如 `platform.tenant.suspend`）**永不出現在**租戶 `GetAbility` 與角色權限矩陣；租戶端與平台工具各維護自己的能力清單 |
 
 ---
 
@@ -45,7 +50,7 @@ flowchart LR
 ### 2.2 三種接觸面（其他一律禁止）
 
 1. **同 process Go 介面**：`entitlement.Service{ Allows(ctx, companyID, feature); CheckLimit(ctx, companyID, feature, delta) }` —— 服務層守衛用，零延遲
-2. **proto RPC**：`platform/v1` 供營運後台（僅 `super`）；租戶端只能讀自己的權益投影（見 §4.5）
+2. **proto RPC**：`platform/v1` 供獨立內部工具（`platform-console/`，僅 `platform.operators`）；租戶端只能讀自己的權益投影（見 §4.5）。**租戶 SPA 不掛任何 `platform.*` 能力、也沒有平台路由**
 3. **事件 outbox**：`platform.events`；同 process consumer 執行跨域副作用。**平台域不直接寫產品域資料**（凍結公司是事件驅動，見 §5.3）
 
 ### 2.3 RLS 前置（與平台域同批做，因為它決定查詢邊界）
@@ -60,6 +65,20 @@ flowchart LR
 - 內嵌 OpenFGA 與業務**共用同一 datastore**（`domains.go` `mountOpenFGA` 沿用 `Database.DatabaseURL`）
 
 **關鍵推論**：policy 是 fail-closed（GUC 未設定 → 看不到列）。故啟用 RLS 後，**未包在租戶交易內的單筆查詢不是效能問題，而是功能壞掉（黑屏）** → 所有路徑（含唯讀）都必須包。
+
+### 2.4 管理介面：三個 surface（三種權威來源對應三種介面）
+
+| Surface | 使用者 | 位置 | 資料來源（硬規則） | 內容 |
+|---|---|---|---|---|
+| **平台營運工具** | `platform.operators` | **獨立 SPA `platform-console/`**（自有 host、不對公網） | **只走 `platform/v1`**（admin 連線）；不得以 `scope=all` 掃業務表（§6.4） | 六頁：①租戶列表（方案／席位用量／狀態／到期／待收款）②租戶詳情（訂閱、期別、override）③方案與價目（`plans`/`plan_prices`）④權益矩陣（`features`×`plan_entitlements`）⑤收款與發票（下一期產生、`RecordPayment`、發票號）⑥平台稽核（`platform.audit_logs`） |
+| **租戶後台** | `company_admin`（限自家）；`dept_admin` 只讀 | 既有租戶 SPA（`features/users/*`） | 業務域 RPC | 公司／部門／員工／角色×權限矩陣（既有 `PermissionMatrix`）＋ **唯讀**「本方案與用量」卡片（`GetTenantEntitlements`） |
+| **客戶自助** | 客戶主帳號／子帳號 | Flutter App（Web 僅 403 與引導） | 客戶域 RPC | 公司資料、地址／聯絡人、專屬商品清單、子帳號管理（新增／停用／QR）、偏好送貨日 |
+
+**三條硬規則**：
+
+1. 三個 surface 的權威來源不同（平台 → 租戶管理員 → 終端客戶），**因此三者都不具備對方權限的寫入能力**：租戶管理員改不了自己的方案與額度；公司員工不能代客戶管理子帳號（D28 灰化，後台只留必填原因的支援動作）。
+2. 租戶後台的訂閱資訊**唯讀且不吵**：僅在用量達 80/90% 或試用將到期時以 banner 提示，其餘收在「帳號／方案」頁。
+3. 平台工具與租戶系統**共用 proto 與 UI 元件庫，不共用路由與登入**；`platform.*` 能力不得出現在租戶 `GetAbility`（S11）。
 
 ---
 
@@ -77,6 +96,8 @@ flowchart LR
 | `subscription_periods` | `period_no`、`period_start/end`、`plan_id`＋`unit_price`＋`seat_price`＋`seat_count`（**快照**）、`amount`、`currency`、`status`(open/paid/void)、`paid_at`、`invoice_no`/`invoice_status`/`buyer_tax_id`/`carrier`、`payment_provider`、`external_ref` | 帳的單位。`UNIQUE (subscription_id, period_no)`；`UNIQUE (payment_provider, external_ref) WHERE external_ref IS NOT NULL`（webhook 冪等） |
 | `tenant_overrides` | `company_id`、`feature_code`、`enabled`、`limit_value`、`reason`、`owner`、`expires_at`、`revoked_at` | 例外唯一入口；`UNIQUE (company_id, feature_code) WHERE revoked_at IS NULL` |
 | `events` | `aggregate_type/id`、`event_type`、`payload jsonb`、`dispatched_at`、`attempts` | outbox；跨域副作用由此驅動 |
+| `operators` | `email`(uniq)、`name`、`role`、`status`、`last_login_at` | 平台操作者白名單（S8）。**不與租戶 `users` 有任何關聯**；新增操作者＝平台側動作，須落 `audit_logs` |
+| `audit_logs`（platform） | `operator_id`、`action`、`target_type`/`target_id`（如 `company:42`）、`reason`、`before`/`after` jsonb、`created_at` | 平台側稽核（S9）。actor 為 `operator_id`，**不 FK 租戶 `users`**；與租戶 `audit_logs` 同形狀但完全分離 |
 
 ### 3.1 四個「不可回填」欄位
 
@@ -94,7 +115,9 @@ flowchart LR
 
 `platform` schema **不套 RLS**，且 **`app_rw` 對該 schema 完全無權限**（只 `GRANT` 業務 schema）；平台域走 `DATABASE_ADMIN_URL`（owner）。業務服務連「誤 SELECT 到方案表」都做不到。
 
-平台域操作的**人可讀稽核複用既有 `audit.Recorder` / `audit_logs`**（有 `company_id` 可填目標租戶），平台域寫稽核走 admin 連線；不另立稽核表。
+平台域操作的稽核**寫入 `platform.audit_logs`（S9），不複用租戶 `audit_logs`**：後者的 `user_id` 是 FK 到租戶 `users`，而平台操作者沒有（也不該有）租戶 `users` 那一列，硬寫會直接被 FK 擋下。兩者形狀一致（actor／action／target／reason／before／after／時間），但**各自獨立、不互相 FK**：平台稽核由 `platform/v1` 的服務層寫入（admin 連線），租戶稽核仍由既有 `audit.Recorder` 於業務交易內寫入（D18）。
+
+帳務相關金額欄位一律在 `platform` schema，不進業務表（D12 只約束業務域）。
 
 ---
 
@@ -268,6 +291,9 @@ spec 內建表（§4.5）「RPC → 需要的 feature/限額 → 對應測試」
 - **新增** D35：platform 域邏輯分離（介面跨服務、實體不拆）
 - **新增** D36：RLS 啟用（`app_rw` 非 owner、業務表 `ENABLE` + `FORCE`、補 `WITH CHECK`）
 - **新增** D37：人工收款 v1 與金流/發票升級契約
+- **新增** D38：平台營運＝**獨立內部工具**（`platform-console/`，自有 OIDC 登入＋`platform.operators` 白名單＋自有 host；只走 `platform/v1`；租戶 SPA 不掛 `platform.*` 能力）。選「完全分離」的理由：三個權威來源（平台／租戶管理員／終端客戶）在**身分層**就分開，而 `users.company_id NOT NULL` 因此不必改動
+- **新增** D39：**平台稽核獨立**（`platform.audit_logs`，actor 為 `operator_id`，不 FK 租戶 `users`）
+- **修訂** D9：租戶 `super` 角色**保留但降為支援用逃生門**——平台日常維運不經租戶身分（改走 D38 的工具）；`super` 的支援操作須填原因並落租戶稽核
 - **修訂** D12：不存金額**縮到業務域**，平台計費域例外（價格/帳單/付款/折讓屬平台域）
 - **修訂** D2：Big Bang → 分階段；自助/試用/凍結/復原為常態
 - **修訂** D3：RLS 由「僅定義」改為已 ENABLE 完成
@@ -286,20 +312,22 @@ spec 內建表（§4.5）「RPC → 需要的 feature/限額 → 對應測試」
 
 ## 9. 範圍邊界
 
-**In**：① RLS 前置（角色/DSN、policy 補 `WITH CHECK`、ENABLE + FORCE、`WithTenantTx` 遷移）② `platform` schema ＋ entitlement ＋ 服務層守衛 ③ 平台營運（`platform/v1` RPC；UI 後補，v1 以 `super` ＋ seed/CLI 操作）④ 05 訂單**只需**守衛介面接點
+**In**：① RLS 前置（角色/DSN、14 個 policy 補 `WITH CHECK`、三張漏網表補 policy、ENABLE + FORCE、請求層租戶交易 `dbtenant.Client` 遷移）② `platform` schema ＋ entitlement ＋ 服務層守衛 ③ **平台營運工具**（`platform/v1` RPC ＋ `platform-console/` 六頁 ＋ `platform.operators` ＋ `platform.audit_logs`）④ 租戶後台的唯讀權益卡片（`GetTenantEntitlements`）⑤ 05 訂單**只需**守衛介面接點
 
-**Out（本 spec 不含）**：05 訂單本體（依原 05 計畫）、08 派車、09 列印、07 通知、04 殘項（3.5/3.6/3.8）、電子發票實作、金流 adapter 實作、自助註冊與試用申請流程（v1 由營運開通）、k8s 部署與備份（D19）、`app/` 任何改動
+**Out（本 spec 不含）**：05 訂單本體（依原 05 計畫）、08 派車、09 列印、07 通知、04 殘項（3.5/3.6/3.8）、電子發票實作、金流 adapter 實作、自助註冊與試用申請流程（v1 由營運開通）、k8s 部署與備份（D19）、`app/` 任何改動（客戶子帳號自助管理屬 D28／app 範圍，不在本 spec）
 
 ## 10. 風險
 
 | # | 風險 | 對策 |
 |---|---|---|
-| R1 | 啟用 RLS 後漏包交易的路徑直接黑屏（功能故障） | `WithTenantTx` 單一入口 ＋ 整合測試「未設 GUC → 0 列」＋ 慣例化 |
+| R1 | 啟用 RLS 後漏包交易的路徑直接黑屏（功能故障） | 請求層租戶交易（interceptor ＋ `dbtenant.Client`）＋ 整合測試「未設 scope → 0 列」＋ 慣例化 |
 | R2 | 配額競態（並行搶最後一個席位） | `subscriptions` 列 `FOR UPDATE` ＋ 併發整合測試 |
 | R3 | `WITH CHECK` 缺口若未補，RLS 看似生效實則可跨租戶寫入 | 先寫會紅的測試，紅轉綠才收工 |
 | R4 | `platform` 域與業務域的跨域一致性（凍結延遲視窗） | 同 process 呼叫（零視窗）；事件僅作為解耦介面，日後拆服務時才需處理延遲 |
 | R5 | 人工收款階段的催收提醒缺自動通知（07 未實作） | v1 以營運後台清單＋CSV 匯出替代，明確列為依賴 |
 | R6 | 計數直查在熱路徑的延遲 | `ponytail:` 標記留痕；延遲可感再加快取＋事件失效 |
+| R7 | 平台工具多一套前端與登入＝多一份維護與攻擊面 | 重用同一 repo 的 proto 生成與 UI 元件庫；不對公網（IP 允許清單／VPN）；操作者限 Workspace 網域＋白名單，且新增操作者本身落 `platform.audit_logs` |
+| R8 | 平台操作者「無租戶身分」導致支援情境（代客排查）沒有現成路徑 | 支援一律經 D38 工具（跨租戶視圖、唯讀）＋必要時由租戶 `super` 逃生門（S10，必填原因、落租戶稽核）；不得為了方便讓平台操作者取得租戶帳號 |
 
 ---
 
