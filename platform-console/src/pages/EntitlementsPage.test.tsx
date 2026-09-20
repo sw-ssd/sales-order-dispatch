@@ -52,6 +52,7 @@ function renderPage() {
       <EntitlementsPage />
     </QueryClientProvider>
   ));
+  return client;
 }
 
 function matrixTable(): HTMLElement {
@@ -128,6 +129,20 @@ describe("EntitlementsPage", () => {
     expect(screen.queryAllByRole("button")).toHaveLength(0);
     expect(screen.queryAllByRole("textbox")).toHaveLength(0);
     expect(document.querySelectorAll("form")).toHaveLength(0);
+  });
+
+  it("方案權益被寫入（invalidate [\"entitlements\"]）後矩陣自動重查", async () => {
+    // 方案權益的寫入在「方案」頁，那裡失效的是 ["entitlements"] 家族（前綴比對）。
+    // 矩陣若用家族外的 key，這一條失效就碰不到它 —— 畫面會留著舊權益。
+    const client = renderPage();
+    const fetched = () => calls.filter((c) => c.method === "GetPlanEntitlements").length;
+    // 等矩陣真的畫出來（＝三個查詢都已經落地），否則失效會碰上還在飛的請求而被跳過。
+    await waitFor(() => expect(screen.getAllByRole("row")).toHaveLength(9));
+    expect(fetched()).toBe(3);
+
+    await client.invalidateQueries({ queryKey: ["entitlements"] });
+
+    await waitFor(() => expect(fetched()).toBe(6));
   });
 
   it("沒有方案時顯示空狀態（不畫空矩陣）", async () => {

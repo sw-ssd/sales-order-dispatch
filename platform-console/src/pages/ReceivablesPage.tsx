@@ -81,8 +81,14 @@ function PaymentForm(props: { row: Receivable; onDone: () => void }) {
       error={mutation.isError ? describeError(mutation.error) : undefined}
       validate={() => {
         const value = amount().trim();
-        if (value !== "" && !MONEY_PATTERN.test(value)) {
+        if (value === "") return undefined;
+        if (!MONEY_PATTERN.test(value)) {
           return "金額格式錯誤：請輸入數字，最多兩位小數（例：1500.00）；留空則採用期別快照金額。";
+        }
+        // `AmountCents=0` 在後端的語意是「採用期別快照」，**不是**「本期不收」：
+        // 填 0 會把整期記成已收（全額入帳）。要表達不收費得走別的路徑，不能靠這個欄位。
+        if (Number(value) === 0) {
+          return "金額必須大於 0：後端把 0 當成「採用期別快照」，填 0 會把整期記成已收。";
         }
         return undefined;
       }}
@@ -102,7 +108,7 @@ function PaymentForm(props: { row: Receivable; onDone: () => void }) {
           onInput={(e) => setAmount(e.currentTarget.value)}
         />
         <FieldDescription>
-          留空＝採用期別快照金額 {props.row.amount}（不支援部分付款；短收／溢收請記於備註）。
+          留空＝採用期別快照金額 {props.row.amount}；填了就必須大於 0（不支援部分付款；短收／溢收請記於備註）。
         </FieldDescription>
       </Field>
 
@@ -191,11 +197,18 @@ export default function ReceivablesPage() {
       title="待收款"
       description="所有未付期別（平台自營公司不算租戶，不列入）；期末已過者標記為逾期。匯出 CSV 只含目前這一頁。"
     >
-      {queryBoundary(receivables, (data) =>
-        data.rows.length === 0 ? (
-          <EmptyState>沒有未付期別。</EmptyState>
-        ) : (
-          <div class="space-y-4">
+      {queryBoundary(receivables, (data) => (
+        <div class="space-y-4">
+          <Show
+            when={data.rows.length > 0}
+            fallback={
+              <EmptyState>
+                {page() > 1
+                  ? `第 ${page()} 頁沒有未付期別（未付的期別可能在前面的頁次）。`
+                  : "沒有未付期別。"}
+              </EmptyState>
+            }
+          >
             <div class="flex items-center gap-3">
               <Button
                 variant="outline"
@@ -246,15 +259,18 @@ export default function ReceivablesPage() {
               </TableBody>
             </Table>
 
-            <Pagination
-              page={page()}
-              pageSize={data.pagination?.pageSize ?? PAGE_SIZE}
-              total={data.pagination?.total ?? data.rows.length}
-              onPage={setPage}
-            />
-          </div>
-        ),
-      )}
+          </Show>
+
+          {/* 分頁控制**永遠**在（含這一頁被清空時）：關在「有資料」分支裡就會變成死路 ——
+              畫面只說「沒有未付期別」，卻沒有上一頁可按。 */}
+          <Pagination
+            page={page()}
+            pageSize={data.pagination?.pageSize ?? PAGE_SIZE}
+            total={data.pagination?.total ?? data.rows.length}
+            onPage={setPage}
+          />
+        </div>
+      ))}
 
       <PaymentDialog
         row={paying()}

@@ -30,7 +30,9 @@ export function receivableStatus(
 }
 
 /**
- * 待收款 CSV：固定六欄（公司、方案、期別、金額、到期日、狀態）。
+ * 待收款 CSV：固定六欄（公司、方案、期別、金額、到期日、狀態），**開頭帶 UTF-8 BOM**。
+ *
+ * BOM 不是裝飾：這份 CSV 要貼進 Excel，Windows 版 Excel 沒有 BOM 就會把 UTF-8 中文當 ANSI 顯示成亂碼。
  *
  * 期別與金額原樣輸出（後端的期別是數字、金額已是 `money.FormatCents` 的兩位小數字串），
  * 欄位含逗號／雙引號／換行／前後空白時以雙引號包住、內部雙引號加倍。
@@ -48,11 +50,13 @@ export function receivablesCsv(rows: readonly ReceivableRow[], now = Date.now())
     ]),
   ];
   return (
+    "\uFEFF" +
     table
       .map((cells) =>
         cells.map((v) => (/[",\r\n]|^\s|\s$/.test(v) ? `"${v.replaceAll('"', '""')}"` : v)).join(","),
       )
-      .join("\n") + "\n"
+      .join("\n") +
+    "\n"
   );
 }
 

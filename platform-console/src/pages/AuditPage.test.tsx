@@ -8,6 +8,7 @@ import AuditPage from "./AuditPage";
  * 契約：稽核是**後端分頁與後端篩選**（不是把整份軌跡抓到前端再過濾）——篩選與頁碼都必須
  * 進請求參數；每列要看得見「誰（operator）、做了什麼（action）、對誰（target）、為什麼（reason）、
  * 什麼時候」，因為平台寫入的稽核就是查帳的唯一依據。
+ * 篩選無結果**不得**長得像「沒有任何紀錄」：空狀態要帶出已套用的條件，且分頁控制要留著。
  */
 const ENTRIES = [
   {
@@ -91,6 +92,34 @@ describe("AuditPage", () => {
     await waitFor(() => expect(auditCalls(calls)).toHaveLength(4));
     expect(lastBody(calls)).toEqual({ page: 1, pageSize: 20 });
     expect((screen.getByLabelText(/目標類型/) as HTMLInputElement).value).toBe("");
+  });
+
+  it("目標類型有可選清單（自由文字仍可打，但打錯字不再是唯一選項）", async () => {
+    renderPage();
+    await screen.findByText("ops@example.com");
+
+    const options = [...document.querySelectorAll("#audit-target-types option")].map(
+      (o) => (o as HTMLOptionElement).value,
+    );
+    expect(options).toEqual(["settings", "company", "plan", "operator", "subscription"]);
+  });
+
+  it("篩選無結果：空狀態帶出篩選條件，且分頁控制仍在", async () => {
+    stubPlatformWire({
+      ListPlatformAudit: () => ({ entries: [], pagination: { page: 1, pageSize: 20, total: 0 } }),
+    });
+    renderPage();
+    await screen.findByText(/尚無平台操作紀錄/);
+
+    fireEvent.input(screen.getByLabelText(/目標類型/), { target: { value: "plna" } });
+    fireEvent.input(screen.getByLabelText(/目標代碼/), { target: { value: "7" } });
+    fireEvent.click(screen.getByRole("button", { name: "查詢" }));
+
+    // 打錯字（plna）不該看起來像「平台從來沒被寫入過」：要說出套了什麼條件。
+    await screen.findByText(/沒有符合條件的紀錄（目標類型「plna」、目標代碼「7」）/);
+    expect(screen.queryByText(/尚無平台操作紀錄/)).toBeNull();
+    expect(screen.getByText(/第 1 \/ 1 頁（共 0 筆）/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "下一頁" })).toBeTruthy();
   });
 
   it("沒有紀錄時顯示空狀態（不出現表格）", async () => {

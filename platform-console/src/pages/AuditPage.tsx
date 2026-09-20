@@ -1,5 +1,5 @@
 import { createQuery } from "@tanstack/solid-query";
-import { createSignal, For } from "solid-js";
+import { createSignal, For, Show } from "solid-js";
 import { Button } from "@ui/button";
 import { Field, FieldDescription, FieldLabel } from "@ui/field";
 import { Input } from "@ui/input";
@@ -18,6 +18,13 @@ import { platform } from "../lib/api";
  * 篩選條件是**按下去才生效**（表單送出），不是每個字都打一次請求。
  */
 const PAGE_SIZE = 20;
+
+/**
+ * `target_type` 在後端是**自由文字且精確比對**（`ListPlatformAudit` 只 TrimSpace），
+ * 這些是實際上會出現的值（各寫入路徑的 `writeTx` 呼叫點 ＋ billing 的 subscription）。
+ * 用 `datalist` 而不是 `select`：清單只是防打錯字，不是白名單 —— 後端加了新種類仍可篩。
+ */
+const TARGET_TYPES = ["settings", "company", "plan", "operator", "subscription"];
 
 export default function AuditPage() {
   // 送出中的草稿與「已套用」的查詢條件分開：打字的每個字不該各打一次後端。
@@ -42,6 +49,14 @@ export default function AuditPage() {
     setQuery({ page: 1, targetType: targetType().trim(), targetId: targetId().trim() });
   };
 
+  /** 已套用的篩選條件（給空狀態用：打錯字不能長得像「平台從來沒被寫入過」）。 */
+  const appliedFilter = () => {
+    const parts: string[] = [];
+    if (query().targetType) parts.push(`目標類型「${query().targetType}」`);
+    if (query().targetId) parts.push(`目標代碼「${query().targetId}」`);
+    return parts.join("、");
+  };
+
   return (
     <PageShell
       title="平台稽核"
@@ -59,11 +74,15 @@ export default function AuditPage() {
           <FieldLabel for="audit-target-type">目標類型</FieldLabel>
           <Input
             id="audit-target-type"
+            list="audit-target-types"
             value={targetType()}
             placeholder="例：company、subscription、plan、operator"
             onInput={(e) => setTargetType(e.currentTarget.value)}
           />
-          <FieldDescription>比對目標種類；留空＝不限。</FieldDescription>
+          <datalist id="audit-target-types">
+            <For each={TARGET_TYPES}>{(type) => <option value={type} />}</For>
+          </datalist>
+          <FieldDescription>精確比對目標種類；留空＝不限。</FieldDescription>
         </Field>
 
         <Field>
@@ -95,11 +114,18 @@ export default function AuditPage() {
         </div>
       </form>
 
-      {queryBoundary(audit, (data) =>
-        data.entries.length === 0 ? (
-          <EmptyState>尚無平台操作紀錄。</EmptyState>
-        ) : (
-          <div class="space-y-4">
+      {queryBoundary(audit, (data) => (
+        <div class="space-y-4">
+          <Show
+            when={data.entries.length > 0}
+            fallback={
+              <EmptyState>
+                {appliedFilter()
+                  ? `沒有符合條件的紀錄（${appliedFilter()}）。`
+                  : "尚無平台操作紀錄。"}
+              </EmptyState>
+            }
+          >
             <Table aria-label="平台稽核紀錄">
               <TableHeader>
                 <TableRow>
@@ -128,15 +154,18 @@ export default function AuditPage() {
               </TableBody>
             </Table>
 
-            <Pagination
-              page={query().page}
-              pageSize={data.pagination?.pageSize ?? PAGE_SIZE}
-              total={data.pagination?.total ?? data.entries.length}
-              onPage={(page) => setQuery({ ...query(), page })}
-            />
-          </div>
-        ),
-      )}
+          </Show>
+
+          {/* 分頁控制**永遠**在（含篩選無結果時）：關在「有資料」分支裡，畫面就只剩一句
+              「沒有紀錄」，看的人分不出是篩選問題還是真的沒有。 */}
+          <Pagination
+            page={query().page}
+            pageSize={data.pagination?.pageSize ?? PAGE_SIZE}
+            total={data.pagination?.total ?? data.entries.length}
+            onPage={(page) => setQuery({ ...query(), page })}
+          />
+        </div>
+      ))}
     </PageShell>
   );
 }

@@ -24,7 +24,10 @@ export default function EntitlementsPage() {
   const planCodes = () => plans.data?.plans.map((plan) => plan.code) ?? [];
 
   const matrix = createQuery(() => ({
-    queryKey: ["plan-entitlements", planCodes()],
+    // key 必須落在 **`["entitlements", …]` 家族**內：方案權益的寫入在「方案」頁，那裡失效的是
+    // `invalidateQueries({ queryKey: ["entitlements"] })`（前綴比對）。家族外的 key 碰不到矩陣，
+    // 改完方案權益後這裡會留著舊值（`PlansPage`／`TenantDetailPage` 也是同一家族的另一個 key）。
+    queryKey: ["entitlements", "matrix", planCodes()],
     queryFn: () =>
       Promise.all(planCodes().map((planCode) => platform.getPlanEntitlements({ planCode }))),
     enabled: plans.data !== undefined,

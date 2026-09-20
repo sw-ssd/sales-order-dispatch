@@ -19,9 +19,13 @@ const row = {
 };
 
 describe("receivablesCsv", () => {
+  it("以 UTF-8 BOM 開頭（Windows Excel 不說謊的前提）", () => {
+    expect(receivablesCsv([row], NOW).startsWith("\uFEFF")).toBe(true);
+  });
+
   it("表頭固定六欄，金額保留後端的兩位小數字串", () => {
     const lines = receivablesCsv([row], NOW).split("\n");
-    expect(lines[0]).toBe("公司,方案,期別,金額,到期日,狀態");
+    expect(lines[0]).toBe("\uFEFF公司,方案,期別,金額,到期日,狀態");
     expect(lines[1]).toBe("甲公司,std,2,1500.00,2026-10-31T00:00:00Z,逾期");
   });
 
@@ -43,7 +47,7 @@ describe("receivablesCsv", () => {
   });
 
   it("沒有資料時只有表頭（不是空字串）", () => {
-    expect(receivablesCsv([], NOW)).toBe("公司,方案,期別,金額,到期日,狀態\n");
+    expect(receivablesCsv([], NOW)).toBe("\uFEFF公司,方案,期別,金額,到期日,狀態\n");
   });
 });
 
