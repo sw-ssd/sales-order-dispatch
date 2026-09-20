@@ -88,7 +88,7 @@ func (s *UserService) canGrantRole(ctx context.Context, id authz.Identity, roleC
 
 // roleActive 判斷角色 code 是否存在於 roles 表且 active 未刪(自訂角色判定)。
 func (s *UserService) roleActive(ctx context.Context, code string) (bool, error) {
-	ok, err := s.db.Role.Query().
+	ok, err := dbtenant.Client(ctx, s.db).Role.Query().
 		Where(role.CodeEQ(code), role.IsActiveEQ(true), role.DeletedAtIsNil()).
 		Exist(ctx)
 	if err != nil {
@@ -126,7 +126,7 @@ func (s *UserService) ListUsers(ctx context.Context, req *connect.Request[v1.Lis
 	if !isUserManager(id) {
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("無使用者查詢權限"))
 	}
-	q := s.db.User.Query()
+	q := dbtenant.Client(ctx, s.db).User.Query()
 
 	// 範圍強制注入(fail-closed:忽略請求自帶的超範圍參數)。
 	companyID := req.Msg.GetCompanyId()
@@ -214,7 +214,7 @@ func (s *UserService) GetUser(ctx context.Context, req *connect.Request[v1.GetUs
 	if err != nil {
 		return nil, err
 	}
-	u, err := s.db.User.Query().WithCompany().WithDepartment().Where(user.ID(userID)).Only(ctx)
+	u, err := dbtenant.Client(ctx, s.db).User.Query().WithCompany().WithDepartment().Where(user.ID(userID)).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -248,7 +248,7 @@ func (s *UserService) CreateUser(ctx context.Context, req *connect.Request[v1.Cr
 	}
 	// 軟刪除的公司(P2-A)不得再收新帳號:它是唯一以請求指定 company_id 的掛載路徑,
 	// 不擋就會把活帳號掛進已刪除的租戶(該公司之後仍能通過登入/身分解析)。
-	exists, err := s.db.Company.Query().Where(company.ID(cid), company.DeletedAtIsNil()).Exist(ctx)
+	exists, err := dbtenant.Client(ctx, s.db).Company.Query().Where(company.ID(cid), company.DeletedAtIsNil()).Exist(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -278,13 +278,15 @@ func (s *UserService) CreateUser(ctx context.Context, req *connect.Request[v1.Cr
 	}
 
 	// 建帳號為關鍵操作:業務異動 + 稽核(D18)同一交易。
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18)。核心表 ENABLE+FORCE 後,
+	// 自開交易(池化連線、未帶 scope)會被 policy 過濾成 0 列/WITH CHECK 擋下。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 
-	build := tx.User.Create().
+	build := db.User.Create().
 		SetCompanyID(cid).
 		SetEmail(req.Msg.GetEmail()).
 		SetName(req.Msg.GetName()).
@@ -323,11 +325,8 @@ func (s *UserService) CreateUser(ctx context.Context, req *connect.Request[v1.Cr
 	if err := recordAudit(ctx, tx, "user", "create", created.ID, cid, auditDept, actorID, map[string]any{"name": created.Name, "email": created.Email, "role": created.Role, "status": string(created.Status)}); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("稽核寫入失敗: %w", err))
 	}
-	if err := tx.Commit(); err != nil {
-		return nil, toConnectError(err)
-	}
 
-	u, err := s.db.User.Query().WithCompany().WithDepartment().Where(user.ID(created.ID)).Only(ctx)
+	u, err := dbtenant.Client(ctx, s.db).User.Query().WithCompany().WithDepartment().Where(user.ID(created.ID)).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -356,15 +355,17 @@ func (s *UserService) UpdateUser(ctx context.Context, req *connect.Request[v1.Up
 	}
 
 	// 更新為關鍵操作:業務異動 + 稽核(D18)同一交易。
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18)。核心表 ENABLE+FORCE 後,
+	// 自開交易(池化連線、未帶 scope)會被 policy 過濾成 0 列/WITH CHECK 擋下。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 
 	before := map[string]any{}
 	after := map[string]any{}
-	update := tx.User.UpdateOneID(userID)
+	update := db.User.UpdateOneID(userID)
 	if req.Msg.Name != nil {
 		update = update.SetName(req.Msg.GetName())
 		before["name"] = target.Name
@@ -414,10 +415,7 @@ func (s *UserService) UpdateUser(ctx context.Context, req *connect.Request[v1.Up
 	if err := s.recordUserAudit(ctx, tx, id, target, "update", before, after); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("稽核寫入失敗: %w", err))
 	}
-	if err := tx.Commit(); err != nil {
-		return nil, toConnectError(err)
-	}
-	u, err := s.db.User.Query().WithCompany().WithDepartment().Where(user.ID(userID)).Only(ctx)
+	u, err := dbtenant.Client(ctx, s.db).User.Query().WithCompany().WithDepartment().Where(user.ID(userID)).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -461,13 +459,15 @@ func (s *UserService) AssignRole(ctx context.Context, req *connect.Request[v1.As
 	}
 
 	// 角色指派(含 guest 審核)為關鍵操作:角色變更 + token_version+1(D5) + 稽核(D18)同一交易。
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18)。核心表 ENABLE+FORCE 後,
+	// 自開交易(池化連線、未帶 scope)會被 policy 過濾成 0 列/WITH CHECK 擋下。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 
-	update := tx.User.UpdateOneID(userID).
+	update := db.User.UpdateOneID(userID).
 		SetRole(roleCode).
 		AddTokenVersion(1) // 角色變更 → 在途舊 JWT/session 立即失效(D5)
 	// guest 審核:僅 pending 轉 active;已停用帳號不被默默復活(I5,
@@ -500,9 +500,6 @@ func (s *UserService) AssignRole(ctx context.Context, req *connect.Request[v1.As
 	); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("稽核寫入失敗: %w", err))
 	}
-	if err := tx.Commit(); err != nil {
-		return nil, toConnectError(err)
-	}
 
 	// 同步 OpenFGA assigned tuple(引擎未注入時略過,OpenFGA 停用/開發降級時由 rolePolicy 承擔)。
 	// 對齊 role_service.syncRolePermissions:OpenFGA 與業務非同交易,在 commit 後執行。
@@ -513,7 +510,7 @@ func (s *UserService) AssignRole(ctx context.Context, req *connect.Request[v1.As
 		log.Printf("user_service: AssignRole(user=%d) OpenFGA assigned tuple 同步失敗(延遲補齊): %v", userID, err)
 	}
 
-	u, err := s.db.User.Query().WithCompany().WithDepartment().Where(user.ID(userID)).Only(ctx)
+	u, err := dbtenant.Client(ctx, s.db).User.Query().WithCompany().WithDepartment().Where(user.ID(userID)).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -544,13 +541,15 @@ func (s *UserService) Deactivate(ctx context.Context, req *connect.Request[v1.De
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("帳號已為 inactive"))
 	}
 	// 停用為關鍵操作:status 異動 + token_version+1(D5) + 稽核(D18)同一交易。
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18)。核心表 ENABLE+FORCE 後,
+	// 自開交易(池化連線、未帶 scope)會被 policy 過濾成 0 列/WITH CHECK 擋下。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 
-	if _, err := tx.User.UpdateOneID(userID).
+	if _, err := db.User.UpdateOneID(userID).
 		SetStatus(user.StatusInactive).
 		AddTokenVersion(1).
 		Save(ctx); err != nil {
@@ -561,9 +560,6 @@ func (s *UserService) Deactivate(ctx context.Context, req *connect.Request[v1.De
 		map[string]any{"status": string(user.StatusInactive)},
 	); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("稽核寫入失敗: %w", err))
-	}
-	if err := tx.Commit(); err != nil {
-		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&v1.DeactivateResponse{}), nil
 }
@@ -594,20 +590,19 @@ func (s *UserService) ForceLogout(ctx context.Context, req *connect.Request[v1.F
 		return nil, err
 	}
 	// 強制登出為關鍵操作:token_version+1 + 稽核(D18)同一交易。
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18)。核心表 ENABLE+FORCE 後,
+	// 自開交易(池化連線、未帶 scope)會被 policy 過濾成 0 列/WITH CHECK 擋下。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 
-	if _, err := tx.User.UpdateOneID(userID).AddTokenVersion(1).Save(ctx); err != nil {
+	if _, err := db.User.UpdateOneID(userID).AddTokenVersion(1).Save(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := s.recordUserAudit(ctx, tx, id, target, "force_logout", nil, nil); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("稽核寫入失敗: %w", err))
-	}
-	if err := tx.Commit(); err != nil {
-		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&v1.ForceLogoutResponse{}), nil
 }
@@ -644,14 +639,14 @@ func (s *UserService) syncUserRoleTuple(ctx context.Context, target *ent.User, n
 
 	// 刪除舊角色 assigned(若存在)。
 	if target.Role != "" && target.Role != newRoleCode {
-		if oldRole, err := s.db.Role.Query().Where(role.CodeEQ(target.Role)).Only(ctx); err == nil {
+		if oldRole, err := dbtenant.Client(ctx, s.db).Role.Query().Where(role.CodeEQ(target.Role)).Only(ctx); err == nil {
 			if derr := e.DeleteTuple(ctx, userObj, "assigned", fmt.Sprintf("role:%d", oldRole.ID)); derr != nil {
 				return derr
 			}
 		}
 	}
 	// 寫入新角色 assigned(若角色存在)。
-	if nr, err := s.db.Role.Query().Where(role.CodeEQ(newRoleCode)).Only(ctx); err == nil {
+	if nr, err := dbtenant.Client(ctx, s.db).Role.Query().Where(role.CodeEQ(newRoleCode)).Only(ctx); err == nil {
 		if werr := e.WriteTuple(ctx, userObj, "assigned", fmt.Sprintf("role:%d", nr.ID)); werr != nil {
 			return werr
 		}
@@ -661,7 +656,7 @@ func (s *UserService) syncUserRoleTuple(ctx context.Context, target *ent.User, n
 
 // loadUser 載入單一使用者(含 company/department edge,供範圍判定)。
 func (s *UserService) loadUser(ctx context.Context, userID int) (*ent.User, error) {
-	u, err := s.db.User.Query().WithCompany().WithDepartment().Where(user.ID(userID)).Only(ctx)
+	u, err := dbtenant.Client(ctx, s.db).User.Query().WithCompany().WithDepartment().Where(user.ID(userID)).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
