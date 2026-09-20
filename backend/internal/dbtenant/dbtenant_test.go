@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"errors"
 	"log"
 	"slices"
 	"strings"
@@ -117,28 +118,68 @@ func TestWrapAppliesNothingWithoutScope(t *testing.T) {
 	}
 }
 
-// 交易開不起來時:不得進入 handler,且根因必須落 server log(對外只回固定訊息,
-// 線上追查僅剩 log 一途;chi Logger 不記錄 handler error)。
-func TestInterceptorLogsRootCauseWhenTxFails(t *testing.T) {
-	db := sqlOpen(t)
-	client := ent.NewClient(ent.Driver(entsql.OpenDB(dialect.SQLite, db)))
-	if err := db.Close(); err != nil {
-		t.Fatalf("關閉 sqlite: %v", err)
-	}
+// failDriver 讓 client.Tx 或 Commit 以含哨兵字串的錯誤失敗,用來驗證錯誤處理路徑。
+type failDriver struct {
+	txErr     error // 非 nil 表示開交易即失敗
+	commitErr error // 非 nil 表示開得起來但提交失敗
+	tx        failTx
+}
 
-	var logged bytes.Buffer
-	prev := log.Writer()
-	log.SetOutput(&logged)
-	t.Cleanup(func() { log.SetOutput(prev) })
+type failTx struct{ commitErr error }
 
-	_, err := Interceptor(client).WrapUnary(func(context.Context, connect.AnyRequest) (connect.AnyResponse, error) {
-		t.Fatal("交易開不起來時不得呼叫 handler")
-		return nil, nil
-	})(context.Background(), nil)
-	if err == nil {
-		t.Fatal("交易開不起來應回錯誤")
+func (t *failTx) Exec(context.Context, string, any, any) error  { return nil }
+func (t *failTx) Query(context.Context, string, any, any) error { return nil }
+func (t *failTx) Commit() error                                 { return t.commitErr }
+func (t *failTx) Rollback() error                               { return nil }
+
+func (d *failDriver) Exec(context.Context, string, any, any) error  { return nil }
+func (d *failDriver) Query(context.Context, string, any, any) error { return nil }
+func (d *failDriver) Close() error                                  { return nil }
+func (d *failDriver) Dialect() string                               { return dialect.SQLite }
+func (d *failDriver) Tx(context.Context) (dialect.Tx, error) {
+	if d.txErr != nil {
+		return nil, d.txErr
 	}
-	if !strings.Contains(logged.String(), "開啟租戶交易失敗") {
-		t.Fatalf("根因應落 server log,got %q", logged.String())
+	d.tx.commitErr = d.commitErr
+	return &d.tx, nil
+}
+
+// 交易開不起來／提交失敗時:對客戶端只准看到固定訊息(SQLSTATE、policy 名與 SET LOCAL
+// 語句文字不得外洩 —— connect-go 逐字轉送 Message()),而根因必須落 server log
+// (chi Logger 不記錄 handler error,線上追查只剩 log 一途)。
+func TestInterceptorHidesRootCauseButLogsIt(t *testing.T) {
+	const sentinel = "SENTINEL-DB-ERROR"
+	cases := map[string]struct {
+		driver *failDriver
+		want   string
+	}{
+		"開啟交易失敗": {&failDriver{txErr: errors.New(sentinel)}, "開啟租戶交易失敗"},
+		"提交失敗":   {&failDriver{commitErr: errors.New(sentinel)}, "提交交易失敗"},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			var logged bytes.Buffer
+			prev := log.Writer()
+			log.SetOutput(&logged)
+			t.Cleanup(func() { log.SetOutput(prev) })
+
+			client := ent.NewClient(ent.Driver(tc.driver))
+			_, err := Interceptor(client).WrapUnary(func(context.Context, connect.AnyRequest) (connect.AnyResponse, error) {
+				return nil, nil
+			})(context.Background(), nil)
+			if err == nil {
+				t.Fatal("應回傳錯誤")
+			}
+			var connectErr *connect.Error
+			if !errors.As(err, &connectErr) {
+				t.Fatalf("應為 connect 錯誤,got %T: %v", err, err)
+			}
+			if got := connectErr.Message(); got != tc.want {
+				t.Fatalf("對客戶端的訊息必須恰為 %q(不得含根因／SQLSTATE),got %q", tc.want, got)
+			}
+			if !strings.Contains(logged.String(), sentinel) {
+				t.Fatalf("根因必須落 server log,got %q", logged.String())
+			}
+		})
 	}
 }

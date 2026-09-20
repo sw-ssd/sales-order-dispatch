@@ -14,6 +14,7 @@ package dbtenant
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 
@@ -96,10 +97,11 @@ func Interceptor(client *ent.Client) connect.Interceptor {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 			tx, err := client.Tx(ctx)
 			if err != nil {
-				// 對外訊息固定(不洩漏 SQLSTATE／約束名),但根因必須落 server log:
-				// chi Logger 不記錄 handler error,吞掉就完全無從追查(同 company_service 慣例)。
+				// 對外只回固定訊息(不洩漏 SQLSTATE／policy 名／SET LOCAL 語句):connect-go 會
+				// 逐字轉送 Message() 給客戶端。根因必須落 server log —— chi Logger 不記錄
+				// handler error,不落 log 就完全無從追查(同 company_service 既有慣例)。
 				log.Printf("dbtenant: 開啟租戶交易失敗: %v", err)
-				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("開啟租戶交易失敗: %w", err))
+				return nil, connect.NewError(connect.CodeInternal, errors.New("開啟租戶交易失敗"))
 			}
 			resp, err := next(WithTenantTx(ctx, tx), req)
 			if err != nil {
@@ -110,7 +112,7 @@ func Interceptor(client *ent.Client) connect.Interceptor {
 			}
 			if err := tx.Commit(); err != nil {
 				log.Printf("dbtenant: 提交租戶交易失敗: %v", err)
-				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("提交交易失敗: %w", err))
+				return nil, connect.NewError(connect.CodeInternal, errors.New("提交交易失敗"))
 			}
 			return resp, nil
 		}
