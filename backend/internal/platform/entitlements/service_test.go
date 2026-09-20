@@ -1,8 +1,11 @@
 package entitlements_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log"
+	"strings"
 	"testing"
 	"time"
 
@@ -48,16 +51,44 @@ func (c counting) Count(_ context.Context, _ int, feature string) (int, error) {
 	return c[feature], nil
 }
 
-func TestNoSubscriptionDeniesEverything(t *testing.T) {
+// F-7：**沒有訂閱列＝尚未開通計費**，不是「已判定不可用」→ 不施加任何限制（等同 Unlimited），
+// 只記一行 log。
+//
+// 為什麼（controller 裁定）：Plan C 的訂閱指派／onboarding 落地前**沒有任何程式會建立
+// platform.subscriptions 列** → 每個真實公司都是 none；若照 fail-closed 擋，員工自助註冊與首次
+// OIDC 登入在現況部署會被硬擋（「目前方案未包含此功能」），而上線即癱瘓。fail-closed 針對的是
+// **已知不可用**與**未列舉**的狀態（suspended／cancelled／任意未知字串 → PLAT-3001，見
+// TestUnlistedSubscriptionStatusIsContractInactive），不是「還沒有計費紀錄」。
+//
+// 契約警語（operator 必讀）：**刪除訂閱列＝不施加限制**；要停用租戶必須把 status 設成
+// cancelled／suspended，**不得刪列** —— 否則一次 DELETE 等於送一個不限額方案。
+func TestNoSubscriptionRowAppliesNoRestriction(t *testing.T) {
 	f := store.NewFake()
 	f.PutFeature(store.Feature{Code: seats, Type: "integer"})
 	f.PutPlan("std", []store.Entitlement{{FeatureCode: seats, Enabled: true, Limit: ptr(int64(10))}})
-	got, err := newSvc(f, nil).Allows(context.Background(), 1, seats)
+	// 刻意不 PutSubscription：公司沒有訂閱列。
+
+	var logs bytes.Buffer
+	prev := log.Writer()
+	log.SetOutput(&logs)
+	defer log.SetOutput(prev)
+
+	svc := newSvc(f, counting{seats: 1000}) // 用量遠超方案上限：若還施加限制就一定會被擋
+	ctx := context.Background()
+
+	got, err := svc.Allows(ctx, 1, seats)
 	if err != nil {
-		t.Fatalf("Allows: %v", err)
+		t.Fatalf("Allows 不得回錯: %v", err)
 	}
-	if got {
-		t.Fatal("無訂閱時必須 fail-closed（不得因為方案有定義就放行）")
+	if !got {
+		t.Fatal("無訂閱列（尚未開通計費）不得施加功能限制：Allows 應為 true")
+	}
+	if err := svc.CheckLimit(ctx, 1, seats, 1_000_000); err != nil {
+		t.Fatalf("無訂閱列不得施加配額限制（不得回 PLAT-5001／5002／3001），got %v", err)
+	}
+	// 必須留下痕跡：這一行就是「無聲地不限制」的唯一可見訊號。
+	if !strings.Contains(logs.String(), "無訂閱列") {
+		t.Fatalf("判定時必須留一行明確 log，got %q", logs.String())
 	}
 }
 
@@ -159,11 +190,12 @@ func TestJudgementTable(t *testing.T) {
 			wantDetails: map[string]string{"feature": "feature.unknown"},
 		},
 		{
-			name:     "無訂閱：方案有定義也不放行",
+			// F-7：沒有訂閱列＝尚未開通計費（Plan C 的訂閱指派落地前是常態）→ 不施加限制。
+			name:     "無訂閱列（尚未開通計費）：不施加限制 → 放行",
 			features: []store.Feature{seatsDef}, ents: stdPlan,
-			feature:    seats,
-			wantAllows: false, wantCode: "PLAT-5002",
-			wantDetails: map[string]string{"feature": seats},
+			counts:  map[string]int{seats: 100},
+			feature: seats, delta: 1,
+			wantAllows: true,
 		},
 		{
 			name:     "查無方案（訂閱指向不存在的方案）",
@@ -247,11 +279,14 @@ func TestJudgementTable(t *testing.T) {
 			wantAllows: false, wantCode: "PLAT-3001",
 		},
 		{
-			name:     "cancelled 不會從 store 出來（Fake／SQL 都只回未取消者）→ 視同無訂閱",
+			// cancelled 不會從 store 出來（Fake／SQL 都只回未取消者）→ 判定層看到的是 **none**
+			// → 依 F-7 不施加限制（cancelled 本身仍必須 PLAT-3001，見
+			// TestCancelledSubscriptionIsContractInactive 的 stubStore）。
+			name:     "store 不回 cancelled → 視同無訂閱列（尚未開通計費）→ 不施加限制",
 			features: []store.Feature{seatsDef}, ents: stdPlan, sub: subWithStatus("cancelled"),
+			counts:  map[string]int{seats: 100},
 			feature: seats, delta: 1,
-			wantAllows: false, wantCode: "PLAT-5002",
-			wantDetails: map[string]string{"feature": seats},
+			wantAllows: true,
 		},
 		{
 			name:     "suspended 且功能未含方案 → 仍是 PLAT-3001（合約問題優先於功能問題）",

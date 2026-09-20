@@ -66,6 +66,14 @@ func TestIntegrationAuthSeatGuardUnderAppRole(t *testing.T) {
 	suspended := authInsertCompany(t, admin, "停用公司", "suspended.example.com")
 	subscribeSeatPlan(t, admin, suspended, "std", "suspended")
 
+	// **沒有訂閱列**（尚未開通計費）→ 不施加限制（F-7）：Plan C 的訂閱指派落地前，每個真實公司
+	// 都是這個狀態，擋住它就等於「員工自助註冊與首次 OIDC 登入全被硬擋，只有管理員進得去補訂閱」。
+	// 已有 10 席（遠超任何方案上限）就是要證明「不施加限制」不是靠「用量很低」僥倖通過。
+	noSub := authInsertCompany(t, admin, "未開通計費", "nosub.example.com")
+	for i := range 10 {
+		authInsertStaffAtCompany(t, admin, noSub, fmt.Sprintf("nosub%d@example.com", i))
+	}
+
 	// 池 >1：守衛（無 scope）會另開一條系統範圍交易（AGENTS §9-6；池設 1 會與請求交易互鎖）。
 	client := authAppRoleClientN(t, dsn, 4)
 	env := newSeatGuardEnv(t, admin, client)
@@ -122,6 +130,32 @@ func TestIntegrationAuthSeatGuardUnderAppRole(t *testing.T) {
 		}
 		if n := authCount(t, admin, `SELECT count(*) FROM users WHERE email = $1`, "new@suspended.example.com"); n != 0 {
 			t.Fatalf("被擋後不得建立帳號，got %d 列", n)
+		}
+	})
+
+	// F-7：**沒有訂閱列＝尚未開通計費** → 不施加限制（建帳號成功），但必須留一行明確 log。
+	// 突變：把 none 改回 PLAT-5002 → 本子測試必須紅（實測見 finalfix-report.md）。
+	t.Run("無訂閱列（尚未開通計費）→ 不施加限制：建帳號成功且留一行 log", func(t *testing.T) {
+		before := authCount(t, admin, `SELECT count(*) FROM users WHERE company_users = $1`, noSub)
+		if before != 10 {
+			t.Fatalf("前置：無訂閱公司應有 10 席，got %d", before)
+		}
+		// registration token 也要在同一個 log 捕捉窗內產生，才不會漏掉判定時的 log。
+		var logs string
+		var err error
+		logs = captureLog(t, func() {
+			var token string
+			token = env.newRegistrationToken(t, "new@nosub.example.com")
+			_, err = env.registerComplete(t, token, noSub)
+		})
+		if err != nil {
+			t.Fatalf("無訂閱列（尚未開通計費）不得施加限制，RegisterComplete 應成功，got %v", err)
+		}
+		if n := authCount(t, admin, `SELECT count(*) FROM users WHERE company_users = $1`, noSub); n != 11 {
+			t.Fatalf("應建立帳號（10 → 11），got %d", n)
+		}
+		if !strings.Contains(logs, "無訂閱列") {
+			t.Fatalf("必須留一行明確 log（「無聲地不限制」沒人看得見），got %q", logs)
 		}
 	})
 }

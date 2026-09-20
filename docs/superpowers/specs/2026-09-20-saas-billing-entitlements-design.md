@@ -202,6 +202,9 @@ Valkey key `ent:{companyID}`；方案變更／override／訂閱狀態異動即 *
 **v1 `features` 清單**：`limit.seats`、`limit.customers`、`limit.products`、`limit.departments`（integer）；`feature.printing`、`feature.dispatch`、`feature.returns`（boolean）。
 **更正（Plan B Task 11，2026-09-20）**：`limit.storage_gb` **已自 v1 清單移除**（原「定案，不增不減」的 8 項現為 7 項）——計數器沒有檔案空間的來源可量。**移除理由的更正（最終全分支審查 F-3）**：不是「種了會讓租戶端權益投影對所有租戶失敗」——判定層的 `Snapshot` 對**沒有計數器**的 integer feature 是「略過該筆 ＋ 記一行 log」，**不會擋整筆回應**（T10 的整合測試正是種了它並斷言 200）；少了計數器的下場是那個 feature 的用量**無聲消失**。故日後要提供 storage 用量，必須**同時**補上計數器。`feature.printing`／`dispatch`／`returns` 隨 05/08/09 落地才有守衛掛點；`limit.storage_gb` 隨 04 §3.6 檔案資產（P2-1）落地並補上計數器後再加回 seed。
 
+**訂閱列的生命週期語意（F-7 裁定，2026-09-20）**：`platform.subscriptions` **沒有該公司的列＝尚未開通計費**，不是「已判定不可用」。判定層對它**不施加任何配額／功能限制**（等同 `Unlimited`），只記一行 log（`entitlements: 公司 N 無訂閱列（尚未開通計費）→ 不施加配額限制`）。理由：在 Plan C 的訂閱指派／onboarding 落地前，**沒有任何程式會建立訂閱列**（每個真實公司都是此狀態），若在此 fail-closed，員工自助註冊與首次 OIDC 登入會被硬擋，而只有進得去的管理員才能補訂閱 —— 上線即癱瘓。這與 fail-closed **不衝突**：fail-closed 針對的是**已知不可用**與**未列舉**的狀態（`suspended`／`cancelled`／任意未知字串 → `PLAT-3001`，見 F-1）。
+**契約警語（operator 必讀）：刪除訂閱列＝不施加限制，不得用來停用租戶** —— 要停用租戶必須把 `status` 設成 `cancelled`（或 `suspended`），否則一次 `DELETE` 等於送一個不限額方案。`PLAT-5002` 的用途不變：**已訂閱、但方案不含該 feature**。
+
 ### 4.6 UI 投影與守衛的分工
 
 新增 `GetTenantEntitlements`（回方案、配額用量 `8/10`、試用到期）供前端 disable 與提示。**載入中或失敗 → 按鈕維持可用**，由後端擋；單一事實來源永遠在後端（與既有「前端守衛不構成授權」一致）。

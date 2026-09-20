@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -29,8 +30,20 @@ const (
 
 // 訂閱狀態（platform.subscriptions.status）。判定採 **allow-list**（見 usable）：
 // **新增狀態必須明確決定它是否可用 —— 未列舉＝不可用**（fail-closed）。
+//
+// **契約警語（operator 必讀）：刪除訂閱列＝不施加限制** —— statusNone 的語意是「尚未開通計費」，
+// 判定層對它不施加任何配額／功能限制（見 Allows／CheckLimit）。要停用租戶必須把 status 設成
+// cancelled／suspended，**不得刪列**；否則一次 DELETE 就等於送一個不限額方案。
 const (
-	statusNone      = "none"      // 沒有未取消的訂閱（Store 回 nil）：不是合約問題，走功能判定（PLAT-5002）
+	// statusNone：沒有未取消的訂閱（Store 回 nil）。這是**尚未開通計費**，不是「已判定不可用」：
+	// Plan C 的訂閱指派／onboarding 落地前沒有任何程式會建立 platform.subscriptions 列（今天每個
+	// 真實公司都是這個狀態），所以在這裡 fail-closed 等於「員工自助註冊與首次 OIDC 登入全被硬擋，
+	// 只有進得去的管理員才能補訂閱」＝上線即癱瘓。
+	//
+	// 因此 Allows／CheckLimit 對它**不施加限制**（等同 Unlimited），只留一行 log 讓它可見
+	// （見 state）。真正的 fail-closed 針對**已知不可用**與**未列舉**的狀態：suspended／cancelled／
+	// 任意未知字串一律 PLAT-3001（見 usable）。
+	statusNone      = "none"
 	statusTrialing  = "trialing"  // 可用：試用中
 	statusActive    = "active"    // 可用
 	statusPastDue   = "past_due"  // 可用：仍在寬限內（催收由 dunning job 改狀態，判定層不自行推算 grace_until）
@@ -114,6 +127,10 @@ func (s *Service) state(ctx context.Context, companyID int) (*tenantState, error
 		Entitlements: map[string]store.Entitlement{}}
 	if sub == nil {
 		out.Status = statusNone
+		// 無訂閱列＝尚未開通計費 → 判定層不施加限制（見 statusNone）。留一行 log：這個狀態在
+		// Plan C 的訂閱指派落地前是常態，而「無聲地不限制」正是最該被看見的事（快取命中時不重記）。
+		log.Printf("entitlements: 公司 %d 無訂閱列（尚未開通計費）→ 不施加配額限制"+
+			"（要停用租戶請設 status=suspended/cancelled，勿刪列）", companyID)
 	} else {
 		out.PlanCode, out.PlanName, out.Status, out.TrialEnds = sub.PlanCode, sub.PlanName, sub.Status, sub.TrialEnds
 	}
@@ -195,6 +212,8 @@ func resolveFeature(st *tenantState, feature string, now time.Time) (resolved, b
 // details（PLAT-3001 訂閱不可用／PLAT-5002 未含功能／PLAT-5001 額度不足），前端據以導向收款或
 // 升級方案。Allows 只回布林、對政策拒絕**不回錯誤**（fail-closed 回 false），供展示與非 RPC
 // 路徑使用：把「沒買」「訂閱停了」轉成錯誤會讓每個呼叫點各自發明錯誤碼。
+//
+// 訂閱狀態的判定見 statusNone 的 doc：**沒有訂閱列＝尚未開通計費 → 不施加限制**（回 true）。
 func (s *Service) Allows(ctx context.Context, companyID int, feature string) (bool, error) {
 	if s.unlimited {
 		return true, nil
@@ -202,6 +221,9 @@ func (s *Service) Allows(ctx context.Context, companyID int, feature string) (bo
 	st, err := s.state(ctx, companyID)
 	if err != nil {
 		return false, errcode.SysInternal.Wrap(err)
+	}
+	if st.Status == statusNone {
+		return true, nil // 尚未開通計費（log 已由 state 記）
 	}
 	r, _ := resolveFeature(st, feature, s.now())
 	return r.enabled, nil
@@ -217,10 +239,15 @@ func (s *Service) CheckLimit(ctx context.Context, companyID int, feature string,
 	if err != nil {
 		return errcode.SysInternal.Wrap(err)
 	}
-	// 沒有訂閱（none）走功能判定 —— PLAT-5002「方案未含此功能」的既定語意包含「根本沒訂閱」。
+	// 沒有訂閱列＝尚未開通計費 → 不施加限制（見 statusNone 的 doc；log 已由 state 記）。
+	// 這裡**不是** fail-open：無限制是這個狀態的既定語意，而「已判定不可用」與「未列舉」的狀態
+	// 一律 PLAT-3001（下一行）。
+	if st.Status == statusNone {
+		return nil
+	}
 	// 其餘不可用狀態（suspended／cancelled／**任何未列舉者**）一律 PLAT-3001，且先於功能判定：
 	// 合約死了，功能有沒有買都不是重點。
-	if st.Status != statusNone && !usable(st.Status) {
+	if !usable(st.Status) {
 		return errcode.PlatformSubscriptionInactive.Error(nil)
 	}
 	r, known := resolveFeature(st, feature, s.now())

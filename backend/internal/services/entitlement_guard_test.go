@@ -303,36 +303,39 @@ func TestCreateCustomerBlockedForDeptAdminAtCompanyLimit(t *testing.T) {
 }
 
 // TestSuperIdentitySkipsQuotaGuard 平台層身分（super／developer，data_scope=all）**略過**
-// entitlement 判定（spec §4.3）：平台方代營運不得被單一租戶的合約綁住 —— 無訂閱、達上限都
+// entitlement 判定（spec §4.3）：平台方代營運不得被單一租戶的合約綁住 —— 訂閱不可用、達上限都
 // 必須照樣能寫。同時釘住對照組：同情境的 company_admin 必須被擋（否則「守衛什麼都放行」也是綠的）。
+//
+// 對照組用的是 **status=suspended**（合約不可用）。**不用「沒有訂閱列」**：那是「尚未開通計費」，
+// 判定層對它不施加限制（F-7），拿它當「會被擋」的對照會把語意反過來。
 func TestSuperIdentitySkipsQuotaGuard(t *testing.T) {
 	ctx := t.Context()
 	db := guardDB(t)
 	co, _, _ := seedUserCompany(t, db)
 	mount := func(m *http.ServeMux, e entitlementChecker) { RegisterUserServices(m, db, e) }
 
-	// ① 平台層身分 ＋ 公司**沒有訂閱**：逃生門（無訂閱時 PLAT-5002 不得擋平台方）。
+	// ① 平台層身分 ＋ 公司訂閱**不可用**（suspended）：逃生門（PLAT-3001 不得擋平台方）。
 	super := authz.Identity{UserID: "1", Role: "super", Roles: []string{"super"}}
 	superClient := salesorderv1connect.NewUserServiceClient(http.DefaultClient,
-		guardURL(t, db, super, guardAllScope(), guardEntitlementsNoSubscription(t, db, entitlements.LimitSeats), mount))
+		guardURL(t, db, super, guardAllScope(), guardEntitlementsSuspended(t, db, co, entitlements.LimitSeats), mount))
 	if _, err := superClient.CreateUser(ctx, connect.NewRequest(&v1.CreateUserRequest{
 		Name: "平台代建", Email: "platform@t.com", CompanyId: uItoa(co), Role: "staff",
 	})); err != nil {
-		t.Fatalf("平台層身分於無訂閱公司建帳號必須成功（spec §4.3 的逃生門），got %v", err)
+		t.Fatalf("平台層身分於訂閱不可用的公司建帳號必須成功（spec §4.3 的逃生門），got %v", err)
 	}
 
-	// ② 對照組：同一家公司、同樣無訂閱 → company_admin 必須被擋在 PLAT-5002。
+	// ② 對照組：同一家公司、同樣 suspended → company_admin 必須被擋在 PLAT-3001。
 	admin := authz.Identity{UserID: "2", CompanyID: uItoa(co), Role: "company_admin", Roles: []string{"company_admin"}}
 	adminClient := salesorderv1connect.NewUserServiceClient(http.DefaultClient,
-		guardURL(t, db, admin, guardCompanyScope(co), guardEntitlementsNoSubscription(t, db, entitlements.LimitSeats), mount))
+		guardURL(t, db, admin, guardCompanyScope(co), guardEntitlementsSuspended(t, db, co, entitlements.LimitSeats), mount))
 	_, err := adminClient.CreateUser(ctx, connect.NewRequest(&v1.CreateUserRequest{
 		Name: "租戶自建", Email: "tenant@t.com", CompanyId: uItoa(co), Role: "staff",
 	}))
 	if connect.CodeOf(err) != connect.CodeFailedPrecondition {
-		t.Fatalf("無訂閱時 company_admin 必須被擋，got %v", err)
+		t.Fatalf("訂閱不可用時 company_admin 必須被擋，got %v", err)
 	}
-	if got := errorInfoOf(t, err).GetCode(); got != "PLAT-5002" {
-		t.Fatalf("無訂閱／方案未含必須帶 ErrorInfo.code=PLAT-5002，got %q", got)
+	if got := errorInfoOf(t, err).GetCode(); got != "PLAT-3001" {
+		t.Fatalf("訂閱不可用必須帶 ErrorInfo.code=PLAT-3001，got %q", got)
 	}
 	if n, _ := db.User.Query().Where(user.HasCompanyWith(company.ID(co)), user.EmailEQ("tenant@t.com")).Count(ctx); n != 0 {
 		t.Fatalf("被擋後不得落庫，got %d 筆", n)
@@ -463,13 +466,16 @@ func guardEntitlements(t *testing.T, db *ent.Client, companyID int, feature stri
 	return entitlements.New(f, NewEntitlementCounter(db), entitlements.NewMemoryCache(), 0)
 }
 
-// guardEntitlementsNoSubscription 建一個「方案有此 feature、但該公司**沒有訂閱**」的判定服務：
-// 任何租戶身分的守衛都會被擋（PLAT-5002）—— 用來對照平台層身分必須照樣放行（逃生門）。
-func guardEntitlementsNoSubscription(t *testing.T, db *ent.Client, feature string) *entitlements.Service {
+// guardEntitlementsSuspended 建一個「方案有此 feature、但該公司訂閱 status=suspended」的判定
+// 服務：任何租戶身分的守衛都會被擋（PLAT-3001）—— 用來對照平台層身分必須照樣放行（逃生門）。
+//
+// 為什麼不是「沒有訂閱」：無訂閱列＝尚未開通計費，判定層對它不施加限制（F-7）。
+func guardEntitlementsSuspended(t *testing.T, db *ent.Client, companyID int, feature string) *entitlements.Service {
 	t.Helper()
 	f := store.NewFake()
 	f.PutFeature(store.Feature{Code: feature, Type: "integer"})
 	f.PutPlan("std", []store.Entitlement{{FeatureCode: feature, Enabled: true, Limit: ptr(int64(10))}})
+	f.PutSubscription(store.Subscription{CompanyID: companyID, PlanCode: "std", Status: "suspended"})
 	return entitlements.New(f, NewEntitlementCounter(db), entitlements.NewMemoryCache(), 0)
 }
 
