@@ -273,11 +273,16 @@ func domainSummary(rows []row) string {
 }
 
 // errConstName 把 Go 常數名轉成前端常數名：CustomerCodeExists → ERR_CUSTOMER_CODE_EXISTS。
+//
+// 縮寫也切開（SysRLSViolation → ERR_SYS_RLS_VIOLATION，而非 ERR_SYS_R_L_S_VIOLATION）：
+// 本碼庫的詞彙有不少全大寫縮寫（RLS／FGA／OIDC）。
 func errConstName(goName string) string {
+	runes := []rune(goName)
 	var b bytes.Buffer
 	b.WriteString("ERR_")
-	for i, r := range goName {
-		if i > 0 && unicode.IsUpper(r) {
+	for i, r := range runes {
+		if i > 0 && unicode.IsUpper(r) &&
+			(unicode.IsLower(runes[i-1]) || (i+1 < len(runes) && unicode.IsLower(runes[i+1]))) {
 			b.WriteByte('_')
 		}
 		b.WriteRune(unicode.ToUpper(r))
