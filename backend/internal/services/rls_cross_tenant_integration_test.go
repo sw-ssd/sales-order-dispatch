@@ -420,6 +420,9 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 			ids = append(ids, p.GetId())
 		}
 		assertIDsOnly(t, "ListProducts", ids, tenantScopedIDs(t, admin, "products", fx.coA, fx.deptA)...)
+		if !containsID(ids, itoa(fx.productA)) {
+			t.Fatalf("A 自家的商品必須看得到(id=%d),got %v", fx.productA, ids)
+		}
 
 		crossCallErr(t, "GetProduct(他公司)", func(ctx context.Context) error {
 			_, err := cl.products.GetProduct(ctx, connect.NewRequest(&productsv1.GetProductRequest{Id: itoa(fx.productB)}))
@@ -456,6 +459,9 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 		assertIDsOnly(t, "ListMetadicts", ids, adminIDs(t, admin,
 			`SELECT id FROM metadicts WHERE type = 'unit' AND deleted_at IS NULL
 			   AND (department_id IS NULL OR department_id = $1)`, fx.deptA)...)
+		if !containsID(ids, itoa(fx.metadictA)) {
+			t.Fatalf("A 部門自家的字典擴充列必須看得到(id=%d),got %v", fx.metadictA, ids)
+		}
 
 		crossCallErr(t, "GetMetadict(他部門)", func(ctx context.Context) error {
 			_, err := cl.metadicts.GetMetadict(ctx, connect.NewRequest(&metadictv1.GetMetadictRequest{Id: itoa(fx.metadictB)}))
