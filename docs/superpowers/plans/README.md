@@ -2,7 +2,7 @@
 
 > **性質**：本索引為計畫目錄導覽與狀態總表。因 2026-09-18 將 backend 01~09 計畫重建為「反映現況」型（以實際程式碼盤點為準），各計畫進度以**狀態標籤**（✅完成 / 🟡部分 / ⬜未開始 / 📦歸檔）呈現，不再以 raw checkbox 數字當唯一進度來源。
 >
-> **現況對齊：2026-09-20**（依 codebase-memory 重新索引 14,148 nodes / 74,195 edges ＋ 程式碼、CI、測試實證）。前端 2026-09-19 四個計畫（元件庫 Phase 1／表單 Phase 2／表格 Phase 3／Ark × Tailkit v2）與 OpenFGA 前端遷移已全數落地。
+> **現況對齊：2026-09-20**（依 codebase-memory 重新索引 14,148 nodes / 74,195 edges ＋ 程式碼、CI、測試實證）。前端 2026-09-19 四個計畫（元件庫 Phase 1／表單 Phase 2／表格 Phase 3／Ark × Tailkit v2）與 OpenFGA 前端遷移已全數落地。**同日 SaaS 化 ①（RLS 租戶隔離）完成**：全站 18 張業務表 `ENABLE`＋`FORCE`、請求層租戶交易（`dbtenant`）、四域＋核心域路徑收斂 0 殘留、9 組 `app_rw` 探針、`AGENTS.md` §9 十四條 RLS 慣例成文。
 >
 > 注意：`frontend/**` 計畫的 `- [ ]` 為**步驟清單**、非進度追蹤，勿以勾選數判定進度（backend 計畫才有勾選慣例）。
 
@@ -40,11 +40,11 @@ graph TD
 | 計畫 | 路徑 | 範圍 | 狀態 | 說明 |
 |------|------|------|------|------|
 | 主計畫 | `2026-08-05-sales-order-1.0-subproject-implementation-plan.md` | 三子專案 50 Tasks / 5 Waves | 🟡 部分 | Wave 1 多數、Wave 2 部分已由 backend 01~04 分批落地（見下列分域計畫）；Wave 3~5（訂單/退貨/通知/派車/列印、Web 業務頁、App 業務）未開工 |
-| SaaS 化 ①：RLS 租戶隔離 | `2026-09-20-rls-tenant-isolation-plan.md` | 租戶隔離啟用（SaaS spec 第①步） | 🟡 計畫已備、未開工 | 10 tasks／67 steps：DSN 分流、`app_rw` 非 owner、14 個 policy 補 `WITH CHECK` ＋三張漏網表、請求層租戶交易（`dbtenant`）、依域分批 ENABLE、跨租戶端到端探針 |
+| SaaS 化 ①：RLS 租戶隔離 | `2026-09-20-rls-tenant-isolation-plan.md` | 租戶隔離啟用（SaaS spec 第①步） | ✅ **完成（2026-09-20）** | 10 tasks ＋ 收尾修正（Task 11）全數落地：`00022` app_rw 非 owner 角色、`00023` 18 個 policy（`WITH CHECK`／`NULLIF`）、`00024`–`00028` 全站 18 張業務表 `ENABLE`＋`FORCE`、請求層租戶交易（`dbtenant`：Interceptor／Client／TxFrom／SystemScopeTx／AfterCommit）、四域＋核心域路徑全數收斂（0 殘留）、T5–T11 共 9 組 `app_rw` 探針（含 scope 矩陣、子表傳遞性、跨租戶端到端、seed、登入全鏈、佈建、錯誤遮蔽、production 角色守護）、`AGENTS.md` §9 十四條慣例。驗證：`task check` 與全套整合測試 EXIT=0 |
 | SaaS 化 ②：platform 域與權益守衛 | `2026-09-20-platform-entitlements-plan.md` | platform schema／entitlement／守衛（SaaS spec 第②步） | 🟡 計畫已備、未開工 | 12 tasks／73 steps：`platform` schema 與 10 表（`app_rw` 零權限）、store（介面＋假實作＋SQL）、權益判定（fail-closed／可快取）、計數器與四個服務注入、七個寫入 RPC 守衛、`platform/v1`、操作者 OIDC 認證、唯讀 RPC 與租戶端投影、seeds。**③ 訂閱生命週期與 `platform-console/` 六頁待寫計畫** |
 | SaaS 化 ③：生命週期與平台營運工具 | `2026-09-20-platform-lifecycle-console-plan.md` | 收款、排程、`platform-console/` 六頁（SaaS spec 第③步） | 🟡 計畫已備、未開工 | 14 tasks／74 steps：金額套件（int64 分）、`SetCompanyStatus` 入口抽出、`RecordPayment`（唯一收款入口、狀態機、冪等）、生命週期轉移、outbox consumer 凍結/復原、`cmd/platform-cron` 單趟排程、Valkey 快取失效、平台寫入 RPC、獨立 console 六頁、租戶端權益卡片、CI |
 | SaaS 化 ④：企業級錯誤碼系統 | `2026-09-20-error-codes-plan.md` | 對外錯誤碼契約（P0-5，與 Plan A 並行） | 🟡 計畫已備、未開工 | 7 tasks／39 steps：`ErrorInfo`（code/details/trace_id）、`internal/errcode` registry（常數即註冊、啟動驗證區段規則）、`trace_id` interceptor、`toConnectError` 改走 registry、首批 17 碼落地、基線守門（282 處只減不增）、碼表與三端常數產生、AGENTS.md 跨租戶改 NotFound |
-| 01-auth | `backend/2026-08-17-backend-01-auth-plan.md` | 認證授權地基 | 🟡 部分 | OIDC/登入/JWT-session/Casbin/RLS 語句/ability/role 權限、middleware（authzMiddleware/protectedRPC）、developer 逃生門（SeedDeveloper）、audit 地基（audit.Recorder DB）、Argon2id、首登受限態（A3）已實作；OpenFGA 內嵌＋Provision＋fail-fast（F2）、testcontainers 整合測試政策與 CI `go-integration`（2026-09-19）已落地；**RLS 僅定義未 ENABLE**、CASL 引擎仍在（D32 待遷移） |
+| 01-auth | `backend/2026-08-17-backend-01-auth-plan.md` | 認證授權地基 | 🟡 部分 | OIDC/登入/JWT-session/Casbin/RLS 語句/ability/role 權限、middleware（authzMiddleware/protectedRPC）、developer 逃生門（SeedDeveloper）、audit 地基（audit.Recorder DB）、Argon2id、首登受限態（A3）已實作；OpenFGA 內嵌＋Provision＋fail-fast（F2）、testcontainers 整合測試政策與 CI `go-integration`（2026-09-19）已落地；**RLS 已於 2026-09-20 全站 ENABLE＋FORCE（Plan A 完成，18 張業務表、請求層租戶交易）**、CASL 引擎仍在（D32 待遷移） |
 | 02-tenancy-users | `backend/2026-08-17-backend-02-tenancy-users-plan.md` | 多租戶與使用者 | 🟡 部分 | Company/Department/Role CRUD 已實作；UserService 7 支 RPC 已落地（含稽核＋`dataScopeForUser`）；公司停用連鎖(2.1.3)（2026-09-18, A2）；公司/部門改**軟刪除**（partial unique index）＋刪除競態互斥鎖（FOR SHARE／FOR UPDATE）＋清單 `sort/desc` 白名單（2026-09-20）；主帳號連鎖(D22)待 |
 | 03-metadicts-audit | `backend/2026-08-17-backend-03-metadicts-audit-plan.md` | 字典檔與稽核 | ✅ 完成 | metadicts（6 RPC + 合併查詢 + ListOptions）與稽核查詢 API（AuditService.List, D27 時間窗）全落地（2026-09-18）；audit.Recorder DB（00009/00010）已由 02 提前落地 |
 | 04-master-data | `backend/2026-08-17-backend-04-master-data-plan.md` | 主檔與檔案資產 | 🟡 部分 | 3.1.1–3.1.4（customers CRUD＋取號＋D22 帳號交付）、3.1.5 欄位（`preferred_delivery_days`/`promo_tag_ids`）、3.2 地址簿＋聯絡人、3.3 商品三實體＋單位換算、3.4 部門級四主檔（warehouse/route/processing_spec/product_category）已落地（2026-09-18~19）；**3.5 客戶專屬商品、3.6 檔案資產、3.8 QR 兌換（proto 已定、無 handler）待** |
