@@ -22,6 +22,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
+	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 )
@@ -384,7 +385,9 @@ func newIdentifiedAuthClientWithDB(t *testing.T, db *ent.Client, id authz.Identi
 		DB: db, Tokens: auth.NewTokenManager("test-secret", kv, db),
 		Lockout: auth.NewLoginLock(kv), OneTime: auth.NewOneTimeStore(kv), Sessions: sessions,
 	})
-	path, handler := salesorderv1connect.NewAuthServiceHandler(h)
+	// 與生產一致(internal/server/domains.go:70)掛上 dbtenant.HandlerOption:請求層租戶交易是
+	// A3 密碼路徑的必要條件(auth_password.go 以 dbtenant.TxFrom 取請求交易;缺它 → internal 錯誤)。
+	path, handler := salesorderv1connect.NewAuthServiceHandler(h, dbtenant.HandlerOption(db))
 	mux := http.NewServeMux()
 	mux.Handle(path, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := authz.WithIdentity(r.Context(), id)

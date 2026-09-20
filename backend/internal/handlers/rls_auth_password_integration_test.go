@@ -85,8 +85,8 @@ func TestIntegrationChangePasswordAuditUnderAppRole(t *testing.T) {
 		// 稽核列(D18 同交易)確實落地,且不含任何密碼材料。
 		if n := authCount(t, admin,
 			`SELECT count(*) FROM audit_logs
-			  WHERE action = 'update' AND resource_type = 'user' AND resource_id = $1 AND company_id = $2 AND user_id = $1`,
-			itoa(uid), coA); n != 1 {
+			  WHERE action = 'update' AND resource_type = 'user' AND resource_id = $1 AND company_id = $2 AND user_id = $3`,
+			itoa(uid), coA, uid); n != 1 {
 			t.Fatalf("改密碼應留下恰 1 列稽核(resource_id=%d, 公司 %d),got %d", uid, coA, n)
 		}
 		var afterSnap string

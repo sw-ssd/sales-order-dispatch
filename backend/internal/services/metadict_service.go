@@ -121,7 +121,7 @@ func (s *MetadictService) ListMetadicts(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, err
 	}
-	q := s.db.Metadict.Query()
+	q := dbtenant.Client(ctx, s.db).Metadict.Query()
 
 	switch {
 	case isSuperIdentity(id):
@@ -187,7 +187,7 @@ func (s *MetadictService) GetMetadict(ctx context.Context, req *connect.Request[
 	if err != nil {
 		return nil, err
 	}
-	m, err := scope(s.db.Metadict.Query().Where(metadict.ID(mid), metadict.DeletedAtIsNil())).Only(ctx)
+	m, err := scope(dbtenant.Client(ctx, s.db).Metadict.Query().Where(metadict.ID(mid), metadict.DeletedAtIsNil())).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -232,13 +232,15 @@ func (s *MetadictService) CreateMetadict(ctx context.Context, req *connect.Reque
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("無權限建立字典"))
 	}
 
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見 customer_service.CreateCustomer:
+	// metadicts ENABLE+FORCE 後,自開交易(池化連線、未帶 scope)會被 policy 過濾成 0 列/擋下。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 
-	build := tx.Metadict.Create().
+	build := db.Metadict.Create().
 		SetType(typ).
 		SetCode(code).
 		SetDisplayName(name).
@@ -257,9 +259,6 @@ func (s *MetadictService) CreateMetadict(ctx context.Context, req *connect.Reque
 	if err := recordAudit(ctx, tx, "metadict", "create", created.ID, cid, created.DepartmentID, actorID, map[string]any{"type": created.Type, "code": created.Code, "display_name": created.DisplayName, "department_id": created.DepartmentID, "is_active": created.IsActive}); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := tx.Commit(); err != nil {
-		return nil, toConnectError(err)
-	}
 	return connect.NewResponse(&metadictv1.CreateMetadictResponse{Metadict: metadictToProto(created)}), nil
 }
 
@@ -273,7 +272,7 @@ func (s *MetadictService) UpdateMetadict(ctx context.Context, req *connect.Reque
 	if err != nil {
 		return nil, err
 	}
-	m, err := s.db.Metadict.Query().Where(metadict.ID(mid), metadict.DeletedAtIsNil()).Only(ctx)
+	m, err := dbtenant.Client(ctx, s.db).Metadict.Query().Where(metadict.ID(mid), metadict.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -284,13 +283,14 @@ func (s *MetadictService) UpdateMetadict(ctx context.Context, req *connect.Reque
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("無權限修改此字典"))
 	}
 
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易(理由同 CreateMetadict):查詢/寫入用 db,稽核續用 tx(同一交易,D18)。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 
-	upd := tx.Metadict.UpdateOneID(mid)
+	upd := db.Metadict.UpdateOneID(mid)
 	if req.Msg.DisplayName != nil {
 		upd = upd.SetDisplayName(*req.Msg.DisplayName)
 	}
@@ -308,9 +308,6 @@ func (s *MetadictService) UpdateMetadict(ctx context.Context, req *connect.Reque
 	if err := recordAuditBA(ctx, tx, "metadict", "update", mid, companyIDFrom(id), metadictActorDeptID(m), actorIDFrom(id), map[string]any{"display_name": m.DisplayName, "sort_order": m.SortOrder, "is_active": m.IsActive}, map[string]any{"display_name": updated.DisplayName, "sort_order": updated.SortOrder, "is_active": updated.IsActive}); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := tx.Commit(); err != nil {
-		return nil, toConnectError(err)
-	}
 	return connect.NewResponse(&metadictv1.UpdateMetadictResponse{Metadict: metadictToProto(updated)}), nil
 }
 
@@ -324,7 +321,7 @@ func (s *MetadictService) DeleteMetadict(ctx context.Context, req *connect.Reque
 	if err != nil {
 		return nil, err
 	}
-	m, err := s.db.Metadict.Query().Where(metadict.ID(mid), metadict.DeletedAtIsNil()).Only(ctx)
+	m, err := dbtenant.Client(ctx, s.db).Metadict.Query().Where(metadict.ID(mid), metadict.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -335,19 +332,17 @@ func (s *MetadictService) DeleteMetadict(ctx context.Context, req *connect.Reque
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("無權限刪除此字典"))
 	}
 
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易(理由同 CreateMetadict):查詢/寫入用 db,稽核續用 tx(同一交易,D18)。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 
-	if err := tx.Metadict.UpdateOneID(mid).SetDeletedAt(time.Now().UTC()).Exec(ctx); err != nil {
+	if err := db.Metadict.UpdateOneID(mid).SetDeletedAt(time.Now().UTC()).Exec(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := recordAuditBA(ctx, tx, "metadict", "delete", mid, companyIDFrom(id), metadictActorDeptID(m), actorIDFrom(id), map[string]any{"type": m.Type, "code": m.Code, "display_name": m.DisplayName}, nil); err != nil {
-		return nil, toConnectError(err)
-	}
-	if err := tx.Commit(); err != nil {
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&metadictv1.DeleteMetadictResponse{}), nil
@@ -363,7 +358,7 @@ func (s *MetadictService) ListOptions(ctx context.Context, req *connect.Request[
 	if !validMetadictTypes[typ] {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("type 必填且必須為合法值,got %q", typ))
 	}
-	q := s.db.Metadict.Query().
+	q := dbtenant.Client(ctx, s.db).Metadict.Query().
 		Where(metadict.TypeEQ(typ), metadict.IsActiveEQ(true), metadict.DeletedAtIsNil())
 	// 可見範圍:super 僅系統預設(與 ListMetadicts 預設一致,避免下拉混入各部門私有值);
 	// 其餘依身分(系統+當前部門 / 僅系統)。

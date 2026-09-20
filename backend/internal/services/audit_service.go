@@ -63,7 +63,7 @@ func (s *AuditService) ListAuditLogs(ctx context.Context, req *connect.Request[a
 		return nil, err
 	}
 	page, pageSize := normalizePage(req.Msg.GetPage(), req.Msg.GetPageSize())
-	q := s.db.AuditLog.Query()
+	q := dbtenant.Client(ctx, s.db).AuditLog.Query()
 
 	// 範圍推導:super 全域(可選 company_id);company_admin 強制自己公司;其餘角色不可查。
 	switch {
@@ -156,7 +156,7 @@ func (s *AuditService) ListAuditLogs(ctx context.Context, req *connect.Request[a
 		for _, a := range items {
 			ids = append(ids, a.UserID)
 		}
-		us, err := s.db.User.Query().Where(user.IDIn(ids...)).All(ctx)
+		us, err := dbtenant.Client(ctx, s.db).User.Query().Where(user.IDIn(ids...)).All(ctx)
 		if err != nil {
 			return nil, toConnectError(err)
 		}

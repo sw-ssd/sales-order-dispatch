@@ -18,6 +18,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
+	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 )
 
@@ -45,7 +46,7 @@ func (h *AuthHandler) ChangePassword(ctx context.Context, req *connect.Request[v
 	if len(newPw) < minNewPasswordLen {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("新密碼至少 8 字元"))
 	}
-	u, err := h.deps.DB.User.Get(ctx, uid)
+	u, err := dbtenant.Client(ctx, h.deps.DB).User.Get(ctx, uid)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("帳號不存在"))
@@ -64,13 +65,15 @@ func (h *AuthHandler) ChangePassword(ctx context.Context, req *connect.Request[v
 		return nil, internal(err)
 	}
 
-	tx, err := h.deps.DB.Tx(ctx)
-	if err != nil {
-		return nil, internal(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18)。audit_logs ENABLE+FORCE 後,
+	// 自開交易(池化連線、未帶 scope)的稽核寫入會被 WITH CHECK 擋;接手請求交易才與業務同交易。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, internal(errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 
-	if _, err := tx.User.UpdateOneID(uid).
+	if _, err := db.User.UpdateOneID(uid).
 		SetPasswordHash(hash).
 		SetMustChangePassword(false).
 		ClearTempPasswordExpiresAt().
@@ -79,9 +82,6 @@ func (h *AuthHandler) ChangePassword(ctx context.Context, req *connect.Request[v
 		return nil, internal(err)
 	}
 	if err := auditChangePassword(ctx, tx, id, uid); err != nil {
-		return nil, internal(err)
-	}
-	if err := tx.Commit(); err != nil {
 		return nil, internal(err)
 	}
 	return connect.NewResponse(&v1.ChangePasswordResponse{}), nil
@@ -98,7 +98,7 @@ func (h *AuthHandler) ResetCustomerPassword(ctx context.Context, req *connect.Re
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("目標 user_id 格式錯誤"))
 	}
-	target, err := h.deps.DB.User.Query().Where(user.ID(targetID)).WithCompany().WithDepartment().Only(ctx)
+	target, err := dbtenant.Client(ctx, h.deps.DB).User.Query().Where(user.ID(targetID)).WithCompany().WithDepartment().Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeNotFound, errors.New("目標帳號不存在"))
@@ -122,13 +122,14 @@ func (h *AuthHandler) ResetCustomerPassword(ctx context.Context, req *connect.Re
 	}
 	exp := time.Now().UTC().Add(tempPasswordTTL)
 
-	tx, err := h.deps.DB.Tx(ctx)
-	if err != nil {
-		return nil, internal(err)
+	// 取請求交易(理由同 ChangePassword):查詢/寫入用 db,稽核續用 tx(同一交易,D18)。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, internal(errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 
-	if _, err := tx.User.UpdateOneID(targetID).
+	if _, err := db.User.UpdateOneID(targetID).
 		SetPasswordHash(hash).
 		SetMustChangePassword(true).
 		SetTempPasswordExpiresAt(exp).
@@ -143,9 +144,6 @@ func (h *AuthHandler) ResetCustomerPassword(ctx context.Context, req *connect.Re
 	}
 	_, actor := auditActor(id)
 	if err := auditResetPassword(ctx, tx, actor, tgtCompanyID, targetID); err != nil {
-		return nil, internal(err)
-	}
-	if err := tx.Commit(); err != nil {
 		return nil, internal(err)
 	}
 	return connect.NewResponse(&v1.ResetCustomerPasswordResponse{TempPassword: temp, ExpiresAt: exp.Unix()}), nil
