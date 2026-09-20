@@ -165,9 +165,15 @@ func (l *fakeLocker) TryLock(context.Context) (func(context.Context) error, bool
 		return nil, false, nil
 	}
 	l.held = true
-	return func(context.Context) error {
+	return func(ctx context.Context) error {
 		l.mu.Lock()
 		defer l.mu.Unlock()
+		// 解鎖需要一個**還活著**的 ctx(真實作的解鎖就是一次 SQL):ctx 已死就解不開。
+		// RunGuarded 因此必須以 context.WithoutCancel 呼叫 release —— 這個假物件是該行為的守門人
+		// (真實作在解鎖失敗時會丟棄連線,連帶也會放掉鎖,故真 PG 分不出這兩條路)。
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		l.held = false
 		l.releases++
 		return nil
@@ -338,6 +344,56 @@ func TestRunOnceReportsPartialSummaryOnFailure(t *testing.T) {
 	}
 }
 
+// I-1:單一租戶的「產生期別」失敗(例:缺當期生效價目 → Task 5 會大聲失敗)**不得讓派送被跳過**。
+// 派送派的是前面掃描(逾期／停用／取消到期)寫下的事件;跳過它,事件會持續積壓,
+// 所有租戶的 subscription.suspended／expired 永遠到不了產品域,而 console 那頭早就顯示 suspended
+// —— 帳務狀態與產品域長期不一致,而且症狀只有「排程回錯誤」。
+func TestRunOnceKeepsDispatchingWhenPeriodOpeningFails(t *testing.T) {
+	now := at(2026, time.October, 1, 3)
+	p := cron.Params{GraceDays: 7, LeadDays: 14, EventBatch: 100}
+	ctx := context.Background()
+
+	f := store.NewFakeBilling()
+	f.PutSetting("system_actor_user_id", "7")
+	// 方案 1 有月繳價目(43 開得出下一期);方案 2 沒有價目 → 該租戶的產生期別大聲失敗。
+	f.PutPlanPrice(1, "monthly", store.Price{BaseCents: 150000, SeatCents: 15000, Currency: "TWD"})
+	// 42:逾期未付(→past_due,它的 subscription.past_due 就是「必須照樣派送」的那一筆)。
+	seedSub(f, 42, "active", "monthly", nil, now.Add(-time.Hour))
+	// 43:服務中、期末在提前窗內,但**沒有價目** → 產生期別失敗。
+	broken := f.PutSubscription(store.Subscription{
+		CompanyID: 43, Status: "trialing", PlanID: 2, SeatCount: 3, BillingCycle: "monthly"})
+	f.PutPeriod(store.Period{SubscriptionID: broken, PeriodNo: 1, Status: "open",
+		PeriodStart: now.AddDate(0, -1, 0), PeriodEnd: now.AddDate(0, 0, 10),
+		PlanID: 2, SeatCount: 3, AmountCents: 195000, Currency: "TWD"})
+	// 44:服務中、期末在提前窗內且有價目 → 迴圈必須繼續跑完它(不能因 43 而放棄其他租戶)。
+	seedSub(f, 44, "active", "monthly", nil, now.AddDate(0, 0, 10))
+
+	deps, log, _, _ := newDeps(f)
+	got, err := cron.RunOnce(ctx, deps, now, p)
+	if err == nil {
+		t.Fatal("產生期別的失敗必須回報")
+	}
+	if !strings.Contains(err.Error(), "產生期別(company=43)") {
+		t.Fatalf("錯誤要說得出是哪一個租戶,got %v", err)
+	}
+	// ① 派送仍被呼叫(且在最後):42 的事件真的被認領走了。
+	order := log.order()
+	if order[len(order)-1] != "DispatchOnce" {
+		t.Fatalf("派送必須照做且放最後,got %v", order)
+	}
+	if got.Dispatched != 2 {
+		// 42 的 subscription.past_due ＋ 44 的 period.opened(44 的期別照開)。
+		t.Fatalf("積壓的事件仍必須被派送,got %d", got.Dispatched)
+	}
+	if left, _ := f.UndispatchedEvents(ctx, 100); len(left) != 0 {
+		t.Fatalf("積壓的事件必須被派送掉,剩 %d 筆", len(left))
+	}
+	// ② 部分完成的計數照舊:42 逾期、44 開出下一期(43 的失敗不影響它)。
+	if got.PastDue != 1 || got.PeriodsOpened != 1 {
+		t.Fatalf("計數應保留部分完成的那份: %+v", got)
+	}
+}
+
 // 單飛:兩個執行重疊時,第二個**什麼都不做**且不算失敗(回零值摘要、Locked=false)。
 // 少了它,兩趟會同時對同一批訂閱做狀態轉移與事件派送(排程沒有列鎖,CAS 靠這一層兜住)。
 func TestRunGuardedSecondOverlappingRunDoesNothing(t *testing.T) {
@@ -388,10 +444,12 @@ func TestRunGuardedSecondOverlappingRunDoesNothing(t *testing.T) {
 }
 
 // panic 復原(C-09):排程是無人看管的行程,panic 裸奔會讓下一次觸發也一起死,而症狀只有
-// CrashLoopBackOff(看起來像部署問題,不是「這一趟沒做成」)。復原後必須回報,且鎖要放掉。
+// CrashLoopBackOff(看起來像部署問題,不是「這一趟沒做成」)。復原後必須回報、**保留已完成的
+// 計數**(爆掉的那趟在 log 裡要看得出「做到哪裡」),且鎖要放掉。
 func TestRunGuardedRecoversPanic(t *testing.T) {
 	lock := &fakeLocker{}
-	deps := cron.Deps{Billing: panicBilling{}, Lock: lock}
+	// 逾期 2 筆之後在停用那一步 panic:兩筆已完成的是已落地的帳務事實,摘要不得被清成零。
+	deps := cron.Deps{Billing: stubBilling{pastDue: 2, panicOn: "SuspendOverdue"}, Lock: lock}
 
 	got, err := cron.RunGuarded(context.Background(), deps, at(2026, time.October, 1, 3),
 		cron.Params{GraceDays: 7, LeadDays: 14, EventBatch: 100})
@@ -401,11 +459,38 @@ func TestRunGuardedRecoversPanic(t *testing.T) {
 	if !strings.Contains(err.Error(), "panic") {
 		t.Fatalf("錯誤應看得出是 panic,got %v", err)
 	}
-	if !got.Locked {
-		t.Fatalf("panic 的那趟仍持有鎖(不該被誤讀成「跳過」): %+v", got)
+	if !got.Locked || got.PastDue != 2 {
+		t.Fatalf("panic 的那趟仍持有鎖,且已完成的計數必須留在摘要裡: %+v", got)
 	}
 	if held, _, releases := lock.state(); held || releases != 1 {
 		t.Fatalf("panic 後鎖必須被釋放(否則下一趟永遠被擋): held=%v releases=%d", held, releases)
+	}
+}
+
+// 取鎖本身 panic 也要被收斂(typed nil 的 Locker 之類):recover 必須涵蓋 TryLock 那一段,
+// 否則排程會以 panic 收場 —— 那正是 RunGuarded 存在的理由。
+func TestRunGuardedRecoversPanicInLock(t *testing.T) {
+	_, err := cron.RunGuarded(context.Background(), cron.Deps{Lock: panicLocker{}},
+		at(2026, time.October, 1, 3), cron.Params{})
+	if err == nil || !strings.Contains(err.Error(), "panic") {
+		t.Fatalf("TryLock 的 panic 必須被復原並回報,got %v", err)
+	}
+}
+
+// 逾時(或取消)不得讓單飛鎖留在連線上(M-4):一趟卡住會一直握著鎖,後續每一趟都只印「跳過」且以 0
+// 收場 —— 對外看起來就是排程靜默停擺。故 RunGuarded 以 context.WithoutCancel 解鎖,這裡釘住它。
+func TestRunGuardedReleasesLockWhenContextExpires(t *testing.T) {
+	lock := &fakeLocker{}
+	deps := cron.Deps{Billing: stubBilling{waitForCtx: true}, Lock: lock}
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+
+	_, err := cron.RunGuarded(ctx, deps, at(2026, time.October, 1, 3), cron.Params{})
+	if err == nil {
+		t.Fatal("逾時必須回報錯誤(不得當成正常完成)")
+	}
+	if held, _, releases := lock.state(); held || releases != 1 {
+		t.Fatalf("逾時後鎖必須被釋放(否則下一趟永遠被擋): held=%v releases=%d", held, releases)
 	}
 }
 
@@ -461,14 +546,45 @@ func TestLoadParams(t *testing.T) {
 	}
 }
 
-// panicBilling:第一步就 panic(其餘方法到不了,故只需滿足介面)。
-type panicBilling struct{}
-
-func (panicBilling) MarkPastDue(context.Context, time.Time, int) (int, error) {
-	panic("假造的 panic")
+// stubBilling 可程式化的假帳務:指定「哪一步 panic」與「逾期幾筆」(panic 路徑的斷言需要
+// 「前面已完成幾筆」)。
+type stubBilling struct {
+	pastDue int
+	panicOn string
+	// waitForCtx 讓第一步一直等到 ctx 結束才回錯誤(模擬「一趟跑太久被逾時砍掉」)。
+	waitForCtx bool
 }
-func (panicBilling) SuspendOverdue(context.Context, time.Time) (int, error)  { return 0, nil }
-func (panicBilling) ExpireCancelled(context.Context, time.Time) (int, error) { return 0, nil }
-func (panicBilling) EnsureNextPeriod(context.Context, int, time.Time, int) (bool, error) {
+
+func (b stubBilling) call(name string) {
+	if b.panicOn == name {
+		panic("假造的 panic:" + name)
+	}
+}
+
+func (b stubBilling) MarkPastDue(ctx context.Context, _ time.Time, _ int) (int, error) {
+	b.call("MarkPastDue")
+	if b.waitForCtx {
+		<-ctx.Done()
+		return 0, ctx.Err()
+	}
+	return b.pastDue, nil
+}
+func (b stubBilling) SuspendOverdue(context.Context, time.Time) (int, error) {
+	b.call("SuspendOverdue")
+	return 0, nil
+}
+func (b stubBilling) ExpireCancelled(context.Context, time.Time) (int, error) {
+	b.call("ExpireCancelled")
+	return 0, nil
+}
+func (b stubBilling) EnsureNextPeriod(context.Context, int, time.Time, int) (bool, error) {
+	b.call("EnsureNextPeriod")
 	return false, nil
+}
+
+// panicLocker:取鎖本身就 panic(測試 recover 是否涵蓋 TryLock 那一段)。
+type panicLocker struct{}
+
+func (panicLocker) TryLock(context.Context) (func(context.Context) error, bool, error) {
+	panic("假造的鎖 panic")
 }

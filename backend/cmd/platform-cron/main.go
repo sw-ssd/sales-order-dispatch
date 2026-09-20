@@ -5,6 +5,10 @@
 //
 // 不內建迴圈:重複執行交給觸發器(k8s CronJob;本機用 `task backend:platform:cron`)。
 // --date 可覆寫「現在」(RFC3339)以便手動補跑或驗證特定日期的那一趟。
+//
+// 錯誤刻意**不經 internal/errcode**(已獲 controller 核准,T14 補文件):本行程是 CLI,錯誤只進
+// log 不跨網路,errcode 的穩定對外碼在此沒有價值 —— 反而它的對外訊息只留固定字串,把 cause
+// 藏進 detail(panic 的 stack 會從 log 裡消失)。
 package main
 
 import (
@@ -24,8 +28,16 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/third_party/database"
 )
 
+// defaultTimeout 為一整趟的逾時上限。為什麼一定要有:一趟卡住就一直握著單飛鎖,後續每一趟都只印
+// 「跳過」並以 0 收場 —— 對外看起來就是排程靜默停擺(而 C-09 已拿掉心跳偵測)。10 分鐘的取捨:
+// 正常一趟是數十秒級(逐租戶一個交易、派送上限 200 筆),10 分鐘是「明顯不正常」又遠大於正常,
+// 不會把慢但健康的一趟砍掉;真的需要更久可用 --timeout 放寬(例:首次補開大量期別)。
+const defaultTimeout = 10 * time.Minute
+
 func main() {
 	dateFlag := flag.String("date", "", "覆寫執行時間(RFC3339;預設為現在)")
+	timeoutFlag := flag.Duration("timeout", defaultTimeout,
+		"整趟執行的逾時上限(預設 10m;逾時仍會釋放單飛鎖並回非零離開碼)")
 	flag.Parse()
 
 	now := time.Now().UTC()
@@ -53,8 +65,12 @@ func main() {
 		Store:    st,
 		Lock:     platformcron.NewAdvisoryLocker(db, platformcron.LockKey),
 	}
+	// 整趟有界:逾時不是「這一趟失敗」而已,它同時保證鎖一定會被放掉
+	// (RunGuarded 以 context.WithoutCancel 解鎖)。
+	ctx, cancel := context.WithTimeout(context.Background(), *timeoutFlag)
+	defer cancel()
+
 	// 營運參數一律來自 platform.settings,不用程式碼裡的預設值:缺席即失敗(見 LoadParams)。
-	ctx := context.Background()
 	params, err := platformcron.LoadParams(ctx, st)
 	if err != nil {
 		log.Fatalf("讀取排程參數失敗: %v\n"+
@@ -62,8 +78,13 @@ func main() {
 	}
 
 	summary, err := platformcron.RunGuarded(ctx, deps, now, params)
+	// Summary 只有 bool 與 int,json.Marshal 不會失敗。
+	raw, _ := json.Marshal(summary)
 	if err != nil {
-		// 唯一以非零離開碼收場的情況:真有沒做成的事(掃描失敗、派送有事件沒派送成功、panic)。
+		// 唯一以非零離開碼收場的情況:真有沒做成的事(掃描失敗、派送有事件沒派送成功、逾時、panic)。
+		// **失敗的那趟也要留下摘要**:log 只有錯誤訊息的話,看不出它做到哪裡就收場(部分完成是已落地的
+		// 帳務事實),而排程不寫平台稽核,這一行的計數就是唯一的痕跡。
+		log.Printf("platform-cron 失敗(now=%s),該趟摘要:%s", now.Format(time.RFC3339), raw)
 		log.Fatalf("排程執行失敗(now=%s): %v", now.Format(time.RFC3339), err)
 	}
 	if !summary.Locked {
@@ -71,10 +92,6 @@ func main() {
 		// 記成失敗(而它其實什麼都沒做,也沒什麼可重試)。
 		log.Printf("platform-cron 跳過(now=%s):另一個排程執行中", now.Format(time.RFC3339))
 		return
-	}
-	raw, err := json.Marshal(summary)
-	if err != nil {
-		log.Fatalf("摘要序列化失敗: %v", err)
 	}
 	// 同一份摘要兩種呈現:繁中一行給人看、JSON 一行給機器(grep／告警)。
 	// 語意要準:dispatched 是「**本趟認領**的事件數」,不是「已派送 N 筆」—— 沒有產品域動作的

@@ -20,6 +20,7 @@ package cron
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"errors"
 	"fmt"
 	"log"
@@ -156,12 +157,32 @@ type Summary struct {
 //     掃描本身也排除非 active/trialing,兩層一致);
 //   - 派送放最後:本趟產生的每一個事件(含凍結)都在同一趟內被認領,不留「事件寫了但沒送」的窗口。
 //
-// 任何一步失敗即中止(回已完成的計數):billing 的掃描各自是一個交易,已完成的轉移不會被撤銷,
-// 故部分完成是**已落地的帳務事實**,摘要如實回報。now 必為呼叫端提供的時間(不得在此讀時鐘,
+// **掃描失敗不得讓派送被跳過**(派出的事件到不了產品域,狀態會長期與帳務不一致)。故失敗分兩類:
+//   - 三段帳務掃描(逾期／停用／取消到期)失敗即中止:它們成敗相連(同一個狀態機、同一條平台寫入
+//     路徑),失敗代表這條路徑本身壞了(連線／權限),硬走後面的步驟只會多幾個一樣的錯誤;
+//   - **逐租戶**的產生期別失敗則記下錯誤、跑完其餘租戶,**照樣派送**:那是單一租戶的資料問題
+//     (缺當期生效價目、billing_cycle 壞掉),一個租戶的髒資料不該讓**所有**租戶的
+//     subscription.suspended／expired 永遠到不了產品域 —— 而 console 那頭早已顯示 suspended。
+//
+// 中止或部分完成都回**已完成的計數**:每個掃描各自是一個交易,已完成的轉移不會被撤銷,
+// 故部分完成是已落地的帳務事實,摘要必須如實回報。now 必為呼叫端提供的時間(不得在此讀時鐘,
 // 否則補跑與測試都不可控)。
+//
+// 錯誤刻意**不經 internal/errcode**:本行程是 CLI,錯誤只進 log 不跨網路,errcode 的穩定對外碼
+// 在此沒有價值(且 errcode 的對外訊息會把 cause 藏進 detail,panic 的 stack 會從 log 裡消失)。
+// 底層已帶碼的錯誤原樣留在 %w 鏈上,基線未加寬(已獲 controller 核准,T14 補文件)。
 func RunOnce(ctx context.Context, deps Deps, now time.Time, p Params) (Summary, error) {
-	var s Summary
-	var err error
+	return runOnceGuarded(ctx, deps, now, p)
+}
+
+// runOnceGuarded 是 RunOnce 的本體,唯一的差別是它自己 recover:panic 發生在**這個框**裡時,
+// 具名回傳的 s 已經帶著前面步驟完成的計數(若把 recover 留在 RunGuarded,那裡只看得到零值)。
+func runOnceGuarded(ctx context.Context, deps Deps, now time.Time, p Params) (s Summary, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("排程 panic: %v\n%s", r, debug.Stack())
+		}
+	}()
 
 	if s.PastDue, err = deps.Billing.MarkPastDue(ctx, now, p.GraceDays); err != nil {
 		return s, fmt.Errorf("標記逾期: %w", err)
@@ -178,10 +199,16 @@ func RunOnce(ctx context.Context, deps Deps, now time.Time, p Params) (Summary, 
 	if err != nil {
 		return s, fmt.Errorf("列出服務中的訂閱: %w", err)
 	}
+	var periodErr error
 	for _, sub := range subs {
 		created, err := deps.Billing.EnsureNextPeriod(ctx, sub.CompanyID, now, p.LeadDays)
 		if err != nil {
-			return s, fmt.Errorf("產生期別(company=%d): %w", sub.CompanyID, err)
+			// 記下**第一個**錯誤就好(其餘同型錯誤只會讓 log 膨脹),但不中斷迴圈:
+			// 每個租戶各自一個交易,其他租戶的期別照開。
+			if periodErr == nil {
+				periodErr = fmt.Errorf("產生期別(company=%d): %w", sub.CompanyID, err)
+			}
+			continue
 		}
 		if created {
 			s.PeriodsOpened++
@@ -189,7 +216,11 @@ func RunOnce(ctx context.Context, deps Deps, now time.Time, p Params) (Summary, 
 	}
 
 	if s.Dispatched, err = deps.Consumer.DispatchOnce(ctx, p.EventBatch); err != nil {
-		return s, fmt.Errorf("派送事件: %w", err)
+		dispatchErr := fmt.Errorf("派送事件: %w", err)
+		if periodErr != nil {
+			return s, errors.Join(periodErr, dispatchErr)
+		}
+		return s, dispatchErr
 	}
 
 	// 待收款清單(spec §5.4):已過期未付的 open 期別。這裡**不另寫查詢** —— 用既有的期別清單
@@ -204,7 +235,7 @@ func RunOnce(ctx context.Context, deps Deps, now time.Time, p Params) (Summary, 
 			s.Receivables++
 		}
 	}
-	return s, nil
+	return s, periodErr
 }
 
 // RunGuarded 為排程的**唯一入口** = 單飛鎖 + RunOnce + panic 復原。
@@ -213,6 +244,14 @@ func RunOnce(ctx context.Context, deps Deps, now time.Time, p Params) (Summary, 
 // 正常的重疊記成失敗)。panic → 收斂成錯誤(含 stack):排程是無人看管的行程,panic 裸奔之後
 // 症狀只有 CrashLoopBackOff,看起來像部署問題而不是「這一趟沒做成」。
 func RunGuarded(ctx context.Context, deps Deps, now time.Time, p Params) (s Summary, err error) {
+	// recover 註冊在**取鎖之前**:TryLock 本身也可能 panic(例:typed nil 的 Locker),那時還沒動
+	// 資料也沒持鎖,但「排程不得裸奔」的立意要一致。RunOnce 自己另有一層 recover(它才看得到
+	// 那個框裡的已完成計數),這一層負責取鎖與解鎖這一段。
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("排程 panic: %v\n%s", r, debug.Stack())
+		}
+	}()
 	if deps.Lock == nil {
 		// 少了鎖就沒有單飛:寧可這一趟不跑,也不要兩個執行一起改帳。
 		return Summary{}, errors.New("排程缺少單飛鎖(未設定時不得執行:兩個執行會一起改帳)")
@@ -226,14 +265,9 @@ func RunGuarded(ctx context.Context, deps Deps, now time.Time, p Params) (s Summ
 	}
 	defer func() {
 		// 用 WithoutCancel 解鎖:ctx 逾時／被取消不該讓鎖留在連線上,否則下一趟全被擋住。
+		// 解鎖失敗在 log 之外還會**丟棄那條連線**(見 AdvisoryLocker.TryLock),故這裡只記錄。
 		if uerr := unlock(context.WithoutCancel(ctx)); uerr != nil {
-			log.Printf("platform-cron: 釋放單飛鎖失敗(連線關閉即已釋放): %v", uerr)
-		}
-	}()
-	defer func() {
-		if r := recover(); r != nil {
-			s = Summary{Locked: true}
-			err = fmt.Errorf("排程 panic: %v\n%s", r, debug.Stack())
+			log.Printf("platform-cron: 釋放單飛鎖失敗(已丟棄該連線,連線關閉即釋放鎖): %v", uerr)
 		}
 	}()
 
@@ -254,7 +288,9 @@ const LockKey int64 = 0x504C415443524F4E
 // 留下永遠「執行中」的殘骸;advisory lock 在連線結束時由資料庫自動釋放。
 //
 // 鎖是 **session 級**、綁在取得它的那一條連線上,故取鎖用一條專屬連線(*sql.Conn,從池中固定
-// 一條),並在解鎖時關掉它 —— 用池裡隨機的連線解鎖會解到別的連線,鎖就洩漏到行程結束。
+// 一條),解鎖也在**同一條**連線上 —— 用池裡隨機的連線解鎖會解到別的連線,鎖就洩漏到行程結束。
+// 解鎖失敗(或 `pg_advisory_unlock` 回報未持有)時那條連線會被**丟棄**(不還池):連線還活著就
+// 可能仍持有鎖,還回池裡會讓同一行程的下一趟擋住自己(從外面看起來就是排程靜默停擺)。
 type AdvisoryLocker struct {
 	db  *sql.DB
 	key int64
@@ -282,10 +318,22 @@ func (l *AdvisoryLocker) TryLock(ctx context.Context) (func(context.Context) err
 		return nil, false, nil
 	}
 	return func(ctx context.Context) error {
-		// 關閉連線本身就會釋放 session 級鎖;unlock 先做是為了讓「真的解不開」看得見
-		// (回錯誤會記一行 log,而不是靜默留鎖)。
-		defer func() { _ = conn.Close() }()
-		_, err := conn.ExecContext(ctx, `SELECT pg_advisory_unlock($1)`, l.key)
-		return err
+		var unlocked bool
+		err := conn.QueryRowContext(ctx, `SELECT pg_advisory_unlock($1)`, l.key).Scan(&unlocked)
+		if err == nil && !unlocked {
+			// 回 false 表示這條 session 根本沒持有鎖(正常路徑不該發生)。
+			err = errors.New("pg_advisory_unlock 回報未持有鎖")
+		}
+		if err != nil {
+			// 解鎖沒有確認成功 → **丟棄**這條連線(不要還池):連線還活著就可能仍持有 session 級鎖,
+			// 還回池裡會讓同一行程的下一趟擋住自己。*sql.Conn.Close 只是**還池**,故在 Raw 內直接
+			// 關掉底層 driver 連線(driver.Conn.Close;連線關閉 = PostgreSQL 自動釋放該 session 的鎖),
+			// 再回 driver.ErrBadConn,讓 database/sql 把這個池位標成壞的、不再重用。
+			_ = conn.Raw(func(any) error { return driver.ErrBadConn })
+			return err
+		}
+		// 解鎖已確認:*sql.Conn.Close 是**還回池**(不是關掉 TCP 連線)——這裡安全,因為鎖已經
+		// 明確放掉;還池讓下一趟不必重新建連線。
+		return conn.Close()
 	}, true, nil
 }

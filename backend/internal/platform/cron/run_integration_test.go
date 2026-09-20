@@ -40,7 +40,8 @@ const cronMigrationsDir = "../../../database/migrations"
 func TestIntegrationRunOnceOverdueFreesTenant(t *testing.T) {
 	testsupport.RequiresContainer(t)
 	ctx := t.Context()
-	adminDB, err := sql.Open("pgx", testsupport.Postgres(t))
+	dsn := testsupport.Postgres(t)
+	adminDB, err := sql.Open("pgx", dsn)
 	if err != nil {
 		t.Fatalf("連線: %v", err)
 	}
@@ -131,6 +132,38 @@ func TestIntegrationRunOnceOverdueFreesTenant(t *testing.T) {
 	}
 	if err := free(ctx); err != nil {
 		t.Fatalf("釋放鎖: %v", err)
+	}
+
+	// ①-2 解鎖失敗時必須**丟棄**那條連線(不得還池):連線還活著就可能仍持有 session 級鎖,
+	// 還回池裡會讓同一行程的下一趟擋住自己(外面看起來就是排程靜默停擺)。
+	//
+	// 怎麼在不靠競態的情況下造出「解鎖失敗但鎖還在」:以業務角色 app_rw 取鎖(它的 EXECUTE 可以收回),
+	// 再從 owner 連線 REVOKE EXECUTE ON pg_advisory_unlock → 解鎖以 42501 失敗,而 session 級鎖仍在。
+	// 探針走**另一條 session**(adminDB,superuser):鎖真的放掉了(=連線被丟棄)才算通過。
+	lockDB, err := sql.Open("pgx", testsupport.AppRoleDSN(t, dsn))
+	if err != nil {
+		t.Fatalf("連線(鎖專用池): %v", err)
+	}
+	lockDB.SetMaxOpenConns(1)
+	defer func() { _ = lockDB.Close() }()
+	doomed := cron.NewAdvisoryLocker(lockDB, cron.LockKey)
+	releaseDoomed, okDoomed, err := doomed.TryLock(ctx)
+	if err != nil || !okDoomed {
+		t.Fatalf("app_rw 取鎖: ok=%v err=%v", okDoomed, err)
+	}
+	if _, err := adminDB.ExecContext(ctx,
+		`REVOKE EXECUTE ON FUNCTION pg_advisory_unlock(bigint) FROM PUBLIC`); err != nil {
+		t.Fatalf("收回 pg_advisory_unlock 的執行權: %v", err)
+	}
+	if err := releaseDoomed(ctx); err == nil {
+		t.Fatal("解鎖失敗必須回報錯誤,不得靜默宣稱已釋放")
+	}
+	if _, err := adminDB.ExecContext(ctx,
+		`GRANT EXECUTE ON FUNCTION pg_advisory_unlock(bigint) TO PUBLIC`); err != nil {
+		t.Fatalf("還原 pg_advisory_unlock 的執行權: %v", err)
+	}
+	if !waitLockFree(t, ctx, adminDB) {
+		t.Fatal("解鎖失敗後那條連線必須被丟棄(鎖已真的放掉),否則同一行程的下一趟會擋住自己")
 	}
 
 	// ② 第 1 趟(now):A 逾期(設寬限 7 天)、B 開出第 2 期。
@@ -239,6 +272,26 @@ func TestIntegrationRunOnceOverdueFreesTenant(t *testing.T) {
 	if platformAudits != 0 {
 		t.Fatalf("排程不得寫平台稽核,got %d 筆", platformAudits)
 	}
+}
+
+// waitLockFree 回報單飛鎖是否已沒人持有:反覆嘗試一小段時間後才判定失敗 —— PostgreSQL 對「連線
+// 斷開」的處置(連帶釋放該 session 的 advisory lock)是**非同步**的,連線剛關就問會問到還在的鎖。
+func waitLockFree(t *testing.T, ctx context.Context, db *sql.DB) bool {
+	t.Helper()
+	for range 40 {
+		release, ok, err := cron.NewAdvisoryLocker(db, cron.LockKey).TryLock(ctx)
+		if err != nil {
+			t.Fatalf("探針取鎖: %v", err)
+		}
+		if ok {
+			if err := release(ctx); err != nil {
+				t.Fatalf("釋放探針的鎖: %v", err)
+			}
+			return true
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	return false
 }
 
 // seedCronPlan 建立一個含月繳價目的方案(產生下一期需要當期生效價,沒有價目會大聲失敗)。
