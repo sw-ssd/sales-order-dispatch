@@ -80,7 +80,7 @@
 
 | # | 項目 | 現況 | 選項 | 歸屬 |
 |---|---|---|---|---|
-| 1 | **席位 vs 客戶帳號的口徑矛盾** | `CreateCustomer` 會建一列 active 的 `users`（`customer_service.go` 的 `buildCustomerAccount`，:466／:475 呼叫），而席位計數含所有非 `inactive` 帳號（`counters.go` 的 `countFeature`）→ 但該路徑只受 `LimitCustomers` 守衛 → 已達席位上限仍可藉「建客戶」超額佔席位。spec §3.2（席位＝未停用帳號）與 §4.5（只有 `CreateUser` 綁 `limit.seats`）互相打架 | (a) 席位只算**非客戶**帳號（`is_customer=false`）——SaaS 直覺，需改 spec §3.2＋計數器（**建議**）；(b) `CreateCustomer` 也檢查 `limit.seats`——與現行 spec 一致但「加一個客戶吃掉一個員工席位」 | 產品／spec 擁有者定調（會動計費語意，本計畫不自行改） |
+| 1 | **席位 vs 客戶帳號的口徑矛盾** | `CreateCustomer` 會建一列 active 的 `users`（`customer_service.go` 的 `buildCustomerAccount`，:466／:475 呼叫），而席位計數含所有非 `inactive` 帳號（`counters.go` 的 `countFeature`）→ 但該路徑只受 `LimitCustomers` 守衛 → 已達席位上限仍可藉「建客戶」超額佔席位。spec §3.2（席位＝未停用帳號）與 §4.5（只有 `CreateUser` 綁 `limit.seats`）互相打架；**同源第三例**：`completeGuest`（既有 guest 轉公司）**不新增 `users` 列但會讓目標公司多一席**（最終審查 2026-09-21 發現） | (a) 席位只算**非客戶**帳號（`is_customer=false`）——SaaS 直覺，需改 spec §3.2＋計數器（**建議**）；(b) `CreateCustomer` 也檢查 `limit.seats`——與現行 spec 一致但「加一個客戶吃掉一個員工席位」 | 產品／spec 擁有者定調（會動計費語意，本計畫不自行改） |
 | 2 | **spec §4.5 守衛清單缺 `UpdateUser`** | 實作已含 inactive→active 的席位守衛（`7122767`），spec 清單未列 | 回寫 spec §4.5 | spec 擁有者（T12 已在 spec §4.5 補註記） |
 | 3 | **`RestoreDepartment` 不存在** | spec §4.5 列了「部門復原」，repo 無此 RPC；`guardCases` 記為具名缺口 | 補 RPC（含守衛）或從 spec 刪列 | `backend-02-tenancy-users`（T12 已在 spec §4.5 補註記） |
 | 4 | **`platform.settings` 由 Plan C 的 `00030` 建立** | Plan B 的 seed 對該表採「有表才寫、跳過並印提示」；形狀已與 Plan C 對齊（`key`／`value` 皆 TEXT） | — （已寫成跨計畫硬契約） | Plan C：落地後**必須重跑 `cmd/seed`**，否則 `cmd/platform-cron` 一開跑就 Fatal |
@@ -89,6 +89,9 @@
 | 7 | **v1 無登出端點** | operator token 效期 12h 內只能靠停用 `operators.status` 即時失效（已有測試） | 補 `Logout`（清 cookie／黑名單）或縮短效期 | Plan C／operator auth |
 | 8 | **`platform-console/` 未落地** | 目錄不存在 → errcode 產生器對它是 no-op，CI 的 errcode 與 proto 閘門都已把路徑列入（一落地就自動納管） | — | Plan C（T1–T14） |
 | 9 | **平台 admin 連線池有兩條** | `mountEntitlements` 與 `mountPlatformAuth` 各自 `database.OpenSQL(AdminDSN())`（process 級、成本可忽略；收斂成單池需改 T5 的 `mountEntitlements` 簽章） | 收斂成一池 | Plan C |
+| 10 | 🔴 **發布次序阻擋：訂閱建立／指派未落地** | **本計畫（含 Plan A／D）沒有任何「建立訂閱／開通租戶」的路徑**（`platform.subscriptions` 只能靠手工 SQL 或 console）。而本計畫一上線，**無訂閱租戶的所有守衛寫入即回 `PLAT-5002`**（最終審查 2026-09-21 實證：`company_admin`＋無訂閱 → 「目前方案未包含此功能」）→ 既有租戶的建使用者／建客戶／建商品／建部門在部署後**立刻全部被擋** | (a) **上線清單強制前置**：先有訂閱指派路徑（Plan C 的 G6 `ChangePlan`／`CancelSubscription`，或一支 onboarding task）；(b) 部署時以 seed／遷移為既有租戶建訂閱列（臨時但可先行）；(c) 守衛加總開關（**不建議**，等於預設 fail-open） | **上線清單（releaser）＋ Plan C** — 未解前**不得部署本計畫** |
+| 11 | **無訂閱（`status='none'`）回 `PLAT-5002` 而非 `PLAT-3001`** | F-1 修正時**刻意保留既有契約**：`none` → `PLAT-5002`（`PlatformFeatureNotInPlan`）；未列舉／不可用狀態 → `PLAT-3001`（`PlatformSubscriptionInactive`）。但對「**根本沒有方案**」的租戶說「此功能不在你的方案內」語意不精確 | 若要更精確：`none` 也改 `PLAT-3001`（會動既有測試與前端文案契約） | spec 擁有者（不阻擋交付） |
+| 12 | **`PLAT-3002`（`PlatformPaymentConflict`）在本計畫無落點** | 該碼屬**付款流**，本計畫刻意不實作（最終審查確認「永無落點」是**預期**而非缺陷） | — | Plan C（付款／帳單） |
 
 ---
 
