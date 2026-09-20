@@ -547,11 +547,15 @@ import "connectrpc.com/connect"
 
 var (
 	// AuthBadCredentials 刻意不區分「帳號不存在」與「密碼錯誤」（防帳號列舉）。
-	AuthBadCredentials = MustRegister(Code{ID: "AUTH-1001", Domain: DomainAuth,
+	// ID 為 AUTH-4003（不是原稿的 AUTH-1001）：區段規則 1xxx 只允許 InvalidArgument，
+	// 而本碼對外是 Unauthenticated → 只有 4xxx 允許，否則 `MustRegister` 於 init panic
+	// （T2 實跑證實）。語意與 connect 碼不變。
+	AuthBadCredentials = MustRegister(Code{ID: "AUTH-4003", Domain: DomainAuth,
 		ConnectCode: connect.CodeUnauthenticated, Message: "帳號或密碼錯誤"})
 
 	// AuthLocked 帶 details.until（解鎖時間）。
-	AuthLocked = MustRegister(Code{ID: "AUTH-1002", Domain: DomainAuth,
+	// ID 為 AUTH-3003（不是原稿的 AUTH-1002）：理由同 AuthBadCredentials（FailedPrecondition 屬 3xxx）。
+	AuthLocked = MustRegister(Code{ID: "AUTH-3003", Domain: DomainAuth,
 		ConnectCode: connect.CodeFailedPrecondition, Message: "帳號已鎖定，請於 {until} 後再試"})
 
 	AuthRegistrationRequired = MustRegister(Code{ID: "AUTH-3001", Domain: DomainAuth,
