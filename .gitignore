@@ -9,3 +9,5 @@ build
 
 # Git worktrees (isolated feature workspaces)
 .worktrees/
+
+.playwright-mcp/

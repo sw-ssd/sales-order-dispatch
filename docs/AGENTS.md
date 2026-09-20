@@ -1,28 +1,27 @@
 # 訂出貨系統 — AI Agent 專案導覽
 
-> 本文件位於專案根目錄，統整 `sales-order-backend`、`sales-order-frontend`、`sales-order-app` 三個子專案。各子專案另有更詳細的 `AGENTS.md`，修改前請一併參閱。
+> 本文件位於 `docs/`，是**多公司訂出貨系統 1.0**（monorepo，`backend`／`frontend`／`app` 三個子專案同倉）的導覽。各子專案的 `AGENTS.md` 是該子專案的權威指引，修改前請一併參閱。
 >
-> **1.0 重建計畫**：本文件描述現行三倉系統；「多公司訂出貨系統 1.0」（全新 monorepo 重建，backend 已開工：01-auth / 02-tenancy-users 部分完成）的規劃文件整合於 `docs/PLANNING_OVERVIEW.md`，決策層為 `docs/superpowers/specs/2026-07-19-sales-order-1.0-decisions.md`（D1–D32），計畫現況見 `docs/superpowers/plans/README.md`，規劃細節請先讀 `docs/PLANNING_OVERVIEW.md`。
-> - `sales-order-app/AGENTS.md`：Flutter App 詳細指引
-> - `sales-order-backend/AGENTS.md`：Go 後台詳細指引
-> - `sales-order-frontend/AGENTS.md`：SolidJS 前端詳細指引
+> **規劃文件**：整體規劃整合於 `docs/PLANNING_OVERVIEW.md`，決策層為 `docs/superpowers/specs/2026-07-19-sales-order-1.0-decisions.md`（D1–D32），計畫現況見 `docs/superpowers/plans/README.md`，規劃細節請先讀 `docs/PLANNING_OVERVIEW.md`。
+> - `backend/AGENTS.md`：Go 後端詳細指引
+> - `frontend/AGENTS.md`：SolidJS 前端詳細指引
+> - `app/AGENTS.md`：Flutter App 詳細指引
 
 ---
 
 ## 1. 專案概覽
 
-這是**訂出貨系統**（Sales Order System）的程式碼庫，主要用於業務員（salesrep）與客戶（customer）建立、查詢、管理銷售訂單（sales order），並與 NetSuite 進行資料同步。系統由三部分組成：
+這是**多公司訂出貨系統 1.0** 的程式碼庫，主要用於業務員（salesrep）與客戶（customer）建立、查詢、管理銷售訂單（sales order）。三個子專案同倉，各自另有 `AGENTS.md`：
 
 | 子專案 | 技術 | 用途 | 版本 |
 |--------|------|------|------|
-| `sales-order-backend` | Go 1.25 | RESTful API 後台服務 | 見 `go.mod` |
-| `sales-order-frontend` | SolidJS 1.9 + TypeScript 5.9 + Vite 6 | 網頁中台（SPA） | `package.json` `1.0.29` |
-| `sales-order-app` | Flutter 3.35.2 + Dart ≥3.9.0 | 跨平台行動 App | `pubspec.yaml` `1.2.6+25` |
-| `appimg` | — | 商店截圖、App 宣傳圖、ButterKit 專案 | — |
+| `backend` | Go（`go 1.25.7`）；ent + Connect-RPC + Casbin/CASL + goose + Valkey | API 後端（Connect-RPC，前綴 `/api/v1`） | 見 `backend/go.mod` |
+| `frontend` | SolidJS（`solid-js ^1.9.15`）+ TypeScript + Vite 8 + Tailwind CSS v4 | 網頁中台（SPA） | 見 `frontend/package.json` |
+| `app` | Flutter + Dart（sdk `^3.10.0`） | 跨平台行動 App（iOS／Android，雙 flavor） | `pubspec.yaml` `1.0.0+1`；Flutter 版本由 `.fvmrc`（`stable`）決定 |
 
 - **主要語言**：文件與程式碼註解以**繁體中文**為主；識別字、檔案名稱、套件名稱維持英文原文。
 - **API 前綴**：後端統一使用 `/api/v1`。
-- **存放庫結構**：根目錄本身沒有套件設定檔（無 root `package.json`、`go.mod`、`pubspec.yaml`），三個子專案各自獨立為一個 Git 倉庫（各有 `.git`）。
+- **存放庫結構**：單一 Git 倉庫（根目錄即 monorepo 根）：根 `package.json`＋`pnpm-workspace.yaml`（工作區 `backend`／`frontend`／`app`，turbo 編排）與根 `Taskfile.yml`（`includes` 三個子專案，另提供 `infra:*`／`fga:*`）。子專案不再各自獨立成倉。
 
 ---
 
@@ -30,66 +29,50 @@
 
 ```text
 .
-├── appimg/                    # 共用宣傳與商店截圖素材
-│   ├── android/               # Android 商店圖
-│   ├── ios/                   # iOS 商店圖
-│   ├── screenshots.butterkit/ # ButterKit 後製專案
-│   ├── export_app_store/      # iOS 截圖成品
-│   ├── export_google_play/    # Android 截圖成品
-│   └── 廣宣頁面.png
-├── sales-order-backend/       # Go 後台 API
-│   ├── cmd/                   # 可執行入口（sw8、migrate、seed、route、token、auto_increment）
-│   ├── config/                # 環境變數設定
-│   ├── database/              # Goose 遷移檔、seeder、Atlas diff 工具
-│   ├── ent/                   # Ent schema 與產生碼
-│   ├── internal/              # 應用核心（domain、middleware、server、utility）
-│   ├── third_party/           # 外部整合（NetSuite、Casbin、Postgres session store、Redis）
-│   ├── testcontainers/        # dockertest 容器測試輔助
-│   ├── taskfiles/             # Task 子任務拆分
-│   ├── go.mod / go.sum
-│   ├── Taskfile.yml
-│   ├── Dockerfile
-│   ├── docker-compose-*.yml
-│   ├── .air.toml              # air 熱重載設定
-│   ├── tygo.yaml              # 產生前端 TypeScript 型別
-│   └── hexagon.env            # 範例/開發環境變數檔（含敏感資訊，已在版控中）
-├── sales-order-frontend/      # SolidJS 網頁前端
+├── .github/workflows/ci.yml   # CI：Go 測試（含 integration）與前端四道 gate
+├── app/                       # Flutter 行動 App（fvm；dev/prod 雙 flavor）
+│   ├── lib/                   # main_dev/main_prod、config.dart、router/、features/、gen/（proto 生成碼）
+│   ├── test/                  # flutter_test
+│   ├── android/ / ios/        # 平台專案（ios/setup_flavors.rb 為一次性注入腳本）
+│   ├── pubspec.yaml / pubspec.lock / analysis_options.yaml
+│   └── AGENTS.md / Taskfile.yml / .fvmrc
+├── backend/                   # Go 後端（ent + Connect-RPC + Casbin/CASL + goose + Valkey）
+│   ├── cmd/                   # 入口：server / migrate / seed
+│   ├── config/                # envconfig 逐檔設定（api、storage、observability…）
+│   ├── database/migrations/   # goose 遷移檔（NNNNN_name.sql，必含 Up/Down）
+│   ├── ent/                   # Ent schema 與產生碼（改 schema 後 go generate ./ent）
+│   ├── internal/
+│   │   ├── services/          # Connect-RPC handler（各 service 提供 Register*Services）
+│   │   ├── domain/<name>/     # usecase + repository 介面
+│   │   ├── proto/             # buf 產生碼（Go 型別與 *connect）
+│   │   └── auth/ authz/ audit/ handlers/ server/ testsupport/
+│   ├── proto/                 # proto 定義唯一來源（改動後 task proto:gen）
+│   ├── third_party/           # 外部整合（database / openfga / cache）
+│   ├── AGENTS.md / Taskfile.yml / go.mod / go.sum
+│   └── buf.yaml / buf.gen.yaml / .air.toml / .env.example
+├── docs/                      # 規劃、規範與報告
+│   ├── AGENTS.md              # 本文件（導覽層級）
+│   ├── PLANNING_OVERVIEW.md / FUNCTION_LIST.md
+│   ├── superpowers/           # specs/（設計書與決策 D1–D32）、plans/（backend 01~09…）、reports/
+│   ├── design/                # 版面與設計進度存檔
+│   └── archive/               # 歸檔（docs.zip）
+├── frontend/                  # SolidJS 網頁前端（Vite + Vitest）
 │   ├── src/
-│   │   ├── components/        # UI 元件（ui/form/datatable/sidebar…）
-│   │   ├── pages/             # 頁面層級元件
-│   │   ├── routes/            # TanStack 檔案式路由
-│   │   ├── lib/               # 領域 API + TanStack Query
-│   │   ├── models/            # TypeScript 型別
-│   │   ├── constant/          # 常數、CASL 規則、選單
-│   │   ├── env/               # 環境變數綱目（Valibot）
-│   │   ├── main.tsx
-│   │   └── globals.css / index.css
-│   ├── public/
-│   ├── test_sqls/             # 臨時 SQL 草稿（不屬建置）
-│   ├── package.json
-│   ├── pnpm-lock.yaml
-│   ├── pnpm-workspace.yaml
-│   ├── vite.config.ts
-│   ├── tailwind.config.ts
-│   ├── tsconfig.json
-│   ├── firebase.json
-│   └── Taskfile.yml
-└── sales-order-app/           # Flutter 行動 App
-    ├── lib/
-    │   ├── layer_business/    # 業務邏輯、網路、路由、服務、DI
-    │   ├── layer_data/        # 模型、本地儲存、常數
-    │   └── layer_presentation/# 畫面、widget、主題
-    ├── android/ / ios/         # 平台專案
-    ├── integration_test/       # Maestro 整合測試 flow
-    ├── assets/                 # 圖片、字型、顏色 XML
-    ├── fastlane_bin/ / bin/    # bundler binstub
-    ├── pubspec.yaml
-    ├── pubspec.lock
-    ├── analysis_options.yaml
-    ├── Taskfile.yml
-    ├── .fvmrc                  # Flutter 版本 3.35.2
-    ├── firebase.json
-    └── firebase_flavor.sh
+│   │   ├── features/<name>/   # 頁面與領域元件（users、auth…，各自 pages/ 與 components/）
+│   │   ├── components/ui/     # Ark UI（行為）× 語意 token 的基礎元件（含 sidebar/、demo/）
+│   │   ├── components/layout/ # AppShell / Sidebar / Topbar
+│   │   ├── lib/               # transport、query-client、ability、proto 生成碼
+│   │   └── router/ App.tsx main.tsx index.css test-setup.ts
+│   ├── scripts/               # casl-golden-gen.mjs
+│   ├── index.html / vite.config.ts / vitest.config.ts / tsconfig.json / eslint.config.js
+│   └── package.json / AGENTS.md / Taskfile.yml
+├── .superpowers/sdd/          # SDD 工作區（各波計畫、報告與複審紀錄）
+├── docker-compose.dev.yml     # 開發基礎設施（PostgreSQL / Valkey / Gotenberg）
+├── Taskfile.yml               # 根 Taskfile：infra:start|stop、fga:start|stop、includes 三個子專案
+├── package.json / pnpm-workspace.yaml / pnpm-lock.yaml / turbo.json
+│                              # ↑ pnpm 工作區（backend/frontend/app）與 turbo 編排
+├── fga-mcp.json               # OpenFGA MCP 連線設定（唯讀）
+└── README.md
 ```
 
 ---
@@ -389,7 +372,7 @@ cd ios && bundle exec fastlane ios beta
 
 開始修改前，建議確認：
 
-1. **是否在正確的子專案工作？** 根目錄無套件設定，請直接進入 `sales-order-backend`、`sales-order-frontend` 或 `sales-order-app`。
+1. **是否在正確的子專案工作？** 子專案位於 `backend`、`frontend`、`app`；根目錄是 monorepo 根（pnpm 工作區與根 Taskfile），不是任一子專案的目錄。
 2. **後端是否已啟動？** 前端與 App 開發、截圖測試都需要後端在線。
 3. **修改後端 Ent schema 後**，是否已執行 `task ent:gen` 並確認遷移檔？
 4. **修改 App 的 Freezed / json_serializable / reactive_forms / auto_route / envied / dart_mappable 來源檔後**，是否已重新執行 `build_runner` 並提交產生檔？
