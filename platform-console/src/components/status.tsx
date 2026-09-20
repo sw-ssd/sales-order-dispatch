@@ -27,3 +27,12 @@ export function SubscriptionBadge(props: { status: string }) {
     </Switch>
   );
 }
+
+/**
+ * 篩選用的狀態選項：標籤與徽章共用同一份真相（`ListTenants.status` 的字面值）。
+ * 值一律送後端的字面值（例：`past_due`），不送顯示文字。
+ */
+export const SUBSCRIPTION_STATUSES = Object.entries(STATUS).map(([value, it]) => ({
+  value,
+  label: it.label,
+}));
