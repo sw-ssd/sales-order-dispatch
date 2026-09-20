@@ -79,6 +79,27 @@ grep -n 's\.db\.\|db.Tx(ctx)' internal/services/<file>.go   # 期望無輸出
 
 ---
 
+## Progress
+
+> 執行記錄與逐任務細節見 `.superpowers/sdd/2026-09-20-rls-tenant-isolation-plan/progress.md`（含每次 review 的判定、裁決與 ledger）。狀態：**10/10 任務完成**（2026-09-20）。
+
+| # | 任務 | 狀態 | 產出（HEAD） | 驗證 |
+|---|---|---|---|---|
+| 1 | preflight 調查 | ✅ | — | 盤點 42 處自開交易與 18 表 |
+| 2 | 資原始碼掃描 | ✅ | — | 124 處直呼查詢清冊 |
+| 3 | `auth`／`dbtenant` ＋ policy migration（00023） | ✅ | `01d7b57` 前後 | policy 覆蓋測試 |
+| 4 | 核心域路徑收斂 | ✅ | 同上 | 整合測試 |
+| 5 | 客戶域遷移（00024） | ✅ | `01d7b57..40bf5ed` | app_rw 探針（14 RPC）＋3 組 mutation |
+| 6 | 主檔域遷移 ＋ 18 policy NULLIF 重建（00025） | ✅ | `7e88280` | 18 policy 去 NULLIF 後與 00023/00011 逐位元組相同 |
+| 7 | 商品域遷移（00026） | ✅ | `326e15f` | 子表傳遞性＋3 組 mutation |
+| 8 | 字典／稽核域（00027）＋ **audit policy 修正** | ✅ | `a272360` | scope 矩陣＋dept-scope 端到端＋ACL 閘門測試 |
+| 9 | 核心域啟用（00028）＋ 認證系統範圍 | ✅ | `25e5f03` | 登入全鏈＋佈建探針＋5 組 mutation |
+| 10 | seed、跨租戶端到端、慣例文件 | ✅ | `8dd58b0` | 14 表／8 Get／24 寫入動詞 ＋ seed 真容器實證 |
+
+**全站 18 張表已 `ENABLE` + `FORCE` RLS**（00024／00025／00026／00027／00028 分批），18 個 policy 全部為 `NULLIF(current_setting(...), '')` 形式。
+
+---
+
 ## File Structure
 
 | 路徑 | 職責 |
@@ -2751,6 +2772,8 @@ git commit -m "feat(backend): 系統範圍收斂、seed 走 admin+系統 scope�
 | 未設 GUC → 0 列、跨租戶寫入被擋（§7.2-1、-2） | Task 3（結構）＋ Task 5–9（行為） |
 | `migrate up/down` 完整回滾（§6.5） | Task 3 Step 5、各 ENABLE migration 的 `Down` |
 | 慣例成文（§6.3） | Task 10 Step 5 |
+| **稽核的 scope 等級完整性（原 policy 缺 `department`/`self` 分支）** | Task 8（00027 修正；非原 spec 明列，屬實測發現） |
+| **外部副作用在 commit 後執行（OpenFGA tuple）** | Task 9 fix round（`dbtenant.AfterCommit`） |
 
 ## 風險與對策（本計畫新增者）
 
@@ -2760,6 +2783,21 @@ git commit -m "feat(backend): 系統範圍收斂、seed 走 admin+系統 scope�
 | P2 | `sd` 批次替換誤傷（例如區域變數也叫 `s.db`） | 每檔替換後以 `grep -n 's\.db\.' <file>` 必須為 0，且 `go build ./...` 通過 |
 | P3 | 請求層長交易壓連線池 | 列入 `backend/AGENTS.md` 慣例；串流 AI／PDF 另立短交易邊界（未來任務） |
 | P4 | `db.Tx(ctx)` 移除後，服務層原本的「部分失敗回滾」語意變成「整請求回滾」 | 這是刻意的語意收斂（D18 同事務稽核亦要求）；以既有整合測試確認無回歸 |
+
+### 實作期間實際遇到的風險（2026-09-20，全部已處置）
+
+| # | 風險（實測發現） | 處置 |
+|---|---|---|
+| P5 | **superuser 連線恆繞過 RLS（`FORCE` 亦然）** → 既有整合測試全綠**不能**當 RLS 生效的證據 | 立為 Global Constraint：宣稱驗 RLS 的測試一律 `app_rw`＋`dbtenant.NewClient`；各域探針照此重寫 |
+| P6 | **`core_audit_logs_scope` 缺 `department`/`self` 分支** → 非 company 身分的**所有**寫入（稽核同交易，D18）整筆失敗 | 00027 修正 USING/WITH CHECK 同條件；新增 scope 矩陣探針＋端到端 dept-scope 寫入斷言；立「每 scope 等級都要有分支」慣例 |
+| P7 | **`USING` 嚴於 `WITH CHECK` 在本堆疊不可實作**（PG 對 `INSERT … RETURNING` 套 SELECT policy，ent 一律 `INSERT … RETURNING id`）→ 該表在某些 scope 等級下寫入必壞 | 讀取收緊一律移服務層 ACL（附閘門測試）；立「`USING` 可較寬、不可較嚴」不變式 |
+| P8 | **同一請求對同一列開第二條交易 → 互鎖死結**（guest 流程的 `UpdateOneID`＋`AddTokenVersion`） | 合併為單一 `SystemScopeTx`；立為慣例；並以「池 2＋deadline」探針釘住 |
+| P9 | **未帶 scope 的系統路徑在核心表啟用後靜默失效**（登入查詢回 0 列＝全員登入失敗；`authz.Provision` 佈建 0 筆卻**不報錯**） | 未登入／系統路徑一律 `SystemScopeTx`；新增登入全鏈與佈建探針，並以「暫時套 00028」取得 RED 證據 |
+| P10 | **`SET LOCAL` 對自訂 GUC 留空字串 placeholder** → `''::bigint` 22P02（把「查不到」變成「系統錯誤」） | 18 個 policy 一律 `NULLIF(current_setting(..., true), '')`（00025） |
+| P11 | **外部副作用在交易內**（OpenFGA tuple 同步先於 commit）→ 回滾後不一致，**新增權限方向 fail-open** | `dbtenant.AfterCommit` post-commit 掛鉤；立為慣例（適用未來的 FCM／派車串流） |
+| P12 | **`SystemScopeTx` 餵裸 client 不會有 scope**（只寫入時 42501，讀取靜默回 0 列）；且它需 ≥2 條連線 | 立為慣例 12；`cmd/seed` 改走 `dbtenant.NewClient`；生產應明確設 `MaxOpenConns` |
+| P13 | **`core_customers_scope` 無 `self` 分支**，而 `customer` 角色 scope 為 `self` → 客戶 App 讀自有資料語意未定 | 目前不可達（服務層對 customer/guest 一律拒絕）；結論寫入 `AGENTS.md` §9.1，歸屬「客戶 App 業務頁面」計畫 |
+| P14 | 跨租戶錯誤碼因 RLS 上線從 `permission_denied` 變 `not_found`（T8 探針釘住的是 pre-RLS 實作細節） | 統一為 `NotFound`（更不漏資訊）；立為慣例；舊斷言改為單一 `NotFound` 並保留「無副作用」斷言 |
 
 ---
 
