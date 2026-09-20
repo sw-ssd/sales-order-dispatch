@@ -428,6 +428,47 @@ func TestZeroTTLDisablesCache(t *testing.T) {
 	}
 }
 
+// F-2：MemoryCache 必須自己實現 TTL —— 否則 New(..., ttl>0) 的 ttl 是空話，
+// 方案／override 異動在長跑行程裡永遠不生效（Plan C 的 Valkey 之前沒有任何失效機制）。
+func TestCacheExpiresAfterTTL(t *testing.T) {
+	f := store.NewFake()
+	f.PutFeature(store.Feature{Code: seats, Type: "integer"})
+	f.PutPlan("std", []store.Entitlement{{FeatureCode: seats, Enabled: true, Limit: ptr(int64(2))}})
+	f.PutSubscription(store.Subscription{CompanyID: 1, PlanCode: "std", Status: "active"})
+
+	cs := &countingStore{Store: f}
+	// 極短 TTL ＋ 睡 TTL 的 5 倍：monotonic clock 保證至少睡滿，不依賴排程精度（不 flaky）。
+	const ttl = 20 * time.Millisecond
+	svc := entitlements.New(cs, counting{seats: 1}, entitlements.NewMemoryCache(), ttl)
+	ctx := context.Background()
+
+	if err := svc.CheckLimit(ctx, 1, seats, 1); err != nil {
+		t.Fatalf("第一次應放行（未達上限）: %v", err)
+	}
+	// 停用訂閱：TTL 過後的判定必須看到它（看不到就是拿舊權益在放行）。
+	f.PutSubscription(store.Subscription{CompanyID: 1, PlanCode: "std", Status: "suspended"})
+	time.Sleep(5 * ttl)
+
+	err := svc.CheckLimit(ctx, 1, seats, 1)
+	if err == nil {
+		t.Fatal("TTL 過後必須再回源（否則 ttl 是空話：升降級／停用永遠不生效）")
+	}
+	if got := errorCodeOf(t, err); got != "PLAT-3001" {
+		t.Fatalf("回源後應看到 suspended（PLAT-3001），got %q", got)
+	}
+	if cs.subCalls != 2 {
+		t.Fatalf("store 查詢次數 = %d；want 2（首次回源＋TTL 過後回源）", cs.subCalls)
+	}
+
+	// 回源後會重新寫快取：緊接著的判定必須命中快取（TTL 生效不等於快取失效）。
+	if err := svc.CheckLimit(ctx, 1, seats, 1); err == nil {
+		t.Fatal("仍應為 PLAT-3001")
+	}
+	if cs.subCalls != 2 {
+		t.Fatalf("回源後應重新快取（store 查詢次數 %d；want 2）", cs.subCalls)
+	}
+}
+
 func TestMemoryCacheRoundTrip(t *testing.T) {
 	c := entitlements.NewMemoryCache()
 	ctx := context.Background()
@@ -450,6 +491,14 @@ func TestMemoryCacheRoundTrip(t *testing.T) {
 	}
 	if _, ok, _ := c.Get(ctx, "ent:1"); ok {
 		t.Fatal("Delete 後不得命中（Plan C 的失效機制靠它）")
+	}
+
+	// ttl <= 0 一律不入庫，與 Service「ttl<=0 表示不快取」同一語意（兩端不得各說各話）。
+	if err := c.Set(ctx, "ent:2", []byte("x"), 0); err != nil {
+		t.Fatalf("Set(ttl=0): %v", err)
+	}
+	if _, ok, _ := c.Get(ctx, "ent:2"); ok {
+		t.Fatal("ttl<=0 不得入庫")
 	}
 }
 
