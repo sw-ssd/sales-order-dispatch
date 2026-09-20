@@ -182,8 +182,12 @@ func resolveFeature(st *tenantState, feature string, now time.Time) (resolved, b
 	return out, true
 }
 
-// Allows 判定 boolean 功能是否可用。判定結果（含「沒買」「額度不足」）一律以 false 表達，
-// 不轉成錯誤——語意是「能不能用」，把合約狀態變成錯誤留給 CheckLimit（PLAT-3001）與 Snapshot。
+// Allows 判定 boolean 功能是否可用。
+//
+// **分工（RPC 守衛必須用 CheckLimit）**：CheckLimit 才是守衛——它會依情境回精確的對外碼與
+// details（PLAT-3001 訂閱不可用／PLAT-5002 未含功能／PLAT-5001 額度不足），前端據以導向收款或
+// 升級方案。Allows 只回布林、對政策拒絕**不回錯誤**（fail-closed 回 false），供展示與非 RPC
+// 路徑使用：把「沒買」「訂閱停了」轉成錯誤會讓每個呼叫點各自發明錯誤碼。
 func (s *Service) Allows(ctx context.Context, companyID int, feature string) (bool, error) {
 	if s.unlimited {
 		return true, nil
