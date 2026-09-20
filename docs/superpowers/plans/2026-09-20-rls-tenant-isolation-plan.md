@@ -87,9 +87,9 @@ grep -n 's\.db\.\|db.Tx(ctx)' internal/services/<file>.go   # 期望無輸出
 |---|---|---|---|---|
 | 1 | preflight 調查 | ✅ | — | 盤點 42 處自開交易與 18 表 |
 | 2 | 資原始碼掃描 | ✅ | — | 124 處直呼查詢清冊 |
-| 3 | `auth`／`dbtenant` ＋ policy migration（00023） | ✅ | `01d7b57` 前後 | policy 覆蓋測試 |
-| 4 | 核心域路徑收斂 | ✅ | 同上 | 整合測試 |
-| 5 | 客戶域遷移（00024） | ✅ | `01d7b57..40bf5ed` | app_rw 探針（14 RPC）＋3 組 mutation |
+| 3 | `auth`／`dbtenant` ＋ policy migration（00023） | ✅ | `7bb14f2` | policy 覆蓋測試 |
+| 4 | 核心域路徑收斂 | ✅ | `9f8727f` | 整合測試 |
+| 5 | 客戶域遷移（00024） | ✅ | `079fe86..40bf5ed` | app_rw 探針（14 RPC）＋3 組 mutation |
 | 6 | 主檔域遷移 ＋ 18 policy NULLIF 重建（00025） | ✅ | `7e88280` | 18 policy 去 NULLIF 後與 00023/00011 逐位元組相同 |
 | 7 | 商品域遷移（00026） | ✅ | `326e15f` | 子表傳遞性＋3 組 mutation |
 | 8 | 字典／稽核域（00027）＋ **audit policy 修正** | ✅ | `a272360` | scope 矩陣＋dept-scope 端到端＋ACL 閘門測試 |
