@@ -117,14 +117,14 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
 **事實**（2026-09-20 實查）：
 
 - `core_customers_scope`（`00023` 建立、`00025` 以 `NULLIF` 重建）的 `USING`／`WITH CHECK` 只有 `all` 與「`company_id` 相符且（`scope=company` 或 `department_id IS NULL` 或 `= current_department_id`）」——**沒有 `self` 分支**。
-- `ScopeForRole("customer") = self`（`internal/auth/rls.go`；`cmd/seed` 的內建角色 `customer` 也是 `self`），而 `RLSStatements` 對 `self` 只設 `app.current_user_id` 與 data_scope，**不設** `department_id`（客戶帳號沒有部門）。
-- `RLSScope.CustomerID` 在生產程式碼**沒有任何生產者**：只有 `RLSStatements` 會把它寫進 `app.current_customer_id`，而 `server.identityFor` 只從 `users` 列組出 scope（`CustomerID` 恆為零值）。
-- 客戶帳號就是 `users` 的一列（`is_customer = true`、`account_name` = `customers.customer_code`，登入見 `auth_handler.Login`）；`customers` 與該帳號之間**沒有**「這筆帳號是哪一筆客戶」的欄位（唯一連到 `users` 的 FK 是 `customers.default_sales_rep_id → users.id`，方向相反）。
+- `ScopeForRole("customer") = self`（`internal/auth/rls.go`；`cmd/seed` 的內建角色 `customer` 也是 `self`）。`RLSStatements` 對 self 會設 `app.current_user_id`（與 data_scope），有部門時另設 `app.current_department_id`（自 `users.department_users`）。
+- **`app.current_customer_id` 從來沒有被設定**：`RLSScope.CustomerID` 在生產程式碼沒有任何生產者（只有 `RLSStatements` 會讀它），`server.identityFor` 組 scope 時只填 `UserID`／`CompanyID`／`DepartmentID`／`DataScope`。
+- 「帳號 → 客戶列」的連結**已經存在**：`users.customer_id → customers.id`（`00014`，含 FK、查詢索引與「每客戶恰一主帳號」的部分唯一索引），由 `customer_service.CreateCustomer` 的 `buildCustomerAccount` 在建檔時填入（主帳號 `is_primary=true`、業務子帳號 `system_generated=true`）。客戶帳號就是這一列（`role=customer`、`is_customer=true`；登入查詢見 `auth_handler.Login` 以 `account_name` 查）。因此這條缺口**不需要新增 schema**。
 
 **結論**：
 
-1. 今天 customer 身分對 `customers` 的可見集合是「**同一公司所有 `department_id IS NULL` 的客戶列**」——同租戶內的公司層全體，而不是「自己那一筆」；寫入面同理。這與 `self` 的語意不符。
+1. 今天 customer 身分對 `customers` 的可見集合是「**同一公司所有 `department_id IS NULL` 的客戶列**」（實測：company 層兩列全部可見、部門層那列不可見）；若該帳號本身有部門（建立者為 dept_admin 時 `department_users` 有值），範圍再放寬為「該部門的全部客戶列」。這與 `self` 的語意不符。
 2. **不是跨公司洩漏**（`company_id` 條件仍在），且目前**不可達**：服務層對 customer/guest 一律 `permission_denied`（`deptScope` 的 default 分支），客戶 App 頁面亦尚未實作（見功能對照表）。
-3. 要讓「只讀自己」成立，必須三者齊備：①先有「帳號 → 客戶列」的連結（新增 `users` → `customers` 的 FK，或在 `identityFor` 以 `account_name = customer_code` 解析）；②`identityFor` 據此填入 `RLSScope.CustomerID`；③在 `core_customers_scope` 補 `self` 分支（`id = NULLIF(current_setting('app.current_customer_id', true), '')::bigint`）。三者缺一不可，且屬 **policy ＋ 服務層語意變更**。
-4. **歸屬**：不在 RLS 啟用計畫（T10 明文「不要改 policy」）內。此缺口應由「**客戶 App 業務頁面**」的實作計畫一併處理：先在該計畫決定連結方式（新增 FK vs 以 `account_name` 解析），再落 policy ＋ `identityFor` ＋ ACL，並附一條以 `app_rw` 跑的 self-範圍探針（樣板：`internal/services/rls_cross_tenant_integration_test.go`）。在此之前的任何「客戶 App 讀自己的資料」實作都不可依賴 RLS。
+3. 修法材料齊備且範圍明確，但屬 **policy ＋ 服務層語意變更**：①`identityFor` 把該列的 `users.customer_id` 填進 `RLSScope.CustomerID`（→ 交易內 `SET LOCAL app.current_customer_id`）；②`core_customers_scope` 補 `self` 分支（`id = NULLIF(current_setting('app.current_customer_id', true), '')::bigint`）；③**同一缺口的表不只 `customers`** —— `core_customer_addresses_scope`／`core_customer_contacts_scope` 也沒有 `self` 分支，客戶 App 未來要讀的新表（訂單等）同理，必須成組處理，否則 App 只是在別的端點又看到整個公司。
+4. **歸屬**：不在 RLS 啟用計畫（T10 明文「不要改 policy」）內。此缺口應由「**客戶 App 業務頁面**」的實作計畫處理：先在該計畫確認產品語意（客戶端是否真的只能看自己那一筆，抑或公司層共用本就允許），再落 ①②③ ＋ 對應 ACL，並附一條以 `app_rw` 跑的 self-範圍探針（樣板：`internal/services/rls_cross_tenant_integration_test.go`）。在此之前的任何「客戶 App 讀自己的資料」實作都不可依賴 RLS。
 
