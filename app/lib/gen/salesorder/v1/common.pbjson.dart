@@ -75,3 +75,39 @@ const Money$json = {
 final $typed_data.Uint8List moneyDescriptor = $convert.base64Decode(
     'CgVNb25leRIhCgxhbW91bnRfbWlub3IYASABKANSC2Ftb3VudE1pbm9yEhoKCGN1cnJlbmN5GA'
     'IgASgJUghjdXJyZW5jeToCGAE=');
+
+@$core.Deprecated('Use errorInfoDescriptor instead')
+const ErrorInfo$json = {
+  '1': 'ErrorInfo',
+  '2': [
+    {'1': 'code', '3': 1, '4': 1, '5': 9, '10': 'code'},
+    {'1': 'message', '3': 2, '4': 1, '5': 9, '10': 'message'},
+    {
+      '1': 'details',
+      '3': 3,
+      '4': 3,
+      '5': 11,
+      '6': '.salesorder.v1.ErrorInfo.DetailsEntry',
+      '10': 'details'
+    },
+    {'1': 'trace_id', '3': 4, '4': 1, '5': 9, '10': 'traceId'},
+  ],
+  '3': [ErrorInfo_DetailsEntry$json],
+};
+
+@$core.Deprecated('Use errorInfoDescriptor instead')
+const ErrorInfo_DetailsEntry$json = {
+  '1': 'DetailsEntry',
+  '2': [
+    {'1': 'key', '3': 1, '4': 1, '5': 9, '10': 'key'},
+    {'1': 'value', '3': 2, '4': 1, '5': 9, '10': 'value'},
+  ],
+  '7': {'7': true},
+};
+
+/// Descriptor for `ErrorInfo`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List errorInfoDescriptor = $convert.base64Decode(
+    'CglFcnJvckluZm8SEgoEY29kZRgBIAEoCVIEY29kZRIYCgdtZXNzYWdlGAIgASgJUgdtZXNzYW'
+    'dlEj8KB2RldGFpbHMYAyADKAsyJS5zYWxlc29yZGVyLnYxLkVycm9ySW5mby5EZXRhaWxzRW50'
+    'cnlSB2RldGFpbHMSGQoIdHJhY2VfaWQYBCABKAlSB3RyYWNlSWQaOgoMRGV0YWlsc0VudHJ5Eh'
+    'AKA2tleRgBIAEoCVIDa2V5EhQKBXZhbHVlGAIgASgJUgV2YWx1ZToCOAE=');

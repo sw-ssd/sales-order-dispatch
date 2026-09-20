@@ -8,7 +8,7 @@ import { enumDesc, fileDesc, messageDesc, tsEnum } from "@bufbuild/protobuf/code
  * Describes the file salesorder/v1/common.proto.
  */
 export const file_salesorder_v1_common = /*@__PURE__*/
-  fileDesc("ChpzYWxlc29yZGVyL3YxL2NvbW1vbi5wcm90bxINc2FsZXNvcmRlci52MSI8CgpQYWdpbmF0aW9uEgwKBHBhZ2UYASABKAUSEQoJcGFnZV9zaXplGAIgASgFEg0KBXRvdGFsGAMgASgDIjYKDlRpbWVzdGFtcFJhbmdlEhIKCnN0YXJ0X3VuaXgYASABKAMSEAoIZW5kX3VuaXgYAiABKAMiMwoFTW9uZXkSFAoMYW1vdW50X21pbm9yGAEgASgDEhAKCGN1cnJlbmN5GAIgASgJOgIYASp/Cg5QcmludFBhcGVyU2l6ZRIgChxQUklOVF9QQVBFUl9TSVpFX1VOU1BFQ0lGSUVEEAASFwoTUFJJTlRfUEFQRVJfU0laRV9BNBABEhcKE1BSSU5UX1BBUEVSX1NJWkVfQTUQAhIZChVQUklOVF9QQVBFUl9TSVpFXzgwTU0QA0JZWldnaXRodWIuY29tL3NhbGVzb3JkZXIvc2FsZXMtb3JkZXItMS4wL2JhY2tlbmQvaW50ZXJuYWwvcHJvdG8vc2FsZXNvcmRlci92MTtzYWxlc29yZGVydjFiBnByb3RvMw");
+  fileDesc("ChpzYWxlc29yZGVyL3YxL2NvbW1vbi5wcm90bxINc2FsZXNvcmRlci52MSI8CgpQYWdpbmF0aW9uEgwKBHBhZ2UYASABKAUSEQoJcGFnZV9zaXplGAIgASgFEg0KBXRvdGFsGAMgASgDIjYKDlRpbWVzdGFtcFJhbmdlEhIKCnN0YXJ0X3VuaXgYASABKAMSEAoIZW5kX3VuaXgYAiABKAMiMwoFTW9uZXkSFAoMYW1vdW50X21pbm9yGAEgASgDEhAKCGN1cnJlbmN5GAIgASgJOgIYASKkAQoJRXJyb3JJbmZvEgwKBGNvZGUYASABKAkSDwoHbWVzc2FnZRgCIAEoCRI2CgdkZXRhaWxzGAMgAygLMiUuc2FsZXNvcmRlci52MS5FcnJvckluZm8uRGV0YWlsc0VudHJ5EhAKCHRyYWNlX2lkGAQgASgJGi4KDERldGFpbHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBKn8KDlByaW50UGFwZXJTaXplEiAKHFBSSU5UX1BBUEVSX1NJWkVfVU5TUEVDSUZJRUQQABIXChNQUklOVF9QQVBFUl9TSVpFX0E0EAESFwoTUFJJTlRfUEFQRVJfU0laRV9BNRACEhkKFVBSSU5UX1BBUEVSX1NJWkVfODBNTRADQllaV2dpdGh1Yi5jb20vc2FsZXNvcmRlci9zYWxlcy1vcmRlci0xLjAvYmFja2VuZC9pbnRlcm5hbC9wcm90by9zYWxlc29yZGVyL3YxO3NhbGVzb3JkZXJ2MWIGcHJvdG8z");
 
 /**
  * Describes the message salesorder.v1.Pagination.
@@ -31,6 +31,13 @@ export const TimestampRangeSchema = /*@__PURE__*/
  */
 export const MoneySchema = /*@__PURE__*/
   messageDesc(file_salesorder_v1_common, 2);
+
+/**
+ * Describes the message salesorder.v1.ErrorInfo.
+ * Use `create(ErrorInfoSchema)` to create a new message.
+ */
+export const ErrorInfoSchema = /*@__PURE__*/
+  messageDesc(file_salesorder_v1_common, 3);
 
 /**
  * Describes the enum salesorder.v1.PrintPaperSize.

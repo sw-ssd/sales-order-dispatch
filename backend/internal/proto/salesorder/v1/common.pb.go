@@ -244,6 +244,77 @@ func (x *Money) GetCurrency() string {
 	return ""
 }
 
+// ErrorInfo:錯誤的結構化資訊,由 connect error detail 攜帶(不引入 googleapis 依賴)。
+// 前端以 code 查本地文案;message 為後端渲染的繁中訊息(log 與 fallback 用);
+// trace_id 供客服回報時對照 server log。
+type ErrorInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`                                                                                 // 例:"CUST-2001"
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`                                                                           // 已渲染的繁中訊息
+	Details       map[string]string      `protobuf:"bytes,3,rep,name=details,proto3" json:"details,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // 結構化參數,例:{used:"10", limit:"10"}
+	TraceId       string                 `protobuf:"bytes,4,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`                                                            // 伺服器端請求追蹤 id
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ErrorInfo) Reset() {
+	*x = ErrorInfo{}
+	mi := &file_salesorder_v1_common_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ErrorInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ErrorInfo) ProtoMessage() {}
+
+func (x *ErrorInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_common_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ErrorInfo.ProtoReflect.Descriptor instead.
+func (*ErrorInfo) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_common_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ErrorInfo) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *ErrorInfo) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *ErrorInfo) GetDetails() map[string]string {
+	if x != nil {
+		return x.Details
+	}
+	return nil
+}
+
+func (x *ErrorInfo) GetTraceId() string {
+	if x != nil {
+		return x.TraceId
+	}
+	return ""
+}
+
 var File_salesorder_v1_common_proto protoreflect.FileDescriptor
 
 const file_salesorder_v1_common_proto_rawDesc = "" +
@@ -260,7 +331,15 @@ const file_salesorder_v1_common_proto_rawDesc = "" +
 	"\bend_unix\x18\x02 \x01(\x03R\aendUnix\"J\n" +
 	"\x05Money\x12!\n" +
 	"\famount_minor\x18\x01 \x01(\x03R\vamountMinor\x12\x1a\n" +
-	"\bcurrency\x18\x02 \x01(\tR\bcurrency:\x02\x18\x01*\x7f\n" +
+	"\bcurrency\x18\x02 \x01(\tR\bcurrency:\x02\x18\x01\"\xd1\x01\n" +
+	"\tErrorInfo\x12\x12\n" +
+	"\x04code\x18\x01 \x01(\tR\x04code\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12?\n" +
+	"\adetails\x18\x03 \x03(\v2%.salesorder.v1.ErrorInfo.DetailsEntryR\adetails\x12\x19\n" +
+	"\btrace_id\x18\x04 \x01(\tR\atraceId\x1a:\n" +
+	"\fDetailsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\x7f\n" +
 	"\x0ePrintPaperSize\x12 \n" +
 	"\x1cPRINT_PAPER_SIZE_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13PRINT_PAPER_SIZE_A4\x10\x01\x12\x17\n" +
@@ -280,19 +359,22 @@ func file_salesorder_v1_common_proto_rawDescGZIP() []byte {
 }
 
 var file_salesorder_v1_common_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_salesorder_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_salesorder_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_salesorder_v1_common_proto_goTypes = []any{
 	(PrintPaperSize)(0),    // 0: salesorder.v1.PrintPaperSize
 	(*Pagination)(nil),     // 1: salesorder.v1.Pagination
 	(*TimestampRange)(nil), // 2: salesorder.v1.TimestampRange
 	(*Money)(nil),          // 3: salesorder.v1.Money
+	(*ErrorInfo)(nil),      // 4: salesorder.v1.ErrorInfo
+	nil,                    // 5: salesorder.v1.ErrorInfo.DetailsEntry
 }
 var file_salesorder_v1_common_proto_depIdxs = []int32{
-	0, // [0:0] is the sub-list for method output_type
-	0, // [0:0] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	5, // 0: salesorder.v1.ErrorInfo.details:type_name -> salesorder.v1.ErrorInfo.DetailsEntry
+	1, // [1:1] is the sub-list for method output_type
+	1, // [1:1] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_salesorder_v1_common_proto_init() }
@@ -306,7 +388,7 @@ func file_salesorder_v1_common_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_salesorder_v1_common_proto_rawDesc), len(file_salesorder_v1_common_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   3,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

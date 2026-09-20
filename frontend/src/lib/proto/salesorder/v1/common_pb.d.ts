@@ -102,6 +102,49 @@ export declare type Money = Message<"salesorder.v1.Money"> & {
 export declare const MoneySchema: GenMessage<Money>;
 
 /**
+ * ErrorInfo:錯誤的結構化資訊,由 connect error detail 攜帶(不引入 googleapis 依賴)。
+ * 前端以 code 查本地文案;message 為後端渲染的繁中訊息(log 與 fallback 用);
+ * trace_id 供客服回報時對照 server log。
+ *
+ * @generated from message salesorder.v1.ErrorInfo
+ */
+export declare type ErrorInfo = Message<"salesorder.v1.ErrorInfo"> & {
+  /**
+   * 例:"CUST-2001"
+   *
+   * @generated from field: string code = 1;
+   */
+  code: string;
+
+  /**
+   * 已渲染的繁中訊息
+   *
+   * @generated from field: string message = 2;
+   */
+  message: string;
+
+  /**
+   * 結構化參數,例:{used:"10", limit:"10"}
+   *
+   * @generated from field: map<string, string> details = 3;
+   */
+  details: { [key: string]: string };
+
+  /**
+   * 伺服器端請求追蹤 id
+   *
+   * @generated from field: string trace_id = 4;
+   */
+  traceId: string;
+};
+
+/**
+ * Describes the message salesorder.v1.ErrorInfo.
+ * Use `create(ErrorInfoSchema)` to create a new message.
+ */
+export declare const ErrorInfoSchema: GenMessage<ErrorInfo>;
+
+/**
  * PrintPaperSize:出貨單/揀貨單列印紙張尺寸。
  *
  * @generated from enum salesorder.v1.PrintPaperSize

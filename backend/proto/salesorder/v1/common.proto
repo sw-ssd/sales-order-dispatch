@@ -33,3 +33,13 @@ enum PrintPaperSize {
   PRINT_PAPER_SIZE_A5 = 2;
   PRINT_PAPER_SIZE_80MM = 3; // 熱感紙 80mm
 }
+
+// ErrorInfo:錯誤的結構化資訊,由 connect error detail 攜帶(不引入 googleapis 依賴)。
+// 前端以 code 查本地文案;message 為後端渲染的繁中訊息(log 與 fallback 用);
+// trace_id 供客服回報時對照 server log。
+message ErrorInfo {
+  string code = 1;                    // 例:"CUST-2001"
+  string message = 2;                 // 已渲染的繁中訊息
+  map<string, string> details = 3;    // 結構化參數,例:{used:"10", limit:"10"}
+  string trace_id = 4;                // 伺服器端請求追蹤 id
+}

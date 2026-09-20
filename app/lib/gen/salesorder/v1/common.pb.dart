@@ -239,6 +239,98 @@ class Money extends $pb.GeneratedMessage {
   void clearCurrency() => $_clearField(2);
 }
 
+/// ErrorInfo:錯誤的結構化資訊,由 connect error detail 攜帶(不引入 googleapis 依賴)。
+/// 前端以 code 查本地文案;message 為後端渲染的繁中訊息(log 與 fallback 用);
+/// trace_id 供客服回報時對照 server log。
+class ErrorInfo extends $pb.GeneratedMessage {
+  factory ErrorInfo({
+    $core.String? code,
+    $core.String? message,
+    $core.Iterable<$core.MapEntry<$core.String, $core.String>>? details,
+    $core.String? traceId,
+  }) {
+    final result = ErrorInfo._();
+    if (code != null) result.code = code;
+    if (message != null) result.message = message;
+    if (details != null) result.details.addEntries(details);
+    if (traceId != null) result.traceId = traceId;
+    return result;
+  }
+
+  ErrorInfo._();
+
+  factory ErrorInfo.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ErrorInfo()..mergeFromBuffer(data, registry);
+  factory ErrorInfo.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ErrorInfo()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ErrorInfo',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: ErrorInfo.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'code')
+    ..aOS(2, _omitFieldNames ? '' : 'message')
+    ..m<$core.String, $core.String>(3, _omitFieldNames ? '' : 'details',
+        entryClassName: 'ErrorInfo.DetailsEntry',
+        keyFieldType: $pb.PbFieldType.OS,
+        valueFieldType: $pb.PbFieldType.OS,
+        packageName: const $pb.PackageName('salesorder.v1'))
+    ..aOS(4, _omitFieldNames ? '' : 'traceId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ErrorInfo clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ErrorInfo copyWith(void Function(ErrorInfo) updates) =>
+      super.copyWith((message) => updates(message as ErrorInfo)) as ErrorInfo;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ErrorInfo() / ErrorInfo.new instead')
+  static ErrorInfo create() => ErrorInfo._();
+  static $pb.GeneratedMessage $_createMessage() => ErrorInfo._();
+  @$core.override
+  ErrorInfo createEmptyInstance() => ErrorInfo._();
+  @$core.pragma('dart2js:noInline')
+  static ErrorInfo getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ErrorInfo>(ErrorInfo.$_createMessage);
+  static ErrorInfo? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get code => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set code($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasCode() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCode() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get message => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set message($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasMessage() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearMessage() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $pb.PbMap<$core.String, $core.String> get details => $_getMap(2);
+
+  @$pb.TagNumber(4)
+  $core.String get traceId => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set traceId($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasTraceId() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearTraceId() => $_clearField(4);
+}
+
 const $core.bool _omitFieldNames =
     $core.bool.fromEnvironment('protobuf.omit_field_names');
 const $core.bool _omitMessageNames =
