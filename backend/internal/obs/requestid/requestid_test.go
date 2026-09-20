@@ -17,8 +17,9 @@ import (
 // 另外驗證「記一行 log」：log 需含方法全名與該 trace_id（客服回報代碼 → 對 log）。
 func TestInterceptorInjectsStableTraceID(t *testing.T) {
 	var buf bytes.Buffer
+	prev := log.Writer()
 	log.SetOutput(&buf)
-	t.Cleanup(func() { log.SetOutput(nil) })
+	t.Cleanup(func() { log.SetOutput(prev) })
 
 	seen := []string{}
 	handler := func(ctx context.Context, _ connect.AnyRequest) (connect.AnyResponse, error) {
