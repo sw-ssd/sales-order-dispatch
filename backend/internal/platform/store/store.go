@@ -39,8 +39,11 @@ type Override struct {
 	ExpiresAt   *time.Time
 }
 
-// Subscription 為租戶當前的訂閱(platform.subscriptions)。公司沒有未取消的訂閱時,
-// Store.Subscription 回 (nil, nil) —— 「沒訂閱」不是錯誤。
+// Subscription 為租戶當前的訂閱(platform.subscriptions)。取列方式與平台端投影
+// (store/postgres/admin.go 的 GetTenant)**逐字相同**：優先未取消的，只有全部都是
+// cancelled 時才取 cancelled —— 「已取消」與「從未訂閱」在判定層必須可區分：
+// 前者 fail-closed 回 PLAT-3001，後者視為尚未開通計費、不施加限制。
+// 公司完全沒有訂閱列時，Store.Subscription 回 (nil, nil) —— 「沒訂閱」不是錯誤。
 type Subscription struct {
 	CompanyID int
 	PlanCode  string
