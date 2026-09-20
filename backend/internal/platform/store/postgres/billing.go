@@ -235,7 +235,12 @@ func (s *Store) PeriodsByStatus(ctx context.Context, status string) ([]store.Per
 	return out, rows.Err()
 }
 
-// ActiveSubscriptionsWithDueOpenPeriod 回 active 且最新一期已過期末者(排程轉 past_due)。
+// ActiveSubscriptionsWithDueOpenPeriod 回 active 且**最新一期仍是 open** 且已過期末者(排程轉 past_due)。
+//
+// 最新一期的狀態必須是 open:已付款(催收後補繳)或已作廢的期別,期末過了也**不算逾期** ——
+// 少了這個條件,逾期後才繳清的客戶會被重新催收、寬限期被重置,最後被停用凍結,而
+// EnsureNextPeriod 只認 active/trialing 又不會替他開下一期 → 客戶從此停止被開帳(C-1)。
+// 函式名承諾的 due **open** period 就是這個意思。
 //
 // 三個排程查詢都必須帶出 plan_id／seat_count／billing_cycle:排程據以開啟下一期,而 **billing_cycle
 // 漏帶等於 G1**(年繳被當月繳、只加一個月 → 少收 11 個月);store 這端少帶,呼叫端只會拿到空字串。
@@ -244,12 +249,12 @@ func (s *Store) ActiveSubscriptionsWithDueOpenPeriod(ctx context.Context, tx *sq
 		SELECT s.id, s.company_id, s.status, s.plan_id, s.seat_count, s.billing_cycle
 		  FROM platform.subscriptions s
 		  JOIN LATERAL (
-			SELECT period_end FROM platform.subscription_periods p
+			SELECT period_end, status FROM platform.subscription_periods p
 			 WHERE p.subscription_id = s.id
 			 ORDER BY p.period_no DESC
 			 LIMIT 1
 		  ) cur ON true
-		 WHERE s.status = 'active' AND cur.period_end < $1`, now)
+		 WHERE s.status = 'active' AND cur.status = 'open' AND cur.period_end < $1`, now)
 }
 
 // PastDueSubscriptionsExpiredGrace 回 past_due 且寬限期已過者(排程轉 suspended)。

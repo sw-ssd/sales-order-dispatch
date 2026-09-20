@@ -174,6 +174,15 @@ func TestFakeBillingAuditPriceAndDueQueries(t *testing.T) {
 	f.PutPeriod(store.Period{SubscriptionID: due, PeriodNo: 1, PeriodEnd: now.Add(-time.Hour)})
 	future := f.PutSubscription(store.Subscription{CompanyID: 12, PlanID: 1, Status: "active"})
 	f.PutPeriod(store.Period{SubscriptionID: future, PeriodNo: 1, PeriodEnd: now.Add(time.Hour)})
+	// 16：active 但還沒有任何期別（不該被選中）；17／18：期末已過但當期已付款／已作廢
+	// —— 逾期後才補繳的客戶不得被再次催收（C-1）。
+	f.PutSubscription(store.Subscription{CompanyID: 16, PlanID: 1, Status: "active"})
+	paidPeriod := f.PutSubscription(store.Subscription{CompanyID: 17, PlanID: 1, Status: "active"})
+	f.PutPeriod(store.Period{SubscriptionID: paidPeriod, PeriodNo: 1, Status: "paid",
+		PeriodEnd: now.Add(-time.Hour)})
+	voidPeriod := f.PutSubscription(store.Subscription{CompanyID: 18, PlanID: 1, Status: "active"})
+	f.PutPeriod(store.Period{SubscriptionID: voidPeriod, PeriodNo: 1, Status: "void",
+		PeriodEnd: now.Add(-time.Hour)})
 	grace := now.Add(-time.Hour)
 	pastDue := f.PutSubscription(store.Subscription{CompanyID: 13, PlanID: 1, Status: "past_due", GraceUntil: &grace})
 	// 14 是只設狀態、沒有寬限期的 past_due:它的作用是證明「無寬限期不算已到期」。
@@ -183,7 +192,7 @@ func TestFakeBillingAuditPriceAndDueQueries(t *testing.T) {
 
 	subs, err := f.ActiveSubscriptionsWithDueOpenPeriod(ctx, nil, now)
 	if err != nil || len(subs) != 1 || subs[0].ID != due {
-		t.Fatalf("逾期未付應只含期末已過的 active(11),got %+v err=%v", subs, err)
+		t.Fatalf("逾期未付應只含期末已過的 active 且當期仍 open(11；17 已付款、18 已作廢不算),got %+v err=%v", subs, err)
 	}
 	subs, err = f.PastDueSubscriptionsExpiredGrace(ctx, nil, now)
 	// 寬限期為 nil 不算「已過」(與 SQL 的 grace_until IS NOT NULL 一致)。
@@ -205,7 +214,7 @@ func TestFakeBillingAuditPriceAndDueQueries(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ActiveOrTrialingSubscriptions: %v", err)
 	}
-	if len(serving) != 2 { // 11／12 active;13 是 past_due、15 是 cancelled
+	if len(serving) != 5 { // 11／12／16／17／18 active;13 是 past_due、15 是 cancelled
 		t.Fatalf("仍在服務中的應只有 active／trialing,got %+v", serving)
 	}
 

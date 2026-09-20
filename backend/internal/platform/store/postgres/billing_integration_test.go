@@ -610,13 +610,18 @@ func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 		}
 		return id
 	}
-	seedPeriod := func(id int64, no int, end time.Time) {
+	seedPeriod := func(id int64, no int, end time.Time, status ...string) {
+		// 期別狀態預設 open；已付款／作廢的期別要能種得出來（C-1：當期已付款不算逾期）。
+		periodStatus := "open"
+		if len(status) > 0 {
+			periodStatus = status[0]
+		}
 		if _, err := db.ExecContext(ctx, `
 			INSERT INTO platform.subscription_periods
 				(subscription_id, period_no, period_start, period_end, plan_id,
-				 unit_price, seat_price, seat_count, amount)
-			VALUES ($1,$2,$3,$4,$5,1500.00,150.00,2,1800.00)`,
-			id, no, end.Add(-720*time.Hour), end, planID); err != nil {
+				 unit_price, seat_price, seat_count, amount, status)
+			VALUES ($1,$2,$3,$4,$5,1500.00,150.00,2,1800.00,$6)`,
+			id, no, end.Add(-720*time.Hour), end, planID, periodStatus); err != nil {
 			t.Fatalf("period(sub %d): %v", id, err)
 		}
 	}
@@ -631,12 +636,17 @@ func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 	seedPeriod(cancelledSub, 1, now.Add(-24*time.Hour))
 	seedPeriod(seedSub(56, "cancelled", "monthly", nil), 1, now.Add(24*time.Hour))
 	trialingSub := seedSub(57, "trialing", "yearly", nil)
+	// 58／59：期末已過但當期已付款／已作廢 —— 逾期後才補繳的客戶不得被再次催收（C-1）。
+	seedPeriod(seedSub(58, "active", "monthly", nil), 1, now.Add(-24*time.Hour), "paid")
+	seedPeriod(seedSub(59, "active", "monthly", nil), 1, now.Add(-24*time.Hour), "void")
 
 	due := withTx(t, db, func(tx *sql.Tx) ([]store.Subscription, error) {
 		return st.ActiveSubscriptionsWithDueOpenPeriod(ctx, tx, now)
 	})
-	if !containsCompany(due, 50) || containsCompany(due, 42) || containsCompany(due, 51) || containsCompany(due, 52) {
-		t.Fatalf("逾期未付應只含 50（active 且最新期別已過期末；42／51 期末未到、52 非 active），got %v", companyIDs(due))
+	if !containsCompany(due, 50) || containsCompany(due, 42) || containsCompany(due, 51) ||
+		containsCompany(due, 52) || containsCompany(due, 58) || containsCompany(due, 59) {
+		t.Fatalf("逾期未付應只含 50（active ＋ 當期仍 open；42／51 期末未到、52 非 active、"+
+			"58 已付款、59 已作廢），got %v", companyIDs(due))
 	}
 	// 排程拿到的訂閱必須帶得動期別產生的欄位：漏帶 billing_cycle 就是 G1（年繳只加一個月、
 	// 少收 11 個月）。三條查詢都逐一驗，因為它們各自是不同的一段 SQL。

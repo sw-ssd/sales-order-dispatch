@@ -168,7 +168,8 @@ type BillingStore interface {
 		invoiceNo, provider, externalRef, note string) error
 	// PeriodsByStatus 取指定狀態的期別(收款清單與對帳用),依 (subscription_id, period_no) 排序。
 	PeriodsByStatus(ctx context.Context, status string) ([]Period, error)
-	// ActiveSubscriptionsWithDueOpenPeriod 回 active 且最新期別已過期末者(轉 past_due)。
+	// ActiveSubscriptionsWithDueOpenPeriod 回 active、最新一期**仍是 open** 且已過期末者(轉 past_due)。
+	// 最新一期已付款(is paid)或作廢(void)者不算逾期:逾期後才繳清的客戶不得被再次催收(C-1)。
 	ActiveSubscriptionsWithDueOpenPeriod(ctx context.Context, tx *sql.Tx, now time.Time) ([]Subscription, error)
 	// PastDueSubscriptionsExpiredGrace 回 past_due 且寬限期已過者(轉 suspended)。
 	PastDueSubscriptionsExpiredGrace(ctx context.Context, tx *sql.Tx, now time.Time) ([]Subscription, error)

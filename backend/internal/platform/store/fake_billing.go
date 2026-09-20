@@ -27,8 +27,8 @@ import (
 //     note 為空字串時保留原值、狀態為 void 等一律拒絕並說出狀態;
 //   - EmitEventTx:空 payload 存成 '{}'(SQL 的 jsonb 欄位不接受空字串);
 //   - RecordAuditTx 的 reason 必填(空字串即拒絕);
-//   - 排程三個查詢的集合邊界(期末 < now、grace_until IS NOT NULL、已發過 subscription.expired
-//     者不再選中)逐一照 SQL 的謂詞寫。
+//   - 排程三個查詢的集合邊界(最新一期**仍是 open** 且期末 < now、grace_until IS NOT NULL、
+//     已發過 subscription.expired 者不再選中)逐一照 SQL 的謂詞寫。
 //
 // 交易語意:記憶體裡沒有真的交易,**tx 參數一律忽略**;唯一表達「同一交易」的地方是 WithTx ——
 // 它進入時整份快照、fn 回錯誤時整份還原,讓「失敗不留半成品」的斷言在單元測試裡也成立。因此
@@ -326,7 +326,8 @@ func (f *FakeBilling) PeriodsByStatus(_ context.Context, status string) ([]Perio
 	return out, nil
 }
 
-// ActiveSubscriptionsWithDueOpenPeriod:active 且最新一期已過期末(SQL 的 `cur.period_end < now`)。
+// ActiveSubscriptionsWithDueOpenPeriod:active 且最新一期**仍是 open** 且已過期末
+// (SQL 的 `cur.status = 'open' AND cur.period_end < now`);已付款／已作廢的期別不算逾期(C-1)。
 func (f *FakeBilling) ActiveSubscriptionsWithDueOpenPeriod(_ context.Context, _ *sql.Tx, now time.Time) ([]Subscription, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -335,7 +336,7 @@ func (f *FakeBilling) ActiveSubscriptionsWithDueOpenPeriod(_ context.Context, _ 
 			return false
 		}
 		cur, ok := f.latestPeriod(s.ID)
-		return ok && cur.PeriodEnd.Before(now)
+		return ok && cur.Status == "open" && cur.PeriodEnd.Before(now)
 	}), nil
 }
 
