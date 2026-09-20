@@ -68,6 +68,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/ent/route"
 	"github.com/salesorder/sales-order-1.0/backend/ent/warehouse"
+	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	auditv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/audit/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/audit/v1/auditv1connect"
@@ -550,9 +551,12 @@ func openPGEntClient(t *testing.T, dsn string) *ent.Client {
 }
 
 // listScanClients 為本測試用到的全部清單 client(同一 mux、同一 super 身分)。
+// T10 起 users 一併掛上:跨租戶統一守門探針
+// (rls_cross_tenant_integration_test.go)重用本 helper 時需要使用者端點。
 type listScanClients struct {
 	companies   salesorderv1connect.CompanyServiceClient
 	departments salesorderv1connect.DepartmentServiceClient
+	users       salesorderv1connect.UserServiceClient
 	roles       salesorderv1connect.RoleServiceClient
 	customers   customersv1connect.CustomerServiceClient
 	specs       mastersv1connect.ProcessingSpecServiceClient
@@ -568,12 +572,33 @@ type listScanClients struct {
 // 公司範圍)把十一張清單的 handler 掛在單一 mux 上(與 sqlite 版 newTestServer 同構,只換 DB)。
 // companyID 為 fixture 所屬公司:各端點以 deptScope 解析身分的 CompanyID 作為可見範圍,
 // 故須為數字。
+//
+// 本函式只決定「原清單測試需要的 scope」:super/公司層 + scope=all。需要別的 scope
+// (例如跨租戶守門探針要的部門層級 A 範圍)者用 newListScanServerWithScope。
 func newListScanServer(t *testing.T, db *ent.Client, companyID int) listScanClients {
 	t.Helper()
-	super := authz.Identity{UserID: "1", CompanyID: strconv.Itoa(companyID), Role: "super", Roles: []string{"super"}}
+	return newListScanServerWithScope(t, db, auth.RLSScope{
+		UserID: "1", CompanyID: strconv.Itoa(companyID),
+		DataScope: auth.DataScopeAll, CompanyActive: true,
+	})
+}
+
+// newListScanServerWithScope 與 newListScanServer 同構,只多注入呼叫端指定的 RLS scope:
+// 身份固定為 super(ACL 全開,讓紅的一定是 RLS 這條接線),請求層租戶交易由各
+// Register*Services 內的 dbtenant.HandlerOption 依 ctx 的 scope 套用(SET LOCAL 在
+// driver 裝飾器的 Tx(ctx) 內執行)。
+//
+// 因此**呼叫端必須傳入 dbtenant.NewClient 建立的 client**(app_rw 連線),否則沒有裝飾器、
+// 也就沒有 SET LOCAL。
+func newListScanServerWithScope(t *testing.T, db *ent.Client, scope auth.RLSScope) listScanClients {
+	t.Helper()
+	super := authz.Identity{
+		UserID: scope.UserID, CompanyID: scope.CompanyID, Role: "super", Roles: []string{"super"},
+	}
 	mux := http.NewServeMux()
 	RegisterCompanyServices(mux, db)
 	RegisterAuditServices(mux, db)
+	RegisterUserServices(mux, db)
 	RegisterRoleServices(mux, db)
 	RegisterCustomerServices(mux, db, "http://localhost:3000")
 	RegisterProcessingSpecService(mux, db)
@@ -584,6 +609,7 @@ func newListScanServer(t *testing.T, db *ent.Client, companyID int) listScanClie
 	RegisterWarehouseService(mux, db)
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := authz.WithIdentity(r.Context(), super)
+		ctx = auth.WithRLS(ctx, scope)
 		ctx = authz.WithCASLEnabled(ctx, true)
 		ctx = authz.WithDB(ctx, db)
 		mux.ServeHTTP(w, r.WithContext(ctx))
@@ -594,6 +620,7 @@ func newListScanServer(t *testing.T, db *ent.Client, companyID int) listScanClie
 	return listScanClients{
 		companies:   salesorderv1connect.NewCompanyServiceClient(http.DefaultClient, ts.URL),
 		departments: salesorderv1connect.NewDepartmentServiceClient(http.DefaultClient, ts.URL),
+		users:       salesorderv1connect.NewUserServiceClient(http.DefaultClient, ts.URL),
 		roles:       salesorderv1connect.NewRoleServiceClient(http.DefaultClient, ts.URL),
 		customers:   customersv1connect.NewCustomerServiceClient(http.DefaultClient, ts.URL),
 		specs:       mastersv1connect.NewProcessingSpecServiceClient(http.DefaultClient, ts.URL),
