@@ -98,6 +98,9 @@ func (s *Server) mountAuth() {
 	services.RegisterProcessingSpecService(apiMux, entClient)
 	services.RegisterProductCategoryService(apiMux, entClient)
 	services.RegisterProductService(apiMux, entClient, entSvc) // 04 Task 3.3 商品主檔
+	// T10/T10b 租戶端權益投影：租戶後台／App 的「我的方案與用量」。掛在 /api/v1 之下（租戶
+	// session ＋ RLS），**不是** /platform/ —— 那裡是 operator cookie 與平台工具的路徑範圍。
+	services.RegisterTenantEntitlementService(apiMux, entClient, entSvc)
 	s.router.Mount("/api/v1", http.StripPrefix("/api/v1", sessions.LoadAndSave(s.authzMiddleware(entClient, sessions, apiMux))))
 
 	// OIDC 公開端點：需 Google client id 與 discovery 可用
