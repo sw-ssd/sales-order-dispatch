@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -337,6 +338,68 @@ func TestIntegrationCustomerServiceUnderAppRole(t *testing.T) {
 			t.Fatalf("被擋下的建檔不得建立 counter 列,得到 %d", n)
 		}
 	})
+}
+
+// TestIntegrationCreateCustomerRequiresTenantTxBeforeWrites 釘住 CreateCustomer 的**交易守衛順序**:
+// 守衛(dbtenant.TxFrom)必須在本函式**第一個** DB 呼叫之前。
+//
+// 為何需要這條(而不是只靠一次性驗證):守衛前移使「無請求交易」路徑的對外錯誤由驗證層的
+// invalid_argument 變成 internal「缺少租戶交易(context)」;若把守衛移回 ensureCustomerCounter
+// 之後,本測試即紅(實測:同一請求回 `invalid_argument: default_sales_rep_id 無效` —— 範圍讀取
+// 先在**未帶租戶範圍**的連線上跑了一輪)。那形態正是客戶域 ENABLE+FORCE 後「漏掉租戶範圍」的
+// 樣態,而全庫對「缺少租戶交易」沒有任何其他斷言,移回去不會有測試轉紅。
+//
+// 觸發方式:掛法與生產完全相同,唯一差別是**不**加 dbtenant.HandlerOption(＝ctx 沒有請求交易);
+// 請求本身完整合法(公司有前綴、業務帳號有效),故守衛若在後,驗證會一路往下走。三條斷言:
+// ①錯誤碼 internal;②訊息含「缺少租戶交易」;③admin 真值確認**一列都沒寫**(customers 與
+// customer_counters 皆 0)—— 這條擋的是「連線其實寫得進去」的形態(owner/superuser 或已帶 scope
+// 的連線):那時守衛前的 autocommit 寫入會真的落地。
+func TestIntegrationCreateCustomerRequiresTenantTxBeforeWrites(t *testing.T) {
+	testsupport.RequiresContainer(t)
+	adminDSN := testsupport.Postgres(t)
+	migrateBusinessUp(t, adminDSN)
+
+	admin := openRawDB(t, adminDSN)
+	defer func() { _ = admin.Close() }()
+	coA := insertRLSCompany(t, admin, "A", "GUARD-A")
+	setCompanyCodePrefix(t, admin, coA, "GRD")
+	rep := insertRLSUser(t, admin, coA, "guard-rep@example.com", "staff")
+	actor := insertRLSUser(t, admin, coA, "guard-admin@example.com", "company_admin")
+
+	client := dbtenant.NewClient(openAppRoleDB(t, adminDSN))
+	t.Cleanup(func() { _ = client.Close() })
+
+	mux := http.NewServeMux()
+	path, handler := customersv1connect.NewCustomerServiceHandler(NewCustomerService(client, "http://localhost:3000"))
+	mux.Handle(path, handler)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := authz.WithIdentity(r.Context(), authz.Identity{
+			UserID: itoa(actor), CompanyID: itoa(coA), Role: "company_admin", Roles: []string{"company_admin"},
+		})
+		ctx = authz.WithDB(ctx, client)
+		mux.ServeHTTP(w, r.WithContext(ctx))
+	}))
+	t.Cleanup(ts.Close)
+	svc := customersv1connect.NewCustomerServiceClient(http.DefaultClient, ts.URL)
+
+	_, err := svc.CreateCustomer(t.Context(), connect.NewRequest(&customersv1.CreateCustomerRequest{
+		Name: "無交易客戶", DefaultSalesRepId: itoa(rep),
+	}))
+	if err == nil {
+		t.Fatal("無請求交易時 CreateCustomer 必須失敗(不得退回 fallback client 寫入)")
+	}
+	if code := connect.CodeOf(err); code != connect.CodeInternal {
+		t.Fatalf("必須在第一個 DB 呼叫之前就以 internal 失敗(守衛前移的契約),got %v(%v)", code, err)
+	}
+	if !strings.Contains(err.Error(), "缺少租戶交易") {
+		t.Fatalf("錯誤訊息應為「缺少租戶交易」,got %q", err.Error())
+	}
+	if n := countRows(t, admin, `SELECT count(*) FROM customers WHERE company_id = $1`, coA); n != 0 {
+		t.Fatalf("守衛之前不得寫入客戶列,得到 %d 筆", n)
+	}
+	if n := countRows(t, admin, `SELECT count(*) FROM customer_counters WHERE company_id = $1`, coA); n != 0 {
+		t.Fatalf("守衛之前不得寫入 counter 列,得到 %d 筆", n)
+	}
 }
 
 // newCustomerAppRoleServer 以業務 client(app_rw ＋ dbtenant.NewClient)掛載真客戶域 handler:
