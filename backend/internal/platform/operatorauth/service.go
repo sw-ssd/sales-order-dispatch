@@ -31,7 +31,13 @@ const CookieName = "platform_session"
 // StateCookieName 為 OIDC CSRF state 的短期 cookie(一次性,驗完即清)。
 const StateCookieName = "platform_oidc_state"
 
-// CookiePath 為 operator 兩個 cookie 的 Path:限定平台 API 與登入端點。
+// CookiePath 為 operator 兩個 cookie 的 Path:限定平台 API 與登入端點,不得放寬成 "/"
+// (那會把 operator cookie 一併送往租戶 API)。
+//
+// **前提:平台 RPC 必須掛在 `/platform/` 之下**(例:把 platform mux 掛成 `/platform/platform.v1.…`)。
+// RFC 6265 的 path-match 是逐段前綴比對:request-path 為 `/platform.v1.PlatformAdminService/…` 時,
+// 未被 cookie-path `/platform` 涵蓋的第一個字元是 **`.`** 而非 `/` → 瀏覽器**不會送出** cookie。
+// 直呼 handler 或直接塞 Cookie 標頭的測試看不到這件事,只有真的走瀏覽器才會。
 const CookiePath = "/platform"
 
 // Audience 為 operator token 的固定 audience;租戶 token 不得帶此值,反之亦然。
@@ -42,6 +48,9 @@ const (
 	LoginPath    = "/platform/auth/google"
 	CallbackPath = "/platform/auth/google/callback"
 )
+
+// errSecretMissing 為密鑰未設定:一律 fail-closed(空 HMAC key 等於人人可簽)。
+var errSecretMissing = errors.New("operator 密鑰未設定")
 
 // Identity 為通過驗證的平台操作者身分。
 type Identity struct {
@@ -118,6 +127,9 @@ func (s *Service) WithOIDC(cfg *oauth2.Config, ex auth.OAuthExchanger, v auth.OI
 
 // IssueToken 簽發 operator JWT(獨立 secret ＋ 固定 audience)。
 func (s *Service) IssueToken(id Identity) (string, error) {
+	if s.cfg.Secret == "" {
+		return "", errSecretMissing
+	}
 	now := time.Now()
 	claims := jwt.MapClaims{
 		"sub":   id.OperatorID,
@@ -133,6 +145,12 @@ func (s *Service) IssueToken(id Identity) (string, error) {
 // verify 驗 token:簽章(僅 HS256)／audience／exp,再以 DB 白名單核對身分。
 // **每一次請求都回查白名單**是刻意的:停用 operator 立即失效,不需要黑名單或短 TTL。
 func (s *Service) verify(ctx context.Context, raw string) (Identity, error) {
+	// fail-closed:secret 為空時 HMAC key 也是空 —— 任何人都能簽出 aud=platform 且帶 exp 的
+	// token,接著只要 email 對上白名單裡的 active operator(sub 是 bigserial,可猜)就取得
+	// operator 身分。呼叫端疏忽(Config 漏填)不得等於「全部放行」。
+	if s.cfg.Secret == "" {
+		return Identity{}, errSecretMissing
+	}
 	parsed, err := jwt.Parse(raw, func(*jwt.Token) (any, error) {
 		return []byte(s.cfg.Secret), nil
 	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),

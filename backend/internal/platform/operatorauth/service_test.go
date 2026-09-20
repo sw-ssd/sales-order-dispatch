@@ -11,6 +11,8 @@ package operatorauth_test
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -174,6 +176,10 @@ func TestSubjectMismatchRejected(t *testing.T) {
 }
 
 // ⑥ operator token 只認 platform_session cookie：走 Authorization Bearer（租戶路徑的憑證位置）不得成立。
+//
+// **弱斷言**（review F-2）：任何「只讀 platform_session 的實作」都會通過，它證明不了跨身分隔離。
+// 「租戶 token 不得通過平台」真正載重的是 ①（secret）與 ②（audience）；本條只是把「憑證位置也
+// 屬於契約的一部分」釘住，別讓後人以為跨身分的證據來自這裡。
 func TestOperatorTokenInBearerHeaderRejected(t *testing.T) {
 	svc := newTestService(t, activeStore())
 	token, err := svc.IssueToken(operatorauth.Identity{OperatorID: 1, Email: "ops@example.com", Role: "admin"})
@@ -192,6 +198,8 @@ func TestOperatorTokenInBearerHeaderRejected(t *testing.T) {
 }
 
 // ⑦ 租戶 session cookie（名稱 session）不得通過平台 interceptor。
+//
+// **弱斷言**（同 ⑥）：只驗 cookie 名稱不重疊，真正的隔離是 secret／audience（①、②）。
 func TestTenantSessionCookieRejected(t *testing.T) {
 	svc := newTestService(t, activeStore())
 	token, err := svc.IssueToken(operatorauth.Identity{OperatorID: 1, Email: "ops@example.com", Role: "admin"})
@@ -206,6 +214,83 @@ func TestTenantSessionCookieRejected(t *testing.T) {
 	})(context.Background(), req)
 	if connect.CodeOf(err) != connect.CodeUnauthenticated {
 		t.Fatalf("租戶 cookie 必須 Unauthenticated，got %v", err)
+	}
+}
+
+// ⑧ 空密鑰必須 fail-closed：secret 為空時 HMAC key 也是空，任何人都能簽出
+// aud=platform 的 token；只要 email 猜中白名單裡的 active operator（sub 是 bigserial 可猜），
+// 就取得 operator 身分。此路徑目前由 Platform.Configured() 擋住，但同一 repo 的
+// auth.TokenManager.VerifyAccess 同樣是顯式 fail-closed（token.go），不靠呼叫端自律。
+func TestEmptySecretRejected(t *testing.T) {
+	svc := operatorauth.New(operatorauth.Config{Secret: ""}, activeStore())
+	token := signHS256(t, "", jwt.MapClaims{
+		"sub": 1, "email": "ops@example.com", "role": "admin", "aud": operatorauth.Audience})
+	err := callWithCookie(t, svc, token)
+	if connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("密鑰未設定時必須 Unauthenticated（fail-closed），got %v", err)
+	}
+	// 反向對照：連簽發都不該成功（否則會流出「用空密鑰簽的 token」）。
+	if _, err := svc.IssueToken(operatorauth.Identity{OperatorID: 1, Email: "ops@example.com"}); err == nil {
+		t.Fatal("密鑰未設定時 IssueToken 必須失敗")
+	}
+}
+
+// ⑨ 缺 exp 的 token 必須拒絕（WithExpirationRequired）—— 沒有期限的 operator token 等於永久憑證。
+// 其餘條件全部正確（secret、audience、白名單、sub），故唯一能擋下它的就是 expiration 檢查。
+func TestMissingExpirationRejected(t *testing.T) {
+	svc := newTestService(t, activeStore())
+	claims := jwt.MapClaims{
+		"sub": 1, "email": "ops@example.com", "role": "admin",
+		"aud": operatorauth.Audience, "iat": time.Now().Unix()}
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(testSecret))
+	if err != nil {
+		t.Fatalf("簽 token: %v", err)
+	}
+	if err := callWithCookie(t, svc, token); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("無 exp 的 token 必須 Unauthenticated，got %v", err)
+	}
+}
+
+// ⑩ alg 混淆／演算法替換：不是 HS256 的標頭一律拒絕。
+// 三個例子各自代表一種守門，缺一不可：
+//   - none：jwt 函式庫自己就會擋（keyfunc 沒回 UnsafeAllowNoneSignatureType）；
+//   - RS256：金鑰型別不符（keyfunc 回 []byte）也會被擋——兩者都是「函式庫擋的」。
+//   - **HS384**：同樣的 secret、同樣合法，**只有 WithValidMethods 擋得住**（拿掉它這條就紅）——
+//     這才是本測試真正載重的一格：簽發端只用 HS256，驗證端就不接受任何其他演算法。
+func TestNonHS256Rejected(t *testing.T) {
+	svc := newTestService(t, activeStore())
+	claims := func() jwt.MapClaims {
+		return jwt.MapClaims{
+			"sub": 1, "email": "ops@example.com", "role": "admin",
+			"aud": operatorauth.Audience, "exp": time.Now().Add(time.Hour).Unix()}
+	}
+	// none：無簽章。
+	noneToken, err := jwt.NewWithClaims(jwt.SigningMethodNone, claims()).
+		SignedString(jwt.UnsafeAllowNoneSignatureType)
+	if err != nil {
+		t.Fatalf("簽 none token: %v", err)
+	}
+	// RS256：非對稱演算法（alg 混淆的典型載體）。
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("產生 RSA 金鑰: %v", err)
+	}
+	rsToken, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims()).SignedString(key)
+	if err != nil {
+		t.Fatalf("簽 RS256 token: %v", err)
+	}
+	// HS384：同一個 secret 的其他 HMAC 家族——除了 WithValidMethods 沒有東西擋得住。
+	hs384, err := jwt.NewWithClaims(jwt.SigningMethodHS384, claims()).SignedString([]byte(testSecret))
+	if err != nil {
+		t.Fatalf("簽 HS384 token: %v", err)
+	}
+
+	for name, token := range map[string]string{"none": noneToken, "RS256": rsToken, "HS384": hs384} {
+		t.Run(name, func(t *testing.T) {
+			if err := callWithCookie(t, svc, token); connect.CodeOf(err) != connect.CodeUnauthenticated {
+				t.Fatalf("%s 標頭必須 Unauthenticated，got %v", name, err)
+			}
+		})
 	}
 }
 

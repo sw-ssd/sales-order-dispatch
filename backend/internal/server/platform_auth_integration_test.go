@@ -36,11 +36,13 @@ func TestIntegrationPlatformAuthMount(t *testing.T) {
 		t.Setenv("PLATFORM_JWT_SECRET", operatorSecret)
 		t.Setenv("PLATFORM_CONSOLE_URL", consoleURL)
 
+		// 走 InitDomains()（不是直呼 mountPlatformAuth）：這正是 T9 取用 s.operatorAuth 的路徑，
+		// 若 InitDomains 裡的那一行被刪掉，本測試必須紅（否則 T9 只會拿到 nil）。
 		s := New(config.New())
-		s.mountPlatformAuth()
+		s.InitDomains()
 
 		if s.operatorAuth == nil {
-			t.Fatal("平台設定齊備時必須掛載 operatorauth（T9 的 interceptor 由此取用）")
+			t.Fatal("平台設定齊備時 InitDomains 必須掛載 operatorauth（T9 的 interceptor 由此取用）")
 		}
 		// 缺 OIDC 依賴：端點在，回 503。
 		for _, path := range []string{operatorauth.LoginPath, operatorauth.CallbackPath} {
@@ -55,7 +57,7 @@ func TestIntegrationPlatformAuthMount(t *testing.T) {
 		t.Setenv("PLATFORM_CONSOLE_URL", "")
 
 		s := New(config.New())
-		s.mountPlatformAuth()
+		s.InitDomains()
 
 		if s.operatorAuth != nil {
 			t.Fatal("平台設定未設齊時不得掛載 operatorauth（開發環境不設平台工具）")
