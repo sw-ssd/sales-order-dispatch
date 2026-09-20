@@ -44,6 +44,8 @@ type Override struct {
 type Subscription struct {
 	CompanyID int
 	PlanCode  string
+	// PlanName 為方案名(JOIN platform.plans.name):租戶端投影要顯示它,不帶出來前端只能顯示 code。
+	PlanName  string
 	Status    string // trialing | active | past_due | suspended | cancelled
 	PlanID    int64
 	SeatCount int

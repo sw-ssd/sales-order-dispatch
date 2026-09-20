@@ -103,17 +103,17 @@ func (s *Store) Overrides(ctx context.Context, companyID int) ([]store.Override,
 }
 
 // Subscription 回傳未取消的訂閱;沒有則回 (nil, nil)。billing_cycle 必須帶出:期別產生
-// 靠它決定 +1 月或 +1 年(G1)。
+// 靠它決定 +1 月或 +1 年(G1)。方案名取自 JOIN 的 plans.name(租戶端投影要顯示它)。
 func (s *Store) Subscription(ctx context.Context, companyID int) (*store.Subscription, error) {
 	row := s.db.QueryRowContext(ctx, `
-		SELECT s.company_id, p.code, s.status, p.id, s.seat_count,
+		SELECT s.company_id, p.code, p.name, s.status, p.id, s.seat_count,
 		       s.billing_cycle, s.trial_ends_at, s.grace_until
 		  FROM platform.subscriptions s
 		  JOIN platform.plans p ON p.id = s.plan_id
 		 WHERE s.company_id = $1 AND s.status <> 'cancelled'`, companyID)
 	var sub store.Subscription
 	var trial, grace sql.NullTime
-	err := row.Scan(&sub.CompanyID, &sub.PlanCode, &sub.Status, &sub.PlanID, &sub.SeatCount,
+	err := row.Scan(&sub.CompanyID, &sub.PlanCode, &sub.PlanName, &sub.Status, &sub.PlanID, &sub.SeatCount,
 		&sub.BillingCycle, &trial, &grace)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil

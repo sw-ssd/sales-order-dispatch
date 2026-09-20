@@ -46,10 +46,7 @@ type Counter interface {
 type tenantState struct {
 	CompanyID int    `json:"company_id"`
 	PlanCode  string `json:"plan_code"`
-	// PlanName 目前**沒有來源**：store.Subscription 不帶方案名（T3 的 SELECT 只取 p.code）。
-	// 欄位先留著，讓租戶端投影的契約（proto 的 plan_name）不用等它。
-	// ponytail: 天花板＝租戶端顯示的方案名為空；升級路徑＝store 的 Subscription 加 PlanName
-	// （SELECT p.name）後，這裡改成 out.PlanName = sub.PlanName，其餘不動。
+	// PlanName 為方案名（store 由 JOIN plans.name 帶出），租戶端投影顯示用。
 	PlanName     string                       `json:"plan_name"`
 	Status       string                       `json:"status"`
 	TrialEnds    *time.Time                   `json:"trial_ends_at,omitempty"`
@@ -102,8 +99,7 @@ func (s *Service) state(ctx context.Context, companyID int) (*tenantState, error
 	if sub == nil {
 		out.Status = statusNone
 	} else {
-		// PlanName 見 tenantState 的說明（目前無來源，維持空字串）。
-		out.PlanCode, out.Status, out.TrialEnds = sub.PlanCode, sub.Status, sub.TrialEnds
+		out.PlanCode, out.PlanName, out.Status, out.TrialEnds = sub.PlanCode, sub.PlanName, sub.Status, sub.TrialEnds
 	}
 
 	features, err := s.st.Features(ctx)

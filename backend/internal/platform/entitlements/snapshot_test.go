@@ -27,7 +27,7 @@ func TestSnapshot(t *testing.T) {
 				f.PutFeature(seatsDef)
 				f.PutFeature(printDef)
 				f.PutPlan("std", stdPlan)
-				sub := store.Subscription{CompanyID: 1, PlanCode: "std", Status: "active", TrialEnds: &trialEnds}
+				sub := store.Subscription{CompanyID: 1, PlanCode: "std", PlanName: "標準", Status: "active", TrialEnds: &trialEnds}
 				f.PutSubscription(sub)
 				return f
 			}(),
