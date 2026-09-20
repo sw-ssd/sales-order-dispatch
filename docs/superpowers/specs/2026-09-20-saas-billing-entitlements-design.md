@@ -92,8 +92,8 @@ flowchart LR
 | `plan_prices` | `plan_id`、`billing_cycle`(monthly/yearly)、`base_price`、`seat_price`、`currency`、`effective_from` | 價格史；新期別取當期生效價 |
 | `features` | `code`、`type`(boolean/integer)、`unit`(席/客戶/商品/部門/GB)、`description` | 可賣的功能與限額清單。**與 OpenFGA 的 resource/action 是不同軸**（誰能做 vs 買了沒有） |
 | `plan_entitlements` | `plan_id`、`feature_code`、`enabled bool`、`limit_value bigint NULL` | 拆兩欄而非單一 `value text`；`limit_value IS NULL` = 不限 |
-| `subscriptions` | `company_id`、`plan_id`、`seat_count`、`status`、`trial_ends_at`、`grace_until`、`dunning_attempts`、`payment_provider`、`invoice_provider`、`external_ref`、`started_at`、`cancelled_at` | 一租戶一份合約；`UNIQUE (company_id) WHERE status <> 'cancelled'`。`seat_count` **僅營運後台可調整**（租戶端只讀，避免自助改動繞過收款）；試用由營運開通時設定 `trial_ends_at`（預設 14 天） |
-| `subscription_periods` | `period_no`、`period_start/end`、`plan_id`＋`unit_price`＋`seat_price`＋`seat_count`（**快照**）、`amount`、`currency`、`status`(open/paid/void)、`paid_at`、`invoice_no`/`invoice_status`/`buyer_tax_id`/`carrier`、`payment_provider`、`external_ref` | 帳的單位。`UNIQUE (subscription_id, period_no)`；`UNIQUE (payment_provider, external_ref) WHERE external_ref IS NOT NULL`（webhook 冪等） |
+| `subscriptions` | `company_id`、`plan_id`、`seat_count`、`billing_cycle`（monthly/yearly）、`status`、`trial_ends_at`、`grace_until`、`dunning_attempts`、`payment_provider`、`invoice_provider`、`external_ref`、`started_at`、`cancelled_at` | 一租戶一份合約；`UNIQUE (company_id) WHERE status <> 'cancelled'`。`seat_count` **僅營運後台可調整**（租戶端只讀，避免自助改動繞過收款）；試用由營運開通時設定 `trial_ends_at`（預設 14 天） |
+| `subscription_periods` | `period_no`、`period_start/end`、`plan_id`＋`unit_price`＋`seat_price`＋`seat_count`（**快照**）、`amount`、`currency`、`status`(open/paid/void)、`paid_at`、`note`（短收／溢收的人工註記）、`invoice_no`/`invoice_status`/`buyer_tax_id`/`carrier`、`payment_provider`、`external_ref` | 帳的單位。`UNIQUE (subscription_id, period_no)`；`UNIQUE (payment_provider, external_ref) WHERE external_ref IS NOT NULL`（webhook 冪等） |
 | `tenant_overrides` | `company_id`、`feature_code`、`enabled`、`limit_value`、`reason`、`owner`、`expires_at`、`revoked_at` | 例外唯一入口；`UNIQUE (company_id, feature_code) WHERE revoked_at IS NULL` |
 | `events` | `aggregate_type/id`、`event_type`、`payload jsonb`、`dispatched_at`、`attempts` | outbox；跨域副作用由此驅動 |
 | `operators` | `email`(uniq)、`name`、`role`、`status`、`last_login_at` | 平台操作者白名單（S8）。**不與租戶 `users` 有任何關聯**；新增操作者＝平台側動作，須落 `audit_logs` |
@@ -192,7 +192,7 @@ Valkey key `ent:{companyID}`；方案變更／override／訂閱狀態異動即 *
 | `past_due → active` | `RecordPayment`（補款） |
 | `past_due → suspended` | 排程：逾 `grace_until`（預設 7 天） |
 | `suspended → active` | `RecordPayment`（復原公司狀態） |
-| 任意 `→ cancelled` | 營運後台終止（期末終止，當期不退，資料不刪） |
+| 任意 `→ cancelled` | 營運後台 `CancelSubscription`（期末終止，當期不退，資料不刪；**必填原因**） |
 
 每次轉移寫 `platform.events`。**v1 人工收款與日後金流的差別只在「誰呼叫 `RecordPayment`」。**
 
@@ -214,6 +214,12 @@ repo 目前**完全沒有** ticker／cron。新增 `cmd/platform-cron`（獨立 
 ### 5.6 取消語意
 
 `cancelled` = 期末終止，期別照算到 `period_end`；資料**不軟刪除、不匯出後刪除**（SaaS 客戶回流的回復請求是常態）。
+
+**到期後的行為（G7）**：`cancelled` 訂閱在 `period_end` 過後**不再提供服務**——排程每日掃描「`cancelled` 且期末已過」者，發 `subscription.expired` 事件，由 consumer 把公司轉為 `suspended`（資料保留、登入被擋）。這一步補的是原本的缺口：`MarkPastDue` 只掃 `active`，已取消的租戶期滿後會一直可用。
+
+**復原**：`cancelled` 是終態，**不得由收款復原**（`allowedTransitions` 已排除；`RecordPayment` 遇 `cancelled` 會回 `FailedPrecondition`）。客戶回頭＝建立**新訂閱**（新合約、新期別、新價格快照），不復活舊合約——這樣歷史帳與稽核不會被改寫。
+
+**取消不影響既有期別**：期末前的服務與發票照舊；若客戶要求提前終止，屬「特殊處理」，以 `note` 記錄並由營運決定是否退費（v1 無自動退費）。
 
 ---
 

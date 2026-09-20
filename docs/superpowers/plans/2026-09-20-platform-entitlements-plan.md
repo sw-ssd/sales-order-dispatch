@@ -317,6 +317,9 @@ CREATE TABLE IF NOT EXISTS platform.subscriptions (
     company_id       bigint      NOT NULL,
     plan_id          bigint      NOT NULL REFERENCES platform.plans(id),
     seat_count       integer     NOT NULL DEFAULT 1,
+    -- 計費週期（G1）：期別產生必須依它決定「加一個月」或「加一年」，
+    -- 否則年繳方案每次只會產生一個月期別（少收 11 個月）。
+    billing_cycle    text        NOT NULL DEFAULT 'monthly', -- monthly | yearly
     status           text        NOT NULL,                -- trialing | active | past_due | suspended | cancelled
     trial_ends_at    timestamptz,
     grace_until      timestamptz,
@@ -353,6 +356,8 @@ CREATE TABLE IF NOT EXISTS platform.subscription_periods (
     carrier          text,
     payment_provider text        NOT NULL DEFAULT 'manual',
     external_ref     text,
+    -- 短收／溢收等人工註記（G8）：不改變期別金額，只留對帳線索。
+    note             text        NOT NULL DEFAULT '',
     created_at       timestamptz NOT NULL DEFAULT now(),
     UNIQUE (subscription_id, period_no)
 );
@@ -486,7 +491,10 @@ type Subscription struct {
 	Status    string // trialing | active | past_due | suspended | cancelled
 	PlanID    int64
 	SeatCount int
-	TrialEnds *time.Time
+	// BillingCycle 決定期別產生時「加一個月」或「加一年」（G1）。
+	BillingCycle string // monthly | yearly
+	TrialEnds    *time.Time
+	GraceUntil   *time.Time
 }
 
 type Store interface {
@@ -2814,8 +2822,9 @@ var platformPlans = []struct {
 	}},
 }
 
-// SeedPlatform 冪等建立平台基礎資料;operatorEmail 為首位平台操作者。
-func SeedPlatform(ctx context.Context, db *sql.DB, operatorEmail string) error {
+// SeedPlatform 冪等建立平台基礎資料;operatorEmail 為首位平台操作者,
+// systemActorEmail 為系統排程用的 actor（G5，見下方說明）。
+func SeedPlatform(ctx context.Context, db *sql.DB, operatorEmail, systemActorEmail string) error {
 	for _, f := range platformFeatures {
 		if _, err := db.ExecContext(ctx, `
 			INSERT INTO platform.features (code, type, unit, description)
@@ -2872,6 +2881,54 @@ func SeedPlatform(ctx context.Context, db *sql.DB, operatorEmail string) error {
 		VALUES ($1, $1, 'admin')
 		ON CONFLICT (email) DO NOTHING`, operatorEmail); err != nil {
 		return fmt.Errorf("seed operator: %w", err)
+	}
+
+	// G5：系統 actor。排程改動租戶狀態時，租戶稽核（audit_logs）需要真實且存在的
+	// user_id 與 company_id（兩者都有 FK），故建立「平台自營公司 ＋ 系統使用者」，
+	// 並把其 user id 記入 platform.settings 供 cmd/platform-cron 與 consumer 取用。
+	//
+	// 為何用 WHERE NOT EXISTS 而非 ON CONFLICT：companies.identifier 與 users.email 的
+	// 唯一性由「部分唯一索引」（WHERE deleted_at IS NULL）表達，部分索引不能當衝突目標。
+	//
+	// systemActorEmail 由呼叫端提供（建議 system@<AllowedEmailDomain>）；password_hash
+	// 填 '!' 是刻意的不可登入值 —— 此帳號只作為系統 actor，不得有任何人以它登入。
+	var platformCompanyID int64
+	if err := db.QueryRowContext(ctx, `
+		WITH ins AS (
+			INSERT INTO companies (name, identifier, status, created_at, updated_at)
+			SELECT '平台營運', 'platform', 'active', now(), now()
+			 WHERE NOT EXISTS (
+				SELECT 1 FROM companies WHERE identifier = 'platform' AND deleted_at IS NULL
+			 )
+			RETURNING id
+		)
+		SELECT id FROM ins
+		UNION ALL
+		SELECT id FROM companies WHERE identifier = 'platform' AND deleted_at IS NULL
+		LIMIT 1`).Scan(&platformCompanyID); err != nil {
+		return fmt.Errorf("seed 平台自營公司: %w", err)
+	}
+
+	var systemUserID int64
+	if err := db.QueryRowContext(ctx, `
+		WITH ins AS (
+			INSERT INTO users (email, name, status, role, password_hash, company_users, created_at, updated_at)
+			SELECT $1, '系統排程', 'active', 'super', '!', $2, now(), now()
+			 WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = $1 AND deleted_at IS NULL)
+			RETURNING id
+		)
+		SELECT id FROM ins
+		UNION ALL
+		SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL
+		LIMIT 1`, systemActorEmail, platformCompanyID).Scan(&systemUserID); err != nil {
+		return fmt.Errorf("seed 系統使用者: %w", err)
+	}
+
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO platform.settings (key, value) VALUES ('system_actor_user_id', $1)
+		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
+		strconv.FormatInt(systemUserID, 10)); err != nil {
+		return fmt.Errorf("seed system_actor_user_id: %w", err)
 	}
 	return nil
 }

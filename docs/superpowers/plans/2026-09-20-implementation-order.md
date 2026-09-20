@@ -8,21 +8,21 @@
 
 ## 1. 已查證的缺陷（必須修，否則會做出錯的帳或開不了機）
 
-| # | 缺陷 | 證據 | 影響 | 修法 |
-|---|---|---|---|---|
-| G1 | **訂閱沒有計費週期**，期別產生卻硬編「一個月」（`PeriodEnd.AddDate(0, 1, 0)`） | `-platform-lifecycle-console-plan.md:1666`；`platform.subscriptions` 欄位清單（`-platform-entitlements-plan.md:319` 附近）無 `billing_cycle` | **年繳方案每次只產生一個月期別 → 直接少收 11 個月的錢** | ② 的 migration 00029 加 `subscriptions.billing_cycle text NOT NULL DEFAULT 'monthly'`（並於 `plan_prices` 對應）；③ 的 `EnsureNextPeriod` 依 `billing_cycle` 決定 `AddDate(0,1,0)` 或 `AddDate(1,0,0)`；補一條年繳測試 |
-| G2 | **日期算術未處理月底**（Go 的 `AddDate` 會正規化） | 同上 `:1666` | 1/31 到期 → 下一期起日 3/3（跳過整個 2 月），帳期與服務期不一致 | 新增 `addBillingPeriod(from, cycle)` 純函式：取「下月同日，不存在則當月最後一日」（1/31→2/28）；單元測試釘住 1/31、3/31、閏年 |
-| G3 | **空交易號的重送會重複入帳事件**：no-op 條件要求 `in.ExternalRef != ""` | `-platform-lifecycle-console-plan.md:1169` | 人工收款（多數沒有交易號）重送 → 再寫一次 `period.payment_recorded`，事件流與稽核失真 | no-op 條件改為「期別已 `paid` **且**（`external_ref` 相同 **或** 兩者皆空）→ 直接回既有期別」；補「兩次空交易號呼叫只寫一次事件」測試 |
-| G4 | **輸入金額從未與期別快照比對** | `RecordPaymentInput.AmountCents` 只出現在事件與稽核 payload（`:1196`、`:1203`），實作無任何比對 | 營運輸入 3000 而期別是 1950 → 帳面顯示 1950、事件寫 1950，**輸入被默默丟棄** | 明確規則：`AmountCents == 0` → 採快照；`!= 0 && != 快照` → `FailedPrecondition`（部分付款屬未支援，見 G10）；補兩條測試 |
-| G5 | **系統 actor 沒有 seed**：`platform.settings.system_actor_user_id` 只在測試 fixture 出現 | `-platform-lifecycle-console-plan.md:605`（測試 INSERT）、`:2217`（cron 讀取即 Fatal） | `cmd/platform-cron` **一開跑就 Fatal**；consumer 的凍結也會因缺 actor 而失敗 | ② 的 `SeedPlatform` 追加：建立平台自營公司（`companies.identifier='platform'`）＋系統使用者 ＋ 寫入 `platform.settings`（冪等）；③ 的 cron 改為「缺設定即明確報錯並附修復指令」 |
+| # | 缺陷 | 證據 | 影響 | 修法 | 狀態 |
+|---|---|---|---|---|---|
+| G1 | **訂閱沒有計費週期**，期別產生卻硬編「一個月」（`PeriodEnd.AddDate(0, 1, 0)`） | `-platform-lifecycle-console-plan.md` 原 `:1666` | **年繳方案每次只產生一個月期別 → 直接少收 11 個月的錢** | ② migration 00029 加 `subscriptions.billing_cycle`；③ 的 `EnsureNextPeriod` 依週期選「+1 月／+1 年」；`CurrentPriceTx` 收 cycle | ✅ 已修 |
+| G2 | **日期算術未處理月底**（Go 的 `AddDate` 會正規化） | 實測：`2026-01-31 + 1 月 = 2026-03-03` | 帳期跳過整個 2 月，服務期與帳期不一致 | ③ 新增 `addBillingPeriod` / `dayOfMonthOrLast`：下月同日、不存在則取當月最後一日 | ✅ 已修 |
+| G3 | **空交易號的重送會重複入帳事件**：no-op 條件要求 `in.ExternalRef != ""` | ③ 原 `:1169` | 人工收款（多數沒有交易號）重送 → 再寫一次 `period.payment_recorded` 與稽核 | no-op 條件改為「期別已 `paid` → 一律 no-op」，交易號不同時記 log 提醒可能溢收 | ✅ 已修 |
+| G4 | **輸入金額從未與期別快照比對** | `AmountCents` 只出現在事件／稽核 payload | 營運輸入 3000 而期別 1950 → 帳面 1950、**輸入被默默丟棄** | ② 明定：`0` → 採快照；非 0 且不符 → `FailedPrecondition`（差異以 `note` 記錄） | ✅ 已修 |
+| G5 | **系統 actor 沒有 seed**：`platform.settings.system_actor_user_id` 只在測試 fixture 出現 | ③ 原 `:605`（測試 INSERT）、`:2217`（cron 讀不到即 Fatal） | `cmd/platform-cron` **一開跑就 Fatal**；consumer 凍結也失敗 | ② `SeedPlatform` 追加：平台自營公司 ＋ 系統使用者（`password_hash='!'` 不可登入）＋ 寫入 settings | ✅ 已修 |
 
 ## 2. 待決策（會影響計畫內容，需你定調）
 
 | # | 議題 | 現況 | 建議 |
 |---|---|---|---|
-| G6 | **方案變更、席位變更、取消**三個寫入 RPC 缺席 | ③ 的寫入 RPC 清單（Task 9）只有 override／收款／方案價目／operator；spec §5.2 卻要求「營運後台終止」、§2.4 要求席位可調 | 補 `SetSeatCount`、`ChangePlan`（v1 只做「下一期生效」，不做按日比例）、`CancelSubscription`（期末終止）三支；spec §5.6 同步寫明「cancelled 到期後由排程轉 suspended」 |
-| G7 | **已取消訂閱到期後無人處理**：`MarkPastDue` 只掃 `active` | spec §5.6 只寫「期別照算到 period_end」 | 排程加一步：`cancelled` 且 `period_end < now` → 公司轉 `suspended`（不再發訂閱事件，改發 `subscription.expired`），並補測試 |
-| G8 | **部分付款／溢收短收無處記錄** | `RecordPayment` 只支援「整期 paid」或「no-op」 | v1 明示不支援部分付款；但 `subscription_periods` 加 `note text`（營運註記短收/溢收與處理方式），否則對帳差異無處可放 |
+| G6 | **方案變更、席位變更、取消**三個寫入 RPC 缺席 | ③ 的寫入 RPC 清單（Task 9）只有 override／收款／方案價目／operator；spec §5.2 卻要求「營運後台終止」、§2.4 要求席位可調 | 補 `SetSeatCount`、`ChangePlan`（v1 只做「下一期生效」，不做按日比例）、`CancelSubscription`（期末終止）三支 | ✅ 已定案並修入 spec 與 ③ |
+| G7 | **已取消訂閱到期後無人處理**：`MarkPastDue` 只掃 `active` | spec §5.6 只寫「期別照算到 period_end」 | 排程加 `ExpireCancelled`：期末已過 → 發 `subscription.expired`，由 consumer 轉 `suspended`；並補測試 | ✅ 已定案並修入 spec 與 ③ |
+| G8 | **部分付款／溢收短收無處記錄** | `RecordPayment` 只支援「整期 paid」或「no-op」 | v1 明示不支援部分付款；`subscription_periods.note` 記短收/溢收；金額不符（非 0 且 ≠ 快照）→ `FailedPrecondition` | ✅ 已定案並修入 spec 與 ③ |
 | G9 | **租戶端無處提供開票資訊** | ③ 的 `RecordPaymentRequest` 有 `buyer_tax_id`／`carrier`，但那是**平台端**欄位（營運要打電話問客戶） | 加一頁「帳務資訊」（租戶後台或 App）：統編、發票地址、載具、聯絡人；平台開票時直接取用。v1 可先做租戶後台欄位 |
 | G10 | **平台稽核保留期未定** | D27 的「1/3/6/12 月或永久」是為**業務**稽核設計 | 帳務與平台稽核法遵上通常要 5–7 年：明定 `platform.audit_logs` 與 `subscription_periods` 不套用 D27 的清理（或另立保留期），並寫進 spec |
 | G11 | **資料匯出（合約終止後客戶帶走資料）** | 目前只說「不刪除」 | 列 1.1：匯出成 CSV/JSON 套件；v1 以人工 SQL 匯出並記錄在案（不要無聲跳過） |

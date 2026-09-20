@@ -507,9 +507,38 @@ type Period struct {
 	InvoiceNo      string
 	PaymentProvider string
 	ExternalRef    string
+	Note           string // 短收／溢收等人工註記（G8；付款時寫入）
 }
 
-type OpenPeriodInput struct { /* 寫入 open 期別所需的快照欄位 */ }
+// OpenPeriodInput 為建立一期所需的快照欄位（不含 note：註記屬付款事件，見 MarkPeriodPaidTx）。
+type OpenPeriodInput struct {
+	SubscriptionID int64
+	PeriodNo       int
+	PeriodStart    time.Time
+	PeriodEnd      time.Time
+	PlanID         int64
+	UnitPriceCents int64
+	SeatPriceCents int64
+	SeatCount      int
+	AmountCents    int64
+	Currency       string
+}
+
+// Price 為「當期生效價」（GB1：以 billing_cycle 對應的價目）。
+type Price struct {
+	BaseCents int64
+	SeatCents int64
+	Currency  string
+}
+
+// Event 為 outbox 事件（consumer 派送用）。
+type Event struct {
+	ID            int64
+	AggregateType string
+	AggregateID   int64
+	EventType     string
+	Payload       []byte
+}
 
 // BillingStore 由 internal/platform/billing 使用；所有寫入方法接受 *sql.Tx 以保證單一交易。
 type BillingStore interface {
@@ -517,13 +546,23 @@ type BillingStore interface {
 	SetSubscriptionStatusTx(ctx context.Context, tx *sql.Tx, subID int64, status string, graceUntil *time.Time) error
 	OpenPeriodTx(ctx context.Context, tx *sql.Tx, in OpenPeriodInput) (*Period, error)
 	OpenPeriodByNoTx(ctx context.Context, tx *sql.Tx, subID int64, periodNo int) (*Period, error)
-	MarkPeriodPaidTx(ctx context.Context, tx *sql.Tx, id int64, paidAt time.Time, invoiceNo, provider, externalRef string) error
+	CurrentPeriodTx(ctx context.Context, tx *sql.Tx, subID int64) (*Period, error)
+	// CurrentPriceTx 取該方案在指定計費週期的當期生效價（cycle: monthly | yearly，G1）。
+	CurrentPriceTx(ctx context.Context, tx *sql.Tx, planID int64, cycle string) (Price, error)
+	// MarkPeriodPaidTx 標記期別已付款（note 為短收／溢收註記，空字串保留原值，G8）。
+	MarkPeriodPaidTx(ctx context.Context, tx *sql.Tx, id int64, paidAt time.Time,
+		invoiceNo, provider, externalRef, note string) error
 	PeriodsByStatus(ctx context.Context, status string) ([]Period, error)
+	ActiveSubscriptionsWithDueOpenPeriod(ctx context.Context, tx *sql.Tx, now time.Time) ([]Subscription, error)
+	PastDueSubscriptionsExpiredGrace(ctx context.Context, tx *sql.Tx, now time.Time) ([]Subscription, error)
+	CancelledSubscriptionsPastPeriodEnd(ctx context.Context, tx *sql.Tx, now time.Time) ([]Subscription, error)
+	ActiveOrTrialingSubscriptions(ctx context.Context) ([]Subscription, error)
 	EmitEventTx(ctx context.Context, tx *sql.Tx, aggregateType string, aggregateID int64, eventType string, payload []byte) error
 	UndispatchedEvents(ctx context.Context, limit int) ([]Event, error)
 	MarkEventDispatchedTx(ctx context.Context, tx *sql.Tx, id int64) error
 	RecordAuditTx(ctx context.Context, tx *sql.Tx, operatorID int64, action, targetType, targetID, reason string, before, after []byte) error
-	SystemActor(ctx context.Context) (int64, error)   // 讀 platform.settings.system_actor_user_id
+	WithTx(ctx context.Context, fn func(*sql.Tx) error) error
+	SystemActor(ctx context.Context) (int64, error) // 讀 platform.settings.system_actor_user_id
 	Setting(ctx context.Context, key string) (string, error)
 	UpsertSettingTx(ctx context.Context, tx *sql.Tx, key, value string) error
 }
@@ -716,6 +755,7 @@ type OpenPeriodInput struct {
 	SeatCount       int
 	AmountCents     int64
 	Currency        string
+	Note            string // 短收／溢收等人工註記（G8）
 }
 
 // OpenSubscriptionTx 以 FOR UPDATE 鎖住該租戶未取消的訂閱：併發的收款／逾期轉移必須互斥，
@@ -779,18 +819,24 @@ func (s *Store) OpenPeriodByNoTx(ctx context.Context, tx *sql.Tx, subID int64, p
 	return s.periodByIDTx(ctx, tx, id)
 }
 
-func (s *Store) periodByIDTx(ctx context.Context, tx *sql.Tx, id int64) (*store.Period, error) {
-	row := tx.QueryRowContext(ctx, `
-		SELECT id, subscription_id, period_no, period_start, period_end, plan_id,
-		       (unit_price*100)::bigint, (seat_price*100)::bigint, seat_count,
-		       (amount*100)::bigint, currency, status, paid_at, COALESCE(invoice_no,''),
-		       payment_provider, COALESCE(external_ref,'')
-		  FROM platform.subscription_periods WHERE id = $1`, id)
+// rowScanner 抽象 *sql.Row 與 *sql.Rows（兩者 Scan 簽章相同），讓期別掃描只有一份。
+type rowScanner interface{ Scan(dest ...any) error }
+
+// periodColumns 為期別欄位順序的單一來源：多處 SELECT 若有順序漂移，
+// 掃描會靜默取到錯欄位（note 的加入即為此類風險）。
+const periodColumns = `id, subscription_id, period_no, period_start, period_end, plan_id,
+	(unit_price*100)::bigint, (seat_price*100)::bigint, seat_count,
+	(amount*100)::bigint, currency, status, paid_at, COALESCE(invoice_no,''),
+	payment_provider, COALESCE(external_ref,''), note`
+
+// scanPeriod 掃描一列期別（欄位順序見 periodColumns）。
+func scanPeriod(sc rowScanner) (*store.Period, error) {
 	var p store.Period
 	var paid sql.NullTime
-	if err := row.Scan(&p.ID, &p.SubscriptionID, &p.PeriodNo, &p.PeriodStart, &p.PeriodEnd,
+	if err := sc.Scan(&p.ID, &p.SubscriptionID, &p.PeriodNo, &p.PeriodStart, &p.PeriodEnd,
 		&p.PlanID, &p.UnitPriceCents, &p.SeatPriceCents, &p.SeatCount, &p.AmountCents,
-		&p.Currency, &p.Status, &paid, &p.InvoiceNo, &p.PaymentProvider, &p.ExternalRef); err != nil {
+		&p.Currency, &p.Status, &paid, &p.InvoiceNo, &p.PaymentProvider, &p.ExternalRef,
+		&p.Note); err != nil {
 		return nil, err
 	}
 	if paid.Valid {
@@ -800,18 +846,25 @@ func (s *Store) periodByIDTx(ctx context.Context, tx *sql.Tx, id int64) (*store.
 	return &p, nil
 }
 
+func (s *Store) periodByIDTx(ctx context.Context, tx *sql.Tx, id int64) (*store.Period, error) {
+	return scanPeriod(tx.QueryRowContext(ctx,
+		`SELECT `+periodColumns+` FROM platform.subscription_periods WHERE id = $1`, id))
+}
+
 // MarkPeriodPaidTx 標記期別為已付款；已是 paid 且交易號相同 → 視為重複入帳（no-op，回 nil）；
 // 已 paid 但交易號不同 → 錯誤（避免覆蓋別筆收款）。
+// note（G8）為短收／溢收的人工註記：未提供時**保留原值**（不得用空字串清掉既有註記）。
 func (s *Store) MarkPeriodPaidTx(ctx context.Context, tx *sql.Tx, id int64, paidAt time.Time,
-	invoiceNo, provider, externalRef string) error {
+	invoiceNo, provider, externalRef, note string) error {
 	res, err := tx.ExecContext(ctx, `
 		UPDATE platform.subscription_periods
 		   SET status = 'paid', paid_at = $2, invoice_no = NULLIF($3,''),
-		       payment_provider = $4, external_ref = NULLIF($5,'')
+		       payment_provider = $4, external_ref = NULLIF($5,''),
+		       note = COALESCE(NULLIF($6,''), note)
 		 WHERE id = $1 AND (
 		    status = 'open'
 		    OR (status = 'paid' AND COALESCE(external_ref,'') = COALESCE(NULLIF($5,''),''))
-		 )`, id, paidAt, invoiceNo, provider, externalRef)
+		 )`, id, paidAt, invoiceNo, provider, externalRef, note)
 	if err != nil {
 		return err
 	}
@@ -886,6 +939,181 @@ func (s *Store) UpsertSettingTx(ctx context.Context, tx *sql.Tx, key, value stri
 	_, err := tx.ExecContext(ctx, `
 		INSERT INTO platform.settings (key, value) VALUES ($1,$2)
 		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`, key, value)
+	return err
+}
+
+// CurrentPriceTx 取該方案在指定計費週期的「當期生效價」（effective_from 最新者）。
+// 期別金額一律用當期價快照：方案調價後新期別用新價、舊期別不變（G1 一併校正週期）。
+func (s *Store) CurrentPriceTx(ctx context.Context, tx *sql.Tx, planID int64, cycle string) (store.Price, error) {
+	row := tx.QueryRowContext(ctx, `
+		SELECT (base_price*100)::bigint, (seat_price*100)::bigint, currency
+		  FROM platform.plan_prices
+		 WHERE plan_id = $1 AND billing_cycle = $2 AND effective_from <= now()
+		 ORDER BY effective_from DESC LIMIT 1`, planID, cycle)
+	var p store.Price
+	if err := row.Scan(&p.BaseCents, &p.SeatCents, &p.Currency); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return store.Price{}, fmt.Errorf("方案 %d 沒有 %s 週期的價目", planID, cycle)
+		}
+		return store.Price{}, err
+	}
+	return p, nil
+}
+
+// CurrentPeriodTx 取訂閱最新一期（期別產生與逾期判定使用）。
+func (s *Store) CurrentPeriodTx(ctx context.Context, tx *sql.Tx, subID int64) (*store.Period, error) {
+	var id int64
+	err := tx.QueryRowContext(ctx, `
+		SELECT id FROM platform.subscription_periods
+		 WHERE subscription_id = $1 ORDER BY period_no DESC LIMIT 1`, subID).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return s.periodByIDTx(ctx, tx, id)
+}
+
+// ActiveSubscriptionsWithDueOpenPeriod：active 且最新期別已過期末（MarkPastDue）。
+func (s *Store) ActiveSubscriptionsWithDueOpenPeriod(ctx context.Context, tx *sql.Tx, now time.Time) ([]store.Subscription, error) {
+	return s.scanSubscriptions(ctx, tx, `
+		SELECT s.id, s.company_id, s.status
+		  FROM platform.subscriptions s
+		  JOIN LATERAL (
+			SELECT period_end FROM platform.subscription_periods p
+			 WHERE p.subscription_id = s.id ORDER BY p.period_no DESC LIMIT 1
+		  ) cur ON true
+		 WHERE s.status = 'active' AND cur.period_end < $1`, now)
+}
+
+// PastDueSubscriptionsExpiredGrace：past_due 且寬限已過（SuspendOverdue）。
+func (s *Store) PastDueSubscriptionsExpiredGrace(ctx context.Context, tx *sql.Tx, now time.Time) ([]store.Subscription, error) {
+	return s.scanSubscriptions(ctx, tx, `
+		SELECT id, company_id, status FROM platform.subscriptions
+		 WHERE status = 'past_due' AND grace_until IS NOT NULL AND grace_until < $1`, now)
+}
+
+// CancelledSubscriptionsPastPeriodEnd：cancelled 且最新期別已過期末（G7）。
+// EXISTS 排除「已發過 subscription.expired」者 → 排程可重跑且不重複發事件。
+func (s *Store) CancelledSubscriptionsPastPeriodEnd(ctx context.Context, tx *sql.Tx, now time.Time) ([]store.Subscription, error) {
+	return s.scanSubscriptions(ctx, tx, `
+		SELECT s.id, s.company_id, s.status
+		  FROM platform.subscriptions s
+		  JOIN LATERAL (
+			SELECT period_end FROM platform.subscription_periods p
+			 WHERE p.subscription_id = s.id ORDER BY p.period_no DESC LIMIT 1
+		  ) cur ON true
+		 WHERE s.status = 'cancelled' AND cur.period_end < $1
+		   AND NOT EXISTS (
+			SELECT 1 FROM platform.events e
+			 WHERE e.aggregate_type = 'subscription' AND e.aggregate_id = s.id
+			   AND e.event_type = 'subscription.expired'
+		   )`, now)
+}
+
+// scanSubscriptions 為三個掃描查詢的共用列掃描（欄位形狀相同）。
+func (s *Store) scanSubscriptions(ctx context.Context, tx *sql.Tx, query string, args ...any) ([]store.Subscription, error) {
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []store.Subscription
+	for rows.Next() {
+		var sub store.Subscription
+		if err := rows.Scan(&sub.ID, &sub.CompanyID, &sub.Status); err != nil {
+			return nil, err
+		}
+		out = append(out, sub)
+	}
+	return out, rows.Err()
+}
+
+// PeriodsByStatus 取指定狀態的期別（收款找當期 open 期別；含 note）。
+func (s *Store) PeriodsByStatus(ctx context.Context, status string) ([]store.Period, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, subscription_id, period_no, period_start, period_end, plan_id,
+		       (unit_price*100)::bigint, (seat_price*100)::bigint, seat_count,
+		       (amount*100)::bigint, currency, status, paid_at, COALESCE(invoice_no,''),
+		       payment_provider, COALESCE(external_ref,''), note
+		  FROM platform.subscription_periods WHERE status = $1 ORDER BY subscription_id, period_no`,
+		status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []store.Period
+	for rows.Next() {
+		p, err := scanPeriod(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *p)
+	}
+	return out, rows.Err()
+}
+
+// WithTx 開交易並把 *sql.Tx 交給 fn（平台寫入一律單一交易，見 Global Constraints）。
+func (s *Store) WithTx(ctx context.Context, fn func(*sql.Tx) error) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	if err := fn(tx); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	return tx.Commit()
+}
+
+// ActiveOrTrialingSubscriptions 供排程逐租戶產生下一期（只有這兩種狀態仍在服務中）。
+func (s *Store) ActiveOrTrialingSubscriptions(ctx context.Context) ([]store.Subscription, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, company_id, status, plan_id, seat_count, billing_cycle
+		  FROM platform.subscriptions
+		 WHERE status IN ('active','trialing')
+		 ORDER BY id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []store.Subscription
+	for rows.Next() {
+		var sub store.Subscription
+		if err := rows.Scan(&sub.ID, &sub.CompanyID, &sub.Status,
+			&sub.PlanID, &sub.SeatCount, &sub.BillingCycle); err != nil {
+			return nil, err
+		}
+		out = append(out, sub)
+	}
+	return out, rows.Err()
+}
+
+// UndispatchedEvents 取未派送事件（consumer 用）。
+func (s *Store) UndispatchedEvents(ctx context.Context, limit int) ([]store.Event, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, aggregate_type, aggregate_id, event_type, payload
+		  FROM platform.events WHERE dispatched_at IS NULL ORDER BY id LIMIT $1`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []store.Event
+	for rows.Next() {
+		var e store.Event
+		if err := rows.Scan(&e.ID, &e.AggregateType, &e.AggregateID, &e.EventType, &e.Payload); err != nil {
+			return nil, err
+		}
+		out = append(out, e)
+	}
+	return out, rows.Err()
+}
+
+// MarkEventDispatchedTx 標記事件已派送；attempts 為可觀測性計數（重試次數）。
+func (s *Store) MarkEventDispatchedTx(ctx context.Context, tx *sql.Tx, id int64) error {
+	_, err := tx.ExecContext(ctx, `
+		UPDATE platform.events SET dispatched_at = now(), attempts = attempts + 1 WHERE id = $1`, id)
 	return err
 }
 
@@ -1118,13 +1346,14 @@ type RecordPaymentInput struct {
 	CompanyID       int
 	PeriodNo        int
 	PaidAt          time.Time
-	AmountCents     int64
+	AmountCents     int64 // 0 = 採用期別快照金額；非 0 且與快照不符 → 拒絕（G4）
 	Provider        string
 	ExternalRef     string
 	InvoiceNo       string
 	InvoiceStatus   string
 	BuyerTaxID      string
 	Carrier         string
+	Note            string // 短收／溢收等人工註記（G8）
 	ActorOperatorID int64
 	Reason          string
 }
@@ -1166,13 +1395,28 @@ func (b *Billing) RecordPayment(ctx context.Context, in RecordPaymentInput) (*st
 			return connect.NewError(connect.CodeFailedPrecondition,
 				errors.New("找不到可收款的期別（請先產生期別）"))
 		}
-		if period.Status == "paid" && period.ExternalRef == in.ExternalRef && in.ExternalRef != "" {
-			out = period // 重複入帳：no-op
+		// 重複入帳判定（G3）：期別已 paid → 一律 no-op。
+		// 為什麼不看交易號：人工收款多數沒有交易號，若要求 external_ref 非空才 no-op，
+		// 空交易號的重送會再寫一次 period.payment_recorded 事件與稽核（帳面與事件流失真）。
+		if period.Status == "paid" {
+			if in.ExternalRef != period.ExternalRef {
+				log.Printf("platform payment: 期別 %d 已付款，本次交易號 %q 與原 %q 不同（可能為溢收，請人工確認）",
+					period.ID, in.ExternalRef, period.ExternalRef)
+			}
+			out = period
 			return nil
 		}
 
+		// 金額驗證（G4）：未填 → 採期別快照；填了但與快照不符 → 拒絕。
+		// v1 不支援部分付款：短收／溢收以 note 記錄，不改變期別金額。
+		if in.AmountCents != 0 && in.AmountCents != period.AmountCents {
+			return connect.NewError(connect.CodeFailedPrecondition,
+				fmt.Errorf("輸入金額 %s 與期別金額 %s 不符（不支援部分付款；差異請記於備註）",
+					money.FormatCents(in.AmountCents), money.FormatCents(period.AmountCents)))
+		}
+
 		if err := b.st.MarkPeriodPaidTx(ctx, tx, period.ID, in.PaidAt,
-			in.InvoiceNo, in.Provider, in.ExternalRef); err != nil {
+			in.InvoiceNo, in.Provider, in.ExternalRef, in.Note); err != nil {
 			return connect.NewError(connect.CodeFailedPrecondition, err)
 		}
 
@@ -1612,7 +1856,98 @@ func TestEnsureNextPeriodSnapshotUsesCurrentPrice(t *testing.T) {
 		t.Fatalf("期別號應遞增為 2，got %d", got.PeriodNo)
 	}
 }
+
+// G1：年繳訂閱產生下一期時，期末必須加一年（不是一個月）。
+func TestEnsureNextPeriodUsesBillingCycle(t *testing.T) {
+	end := time.Date(2026, 10, 31, 0, 0, 0, 0, time.UTC)
+	now := time.Date(2026, 10, 25, 3, 0, 0, 0, time.UTC) // 在 leadDays=14 的提前窗內
+	f := &fakeBilling{
+		sub: &store.Subscription{ID: 5, CompanyID: 42, Status: "active",
+			PlanID: 1, SeatCount: 3, BillingCycle: "yearly"},
+		curPeriod: &store.Period{SubscriptionID: 5, PeriodNo: 1, PeriodEnd: end},
+		price:     store.Price{BaseCents: 1620000, SeatCents: 162000, Currency: "TWD"},
+	}
+	created, err := billing.NewBilling(f).EnsureNextPeriod(context.Background(), 42, now, 14)
+	if err != nil || !created {
+		t.Fatalf("應建立下一期: created=%v err=%v", created, err)
+	}
+	wantEnd := time.Date(2027, 10, 31, 0, 0, 0, 0, time.UTC)
+	if got := f.opened[0].PeriodEnd; !got.Equal(wantEnd) {
+		t.Fatalf("年繳期末應為 %s（+1 年），got %s", wantEnd, got)
+	}
+	if got := f.opened[0].PeriodStart; !got.Equal(end) {
+		t.Fatalf("新期別起日應接續前期期末 %s，got %s", end, got)
+	}
+}
 ```
+
+**以下兩條置於獨立檔案 `internal/platform/billing/lifecycle_internal_test.go`（`package billing`；`addBillingPeriod` 未匯出，外部測試套件取用不到）**
+
+```go
+// G2：月底不能靠 time.AddDate（1/31 + 1 月會正規化成 3/3，帳期跳過整個 2 月）。
+func TestAddBillingPeriodHandlesMonthEnd(t *testing.T) {
+	cases := []struct {
+		from, cycle, want string
+	}{
+		{"2026-01-31T00:00:00Z", "monthly", "2026-02-28T00:00:00Z"},
+		{"2026-03-31T00:00:00Z", "monthly", "2026-04-30T00:00:00Z"},
+		{"2028-01-31T00:00:00Z", "monthly", "2028-02-29T00:00:00Z"}, // 閏年
+		{"2026-01-15T00:00:00Z", "monthly", "2026-02-15T00:00:00Z"},
+		{"2026-12-15T00:00:00Z", "monthly", "2027-01-15T00:00:00Z"}, // 跨年
+		{"2026-02-28T00:00:00Z", "yearly", "2027-02-28T00:00:00Z"},
+		{"2028-02-29T00:00:00Z", "yearly", "2029-02-28T00:00:00Z"}, // 閏日遇平年
+	}
+	for _, tc := range cases {
+		from, err := time.Parse(time.RFC3339, tc.from)
+		if err != nil {
+			t.Fatalf("解析 %s: %v", tc.from, err)
+		}
+		got, err := addBillingPeriod(from, tc.cycle)
+		if err != nil {
+			t.Fatalf("addBillingPeriod(%s, %s): %v", tc.from, tc.cycle, err)
+		}
+		want, _ := time.Parse(time.RFC3339, tc.want)
+		if !got.Equal(want) {
+			t.Fatalf("addBillingPeriod(%s, %s) = %s；want %s",
+				tc.from, tc.cycle, got.Format(time.RFC3339), tc.want)
+		}
+	}
+	if _, err := addBillingPeriod(time.Now(), "weekly"); err == nil {
+		t.Fatal("未知計費週期應報錯（不得默默當成月繳）")
+	}
+}
+```
+
+**回到 `lifecycle_test.go`（`package billing_test`）**
+
+```go
+// G7：cancelled 且期末已過 → 發 subscription.expired（由 consumer 把公司轉 suspended）；
+// **不得改變訂閱狀態**（cancelled 是終態，改狀態會破壞帳與稽核的可重現性）。
+func TestExpireCancelledEmitsEventWithoutChangingStatus(t *testing.T) {
+	now := time.Date(2026, 11, 1, 3, 0, 0, 0, time.UTC)
+	f := &fakeBilling{
+		expiredCancelled: []store.Subscription{{ID: 5, CompanyID: 42, Status: "cancelled"}},
+	}
+	n, err := billing.NewBilling(f).ExpireCancelled(context.Background(), now)
+	if err != nil || n != 1 {
+		t.Fatalf("應處理 1 筆: n=%d err=%v", n, err)
+	}
+	if !slices.Contains(f.events, "subscription.expired") {
+		t.Fatalf("應發 subscription.expired，got %v", f.events)
+	}
+	if f.status != "" {
+		t.Fatalf("不得改變訂閱狀態，got %q", f.status)
+	}
+
+	// 重跑：SQL 條件已排除「已發過 expired 事件」者 → 計數 0
+	f.expiredCancelled = nil
+	if n2, err := billing.NewBilling(f).ExpireCancelled(context.Background(), now); err != nil || n2 != 0 {
+		t.Fatalf("重跑不應再處理: n=%d err=%v", n2, err)
+	}
+}
+```
+
+（`fakeBilling` 追加 `expiredCancelled []store.Subscription` 欄位與 `CancelledSubscriptionsPastPeriodEnd` 方法（回傳它），以及 `CurrentPriceTx(ctx, tx, planID int64, cycle string)` 的簽章對齊。）
 
 - [ ] **Step 2: 實作（`lifecycle.go`）**
 
@@ -1633,6 +1968,8 @@ import (
 )
 
 // EnsureNextPeriod 在到期前 leadDays 天建立下一期（open）；已存在即回 false。
+// 期別長度依訂閱的 billing_cycle（月繳 +1 月、年繳 +1 年），且以 addBillingPeriod
+// 處理月底（Go 的 AddDate 會把 1/31 正規化成 3/3，帳期會跳過整個 2 月 —— G1/G2）。
 func (b *Billing) EnsureNextPeriod(ctx context.Context, companyID int, now time.Time, leadDays int) (bool, error) {
 	created := false
 	err := withTx(ctx, b.st, func(tx *sql.Tx) error {
@@ -1653,7 +1990,7 @@ func (b *Billing) EnsureNextPeriod(ctx context.Context, companyID int, now time.
 		if _, err := b.st.OpenPeriodByNoTx(ctx, tx, sub.ID, cur.PeriodNo+1); err == nil {
 			return nil // 已有下一期
 		}
-		price, err := b.st.CurrentPriceTx(ctx, tx, sub.PlanID)
+		price, err := b.st.CurrentPriceTx(ctx, tx, sub.PlanID, sub.BillingCycle)
 		if err != nil {
 			return connect.NewError(connect.CodeFailedPrecondition, err)
 		}
@@ -1661,16 +1998,21 @@ func (b *Billing) EnsureNextPeriod(ctx context.Context, companyID int, now time.
 		if err != nil {
 			return connect.NewError(connect.CodeInternal, err)
 		}
+		nextEnd, err := addBillingPeriod(cur.PeriodEnd, sub.BillingCycle)
+		if err != nil {
+			return connect.NewError(connect.CodeFailedPrecondition, err)
+		}
 		if _, err := b.st.OpenPeriodTx(ctx, tx, store.OpenPeriodInput{
 			SubscriptionID: sub.ID, PeriodNo: cur.PeriodNo + 1,
-			PeriodStart: cur.PeriodEnd, PeriodEnd: cur.PeriodEnd.AddDate(0, 1, 0),
+			PeriodStart: cur.PeriodEnd, PeriodEnd: nextEnd,
 			PlanID: sub.PlanID, UnitPriceCents: price.BaseCents, SeatPriceCents: price.SeatCents,
 			SeatCount: sub.SeatCount, AmountCents: amount, Currency: price.Currency,
 		}); err != nil {
 			return err
 		}
 		if err := b.emit(ctx, tx, sub.ID, "period.opened", map[string]any{
-			"company_id": companyID, "period_no": cur.PeriodNo + 1, "amount_cents": amount,
+			"company_id": companyID, "period_no": cur.PeriodNo + 1,
+			"amount_cents": amount, "billing_cycle": sub.BillingCycle,
 		}); err != nil {
 			return err
 		}
@@ -1678,6 +2020,35 @@ func (b *Billing) EnsureNextPeriod(ctx context.Context, companyID int, now time.
 		return nil
 	})
 	return created, err
+}
+
+// addBillingPeriod 由期別起算下一個期末：月繳取「下月同日」、年繳取「明年同日」；
+// 該日不存在（1/31、3/31、閏年 2/29）時取當月最後一日。
+// 為何不用 time.AddDate：它會正規化（1/31 + 1 月 = 3/3），帳期會跳過整個 2 月。
+func addBillingPeriod(from time.Time, cycle string) (time.Time, error) {
+	switch cycle {
+	case "monthly":
+		return dayOfMonthOrLast(from, from.Year(), int(from.Month())+1)
+	case "yearly":
+		return dayOfMonthOrLast(from, from.Year()+1, int(from.Month()))
+	default:
+		return time.Time{}, fmt.Errorf("未知的計費週期 %q（允許 monthly / yearly）", cycle)
+	}
+}
+
+// dayOfMonthOrLast 回傳「year-month 的同一天」；該日不存在時回該月最後一天。
+func dayOfMonthOrLast(from time.Time, year, month int) (time.Time, error) {
+	if month > 12 {
+		year, month = year+1, month-12
+	}
+	loc := from.Location()
+	lastDay := time.Date(year, time.Month(month)+1, 0, 0, 0, 0, 0, loc).Day()
+	day := from.Day()
+	if day > lastDay {
+		day = lastDay
+	}
+	return time.Date(year, time.Month(month), day,
+		from.Hour(), from.Minute(), from.Second(), from.Nanosecond(), loc), nil
 }
 
 // MarkPastDue 掃描 active 且期末已過的訂閱 → past_due ＋ 寬限期；回傳受影響筆數。
@@ -1734,9 +2105,33 @@ func (b *Billing) SuspendOverdue(ctx context.Context, now time.Time) (int, error
 	})
 	return n, err
 }
+
+// ExpireCancelled 掃描 cancelled 且期末已過的訂閱 → 發 subscription.expired（G7）。
+// 為何需要：MarkPastDue 只掃 active，已取消的租戶期滿後會一直可用；
+// 取消是「期末終止」，故期末前仍提供服務、期末後才停止。
+// 不改變訂閱狀態（cancelled 是終態）：只發事件，由 consumer 把公司轉為 suspended。
+func (b *Billing) ExpireCancelled(ctx context.Context, now time.Time) (int, error) {
+	n := 0
+	err := withTx(ctx, b.st, func(tx *sql.Tx) error {
+		expired, err := b.st.CancelledSubscriptionsPastPeriodEnd(ctx, tx, now)
+		if err != nil {
+			return err
+		}
+		for _, sub := range expired {
+			if err := b.emit(ctx, tx, sub.ID, "subscription.expired", map[string]any{
+				"company_id": sub.CompanyID, "reason": "cancelled_at_period_end",
+			}); err != nil {
+				return err
+			}
+			n++
+		}
+		return nil
+	})
+	return n, err
+}
 ```
 
-（`store.BillingStore` 追加三個查詢：`CurrentPeriodTx`、`CurrentPriceTx`、`ActiveSubscriptionsWithDueOpenPeriod`、`PastDueSubscriptionsExpiredGrace`；`errors` import 若未用到即移除。）
+（`store.BillingStore` 追加四個查詢：`CurrentPeriodTx`、`CurrentPriceTx(ctx, tx, planID, cycle)`、`ActiveSubscriptionsWithDueOpenPeriod`、`PastDueSubscriptionsExpiredGrace`、`CancelledSubscriptionsPastPeriodEnd`；`errors` import 若未用到即移除。）
 
 - [ ] **Step 3: 補齊測試至全綠並可重跑**
 
@@ -2076,15 +2471,19 @@ func TestRunOnceIsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("第一趟: %v", err)
 	}
-	if first.PastDue != 1 || first.Suspended != 1 || first.PeriodsOpened != 1 || first.Dispatched < 1 {
+	// fixture 需含：1 家逾期末付（→past_due）、1 家寬限已過（→suspended）、
+	// 1 家 cancelled 且期末已過（→expired，G7）、1 家進入提前窗（→開下一期）。
+	if first.PastDue != 1 || first.Suspended != 1 || first.ExpiredCancelled != 1 ||
+		first.PeriodsOpened != 1 || first.Dispatched < 1 {
 		t.Fatalf("第一趟計數不符: %+v", first)
 	}
 	second, err := RunOnce(context.Background(), deps, now, Params{GraceDays: 7, LeadDays: 14, EventBatch: 100})
 	if err != nil {
 		t.Fatalf("第二趟: %v", err)
 	}
-	if second.PastDue != 0 || second.Suspended != 0 || second.PeriodsOpened != 0 {
-		t.Fatalf("重跑不得重複轉移: %+v", second)
+	if second.PastDue != 0 || second.Suspended != 0 || second.ExpiredCancelled != 0 ||
+		second.PeriodsOpened != 0 || second.Dispatched != 0 {
+		t.Fatalf("重跑不得重複轉移或重複派送: %+v", second)
 	}
 }
 ```
@@ -2119,15 +2518,16 @@ type Params struct {
 }
 
 type Summary struct {
-	PastDue       int `json:"past_due"`
-	Suspended     int `json:"suspended"`
-	PeriodsOpened int `json:"periods_opened"`
-	Dispatched    int `json:"dispatched"`
-	Receivables   int `json:"receivables"`
+	PastDue          int `json:"past_due"`
+	Suspended        int `json:"suspended"`
+	ExpiredCancelled int `json:"expired_cancelled"`
+	PeriodsOpened    int `json:"periods_opened"`
+	Dispatched       int `json:"dispatched"`
 }
 
-// RunOnce 依序執行：逾期轉移 → 寬限停用 → 事件派送（凍結/復原）→ 產生下一期 → 待收款統計。
-// 順序有依賴：先派送事件（凍結）再產期別，避免對剛停用的租戶開新期。
+// RunOnce 依序執行：逾期轉移 → 寬限停用 → 取消到期 → 事件派送（凍結/復原）→ 產生下一期。
+// 順序有依賴：先轉移狀態並派送事件（凍結），再產期別 —— 避免對剛停用的租戶開新期。
+// 待收款清單不在排程內（它是唯讀視圖，由 PlatformAdminService.ListReceivables 提供）。
 func RunOnce(ctx context.Context, deps Deps, now time.Time, p Params) (Summary, error) {
 	var s Summary
 	var err error
@@ -2137,6 +2537,10 @@ func RunOnce(ctx context.Context, deps Deps, now time.Time, p Params) (Summary, 
 	}
 	if s.Suspended, err = deps.Billing.SuspendOverdue(ctx, now); err != nil {
 		return s, fmt.Errorf("停用欠費: %w", err)
+	}
+	// G7：已取消且期末已過 → 發 subscription.expired（下一段的 DispatchOnce 會派送成凍結）。
+	if s.ExpiredCancelled, err = deps.Billing.ExpireCancelled(ctx, now); err != nil {
+		return s, fmt.Errorf("取消到期: %w", err)
 	}
 	if s.Dispatched, err = deps.Consumer.DispatchOnce(ctx, p.EventBatch); err != nil {
 		return s, fmt.Errorf("派送事件: %w", err)
@@ -2155,12 +2559,6 @@ func RunOnce(ctx context.Context, deps Deps, now time.Time, p Params) (Summary, 
 			s.PeriodsOpened++
 		}
 	}
-
-	recv, err := deps.Store.Receivables(ctx, now)
-	if err != nil {
-		return s, fmt.Errorf("待收款清單: %w", err)
-	}
-	s.Receivables = len(recv)
 	return s, nil
 }
 ```
@@ -2214,7 +2612,9 @@ func main() {
 	st := postgres.New(db)
 	actorID, err := st.SystemActor(context.Background())
 	if err != nil {
-		log.Fatalf("讀取系統 actor（platform.settings.system_actor_user_id）: %v", err)
+		log.Fatalf("讀取系統 actor 失敗: %v\n"+
+			"修復：先執行 `task seed`（或 `go run ./cmd/seed`）建立平台自營公司與系統使用者，"+
+			"它會寫入 platform.settings.system_actor_user_id（G5）。", err)
 	}
 	systemActor := authz.Identity{UserID: strconv.FormatInt(actorID, 10), Role: "super", Roles: []string{"super"}}
 
@@ -2493,6 +2893,10 @@ service PlatformAdminService {
   // 既有唯讀 …
   rpc ListReceivables(ListReceivablesRequest) returns (ListReceivablesResponse);
   rpc RecordPayment(RecordPaymentRequest) returns (RecordPaymentResponse);
+  // 訂閱生命週期（G6）：席位、改方案、取消 —— 三者都必須填 reason（平台稽核必填）。
+  rpc SetSeatCount(SetSeatCountRequest) returns (SetSeatCountResponse);
+  rpc ChangePlan(ChangePlanRequest) returns (ChangePlanResponse);
+  rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse);
   rpc SetTenantOverride(SetTenantOverrideRequest) returns (SetTenantOverrideResponse);
   rpc RevokeTenantOverride(RevokeTenantOverrideRequest) returns (RevokeTenantOverrideResponse);
   rpc UpsertPlanPrice(UpsertPlanPriceRequest) returns (UpsertPlanPriceResponse);
@@ -2501,6 +2905,55 @@ service PlatformAdminService {
   rpc DisableOperator(DisableOperatorRequest) returns (DisableOperatorResponse);
 }
 ```
+
+三支生命週期 RPC 的訊息與語意（v1 刻意**不做按日比例計費**：變更一律「下一期生效」，避免在沒有金流對帳的前提下產生半期金額）：
+
+```proto
+message SetSeatCountRequest {
+  string company_id = 1;
+  int32  seat_count = 2;   // 新席位數；不得小於目前使用中的席次
+  string reason = 3;       // 必填
+}
+message SetSeatCountResponse { int32 seat_count = 1; }
+
+message ChangePlanRequest {
+  string company_id = 1;
+  string plan_code = 2;    // 新方案；下一期生效，當期不動
+  string reason = 3;       // 必填
+}
+message ChangePlanResponse { string plan_code = 1; string effective_from = 2; }
+
+message CancelSubscriptionRequest {
+  string company_id = 1;
+  bool   at_period_end = 2; // v1 僅支援 true（期末終止）；false 屬特殊處理，回 FailedPrecondition
+  string reason = 3;        // 必填
+}
+message CancelSubscriptionResponse { string cancelled_at = 1; string service_until = 2; }
+
+message ListReceivablesRequest  { int32 page = 1; int32 page_size = 2; }
+message ListReceivablesResponse {
+  repeated Receivable rows = 1;
+  PlatformPagination pagination = 2;
+}
+message Receivable {
+  string company_id = 1;
+  string company_name = 2;
+  string plan_code = 3;
+  int32  period_no = 4;
+  string amount = 5;        // 兩位小數字串（"1500.00"）
+  string period_end = 6;
+  string status = 7;        // open | paid（僅列出 open 與已逾期）
+}
+```
+
+**語意與邊界（實作時照此實作，不得自行放寬）**：
+
+| RPC | 行為 | 拒絕條件 |
+|---|---|---|
+| `SetSeatCount` | 更新 `subscriptions.seat_count`（下一次產期即用新席位數計價） | `seat_count < 使用中席次`（以計數器查）→ `FailedPrecondition`；`<= 0` → `InvalidArgument` |
+| `ChangePlan` | 只改 `subscriptions.plan_id`；**當期期別不動**（價格快照已寫死），下一期起用新方案與新價 | 目標方案不存在／已歸檔 → `FailedPrecondition`；與現行方案相同 → no-op（不寫稽核） |
+| `CancelSubscription` | `status → cancelled`（`allowedTransitions` 檢查）＋發 `subscription.cancelled`；期末後由 `ExpireCancelled` 轉 `suspended` | 已 `cancelled` → no-op；`at_period_end=false` → `FailedPrecondition`（v1 不支援立即終止） |
+| `ListReceivables` | 列出所有 `open` 期別（含已逾期者）＋公司名；供 console 匯出 CSV | 無（唯讀） |
 
 - [ ] **Step 1: proto 與生成**
 
@@ -2580,6 +3033,22 @@ func TestWriteRPCsShareThreeContracts(t *testing.T) {
 		{"RecordPayment", func(h *PlatformAdminService, ctx context.Context, reason string) error {
 			_, err := h.RecordPayment(ctx, connect.NewRequest(
 				&platformv1.RecordPaymentRequest{CompanyId: "42", PeriodNo: 1, Reason: reason}))
+			return err
+		}},
+		{"SetSeatCount", func(h *PlatformAdminService, ctx context.Context, reason string) error {
+			_, err := h.SetSeatCount(ctx, connect.NewRequest(
+				&platformv1.SetSeatCountRequest{CompanyId: "42", SeatCount: 5, Reason: reason}))
+			return err
+		}},
+		{"ChangePlan", func(h *PlatformAdminService, ctx context.Context, reason string) error {
+			_, err := h.ChangePlan(ctx, connect.NewRequest(
+				&platformv1.ChangePlanRequest{CompanyId: "42", PlanCode: "pro", Reason: reason}))
+			return err
+		}},
+		{"CancelSubscription", func(h *PlatformAdminService, ctx context.Context, reason string) error {
+			_, err := h.CancelSubscription(ctx, connect.NewRequest(
+				&platformv1.CancelSubscriptionRequest{
+					CompanyId: "42", AtPeriodEnd: true, Reason: reason}))
 			return err
 		}},
 		{"SetTenantOverride", func(h *PlatformAdminService, ctx context.Context, reason string) error {
