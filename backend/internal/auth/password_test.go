@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -97,9 +98,11 @@ func TestLoginLockTTLExpiry(t *testing.T) {
 	}
 }
 
-// TestLoginLockLockedUntil 釘住「解鎖時間」契約：未鎖定 → 零值時間；已鎖定 → 落在
-// (now, now+LockDuration] 內，且隨剩餘 TTL 縮短而提前（details.until 要顯示的是真實解鎖
-// 時間，不是固定的「30 分鐘後」）。
+// TestLoginLockLockedUntil 釘住「解鎖時間」契約，且走**真實流程**（RecordFailure，不靠人工 Expire）：
+// ①鎖定期間計數鍵的窗口仍在（第一次失敗起算 LockDuration）——這同時釘住 `MemoryStore.Incr`
+// 不得清掉既有 TTL（否則計數鍵永不過期、鎖定永不解鎖，與 Redis 的 INCR 語意分歧）；
+// ②解鎖時間落在 (now, now+LockDuration]；③解鎖時間讀的是**KV 的真實剩餘 TTL**，
+// 不是 fallback 的「now + LockDuration」假值。
 func TestLoginLockLockedUntil(t *testing.T) {
 	ctx := context.Background()
 	kv := NewMemoryStore()
@@ -113,6 +116,18 @@ func TestLoginLockLockedUntil(t *testing.T) {
 			t.Fatalf("RecordFailure: %v", err)
 		}
 	}
+	// ① 真實流程後窗口仍在（首次失敗時設定；後續 Incr 不得清掉）。
+	ttl, err := kv.TTL(ctx, loginFailKey("C003"))
+	if err != nil {
+		t.Fatalf("TTL: %v", err)
+	}
+	if ttl <= 0 {
+		t.Fatal("多次失敗後計數鍵不得失去 TTL（否則鎖定永不解鎖；Redis 的 INCR 會保留 TTL）")
+	}
+	if ttl > LockDuration {
+		t.Fatalf("剩餘窗口 = %v，不得超過 LockDuration = %v", ttl, LockDuration)
+	}
+	// ② 解鎖時間落在窗口內。
 	until, err := lock.LockedUntil(ctx, "C003")
 	if err != nil {
 		t.Fatalf("LockedUntil: %v", err)
@@ -120,16 +135,17 @@ func TestLoginLockLockedUntil(t *testing.T) {
 	if remaining := time.Until(until); remaining <= 0 || remaining > LockDuration {
 		t.Fatalf("解鎖時間應落在 (now, now+%v] 內,得到 remaining=%v", LockDuration, remaining)
 	}
-	// 剩餘 TTL 縮短(首次失敗已過一段時間)→ 解鎖時間必須跟著提前。
-	if err := kv.Expire(ctx, loginFailKey("C003"), time.Minute); err != nil {
-		t.Fatalf("Expire: %v", err)
+	// ③ 換一個「剩餘 20 分鐘」的計數鍵（鎖定狀態的真實樣貌）→ 解鎖時間必須跟著縮短；
+	// 若實作回 fallback（now + LockDuration = 30 分）就抓得到。
+	if err := kv.Set(ctx, loginFailKey("C004"), strconv.Itoa(MaxLoginFailures), 20*time.Minute); err != nil {
+		t.Fatalf("Set: %v", err)
 	}
-	until2, err := lock.LockedUntil(ctx, "C003")
+	until4, err := lock.LockedUntil(ctx, "C004")
 	if err != nil {
-		t.Fatalf("LockedUntil(縮短後): %v", err)
+		t.Fatalf("LockedUntil(20 分窗口): %v", err)
 	}
-	if remaining := time.Until(until2); remaining <= 0 || remaining > time.Minute {
-		t.Fatalf("剩餘 TTL 縮短後解鎖時間應提前,得到 remaining=%v", remaining)
+	if remaining := time.Until(until4); remaining <= 0 || remaining > 21*time.Minute {
+		t.Fatalf("解鎖時間應反映 KV 的真實剩餘 TTL（約 20 分）,得到 remaining=%v（fallback 假值＝30 分）", remaining)
 	}
 }
 

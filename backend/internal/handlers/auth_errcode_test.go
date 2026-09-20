@@ -113,6 +113,14 @@ func TestAuthFirstBatchCodesAreReturned(t *testing.T) {
 				&v1.ChangePasswordRequest{OldPassword: "a", NewPassword: "b1234567"}))
 			return err
 		}},
+		{"改密碼帳號不存在", "AUTH-4001", nil, func(t *testing.T) error {
+			// 同一個 RPC 內的錯誤表面要一致:身分指向不存在的帳號不得回裸 connect 錯誤。
+			client := newIdentifiedAuthClientWithDB(t, openAuthDB(t), authz.Identity{
+				UserID: "999999", CompanyID: "1", Role: "customer", Roles: []string{"customer"}})
+			_, err := client.ChangePassword(context.Background(), connect.NewRequest(
+				&v1.ChangePasswordRequest{OldPassword: "a1234567", NewPassword: "b1234567"}))
+			return err
+		}},
 	}
 
 	for _, tc := range cases {

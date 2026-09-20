@@ -50,7 +50,9 @@ func (h *AuthHandler) ChangePassword(ctx context.Context, req *connect.Request[v
 	u, err := dbtenant.Client(ctx, h.deps.DB).User.Get(ctx, uid)
 	if err != nil {
 		if ent.IsNotFound(err) {
-			return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("帳號不存在"))
+			// 身分指向已不存在的帳號:與「無身分」同碼(AUTH-4001),前端一律導向登入頁;
+			// 同一個 RPC 內的錯誤表面因此一致(都有碼與 trace_id)。
+			return nil, errcode.AuthUnauthenticated.Error(nil)
 		}
 		return nil, internal(err)
 	}

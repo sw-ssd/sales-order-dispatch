@@ -200,12 +200,18 @@ func (s *MemoryStore) Delete(ctx context.Context, key string) error {
 func (s *MemoryStore) Incr(ctx context.Context, key string) (int64, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	var n int64
+	var (
+		n   int64
+		exp time.Time
+	)
 	if v, ok := s.getLocked(key); ok {
 		n, _ = strconv.ParseInt(v, 10, 64)
+		// 保留既有 TTL:與 Redis 的 INCR 一致(INCR 不改變既有 TTL)。清掉它會讓登入失敗計數
+		// 永不過期(鎖定永不解鎖),且 LockedUntil 永遠走 fallback。
+		exp = s.m[key].expires
 	}
 	n++
-	s.m[key] = memEntry{value: strconv.FormatInt(n, 10)}
+	s.m[key] = memEntry{value: strconv.FormatInt(n, 10), expires: exp}
 	return n, nil
 }
 
