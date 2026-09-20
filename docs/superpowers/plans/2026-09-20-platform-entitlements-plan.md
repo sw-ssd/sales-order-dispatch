@@ -1622,7 +1622,9 @@ git commit -m "feat(backend): 權益計數器與四個業務服務的建構子�
 ### Task 6: 配額守衛掛點與表驅動測試
 
 **Files:**
-- Modify: `internal/services/user_service.go`（`CreateUser`）、`customer_service.go`（`CreateCustomer`、`RestoreCustomer`）、`product_service.go`（`CreateProduct`、`RestoreProduct`）、`company_service.go`（`CreateDepartment`、`RestoreDepartment`）
+- Modify: `internal/services/user_service.go`（`CreateUser`）、`customer_service.go`（`CreateCustomer`、`RestoreCustomer`）、`product_service.go`（`CreateProduct`、`RestoreProduct`）、`company_service.go`（`CreateDepartment`）
+
+**⚠️ 守衛清單是「6 項」而非 7 項（controller 更正，2026-09-20；T6 開工前實查）**：spec §4.5 列的第 7 項 `DepartmentService.RestoreDepartment` **在 repo 不存在**——`proto/salesorder/v1/company.proto` 的 `DepartmentService` 只有 `List/Get/Create/Update/Delete`（00020 的部門軟刪除**只做了 Delete 側**），全 repo（含 generated Go）grep 只命中文件。因此本任務只掛 6 個守衛，並在測試檔以**可追蹤的具名缺口註解**記錄第 7 項（部門復原 RPC 落地後必須補上 `{RestoreDepartment, LimitDepartments}` 並掛守衛）。**不得**在本任務新增該 RPC（屬新功能：proto／生成／handler／scope ability）。缺口歸屬：部門域（`backend/2026-08-17-backend-02-tenancy-users-plan.md`），並建議回寫 spec §4.5。
 - Create: `internal/services/entitlement_guard_test.go`（表驅動）
 - Create: `internal/services/entitlement_guard_integration_test.go`
 
@@ -1655,7 +1657,10 @@ var guardCases = []struct {
 	{"ProductService.CreateProduct", entitlements.LimitProducts},
 	{"ProductService.RestoreProduct", entitlements.LimitProducts},
 	{"DepartmentService.CreateDepartment", entitlements.LimitDepartments},
-	{"DepartmentService.RestoreDepartment", entitlements.LimitDepartments},
+	// 待補（第 7 項）：spec §4.5 的 DepartmentService.RestoreDepartment **在 repo 不存在**
+	// （DepartmentService 只有 List/Get/Create/Update/Delete；00020 的部門軟刪除只做了 Delete 側）
+	// → 部門復原 RPC 落地後，必須在此補上 {"DepartmentService.RestoreDepartment", LimitDepartments}
+	//   並在 company_service.go 對應位置掛守衛。歸屬：backend-02-tenancy-users 計畫。
 }
 
 // recorder 記錄 CheckLimit 被呼叫的 feature。
