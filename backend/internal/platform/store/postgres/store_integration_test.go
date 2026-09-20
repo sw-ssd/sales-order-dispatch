@@ -25,7 +25,9 @@ import (
 //     只寫限額的例外會把功能整個關掉;
 //   - subscriptions.billing_cycle／trial_ends_at／grace_until 必須真的從資料帶出
 //     (年繳方案的期別要 +1 年,G1);
-//   - 已撤銷(revoked_at)的例外不得回傳;已到期的例外**必須**回傳(到期由判定層處理)。
+//   - 已撤銷(revoked_at)的例外不得回傳;已到期的例外**必須**回傳(到期由判定層處理);
+//   - 已取消(status = 'cancelled')的訂閱不得當成現行訂閱(partial unique index 只管未
+//     取消者,故同一公司可同時有 active 與 cancelled 列)。
 func TestIntegrationPlatformStore(t *testing.T) {
 	testsupport.RequiresContainer(t)
 	dsn := testsupport.Postgres(t)
@@ -62,10 +64,17 @@ func TestIntegrationPlatformStore(t *testing.T) {
 	}
 	// 42 為月繳(用預設值)、無試用／寬限;44 為年繳且兩者有值 —— 兩者相反,才驗得出欄位確實
 	//「從資料來」而不是常數或零值。
+	//
+	// 43／45 與 42 的第二列專為「未取消」這條過濾而設:partial unique index 只管未取消者,
+	// 故同一公司可以同時有 active 與 cancelled 列。43 是**唯一一列就是 cancelled** 的租戶 ——
+	// 少了 `status <> 'cancelled'` 就一定會回那一列(不依賴列的實體順序,是這條過濾的守門);
+	// 42 的 cancelled 列則驗「兩列並存時挑的是 active 那一列」;45 完全沒有列,走 ErrNoRows。
 	if _, err := db.ExecContext(ctx, `
-		INSERT INTO platform.subscriptions (company_id, plan_id, status, seat_count)
-		VALUES (42, $1, 'active', 10),
-		       (44, $1, 'trialing', 3)`, planID); err != nil {
+		INSERT INTO platform.subscriptions (company_id, plan_id, status, seat_count) VALUES
+		(42, $1, 'active', 10),
+		(44, $1, 'trialing', 3),
+		(43, $1, 'cancelled', 99),
+		(42, $1, 'cancelled', 77)`, planID); err != nil {
 		t.Fatalf("seed subscription: %v", err)
 	}
 	if _, err := db.ExecContext(ctx, `
@@ -127,13 +136,14 @@ func TestIntegrationPlatformStore(t *testing.T) {
 		t.Fatalf("未知方案應回空而非錯誤,got %+v err=%v", unknown, err)
 	}
 
+	// 42 另有一列已取消的舊訂閱(seat_count 77):未取消的過濾必須挑出 active 那一列。
 	sub, err := st.Subscription(ctx, 42)
 	if err != nil || sub == nil {
 		t.Fatalf("Subscription(42): got %+v err=%v", sub, err)
 	}
 	if sub.CompanyID != 42 || sub.PlanCode != "std" || sub.PlanID != planID ||
 		sub.Status != "active" || sub.SeatCount != 10 || sub.BillingCycle != "monthly" {
-		t.Fatalf("42 的訂閱欄位不對,got %+v", *sub)
+		t.Fatalf("42 的訂閱欄位不對(同一公司另有已取消的列,不得回錯那一列),got %+v", *sub)
 	}
 	if sub.TrialEnds != nil || sub.GraceUntil != nil {
 		t.Fatalf("42 的試用／寬限為 NULL,應掃成 nil,got %+v", *sub)
@@ -146,7 +156,13 @@ func TestIntegrationPlatformStore(t *testing.T) {
 		sub.GraceUntil == nil || !sub.GraceUntil.Equal(graceUntil) {
 		t.Fatalf("試用到期／寬限日未帶出,got %+v", *sub)
 	}
+	// 43 的唯一一列是已取消:拿掉 `status <> 'cancelled'` 必定回那一列,故此斷言是該條件的守門
+	// (把已取消的舊約當成現行訂閱,會讓停用／退款的公司繼續享有權益)。
 	if sub, err := st.Subscription(ctx, 43); err != nil || sub != nil {
+		t.Fatalf("只有已取消訂閱的租戶應回 (nil, nil),got %+v err=%v", sub, err)
+	}
+	// 45 完全沒有列:走的是 ErrNoRows → (nil, nil) 的路徑,與上面那條不同。
+	if sub, err := st.Subscription(ctx, 45); err != nil || sub != nil {
 		t.Fatalf("無訂閱應回 (nil, nil),got %+v err=%v", sub, err)
 	}
 
