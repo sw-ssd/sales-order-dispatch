@@ -8,7 +8,7 @@
 
 ## 0. 為什麼重來（attempt-1 的根因）
 
-attempt-1 的四個 commit 已由 `git reset --keep 7d1ac4b` 移除，spec/plan/ledger 存於 `.superpowers/sdd/2026-09-19-frontend-ark-ui-migration-plan/attempt-1/`。作廢的原因不是程式碼品質（dialog 改寫通過複審），而是**設計層的兩個決策逼出補丁**：
+attempt-1 的四個 commit 已由 `git reset --keep 7d1ac4b` 移除（其 spec/plan/ledger 原存於 `.superpowers/sdd/…ark-ui-migration-plan/attempt-1/`；該工作區已於專案收尾時刪除，故此處僅存歷史敘述——**下方表格即為其結論的完整留存**）。作廢的原因不是程式碼品質（dialog 改寫通過複審），而是**設計層的兩個決策逼出補丁**：
 
 | 根因 | 症狀 |
 |---|---|
