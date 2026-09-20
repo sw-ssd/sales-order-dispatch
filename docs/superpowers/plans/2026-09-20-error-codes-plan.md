@@ -743,17 +743,29 @@ func stampTraceID(ctx context.Context, err error) error {
 	}
 	var info *commonv1.ErrorInfo
 	for _, d := range ce.Details() {
-		if m, ok := d.(proto.Message); ok {
-			if ei, ok := m.(*commonv1.ErrorInfo); ok {
-				info = ei
-			}
+		// 注意：Details() 回傳 []*connect.ErrorDetail（不是 proto.Message）→ 用 Value() 取回 proto。
+		if ei, ok := d.Value().(*commonv1.ErrorInfo); ok {
+			info = ei
 		}
 	}
 	if info == nil || info.GetTraceId() != "" {
 		return err
 	}
-	info.TraceId = id
-	return err
+	// 重建（不賭就地修改）：複製其他 detail 與 Meta，再附上補好 trace 的 ErrorInfo。
+	ne := connect.NewError(ce.Code(), errors.New(ce.Message()))
+	for k, vs := range ce.Meta() {
+		for _, v := range vs {
+			ne.Meta().Add(k, v)
+		}
+	}
+	stamped := proto.Clone(info).(*commonv1.ErrorInfo)
+	stamped.TraceId = id
+	if det, derr := connect.NewErrorDetail(stamped); derr == nil {
+		ne.AddDetail(det)
+	} else {
+		return err
+	}
+	return ne
 }
 ```
 
@@ -846,7 +858,8 @@ func errcodeCodeOf(t *testing.T, err error) string {
 		t.Fatalf("應為 *connect.Error，got %T", err)
 	}
 	for _, d := range ce.Details() {
-		if info, ok := d.(*commonv1.ErrorInfo); ok {
+		// 注意：Details() 回傳 []*connect.ErrorDetail（不是 proto.Message）→ 用 Value() 取回 proto。
+		if info, ok := d.Value().(*commonv1.ErrorInfo); ok {
 			return info.GetCode()
 		}
 	}
@@ -1213,15 +1226,24 @@ git commit -m "feat(errcode): 首批碼落地（auth／權限／樣板域）＋ 
 - Generated: `docs/error-codes.md`、`frontend/src/lib/errcode.ts`、`platform-console/src/lib/errcode.ts`、`app/lib/gen/errcode.dart`
 - Modify: `.github/workflows/ci.yml`
 
-- [ ] **Step 1: 產生基線（一次性）**
+- [ ] **Step 1: 產生基線（一次性；以掃描器本身產生，不要用 grep）**
+
+⚠️ **不要用 grep 產生基線**：Step 2 的守門掃描以 `"<檔名>:<函式名>"` 為鍵（**刻意不用行號**——行號會因無關編輯全部失效，讓守門測試每次都被迫更新），而 `grep | sed 's/:[0-9]*:/:/'` 產生的鍵**粒度不同**（不含函式名），兩者對不上就會變成永遠紅／永遠綠。
+作法：讓守門測試支援標準的更新旗標，用它產生基線：
+
+```go
+// 用法：go test ./internal/services/ -run TestNoUnregisteredErrorConstruction -update-errcode-baseline
+var updateBaseline = flag.Bool("update-errcode-baseline", false,
+	"重寫 errcode_baseline.txt 為目前掃描結果（僅在有意縮小基線時使用，並在 PR 說明）")
+```
 
 ```bash
 cd backend
-# 基線 = 目前所有 connect.NewError( 呼叫點的位置雜湊（不含 errcode 套件與測試）
-grep -rn 'connect.NewError(' internal/ --include='*.go' | grep -v '_test.go' | grep -v 'internal/errcode/' \
-  | sed 's/:[0-9]*:/:/' | sort -u > internal/services/errcode_baseline.txt
-wc -l internal/services/errcode_baseline.txt   # 約 280 行
+go test ./internal/services/ -run TestNoUnregisteredErrorConstruction -update-errcode-baseline
+wc -l internal/services/errcode_baseline.txt   # 以**當時的樹**為準（Plan A／T1–T5 之後已與計畫撰寫時不同，勿抄舊數字）
 ```
+
+（旗標只在檔案不存在或明確指定時可寫；平時執行必須是唯讀比較。）
 
 - [ ] **Step 2: 寫守門測試**
 
@@ -1272,6 +1294,8 @@ func TestNoUnregisteredErrorConstruction(t *testing.T) {
 
 （`cmd/gen-errcodes/main.go` 以 `text/template` 產生四個檔案；TS 輸出 `export const ERR_CUSTOMER_CODE_EXISTS = "CUST-2001";` 形式的常數與 `CODE_MESSAGES` 表；Dart 同理。實作時一併建立 `cmd/gen-errcodes`。）
 
+⚠️ **`platform-console/src/lib/errcode.ts` 目前無處可寫**：`platform-console/` 是 Plan C 的產物、**本計畫執行時不存在**。作法：產生器**只在該目錄存在時**才輸出該檔（否則跳過並印一行提示），CI 的 diff 清單亦比照（路徑不存在時 `git diff --exit-code --` 對該路徑是 no-op，但仍請在 CI 步驟註明「Plan C 落地後會自動納入」）。**不要**為了這步先建 `platform-console/` 骨架。
+
 - [ ] **Step 4: CI 同步檢查**
 
 ```yaml
@@ -1311,14 +1335,15 @@ git commit -m "feat(errcode): 基線守門（只減不增）、碼表與三端�
 - [ ] **Step 1: `backend/AGENTS.md` 新增錯誤碼小節，並精確化跨租戶慣例**
 
 ```markdown
-## 11. 錯誤碼（2026-09-20 起）
+## 10. 錯誤碼（2026-09-20 起）
 
-1. **一律使用 `internal/errcode` 的註冊碼**；不得直接 `connect.NewError(…, errors.New("…"))`（既有 282 處列於 `errcode_baseline.txt`，基線只能縮小）。
+1. **一律使用 `internal/errcode` 的註冊碼**；不得直接 `connect.NewError(…, errors.New("…"))`（既有呼叫點列於 `internal/services/errcode_baseline.txt`，**基線只能縮小**；新增未帶註冊碼者測試會紅）。
 2. **碼發佈後不得重用或改義**；廢止只加 `Deprecated: true`。
 3. **區段規則**：`1xxx` 驗證／`2xxx` 衝突／`3xxx` 狀態／`4xxx` 權限（含 NotFound）／`5xxx` 配額與訂閱／`9xxx` 系統。`register()` 會驗證，違反即啟動失敗。
-4. **5xx 一律 `SYS-9000`**，內部細節只進 log；`trace_id` 由 requestid interceptor 產生並在錯誤回應中帶出。
+4. **5xx 一律 `SYS-9000`**，內部細節只進 log；`trace_id` 由 requestid interceptor 產生，並在回應的 `ErrorInfo.trace_id` 帶出（**不**寫進訊息樣板）。
 5. **跨租戶與不存在一律 `SYS-4002`（NotFound）**：不洩漏資源是否存在。授權**檢查**失敗（角色/範圍不足）才是 `SYS-4001`（PermissionDenied）——兩者語意不同，前端處理也不同（「請管理員開權」vs「找不到」）。
 6. **配額不足用 `PLAT-5001/5002`**（帶 `feature`／`used`／`limit`）：前端據此導向升級方案，不得以 `PermissionDenied` 表示額度問題。
+7. **`Error`／`Wrap` 不收 ctx**：`trace_id` 由邊界（`internal/obs/requestid` 的 interceptor）補進 `ErrorInfo`，呼叫端不必也不該傳 ctx（`internal/errcode` 因此是純葉節點）。
 ```
 
 （同時修訂既有第 3 節「跨租戶資料存取失敗回 PermissionDenied」為精確表述：**授權檢查失敗** → `SYS-4001`；**因範圍過濾而查不到** → `SYS-4002`。）
