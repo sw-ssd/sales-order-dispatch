@@ -109,8 +109,10 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
     為什麼：兩份實作漂移時只會壞掉其中一條路徑，而且症狀是靜默的。
 11. **外部系統的副作用必須在 DB commit 之後**（`dbtenant.AfterCommit` 的 post-commit 掛鉤）：OpenFGA tuple 同步已如此，未來的 FCM 推播／派車串流一體適用。**適用範圍不限 OpenFGA**。
     為什麼：在交易內同步外部狀態，一旦該交易回滾就留下不一致，而授權類同步是 **fail-open 方向**（多授權）；掛鉤在 rollback 時整個丟棄，並讓交易的列鎖不跨越外部 I/O。
-12. **`SystemScopeTx` 必須搭配 `dbtenant.NewClient` 建立的 client**：`SET LOCAL` 是 driver 裝飾器在 `Tx(ctx)` 內套的，餵裸 client（`entsql.OpenDB`／`database.OpenEnt` 直接建）時**沒有任何 scope 被設定**，寫入會以 `42501` 被 `WITH CHECK` 擋下 ——「包了 `SystemScopeTx`」不等於「有系統範圍」。同理 `dbtenant.Client(ctx, fallback)` 的 fallback 也必須是裝飾過的 client。
-    為什麼：`SystemScopeTx` 只做「注入 scope 到 ctx ＋ 開交易」，真正下 `SET LOCAL` 的是裝飾器；少了裝飾器，錯誤訊息（`new row violates row-level security policy`）會誤導人以為是 policy 問題（T10 實測，`cmd/seed` 的第一版修法就是這樣錯的）。
+12. **`SystemScopeTx` 必須搭配 `dbtenant.NewClient` 建立的 client，且其 callback 內一律用 `tx.Client()`**：
+    - `SET LOCAL` 是 driver 裝飾器在 `Tx(ctx)` 內套的，餵裸 client（`entsql.OpenDB`／`database.OpenEnt` 直接建）時**沒有任何 scope 被設定**，寫入會以 `42501` 被 `WITH CHECK` 擋下 ——「包了 `SystemScopeTx`」不等於「有系統範圍」。
+    - `SystemScopeTx`（`dbtenant.go`）只做「`auth.WithRLS(scope=all)` ＋ `client.Tx(ctx)`」，**不會**呼叫 `WithTenantTx` 把交易放進 ctx → 在 callback 內用 `dbtenant.Client(ctx, s.db)` 會拿回 fallback（**即使它是裝飾過的 client 也是池上另一條連線**，那條連線上沒有 `SET LOCAL`）：讀取 fail-closed 回 0 列、寫入 `42501`。故 callback 內一律 `tx.Client()`（或自行 `dbtenant.WithTenantTx`）。
+    為什麼：兩種錯法都不會編譯失敗、也不會在 sqlite 單元測試看得出來，症狀只有「查不到」或 42501（T10 實測，`cmd/seed` 的第一版修法就是第一種）。
 
 ### 9.1 已知設計缺口：客戶 App 的「只讀自己」在 RLS 下沒有 `self` 分支（T10 結論）
 
