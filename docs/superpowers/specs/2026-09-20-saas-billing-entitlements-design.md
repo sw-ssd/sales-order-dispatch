@@ -250,7 +250,7 @@ Valkey key `ent:{companyID}`；方案變更／override／訂閱狀態異動即 *
 > **少了 `cur.status = 'open'` 這一項是 Plan C Task 5 的 Critical（C-1）**：逾期後才繳清的客戶（催收主線）
 > 會被重新催收、寬限期被重置，最後被 `SuspendOverdue` 凍結，而 `EnsureNextPeriod` 只認服務中的訂閱
 > 又不會替他開下一期 → **客戶從此停止被開帳**。`MarkPastDue` 另有第二層防線（取當前期別，非 `open` 即 skip）。
-> 另註：`cancelled` 的 G7 掃描（`postgres/billing.go:328`）**不**比對期別狀態——取消是期末終止，期末前照算、
+> 另註：`cancelled` 的 G7 掃描（`CancelledSubscriptionsPastPeriodEnd`，`postgres/billing.go:334`）**不**比對期別狀態——取消是期末終止，期末前照算、
 > 期末後才凍結，那是刻意的不對稱。
 >
 > 舊謂詞（`s.status='active' AND cur.period_end < $1`）以字面出現在本計畫的任務樣板碼

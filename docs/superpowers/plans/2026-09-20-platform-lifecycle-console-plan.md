@@ -62,7 +62,7 @@
 | 限 `role=admin` 的 RPC | **2**（`CreateOperator`／`DisableOperator`） | `grep -c "requireAdmin(ctx)" backend/internal/services/platform_admin_service.go` |
 | 錯誤碼 | **22 碼**（SYS 7／AUTH 7／PLAT 5／CUST 3），**19 已落點** | 見 `AGENTS.md` §10-8（2026-09-21 重數） |
 | errcode 基線 | **98 行／233 呼叫點**（只減不增，本計畫未動） | `wc -l < backend/internal/services/errcode_baseline.txt`；`awk -F: '{s+=$NF} END {print s}' …` |
-| console 頁面 | **6**（`/tenants`、`/tenants/$tenantId`、`/plans`、`/entitlements`、`/receivables`、`/audit`） | `grep -c 'path: "/' platform-console/src/router.tsx` |
+| console 頁面 | **6**（`/tenants`、`/tenants/$tenantId`、`/plans`、`/entitlements`、`/receivables`、`/audit`；另有根路由 `"/"` 轉導與 `LOGIN_ROUTE`） | `grep -c 'path: "/' platform-console/src/router.tsx` ＝ **7**（含根路由 `"/"` 那一列，扣掉即 6 頁；`/login` 用 `LOGIN_ROUTE` 常數故不在這 7 列內） |
 | console 測試 | **72**（12 檔） | `pnpm -C platform-console test` |
 | CI job | **5**（go／go-integration／frontend／platform-console／flutter） | `grep -E "^  [a-z-]+:$" .github/workflows/ci.yml`（多一列是 `on:` 的 `push:`） |
 
@@ -83,6 +83,7 @@
 | 11 | 接受的範圍外編輯：`postgres/store.go` 唯讀 `Subscription` 補 `SELECT s.id`（5 行） | `Subscription` 新增 `ID` 欄位後，只讓寫入路徑填而唯讀路徑留 0 就是**靜默 0 值陷阱** |
 | 12 | 計畫 Task 5 樣板碼的舊逾期 SQL 已被實作取代 | 樣板是派工用的草稿；實作加了 `cur.status='open'`，spec §5.2 已就地更正並標日期 |
 | 13 | 排程事件名以 T4/T5 為準：`period.payment_recorded`（不是裁定文字裡的 `payment.recorded`） | 該事件本無跨域副作用，consumer 記一行 log 後認領，無功能影響 |
+| 14 | **`task test:integration` 補上 `-count=1`**（`backend/Taskfile.yml`，T14 修） | 少了它整趟會命中 Go 測試快取並回報全綠（2026-09-21 實測：牆鐘 0.75s、全部 `(cached)`）→ **守門指令可假綠**；CI 的 `go-integration` job 本來就有 `-count=1`。**驗收指令一律要有「真的跑過」的證據** |
 
 ### 未結項（deferred：現況、選項、歸屬）
 
@@ -123,6 +124,8 @@
 | 31 | 清空最後一頁後 `page` 停在 2 而 `lastPage` 變 1 → 顯示「**第 2 / 1 頁（共 50 筆）**」的矛盾頁碼 | 未動（上一頁仍可按、總筆數為真） | 當頁變空時把頁碼夾回 `lastPage`，或讓 Pagination 顯示值夾住 | `platform-console`（低） |
 | 32 | `PlanBanner.test.tsx` 以 `queryKey` 字串當同步閘（改 key 會假紅）；`USABLE_STATUSES` 是後端 `usable()` 的**手抄副本**；`usageValue` 的數值分支不再看 `featureCode` 前綴；提示條只有兩級色階 | 未動（漂移方向是「過度阻擋」，大聲） | 把 allow-list 寫成後端契約測試；色階分級 | `frontend` account 功能（低） |
 | 33 | **Plan B 未結項 #13 仍留給後端**：投影在「無訂閱列」時仍讓每個 boolean feature 列 `enabled=false` | 前端以 `isUnprovisioned` 因應；後端未改 | 投影加「尚未開通訂閱」的專屬形狀 | `platform/entitlements` 投影（訂閱指派落地時） |
+| 34 | **store 層的 `reason` 只擋空字串，不 trim**（`recordAuditTx`：`postgres/billing.go:453`、fake `fake_billing.go:477`；`admin_writes.go:60` 只是轉呼叫） | 目前**不可達**：三個進入點（`RecordPayment` `billing.go:112`／`billing.audit` `subscription.go:263`／`platformReason` `platform_admin_service.go:1015`）都以 `TrimSpace` 先擋。但 `platform.audit_logs.reason` 是 NOT NULL、**空字串合法** → 未來新增寫入點若忘了 trim，`"   "` 會寫成一列看起來有值卻沒有理由的稽核（T14 審查發現，已寫進 AGENTS.md §11-15 的事實敘述） | store 端也 `TrimSpace` 後再判定（1 行，需動程式碼）；或把「進入點必須 trim」寫成 store 介面的契約註解 | `platform/store` 後續維護（低～中） |
+| 35 | **`task test:integration` 曾缺 `-count=1`**（可假綠） | **T14 已修**（`backend/Taskfile.yml` 一行，見更正表第 14 列）；同類風險仍在其他「跑測試」的入口：任何只回報「全綠」而不帶 `-count=1` 的守門指令都可能命中快取 | 新增任何測試指令時一律帶 `-count=1`（或 `-count=1` 由 Taskfile 統一提供） | 全 repo 的 Taskfile／CI 慣例 |
 
 ---
 
