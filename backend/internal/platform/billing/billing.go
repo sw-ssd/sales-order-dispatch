@@ -126,6 +126,19 @@ func (b *Billing) RecordPayment(ctx context.Context, in RecordPaymentInput) (*st
 						period.PeriodNo, period.ExternalRef, in.ExternalRef),
 				})
 			}
+			// 交易號相同才是重送：不重寫事件與稽核，但**備註可以補寫** —— note 是短收／溢收的
+			// 唯一落點（G8），而 store 對已經 paid 的列只寫 note（其餘憑據由 `status='open'` 的
+			// CASE 保留原值）。少了這一段，console 對已入帳期別補記差異會「回成功但什麼都沒寫」。
+			if in.Note != "" {
+				if err := b.st.MarkPeriodPaidTx(ctx, tx, period.ID, in.PaidAt, in.InvoiceNo,
+					in.Provider, in.ExternalRef, in.Note); err != nil {
+					if errors.Is(err, sql.ErrNoRows) {
+						return errcode.SysNotFound.Wrap(err)
+					}
+					return errcode.SysInternal.Wrap(err)
+				}
+				period.Note = in.Note
+			}
 			out = period
 			return nil
 		}

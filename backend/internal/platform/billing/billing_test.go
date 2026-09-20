@@ -557,6 +557,54 @@ func TestRecordPaymentReplayIsNoop(t *testing.T) {
 	}
 }
 
+// 重播（同期別、同交易號）可以**補寫**短收／溢收的備註，但事件與稽核仍不得重寫 ——
+// store 的契約是「note 入帳與重播都可補寫、空字串保留原值」，而 note 是短收／溢收的唯一落點
+// （G8）；少了這條，console 對已入帳期別補記差異會回成功但什麼都沒寫。
+func TestRecordPaymentReplayPatchesNote(t *testing.T) {
+	f := store.NewFakeBilling()
+	f.PutSubscription(store.Subscription{ID: 5, CompanyID: 42, Status: "suspended"})
+	f.PutPeriod(store.Period{ID: 9, SubscriptionID: 5, PeriodNo: 1, Status: "open", AmountCents: amountCents})
+	b := billing.NewBilling(f)
+	paidAt := time.Date(2026, 9, 21, 10, 30, 0, 0, time.UTC)
+	in := billing.RecordPaymentInput{
+		CompanyID: 42, PaidAt: paidAt, Provider: "manual", ExternalRef: "BANK-12345",
+		InvoiceNo: "AB12345678", Note: "匯入 1900（短收 50）", ActorOperatorID: 7, Reason: "匯款入帳",
+	}
+	if _, err := b.RecordPayment(context.Background(), in); err != nil {
+		t.Fatalf("第一次收款: %v", err)
+	}
+	eventsBefore, auditsBefore := len(f.Events()), len(f.Audits())
+
+	// 空備註的重播：保留原註記（不得被空字串清掉）。
+	in.Note = ""
+	if _, err := b.RecordPayment(context.Background(), in); err != nil {
+		t.Fatalf("空備註重播: %v", err)
+	}
+	if got := readPeriod(t, f, 5, 1).Note; got != "匯入 1900（短收 50）" {
+		t.Fatalf("空備註不得清掉原註記，got %q", got)
+	}
+
+	// 非空備註的重播：補寫差異（短收／溢收的唯一落點，G8）。
+	in.Note = "6/1 已補足差額 50 元"
+	if _, err := b.RecordPayment(context.Background(), in); err != nil {
+		t.Fatalf("補寫備註: %v", err)
+	}
+	p := readPeriod(t, f, 5, 1)
+	if p.Note != "6/1 已補足差額 50 元" {
+		t.Fatalf("重播應可補寫備註，got %q", p.Note)
+	}
+	if p.Status != "paid" || p.InvoiceNo != "AB12345678" || p.ExternalRef != "BANK-12345" ||
+		p.PaidAt == nil || !p.PaidAt.Equal(paidAt) {
+		t.Fatalf("補寫備註不得動到付款憑據，got %+v", p)
+	}
+	if got := len(f.Events()); got != eventsBefore {
+		t.Fatalf("重播不得再寫事件，got %d 筆（原 %d 筆）", got, eventsBefore)
+	}
+	if got := len(f.Audits()); got != auditsBefore {
+		t.Fatalf("重播不得再寫稽核，got %d 筆（原 %d 筆）", got, auditsBefore)
+	}
+}
+
 // 期別已付款但交易號不同 = 同一期收到第二筆不同的錢（溢收／重複收款）：這是收款衝突，
 // 必須回 PLAT-3002 讓人看到；靜默 no-op 會讓第二筆匯入在帳面上消失。
 func TestRecordPaymentConflictsOnDifferentExternalRef(t *testing.T) {

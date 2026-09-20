@@ -7,7 +7,8 @@
 //	② 訂閱由 suspended 轉 active 且寬限期清空；
 //	③ subscription.reactivated（payload 的 company_id 真的寫進 jsonb）與
 //	   period.payment_recorded 各 1 筆，平台稽核 1 筆且 actor 為 operator、reason 為人工理由；
-//	④ 同交易號重送 → 不再增加事件與稽核（webhook 重送安全，G3）。
+//	④ 同交易號重送 → 不再增加事件與稽核（webhook 重送安全，G3）；
+//	⑤ 重送仍可補寫短收／溢收備註（G8）——note 落地、憑據不動、事件與稽核不變。
 //
 // 這條路徑同時是 T4 唯一的整合測試：T9 的 RPC 只做身分、參數驗證與快取失效，DB 層行為不重測。
 package billing_test
@@ -160,5 +161,40 @@ func TestIntegrationRecordPayment(t *testing.T) {
 	}
 	if recorded2 != 1 || audits2 != 1 {
 		t.Fatalf("重送不得重複入帳: recorded=%d audits=%d（應維持 1/1）", recorded2, audits2)
+	}
+
+	// ⑤ 重送仍可補寫短收／溢收備註（G8）：note 改變、憑據不變、事件與稽核仍不增加
+	replay := in
+	replay.Note = "6/1 已補足差額 50 元"
+	if _, err := b.RecordPayment(ctx, replay); err != nil {
+		t.Fatalf("以新備註重送: %v", err)
+	}
+	var note2 string
+	if err := db.QueryRowContext(ctx,
+		`SELECT note FROM platform.subscription_periods WHERE id = $1`, periodID).Scan(&note2); err != nil {
+		t.Fatalf("查補寫後的備註: %v", err)
+	}
+	if note2 != "6/1 已補足差額 50 元" {
+		t.Fatalf("重送應可補寫備註（短收／溢收的唯一落點），got %q", note2)
+	}
+	if err := db.QueryRowContext(ctx, `
+		SELECT status, COALESCE(invoice_no,''), COALESCE(external_ref,'')
+		  FROM platform.subscription_periods WHERE id = $1`, periodID).
+		Scan(&pStatus, &invoiceNo, &externalRef); err != nil {
+		t.Fatalf("查補寫後的憑據: %v", err)
+	}
+	if pStatus != "paid" || invoiceNo != "AB12345678" || externalRef != "BANK-12345" {
+		t.Fatalf("補寫備註不得動到付款憑據: status=%q invoice_no=%q external_ref=%q",
+			pStatus, invoiceNo, externalRef)
+	}
+	if err := db.QueryRowContext(ctx, `
+		SELECT
+		 (SELECT count(*) FROM platform.events WHERE event_type = 'period.payment_recorded'),
+		 (SELECT count(*) FROM platform.audit_logs WHERE action = 'record_payment')`).
+		Scan(&recorded2, &audits2); err != nil {
+		t.Fatalf("補寫備註後查計數: %v", err)
+	}
+	if recorded2 != 1 || audits2 != 1 {
+		t.Fatalf("補寫備註不得再寫事件與稽核: recorded=%d audits=%d（應維持 1/1）", recorded2, audits2)
 	}
 }
