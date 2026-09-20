@@ -35,7 +35,8 @@ var metadictAuditRLSTables = []string{"metadicts", "audit_logs"}
 //   - `metadicts` 單表兩層:`department_id IS NULL` 為系統預設列 —— USING 允許任何 scope 讀取,
 //     但 WITH CHECK **不含** `department_id IS NULL`(00011 刻意較嚴),故公司/部門身分只能寫
 //     自己部門的擴充列,寫系統預設列必須被擋(只有 super 的 scope=all 才行)。
-//   - `audit_logs` 以 company_id 為租戶鍵:任何 scope 的請求都只能寫自己公司的稽核(讀取仍限 all/company)。
+//   - `audit_logs` 以 company_id 為租戶鍵:讀取與寫入**同一條件**(00027 把 USING 與 WITH CHECK
+//     改為一致後),任何 scope 等級(company／department／self)都只碰得到自己公司的稽核。
 //
 // 為何用 app_rw 而非 admin:容器/測試的 admin 連線是 superuser,PG 的 superuser 永遠繞過 RLS
 // (FORCE 亦然)→ 以它連線根本測不到 fail-closed。app_rw 是 00022 建出的 NOBYPASSRLS 非 owner
