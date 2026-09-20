@@ -43,9 +43,6 @@ const (
 	CallbackPath = "/platform/auth/google/callback"
 )
 
-// tokenAudienceIssuer 為 jwt 驗證用的 audience 值。
-var tokenAudience = jwt.ClaimStrings{Audience}
-
 // Identity 為通過驗證的平台操作者身分。
 type Identity struct {
 	OperatorID int64
