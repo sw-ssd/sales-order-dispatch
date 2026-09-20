@@ -57,6 +57,11 @@ tasks:
     desc: 執行冪等 seeder
     cmd: go run ./cmd/seed
 
+  platform:cron:
+    desc: 執行一趟平台排程（逾期 → 凍結 → 產生期別 → 事件派送；--date 可覆寫時間，例 -- -date 2026-10-01T03:00:00Z）
+    # 單趟、不內建迴圈:重複執行由觸發器負責（正式環境是 k8s CronJob）。
+    cmd: go run ./cmd/platform-cron {{.CLI_ARGS}}
+
   db:app-password:
     desc: 為本機開發資料庫設定 app_rw 密碼（migration 00022 只建角色不建密碼）
     # 本 Taskfile 不載入 .env：使用前先 export DATABASE_ADMIN_URL（owner 連線）。
