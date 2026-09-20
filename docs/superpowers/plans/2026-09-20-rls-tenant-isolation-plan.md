@@ -279,17 +279,36 @@ END
 $$;
 -- +goose StatementEnd
 
+-- 授權：**明確列舉業務表**，不用 `ALL TABLES`／`ALTER DEFAULT PRIVILEGES`（T2 審查裁決，2026-09-20）。
+-- 理由：內嵌 OpenFGA 與業務**共用同一個 database 的 public schema**，其 datastore 表
+-- （tuple／authorization_model／store／assertion／changelog）與 goose 版本表都會被
+-- `ALL TABLES` 與 default privileges 一併授權給業務角色——等於讓業務連線可改寫授權資料。
+-- 且 `ALTER DEFAULT PRIVILEGES` 無法排除「未來由 owner 建立的非業務表」（OpenFGA 的
+-- migration 會在 00022 之後繼續建表），屬不可局部修補的設計，故一併移除。
+-- 代價（刻意的摩擦）：**新增業務表時，必須在其 migration 內顯式 GRANT 這四項 DML 與 sequence**。
 GRANT USAGE ON SCHEMA public TO app_rw;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_rw;
+GRANT SELECT, INSERT, UPDATE, DELETE ON
+    companies, departments, users, roles, role_permissions,
+    audit_logs, metadicts,
+    customers, customer_counters, customer_addresses, customer_contacts,
+    warehouses, routes, processing_specs, product_categories,
+    products, product_units, product_processing_specs
+TO app_rw;
+-- sequence 不承載租戶資料，且漏授權會讓 INSERT 失敗（與表的風險不對稱），故保留 ALL SEQUENCES。
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_rw;
--- 之後新增的表/序列自動授權（migration 以 owner 執行，故 default privileges 掛在 owner 上）
-ALTER DEFAULT PRIVILEGES IN SCHEMA public
-    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_rw;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public
-    GRANT USAGE, SELECT ON SEQUENCES TO app_rw;
 
 -- +goose Down
 -- +goose StatementBegin
+-- 先撤銷同一份白名單再 DROP ROLE —— 直接 DROP ROLE 會被 ACL 依賴擋下（SQLSTATE 2BP01），
+-- 使 Down 不可回滾（原計畫版本即犯此錯，由實作與審查共同發現）。
+REVOKE USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public FROM app_rw;
+REVOKE SELECT, INSERT, UPDATE, DELETE ON
+    companies, departments, users, roles, role_permissions,
+    audit_logs, metadicts,
+    customers, customer_counters, customer_addresses, customer_contacts,
+    warehouses, routes, processing_specs, product_categories,
+    products, product_units, product_processing_specs
+FROM app_rw;
 REVOKE USAGE ON SCHEMA public FROM app_rw;
 DROP ROLE IF EXISTS app_rw;
 -- +goose StatementEnd
