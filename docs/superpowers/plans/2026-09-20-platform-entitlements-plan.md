@@ -1583,21 +1583,26 @@ go vet ./... 2>&1 | head -20
 
 - [ ] **Step 6: 組裝（`internal/server/domains.go`）**
 
+**[controller 裁定，2026-09-20；實作採此版，勿照下方原稿]** 原稿的「admin 連線失敗 → `log`＋略過掛載」是**錯的**：那會讓四個業務 `register` 落空＝**四個業務 RPC 整組不掛載**（比「無守衛」更糟，且症狀是「功能消失」）。正解是**平台層不可用時拒絕啟動**（fail-fast，與其他 production 守護一致），並用 `internal/third_party/database` 的集中開啟（`database.OpenSQL(AdminDSN)`，會 Ping、符合 D31），而不是裸 `sql.Open`。
+
 ```go
-	// 平台域(admin 連線):store → entitlement → counters → 注入四個業務服務
-	adminDB, err := sql.Open("pgx", s.cfg.Database.AdminDSN())
+	// 平台域（admin 連線）：store → entitlement → counters → 注入四個業務服務。
+	// 契約：平台層不可用 → 拒絕啟動（不得略過掛載：那會讓四個業務 RPC 整組消失）。
+	adminDB, err := database.OpenSQL(s.cfg.Database.AdminDSN())
 	if err != nil {
-		log.Printf("platform: 略過掛載（admin 連線: %v）", err)
-	} else {
-		platformStore := postgresstore.New(adminDB)
-		entSvc := entitlements.New(platformStore, services.NewEntitlementCounter(entClient),
-			entitlements.NewMemoryCache(), 60*time.Second)
-		s.entitlements = entSvc
-		services.RegisterUserServices(apiMux, entClient, entSvc)
-		services.RegisterCustomerServices(apiMux, entClient, s.cfg.Auth.FrontendURL, entSvc)
-		services.RegisterProductService(apiMux, entClient, entSvc)
+		return fmt.Errorf("config: 無法開啟平台 admin 連線（平台權益守衛是業務寫入的前置條件）: %w", err)
 	}
+	platformStore := postgresstore.New(adminDB)
+	entSvc := entitlements.New(platformStore, services.NewEntitlementCounter(entClient),
+		entitlements.NewMemoryCache(), 60*time.Second)
+	s.entitlements = entSvc
+	services.RegisterUserServices(apiMux, entClient, entSvc)
+	services.RegisterCustomerServices(apiMux, entClient, s.cfg.Auth.FrontendURL, entSvc)
+	services.RegisterProductService(apiMux, entClient, entSvc)
 ```
+
+**[controller 裁定]** 守衛要能被**記錄式假物件**注入（T6 的表驅動測試要驗「RPC → feature」對應），因此四個服務的建構子收的是 **consumer-side 最小介面**（在 `internal/services` 定義，例：`type entitlementChecker interface { CheckLimit(ctx, companyID, feature, delta) error }`），**不是**具體型別 `*entitlements.Service`。Go 慣例：接受介面、回傳結構。`domains.go` 傳真 `*entitlements.Service`（滿足該介面）即可。T10 需要的是另一組方法（`Allows`／`Load`／`Snapshot`）→ **另立窄介面**，不要塞進同一個。
+
 （快取實作：v1 用 `MemoryCache`；Valkey 實作與失效屬 Plan C 的訂閱寫入路徑，屆時替換此處即可。）
 
 - [ ] **Step 7: 跑測試**
