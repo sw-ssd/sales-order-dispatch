@@ -71,6 +71,10 @@ describe("路由守衛", () => {
 
     await waitFor(() => expect(screen.getByRole("link", { name: "以 Google 登入" })).toBeTruthy());
     expect(router.state.location.pathname).toBe("/login");
+    // 登入頁不套 console 外框（否則會出現按了又被守衛彈回的「登出」鈕與整排導覽，
+    // 且 <main> 會嵌套在 <main> 內）。
+    expect(screen.queryByRole("navigation", { name: "主導覽" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "登出" })).toBeNull();
     expect(listTenants).not.toHaveBeenCalled();
   });
 });

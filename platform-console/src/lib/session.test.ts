@@ -7,7 +7,7 @@ vi.mock("./api", () => ({
   loginUrl: "/platform/auth/google",
 }));
 
-import { ensureSession, logout, resetSession, sessionStatus } from "./session";
+import { ensureSession, logout, PROBE_TTL_MS, resetSession, sessionStatus } from "./session";
 
 describe("ensureSession（session 探針）", () => {
   beforeEach(() => {
@@ -39,6 +39,21 @@ describe("ensureSession（session 探針）", () => {
     await ensureSession();
     expect(listTenants).toHaveBeenCalledTimes(1);
   });
+
+  it("成功結果不得永久快取：過了 TTL 會重新探針", async () => {
+    const now = vi.spyOn(Date, "now");
+    try {
+      now.mockReturnValue(0);
+      listTenants.mockResolvedValue({ tenants: [] });
+      await ensureSession();
+
+      now.mockReturnValue(PROBE_TTL_MS + 1);
+      await ensureSession();
+      expect(listTenants).toHaveBeenCalledTimes(2);
+    } finally {
+      now.mockRestore();
+    }
+  });
 });
 
 describe("logout", () => {
@@ -54,5 +69,21 @@ describe("logout", () => {
     expect(sessionStatus()).toBe("anonymous");
     await expect(ensureSession()).resolves.toBe(false);
     expect(listTenants).toHaveBeenCalledTimes(1);
+  });
+
+  it("登出後即使過了 TTL 也不再探針（否則會用仍在的 cookie 把人放回主控台）", async () => {
+    const now = vi.spyOn(Date, "now");
+    try {
+      now.mockReturnValue(0);
+      listTenants.mockResolvedValue({ tenants: [] });
+      await ensureSession();
+      logout();
+
+      now.mockReturnValue(PROBE_TTL_MS * 10);
+      await expect(ensureSession()).resolves.toBe(false);
+      expect(listTenants).toHaveBeenCalledTimes(1);
+    } finally {
+      now.mockRestore();
+    }
   });
 });

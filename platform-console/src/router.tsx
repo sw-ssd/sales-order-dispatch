@@ -5,8 +5,10 @@ import {
   Outlet,
   redirect,
   RouterProvider,
+  useRouterState,
   type RouterHistory,
 } from "@tanstack/solid-router";
+import { Show } from "solid-js";
 import App from "./App";
 import { requireOperator } from "./lib/guard";
 import AuditPage from "./pages/AuditPage";
@@ -17,18 +19,35 @@ import ReceivablesPage from "./pages/ReceivablesPage";
 import TenantDetailPage from "./pages/TenantDetailPage";
 import TenantsPage from "./pages/TenantsPage";
 
+/** 唯一不需要 operator 的路徑；也是唯一不套外框的路徑。 */
+const LOGIN_ROUTE = "/login";
+
 /**
  * console 自己的路由樹（**不共用**租戶 SPA 的 router 或守衛）。
  *
+ * root 只負責「套不套外框」：`/login` 不套（否則會出現按了又被守衛彈回的登出鈕與整排導覽，
+ * 且 `<main>` 會嵌套；與租戶 SPA 的 chromeless 慣例同型），其餘頁面套外框（導覽＋登出）。
  * 六頁平台功能全部掛 `beforeLoad: requireOperator()`；只有 `/login` 不需要 operator。
+ *
  * 守衛是 UX，不是授權：後端 operatorauth.Interceptor 才是決策者（見 lib/guard.ts）。
  */
 const rootRoute = createRootRoute({
-  component: () => (
-    <App>
-      <Outlet />
-    </App>
-  ),
+  component: () => {
+    const pathname = useRouterState({ select: (state) => state.location.pathname });
+    return (
+      <Show when={pathname() !== LOGIN_ROUTE} fallback={<Outlet />}>
+        <App>
+          <Outlet />
+        </App>
+      </Show>
+    );
+  },
+});
+
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: LOGIN_ROUTE,
+  component: LoginPage,
 });
 
 const indexRoute = createRoute({
@@ -37,12 +56,6 @@ const indexRoute = createRoute({
   beforeLoad: () => {
     throw redirect({ to: "/tenants" });
   },
-});
-
-const loginRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/login",
-  component: LoginPage,
 });
 
 const tenantsRoute = createRoute({
@@ -88,8 +101,8 @@ const auditRoute = createRoute({
 });
 
 export const routeTree = rootRoute.addChildren([
-  indexRoute,
   loginRoute,
+  indexRoute,
   tenantsRoute,
   tenantDetailRoute,
   plansRoute,

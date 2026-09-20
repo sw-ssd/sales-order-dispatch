@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { platform } from "./api";
+import { LOGIN_PATH, loginUrl, PLATFORM_PATH, platform } from "./api";
 
 /**
  * 產生的 proto 與 Connect client 真的被用來打 `platform/v1`：這個測試不 mock 我們的
@@ -37,12 +37,25 @@ describe("platform client", () => {
 
     const res = await platform.listTenants({ page: 1, pageSize: 1 });
 
-    expect(String(calls[0]?.input)).toBe("/platform.v1.PlatformAdminService/ListTenants");
+    // 後端把平台 RPC 掛在字面 /platform/ 之下（domains.go: Mount(operatorauth.CookiePath, StripPrefix(...))），
+    // 少了這一段就是 404，而且 cookie 的 Path=/platform 依 RFC 6265 逐段前綴比對也不涵蓋
+    // /platform.v1.…（未涵蓋的第一個字元是 "."）→ 瀏覽器根本不會送出 cookie。
+    // 後端那一側由 internal/server/platform_admin_mount_integration_test.go 的
+    // TestIntegrationPlatformAdminMount 釘住（含「少了前綴的 procedure 必須 404」）。
+    expect(String(calls[0]?.input)).toBe("/platform/platform.v1.PlatformAdminService/ListTenants");
     // operator session 是 HttpOnly cookie：每個請求都必須帶上。
     expect(calls[0]?.init?.credentials).toBe("include");
     expect(res.tenants).toHaveLength(1);
     expect(res.tenants[0]?.companyName).toBe("甲公司");
     expect(res.tenants[0]?.seatCount).toBe(8);
     expect(res.pagination?.total).toBe(1);
+  });
+
+  it("base 路徑恰為 /platform（後端掛載前綴＝cookie Path；登入端點同一個前綴）", () => {
+    // 兩端的字面值必須一致：後端是 operatorauth.CookiePath／LoginPath，
+    // 前端是 PLATFORM_PATH。任一側改了而另一側沒改 → cookie 不送出或 404。
+    expect(PLATFORM_PATH).toBe("/platform");
+    expect(LOGIN_PATH).toBe("/platform/auth/google");
+    expect(loginUrl).toBe("/platform/auth/google");
   });
 });

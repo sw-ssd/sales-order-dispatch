@@ -9,7 +9,18 @@ const [status, setStatus] = createSignal<SessionStatus>("unknown");
 /** 登入狀態訊號（唯讀）：只有探針與登出會改它。 */
 export const sessionStatus = status;
 
+/**
+ * 探針結果的 TTL：HttpOnly cookie 的效期只有後端知道，前端只能「過一陣子回頭問一次」。
+ *
+ * 永久快取會讓 session 失效後（12h 到期、operator 被停用）導航仍穿過守衛，只看到頁面上的
+ * 401 文案卻不回首頁——不是 fail-open（後端仍擋），但 UX 誤導。TTL 把這個窗口壓在 30 秒內，
+ * 也讓一般導航不必每次都多打一個 RPC。
+ */
+export const PROBE_TTL_MS = 30_000;
+
 let probe: Promise<boolean> | undefined;
+let probeAt = 0;
+let loggedOut = false;
 
 /**
  * 單一探針：以最小的平台查詢（1 筆租戶）問後端「這個 cookie 還算數嗎」。
@@ -17,19 +28,23 @@ let probe: Promise<boolean> | undefined;
  * 不新增認證端點、不看 cookie 內容（HttpOnly）：**唯一**可信的來源就是後端本身。
  * 任何失敗（Unauthenticated／連線失敗／非 operator 白名單）一律視為未登入
  * —— fail-closed，寧可把使用者擋在登入頁，也不要讓後續畫面以為有 session。
- * 結果在本次頁面生命週期內快取：導航不重打後端。
+ * 結果快取 PROBE_TTL_MS；登出後（loggedOut）不再探針。
  */
 export async function ensureSession(): Promise<boolean> {
-  probe ??= platform.listTenants({ page: 1, pageSize: 1 }).then(
-    () => {
-      setStatus("authenticated");
-      return true;
-    },
-    () => {
-      setStatus("anonymous");
-      return false;
-    },
-  );
+  if (loggedOut) return false;
+  if (!probe || Date.now() - probeAt >= PROBE_TTL_MS) {
+    probeAt = Date.now();
+    probe = platform.listTenants({ page: 1, pageSize: 1 }).then(
+      () => {
+        setStatus("authenticated");
+        return true;
+      },
+      () => {
+        setStatus("anonymous");
+        return false;
+      },
+    );
+  }
   return probe;
 }
 
@@ -37,17 +52,21 @@ export async function ensureSession(): Promise<boolean> {
  * 登出（純前端，v1 無登出端點）。
  *
  * `platform_session` 是 HttpOnly，前端**無法**刪除它，所以這裡只把本地狀態歸零
- * （導航立刻回到登入頁）。cookie 仍有效至效期結束；要真正即時撤銷，只有後端做得到：
+ * （導航立刻回到登入頁），cookie 仍有效至效期結束；要真正即時撤銷，只有後端做得到：
  * 停用 `platform.operators` 該列（`operatorauth.verify` 每次請求都回查白名單）。
- * 換帳號則需等 cookie 過期或由後端撤銷。
+ * 因此登出後**不再探針**——否則 TTL 一過，後端會照 cookie 判定「仍登入」，
+ * 把剛按了登出的人又放回主控台。換帳號＝關掉分頁重開（或由後端撤銷）。
  */
 export function logout() {
+  loggedOut = true;
   setStatus("anonymous");
   probe = Promise.resolve(false);
 }
 
 /** 測試用：清掉快取的探針結果（正式流程不需要）。 */
 export function resetSession() {
+  loggedOut = false;
+  probeAt = 0;
   setStatus("unknown");
   probe = undefined;
 }
