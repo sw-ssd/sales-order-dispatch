@@ -1,11 +1,15 @@
 package dbtenant
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"log"
 	"slices"
+	"strings"
 	"testing"
 
+	"connectrpc.com/connect"
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
 	_ "github.com/mattn/go-sqlite3" // sqlite 記憶體測試驅動(與專案既有單元測試同款)
@@ -110,5 +114,31 @@ func TestWrapAppliesNothingWithoutScope(t *testing.T) {
 	}
 	if len(inner.tx.execs) != 0 {
 		t.Fatalf("空 scope 不應執行任何語句,got %q", inner.tx.execs)
+	}
+}
+
+// 交易開不起來時:不得進入 handler,且根因必須落 server log(對外只回固定訊息,
+// 線上追查僅剩 log 一途;chi Logger 不記錄 handler error)。
+func TestInterceptorLogsRootCauseWhenTxFails(t *testing.T) {
+	db := sqlOpen(t)
+	client := ent.NewClient(ent.Driver(entsql.OpenDB(dialect.SQLite, db)))
+	if err := db.Close(); err != nil {
+		t.Fatalf("關閉 sqlite: %v", err)
+	}
+
+	var logged bytes.Buffer
+	prev := log.Writer()
+	log.SetOutput(&logged)
+	t.Cleanup(func() { log.SetOutput(prev) })
+
+	_, err := Interceptor(client).WrapUnary(func(context.Context, connect.AnyRequest) (connect.AnyResponse, error) {
+		t.Fatal("交易開不起來時不得呼叫 handler")
+		return nil, nil
+	})(context.Background(), nil)
+	if err == nil {
+		t.Fatal("交易開不起來應回錯誤")
+	}
+	if !strings.Contains(logged.String(), "開啟租戶交易失敗") {
+		t.Fatalf("根因應落 server log,got %q", logged.String())
 	}
 }

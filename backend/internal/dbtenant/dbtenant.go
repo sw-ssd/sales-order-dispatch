@@ -14,8 +14,8 @@ package dbtenant
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
+	"log"
 
 	"connectrpc.com/connect"
 	"entgo.io/ent/dialect"
@@ -96,15 +96,21 @@ func Interceptor(client *ent.Client) connect.Interceptor {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 			tx, err := client.Tx(ctx)
 			if err != nil {
-				return nil, connect.NewError(connect.CodeInternal, errors.New("開啟租戶交易失敗"))
+				// 對外訊息固定(不洩漏 SQLSTATE／約束名),但根因必須落 server log:
+				// chi Logger 不記錄 handler error,吞掉就完全無從追查(同 company_service 慣例)。
+				log.Printf("dbtenant: 開啟租戶交易失敗: %v", err)
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("開啟租戶交易失敗: %w", err))
 			}
 			resp, err := next(WithTenantTx(ctx, tx), req)
 			if err != nil {
-				_ = tx.Rollback()
+				if rbErr := tx.Rollback(); rbErr != nil {
+					log.Printf("dbtenant: 回滾租戶交易失敗: %v", rbErr)
+				}
 				return nil, err
 			}
 			if err := tx.Commit(); err != nil {
-				return nil, connect.NewError(connect.CodeInternal, errors.New("提交交易失敗"))
+				log.Printf("dbtenant: 提交租戶交易失敗: %v", err)
+				return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("提交交易失敗: %w", err))
 			}
 			return resp, nil
 		}
