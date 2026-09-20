@@ -769,6 +769,8 @@ func stampTraceID(ctx context.Context, err error) error {
 }
 ```
 
+⚠️ **T3b 已實測定案：就地修改在本版本（connect-go v1.21.0）**不可行**——`ErrorDetail.Value()` 回傳 `proto.Clone`、序列化走 `NewErrorDetail` 當下 marshal 的 `pbAny`（先用就地版取 RED：客戶端收到 trace_id=""）。以下疑慮已無懸念，一律採「重建」。
+
 ⚠️ **必須以測試確認「就地修改真的傳得出去」**：connect-go 的 `Details()` 是否回傳原指標（改了就生效）或序列化副本（改了沒用）依版本而異。若就地修改無效，改為**重建錯誤**（`connect.NewError(ce.Code(), errors.New(ce.Message()))` ＋ `AddDetail(新 ErrorInfo)`）——不論哪一種，**驗收標準是「客戶端真的收到非空 trace_id」**：
 
 ```go
