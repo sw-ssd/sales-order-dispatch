@@ -15,9 +15,9 @@ import {
   ALERT_CLASS,
   entitlementAlerts,
   featureLabel,
-  formatTrialEndsAt,
-  isUnprovisioned,
+  featureListNote,
   subscriptionStatus,
+  trialEndsAtFor,
   usageValue,
 } from "./entitlements";
 import { tenantEntitlementsQueryOptions } from "./queries";
@@ -77,7 +77,7 @@ export default function PlanCard() {
                   </Badge>
                 </div>
 
-                <Show when={formatTrialEndsAt(entitlements().trialEndsAt)}>
+                <Show when={trialEndsAtFor(entitlements().status, entitlements().trialEndsAt)}>
                   {(date) => (
                     <p class="text-sm text-muted-foreground">
                       試用到期：<span class="font-medium">{date()}</span>（UTC）
@@ -103,7 +103,7 @@ export default function PlanCard() {
                 </Show>
 
                 <Show
-                  when={isUnprovisioned(entitlements())}
+                  when={featureListNote(entitlements())}
                   fallback={
                     <ul class="flex flex-col divide-y divide-border">
                       <For each={entitlements().usage}>
@@ -119,11 +119,7 @@ export default function PlanCard() {
                     </ul>
                   }
                 >
-                  <p class="text-sm text-muted-foreground">
-                    尚未開通計費（目前沒有訂閱方案），因此不列出功能開通狀態——
-                    未指派方案與「方案不含」在本卡片上長得一樣，請以實際操作結果為準；
-                    需要開通請洽營運。
-                  </p>
+                  {(note) => <p class="text-sm text-muted-foreground">{note()}</p>}
                 </Show>
 
                 <p class="text-xs text-muted-foreground">
