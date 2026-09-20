@@ -23,6 +23,7 @@
   cd backend && grep -rn '\.Query()\|\.Create()\|UpdateOneID\|DeleteOneID\|\.Get(ctx' internal --include='*.go' | grep -v _test.go
   ```
   並在報告中列出你掃到的檔案與處置。**測試套件抓不到漏網（superuser／sqlite），只有這個掃描與 app_rw 探針抓得到。**
+- **`USING` 與 `WITH CHECK` 必須同條件；`USING` 絕不得嚴於 `WITH CHECK`（T8 實測的堆疊層不變式）**：PG 對 `INSERT ... RETURNING` 會套 **SELECT policy（USING）**，而 ent 的 `Create().Save()`／`Exec()` 一律產生 `INSERT ... RETURNING id`（ent v0.14.6 `sqlgraph/graph.go:1475`，除非自帶 id）→ **只要 USING 比 WITH CHECK 嚴，該表在對應 scope 等級下的寫入必定失敗**（fail-closed；superuser／sqlite 測試看不到）。實測（app_rw）：同條件下 `dept/plain INSERT` 成功、`dept/INSERT…RETURNING` 42501。因此「讀取權限比寫入權限嚴」在 DB 層**不可實作**；讀取權限的收緊一律由服務層 ACL 承擔（並須有測試證明它是閘門），DB 層只負責**跨公司隔離**。
 - **收斂掃描要連「policy 的 scope 分支」一起查**：新增／重建 policy 時，逐一確認每一個「合法的寫入者 scope 等級」都在 WITH CHECK 有對應分支；缺分支 = 該角色寫入必壞（fail-closed，且 **superuser／sqlite 測試看不到**）。同理，凡 USING 只認 `'all'`／`'company'` 而未涵蓋 `department`／`self` 的表，都要確認「該等級的使用者本來就不該讀」是**刻意**的，而非漏寫。
 - **未登入／系統範圍路徑一律 `dbtenant.SystemScopeTx`**（不是 `dbtenant.Client`）：登入、註冊、OIDC、refresh 輪替、身分查詢（middleware 的 `identityFor`）、`authz.Provision`、`cmd/seed`。
 - **政策啟用順序 = 先收斂後啟用**：每個 domain 任務必須在**同一個 commit 序列內**先完成路徑收斂再落 ENABLE migration；不得先啟用再補收斂（會留下生產路徑 fail-closed 的窗口）。
@@ -1993,17 +1994,21 @@ git commit -m "feat(backend): 商品域（含子表）啟用 RLS 並收斂路徑
 2. 探針要涵蓋「**改密碼後稽核列確實落地**」與「**臨時密碼簽發**」兩條路徑，且必須在 **`app_rw`** 下以真 handler 走（sqlite 測試對 RLS 無鑑別力）。
 3. 動手前掃描（與 Global Constraints 的收斂掃描同法）：`grep -rn 'audit\.Record(' internal --include='*.go' | grep -v _test.go` 的所有生產命中點都要在同一個請求交易內。
 
-**[RULING] `audit_logs` 的 WITH CHECK 是白名單例外，必須在 00027 修正**（實測根因，非 scope setter 問題：`auth.RLSStatements` 對任何等級都會設 `app.current_company_id`）：
+**[RULING] `audit_logs` 的 USING 與 WITH CHECK 都要改（白名單例外）**（實測根因，非 scope setter 問題：`auth.RLSStatements` 對任何等級都會設 `app.current_company_id`）：
 - `core_audit_logs_scope`（`00023:92-107`）的 USING／WITH CHECK **只有 `'all'`／`'company'` 分支，缺 `department`／`self`**；同一批的 `users`（`00023:47-79`）與 `departments`（`00023:21-45`）都有這兩個分支，`roles`／`role_permissions` 用 `scope <> ''` → **audit_logs 是唯一例外**。後果：dept_admin／staff／客戶的任何寫入都會因稽核 INSERT 被擋而**整筆失敗**（違反 D18；superuser／sqlite 測試看不到）。
-- 00027 的 Up **只改 WITH CHECK**：
+- **00027 的 Up 把 USING 與 WITH CHECK 改成同一條件**（USING 不得嚴於 WITH CHECK，見 Global Constraints 的 RETURNING 不變式；其餘 17 個 policy 本來就是同條件）：
   ```sql
-  WITH CHECK (
+  USING (
       COALESCE(current_setting('app.current_data_scope', true), '') = 'all'
       OR (NULLIF(current_setting('app.current_company_id', true), ''))::bigint = company_id
   )
+  WITH CHECK ( 同上 )
   ```
-  **USING（讀）逐字不動**（讀取仍限 super／company，與服務層 ACL 一致，屬深度防禦）。Down 還原為 00025 的形式。00023／00025 不改（歷史不改）。
-- 必須附證據：①scope 矩陣探針（`all`／`company`／`department`／`self` × 自己公司 INSERT → PASS；跨公司 → 42501；未設 scope → 42501）；②**端到端 dept-scope 寫入**（以 department 身分走一條**已啟用**域的寫入路徑如 `CreateCustomer`，斷言交易成功且稽核列落地）——這條目前完全沒有覆蓋，正是缺陷潛伏至今的原因。
+  Down 還原為 00025 的形式。00023／00025 不改（歷史不改）。
+- **讀取收緊改由服務層 ACL 承擔**（原本 USING 較嚴是想在 DB 層擋；該做法與 RETURNING 機制不相容）。必須有證據證明閘門仍在：
+  ①**跨公司**：以 A 公司身分（任一 scope 等級）讀／寫 B 公司的稽核列 → 不可見／42501；
+  ②**服務層 ACL**：`AuditService` 對 dept_admin／staff／customer 的查詢仍被擋（列出測試名並實際跑過）。
+- 另附：①scope 矩陣探針（`all`／`company`／`department`／`self` × 自己公司 INSERT → PASS；跨公司 → 42501；未設 scope → 42501）；②**端到端 dept-scope 寫入**（以 department 身分走一條**已啟用**域的寫入路徑如 `CreateCustomer`，斷言交易成功且稽核列落地）——這條目前完全沒有覆蓋，正是缺陷潛伏至今的原因。
 
 **Interfaces:**
 - Consumes: `dbtenant.Client(ctx, s.db)`
