@@ -1597,6 +1597,2248 @@ class PlatformAuditEntry extends $pb.GeneratedMessage {
   void clearCreatedAt() => $_clearField(7);
 }
 
+class ListReceivablesRequest extends $pb.GeneratedMessage {
+  factory ListReceivablesRequest({
+    $core.int? page,
+    $core.int? pageSize,
+  }) {
+    final result = ListReceivablesRequest._();
+    if (page != null) result.page = page;
+    if (pageSize != null) result.pageSize = pageSize;
+    return result;
+  }
+
+  ListReceivablesRequest._();
+
+  factory ListReceivablesRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListReceivablesRequest()..mergeFromBuffer(data, registry);
+  factory ListReceivablesRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListReceivablesRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListReceivablesRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: ListReceivablesRequest.$_createMessage)
+    ..aI(1, _omitFieldNames ? '' : 'page')
+    ..aI(2, _omitFieldNames ? '' : 'pageSize')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListReceivablesRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListReceivablesRequest copyWith(
+          void Function(ListReceivablesRequest) updates) =>
+      super.copyWith((message) => updates(message as ListReceivablesRequest))
+          as ListReceivablesRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListReceivablesRequest() / ListReceivablesRequest.new instead')
+  static ListReceivablesRequest create() => ListReceivablesRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ListReceivablesRequest._();
+  @$core.override
+  ListReceivablesRequest createEmptyInstance() => ListReceivablesRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ListReceivablesRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListReceivablesRequest>(
+          ListReceivablesRequest.$_createMessage);
+  static ListReceivablesRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get page => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set page($core.int value) => $_setSignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPage() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPage() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.int get pageSize => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set pageSize($core.int value) => $_setSignedInt32(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPageSize() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPageSize() => $_clearField(2);
+}
+
+class ListReceivablesResponse extends $pb.GeneratedMessage {
+  factory ListReceivablesResponse({
+    $core.Iterable<Receivable>? rows,
+    PlatformPagination? pagination,
+  }) {
+    final result = ListReceivablesResponse._();
+    if (rows != null) result.rows.addAll(rows);
+    if (pagination != null) result.pagination = pagination;
+    return result;
+  }
+
+  ListReceivablesResponse._();
+
+  factory ListReceivablesResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListReceivablesResponse()..mergeFromBuffer(data, registry);
+  factory ListReceivablesResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListReceivablesResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListReceivablesResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: ListReceivablesResponse.$_createMessage)
+    ..pPM<Receivable>(1, _omitFieldNames ? '' : 'rows',
+        subBuilder: Receivable.$_createMessage)
+    ..aOM<PlatformPagination>(2, _omitFieldNames ? '' : 'pagination',
+        subBuilder: PlatformPagination.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListReceivablesResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListReceivablesResponse copyWith(
+          void Function(ListReceivablesResponse) updates) =>
+      super.copyWith((message) => updates(message as ListReceivablesResponse))
+          as ListReceivablesResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListReceivablesResponse() / ListReceivablesResponse.new instead')
+  static ListReceivablesResponse create() => ListReceivablesResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ListReceivablesResponse._();
+  @$core.override
+  ListReceivablesResponse createEmptyInstance() => ListReceivablesResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ListReceivablesResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListReceivablesResponse>(
+          ListReceivablesResponse.$_createMessage);
+  static ListReceivablesResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<Receivable> get rows => $_getList(0);
+
+  @$pb.TagNumber(2)
+  PlatformPagination get pagination => $_getN(1);
+  @$pb.TagNumber(2)
+  set pagination(PlatformPagination value) => $_setField(2, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPagination() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPagination() => $_clearField(2);
+  @$pb.TagNumber(2)
+  PlatformPagination ensurePagination() => $_ensure(1);
+}
+
+/// Receivable:一期未付的帳(供 console 顯示與匯出 CSV)。G5 的平台自營公司不算租戶,不列入。
+class Receivable extends $pb.GeneratedMessage {
+  factory Receivable({
+    $core.String? companyId,
+    $core.String? companyName,
+    $core.String? planCode,
+    $core.int? periodNo,
+    $core.String? amount,
+    $core.String? periodEnd,
+    $core.String? status,
+  }) {
+    final result = Receivable._();
+    if (companyId != null) result.companyId = companyId;
+    if (companyName != null) result.companyName = companyName;
+    if (planCode != null) result.planCode = planCode;
+    if (periodNo != null) result.periodNo = periodNo;
+    if (amount != null) result.amount = amount;
+    if (periodEnd != null) result.periodEnd = periodEnd;
+    if (status != null) result.status = status;
+    return result;
+  }
+
+  Receivable._();
+
+  factory Receivable.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Receivable()..mergeFromBuffer(data, registry);
+  factory Receivable.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      Receivable()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'Receivable',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: Receivable.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'companyId')
+    ..aOS(2, _omitFieldNames ? '' : 'companyName')
+    ..aOS(3, _omitFieldNames ? '' : 'planCode')
+    ..aI(4, _omitFieldNames ? '' : 'periodNo')
+    ..aOS(5, _omitFieldNames ? '' : 'amount')
+    ..aOS(6, _omitFieldNames ? '' : 'periodEnd')
+    ..aOS(7, _omitFieldNames ? '' : 'status')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Receivable clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  Receivable copyWith(void Function(Receivable) updates) =>
+      super.copyWith((message) => updates(message as Receivable)) as Receivable;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use Receivable() / Receivable.new instead')
+  static Receivable create() => Receivable._();
+  static $pb.GeneratedMessage $_createMessage() => Receivable._();
+  @$core.override
+  Receivable createEmptyInstance() => Receivable._();
+  @$core.pragma('dart2js:noInline')
+  static Receivable getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<Receivable>(Receivable.$_createMessage);
+  static Receivable? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get companyId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set companyId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasCompanyId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCompanyId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get companyName => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set companyName($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasCompanyName() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearCompanyName() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get planCode => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set planCode($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasPlanCode() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearPlanCode() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.int get periodNo => $_getIZ(3);
+  @$pb.TagNumber(4)
+  set periodNo($core.int value) => $_setSignedInt32(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasPeriodNo() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearPeriodNo() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get amount => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set amount($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasAmount() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearAmount() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get periodEnd => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set periodEnd($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasPeriodEnd() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearPeriodEnd() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get status => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set status($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasStatus() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearStatus() => $_clearField(7);
+}
+
+class RecordPaymentRequest extends $pb.GeneratedMessage {
+  factory RecordPaymentRequest({
+    $core.String? companyId,
+    $core.int? periodNo,
+    $core.String? amount,
+    $core.String? provider,
+    $core.String? externalRef,
+    $core.String? invoiceNo,
+    $core.String? invoiceStatus,
+    $core.String? buyerTaxId,
+    $core.String? carrier,
+    $core.String? note,
+    $core.String? reason,
+  }) {
+    final result = RecordPaymentRequest._();
+    if (companyId != null) result.companyId = companyId;
+    if (periodNo != null) result.periodNo = periodNo;
+    if (amount != null) result.amount = amount;
+    if (provider != null) result.provider = provider;
+    if (externalRef != null) result.externalRef = externalRef;
+    if (invoiceNo != null) result.invoiceNo = invoiceNo;
+    if (invoiceStatus != null) result.invoiceStatus = invoiceStatus;
+    if (buyerTaxId != null) result.buyerTaxId = buyerTaxId;
+    if (carrier != null) result.carrier = carrier;
+    if (note != null) result.note = note;
+    if (reason != null) result.reason = reason;
+    return result;
+  }
+
+  RecordPaymentRequest._();
+
+  factory RecordPaymentRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RecordPaymentRequest()..mergeFromBuffer(data, registry);
+  factory RecordPaymentRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RecordPaymentRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RecordPaymentRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: RecordPaymentRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'companyId')
+    ..aI(2, _omitFieldNames ? '' : 'periodNo')
+    ..aOS(3, _omitFieldNames ? '' : 'amount')
+    ..aOS(4, _omitFieldNames ? '' : 'provider')
+    ..aOS(5, _omitFieldNames ? '' : 'externalRef')
+    ..aOS(6, _omitFieldNames ? '' : 'invoiceNo')
+    ..aOS(7, _omitFieldNames ? '' : 'invoiceStatus')
+    ..aOS(8, _omitFieldNames ? '' : 'buyerTaxId')
+    ..aOS(9, _omitFieldNames ? '' : 'carrier')
+    ..aOS(10, _omitFieldNames ? '' : 'note')
+    ..aOS(11, _omitFieldNames ? '' : 'reason')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RecordPaymentRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RecordPaymentRequest copyWith(void Function(RecordPaymentRequest) updates) =>
+      super.copyWith((message) => updates(message as RecordPaymentRequest))
+          as RecordPaymentRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RecordPaymentRequest() / RecordPaymentRequest.new instead')
+  static RecordPaymentRequest create() => RecordPaymentRequest._();
+  static $pb.GeneratedMessage $_createMessage() => RecordPaymentRequest._();
+  @$core.override
+  RecordPaymentRequest createEmptyInstance() => RecordPaymentRequest._();
+  @$core.pragma('dart2js:noInline')
+  static RecordPaymentRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RecordPaymentRequest>(
+          RecordPaymentRequest.$_createMessage);
+  static RecordPaymentRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get companyId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set companyId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasCompanyId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCompanyId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.int get periodNo => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set periodNo($core.int value) => $_setSignedInt32(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPeriodNo() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPeriodNo() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get amount => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set amount($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasAmount() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearAmount() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get provider => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set provider($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasProvider() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearProvider() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get externalRef => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set externalRef($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasExternalRef() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearExternalRef() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get invoiceNo => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set invoiceNo($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasInvoiceNo() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearInvoiceNo() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get invoiceStatus => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set invoiceStatus($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasInvoiceStatus() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearInvoiceStatus() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.String get buyerTaxId => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set buyerTaxId($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasBuyerTaxId() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearBuyerTaxId() => $_clearField(8);
+
+  @$pb.TagNumber(9)
+  $core.String get carrier => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set carrier($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasCarrier() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearCarrier() => $_clearField(9);
+
+  @$pb.TagNumber(10)
+  $core.String get note => $_getSZ(9);
+  @$pb.TagNumber(10)
+  set note($core.String value) => $_setString(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasNote() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearNote() => $_clearField(10);
+
+  @$pb.TagNumber(11)
+  $core.String get reason => $_getSZ(10);
+  @$pb.TagNumber(11)
+  set reason($core.String value) => $_setString(10, value);
+  @$pb.TagNumber(11)
+  $core.bool hasReason() => $_has(10);
+  @$pb.TagNumber(11)
+  void clearReason() => $_clearField(11);
+}
+
+class RecordPaymentResponse extends $pb.GeneratedMessage {
+  factory RecordPaymentResponse({
+    $core.int? periodNo,
+    $core.String? status,
+  }) {
+    final result = RecordPaymentResponse._();
+    if (periodNo != null) result.periodNo = periodNo;
+    if (status != null) result.status = status;
+    return result;
+  }
+
+  RecordPaymentResponse._();
+
+  factory RecordPaymentResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RecordPaymentResponse()..mergeFromBuffer(data, registry);
+  factory RecordPaymentResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RecordPaymentResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RecordPaymentResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: RecordPaymentResponse.$_createMessage)
+    ..aI(1, _omitFieldNames ? '' : 'periodNo')
+    ..aOS(2, _omitFieldNames ? '' : 'status')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RecordPaymentResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RecordPaymentResponse copyWith(
+          void Function(RecordPaymentResponse) updates) =>
+      super.copyWith((message) => updates(message as RecordPaymentResponse))
+          as RecordPaymentResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RecordPaymentResponse() / RecordPaymentResponse.new instead')
+  static RecordPaymentResponse create() => RecordPaymentResponse._();
+  static $pb.GeneratedMessage $_createMessage() => RecordPaymentResponse._();
+  @$core.override
+  RecordPaymentResponse createEmptyInstance() => RecordPaymentResponse._();
+  @$core.pragma('dart2js:noInline')
+  static RecordPaymentResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RecordPaymentResponse>(
+          RecordPaymentResponse.$_createMessage);
+  static RecordPaymentResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get periodNo => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set periodNo($core.int value) => $_setSignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPeriodNo() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPeriodNo() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get status => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set status($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasStatus() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearStatus() => $_clearField(2);
+}
+
+class SetSeatCountRequest extends $pb.GeneratedMessage {
+  factory SetSeatCountRequest({
+    $core.String? companyId,
+    $core.int? seatCount,
+    $core.String? reason,
+  }) {
+    final result = SetSeatCountRequest._();
+    if (companyId != null) result.companyId = companyId;
+    if (seatCount != null) result.seatCount = seatCount;
+    if (reason != null) result.reason = reason;
+    return result;
+  }
+
+  SetSeatCountRequest._();
+
+  factory SetSeatCountRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetSeatCountRequest()..mergeFromBuffer(data, registry);
+  factory SetSeatCountRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetSeatCountRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetSeatCountRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: SetSeatCountRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'companyId')
+    ..aI(2, _omitFieldNames ? '' : 'seatCount')
+    ..aOS(3, _omitFieldNames ? '' : 'reason')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetSeatCountRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetSeatCountRequest copyWith(void Function(SetSeatCountRequest) updates) =>
+      super.copyWith((message) => updates(message as SetSeatCountRequest))
+          as SetSeatCountRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core
+      .Deprecated('Use SetSeatCountRequest() / SetSeatCountRequest.new instead')
+  static SetSeatCountRequest create() => SetSeatCountRequest._();
+  static $pb.GeneratedMessage $_createMessage() => SetSeatCountRequest._();
+  @$core.override
+  SetSeatCountRequest createEmptyInstance() => SetSeatCountRequest._();
+  @$core.pragma('dart2js:noInline')
+  static SetSeatCountRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SetSeatCountRequest>(
+          SetSeatCountRequest.$_createMessage);
+  static SetSeatCountRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get companyId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set companyId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasCompanyId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCompanyId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.int get seatCount => $_getIZ(1);
+  @$pb.TagNumber(2)
+  set seatCount($core.int value) => $_setSignedInt32(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasSeatCount() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearSeatCount() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get reason => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set reason($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasReason() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearReason() => $_clearField(3);
+}
+
+class SetSeatCountResponse extends $pb.GeneratedMessage {
+  factory SetSeatCountResponse({
+    $core.int? seatCount,
+  }) {
+    final result = SetSeatCountResponse._();
+    if (seatCount != null) result.seatCount = seatCount;
+    return result;
+  }
+
+  SetSeatCountResponse._();
+
+  factory SetSeatCountResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetSeatCountResponse()..mergeFromBuffer(data, registry);
+  factory SetSeatCountResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetSeatCountResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetSeatCountResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: SetSeatCountResponse.$_createMessage)
+    ..aI(1, _omitFieldNames ? '' : 'seatCount')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetSeatCountResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetSeatCountResponse copyWith(void Function(SetSeatCountResponse) updates) =>
+      super.copyWith((message) => updates(message as SetSeatCountResponse))
+          as SetSeatCountResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use SetSeatCountResponse() / SetSeatCountResponse.new instead')
+  static SetSeatCountResponse create() => SetSeatCountResponse._();
+  static $pb.GeneratedMessage $_createMessage() => SetSeatCountResponse._();
+  @$core.override
+  SetSeatCountResponse createEmptyInstance() => SetSeatCountResponse._();
+  @$core.pragma('dart2js:noInline')
+  static SetSeatCountResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SetSeatCountResponse>(
+          SetSeatCountResponse.$_createMessage);
+  static SetSeatCountResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get seatCount => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set seatCount($core.int value) => $_setSignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasSeatCount() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSeatCount() => $_clearField(1);
+}
+
+class ChangePlanRequest extends $pb.GeneratedMessage {
+  factory ChangePlanRequest({
+    $core.String? companyId,
+    $core.String? planCode,
+    $core.String? reason,
+  }) {
+    final result = ChangePlanRequest._();
+    if (companyId != null) result.companyId = companyId;
+    if (planCode != null) result.planCode = planCode;
+    if (reason != null) result.reason = reason;
+    return result;
+  }
+
+  ChangePlanRequest._();
+
+  factory ChangePlanRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ChangePlanRequest()..mergeFromBuffer(data, registry);
+  factory ChangePlanRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ChangePlanRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ChangePlanRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: ChangePlanRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'companyId')
+    ..aOS(2, _omitFieldNames ? '' : 'planCode')
+    ..aOS(3, _omitFieldNames ? '' : 'reason')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ChangePlanRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ChangePlanRequest copyWith(void Function(ChangePlanRequest) updates) =>
+      super.copyWith((message) => updates(message as ChangePlanRequest))
+          as ChangePlanRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ChangePlanRequest() / ChangePlanRequest.new instead')
+  static ChangePlanRequest create() => ChangePlanRequest._();
+  static $pb.GeneratedMessage $_createMessage() => ChangePlanRequest._();
+  @$core.override
+  ChangePlanRequest createEmptyInstance() => ChangePlanRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ChangePlanRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ChangePlanRequest>(
+          ChangePlanRequest.$_createMessage);
+  static ChangePlanRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get companyId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set companyId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasCompanyId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCompanyId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get planCode => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set planCode($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPlanCode() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPlanCode() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get reason => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set reason($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasReason() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearReason() => $_clearField(3);
+}
+
+class ChangePlanResponse extends $pb.GeneratedMessage {
+  factory ChangePlanResponse({
+    $core.String? planCode,
+    $core.String? effectiveFrom,
+  }) {
+    final result = ChangePlanResponse._();
+    if (planCode != null) result.planCode = planCode;
+    if (effectiveFrom != null) result.effectiveFrom = effectiveFrom;
+    return result;
+  }
+
+  ChangePlanResponse._();
+
+  factory ChangePlanResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ChangePlanResponse()..mergeFromBuffer(data, registry);
+  factory ChangePlanResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ChangePlanResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ChangePlanResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: ChangePlanResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'planCode')
+    ..aOS(2, _omitFieldNames ? '' : 'effectiveFrom')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ChangePlanResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ChangePlanResponse copyWith(void Function(ChangePlanResponse) updates) =>
+      super.copyWith((message) => updates(message as ChangePlanResponse))
+          as ChangePlanResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use ChangePlanResponse() / ChangePlanResponse.new instead')
+  static ChangePlanResponse create() => ChangePlanResponse._();
+  static $pb.GeneratedMessage $_createMessage() => ChangePlanResponse._();
+  @$core.override
+  ChangePlanResponse createEmptyInstance() => ChangePlanResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ChangePlanResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ChangePlanResponse>(
+          ChangePlanResponse.$_createMessage);
+  static ChangePlanResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get planCode => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set planCode($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPlanCode() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPlanCode() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get effectiveFrom => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set effectiveFrom($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasEffectiveFrom() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearEffectiveFrom() => $_clearField(2);
+}
+
+class CancelSubscriptionRequest extends $pb.GeneratedMessage {
+  factory CancelSubscriptionRequest({
+    $core.String? companyId,
+    $core.bool? atPeriodEnd,
+    $core.String? reason,
+  }) {
+    final result = CancelSubscriptionRequest._();
+    if (companyId != null) result.companyId = companyId;
+    if (atPeriodEnd != null) result.atPeriodEnd = atPeriodEnd;
+    if (reason != null) result.reason = reason;
+    return result;
+  }
+
+  CancelSubscriptionRequest._();
+
+  factory CancelSubscriptionRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CancelSubscriptionRequest()..mergeFromBuffer(data, registry);
+  factory CancelSubscriptionRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CancelSubscriptionRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CancelSubscriptionRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: CancelSubscriptionRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'companyId')
+    ..aOB(2, _omitFieldNames ? '' : 'atPeriodEnd')
+    ..aOS(3, _omitFieldNames ? '' : 'reason')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CancelSubscriptionRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CancelSubscriptionRequest copyWith(
+          void Function(CancelSubscriptionRequest) updates) =>
+      super.copyWith((message) => updates(message as CancelSubscriptionRequest))
+          as CancelSubscriptionRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use CancelSubscriptionRequest() / CancelSubscriptionRequest.new instead')
+  static CancelSubscriptionRequest create() => CancelSubscriptionRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      CancelSubscriptionRequest._();
+  @$core.override
+  CancelSubscriptionRequest createEmptyInstance() =>
+      CancelSubscriptionRequest._();
+  @$core.pragma('dart2js:noInline')
+  static CancelSubscriptionRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<CancelSubscriptionRequest>(
+          CancelSubscriptionRequest.$_createMessage);
+  static CancelSubscriptionRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get companyId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set companyId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasCompanyId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCompanyId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.bool get atPeriodEnd => $_getBF(1);
+  @$pb.TagNumber(2)
+  set atPeriodEnd($core.bool value) => $_setBool(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasAtPeriodEnd() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearAtPeriodEnd() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get reason => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set reason($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasReason() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearReason() => $_clearField(3);
+}
+
+class CancelSubscriptionResponse extends $pb.GeneratedMessage {
+  factory CancelSubscriptionResponse({
+    $core.String? cancelledAt,
+    $core.String? serviceUntil,
+  }) {
+    final result = CancelSubscriptionResponse._();
+    if (cancelledAt != null) result.cancelledAt = cancelledAt;
+    if (serviceUntil != null) result.serviceUntil = serviceUntil;
+    return result;
+  }
+
+  CancelSubscriptionResponse._();
+
+  factory CancelSubscriptionResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CancelSubscriptionResponse()..mergeFromBuffer(data, registry);
+  factory CancelSubscriptionResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CancelSubscriptionResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CancelSubscriptionResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: CancelSubscriptionResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'cancelledAt')
+    ..aOS(2, _omitFieldNames ? '' : 'serviceUntil')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CancelSubscriptionResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CancelSubscriptionResponse copyWith(
+          void Function(CancelSubscriptionResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as CancelSubscriptionResponse))
+          as CancelSubscriptionResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use CancelSubscriptionResponse() / CancelSubscriptionResponse.new instead')
+  static CancelSubscriptionResponse create() => CancelSubscriptionResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      CancelSubscriptionResponse._();
+  @$core.override
+  CancelSubscriptionResponse createEmptyInstance() =>
+      CancelSubscriptionResponse._();
+  @$core.pragma('dart2js:noInline')
+  static CancelSubscriptionResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<CancelSubscriptionResponse>(
+          CancelSubscriptionResponse.$_createMessage);
+  static CancelSubscriptionResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get cancelledAt => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set cancelledAt($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasCancelledAt() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCancelledAt() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get serviceUntil => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set serviceUntil($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasServiceUntil() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearServiceUntil() => $_clearField(2);
+}
+
+class GetBillingSettingsRequest extends $pb.GeneratedMessage {
+  factory GetBillingSettingsRequest() => GetBillingSettingsRequest._();
+
+  GetBillingSettingsRequest._();
+
+  factory GetBillingSettingsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetBillingSettingsRequest()..mergeFromBuffer(data, registry);
+  factory GetBillingSettingsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetBillingSettingsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetBillingSettingsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: GetBillingSettingsRequest.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetBillingSettingsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetBillingSettingsRequest copyWith(
+          void Function(GetBillingSettingsRequest) updates) =>
+      super.copyWith((message) => updates(message as GetBillingSettingsRequest))
+          as GetBillingSettingsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetBillingSettingsRequest() / GetBillingSettingsRequest.new instead')
+  static GetBillingSettingsRequest create() => GetBillingSettingsRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      GetBillingSettingsRequest._();
+  @$core.override
+  GetBillingSettingsRequest createEmptyInstance() =>
+      GetBillingSettingsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetBillingSettingsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetBillingSettingsRequest>(
+          GetBillingSettingsRequest.$_createMessage);
+  static GetBillingSettingsRequest? _defaultInstance;
+}
+
+class GetBillingSettingsResponse extends $pb.GeneratedMessage {
+  factory GetBillingSettingsResponse({
+    $core.Iterable<BillingSetting>? settings,
+  }) {
+    final result = GetBillingSettingsResponse._();
+    if (settings != null) result.settings.addAll(settings);
+    return result;
+  }
+
+  GetBillingSettingsResponse._();
+
+  factory GetBillingSettingsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetBillingSettingsResponse()..mergeFromBuffer(data, registry);
+  factory GetBillingSettingsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetBillingSettingsResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetBillingSettingsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: GetBillingSettingsResponse.$_createMessage)
+    ..pPM<BillingSetting>(1, _omitFieldNames ? '' : 'settings',
+        subBuilder: BillingSetting.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetBillingSettingsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetBillingSettingsResponse copyWith(
+          void Function(GetBillingSettingsResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as GetBillingSettingsResponse))
+          as GetBillingSettingsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetBillingSettingsResponse() / GetBillingSettingsResponse.new instead')
+  static GetBillingSettingsResponse create() => GetBillingSettingsResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      GetBillingSettingsResponse._();
+  @$core.override
+  GetBillingSettingsResponse createEmptyInstance() =>
+      GetBillingSettingsResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetBillingSettingsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetBillingSettingsResponse>(
+          GetBillingSettingsResponse.$_createMessage);
+  static GetBillingSettingsResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<BillingSetting> get settings => $_getList(0);
+}
+
+/// BillingSetting:一項可由介面調整的營運參數(trial_days／grace_days／lead_days)。
+class BillingSetting extends $pb.GeneratedMessage {
+  factory BillingSetting({
+    $core.String? key,
+    $core.String? value,
+    $core.String? description,
+  }) {
+    final result = BillingSetting._();
+    if (key != null) result.key = key;
+    if (value != null) result.value = value;
+    if (description != null) result.description = description;
+    return result;
+  }
+
+  BillingSetting._();
+
+  factory BillingSetting.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      BillingSetting()..mergeFromBuffer(data, registry);
+  factory BillingSetting.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      BillingSetting()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'BillingSetting',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: BillingSetting.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'key')
+    ..aOS(2, _omitFieldNames ? '' : 'value')
+    ..aOS(3, _omitFieldNames ? '' : 'description')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  BillingSetting clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  BillingSetting copyWith(void Function(BillingSetting) updates) =>
+      super.copyWith((message) => updates(message as BillingSetting))
+          as BillingSetting;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use BillingSetting() / BillingSetting.new instead')
+  static BillingSetting create() => BillingSetting._();
+  static $pb.GeneratedMessage $_createMessage() => BillingSetting._();
+  @$core.override
+  BillingSetting createEmptyInstance() => BillingSetting._();
+  @$core.pragma('dart2js:noInline')
+  static BillingSetting getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<BillingSetting>(
+          BillingSetting.$_createMessage);
+  static BillingSetting? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get key => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set key($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasKey() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearKey() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get value => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set value($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasValue() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearValue() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get description => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set description($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasDescription() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearDescription() => $_clearField(3);
+}
+
+class UpdateBillingSettingsRequest extends $pb.GeneratedMessage {
+  factory UpdateBillingSettingsRequest({
+    $core.Iterable<BillingSetting>? settings,
+    $core.String? reason,
+  }) {
+    final result = UpdateBillingSettingsRequest._();
+    if (settings != null) result.settings.addAll(settings);
+    if (reason != null) result.reason = reason;
+    return result;
+  }
+
+  UpdateBillingSettingsRequest._();
+
+  factory UpdateBillingSettingsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UpdateBillingSettingsRequest()..mergeFromBuffer(data, registry);
+  factory UpdateBillingSettingsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UpdateBillingSettingsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'UpdateBillingSettingsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: UpdateBillingSettingsRequest.$_createMessage)
+    ..pPM<BillingSetting>(1, _omitFieldNames ? '' : 'settings',
+        subBuilder: BillingSetting.$_createMessage)
+    ..aOS(2, _omitFieldNames ? '' : 'reason')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpdateBillingSettingsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpdateBillingSettingsRequest copyWith(
+          void Function(UpdateBillingSettingsRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as UpdateBillingSettingsRequest))
+          as UpdateBillingSettingsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use UpdateBillingSettingsRequest() / UpdateBillingSettingsRequest.new instead')
+  static UpdateBillingSettingsRequest create() =>
+      UpdateBillingSettingsRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      UpdateBillingSettingsRequest._();
+  @$core.override
+  UpdateBillingSettingsRequest createEmptyInstance() =>
+      UpdateBillingSettingsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static UpdateBillingSettingsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<UpdateBillingSettingsRequest>(
+          UpdateBillingSettingsRequest.$_createMessage);
+  static UpdateBillingSettingsRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<BillingSetting> get settings => $_getList(0);
+
+  @$pb.TagNumber(2)
+  $core.String get reason => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set reason($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasReason() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearReason() => $_clearField(2);
+}
+
+class UpdateBillingSettingsResponse extends $pb.GeneratedMessage {
+  factory UpdateBillingSettingsResponse({
+    $core.Iterable<BillingSetting>? settings,
+  }) {
+    final result = UpdateBillingSettingsResponse._();
+    if (settings != null) result.settings.addAll(settings);
+    return result;
+  }
+
+  UpdateBillingSettingsResponse._();
+
+  factory UpdateBillingSettingsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UpdateBillingSettingsResponse()..mergeFromBuffer(data, registry);
+  factory UpdateBillingSettingsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UpdateBillingSettingsResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'UpdateBillingSettingsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: UpdateBillingSettingsResponse.$_createMessage)
+    ..pPM<BillingSetting>(1, _omitFieldNames ? '' : 'settings',
+        subBuilder: BillingSetting.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpdateBillingSettingsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpdateBillingSettingsResponse copyWith(
+          void Function(UpdateBillingSettingsResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as UpdateBillingSettingsResponse))
+          as UpdateBillingSettingsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use UpdateBillingSettingsResponse() / UpdateBillingSettingsResponse.new instead')
+  static UpdateBillingSettingsResponse create() =>
+      UpdateBillingSettingsResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      UpdateBillingSettingsResponse._();
+  @$core.override
+  UpdateBillingSettingsResponse createEmptyInstance() =>
+      UpdateBillingSettingsResponse._();
+  @$core.pragma('dart2js:noInline')
+  static UpdateBillingSettingsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<UpdateBillingSettingsResponse>(
+          UpdateBillingSettingsResponse.$_createMessage);
+  static UpdateBillingSettingsResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<BillingSetting> get settings => $_getList(0);
+}
+
+class SetTenantOverrideRequest extends $pb.GeneratedMessage {
+  factory SetTenantOverrideRequest({
+    $core.String? companyId,
+    $core.String? featureCode,
+    $core.bool? enabledSet,
+    $core.bool? enabled,
+    $core.bool? limitSet,
+    $fixnum.Int64? limitValue,
+    $core.String? owner,
+    $core.String? expiresAt,
+    $core.String? reason,
+  }) {
+    final result = SetTenantOverrideRequest._();
+    if (companyId != null) result.companyId = companyId;
+    if (featureCode != null) result.featureCode = featureCode;
+    if (enabledSet != null) result.enabledSet = enabledSet;
+    if (enabled != null) result.enabled = enabled;
+    if (limitSet != null) result.limitSet = limitSet;
+    if (limitValue != null) result.limitValue = limitValue;
+    if (owner != null) result.owner = owner;
+    if (expiresAt != null) result.expiresAt = expiresAt;
+    if (reason != null) result.reason = reason;
+    return result;
+  }
+
+  SetTenantOverrideRequest._();
+
+  factory SetTenantOverrideRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetTenantOverrideRequest()..mergeFromBuffer(data, registry);
+  factory SetTenantOverrideRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetTenantOverrideRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetTenantOverrideRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: SetTenantOverrideRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'companyId')
+    ..aOS(2, _omitFieldNames ? '' : 'featureCode')
+    ..aOB(3, _omitFieldNames ? '' : 'enabledSet')
+    ..aOB(4, _omitFieldNames ? '' : 'enabled')
+    ..aOB(5, _omitFieldNames ? '' : 'limitSet')
+    ..aInt64(6, _omitFieldNames ? '' : 'limitValue')
+    ..aOS(7, _omitFieldNames ? '' : 'owner')
+    ..aOS(8, _omitFieldNames ? '' : 'expiresAt')
+    ..aOS(9, _omitFieldNames ? '' : 'reason')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetTenantOverrideRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetTenantOverrideRequest copyWith(
+          void Function(SetTenantOverrideRequest) updates) =>
+      super.copyWith((message) => updates(message as SetTenantOverrideRequest))
+          as SetTenantOverrideRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use SetTenantOverrideRequest() / SetTenantOverrideRequest.new instead')
+  static SetTenantOverrideRequest create() => SetTenantOverrideRequest._();
+  static $pb.GeneratedMessage $_createMessage() => SetTenantOverrideRequest._();
+  @$core.override
+  SetTenantOverrideRequest createEmptyInstance() =>
+      SetTenantOverrideRequest._();
+  @$core.pragma('dart2js:noInline')
+  static SetTenantOverrideRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SetTenantOverrideRequest>(
+          SetTenantOverrideRequest.$_createMessage);
+  static SetTenantOverrideRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get companyId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set companyId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasCompanyId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCompanyId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get featureCode => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set featureCode($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasFeatureCode() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearFeatureCode() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.bool get enabledSet => $_getBF(2);
+  @$pb.TagNumber(3)
+  set enabledSet($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasEnabledSet() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearEnabledSet() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.bool get enabled => $_getBF(3);
+  @$pb.TagNumber(4)
+  set enabled($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasEnabled() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearEnabled() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.bool get limitSet => $_getBF(4);
+  @$pb.TagNumber(5)
+  set limitSet($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasLimitSet() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearLimitSet() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $fixnum.Int64 get limitValue => $_getI64(5);
+  @$pb.TagNumber(6)
+  set limitValue($fixnum.Int64 value) => $_setInt64(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasLimitValue() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearLimitValue() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get owner => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set owner($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasOwner() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearOwner() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.String get expiresAt => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set expiresAt($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasExpiresAt() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearExpiresAt() => $_clearField(8);
+
+  @$pb.TagNumber(9)
+  $core.String get reason => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set reason($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasReason() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearReason() => $_clearField(9);
+}
+
+class SetTenantOverrideResponse extends $pb.GeneratedMessage {
+  factory SetTenantOverrideResponse({
+    $core.String? id,
+  }) {
+    final result = SetTenantOverrideResponse._();
+    if (id != null) result.id = id;
+    return result;
+  }
+
+  SetTenantOverrideResponse._();
+
+  factory SetTenantOverrideResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetTenantOverrideResponse()..mergeFromBuffer(data, registry);
+  factory SetTenantOverrideResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetTenantOverrideResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetTenantOverrideResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: SetTenantOverrideResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetTenantOverrideResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetTenantOverrideResponse copyWith(
+          void Function(SetTenantOverrideResponse) updates) =>
+      super.copyWith((message) => updates(message as SetTenantOverrideResponse))
+          as SetTenantOverrideResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use SetTenantOverrideResponse() / SetTenantOverrideResponse.new instead')
+  static SetTenantOverrideResponse create() => SetTenantOverrideResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      SetTenantOverrideResponse._();
+  @$core.override
+  SetTenantOverrideResponse createEmptyInstance() =>
+      SetTenantOverrideResponse._();
+  @$core.pragma('dart2js:noInline')
+  static SetTenantOverrideResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SetTenantOverrideResponse>(
+          SetTenantOverrideResponse.$_createMessage);
+  static SetTenantOverrideResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+}
+
+class RevokeTenantOverrideRequest extends $pb.GeneratedMessage {
+  factory RevokeTenantOverrideRequest({
+    $core.String? overrideId,
+    $core.String? reason,
+  }) {
+    final result = RevokeTenantOverrideRequest._();
+    if (overrideId != null) result.overrideId = overrideId;
+    if (reason != null) result.reason = reason;
+    return result;
+  }
+
+  RevokeTenantOverrideRequest._();
+
+  factory RevokeTenantOverrideRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RevokeTenantOverrideRequest()..mergeFromBuffer(data, registry);
+  factory RevokeTenantOverrideRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RevokeTenantOverrideRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RevokeTenantOverrideRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: RevokeTenantOverrideRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'overrideId')
+    ..aOS(2, _omitFieldNames ? '' : 'reason')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RevokeTenantOverrideRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RevokeTenantOverrideRequest copyWith(
+          void Function(RevokeTenantOverrideRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as RevokeTenantOverrideRequest))
+          as RevokeTenantOverrideRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RevokeTenantOverrideRequest() / RevokeTenantOverrideRequest.new instead')
+  static RevokeTenantOverrideRequest create() =>
+      RevokeTenantOverrideRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      RevokeTenantOverrideRequest._();
+  @$core.override
+  RevokeTenantOverrideRequest createEmptyInstance() =>
+      RevokeTenantOverrideRequest._();
+  @$core.pragma('dart2js:noInline')
+  static RevokeTenantOverrideRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RevokeTenantOverrideRequest>(
+          RevokeTenantOverrideRequest.$_createMessage);
+  static RevokeTenantOverrideRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get overrideId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set overrideId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasOverrideId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearOverrideId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get reason => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set reason($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasReason() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearReason() => $_clearField(2);
+}
+
+class RevokeTenantOverrideResponse extends $pb.GeneratedMessage {
+  factory RevokeTenantOverrideResponse({
+    $core.String? companyId,
+    $core.String? featureCode,
+  }) {
+    final result = RevokeTenantOverrideResponse._();
+    if (companyId != null) result.companyId = companyId;
+    if (featureCode != null) result.featureCode = featureCode;
+    return result;
+  }
+
+  RevokeTenantOverrideResponse._();
+
+  factory RevokeTenantOverrideResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RevokeTenantOverrideResponse()..mergeFromBuffer(data, registry);
+  factory RevokeTenantOverrideResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      RevokeTenantOverrideResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'RevokeTenantOverrideResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: RevokeTenantOverrideResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'companyId')
+    ..aOS(2, _omitFieldNames ? '' : 'featureCode')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RevokeTenantOverrideResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  RevokeTenantOverrideResponse copyWith(
+          void Function(RevokeTenantOverrideResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as RevokeTenantOverrideResponse))
+          as RevokeTenantOverrideResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use RevokeTenantOverrideResponse() / RevokeTenantOverrideResponse.new instead')
+  static RevokeTenantOverrideResponse create() =>
+      RevokeTenantOverrideResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      RevokeTenantOverrideResponse._();
+  @$core.override
+  RevokeTenantOverrideResponse createEmptyInstance() =>
+      RevokeTenantOverrideResponse._();
+  @$core.pragma('dart2js:noInline')
+  static RevokeTenantOverrideResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<RevokeTenantOverrideResponse>(
+          RevokeTenantOverrideResponse.$_createMessage);
+  static RevokeTenantOverrideResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get companyId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set companyId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasCompanyId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCompanyId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get featureCode => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set featureCode($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasFeatureCode() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearFeatureCode() => $_clearField(2);
+}
+
+class UpsertPlanPriceRequest extends $pb.GeneratedMessage {
+  factory UpsertPlanPriceRequest({
+    $core.String? planCode,
+    $core.String? billingCycle,
+    $core.String? basePrice,
+    $core.String? seatPrice,
+    $core.String? currency,
+    $core.String? reason,
+  }) {
+    final result = UpsertPlanPriceRequest._();
+    if (planCode != null) result.planCode = planCode;
+    if (billingCycle != null) result.billingCycle = billingCycle;
+    if (basePrice != null) result.basePrice = basePrice;
+    if (seatPrice != null) result.seatPrice = seatPrice;
+    if (currency != null) result.currency = currency;
+    if (reason != null) result.reason = reason;
+    return result;
+  }
+
+  UpsertPlanPriceRequest._();
+
+  factory UpsertPlanPriceRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UpsertPlanPriceRequest()..mergeFromBuffer(data, registry);
+  factory UpsertPlanPriceRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UpsertPlanPriceRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'UpsertPlanPriceRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: UpsertPlanPriceRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'planCode')
+    ..aOS(2, _omitFieldNames ? '' : 'billingCycle')
+    ..aOS(3, _omitFieldNames ? '' : 'basePrice')
+    ..aOS(4, _omitFieldNames ? '' : 'seatPrice')
+    ..aOS(5, _omitFieldNames ? '' : 'currency')
+    ..aOS(6, _omitFieldNames ? '' : 'reason')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpsertPlanPriceRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpsertPlanPriceRequest copyWith(
+          void Function(UpsertPlanPriceRequest) updates) =>
+      super.copyWith((message) => updates(message as UpsertPlanPriceRequest))
+          as UpsertPlanPriceRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use UpsertPlanPriceRequest() / UpsertPlanPriceRequest.new instead')
+  static UpsertPlanPriceRequest create() => UpsertPlanPriceRequest._();
+  static $pb.GeneratedMessage $_createMessage() => UpsertPlanPriceRequest._();
+  @$core.override
+  UpsertPlanPriceRequest createEmptyInstance() => UpsertPlanPriceRequest._();
+  @$core.pragma('dart2js:noInline')
+  static UpsertPlanPriceRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<UpsertPlanPriceRequest>(
+          UpsertPlanPriceRequest.$_createMessage);
+  static UpsertPlanPriceRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get planCode => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set planCode($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPlanCode() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPlanCode() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get billingCycle => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set billingCycle($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasBillingCycle() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearBillingCycle() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get basePrice => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set basePrice($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasBasePrice() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearBasePrice() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get seatPrice => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set seatPrice($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasSeatPrice() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearSeatPrice() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get currency => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set currency($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasCurrency() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearCurrency() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get reason => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set reason($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasReason() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearReason() => $_clearField(6);
+}
+
+class UpsertPlanPriceResponse extends $pb.GeneratedMessage {
+  factory UpsertPlanPriceResponse() => UpsertPlanPriceResponse._();
+
+  UpsertPlanPriceResponse._();
+
+  factory UpsertPlanPriceResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UpsertPlanPriceResponse()..mergeFromBuffer(data, registry);
+  factory UpsertPlanPriceResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      UpsertPlanPriceResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'UpsertPlanPriceResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: UpsertPlanPriceResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpsertPlanPriceResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  UpsertPlanPriceResponse copyWith(
+          void Function(UpsertPlanPriceResponse) updates) =>
+      super.copyWith((message) => updates(message as UpsertPlanPriceResponse))
+          as UpsertPlanPriceResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use UpsertPlanPriceResponse() / UpsertPlanPriceResponse.new instead')
+  static UpsertPlanPriceResponse create() => UpsertPlanPriceResponse._();
+  static $pb.GeneratedMessage $_createMessage() => UpsertPlanPriceResponse._();
+  @$core.override
+  UpsertPlanPriceResponse createEmptyInstance() => UpsertPlanPriceResponse._();
+  @$core.pragma('dart2js:noInline')
+  static UpsertPlanPriceResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<UpsertPlanPriceResponse>(
+          UpsertPlanPriceResponse.$_createMessage);
+  static UpsertPlanPriceResponse? _defaultInstance;
+}
+
+class SetPlanEntitlementRequest extends $pb.GeneratedMessage {
+  factory SetPlanEntitlementRequest({
+    $core.String? planCode,
+    $core.String? featureCode,
+    $core.bool? enabled,
+    $core.bool? limitSet,
+    $fixnum.Int64? limitValue,
+    $core.String? reason,
+  }) {
+    final result = SetPlanEntitlementRequest._();
+    if (planCode != null) result.planCode = planCode;
+    if (featureCode != null) result.featureCode = featureCode;
+    if (enabled != null) result.enabled = enabled;
+    if (limitSet != null) result.limitSet = limitSet;
+    if (limitValue != null) result.limitValue = limitValue;
+    if (reason != null) result.reason = reason;
+    return result;
+  }
+
+  SetPlanEntitlementRequest._();
+
+  factory SetPlanEntitlementRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetPlanEntitlementRequest()..mergeFromBuffer(data, registry);
+  factory SetPlanEntitlementRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetPlanEntitlementRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetPlanEntitlementRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: SetPlanEntitlementRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'planCode')
+    ..aOS(2, _omitFieldNames ? '' : 'featureCode')
+    ..aOB(3, _omitFieldNames ? '' : 'enabled')
+    ..aOB(4, _omitFieldNames ? '' : 'limitSet')
+    ..aInt64(5, _omitFieldNames ? '' : 'limitValue')
+    ..aOS(6, _omitFieldNames ? '' : 'reason')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetPlanEntitlementRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetPlanEntitlementRequest copyWith(
+          void Function(SetPlanEntitlementRequest) updates) =>
+      super.copyWith((message) => updates(message as SetPlanEntitlementRequest))
+          as SetPlanEntitlementRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use SetPlanEntitlementRequest() / SetPlanEntitlementRequest.new instead')
+  static SetPlanEntitlementRequest create() => SetPlanEntitlementRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      SetPlanEntitlementRequest._();
+  @$core.override
+  SetPlanEntitlementRequest createEmptyInstance() =>
+      SetPlanEntitlementRequest._();
+  @$core.pragma('dart2js:noInline')
+  static SetPlanEntitlementRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SetPlanEntitlementRequest>(
+          SetPlanEntitlementRequest.$_createMessage);
+  static SetPlanEntitlementRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get planCode => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set planCode($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPlanCode() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPlanCode() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get featureCode => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set featureCode($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasFeatureCode() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearFeatureCode() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.bool get enabled => $_getBF(2);
+  @$pb.TagNumber(3)
+  set enabled($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasEnabled() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearEnabled() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.bool get limitSet => $_getBF(3);
+  @$pb.TagNumber(4)
+  set limitSet($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasLimitSet() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearLimitSet() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $fixnum.Int64 get limitValue => $_getI64(4);
+  @$pb.TagNumber(5)
+  set limitValue($fixnum.Int64 value) => $_setInt64(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasLimitValue() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearLimitValue() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get reason => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set reason($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasReason() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearReason() => $_clearField(6);
+}
+
+class SetPlanEntitlementResponse extends $pb.GeneratedMessage {
+  factory SetPlanEntitlementResponse() => SetPlanEntitlementResponse._();
+
+  SetPlanEntitlementResponse._();
+
+  factory SetPlanEntitlementResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetPlanEntitlementResponse()..mergeFromBuffer(data, registry);
+  factory SetPlanEntitlementResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SetPlanEntitlementResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SetPlanEntitlementResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: SetPlanEntitlementResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetPlanEntitlementResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SetPlanEntitlementResponse copyWith(
+          void Function(SetPlanEntitlementResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as SetPlanEntitlementResponse))
+          as SetPlanEntitlementResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use SetPlanEntitlementResponse() / SetPlanEntitlementResponse.new instead')
+  static SetPlanEntitlementResponse create() => SetPlanEntitlementResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      SetPlanEntitlementResponse._();
+  @$core.override
+  SetPlanEntitlementResponse createEmptyInstance() =>
+      SetPlanEntitlementResponse._();
+  @$core.pragma('dart2js:noInline')
+  static SetPlanEntitlementResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SetPlanEntitlementResponse>(
+          SetPlanEntitlementResponse.$_createMessage);
+  static SetPlanEntitlementResponse? _defaultInstance;
+}
+
+class CreateOperatorRequest extends $pb.GeneratedMessage {
+  factory CreateOperatorRequest({
+    $core.String? email,
+    $core.String? name,
+    $core.String? role,
+    $core.String? reason,
+  }) {
+    final result = CreateOperatorRequest._();
+    if (email != null) result.email = email;
+    if (name != null) result.name = name;
+    if (role != null) result.role = role;
+    if (reason != null) result.reason = reason;
+    return result;
+  }
+
+  CreateOperatorRequest._();
+
+  factory CreateOperatorRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CreateOperatorRequest()..mergeFromBuffer(data, registry);
+  factory CreateOperatorRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CreateOperatorRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CreateOperatorRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: CreateOperatorRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'email')
+    ..aOS(2, _omitFieldNames ? '' : 'name')
+    ..aOS(3, _omitFieldNames ? '' : 'role')
+    ..aOS(4, _omitFieldNames ? '' : 'reason')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CreateOperatorRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CreateOperatorRequest copyWith(
+          void Function(CreateOperatorRequest) updates) =>
+      super.copyWith((message) => updates(message as CreateOperatorRequest))
+          as CreateOperatorRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use CreateOperatorRequest() / CreateOperatorRequest.new instead')
+  static CreateOperatorRequest create() => CreateOperatorRequest._();
+  static $pb.GeneratedMessage $_createMessage() => CreateOperatorRequest._();
+  @$core.override
+  CreateOperatorRequest createEmptyInstance() => CreateOperatorRequest._();
+  @$core.pragma('dart2js:noInline')
+  static CreateOperatorRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<CreateOperatorRequest>(
+          CreateOperatorRequest.$_createMessage);
+  static CreateOperatorRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get email => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set email($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasEmail() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearEmail() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get name => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set name($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasName() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearName() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get role => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set role($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasRole() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearRole() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get reason => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set reason($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasReason() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearReason() => $_clearField(4);
+}
+
+class CreateOperatorResponse extends $pb.GeneratedMessage {
+  factory CreateOperatorResponse({
+    $core.String? id,
+  }) {
+    final result = CreateOperatorResponse._();
+    if (id != null) result.id = id;
+    return result;
+  }
+
+  CreateOperatorResponse._();
+
+  factory CreateOperatorResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CreateOperatorResponse()..mergeFromBuffer(data, registry);
+  factory CreateOperatorResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CreateOperatorResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CreateOperatorResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: CreateOperatorResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CreateOperatorResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CreateOperatorResponse copyWith(
+          void Function(CreateOperatorResponse) updates) =>
+      super.copyWith((message) => updates(message as CreateOperatorResponse))
+          as CreateOperatorResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use CreateOperatorResponse() / CreateOperatorResponse.new instead')
+  static CreateOperatorResponse create() => CreateOperatorResponse._();
+  static $pb.GeneratedMessage $_createMessage() => CreateOperatorResponse._();
+  @$core.override
+  CreateOperatorResponse createEmptyInstance() => CreateOperatorResponse._();
+  @$core.pragma('dart2js:noInline')
+  static CreateOperatorResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<CreateOperatorResponse>(
+          CreateOperatorResponse.$_createMessage);
+  static CreateOperatorResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+}
+
+class DisableOperatorRequest extends $pb.GeneratedMessage {
+  factory DisableOperatorRequest({
+    $core.String? operatorId,
+    $core.String? reason,
+  }) {
+    final result = DisableOperatorRequest._();
+    if (operatorId != null) result.operatorId = operatorId;
+    if (reason != null) result.reason = reason;
+    return result;
+  }
+
+  DisableOperatorRequest._();
+
+  factory DisableOperatorRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DisableOperatorRequest()..mergeFromBuffer(data, registry);
+  factory DisableOperatorRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DisableOperatorRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DisableOperatorRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: DisableOperatorRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'operatorId')
+    ..aOS(2, _omitFieldNames ? '' : 'reason')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DisableOperatorRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DisableOperatorRequest copyWith(
+          void Function(DisableOperatorRequest) updates) =>
+      super.copyWith((message) => updates(message as DisableOperatorRequest))
+          as DisableOperatorRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use DisableOperatorRequest() / DisableOperatorRequest.new instead')
+  static DisableOperatorRequest create() => DisableOperatorRequest._();
+  static $pb.GeneratedMessage $_createMessage() => DisableOperatorRequest._();
+  @$core.override
+  DisableOperatorRequest createEmptyInstance() => DisableOperatorRequest._();
+  @$core.pragma('dart2js:noInline')
+  static DisableOperatorRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<DisableOperatorRequest>(
+          DisableOperatorRequest.$_createMessage);
+  static DisableOperatorRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get operatorId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set operatorId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasOperatorId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearOperatorId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get reason => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set reason($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasReason() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearReason() => $_clearField(2);
+}
+
+class DisableOperatorResponse extends $pb.GeneratedMessage {
+  factory DisableOperatorResponse() => DisableOperatorResponse._();
+
+  DisableOperatorResponse._();
+
+  factory DisableOperatorResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DisableOperatorResponse()..mergeFromBuffer(data, registry);
+  factory DisableOperatorResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DisableOperatorResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DisableOperatorResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: DisableOperatorResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DisableOperatorResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DisableOperatorResponse copyWith(
+          void Function(DisableOperatorResponse) updates) =>
+      super.copyWith((message) => updates(message as DisableOperatorResponse))
+          as DisableOperatorResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use DisableOperatorResponse() / DisableOperatorResponse.new instead')
+  static DisableOperatorResponse create() => DisableOperatorResponse._();
+  static $pb.GeneratedMessage $_createMessage() => DisableOperatorResponse._();
+  @$core.override
+  DisableOperatorResponse createEmptyInstance() => DisableOperatorResponse._();
+  @$core.pragma('dart2js:noInline')
+  static DisableOperatorResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<DisableOperatorResponse>(
+          DisableOperatorResponse.$_createMessage);
+  static DisableOperatorResponse? _defaultInstance;
+}
+
 /// GetTenantEntitlementsRequest:租戶端唯讀投影(自己的公司;前端據此 disable 按鈕與顯示用量)。
 class GetTenantEntitlementsRequest extends $pb.GeneratedMessage {
   factory GetTenantEntitlementsRequest() => GetTenantEntitlementsRequest._();
@@ -1881,6 +4123,61 @@ class PlatformAdminServiceApi {
           $pb.ClientContext? ctx, ListPlatformAuditRequest request) =>
       _client.invoke<ListPlatformAuditResponse>(ctx, 'PlatformAdminService',
           'ListPlatformAudit', request, ListPlatformAuditResponse());
+
+  /// --- 平台寫入(T9)。共同契約:每個寫入都必須帶 reason(平台稽核必填),
+  /// actor 一律是 cookie 上的真實 operator;資料與稽核同一個交易(失敗不留半成品)。
+  $async.Future<ListReceivablesResponse> listReceivables(
+          $pb.ClientContext? ctx, ListReceivablesRequest request) =>
+      _client.invoke<ListReceivablesResponse>(ctx, 'PlatformAdminService',
+          'ListReceivables', request, ListReceivablesResponse());
+  $async.Future<RecordPaymentResponse> recordPayment(
+          $pb.ClientContext? ctx, RecordPaymentRequest request) =>
+      _client.invoke<RecordPaymentResponse>(ctx, 'PlatformAdminService',
+          'RecordPayment', request, RecordPaymentResponse());
+  $async.Future<SetSeatCountResponse> setSeatCount(
+          $pb.ClientContext? ctx, SetSeatCountRequest request) =>
+      _client.invoke<SetSeatCountResponse>(ctx, 'PlatformAdminService',
+          'SetSeatCount', request, SetSeatCountResponse());
+  $async.Future<ChangePlanResponse> changePlan(
+          $pb.ClientContext? ctx, ChangePlanRequest request) =>
+      _client.invoke<ChangePlanResponse>(ctx, 'PlatformAdminService',
+          'ChangePlan', request, ChangePlanResponse());
+  $async.Future<CancelSubscriptionResponse> cancelSubscription(
+          $pb.ClientContext? ctx, CancelSubscriptionRequest request) =>
+      _client.invoke<CancelSubscriptionResponse>(ctx, 'PlatformAdminService',
+          'CancelSubscription', request, CancelSubscriptionResponse());
+  $async.Future<GetBillingSettingsResponse> getBillingSettings(
+          $pb.ClientContext? ctx, GetBillingSettingsRequest request) =>
+      _client.invoke<GetBillingSettingsResponse>(ctx, 'PlatformAdminService',
+          'GetBillingSettings', request, GetBillingSettingsResponse());
+  $async.Future<UpdateBillingSettingsResponse> updateBillingSettings(
+          $pb.ClientContext? ctx, UpdateBillingSettingsRequest request) =>
+      _client.invoke<UpdateBillingSettingsResponse>(ctx, 'PlatformAdminService',
+          'UpdateBillingSettings', request, UpdateBillingSettingsResponse());
+  $async.Future<SetTenantOverrideResponse> setTenantOverride(
+          $pb.ClientContext? ctx, SetTenantOverrideRequest request) =>
+      _client.invoke<SetTenantOverrideResponse>(ctx, 'PlatformAdminService',
+          'SetTenantOverride', request, SetTenantOverrideResponse());
+  $async.Future<RevokeTenantOverrideResponse> revokeTenantOverride(
+          $pb.ClientContext? ctx, RevokeTenantOverrideRequest request) =>
+      _client.invoke<RevokeTenantOverrideResponse>(ctx, 'PlatformAdminService',
+          'RevokeTenantOverride', request, RevokeTenantOverrideResponse());
+  $async.Future<UpsertPlanPriceResponse> upsertPlanPrice(
+          $pb.ClientContext? ctx, UpsertPlanPriceRequest request) =>
+      _client.invoke<UpsertPlanPriceResponse>(ctx, 'PlatformAdminService',
+          'UpsertPlanPrice', request, UpsertPlanPriceResponse());
+  $async.Future<SetPlanEntitlementResponse> setPlanEntitlement(
+          $pb.ClientContext? ctx, SetPlanEntitlementRequest request) =>
+      _client.invoke<SetPlanEntitlementResponse>(ctx, 'PlatformAdminService',
+          'SetPlanEntitlement', request, SetPlanEntitlementResponse());
+  $async.Future<CreateOperatorResponse> createOperator(
+          $pb.ClientContext? ctx, CreateOperatorRequest request) =>
+      _client.invoke<CreateOperatorResponse>(ctx, 'PlatformAdminService',
+          'CreateOperator', request, CreateOperatorResponse());
+  $async.Future<DisableOperatorResponse> disableOperator(
+          $pb.ClientContext? ctx, DisableOperatorRequest request) =>
+      _client.invoke<DisableOperatorResponse>(ctx, 'PlatformAdminService',
+          'DisableOperator', request, DisableOperatorResponse());
 }
 
 /// TenantEntitlementService:租戶端權益投影(租戶 session;唯讀)。

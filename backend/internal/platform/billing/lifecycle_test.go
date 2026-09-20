@@ -365,8 +365,7 @@ func TestMarkPastDueSkipsPaidPeriodEvenIfScanned(t *testing.T) {
 	seedSub(f, store.Subscription{CompanyID: 42, Status: "active", PlanID: 1,
 		BillingCycle: "monthly"}, now.AddDate(0, -1, 0), now.Add(-time.Hour))
 	// 把第 1 期標成已付款（收款是付款的唯一寫入路徑，這裡直接用 store 的付款方法）。
-	if err := f.MarkPeriodPaidTx(context.Background(), nil, 9, now.Add(-time.Hour),
-		"AB12345678", "manual", "BANK-1", ""); err != nil {
+	if err := f.MarkPeriodPaidTx(context.Background(), nil, 9, now.Add(-time.Hour), "AB12345678", "", "", "", "manual", "BANK-1", ""); err != nil {
 		t.Fatalf("MarkPeriodPaidTx: %v", err)
 	}
 	st := cannedScan{FakeBilling: f,

@@ -561,6 +561,782 @@ export declare type PlatformAuditEntry = Message<"platform.v1.PlatformAuditEntry
 export declare const PlatformAuditEntrySchema: GenMessage<PlatformAuditEntry>;
 
 /**
+ * @generated from message platform.v1.ListReceivablesRequest
+ */
+export declare type ListReceivablesRequest = Message<"platform.v1.ListReceivablesRequest"> & {
+  /**
+   * @generated from field: int32 page = 1;
+   */
+  page: number;
+
+  /**
+   * @generated from field: int32 page_size = 2;
+   */
+  pageSize: number;
+};
+
+/**
+ * Describes the message platform.v1.ListReceivablesRequest.
+ * Use `create(ListReceivablesRequestSchema)` to create a new message.
+ */
+export declare const ListReceivablesRequestSchema: GenMessage<ListReceivablesRequest>;
+
+/**
+ * @generated from message platform.v1.ListReceivablesResponse
+ */
+export declare type ListReceivablesResponse = Message<"platform.v1.ListReceivablesResponse"> & {
+  /**
+   * @generated from field: repeated platform.v1.Receivable rows = 1;
+   */
+  rows: Receivable[];
+
+  /**
+   * @generated from field: platform.v1.PlatformPagination pagination = 2;
+   */
+  pagination?: PlatformPagination | undefined;
+};
+
+/**
+ * Describes the message platform.v1.ListReceivablesResponse.
+ * Use `create(ListReceivablesResponseSchema)` to create a new message.
+ */
+export declare const ListReceivablesResponseSchema: GenMessage<ListReceivablesResponse>;
+
+/**
+ * Receivable:一期未付的帳(供 console 顯示與匯出 CSV)。G5 的平台自營公司不算租戶,不列入。
+ *
+ * @generated from message platform.v1.Receivable
+ */
+export declare type Receivable = Message<"platform.v1.Receivable"> & {
+  /**
+   * @generated from field: string company_id = 1;
+   */
+  companyId: string;
+
+  /**
+   * @generated from field: string company_name = 2;
+   */
+  companyName: string;
+
+  /**
+   * @generated from field: string plan_code = 3;
+   */
+  planCode: string;
+
+  /**
+   * @generated from field: int32 period_no = 4;
+   */
+  periodNo: number;
+
+  /**
+   * 兩位小數字串("1500.00")
+   *
+   * @generated from field: string amount = 5;
+   */
+  amount: string;
+
+  /**
+   * RFC3339
+   *
+   * @generated from field: string period_end = 6;
+   */
+  periodEnd: string;
+
+  /**
+   * open(未付;已過期末者即逾期)
+   *
+   * @generated from field: string status = 7;
+   */
+  status: string;
+};
+
+/**
+ * Describes the message platform.v1.Receivable.
+ * Use `create(ReceivableSchema)` to create a new message.
+ */
+export declare const ReceivableSchema: GenMessage<Receivable>;
+
+/**
+ * @generated from message platform.v1.RecordPaymentRequest
+ */
+export declare type RecordPaymentRequest = Message<"platform.v1.RecordPaymentRequest"> & {
+  /**
+   * @generated from field: string company_id = 1;
+   */
+  companyId: string;
+
+  /**
+   * 0 = 當前(最新)一期
+   *
+   * @generated from field: int32 period_no = 2;
+   */
+  periodNo: number;
+
+  /**
+   * 金額字串;空 = 採用期別快照金額(不支援部分付款)
+   *
+   * @generated from field: string amount = 3;
+   */
+  amount: string;
+
+  /**
+   * manual | ecpay | …;空 = manual
+   *
+   * @generated from field: string provider = 4;
+   */
+  provider: string;
+
+  /**
+   * 匯款帳號／交易號(重送冪等以此比對)
+   *
+   * @generated from field: string external_ref = 5;
+   */
+  externalRef: string;
+
+  /**
+   * @generated from field: string invoice_no = 6;
+   */
+  invoiceNo: string;
+
+  /**
+   * @generated from field: string invoice_status = 7;
+   */
+  invoiceStatus: string;
+
+  /**
+   * 統一編號
+   *
+   * @generated from field: string buyer_tax_id = 8;
+   */
+  buyerTaxId: string;
+
+  /**
+   * 載具
+   *
+   * @generated from field: string carrier = 9;
+   */
+  carrier: string;
+
+  /**
+   * 短收／溢收備註(不改變期別金額)
+   *
+   * @generated from field: string note = 10;
+   */
+  note: string;
+
+  /**
+   * 必填
+   *
+   * @generated from field: string reason = 11;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message platform.v1.RecordPaymentRequest.
+ * Use `create(RecordPaymentRequestSchema)` to create a new message.
+ */
+export declare const RecordPaymentRequestSchema: GenMessage<RecordPaymentRequest>;
+
+/**
+ * @generated from message platform.v1.RecordPaymentResponse
+ */
+export declare type RecordPaymentResponse = Message<"platform.v1.RecordPaymentResponse"> & {
+  /**
+   * @generated from field: int32 period_no = 1;
+   */
+  periodNo: number;
+
+  /**
+   * @generated from field: string status = 2;
+   */
+  status: string;
+};
+
+/**
+ * Describes the message platform.v1.RecordPaymentResponse.
+ * Use `create(RecordPaymentResponseSchema)` to create a new message.
+ */
+export declare const RecordPaymentResponseSchema: GenMessage<RecordPaymentResponse>;
+
+/**
+ * @generated from message platform.v1.SetSeatCountRequest
+ */
+export declare type SetSeatCountRequest = Message<"platform.v1.SetSeatCountRequest"> & {
+  /**
+   * @generated from field: string company_id = 1;
+   */
+  companyId: string;
+
+  /**
+   * 新席位數;不得小於目前使用中的席次
+   *
+   * @generated from field: int32 seat_count = 2;
+   */
+  seatCount: number;
+
+  /**
+   * 必填
+   *
+   * @generated from field: string reason = 3;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message platform.v1.SetSeatCountRequest.
+ * Use `create(SetSeatCountRequestSchema)` to create a new message.
+ */
+export declare const SetSeatCountRequestSchema: GenMessage<SetSeatCountRequest>;
+
+/**
+ * @generated from message platform.v1.SetSeatCountResponse
+ */
+export declare type SetSeatCountResponse = Message<"platform.v1.SetSeatCountResponse"> & {
+  /**
+   * @generated from field: int32 seat_count = 1;
+   */
+  seatCount: number;
+};
+
+/**
+ * Describes the message platform.v1.SetSeatCountResponse.
+ * Use `create(SetSeatCountResponseSchema)` to create a new message.
+ */
+export declare const SetSeatCountResponseSchema: GenMessage<SetSeatCountResponse>;
+
+/**
+ * @generated from message platform.v1.ChangePlanRequest
+ */
+export declare type ChangePlanRequest = Message<"platform.v1.ChangePlanRequest"> & {
+  /**
+   * @generated from field: string company_id = 1;
+   */
+  companyId: string;
+
+  /**
+   * 新方案;下一期生效,當期不動
+   *
+   * @generated from field: string plan_code = 2;
+   */
+  planCode: string;
+
+  /**
+   * 必填
+   *
+   * @generated from field: string reason = 3;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message platform.v1.ChangePlanRequest.
+ * Use `create(ChangePlanRequestSchema)` to create a new message.
+ */
+export declare const ChangePlanRequestSchema: GenMessage<ChangePlanRequest>;
+
+/**
+ * @generated from message platform.v1.ChangePlanResponse
+ */
+export declare type ChangePlanResponse = Message<"platform.v1.ChangePlanResponse"> & {
+  /**
+   * @generated from field: string plan_code = 1;
+   */
+  planCode: string;
+
+  /**
+   * 下一期起日(RFC3339)
+   *
+   * @generated from field: string effective_from = 2;
+   */
+  effectiveFrom: string;
+};
+
+/**
+ * Describes the message platform.v1.ChangePlanResponse.
+ * Use `create(ChangePlanResponseSchema)` to create a new message.
+ */
+export declare const ChangePlanResponseSchema: GenMessage<ChangePlanResponse>;
+
+/**
+ * @generated from message platform.v1.CancelSubscriptionRequest
+ */
+export declare type CancelSubscriptionRequest = Message<"platform.v1.CancelSubscriptionRequest"> & {
+  /**
+   * @generated from field: string company_id = 1;
+   */
+  companyId: string;
+
+  /**
+   * v1 僅支援 true(期末終止);false 回 PLAT-3001
+   *
+   * @generated from field: bool at_period_end = 2;
+   */
+  atPeriodEnd: boolean;
+
+  /**
+   * 必填
+   *
+   * @generated from field: string reason = 3;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message platform.v1.CancelSubscriptionRequest.
+ * Use `create(CancelSubscriptionRequestSchema)` to create a new message.
+ */
+export declare const CancelSubscriptionRequestSchema: GenMessage<CancelSubscriptionRequest>;
+
+/**
+ * @generated from message platform.v1.CancelSubscriptionResponse
+ */
+export declare type CancelSubscriptionResponse = Message<"platform.v1.CancelSubscriptionResponse"> & {
+  /**
+   * @generated from field: string cancelled_at = 1;
+   */
+  cancelledAt: string;
+
+  /**
+   * 服務提供到這個時間(期末)
+   *
+   * @generated from field: string service_until = 2;
+   */
+  serviceUntil: string;
+};
+
+/**
+ * Describes the message platform.v1.CancelSubscriptionResponse.
+ * Use `create(CancelSubscriptionResponseSchema)` to create a new message.
+ */
+export declare const CancelSubscriptionResponseSchema: GenMessage<CancelSubscriptionResponse>;
+
+/**
+ * @generated from message platform.v1.GetBillingSettingsRequest
+ */
+export declare type GetBillingSettingsRequest = Message<"platform.v1.GetBillingSettingsRequest"> & {
+};
+
+/**
+ * Describes the message platform.v1.GetBillingSettingsRequest.
+ * Use `create(GetBillingSettingsRequestSchema)` to create a new message.
+ */
+export declare const GetBillingSettingsRequestSchema: GenMessage<GetBillingSettingsRequest>;
+
+/**
+ * @generated from message platform.v1.GetBillingSettingsResponse
+ */
+export declare type GetBillingSettingsResponse = Message<"platform.v1.GetBillingSettingsResponse"> & {
+  /**
+   * @generated from field: repeated platform.v1.BillingSetting settings = 1;
+   */
+  settings: BillingSetting[];
+};
+
+/**
+ * Describes the message platform.v1.GetBillingSettingsResponse.
+ * Use `create(GetBillingSettingsResponseSchema)` to create a new message.
+ */
+export declare const GetBillingSettingsResponseSchema: GenMessage<GetBillingSettingsResponse>;
+
+/**
+ * BillingSetting:一項可由介面調整的營運參數(trial_days／grace_days／lead_days)。
+ *
+ * @generated from message platform.v1.BillingSetting
+ */
+export declare type BillingSetting = Message<"platform.v1.BillingSetting"> & {
+  /**
+   * @generated from field: string key = 1;
+   */
+  key: string;
+
+  /**
+   * @generated from field: string value = 2;
+   */
+  value: string;
+
+  /**
+   * @generated from field: string description = 3;
+   */
+  description: string;
+};
+
+/**
+ * Describes the message platform.v1.BillingSetting.
+ * Use `create(BillingSettingSchema)` to create a new message.
+ */
+export declare const BillingSettingSchema: GenMessage<BillingSetting>;
+
+/**
+ * @generated from message platform.v1.UpdateBillingSettingsRequest
+ */
+export declare type UpdateBillingSettingsRequest = Message<"platform.v1.UpdateBillingSettingsRequest"> & {
+  /**
+   * @generated from field: repeated platform.v1.BillingSetting settings = 1;
+   */
+  settings: BillingSetting[];
+
+  /**
+   * 必填
+   *
+   * @generated from field: string reason = 2;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message platform.v1.UpdateBillingSettingsRequest.
+ * Use `create(UpdateBillingSettingsRequestSchema)` to create a new message.
+ */
+export declare const UpdateBillingSettingsRequestSchema: GenMessage<UpdateBillingSettingsRequest>;
+
+/**
+ * @generated from message platform.v1.UpdateBillingSettingsResponse
+ */
+export declare type UpdateBillingSettingsResponse = Message<"platform.v1.UpdateBillingSettingsResponse"> & {
+  /**
+   * @generated from field: repeated platform.v1.BillingSetting settings = 1;
+   */
+  settings: BillingSetting[];
+};
+
+/**
+ * Describes the message platform.v1.UpdateBillingSettingsResponse.
+ * Use `create(UpdateBillingSettingsResponseSchema)` to create a new message.
+ */
+export declare const UpdateBillingSettingsResponseSchema: GenMessage<UpdateBillingSettingsResponse>;
+
+/**
+ * @generated from message platform.v1.SetTenantOverrideRequest
+ */
+export declare type SetTenantOverrideRequest = Message<"platform.v1.SetTenantOverrideRequest"> & {
+  /**
+   * @generated from field: string company_id = 1;
+   */
+  companyId: string;
+
+  /**
+   * @generated from field: string feature_code = 2;
+   */
+  featureCode: string;
+
+  /**
+   * false = 不覆寫 boolean 維度
+   *
+   * @generated from field: bool enabled_set = 3;
+   */
+  enabledSet: boolean;
+
+  /**
+   * @generated from field: bool enabled = 4;
+   */
+  enabled: boolean;
+
+  /**
+   * false = 不覆寫限額維度(不限額請給 limit_set + 極大值)
+   *
+   * @generated from field: bool limit_set = 5;
+   */
+  limitSet: boolean;
+
+  /**
+   * @generated from field: int64 limit_value = 6;
+   */
+  limitValue: bigint;
+
+  /**
+   * 承諾者(平台側人員)
+   *
+   * @generated from field: string owner = 7;
+   */
+  owner: string;
+
+  /**
+   * RFC3339;空 = 不過期
+   *
+   * @generated from field: string expires_at = 8;
+   */
+  expiresAt: string;
+
+  /**
+   * 必填
+   *
+   * @generated from field: string reason = 9;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message platform.v1.SetTenantOverrideRequest.
+ * Use `create(SetTenantOverrideRequestSchema)` to create a new message.
+ */
+export declare const SetTenantOverrideRequestSchema: GenMessage<SetTenantOverrideRequest>;
+
+/**
+ * @generated from message platform.v1.SetTenantOverrideResponse
+ */
+export declare type SetTenantOverrideResponse = Message<"platform.v1.SetTenantOverrideResponse"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message platform.v1.SetTenantOverrideResponse.
+ * Use `create(SetTenantOverrideResponseSchema)` to create a new message.
+ */
+export declare const SetTenantOverrideResponseSchema: GenMessage<SetTenantOverrideResponse>;
+
+/**
+ * @generated from message platform.v1.RevokeTenantOverrideRequest
+ */
+export declare type RevokeTenantOverrideRequest = Message<"platform.v1.RevokeTenantOverrideRequest"> & {
+  /**
+   * @generated from field: string override_id = 1;
+   */
+  overrideId: string;
+
+  /**
+   * 必填
+   *
+   * @generated from field: string reason = 2;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message platform.v1.RevokeTenantOverrideRequest.
+ * Use `create(RevokeTenantOverrideRequestSchema)` to create a new message.
+ */
+export declare const RevokeTenantOverrideRequestSchema: GenMessage<RevokeTenantOverrideRequest>;
+
+/**
+ * @generated from message platform.v1.RevokeTenantOverrideResponse
+ */
+export declare type RevokeTenantOverrideResponse = Message<"platform.v1.RevokeTenantOverrideResponse"> & {
+  /**
+   * @generated from field: string company_id = 1;
+   */
+  companyId: string;
+
+  /**
+   * @generated from field: string feature_code = 2;
+   */
+  featureCode: string;
+};
+
+/**
+ * Describes the message platform.v1.RevokeTenantOverrideResponse.
+ * Use `create(RevokeTenantOverrideResponseSchema)` to create a new message.
+ */
+export declare const RevokeTenantOverrideResponseSchema: GenMessage<RevokeTenantOverrideResponse>;
+
+/**
+ * @generated from message platform.v1.UpsertPlanPriceRequest
+ */
+export declare type UpsertPlanPriceRequest = Message<"platform.v1.UpsertPlanPriceRequest"> & {
+  /**
+   * @generated from field: string plan_code = 1;
+   */
+  planCode: string;
+
+  /**
+   * monthly | yearly
+   *
+   * @generated from field: string billing_cycle = 2;
+   */
+  billingCycle: string;
+
+  /**
+   * 金額字串("1500.00"),後端 money.ParseCents
+   *
+   * @generated from field: string base_price = 3;
+   */
+  basePrice: string;
+
+  /**
+   * @generated from field: string seat_price = 4;
+   */
+  seatPrice: string;
+
+  /**
+   * 空 = TWD
+   *
+   * @generated from field: string currency = 5;
+   */
+  currency: string;
+
+  /**
+   * 必填
+   *
+   * @generated from field: string reason = 6;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message platform.v1.UpsertPlanPriceRequest.
+ * Use `create(UpsertPlanPriceRequestSchema)` to create a new message.
+ */
+export declare const UpsertPlanPriceRequestSchema: GenMessage<UpsertPlanPriceRequest>;
+
+/**
+ * @generated from message platform.v1.UpsertPlanPriceResponse
+ */
+export declare type UpsertPlanPriceResponse = Message<"platform.v1.UpsertPlanPriceResponse"> & {
+};
+
+/**
+ * Describes the message platform.v1.UpsertPlanPriceResponse.
+ * Use `create(UpsertPlanPriceResponseSchema)` to create a new message.
+ */
+export declare const UpsertPlanPriceResponseSchema: GenMessage<UpsertPlanPriceResponse>;
+
+/**
+ * @generated from message platform.v1.SetPlanEntitlementRequest
+ */
+export declare type SetPlanEntitlementRequest = Message<"platform.v1.SetPlanEntitlementRequest"> & {
+  /**
+   * @generated from field: string plan_code = 1;
+   */
+  planCode: string;
+
+  /**
+   * @generated from field: string feature_code = 2;
+   */
+  featureCode: string;
+
+  /**
+   * @generated from field: bool enabled = 3;
+   */
+  enabled: boolean;
+
+  /**
+   * false = 不限額(NULL),不是 0
+   *
+   * @generated from field: bool limit_set = 4;
+   */
+  limitSet: boolean;
+
+  /**
+   * @generated from field: int64 limit_value = 5;
+   */
+  limitValue: bigint;
+
+  /**
+   * 必填
+   *
+   * @generated from field: string reason = 6;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message platform.v1.SetPlanEntitlementRequest.
+ * Use `create(SetPlanEntitlementRequestSchema)` to create a new message.
+ */
+export declare const SetPlanEntitlementRequestSchema: GenMessage<SetPlanEntitlementRequest>;
+
+/**
+ * @generated from message platform.v1.SetPlanEntitlementResponse
+ */
+export declare type SetPlanEntitlementResponse = Message<"platform.v1.SetPlanEntitlementResponse"> & {
+};
+
+/**
+ * Describes the message platform.v1.SetPlanEntitlementResponse.
+ * Use `create(SetPlanEntitlementResponseSchema)` to create a new message.
+ */
+export declare const SetPlanEntitlementResponseSchema: GenMessage<SetPlanEntitlementResponse>;
+
+/**
+ * @generated from message platform.v1.CreateOperatorRequest
+ */
+export declare type CreateOperatorRequest = Message<"platform.v1.CreateOperatorRequest"> & {
+  /**
+   * @generated from field: string email = 1;
+   */
+  email: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * operator | admin;空 = operator
+   *
+   * @generated from field: string role = 3;
+   */
+  role: string;
+
+  /**
+   * 必填
+   *
+   * @generated from field: string reason = 4;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message platform.v1.CreateOperatorRequest.
+ * Use `create(CreateOperatorRequestSchema)` to create a new message.
+ */
+export declare const CreateOperatorRequestSchema: GenMessage<CreateOperatorRequest>;
+
+/**
+ * @generated from message platform.v1.CreateOperatorResponse
+ */
+export declare type CreateOperatorResponse = Message<"platform.v1.CreateOperatorResponse"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message platform.v1.CreateOperatorResponse.
+ * Use `create(CreateOperatorResponseSchema)` to create a new message.
+ */
+export declare const CreateOperatorResponseSchema: GenMessage<CreateOperatorResponse>;
+
+/**
+ * @generated from message platform.v1.DisableOperatorRequest
+ */
+export declare type DisableOperatorRequest = Message<"platform.v1.DisableOperatorRequest"> & {
+  /**
+   * @generated from field: string operator_id = 1;
+   */
+  operatorId: string;
+
+  /**
+   * 必填
+   *
+   * @generated from field: string reason = 2;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message platform.v1.DisableOperatorRequest.
+ * Use `create(DisableOperatorRequestSchema)` to create a new message.
+ */
+export declare const DisableOperatorRequestSchema: GenMessage<DisableOperatorRequest>;
+
+/**
+ * @generated from message platform.v1.DisableOperatorResponse
+ */
+export declare type DisableOperatorResponse = Message<"platform.v1.DisableOperatorResponse"> & {
+};
+
+/**
+ * Describes the message platform.v1.DisableOperatorResponse.
+ * Use `create(DisableOperatorResponseSchema)` to create a new message.
+ */
+export declare const DisableOperatorResponseSchema: GenMessage<DisableOperatorResponse>;
+
+/**
  * GetTenantEntitlementsRequest:租戶端唯讀投影(自己的公司;前端據此 disable 按鈕與顯示用量)。
  *
  * @generated from message platform.v1.GetTenantEntitlementsRequest
@@ -693,6 +1469,113 @@ export declare const PlatformAdminService: GenService<{
     methodKind: "unary";
     input: typeof ListPlatformAuditRequestSchema;
     output: typeof ListPlatformAuditResponseSchema;
+  },
+  /**
+   * --- 平台寫入(T9)。共同契約:每個寫入都必須帶 reason(平台稽核必填),
+   * actor 一律是 cookie 上的真實 operator;資料與稽核同一個交易(失敗不留半成品)。
+   *
+   * @generated from rpc platform.v1.PlatformAdminService.ListReceivables
+   */
+  listReceivables: {
+    methodKind: "unary";
+    input: typeof ListReceivablesRequestSchema;
+    output: typeof ListReceivablesResponseSchema;
+  },
+  /**
+   * @generated from rpc platform.v1.PlatformAdminService.RecordPayment
+   */
+  recordPayment: {
+    methodKind: "unary";
+    input: typeof RecordPaymentRequestSchema;
+    output: typeof RecordPaymentResponseSchema;
+  },
+  /**
+   * @generated from rpc platform.v1.PlatformAdminService.SetSeatCount
+   */
+  setSeatCount: {
+    methodKind: "unary";
+    input: typeof SetSeatCountRequestSchema;
+    output: typeof SetSeatCountResponseSchema;
+  },
+  /**
+   * @generated from rpc platform.v1.PlatformAdminService.ChangePlan
+   */
+  changePlan: {
+    methodKind: "unary";
+    input: typeof ChangePlanRequestSchema;
+    output: typeof ChangePlanResponseSchema;
+  },
+  /**
+   * @generated from rpc platform.v1.PlatformAdminService.CancelSubscription
+   */
+  cancelSubscription: {
+    methodKind: "unary";
+    input: typeof CancelSubscriptionRequestSchema;
+    output: typeof CancelSubscriptionResponseSchema;
+  },
+  /**
+   * @generated from rpc platform.v1.PlatformAdminService.GetBillingSettings
+   */
+  getBillingSettings: {
+    methodKind: "unary";
+    input: typeof GetBillingSettingsRequestSchema;
+    output: typeof GetBillingSettingsResponseSchema;
+  },
+  /**
+   * @generated from rpc platform.v1.PlatformAdminService.UpdateBillingSettings
+   */
+  updateBillingSettings: {
+    methodKind: "unary";
+    input: typeof UpdateBillingSettingsRequestSchema;
+    output: typeof UpdateBillingSettingsResponseSchema;
+  },
+  /**
+   * @generated from rpc platform.v1.PlatformAdminService.SetTenantOverride
+   */
+  setTenantOverride: {
+    methodKind: "unary";
+    input: typeof SetTenantOverrideRequestSchema;
+    output: typeof SetTenantOverrideResponseSchema;
+  },
+  /**
+   * @generated from rpc platform.v1.PlatformAdminService.RevokeTenantOverride
+   */
+  revokeTenantOverride: {
+    methodKind: "unary";
+    input: typeof RevokeTenantOverrideRequestSchema;
+    output: typeof RevokeTenantOverrideResponseSchema;
+  },
+  /**
+   * @generated from rpc platform.v1.PlatformAdminService.UpsertPlanPrice
+   */
+  upsertPlanPrice: {
+    methodKind: "unary";
+    input: typeof UpsertPlanPriceRequestSchema;
+    output: typeof UpsertPlanPriceResponseSchema;
+  },
+  /**
+   * @generated from rpc platform.v1.PlatformAdminService.SetPlanEntitlement
+   */
+  setPlanEntitlement: {
+    methodKind: "unary";
+    input: typeof SetPlanEntitlementRequestSchema;
+    output: typeof SetPlanEntitlementResponseSchema;
+  },
+  /**
+   * @generated from rpc platform.v1.PlatformAdminService.CreateOperator
+   */
+  createOperator: {
+    methodKind: "unary";
+    input: typeof CreateOperatorRequestSchema;
+    output: typeof CreateOperatorResponseSchema;
+  },
+  /**
+   * @generated from rpc platform.v1.PlatformAdminService.DisableOperator
+   */
+  disableOperator: {
+    methodKind: "unary";
+    input: typeof DisableOperatorRequestSchema;
+    output: typeof DisableOperatorResponseSchema;
   },
 }>;
 

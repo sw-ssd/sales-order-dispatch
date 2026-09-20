@@ -38,8 +38,16 @@ func (v *ValkeyCache) Get(ctx context.Context, key string) ([]byte, bool, error)
 	return raw, true, nil
 }
 
-// Set 寫入快取。ttl <= 0 由 Valkey 語意決定（0 = 永不過期），呼叫端（Service）已先擋掉 ttl <= 0。
+// Set 寫入快取。**ttl <= 0 一律不入庫**（與 MemoryCache.Set 同一語意）。
+//
+// 為什麼不能沿用 Valkey 的原生語意（0 = 永不過期）：判定層的 `ttl <= 0` 意思是「不快取」，
+// 兩端各說各話的失效模式是**最壞的一種** —— 營運把 TTL 設成 0 想關掉快取，實際卻得到
+// 「永久快取這一份權益」，之後所有失效都靠寫入路徑記得刪；漏一條路徑就是永遠讀舊方案。
+// 呼叫端（Service.state）本來就會先擋，這裡再擋一次是為了讓**快取介面的契約**只有一種讀法。
 func (v *ValkeyCache) Set(ctx context.Context, key string, val []byte, ttl time.Duration) error {
+	if ttl <= 0 {
+		return nil
+	}
 	return v.client.Set(ctx, key, val, ttl).Err()
 }
 
@@ -101,6 +109,15 @@ func Invalidate(ctx context.Context, c Cache, companyID int) error {
 	return nil
 }
 
+// ErrScanUnsupported 為「這個快取實作不支援全量失效」的**哨兵錯誤**（實作缺 Scanner）。
+//
+// 為什麼要是可辨識的哨兵而不是一句錯誤字串：呼叫端（T9 的平台寫入 RPC）對這兩種結果的處置
+// 完全不同 —— 「不支援」（本機／單 replica 的 MemoryCache）是**已知的部署形態**，TTL 就是
+// 收斂上界，log 一行說明即可；「掃描／刪除失敗」（Valkey 故障）是意外，要留下可追的痕跡。
+// 兩者都只進 log（已落地的寫入不得因快取回錯——見 Invalidate 的說明），但字串比對會讓
+// 「Valkey 回了同樣的字」被當成「不支援」而靜默。
+var ErrScanUnsupported = errors.New("此快取實作不支援全量失效（缺少 Keys）")
+
 // InvalidateAll 清除**所有**租戶的權益快取（方案的內容與價目異動時使用）。
 //
 // 為什麼是「全部」而不是「用到該方案的租戶」：判定快照含方案的 entitlements，改一格方案等於
@@ -115,7 +132,7 @@ func InvalidateAll(ctx context.Context, c Cache) error {
 	}
 	sc, ok := c.(Scanner)
 	if !ok {
-		return errors.New("此快取實作不支援全量失效（缺少 Keys）")
+		return ErrScanUnsupported
 	}
 	keys, err := sc.Keys(ctx, cachePrefix+"*")
 	if err != nil {

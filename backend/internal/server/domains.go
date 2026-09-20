@@ -20,6 +20,7 @@ import (
 	domainauth "github.com/salesorder/sales-order-1.0/backend/internal/domain/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/handlers"
 	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/billing"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
 	postgresstore "github.com/salesorder/sales-order-1.0/backend/internal/platform/store/postgres"
@@ -145,9 +146,9 @@ func (s *Server) mountEntitlements(db *ent.Client) *entitlements.Service {
 	// 它們的失效才會對 API 生效）；Valkey 不可用時退回行程內記憶體 —— 快取是加速器，
 	// 不是啟動前提，沒有它配額判定照常運作（只是各行程各記一份、跨行程失效不生效）。
 	entCache := s.openEntitlementCache()
-	svc := entitlements.New(postgresstore.New(adminDB), services.NewEntitlementCounter(db),
-		entCache, entitlementCacheTTL)
-	s.entitlements, s.entitlementCache = svc, entCache
+	counters := services.NewEntitlementCounter(db)
+	svc := entitlements.New(postgresstore.New(adminDB), counters, entCache, entitlementCacheTTL)
+	s.entitlements, s.entitlementCache, s.entitlementCounter = svc, entCache, counters
 	log.Println("platform: 權益守衛已掛載（entitlements.Service → 四個業務服務）")
 	return svc
 }
@@ -210,8 +211,14 @@ func (s *Server) mountPlatformAuth() {
 	//
 	// 掛在此處（登入路由之後、OIDC 依賴檢查之前）：RPC 只需要 interceptor，不需要 Google
 	// discovery —— OIDC 暫時不可用時既有工作階段仍能讀取。
+	// 平台寫入的帳務狀態機（T9）：與排程／consumer 用同一組寫入介面（admin 連線），並接上
+	// **同一顆權益快取** —— 少了 .WithCache，收款把訂閱帶回 active 之後，判定層最長一個 TTL 內
+	// 仍讀舊權益（服務層自己的失效只涵蓋它經手的寫入，billing 內部的狀態轉移要看這裡）。
+	// 快取未掛載時為 nil：entitlements.Invalidate 對 nil 是 no-op（沒有快取＝沒有東西要失效）。
+	platformBilling := billing.NewBilling(postgresstore.New(adminDB)).WithCache(s.entitlementCache)
 	platformMux := http.NewServeMux()
-	services.RegisterPlatformAdminService(platformMux, postgresstore.NewAdmin(adminDB), opAuth)
+	services.RegisterPlatformAdminService(platformMux, postgresstore.NewAdmin(adminDB),
+		platformBilling, s.entitlementCache, s.entitlementCounter, opAuth)
 	s.router.Mount(operatorauth.CookiePath, http.StripPrefix(operatorauth.CookiePath, platformMux))
 
 	clientID := s.cfg.Auth.GoogleClientID

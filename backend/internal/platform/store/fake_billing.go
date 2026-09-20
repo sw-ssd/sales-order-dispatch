@@ -25,6 +25,8 @@ import (
 //   - MarkPeriodPaidTx:同交易號重送是完全 no-op(既有付款憑據一個都不動)、交易號不同即拒絕、
 //     **同一 provider ＋ 交易號不得入帳兩期**(00029 的 periods_provider_ref_unique)、
 //     note 為空字串時保留原值、狀態為 void 等一律拒絕並說出狀態;
+//   - SetSeatCountTx／SetSubscriptionPlanTx:訂閱不存在 → sql.ErrNoRows(不得靜默成功);
+//     PlanIDByCodeTx 對「已歸檔」視同不存在(假實作只認 PutPlan 註冊過的方案);
 //   - EmitEventTx:空 payload 存成 '{}'(SQL 的 jsonb 欄位不接受空字串);
 //   - RecordAuditTx 的 reason 必填(空字串即拒絕);
 //   - 排程三個查詢的集合邊界(最新一期**仍是 open** 且期末 < now、grace_until IS NOT NULL、
@@ -49,6 +51,9 @@ type FakeBilling struct {
 	prices     map[priceKey]Price
 	audits     []AuditRecord
 	settings   map[string]string
+	// plans 為 code → 方案 id(**只註冊 active 的方案**):PlanIDByCodeTx 對已歸檔者視同不存在,
+	// 而「歸檔」是 SQL 的 WHERE 條件,假實作不需要另一份狀態 —— 不註冊就是不存在。
+	plans map[string]int64
 }
 
 // priceKey 為價目的鍵(方案 × 計費週期);SQL 端另有 effective_from 的生效順序,假實作只保留
@@ -73,6 +78,7 @@ func NewFakeBilling() *FakeBilling {
 		dispatched: map[int64]bool{},
 		prices:     map[priceKey]Price{},
 		settings:   map[string]string{},
+		plans:      map[string]int64{},
 	}
 }
 
@@ -113,6 +119,14 @@ func (f *FakeBilling) PutPlanPrice(planID int64, cycle string, p Price) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.prices[priceKey{planID: planID, cycle: cycle}] = p
+}
+
+// PutPlan 註冊一個可被指派的方案(code → id)。未註冊者(含已歸檔的方案)在 PlanIDByCodeTx
+// 一律視同不存在 —— 與 SQL 的 `status = 'active'` 條件同語意。
+func (f *FakeBilling) PutPlan(code string, id int64) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.plans[code] = id
 }
 
 // PutSetting 種一筆營運參數(含 system_actor_user_id)。
@@ -266,7 +280,7 @@ func (f *FakeBilling) CurrentPriceTx(_ context.Context, _ *sql.Tx, planID int64,
 // MarkPeriodPaidTx 標記期別已付款(見型別說明:同交易號重送 no-op 且不動既有憑據、不同交易號
 // 拒絕、同一交易號不得入帳兩期、note 空字串保留原值、其他狀態一律拒絕)。
 func (f *FakeBilling) MarkPeriodPaidTx(_ context.Context, _ *sql.Tx, id int64, paidAt time.Time,
-	invoiceNo, provider, externalRef, note string) error {
+	invoiceNo, invoiceStatus, buyerTaxID, carrier, provider, externalRef, note string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	i := f.periodIndex(id)
@@ -305,6 +319,41 @@ func (f *FakeBilling) MarkPeriodPaidTx(_ context.Context, _ *sql.Tx, id int64, p
 		p.Note = note
 	}
 	return nil
+}
+
+// SetSeatCountTx 更新席位數;訂閱不存在回 sql.ErrNoRows(與 SQL 同語意)。
+func (f *FakeBilling) SetSeatCountTx(_ context.Context, _ *sql.Tx, subID int64, seats int) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	i := f.subIndex(subID)
+	if i < 0 {
+		return fmt.Errorf("訂閱 %d 不存在: %w", subID, sql.ErrNoRows)
+	}
+	f.subs[i].SeatCount = seats
+	return nil
+}
+
+// SetSubscriptionPlanTx 改訂閱的方案;訂閱不存在回 sql.ErrNoRows(與 SQL 同語意)。
+func (f *FakeBilling) SetSubscriptionPlanTx(_ context.Context, _ *sql.Tx, subID, planID int64) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	i := f.subIndex(subID)
+	if i < 0 {
+		return fmt.Errorf("訂閱 %d 不存在: %w", subID, sql.ErrNoRows)
+	}
+	f.subs[i].PlanID = planID
+	return nil
+}
+
+// PlanIDByCodeTx 以 code 取方案 id;未註冊(不存在／已歸檔)回 sql.ErrNoRows。
+func (f *FakeBilling) PlanIDByCodeTx(_ context.Context, _ *sql.Tx, code string) (int64, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	id, ok := f.plans[code]
+	if !ok {
+		return 0, fmt.Errorf("方案 %q 不存在或已歸檔: %w", code, sql.ErrNoRows)
+	}
+	return id, nil
 }
 
 // PeriodsByStatus 取指定狀態的期別,依 (subscription_id, period_no) 排序(與 SQL 同序)。

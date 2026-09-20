@@ -163,27 +163,35 @@ func (s *Store) CurrentPriceTx(ctx context.Context, tx *sql.Tx, planID int64, cy
 // MarkPeriodPaidTx 標記期別為已付款。三種情境各自有明確結果:
 //   - status='open' → 入帳;
 //   - 已是 paid 且**交易號相同** → 視為重複入帳(webhook 重播／呼叫端重試),**完全 no-op**:
-//     付款憑據(paid_at／invoice_no／payment_provider／external_ref)只有在第一次入帳時才寫 ——
-//     重播若沒重帶發票號(空字串),把已存的發票號清成 NULL 就是把稅務與對帳憑據抹掉;
+//     付款憑據(paid_at／invoice_no／invoice_status／buyer_tax_id／carrier／payment_provider／
+//     external_ref)只有在第一次入帳時才寫 —— 重播若沒重帶發票號(空字串),把已存的發票號清成
+//     NULL 就是把稅務與對帳憑據抹掉;
 //   - 已是 paid 但交易號不同 → 錯誤(不得覆蓋別筆收款);
 //   - 其他狀態(status='void' 等) → 錯誤並說出實際狀態(不得講成「已付款」)。
 //
 // note(G8)為短收／溢收的人工註記:未提供(空字串)時**保留原值**;入帳與重播都可以補寫它
 // (它描述的是這筆收款的事實,不是入帳當下的快照)。
+//
+// 開票資訊(invoice_status／buyer_tax_id／carrier)與 invoice_no 同一組 CASE:它們是**入帳當下
+// 的憑據**,重播不得改寫(見上),故不落在 CASE 之外。三者都是 NULLIF(...,”) —— 空字串在
+// 這些欄位代表「未提供」,寫成 ” 會讓 console 分不出「沒填」與「填了空」。
 func (s *Store) MarkPeriodPaidTx(ctx context.Context, tx *sql.Tx, id int64, paidAt time.Time,
-	invoiceNo, provider, externalRef, note string) error {
+	invoiceNo, invoiceStatus, buyerTaxID, carrier, provider, externalRef, note string) error {
 	res, err := tx.ExecContext(ctx, `
 		UPDATE platform.subscription_periods
 		   SET status = 'paid',
 		       paid_at = CASE WHEN status = 'open' THEN $2 ELSE paid_at END,
 		       invoice_no = CASE WHEN status = 'open' THEN NULLIF($3,'') ELSE invoice_no END,
-		       payment_provider = CASE WHEN status = 'open' THEN $4 ELSE payment_provider END,
-		       external_ref = CASE WHEN status = 'open' THEN NULLIF($5,'') ELSE external_ref END,
-		       note = COALESCE(NULLIF($6,''), note)
+		       invoice_status = CASE WHEN status = 'open' THEN NULLIF($4,'') ELSE invoice_status END,
+		       buyer_tax_id = CASE WHEN status = 'open' THEN NULLIF($5,'') ELSE buyer_tax_id END,
+		       carrier = CASE WHEN status = 'open' THEN NULLIF($6,'') ELSE carrier END,
+		       payment_provider = CASE WHEN status = 'open' THEN $7 ELSE payment_provider END,
+		       external_ref = CASE WHEN status = 'open' THEN NULLIF($8,'') ELSE external_ref END,
+		       note = COALESCE(NULLIF($9,''), note)
 		 WHERE id = $1 AND (
 		    status = 'open'
-		    OR (status = 'paid' AND COALESCE(external_ref,'') = COALESCE(NULLIF($5,''),''))
-		 )`, id, paidAt, invoiceNo, provider, externalRef, note)
+		    OR (status = 'paid' AND COALESCE(external_ref,'') = COALESCE(NULLIF($8,''),''))
+		 )`, id, paidAt, invoiceNo, invoiceStatus, buyerTaxID, carrier, provider, externalRef, note)
 	if err != nil {
 		return err
 	}
@@ -209,6 +217,61 @@ func (s *Store) MarkPeriodPaidTx(ctx context.Context, tx *sql.Tx, id int64, paid
 		}
 		return fmt.Errorf("期別 %d 已付款（交易號 %q）且交易號不同（%q），拒絕覆蓋",
 			id, ref.String, externalRef)
+	}
+	return nil
+}
+
+// SetSeatCountTx 更新席位數。**訂閱不存在時回 sql.ErrNoRows**(不得靜默成功:0 列被改到卻回 nil,
+// 呼叫端會在同一交易內照樣寫稽核,留下「稽核說改席位、DB 沒動」的帳實不符)。
+//
+// 只改 subscriptions.seat_count:當期期別的 seat_count 是**開帳當下的快照**,改它等於回溯改帳
+// (已經開出去的金額與快照對不上)。新席位數在**下一次產期**時才被快照進新期別。
+func (s *Store) SetSeatCountTx(ctx context.Context, tx *sql.Tx, subID int64, seats int) error {
+	return execOneTx(ctx, tx, `
+		UPDATE platform.subscriptions
+		   SET seat_count = $2, updated_at = now()
+		 WHERE id = $1`, subID, seats)
+}
+
+// SetSubscriptionPlanTx 改訂閱的方案。與席位同理:當期期別的 plan_id 是快照,不動;下一期起
+// 才用新方案與新價(見 store.BillingStore 的說明)。訂閱不存在回 sql.ErrNoRows。
+func (s *Store) SetSubscriptionPlanTx(ctx context.Context, tx *sql.Tx, subID, planID int64) error {
+	return execOneTx(ctx, tx, `
+		UPDATE platform.subscriptions
+		   SET plan_id = $2, updated_at = now()
+		 WHERE id = $1`, subID, planID)
+}
+
+// PlanIDByCodeTx 以 code 取方案 id。**已歸檔(status='archived')視同不存在**:方案歸檔的語意是
+// 「不再賣」,而改訂閱的方案就是一次新的指派 —— 兩者混用會讓歸檔方案繼續被賣出去。
+func (s *Store) PlanIDByCodeTx(ctx context.Context, tx *sql.Tx, code string) (int64, error) {
+	var id int64
+	err := tx.QueryRowContext(ctx, `
+		SELECT id FROM platform.plans WHERE code = $1 AND status = 'active'`, code).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, fmt.Errorf("方案 %q 不存在或已歸檔: %w", code, sql.ErrNoRows)
+	}
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
+// execOneTx 執行一段「必須改到恰好一列」的 UPDATE:0 列即 sql.ErrNoRows。
+//
+// 共用的理由:平台寫入的每一支 UPDATE 都有同一個失效模式 —— 條件沒命中卻回 nil,呼叫端於是
+// 在同一交易內寫下與事實不符的稽核。把「0 列 = 不存在」收斂在一處,才不會有一支漏掉。
+func execOneTx(ctx context.Context, tx *sql.Tx, query string, args ...any) error {
+	res, err := tx.ExecContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return sql.ErrNoRows
 	}
 	return nil
 }
@@ -377,6 +440,16 @@ func (s *Store) MarkEventDispatchedTx(ctx context.Context, tx *sql.Tx, id int64)
 // reason 必填:動到錢與權限的操作必須留下「為什麼」,空字串即拒絕(不寫半筆)。
 func (s *Store) RecordAuditTx(ctx context.Context, tx *sql.Tx, operatorID int64,
 	action, targetType, targetID, reason string, before, after []byte) error {
+	return recordAuditTx(ctx, tx, operatorID, action, targetType, targetID, reason, before, after)
+}
+
+// recordAuditTx 為平台稽核的唯一 INSERT(*Store 的帳務寫入與 *Admin 的 console 寫入共用)。
+//
+// 兩條路徑共用一句 SQL 的理由:稽核的欄位對應一旦分岔,就會有一邊寫錯欄位而**沒有人會發現**
+// (稽核不參與任何業務判斷,寫錯了照樣 commit)。nullJSON 的處理也在同一個地方:before／after
+// 沒提供時是 SQL NULL,不是 jsonb 的 'null'(見 nullJSON)。
+func recordAuditTx(ctx context.Context, tx *sql.Tx, operatorID int64,
+	action, targetType, targetID, reason string, before, after []byte) error {
 	if reason == "" {
 		return errors.New("平台稽核必須提供原因")
 	}
@@ -433,6 +506,11 @@ func (s *Store) Setting(ctx context.Context, key string) (string, error) {
 
 // UpsertSettingTx 寫入營運參數(console 維護用;seed 亦寫同一張表,故用 upsert 保持冪等)。
 func (s *Store) UpsertSettingTx(ctx context.Context, tx *sql.Tx, key, value string) error {
+	return upsertSettingTx(ctx, tx, key, value)
+}
+
+// upsertSettingTx 為營運參數的唯一寫入(*Store 與 *Admin 共用;seed 亦寫同一張表故必須冪等)。
+func upsertSettingTx(ctx context.Context, tx *sql.Tx, key, value string) error {
 	_, err := tx.ExecContext(ctx, `
 		INSERT INTO platform.settings (key, value) VALUES ($1,$2)
 		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`, key, value)

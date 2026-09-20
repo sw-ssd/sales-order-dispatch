@@ -93,7 +93,7 @@ func TestPlatformAdminRequiresOperatorIdentity(t *testing.T) {
 		for _, c := range platformAdminCalls() {
 			t.Run(ctxName+"/"+c.name, func(t *testing.T) {
 				fake := platformAdminFixture()
-				svc := NewPlatformAdminService(fake)
+				svc := newReadOnlyPlatformService(fake)
 
 				err := c.call(ctx, svc)
 				if connect.CodeOf(err) != connect.CodeUnauthenticated {
@@ -114,7 +114,7 @@ func TestPlatformAdminRequiresOperatorIdentity(t *testing.T) {
 	for _, c := range platformAdminCalls() {
 		t.Run("operator/"+c.name, func(t *testing.T) {
 			fake := platformAdminFixture()
-			svc := NewPlatformAdminService(fake)
+			svc := newReadOnlyPlatformService(fake)
 
 			if err := c.call(opCtx, svc); err != nil {
 				t.Fatalf("operator 身分應可讀取: %v", err)
@@ -132,7 +132,7 @@ func TestPlatformAdminRequiresOperatorIdentity(t *testing.T) {
 // 分頁用 0（未指定）:全 domain 的慣例是 page<1→1、page_size<1→預設 20,回應帶**正規化後**的
 // 值才不會讓前端算出錯誤的頁數。
 func TestPlatformAdminListTenantsMapsSummary(t *testing.T) {
-	svc := NewPlatformAdminService(platformAdminFixture())
+	svc := newReadOnlyPlatformService(platformAdminFixture())
 	ctx := operatorauth.WithIdentity(context.Background(),
 		operatorauth.Identity{OperatorID: 1, Email: "ops@example.com", Role: "admin"})
 
@@ -193,7 +193,7 @@ func TestPlatformAdminRejectsInvalidArguments(t *testing.T) {
 	for name, call := range tests {
 		t.Run(name, func(t *testing.T) {
 			fake := platformAdminFixture()
-			svc := NewPlatformAdminService(fake)
+			svc := newReadOnlyPlatformService(fake)
 
 			err := call(svc)
 			if connect.CodeOf(err) != connect.CodeInvalidArgument {
@@ -229,7 +229,7 @@ func TestPlatformAdminMapsNotFound(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			fake := platformAdminFixture()
 			fake.err = platformstore.ErrNotFound
-			svc := NewPlatformAdminService(fake)
+			svc := newReadOnlyPlatformService(fake)
 
 			err := call(svc)
 			if connect.CodeOf(err) != connect.CodeNotFound {
@@ -239,36 +239,6 @@ func TestPlatformAdminMapsNotFound(t *testing.T) {
 				t.Fatalf("必須是註冊碼 SYS-4002,got %q", got)
 			}
 		})
-	}
-}
-
-// TestPlatformAdminRecordAuditKeepsOperatorActor 驗平台稽核的參數映射:actor 是** operator id**
-// (v1 只有讀取 RPC,寫入路徑由後續任務接上;映射若把租戶 user id 當 actor,平台稽核就失去意義)。
-func TestPlatformAdminRecordAuditKeepsOperatorActor(t *testing.T) {
-	fake := platformAdminFixture()
-	svc := NewPlatformAdminService(fake)
-	identity := operatorauth.Identity{OperatorID: 42, Email: "ops@example.com", Role: "admin"}
-
-	before := map[string]any{"role": "operator"}
-	after := map[string]any{"role": "admin"}
-	if err := svc.recordPlatformAudit(context.Background(), identity,
-		"operator.update", "operator", "9", "升為管理員", before, after); err != nil {
-		t.Fatalf("寫入稽核: %v", err)
-	}
-
-	if len(fake.recorded) != 1 {
-		t.Fatalf("應寫入 1 筆稽核,got %d", len(fake.recorded))
-	}
-	got := fake.recorded[0]
-	if got.operatorID != 42 {
-		t.Fatalf("actor 必須是 operator id（42）,got %d", got.operatorID)
-	}
-	if got.action != "operator.update" || got.targetType != "operator" || got.targetID != "9" ||
-		got.reason != "升為管理員" {
-		t.Fatalf("稽核欄位映射錯誤: %+v", got)
-	}
-	if got.before["role"] != "operator" || got.after["role"] != "admin" {
-		t.Fatalf("before／after 未原樣帶入: %+v / %+v", got.before, got.after)
 	}
 }
 
@@ -284,18 +254,19 @@ type fakePlatformStore struct {
 	ents      []FeatureEntitlementRow
 	features  []FeatureRow
 	audit     []PlatformAuditRow
-	err       error
+	// receivables 為 ListReceivables 的來源(T9);settings 為營運參數(T9)。
+	receivables []ReceivableRow
+	settings    map[string]string
+	err         error
+	// writes 為 T9 寫入路徑的記錄器(定義在 platform_admin_write_test.go):寫入方法全部掛在
+	// 它上面,讓「一次寫入恰一筆稽核」與「失敗不留半成品」可以逐項斷言。
+	writes *fakeWrites
+	// createOperatorConflict 模擬 email 唯一鍵衝突(store.ErrConflict)。
+	createOperatorConflict bool
 
 	// calls 為 store 被查詢的次數:「擋下來了」不能只是回應長得像——資料庫早已被讀過一遍
 	// 也算越界,故授權／參數檢查必須在查詢之前。
-	calls    int
-	recorded []recordedAudit
-}
-
-type recordedAudit struct {
-	operatorID                           int64
-	action, targetType, targetID, reason string
-	before, after                        map[string]any
+	calls int
 }
 
 func (f *fakePlatformStore) ListTenants(context.Context, string, string, int32, int32) ([]TenantRow, int, error) {
@@ -336,13 +307,4 @@ func (f *fakePlatformStore) ListPlatformAudit(context.Context, string, string, i
 		return nil, 0, f.err
 	}
 	return f.audit, len(f.audit), nil
-}
-
-func (f *fakePlatformStore) RecordAudit(_ context.Context, operatorID int64,
-	action, targetType, targetID, reason string, before, after map[string]any) error {
-	f.recorded = append(f.recorded, recordedAudit{
-		operatorID: operatorID, action: action, targetType: targetType, targetID: targetID,
-		reason: reason, before: before, after: after,
-	})
-	return f.err
 }

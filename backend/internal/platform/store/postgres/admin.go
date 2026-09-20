@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"strconv"
 	"strings"
@@ -13,6 +12,9 @@ import (
 
 // Admin 為平台營運工具(PlatformAdminService)的存取層:跨租戶投影查詢 ＋ 平台稽核寫入。
 // 一律 admin(owner)連線:platform schema 對業務角色 app_rw 零權限(00029/S9)。
+//
+// 稽核一律**與資料同一個交易**(RecordAuditTx,見 admin_writes.go):本型別沒有非交易式的
+// 稽核入口 —— 那會允許「稽核說改了、其實沒動」的半成品(T9 移除了 v1 唯讀時期的暫置物)。
 //
 // 為什麼不併進 Store:
 //   - Store 服務權益**判定**(方案／權益／訂閱／例外,供四個業務服務的配額守衛),本型別
@@ -388,27 +390,6 @@ func (s *Admin) ListPlatformAudit(ctx context.Context, targetType, targetID stri
 	return out, total, rows.Err()
 }
 
-// RecordAudit 寫入平台稽核(S9:actor 為 operator_id,不 FK 租戶 users —— 平台操作沒有租戶身分)。
-//
-// before／after 為 nil 時寫 SQL NULL,不是 JSON 的 null:稽核上「沒有這個資訊」與「值就是
-// null」是兩件事,而 json.Marshal(nil map) 會得到後者。
-func (s *Admin) RecordAudit(ctx context.Context, operatorID int64, action, targetType, targetID, reason string,
-	before, after map[string]any) error {
-	b, err := jsonbParam(before)
-	if err != nil {
-		return err
-	}
-	a, err := jsonbParam(after)
-	if err != nil {
-		return err
-	}
-	_, err = s.db.ExecContext(ctx, `
-		INSERT INTO platform.audit_logs (operator_id, action, target_type, target_id, reason, before, after)
-		VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb)`,
-		operatorID, action, targetType, targetID, reason, b, a)
-	return err
-}
-
 // scanTenant 讀取 tenantCols 的一列(*sql.Row 與 *sql.Rows 共用)。
 func scanTenant(sc rowScanner) (store.TenantRow, error) {
 	var (
@@ -446,16 +427,4 @@ type queryer interface {
 func likeContains(keyword string) string {
 	r := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
 	return "%" + r.Replace(keyword) + "%"
-}
-
-// jsonbParam 把 JSON 物件轉為可綁進 jsonb 欄位的參數(nil → SQL NULL)。
-func jsonbParam(m map[string]any) (any, error) {
-	if m == nil {
-		return nil, nil
-	}
-	raw, err := json.Marshal(m)
-	if err != nil {
-		return nil, err
-	}
-	return string(raw), nil
 }

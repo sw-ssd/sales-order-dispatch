@@ -50,6 +50,45 @@ const (
 	// PlatformAdminServiceListPlatformAuditProcedure is the fully-qualified name of the
 	// PlatformAdminService's ListPlatformAudit RPC.
 	PlatformAdminServiceListPlatformAuditProcedure = "/platform.v1.PlatformAdminService/ListPlatformAudit"
+	// PlatformAdminServiceListReceivablesProcedure is the fully-qualified name of the
+	// PlatformAdminService's ListReceivables RPC.
+	PlatformAdminServiceListReceivablesProcedure = "/platform.v1.PlatformAdminService/ListReceivables"
+	// PlatformAdminServiceRecordPaymentProcedure is the fully-qualified name of the
+	// PlatformAdminService's RecordPayment RPC.
+	PlatformAdminServiceRecordPaymentProcedure = "/platform.v1.PlatformAdminService/RecordPayment"
+	// PlatformAdminServiceSetSeatCountProcedure is the fully-qualified name of the
+	// PlatformAdminService's SetSeatCount RPC.
+	PlatformAdminServiceSetSeatCountProcedure = "/platform.v1.PlatformAdminService/SetSeatCount"
+	// PlatformAdminServiceChangePlanProcedure is the fully-qualified name of the PlatformAdminService's
+	// ChangePlan RPC.
+	PlatformAdminServiceChangePlanProcedure = "/platform.v1.PlatformAdminService/ChangePlan"
+	// PlatformAdminServiceCancelSubscriptionProcedure is the fully-qualified name of the
+	// PlatformAdminService's CancelSubscription RPC.
+	PlatformAdminServiceCancelSubscriptionProcedure = "/platform.v1.PlatformAdminService/CancelSubscription"
+	// PlatformAdminServiceGetBillingSettingsProcedure is the fully-qualified name of the
+	// PlatformAdminService's GetBillingSettings RPC.
+	PlatformAdminServiceGetBillingSettingsProcedure = "/platform.v1.PlatformAdminService/GetBillingSettings"
+	// PlatformAdminServiceUpdateBillingSettingsProcedure is the fully-qualified name of the
+	// PlatformAdminService's UpdateBillingSettings RPC.
+	PlatformAdminServiceUpdateBillingSettingsProcedure = "/platform.v1.PlatformAdminService/UpdateBillingSettings"
+	// PlatformAdminServiceSetTenantOverrideProcedure is the fully-qualified name of the
+	// PlatformAdminService's SetTenantOverride RPC.
+	PlatformAdminServiceSetTenantOverrideProcedure = "/platform.v1.PlatformAdminService/SetTenantOverride"
+	// PlatformAdminServiceRevokeTenantOverrideProcedure is the fully-qualified name of the
+	// PlatformAdminService's RevokeTenantOverride RPC.
+	PlatformAdminServiceRevokeTenantOverrideProcedure = "/platform.v1.PlatformAdminService/RevokeTenantOverride"
+	// PlatformAdminServiceUpsertPlanPriceProcedure is the fully-qualified name of the
+	// PlatformAdminService's UpsertPlanPrice RPC.
+	PlatformAdminServiceUpsertPlanPriceProcedure = "/platform.v1.PlatformAdminService/UpsertPlanPrice"
+	// PlatformAdminServiceSetPlanEntitlementProcedure is the fully-qualified name of the
+	// PlatformAdminService's SetPlanEntitlement RPC.
+	PlatformAdminServiceSetPlanEntitlementProcedure = "/platform.v1.PlatformAdminService/SetPlanEntitlement"
+	// PlatformAdminServiceCreateOperatorProcedure is the fully-qualified name of the
+	// PlatformAdminService's CreateOperator RPC.
+	PlatformAdminServiceCreateOperatorProcedure = "/platform.v1.PlatformAdminService/CreateOperator"
+	// PlatformAdminServiceDisableOperatorProcedure is the fully-qualified name of the
+	// PlatformAdminService's DisableOperator RPC.
+	PlatformAdminServiceDisableOperatorProcedure = "/platform.v1.PlatformAdminService/DisableOperator"
 	// TenantEntitlementServiceGetTenantEntitlementsProcedure is the fully-qualified name of the
 	// TenantEntitlementService's GetTenantEntitlements RPC.
 	TenantEntitlementServiceGetTenantEntitlementsProcedure = "/platform.v1.TenantEntitlementService/GetTenantEntitlements"
@@ -62,6 +101,21 @@ type PlatformAdminServiceClient interface {
 	ListPlans(context.Context, *connect.Request[v1.ListPlansRequest]) (*connect.Response[v1.ListPlansResponse], error)
 	GetPlanEntitlements(context.Context, *connect.Request[v1.GetPlanEntitlementsRequest]) (*connect.Response[v1.GetPlanEntitlementsResponse], error)
 	ListPlatformAudit(context.Context, *connect.Request[v1.ListPlatformAuditRequest]) (*connect.Response[v1.ListPlatformAuditResponse], error)
+	// --- 平台寫入(T9)。共同契約:每個寫入都必須帶 reason(平台稽核必填),
+	// actor 一律是 cookie 上的真實 operator;資料與稽核同一個交易(失敗不留半成品)。
+	ListReceivables(context.Context, *connect.Request[v1.ListReceivablesRequest]) (*connect.Response[v1.ListReceivablesResponse], error)
+	RecordPayment(context.Context, *connect.Request[v1.RecordPaymentRequest]) (*connect.Response[v1.RecordPaymentResponse], error)
+	SetSeatCount(context.Context, *connect.Request[v1.SetSeatCountRequest]) (*connect.Response[v1.SetSeatCountResponse], error)
+	ChangePlan(context.Context, *connect.Request[v1.ChangePlanRequest]) (*connect.Response[v1.ChangePlanResponse], error)
+	CancelSubscription(context.Context, *connect.Request[v1.CancelSubscriptionRequest]) (*connect.Response[v1.CancelSubscriptionResponse], error)
+	GetBillingSettings(context.Context, *connect.Request[v1.GetBillingSettingsRequest]) (*connect.Response[v1.GetBillingSettingsResponse], error)
+	UpdateBillingSettings(context.Context, *connect.Request[v1.UpdateBillingSettingsRequest]) (*connect.Response[v1.UpdateBillingSettingsResponse], error)
+	SetTenantOverride(context.Context, *connect.Request[v1.SetTenantOverrideRequest]) (*connect.Response[v1.SetTenantOverrideResponse], error)
+	RevokeTenantOverride(context.Context, *connect.Request[v1.RevokeTenantOverrideRequest]) (*connect.Response[v1.RevokeTenantOverrideResponse], error)
+	UpsertPlanPrice(context.Context, *connect.Request[v1.UpsertPlanPriceRequest]) (*connect.Response[v1.UpsertPlanPriceResponse], error)
+	SetPlanEntitlement(context.Context, *connect.Request[v1.SetPlanEntitlementRequest]) (*connect.Response[v1.SetPlanEntitlementResponse], error)
+	CreateOperator(context.Context, *connect.Request[v1.CreateOperatorRequest]) (*connect.Response[v1.CreateOperatorResponse], error)
+	DisableOperator(context.Context, *connect.Request[v1.DisableOperatorRequest]) (*connect.Response[v1.DisableOperatorResponse], error)
 }
 
 // NewPlatformAdminServiceClient constructs a client for the platform.v1.PlatformAdminService
@@ -105,16 +159,107 @@ func NewPlatformAdminServiceClient(httpClient connect.HTTPClient, baseURL string
 			connect.WithSchema(platformAdminServiceMethods.ByName("ListPlatformAudit")),
 			connect.WithClientOptions(opts...),
 		),
+		listReceivables: connect.NewClient[v1.ListReceivablesRequest, v1.ListReceivablesResponse](
+			httpClient,
+			baseURL+PlatformAdminServiceListReceivablesProcedure,
+			connect.WithSchema(platformAdminServiceMethods.ByName("ListReceivables")),
+			connect.WithClientOptions(opts...),
+		),
+		recordPayment: connect.NewClient[v1.RecordPaymentRequest, v1.RecordPaymentResponse](
+			httpClient,
+			baseURL+PlatformAdminServiceRecordPaymentProcedure,
+			connect.WithSchema(platformAdminServiceMethods.ByName("RecordPayment")),
+			connect.WithClientOptions(opts...),
+		),
+		setSeatCount: connect.NewClient[v1.SetSeatCountRequest, v1.SetSeatCountResponse](
+			httpClient,
+			baseURL+PlatformAdminServiceSetSeatCountProcedure,
+			connect.WithSchema(platformAdminServiceMethods.ByName("SetSeatCount")),
+			connect.WithClientOptions(opts...),
+		),
+		changePlan: connect.NewClient[v1.ChangePlanRequest, v1.ChangePlanResponse](
+			httpClient,
+			baseURL+PlatformAdminServiceChangePlanProcedure,
+			connect.WithSchema(platformAdminServiceMethods.ByName("ChangePlan")),
+			connect.WithClientOptions(opts...),
+		),
+		cancelSubscription: connect.NewClient[v1.CancelSubscriptionRequest, v1.CancelSubscriptionResponse](
+			httpClient,
+			baseURL+PlatformAdminServiceCancelSubscriptionProcedure,
+			connect.WithSchema(platformAdminServiceMethods.ByName("CancelSubscription")),
+			connect.WithClientOptions(opts...),
+		),
+		getBillingSettings: connect.NewClient[v1.GetBillingSettingsRequest, v1.GetBillingSettingsResponse](
+			httpClient,
+			baseURL+PlatformAdminServiceGetBillingSettingsProcedure,
+			connect.WithSchema(platformAdminServiceMethods.ByName("GetBillingSettings")),
+			connect.WithClientOptions(opts...),
+		),
+		updateBillingSettings: connect.NewClient[v1.UpdateBillingSettingsRequest, v1.UpdateBillingSettingsResponse](
+			httpClient,
+			baseURL+PlatformAdminServiceUpdateBillingSettingsProcedure,
+			connect.WithSchema(platformAdminServiceMethods.ByName("UpdateBillingSettings")),
+			connect.WithClientOptions(opts...),
+		),
+		setTenantOverride: connect.NewClient[v1.SetTenantOverrideRequest, v1.SetTenantOverrideResponse](
+			httpClient,
+			baseURL+PlatformAdminServiceSetTenantOverrideProcedure,
+			connect.WithSchema(platformAdminServiceMethods.ByName("SetTenantOverride")),
+			connect.WithClientOptions(opts...),
+		),
+		revokeTenantOverride: connect.NewClient[v1.RevokeTenantOverrideRequest, v1.RevokeTenantOverrideResponse](
+			httpClient,
+			baseURL+PlatformAdminServiceRevokeTenantOverrideProcedure,
+			connect.WithSchema(platformAdminServiceMethods.ByName("RevokeTenantOverride")),
+			connect.WithClientOptions(opts...),
+		),
+		upsertPlanPrice: connect.NewClient[v1.UpsertPlanPriceRequest, v1.UpsertPlanPriceResponse](
+			httpClient,
+			baseURL+PlatformAdminServiceUpsertPlanPriceProcedure,
+			connect.WithSchema(platformAdminServiceMethods.ByName("UpsertPlanPrice")),
+			connect.WithClientOptions(opts...),
+		),
+		setPlanEntitlement: connect.NewClient[v1.SetPlanEntitlementRequest, v1.SetPlanEntitlementResponse](
+			httpClient,
+			baseURL+PlatformAdminServiceSetPlanEntitlementProcedure,
+			connect.WithSchema(platformAdminServiceMethods.ByName("SetPlanEntitlement")),
+			connect.WithClientOptions(opts...),
+		),
+		createOperator: connect.NewClient[v1.CreateOperatorRequest, v1.CreateOperatorResponse](
+			httpClient,
+			baseURL+PlatformAdminServiceCreateOperatorProcedure,
+			connect.WithSchema(platformAdminServiceMethods.ByName("CreateOperator")),
+			connect.WithClientOptions(opts...),
+		),
+		disableOperator: connect.NewClient[v1.DisableOperatorRequest, v1.DisableOperatorResponse](
+			httpClient,
+			baseURL+PlatformAdminServiceDisableOperatorProcedure,
+			connect.WithSchema(platformAdminServiceMethods.ByName("DisableOperator")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // platformAdminServiceClient implements PlatformAdminServiceClient.
 type platformAdminServiceClient struct {
-	listTenants         *connect.Client[v1.ListTenantsRequest, v1.ListTenantsResponse]
-	getTenant           *connect.Client[v1.GetTenantRequest, v1.GetTenantResponse]
-	listPlans           *connect.Client[v1.ListPlansRequest, v1.ListPlansResponse]
-	getPlanEntitlements *connect.Client[v1.GetPlanEntitlementsRequest, v1.GetPlanEntitlementsResponse]
-	listPlatformAudit   *connect.Client[v1.ListPlatformAuditRequest, v1.ListPlatformAuditResponse]
+	listTenants           *connect.Client[v1.ListTenantsRequest, v1.ListTenantsResponse]
+	getTenant             *connect.Client[v1.GetTenantRequest, v1.GetTenantResponse]
+	listPlans             *connect.Client[v1.ListPlansRequest, v1.ListPlansResponse]
+	getPlanEntitlements   *connect.Client[v1.GetPlanEntitlementsRequest, v1.GetPlanEntitlementsResponse]
+	listPlatformAudit     *connect.Client[v1.ListPlatformAuditRequest, v1.ListPlatformAuditResponse]
+	listReceivables       *connect.Client[v1.ListReceivablesRequest, v1.ListReceivablesResponse]
+	recordPayment         *connect.Client[v1.RecordPaymentRequest, v1.RecordPaymentResponse]
+	setSeatCount          *connect.Client[v1.SetSeatCountRequest, v1.SetSeatCountResponse]
+	changePlan            *connect.Client[v1.ChangePlanRequest, v1.ChangePlanResponse]
+	cancelSubscription    *connect.Client[v1.CancelSubscriptionRequest, v1.CancelSubscriptionResponse]
+	getBillingSettings    *connect.Client[v1.GetBillingSettingsRequest, v1.GetBillingSettingsResponse]
+	updateBillingSettings *connect.Client[v1.UpdateBillingSettingsRequest, v1.UpdateBillingSettingsResponse]
+	setTenantOverride     *connect.Client[v1.SetTenantOverrideRequest, v1.SetTenantOverrideResponse]
+	revokeTenantOverride  *connect.Client[v1.RevokeTenantOverrideRequest, v1.RevokeTenantOverrideResponse]
+	upsertPlanPrice       *connect.Client[v1.UpsertPlanPriceRequest, v1.UpsertPlanPriceResponse]
+	setPlanEntitlement    *connect.Client[v1.SetPlanEntitlementRequest, v1.SetPlanEntitlementResponse]
+	createOperator        *connect.Client[v1.CreateOperatorRequest, v1.CreateOperatorResponse]
+	disableOperator       *connect.Client[v1.DisableOperatorRequest, v1.DisableOperatorResponse]
 }
 
 // ListTenants calls platform.v1.PlatformAdminService.ListTenants.
@@ -142,6 +287,71 @@ func (c *platformAdminServiceClient) ListPlatformAudit(ctx context.Context, req 
 	return c.listPlatformAudit.CallUnary(ctx, req)
 }
 
+// ListReceivables calls platform.v1.PlatformAdminService.ListReceivables.
+func (c *platformAdminServiceClient) ListReceivables(ctx context.Context, req *connect.Request[v1.ListReceivablesRequest]) (*connect.Response[v1.ListReceivablesResponse], error) {
+	return c.listReceivables.CallUnary(ctx, req)
+}
+
+// RecordPayment calls platform.v1.PlatformAdminService.RecordPayment.
+func (c *platformAdminServiceClient) RecordPayment(ctx context.Context, req *connect.Request[v1.RecordPaymentRequest]) (*connect.Response[v1.RecordPaymentResponse], error) {
+	return c.recordPayment.CallUnary(ctx, req)
+}
+
+// SetSeatCount calls platform.v1.PlatformAdminService.SetSeatCount.
+func (c *platformAdminServiceClient) SetSeatCount(ctx context.Context, req *connect.Request[v1.SetSeatCountRequest]) (*connect.Response[v1.SetSeatCountResponse], error) {
+	return c.setSeatCount.CallUnary(ctx, req)
+}
+
+// ChangePlan calls platform.v1.PlatformAdminService.ChangePlan.
+func (c *platformAdminServiceClient) ChangePlan(ctx context.Context, req *connect.Request[v1.ChangePlanRequest]) (*connect.Response[v1.ChangePlanResponse], error) {
+	return c.changePlan.CallUnary(ctx, req)
+}
+
+// CancelSubscription calls platform.v1.PlatformAdminService.CancelSubscription.
+func (c *platformAdminServiceClient) CancelSubscription(ctx context.Context, req *connect.Request[v1.CancelSubscriptionRequest]) (*connect.Response[v1.CancelSubscriptionResponse], error) {
+	return c.cancelSubscription.CallUnary(ctx, req)
+}
+
+// GetBillingSettings calls platform.v1.PlatformAdminService.GetBillingSettings.
+func (c *platformAdminServiceClient) GetBillingSettings(ctx context.Context, req *connect.Request[v1.GetBillingSettingsRequest]) (*connect.Response[v1.GetBillingSettingsResponse], error) {
+	return c.getBillingSettings.CallUnary(ctx, req)
+}
+
+// UpdateBillingSettings calls platform.v1.PlatformAdminService.UpdateBillingSettings.
+func (c *platformAdminServiceClient) UpdateBillingSettings(ctx context.Context, req *connect.Request[v1.UpdateBillingSettingsRequest]) (*connect.Response[v1.UpdateBillingSettingsResponse], error) {
+	return c.updateBillingSettings.CallUnary(ctx, req)
+}
+
+// SetTenantOverride calls platform.v1.PlatformAdminService.SetTenantOverride.
+func (c *platformAdminServiceClient) SetTenantOverride(ctx context.Context, req *connect.Request[v1.SetTenantOverrideRequest]) (*connect.Response[v1.SetTenantOverrideResponse], error) {
+	return c.setTenantOverride.CallUnary(ctx, req)
+}
+
+// RevokeTenantOverride calls platform.v1.PlatformAdminService.RevokeTenantOverride.
+func (c *platformAdminServiceClient) RevokeTenantOverride(ctx context.Context, req *connect.Request[v1.RevokeTenantOverrideRequest]) (*connect.Response[v1.RevokeTenantOverrideResponse], error) {
+	return c.revokeTenantOverride.CallUnary(ctx, req)
+}
+
+// UpsertPlanPrice calls platform.v1.PlatformAdminService.UpsertPlanPrice.
+func (c *platformAdminServiceClient) UpsertPlanPrice(ctx context.Context, req *connect.Request[v1.UpsertPlanPriceRequest]) (*connect.Response[v1.UpsertPlanPriceResponse], error) {
+	return c.upsertPlanPrice.CallUnary(ctx, req)
+}
+
+// SetPlanEntitlement calls platform.v1.PlatformAdminService.SetPlanEntitlement.
+func (c *platformAdminServiceClient) SetPlanEntitlement(ctx context.Context, req *connect.Request[v1.SetPlanEntitlementRequest]) (*connect.Response[v1.SetPlanEntitlementResponse], error) {
+	return c.setPlanEntitlement.CallUnary(ctx, req)
+}
+
+// CreateOperator calls platform.v1.PlatformAdminService.CreateOperator.
+func (c *platformAdminServiceClient) CreateOperator(ctx context.Context, req *connect.Request[v1.CreateOperatorRequest]) (*connect.Response[v1.CreateOperatorResponse], error) {
+	return c.createOperator.CallUnary(ctx, req)
+}
+
+// DisableOperator calls platform.v1.PlatformAdminService.DisableOperator.
+func (c *platformAdminServiceClient) DisableOperator(ctx context.Context, req *connect.Request[v1.DisableOperatorRequest]) (*connect.Response[v1.DisableOperatorResponse], error) {
+	return c.disableOperator.CallUnary(ctx, req)
+}
+
 // PlatformAdminServiceHandler is an implementation of the platform.v1.PlatformAdminService service.
 type PlatformAdminServiceHandler interface {
 	ListTenants(context.Context, *connect.Request[v1.ListTenantsRequest]) (*connect.Response[v1.ListTenantsResponse], error)
@@ -149,6 +359,21 @@ type PlatformAdminServiceHandler interface {
 	ListPlans(context.Context, *connect.Request[v1.ListPlansRequest]) (*connect.Response[v1.ListPlansResponse], error)
 	GetPlanEntitlements(context.Context, *connect.Request[v1.GetPlanEntitlementsRequest]) (*connect.Response[v1.GetPlanEntitlementsResponse], error)
 	ListPlatformAudit(context.Context, *connect.Request[v1.ListPlatformAuditRequest]) (*connect.Response[v1.ListPlatformAuditResponse], error)
+	// --- 平台寫入(T9)。共同契約:每個寫入都必須帶 reason(平台稽核必填),
+	// actor 一律是 cookie 上的真實 operator;資料與稽核同一個交易(失敗不留半成品)。
+	ListReceivables(context.Context, *connect.Request[v1.ListReceivablesRequest]) (*connect.Response[v1.ListReceivablesResponse], error)
+	RecordPayment(context.Context, *connect.Request[v1.RecordPaymentRequest]) (*connect.Response[v1.RecordPaymentResponse], error)
+	SetSeatCount(context.Context, *connect.Request[v1.SetSeatCountRequest]) (*connect.Response[v1.SetSeatCountResponse], error)
+	ChangePlan(context.Context, *connect.Request[v1.ChangePlanRequest]) (*connect.Response[v1.ChangePlanResponse], error)
+	CancelSubscription(context.Context, *connect.Request[v1.CancelSubscriptionRequest]) (*connect.Response[v1.CancelSubscriptionResponse], error)
+	GetBillingSettings(context.Context, *connect.Request[v1.GetBillingSettingsRequest]) (*connect.Response[v1.GetBillingSettingsResponse], error)
+	UpdateBillingSettings(context.Context, *connect.Request[v1.UpdateBillingSettingsRequest]) (*connect.Response[v1.UpdateBillingSettingsResponse], error)
+	SetTenantOverride(context.Context, *connect.Request[v1.SetTenantOverrideRequest]) (*connect.Response[v1.SetTenantOverrideResponse], error)
+	RevokeTenantOverride(context.Context, *connect.Request[v1.RevokeTenantOverrideRequest]) (*connect.Response[v1.RevokeTenantOverrideResponse], error)
+	UpsertPlanPrice(context.Context, *connect.Request[v1.UpsertPlanPriceRequest]) (*connect.Response[v1.UpsertPlanPriceResponse], error)
+	SetPlanEntitlement(context.Context, *connect.Request[v1.SetPlanEntitlementRequest]) (*connect.Response[v1.SetPlanEntitlementResponse], error)
+	CreateOperator(context.Context, *connect.Request[v1.CreateOperatorRequest]) (*connect.Response[v1.CreateOperatorResponse], error)
+	DisableOperator(context.Context, *connect.Request[v1.DisableOperatorRequest]) (*connect.Response[v1.DisableOperatorResponse], error)
 }
 
 // NewPlatformAdminServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -188,6 +413,84 @@ func NewPlatformAdminServiceHandler(svc PlatformAdminServiceHandler, opts ...con
 		connect.WithSchema(platformAdminServiceMethods.ByName("ListPlatformAudit")),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformAdminServiceListReceivablesHandler := connect.NewUnaryHandler(
+		PlatformAdminServiceListReceivablesProcedure,
+		svc.ListReceivables,
+		connect.WithSchema(platformAdminServiceMethods.ByName("ListReceivables")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformAdminServiceRecordPaymentHandler := connect.NewUnaryHandler(
+		PlatformAdminServiceRecordPaymentProcedure,
+		svc.RecordPayment,
+		connect.WithSchema(platformAdminServiceMethods.ByName("RecordPayment")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformAdminServiceSetSeatCountHandler := connect.NewUnaryHandler(
+		PlatformAdminServiceSetSeatCountProcedure,
+		svc.SetSeatCount,
+		connect.WithSchema(platformAdminServiceMethods.ByName("SetSeatCount")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformAdminServiceChangePlanHandler := connect.NewUnaryHandler(
+		PlatformAdminServiceChangePlanProcedure,
+		svc.ChangePlan,
+		connect.WithSchema(platformAdminServiceMethods.ByName("ChangePlan")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformAdminServiceCancelSubscriptionHandler := connect.NewUnaryHandler(
+		PlatformAdminServiceCancelSubscriptionProcedure,
+		svc.CancelSubscription,
+		connect.WithSchema(platformAdminServiceMethods.ByName("CancelSubscription")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformAdminServiceGetBillingSettingsHandler := connect.NewUnaryHandler(
+		PlatformAdminServiceGetBillingSettingsProcedure,
+		svc.GetBillingSettings,
+		connect.WithSchema(platformAdminServiceMethods.ByName("GetBillingSettings")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformAdminServiceUpdateBillingSettingsHandler := connect.NewUnaryHandler(
+		PlatformAdminServiceUpdateBillingSettingsProcedure,
+		svc.UpdateBillingSettings,
+		connect.WithSchema(platformAdminServiceMethods.ByName("UpdateBillingSettings")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformAdminServiceSetTenantOverrideHandler := connect.NewUnaryHandler(
+		PlatformAdminServiceSetTenantOverrideProcedure,
+		svc.SetTenantOverride,
+		connect.WithSchema(platformAdminServiceMethods.ByName("SetTenantOverride")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformAdminServiceRevokeTenantOverrideHandler := connect.NewUnaryHandler(
+		PlatformAdminServiceRevokeTenantOverrideProcedure,
+		svc.RevokeTenantOverride,
+		connect.WithSchema(platformAdminServiceMethods.ByName("RevokeTenantOverride")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformAdminServiceUpsertPlanPriceHandler := connect.NewUnaryHandler(
+		PlatformAdminServiceUpsertPlanPriceProcedure,
+		svc.UpsertPlanPrice,
+		connect.WithSchema(platformAdminServiceMethods.ByName("UpsertPlanPrice")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformAdminServiceSetPlanEntitlementHandler := connect.NewUnaryHandler(
+		PlatformAdminServiceSetPlanEntitlementProcedure,
+		svc.SetPlanEntitlement,
+		connect.WithSchema(platformAdminServiceMethods.ByName("SetPlanEntitlement")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformAdminServiceCreateOperatorHandler := connect.NewUnaryHandler(
+		PlatformAdminServiceCreateOperatorProcedure,
+		svc.CreateOperator,
+		connect.WithSchema(platformAdminServiceMethods.ByName("CreateOperator")),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformAdminServiceDisableOperatorHandler := connect.NewUnaryHandler(
+		PlatformAdminServiceDisableOperatorProcedure,
+		svc.DisableOperator,
+		connect.WithSchema(platformAdminServiceMethods.ByName("DisableOperator")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/platform.v1.PlatformAdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PlatformAdminServiceListTenantsProcedure:
@@ -200,6 +503,32 @@ func NewPlatformAdminServiceHandler(svc PlatformAdminServiceHandler, opts ...con
 			platformAdminServiceGetPlanEntitlementsHandler.ServeHTTP(w, r)
 		case PlatformAdminServiceListPlatformAuditProcedure:
 			platformAdminServiceListPlatformAuditHandler.ServeHTTP(w, r)
+		case PlatformAdminServiceListReceivablesProcedure:
+			platformAdminServiceListReceivablesHandler.ServeHTTP(w, r)
+		case PlatformAdminServiceRecordPaymentProcedure:
+			platformAdminServiceRecordPaymentHandler.ServeHTTP(w, r)
+		case PlatformAdminServiceSetSeatCountProcedure:
+			platformAdminServiceSetSeatCountHandler.ServeHTTP(w, r)
+		case PlatformAdminServiceChangePlanProcedure:
+			platformAdminServiceChangePlanHandler.ServeHTTP(w, r)
+		case PlatformAdminServiceCancelSubscriptionProcedure:
+			platformAdminServiceCancelSubscriptionHandler.ServeHTTP(w, r)
+		case PlatformAdminServiceGetBillingSettingsProcedure:
+			platformAdminServiceGetBillingSettingsHandler.ServeHTTP(w, r)
+		case PlatformAdminServiceUpdateBillingSettingsProcedure:
+			platformAdminServiceUpdateBillingSettingsHandler.ServeHTTP(w, r)
+		case PlatformAdminServiceSetTenantOverrideProcedure:
+			platformAdminServiceSetTenantOverrideHandler.ServeHTTP(w, r)
+		case PlatformAdminServiceRevokeTenantOverrideProcedure:
+			platformAdminServiceRevokeTenantOverrideHandler.ServeHTTP(w, r)
+		case PlatformAdminServiceUpsertPlanPriceProcedure:
+			platformAdminServiceUpsertPlanPriceHandler.ServeHTTP(w, r)
+		case PlatformAdminServiceSetPlanEntitlementProcedure:
+			platformAdminServiceSetPlanEntitlementHandler.ServeHTTP(w, r)
+		case PlatformAdminServiceCreateOperatorProcedure:
+			platformAdminServiceCreateOperatorHandler.ServeHTTP(w, r)
+		case PlatformAdminServiceDisableOperatorProcedure:
+			platformAdminServiceDisableOperatorHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -227,6 +556,58 @@ func (UnimplementedPlatformAdminServiceHandler) GetPlanEntitlements(context.Cont
 
 func (UnimplementedPlatformAdminServiceHandler) ListPlatformAudit(context.Context, *connect.Request[v1.ListPlatformAuditRequest]) (*connect.Response[v1.ListPlatformAuditResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("platform.v1.PlatformAdminService.ListPlatformAudit is not implemented"))
+}
+
+func (UnimplementedPlatformAdminServiceHandler) ListReceivables(context.Context, *connect.Request[v1.ListReceivablesRequest]) (*connect.Response[v1.ListReceivablesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("platform.v1.PlatformAdminService.ListReceivables is not implemented"))
+}
+
+func (UnimplementedPlatformAdminServiceHandler) RecordPayment(context.Context, *connect.Request[v1.RecordPaymentRequest]) (*connect.Response[v1.RecordPaymentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("platform.v1.PlatformAdminService.RecordPayment is not implemented"))
+}
+
+func (UnimplementedPlatformAdminServiceHandler) SetSeatCount(context.Context, *connect.Request[v1.SetSeatCountRequest]) (*connect.Response[v1.SetSeatCountResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("platform.v1.PlatformAdminService.SetSeatCount is not implemented"))
+}
+
+func (UnimplementedPlatformAdminServiceHandler) ChangePlan(context.Context, *connect.Request[v1.ChangePlanRequest]) (*connect.Response[v1.ChangePlanResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("platform.v1.PlatformAdminService.ChangePlan is not implemented"))
+}
+
+func (UnimplementedPlatformAdminServiceHandler) CancelSubscription(context.Context, *connect.Request[v1.CancelSubscriptionRequest]) (*connect.Response[v1.CancelSubscriptionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("platform.v1.PlatformAdminService.CancelSubscription is not implemented"))
+}
+
+func (UnimplementedPlatformAdminServiceHandler) GetBillingSettings(context.Context, *connect.Request[v1.GetBillingSettingsRequest]) (*connect.Response[v1.GetBillingSettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("platform.v1.PlatformAdminService.GetBillingSettings is not implemented"))
+}
+
+func (UnimplementedPlatformAdminServiceHandler) UpdateBillingSettings(context.Context, *connect.Request[v1.UpdateBillingSettingsRequest]) (*connect.Response[v1.UpdateBillingSettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("platform.v1.PlatformAdminService.UpdateBillingSettings is not implemented"))
+}
+
+func (UnimplementedPlatformAdminServiceHandler) SetTenantOverride(context.Context, *connect.Request[v1.SetTenantOverrideRequest]) (*connect.Response[v1.SetTenantOverrideResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("platform.v1.PlatformAdminService.SetTenantOverride is not implemented"))
+}
+
+func (UnimplementedPlatformAdminServiceHandler) RevokeTenantOverride(context.Context, *connect.Request[v1.RevokeTenantOverrideRequest]) (*connect.Response[v1.RevokeTenantOverrideResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("platform.v1.PlatformAdminService.RevokeTenantOverride is not implemented"))
+}
+
+func (UnimplementedPlatformAdminServiceHandler) UpsertPlanPrice(context.Context, *connect.Request[v1.UpsertPlanPriceRequest]) (*connect.Response[v1.UpsertPlanPriceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("platform.v1.PlatformAdminService.UpsertPlanPrice is not implemented"))
+}
+
+func (UnimplementedPlatformAdminServiceHandler) SetPlanEntitlement(context.Context, *connect.Request[v1.SetPlanEntitlementRequest]) (*connect.Response[v1.SetPlanEntitlementResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("platform.v1.PlatformAdminService.SetPlanEntitlement is not implemented"))
+}
+
+func (UnimplementedPlatformAdminServiceHandler) CreateOperator(context.Context, *connect.Request[v1.CreateOperatorRequest]) (*connect.Response[v1.CreateOperatorResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("platform.v1.PlatformAdminService.CreateOperator is not implemented"))
+}
+
+func (UnimplementedPlatformAdminServiceHandler) DisableOperator(context.Context, *connect.Request[v1.DisableOperatorRequest]) (*connect.Response[v1.DisableOperatorResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("platform.v1.PlatformAdminService.DisableOperator is not implemented"))
 }
 
 // TenantEntitlementServiceClient is a client for the platform.v1.TenantEntitlementService service.

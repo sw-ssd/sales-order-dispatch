@@ -1194,6 +1194,1640 @@ func (x *PlatformAuditEntry) GetCreatedAt() string {
 	return ""
 }
 
+type ListReceivablesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Page          int32                  `protobuf:"varint,1,opt,name=page,proto3" json:"page,omitempty"`
+	PageSize      int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListReceivablesRequest) Reset() {
+	*x = ListReceivablesRequest{}
+	mi := &file_platform_v1_platform_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListReceivablesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListReceivablesRequest) ProtoMessage() {}
+
+func (x *ListReceivablesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListReceivablesRequest.ProtoReflect.Descriptor instead.
+func (*ListReceivablesRequest) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *ListReceivablesRequest) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *ListReceivablesRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+type ListReceivablesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Rows          []*Receivable          `protobuf:"bytes,1,rep,name=rows,proto3" json:"rows,omitempty"`
+	Pagination    *PlatformPagination    `protobuf:"bytes,2,opt,name=pagination,proto3" json:"pagination,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListReceivablesResponse) Reset() {
+	*x = ListReceivablesResponse{}
+	mi := &file_platform_v1_platform_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListReceivablesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListReceivablesResponse) ProtoMessage() {}
+
+func (x *ListReceivablesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListReceivablesResponse.ProtoReflect.Descriptor instead.
+func (*ListReceivablesResponse) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *ListReceivablesResponse) GetRows() []*Receivable {
+	if x != nil {
+		return x.Rows
+	}
+	return nil
+}
+
+func (x *ListReceivablesResponse) GetPagination() *PlatformPagination {
+	if x != nil {
+		return x.Pagination
+	}
+	return nil
+}
+
+// Receivable:一期未付的帳(供 console 顯示與匯出 CSV)。G5 的平台自營公司不算租戶,不列入。
+type Receivable struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CompanyId     string                 `protobuf:"bytes,1,opt,name=company_id,json=companyId,proto3" json:"company_id,omitempty"`
+	CompanyName   string                 `protobuf:"bytes,2,opt,name=company_name,json=companyName,proto3" json:"company_name,omitempty"`
+	PlanCode      string                 `protobuf:"bytes,3,opt,name=plan_code,json=planCode,proto3" json:"plan_code,omitempty"`
+	PeriodNo      int32                  `protobuf:"varint,4,opt,name=period_no,json=periodNo,proto3" json:"period_no,omitempty"`
+	Amount        string                 `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty"`                        // 兩位小數字串("1500.00")
+	PeriodEnd     string                 `protobuf:"bytes,6,opt,name=period_end,json=periodEnd,proto3" json:"period_end,omitempty"` // RFC3339
+	Status        string                 `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"`                        // open(未付;已過期末者即逾期)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Receivable) Reset() {
+	*x = Receivable{}
+	mi := &file_platform_v1_platform_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Receivable) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Receivable) ProtoMessage() {}
+
+func (x *Receivable) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Receivable.ProtoReflect.Descriptor instead.
+func (*Receivable) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *Receivable) GetCompanyId() string {
+	if x != nil {
+		return x.CompanyId
+	}
+	return ""
+}
+
+func (x *Receivable) GetCompanyName() string {
+	if x != nil {
+		return x.CompanyName
+	}
+	return ""
+}
+
+func (x *Receivable) GetPlanCode() string {
+	if x != nil {
+		return x.PlanCode
+	}
+	return ""
+}
+
+func (x *Receivable) GetPeriodNo() int32 {
+	if x != nil {
+		return x.PeriodNo
+	}
+	return 0
+}
+
+func (x *Receivable) GetAmount() string {
+	if x != nil {
+		return x.Amount
+	}
+	return ""
+}
+
+func (x *Receivable) GetPeriodEnd() string {
+	if x != nil {
+		return x.PeriodEnd
+	}
+	return ""
+}
+
+func (x *Receivable) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+type RecordPaymentRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CompanyId     string                 `protobuf:"bytes,1,opt,name=company_id,json=companyId,proto3" json:"company_id,omitempty"`
+	PeriodNo      int32                  `protobuf:"varint,2,opt,name=period_no,json=periodNo,proto3" json:"period_no,omitempty"`         // 0 = 當前(最新)一期
+	Amount        string                 `protobuf:"bytes,3,opt,name=amount,proto3" json:"amount,omitempty"`                              // 金額字串;空 = 採用期別快照金額(不支援部分付款)
+	Provider      string                 `protobuf:"bytes,4,opt,name=provider,proto3" json:"provider,omitempty"`                          // manual | ecpay | …;空 = manual
+	ExternalRef   string                 `protobuf:"bytes,5,opt,name=external_ref,json=externalRef,proto3" json:"external_ref,omitempty"` // 匯款帳號／交易號(重送冪等以此比對)
+	InvoiceNo     string                 `protobuf:"bytes,6,opt,name=invoice_no,json=invoiceNo,proto3" json:"invoice_no,omitempty"`
+	InvoiceStatus string                 `protobuf:"bytes,7,opt,name=invoice_status,json=invoiceStatus,proto3" json:"invoice_status,omitempty"`
+	BuyerTaxId    string                 `protobuf:"bytes,8,opt,name=buyer_tax_id,json=buyerTaxId,proto3" json:"buyer_tax_id,omitempty"` // 統一編號
+	Carrier       string                 `protobuf:"bytes,9,opt,name=carrier,proto3" json:"carrier,omitempty"`                           // 載具
+	Note          string                 `protobuf:"bytes,10,opt,name=note,proto3" json:"note,omitempty"`                                // 短收／溢收備註(不改變期別金額)
+	Reason        string                 `protobuf:"bytes,11,opt,name=reason,proto3" json:"reason,omitempty"`                            // 必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RecordPaymentRequest) Reset() {
+	*x = RecordPaymentRequest{}
+	mi := &file_platform_v1_platform_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecordPaymentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecordPaymentRequest) ProtoMessage() {}
+
+func (x *RecordPaymentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecordPaymentRequest.ProtoReflect.Descriptor instead.
+func (*RecordPaymentRequest) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *RecordPaymentRequest) GetCompanyId() string {
+	if x != nil {
+		return x.CompanyId
+	}
+	return ""
+}
+
+func (x *RecordPaymentRequest) GetPeriodNo() int32 {
+	if x != nil {
+		return x.PeriodNo
+	}
+	return 0
+}
+
+func (x *RecordPaymentRequest) GetAmount() string {
+	if x != nil {
+		return x.Amount
+	}
+	return ""
+}
+
+func (x *RecordPaymentRequest) GetProvider() string {
+	if x != nil {
+		return x.Provider
+	}
+	return ""
+}
+
+func (x *RecordPaymentRequest) GetExternalRef() string {
+	if x != nil {
+		return x.ExternalRef
+	}
+	return ""
+}
+
+func (x *RecordPaymentRequest) GetInvoiceNo() string {
+	if x != nil {
+		return x.InvoiceNo
+	}
+	return ""
+}
+
+func (x *RecordPaymentRequest) GetInvoiceStatus() string {
+	if x != nil {
+		return x.InvoiceStatus
+	}
+	return ""
+}
+
+func (x *RecordPaymentRequest) GetBuyerTaxId() string {
+	if x != nil {
+		return x.BuyerTaxId
+	}
+	return ""
+}
+
+func (x *RecordPaymentRequest) GetCarrier() string {
+	if x != nil {
+		return x.Carrier
+	}
+	return ""
+}
+
+func (x *RecordPaymentRequest) GetNote() string {
+	if x != nil {
+		return x.Note
+	}
+	return ""
+}
+
+func (x *RecordPaymentRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type RecordPaymentResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PeriodNo      int32                  `protobuf:"varint,1,opt,name=period_no,json=periodNo,proto3" json:"period_no,omitempty"`
+	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RecordPaymentResponse) Reset() {
+	*x = RecordPaymentResponse{}
+	mi := &file_platform_v1_platform_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RecordPaymentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RecordPaymentResponse) ProtoMessage() {}
+
+func (x *RecordPaymentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RecordPaymentResponse.ProtoReflect.Descriptor instead.
+func (*RecordPaymentResponse) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *RecordPaymentResponse) GetPeriodNo() int32 {
+	if x != nil {
+		return x.PeriodNo
+	}
+	return 0
+}
+
+func (x *RecordPaymentResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+type SetSeatCountRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CompanyId     string                 `protobuf:"bytes,1,opt,name=company_id,json=companyId,proto3" json:"company_id,omitempty"`
+	SeatCount     int32                  `protobuf:"varint,2,opt,name=seat_count,json=seatCount,proto3" json:"seat_count,omitempty"` // 新席位數;不得小於目前使用中的席次
+	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`                         // 必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetSeatCountRequest) Reset() {
+	*x = SetSeatCountRequest{}
+	mi := &file_platform_v1_platform_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetSeatCountRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetSeatCountRequest) ProtoMessage() {}
+
+func (x *SetSeatCountRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetSeatCountRequest.ProtoReflect.Descriptor instead.
+func (*SetSeatCountRequest) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *SetSeatCountRequest) GetCompanyId() string {
+	if x != nil {
+		return x.CompanyId
+	}
+	return ""
+}
+
+func (x *SetSeatCountRequest) GetSeatCount() int32 {
+	if x != nil {
+		return x.SeatCount
+	}
+	return 0
+}
+
+func (x *SetSeatCountRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type SetSeatCountResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SeatCount     int32                  `protobuf:"varint,1,opt,name=seat_count,json=seatCount,proto3" json:"seat_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetSeatCountResponse) Reset() {
+	*x = SetSeatCountResponse{}
+	mi := &file_platform_v1_platform_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetSeatCountResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetSeatCountResponse) ProtoMessage() {}
+
+func (x *SetSeatCountResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetSeatCountResponse.ProtoReflect.Descriptor instead.
+func (*SetSeatCountResponse) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *SetSeatCountResponse) GetSeatCount() int32 {
+	if x != nil {
+		return x.SeatCount
+	}
+	return 0
+}
+
+type ChangePlanRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CompanyId     string                 `protobuf:"bytes,1,opt,name=company_id,json=companyId,proto3" json:"company_id,omitempty"`
+	PlanCode      string                 `protobuf:"bytes,2,opt,name=plan_code,json=planCode,proto3" json:"plan_code,omitempty"` // 新方案;下一期生效,當期不動
+	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`                     // 必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChangePlanRequest) Reset() {
+	*x = ChangePlanRequest{}
+	mi := &file_platform_v1_platform_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChangePlanRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChangePlanRequest) ProtoMessage() {}
+
+func (x *ChangePlanRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChangePlanRequest.ProtoReflect.Descriptor instead.
+func (*ChangePlanRequest) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *ChangePlanRequest) GetCompanyId() string {
+	if x != nil {
+		return x.CompanyId
+	}
+	return ""
+}
+
+func (x *ChangePlanRequest) GetPlanCode() string {
+	if x != nil {
+		return x.PlanCode
+	}
+	return ""
+}
+
+func (x *ChangePlanRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type ChangePlanResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PlanCode      string                 `protobuf:"bytes,1,opt,name=plan_code,json=planCode,proto3" json:"plan_code,omitempty"`
+	EffectiveFrom string                 `protobuf:"bytes,2,opt,name=effective_from,json=effectiveFrom,proto3" json:"effective_from,omitempty"` // 下一期起日(RFC3339)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChangePlanResponse) Reset() {
+	*x = ChangePlanResponse{}
+	mi := &file_platform_v1_platform_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChangePlanResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChangePlanResponse) ProtoMessage() {}
+
+func (x *ChangePlanResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChangePlanResponse.ProtoReflect.Descriptor instead.
+func (*ChangePlanResponse) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *ChangePlanResponse) GetPlanCode() string {
+	if x != nil {
+		return x.PlanCode
+	}
+	return ""
+}
+
+func (x *ChangePlanResponse) GetEffectiveFrom() string {
+	if x != nil {
+		return x.EffectiveFrom
+	}
+	return ""
+}
+
+type CancelSubscriptionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CompanyId     string                 `protobuf:"bytes,1,opt,name=company_id,json=companyId,proto3" json:"company_id,omitempty"`
+	AtPeriodEnd   bool                   `protobuf:"varint,2,opt,name=at_period_end,json=atPeriodEnd,proto3" json:"at_period_end,omitempty"` // v1 僅支援 true(期末終止);false 回 PLAT-3001
+	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`                                 // 必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelSubscriptionRequest) Reset() {
+	*x = CancelSubscriptionRequest{}
+	mi := &file_platform_v1_platform_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelSubscriptionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelSubscriptionRequest) ProtoMessage() {}
+
+func (x *CancelSubscriptionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelSubscriptionRequest.ProtoReflect.Descriptor instead.
+func (*CancelSubscriptionRequest) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *CancelSubscriptionRequest) GetCompanyId() string {
+	if x != nil {
+		return x.CompanyId
+	}
+	return ""
+}
+
+func (x *CancelSubscriptionRequest) GetAtPeriodEnd() bool {
+	if x != nil {
+		return x.AtPeriodEnd
+	}
+	return false
+}
+
+func (x *CancelSubscriptionRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type CancelSubscriptionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CancelledAt   string                 `protobuf:"bytes,1,opt,name=cancelled_at,json=cancelledAt,proto3" json:"cancelled_at,omitempty"`
+	ServiceUntil  string                 `protobuf:"bytes,2,opt,name=service_until,json=serviceUntil,proto3" json:"service_until,omitempty"` // 服務提供到這個時間(期末)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelSubscriptionResponse) Reset() {
+	*x = CancelSubscriptionResponse{}
+	mi := &file_platform_v1_platform_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelSubscriptionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelSubscriptionResponse) ProtoMessage() {}
+
+func (x *CancelSubscriptionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelSubscriptionResponse.ProtoReflect.Descriptor instead.
+func (*CancelSubscriptionResponse) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *CancelSubscriptionResponse) GetCancelledAt() string {
+	if x != nil {
+		return x.CancelledAt
+	}
+	return ""
+}
+
+func (x *CancelSubscriptionResponse) GetServiceUntil() string {
+	if x != nil {
+		return x.ServiceUntil
+	}
+	return ""
+}
+
+type GetBillingSettingsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetBillingSettingsRequest) Reset() {
+	*x = GetBillingSettingsRequest{}
+	mi := &file_platform_v1_platform_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetBillingSettingsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetBillingSettingsRequest) ProtoMessage() {}
+
+func (x *GetBillingSettingsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetBillingSettingsRequest.ProtoReflect.Descriptor instead.
+func (*GetBillingSettingsRequest) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{29}
+}
+
+type GetBillingSettingsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Settings      []*BillingSetting      `protobuf:"bytes,1,rep,name=settings,proto3" json:"settings,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetBillingSettingsResponse) Reset() {
+	*x = GetBillingSettingsResponse{}
+	mi := &file_platform_v1_platform_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetBillingSettingsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetBillingSettingsResponse) ProtoMessage() {}
+
+func (x *GetBillingSettingsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetBillingSettingsResponse.ProtoReflect.Descriptor instead.
+func (*GetBillingSettingsResponse) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *GetBillingSettingsResponse) GetSettings() []*BillingSetting {
+	if x != nil {
+		return x.Settings
+	}
+	return nil
+}
+
+// BillingSetting:一項可由介面調整的營運參數(trial_days／grace_days／lead_days)。
+type BillingSetting struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Value         string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BillingSetting) Reset() {
+	*x = BillingSetting{}
+	mi := &file_platform_v1_platform_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BillingSetting) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BillingSetting) ProtoMessage() {}
+
+func (x *BillingSetting) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BillingSetting.ProtoReflect.Descriptor instead.
+func (*BillingSetting) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *BillingSetting) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *BillingSetting) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
+func (x *BillingSetting) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+type UpdateBillingSettingsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Settings      []*BillingSetting      `protobuf:"bytes,1,rep,name=settings,proto3" json:"settings,omitempty"`
+	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"` // 必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateBillingSettingsRequest) Reset() {
+	*x = UpdateBillingSettingsRequest{}
+	mi := &file_platform_v1_platform_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateBillingSettingsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateBillingSettingsRequest) ProtoMessage() {}
+
+func (x *UpdateBillingSettingsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateBillingSettingsRequest.ProtoReflect.Descriptor instead.
+func (*UpdateBillingSettingsRequest) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *UpdateBillingSettingsRequest) GetSettings() []*BillingSetting {
+	if x != nil {
+		return x.Settings
+	}
+	return nil
+}
+
+func (x *UpdateBillingSettingsRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type UpdateBillingSettingsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Settings      []*BillingSetting      `protobuf:"bytes,1,rep,name=settings,proto3" json:"settings,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateBillingSettingsResponse) Reset() {
+	*x = UpdateBillingSettingsResponse{}
+	mi := &file_platform_v1_platform_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateBillingSettingsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateBillingSettingsResponse) ProtoMessage() {}
+
+func (x *UpdateBillingSettingsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateBillingSettingsResponse.ProtoReflect.Descriptor instead.
+func (*UpdateBillingSettingsResponse) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *UpdateBillingSettingsResponse) GetSettings() []*BillingSetting {
+	if x != nil {
+		return x.Settings
+	}
+	return nil
+}
+
+type SetTenantOverrideRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CompanyId     string                 `protobuf:"bytes,1,opt,name=company_id,json=companyId,proto3" json:"company_id,omitempty"`
+	FeatureCode   string                 `protobuf:"bytes,2,opt,name=feature_code,json=featureCode,proto3" json:"feature_code,omitempty"`
+	EnabledSet    bool                   `protobuf:"varint,3,opt,name=enabled_set,json=enabledSet,proto3" json:"enabled_set,omitempty"` // false = 不覆寫 boolean 維度
+	Enabled       bool                   `protobuf:"varint,4,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	LimitSet      bool                   `protobuf:"varint,5,opt,name=limit_set,json=limitSet,proto3" json:"limit_set,omitempty"` // false = 不覆寫限額維度(不限額請給 limit_set + 極大值)
+	LimitValue    int64                  `protobuf:"varint,6,opt,name=limit_value,json=limitValue,proto3" json:"limit_value,omitempty"`
+	Owner         string                 `protobuf:"bytes,7,opt,name=owner,proto3" json:"owner,omitempty"`                          // 承諾者(平台側人員)
+	ExpiresAt     string                 `protobuf:"bytes,8,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"` // RFC3339;空 = 不過期
+	Reason        string                 `protobuf:"bytes,9,opt,name=reason,proto3" json:"reason,omitempty"`                        // 必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetTenantOverrideRequest) Reset() {
+	*x = SetTenantOverrideRequest{}
+	mi := &file_platform_v1_platform_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetTenantOverrideRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetTenantOverrideRequest) ProtoMessage() {}
+
+func (x *SetTenantOverrideRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetTenantOverrideRequest.ProtoReflect.Descriptor instead.
+func (*SetTenantOverrideRequest) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *SetTenantOverrideRequest) GetCompanyId() string {
+	if x != nil {
+		return x.CompanyId
+	}
+	return ""
+}
+
+func (x *SetTenantOverrideRequest) GetFeatureCode() string {
+	if x != nil {
+		return x.FeatureCode
+	}
+	return ""
+}
+
+func (x *SetTenantOverrideRequest) GetEnabledSet() bool {
+	if x != nil {
+		return x.EnabledSet
+	}
+	return false
+}
+
+func (x *SetTenantOverrideRequest) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *SetTenantOverrideRequest) GetLimitSet() bool {
+	if x != nil {
+		return x.LimitSet
+	}
+	return false
+}
+
+func (x *SetTenantOverrideRequest) GetLimitValue() int64 {
+	if x != nil {
+		return x.LimitValue
+	}
+	return 0
+}
+
+func (x *SetTenantOverrideRequest) GetOwner() string {
+	if x != nil {
+		return x.Owner
+	}
+	return ""
+}
+
+func (x *SetTenantOverrideRequest) GetExpiresAt() string {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return ""
+}
+
+func (x *SetTenantOverrideRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type SetTenantOverrideResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetTenantOverrideResponse) Reset() {
+	*x = SetTenantOverrideResponse{}
+	mi := &file_platform_v1_platform_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetTenantOverrideResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetTenantOverrideResponse) ProtoMessage() {}
+
+func (x *SetTenantOverrideResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetTenantOverrideResponse.ProtoReflect.Descriptor instead.
+func (*SetTenantOverrideResponse) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *SetTenantOverrideResponse) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type RevokeTenantOverrideRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OverrideId    string                 `protobuf:"bytes,1,opt,name=override_id,json=overrideId,proto3" json:"override_id,omitempty"`
+	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"` // 必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeTenantOverrideRequest) Reset() {
+	*x = RevokeTenantOverrideRequest{}
+	mi := &file_platform_v1_platform_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeTenantOverrideRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeTenantOverrideRequest) ProtoMessage() {}
+
+func (x *RevokeTenantOverrideRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeTenantOverrideRequest.ProtoReflect.Descriptor instead.
+func (*RevokeTenantOverrideRequest) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *RevokeTenantOverrideRequest) GetOverrideId() string {
+	if x != nil {
+		return x.OverrideId
+	}
+	return ""
+}
+
+func (x *RevokeTenantOverrideRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type RevokeTenantOverrideResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CompanyId     string                 `protobuf:"bytes,1,opt,name=company_id,json=companyId,proto3" json:"company_id,omitempty"`
+	FeatureCode   string                 `protobuf:"bytes,2,opt,name=feature_code,json=featureCode,proto3" json:"feature_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RevokeTenantOverrideResponse) Reset() {
+	*x = RevokeTenantOverrideResponse{}
+	mi := &file_platform_v1_platform_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RevokeTenantOverrideResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RevokeTenantOverrideResponse) ProtoMessage() {}
+
+func (x *RevokeTenantOverrideResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RevokeTenantOverrideResponse.ProtoReflect.Descriptor instead.
+func (*RevokeTenantOverrideResponse) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *RevokeTenantOverrideResponse) GetCompanyId() string {
+	if x != nil {
+		return x.CompanyId
+	}
+	return ""
+}
+
+func (x *RevokeTenantOverrideResponse) GetFeatureCode() string {
+	if x != nil {
+		return x.FeatureCode
+	}
+	return ""
+}
+
+type UpsertPlanPriceRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PlanCode      string                 `protobuf:"bytes,1,opt,name=plan_code,json=planCode,proto3" json:"plan_code,omitempty"`
+	BillingCycle  string                 `protobuf:"bytes,2,opt,name=billing_cycle,json=billingCycle,proto3" json:"billing_cycle,omitempty"` // monthly | yearly
+	BasePrice     string                 `protobuf:"bytes,3,opt,name=base_price,json=basePrice,proto3" json:"base_price,omitempty"`          // 金額字串("1500.00"),後端 money.ParseCents
+	SeatPrice     string                 `protobuf:"bytes,4,opt,name=seat_price,json=seatPrice,proto3" json:"seat_price,omitempty"`
+	Currency      string                 `protobuf:"bytes,5,opt,name=currency,proto3" json:"currency,omitempty"` // 空 = TWD
+	Reason        string                 `protobuf:"bytes,6,opt,name=reason,proto3" json:"reason,omitempty"`     // 必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpsertPlanPriceRequest) Reset() {
+	*x = UpsertPlanPriceRequest{}
+	mi := &file_platform_v1_platform_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpsertPlanPriceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpsertPlanPriceRequest) ProtoMessage() {}
+
+func (x *UpsertPlanPriceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpsertPlanPriceRequest.ProtoReflect.Descriptor instead.
+func (*UpsertPlanPriceRequest) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *UpsertPlanPriceRequest) GetPlanCode() string {
+	if x != nil {
+		return x.PlanCode
+	}
+	return ""
+}
+
+func (x *UpsertPlanPriceRequest) GetBillingCycle() string {
+	if x != nil {
+		return x.BillingCycle
+	}
+	return ""
+}
+
+func (x *UpsertPlanPriceRequest) GetBasePrice() string {
+	if x != nil {
+		return x.BasePrice
+	}
+	return ""
+}
+
+func (x *UpsertPlanPriceRequest) GetSeatPrice() string {
+	if x != nil {
+		return x.SeatPrice
+	}
+	return ""
+}
+
+func (x *UpsertPlanPriceRequest) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
+}
+
+func (x *UpsertPlanPriceRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type UpsertPlanPriceResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpsertPlanPriceResponse) Reset() {
+	*x = UpsertPlanPriceResponse{}
+	mi := &file_platform_v1_platform_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpsertPlanPriceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpsertPlanPriceResponse) ProtoMessage() {}
+
+func (x *UpsertPlanPriceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpsertPlanPriceResponse.ProtoReflect.Descriptor instead.
+func (*UpsertPlanPriceResponse) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{39}
+}
+
+type SetPlanEntitlementRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PlanCode      string                 `protobuf:"bytes,1,opt,name=plan_code,json=planCode,proto3" json:"plan_code,omitempty"`
+	FeatureCode   string                 `protobuf:"bytes,2,opt,name=feature_code,json=featureCode,proto3" json:"feature_code,omitempty"`
+	Enabled       bool                   `protobuf:"varint,3,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	LimitSet      bool                   `protobuf:"varint,4,opt,name=limit_set,json=limitSet,proto3" json:"limit_set,omitempty"` // false = 不限額(NULL),不是 0
+	LimitValue    int64                  `protobuf:"varint,5,opt,name=limit_value,json=limitValue,proto3" json:"limit_value,omitempty"`
+	Reason        string                 `protobuf:"bytes,6,opt,name=reason,proto3" json:"reason,omitempty"` // 必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetPlanEntitlementRequest) Reset() {
+	*x = SetPlanEntitlementRequest{}
+	mi := &file_platform_v1_platform_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetPlanEntitlementRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetPlanEntitlementRequest) ProtoMessage() {}
+
+func (x *SetPlanEntitlementRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetPlanEntitlementRequest.ProtoReflect.Descriptor instead.
+func (*SetPlanEntitlementRequest) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *SetPlanEntitlementRequest) GetPlanCode() string {
+	if x != nil {
+		return x.PlanCode
+	}
+	return ""
+}
+
+func (x *SetPlanEntitlementRequest) GetFeatureCode() string {
+	if x != nil {
+		return x.FeatureCode
+	}
+	return ""
+}
+
+func (x *SetPlanEntitlementRequest) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *SetPlanEntitlementRequest) GetLimitSet() bool {
+	if x != nil {
+		return x.LimitSet
+	}
+	return false
+}
+
+func (x *SetPlanEntitlementRequest) GetLimitValue() int64 {
+	if x != nil {
+		return x.LimitValue
+	}
+	return 0
+}
+
+func (x *SetPlanEntitlementRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type SetPlanEntitlementResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetPlanEntitlementResponse) Reset() {
+	*x = SetPlanEntitlementResponse{}
+	mi := &file_platform_v1_platform_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetPlanEntitlementResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetPlanEntitlementResponse) ProtoMessage() {}
+
+func (x *SetPlanEntitlementResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetPlanEntitlementResponse.ProtoReflect.Descriptor instead.
+func (*SetPlanEntitlementResponse) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{41}
+}
+
+type CreateOperatorRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Role          string                 `protobuf:"bytes,3,opt,name=role,proto3" json:"role,omitempty"`     // operator | admin;空 = operator
+	Reason        string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"` // 必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateOperatorRequest) Reset() {
+	*x = CreateOperatorRequest{}
+	mi := &file_platform_v1_platform_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateOperatorRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateOperatorRequest) ProtoMessage() {}
+
+func (x *CreateOperatorRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateOperatorRequest.ProtoReflect.Descriptor instead.
+func (*CreateOperatorRequest) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *CreateOperatorRequest) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *CreateOperatorRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *CreateOperatorRequest) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
+func (x *CreateOperatorRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type CreateOperatorResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateOperatorResponse) Reset() {
+	*x = CreateOperatorResponse{}
+	mi := &file_platform_v1_platform_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateOperatorResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateOperatorResponse) ProtoMessage() {}
+
+func (x *CreateOperatorResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateOperatorResponse.ProtoReflect.Descriptor instead.
+func (*CreateOperatorResponse) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *CreateOperatorResponse) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type DisableOperatorRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OperatorId    string                 `protobuf:"bytes,1,opt,name=operator_id,json=operatorId,proto3" json:"operator_id,omitempty"`
+	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"` // 必填
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DisableOperatorRequest) Reset() {
+	*x = DisableOperatorRequest{}
+	mi := &file_platform_v1_platform_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DisableOperatorRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DisableOperatorRequest) ProtoMessage() {}
+
+func (x *DisableOperatorRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DisableOperatorRequest.ProtoReflect.Descriptor instead.
+func (*DisableOperatorRequest) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *DisableOperatorRequest) GetOperatorId() string {
+	if x != nil {
+		return x.OperatorId
+	}
+	return ""
+}
+
+func (x *DisableOperatorRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type DisableOperatorResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DisableOperatorResponse) Reset() {
+	*x = DisableOperatorResponse{}
+	mi := &file_platform_v1_platform_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DisableOperatorResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DisableOperatorResponse) ProtoMessage() {}
+
+func (x *DisableOperatorResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DisableOperatorResponse.ProtoReflect.Descriptor instead.
+func (*DisableOperatorResponse) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{45}
+}
+
 // GetTenantEntitlementsRequest:租戶端唯讀投影(自己的公司;前端據此 disable 按鈕與顯示用量)。
 type GetTenantEntitlementsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1203,7 +2837,7 @@ type GetTenantEntitlementsRequest struct {
 
 func (x *GetTenantEntitlementsRequest) Reset() {
 	*x = GetTenantEntitlementsRequest{}
-	mi := &file_platform_v1_platform_proto_msgTypes[18]
+	mi := &file_platform_v1_platform_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1215,7 +2849,7 @@ func (x *GetTenantEntitlementsRequest) String() string {
 func (*GetTenantEntitlementsRequest) ProtoMessage() {}
 
 func (x *GetTenantEntitlementsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[18]
+	mi := &file_platform_v1_platform_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1228,7 +2862,7 @@ func (x *GetTenantEntitlementsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTenantEntitlementsRequest.ProtoReflect.Descriptor instead.
 func (*GetTenantEntitlementsRequest) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{18}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{46}
 }
 
 type GetTenantEntitlementsResponse struct {
@@ -1244,7 +2878,7 @@ type GetTenantEntitlementsResponse struct {
 
 func (x *GetTenantEntitlementsResponse) Reset() {
 	*x = GetTenantEntitlementsResponse{}
-	mi := &file_platform_v1_platform_proto_msgTypes[19]
+	mi := &file_platform_v1_platform_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1256,7 +2890,7 @@ func (x *GetTenantEntitlementsResponse) String() string {
 func (*GetTenantEntitlementsResponse) ProtoMessage() {}
 
 func (x *GetTenantEntitlementsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[19]
+	mi := &file_platform_v1_platform_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1269,7 +2903,7 @@ func (x *GetTenantEntitlementsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTenantEntitlementsResponse.ProtoReflect.Descriptor instead.
 func (*GetTenantEntitlementsResponse) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{19}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *GetTenantEntitlementsResponse) GetPlanCode() string {
@@ -1321,7 +2955,7 @@ type Usage struct {
 
 func (x *Usage) Reset() {
 	*x = Usage{}
-	mi := &file_platform_v1_platform_proto_msgTypes[20]
+	mi := &file_platform_v1_platform_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1333,7 +2967,7 @@ func (x *Usage) String() string {
 func (*Usage) ProtoMessage() {}
 
 func (x *Usage) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[20]
+	mi := &file_platform_v1_platform_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1346,7 +2980,7 @@ func (x *Usage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Usage.ProtoReflect.Descriptor instead.
 func (*Usage) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{20}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *Usage) GetFeatureCode() string {
@@ -1488,7 +3122,137 @@ const file_platform_v1_platform_proto_rawDesc = "" +
 	"\ttarget_id\x18\x05 \x01(\tR\btargetId\x12\x16\n" +
 	"\x06reason\x18\x06 \x01(\tR\x06reason\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\a \x01(\tR\tcreatedAt\"\x1e\n" +
+	"created_at\x18\a \x01(\tR\tcreatedAt\"I\n" +
+	"\x16ListReceivablesRequest\x12\x12\n" +
+	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x1b\n" +
+	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\"\x87\x01\n" +
+	"\x17ListReceivablesResponse\x12+\n" +
+	"\x04rows\x18\x01 \x03(\v2\x17.platform.v1.ReceivableR\x04rows\x12?\n" +
+	"\n" +
+	"pagination\x18\x02 \x01(\v2\x1f.platform.v1.PlatformPaginationR\n" +
+	"pagination\"\xd7\x01\n" +
+	"\n" +
+	"Receivable\x12\x1d\n" +
+	"\n" +
+	"company_id\x18\x01 \x01(\tR\tcompanyId\x12!\n" +
+	"\fcompany_name\x18\x02 \x01(\tR\vcompanyName\x12\x1b\n" +
+	"\tplan_code\x18\x03 \x01(\tR\bplanCode\x12\x1b\n" +
+	"\tperiod_no\x18\x04 \x01(\x05R\bperiodNo\x12\x16\n" +
+	"\x06amount\x18\x05 \x01(\tR\x06amount\x12\x1d\n" +
+	"\n" +
+	"period_end\x18\x06 \x01(\tR\tperiodEnd\x12\x16\n" +
+	"\x06status\x18\a \x01(\tR\x06status\"\xd7\x02\n" +
+	"\x14RecordPaymentRequest\x12\x1d\n" +
+	"\n" +
+	"company_id\x18\x01 \x01(\tR\tcompanyId\x12\x1b\n" +
+	"\tperiod_no\x18\x02 \x01(\x05R\bperiodNo\x12\x16\n" +
+	"\x06amount\x18\x03 \x01(\tR\x06amount\x12\x1a\n" +
+	"\bprovider\x18\x04 \x01(\tR\bprovider\x12!\n" +
+	"\fexternal_ref\x18\x05 \x01(\tR\vexternalRef\x12\x1d\n" +
+	"\n" +
+	"invoice_no\x18\x06 \x01(\tR\tinvoiceNo\x12%\n" +
+	"\x0einvoice_status\x18\a \x01(\tR\rinvoiceStatus\x12 \n" +
+	"\fbuyer_tax_id\x18\b \x01(\tR\n" +
+	"buyerTaxId\x12\x18\n" +
+	"\acarrier\x18\t \x01(\tR\acarrier\x12\x12\n" +
+	"\x04note\x18\n" +
+	" \x01(\tR\x04note\x12\x16\n" +
+	"\x06reason\x18\v \x01(\tR\x06reason\"L\n" +
+	"\x15RecordPaymentResponse\x12\x1b\n" +
+	"\tperiod_no\x18\x01 \x01(\x05R\bperiodNo\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\"k\n" +
+	"\x13SetSeatCountRequest\x12\x1d\n" +
+	"\n" +
+	"company_id\x18\x01 \x01(\tR\tcompanyId\x12\x1d\n" +
+	"\n" +
+	"seat_count\x18\x02 \x01(\x05R\tseatCount\x12\x16\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\"5\n" +
+	"\x14SetSeatCountResponse\x12\x1d\n" +
+	"\n" +
+	"seat_count\x18\x01 \x01(\x05R\tseatCount\"g\n" +
+	"\x11ChangePlanRequest\x12\x1d\n" +
+	"\n" +
+	"company_id\x18\x01 \x01(\tR\tcompanyId\x12\x1b\n" +
+	"\tplan_code\x18\x02 \x01(\tR\bplanCode\x12\x16\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\"X\n" +
+	"\x12ChangePlanResponse\x12\x1b\n" +
+	"\tplan_code\x18\x01 \x01(\tR\bplanCode\x12%\n" +
+	"\x0eeffective_from\x18\x02 \x01(\tR\reffectiveFrom\"v\n" +
+	"\x19CancelSubscriptionRequest\x12\x1d\n" +
+	"\n" +
+	"company_id\x18\x01 \x01(\tR\tcompanyId\x12\"\n" +
+	"\rat_period_end\x18\x02 \x01(\bR\vatPeriodEnd\x12\x16\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\"d\n" +
+	"\x1aCancelSubscriptionResponse\x12!\n" +
+	"\fcancelled_at\x18\x01 \x01(\tR\vcancelledAt\x12#\n" +
+	"\rservice_until\x18\x02 \x01(\tR\fserviceUntil\"\x1b\n" +
+	"\x19GetBillingSettingsRequest\"U\n" +
+	"\x1aGetBillingSettingsResponse\x127\n" +
+	"\bsettings\x18\x01 \x03(\v2\x1b.platform.v1.BillingSettingR\bsettings\"Z\n" +
+	"\x0eBillingSetting\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value\x12 \n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\"o\n" +
+	"\x1cUpdateBillingSettingsRequest\x127\n" +
+	"\bsettings\x18\x01 \x03(\v2\x1b.platform.v1.BillingSettingR\bsettings\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"X\n" +
+	"\x1dUpdateBillingSettingsResponse\x127\n" +
+	"\bsettings\x18\x01 \x03(\v2\x1b.platform.v1.BillingSettingR\bsettings\"\xa2\x02\n" +
+	"\x18SetTenantOverrideRequest\x12\x1d\n" +
+	"\n" +
+	"company_id\x18\x01 \x01(\tR\tcompanyId\x12!\n" +
+	"\ffeature_code\x18\x02 \x01(\tR\vfeatureCode\x12\x1f\n" +
+	"\venabled_set\x18\x03 \x01(\bR\n" +
+	"enabledSet\x12\x18\n" +
+	"\aenabled\x18\x04 \x01(\bR\aenabled\x12\x1b\n" +
+	"\tlimit_set\x18\x05 \x01(\bR\blimitSet\x12\x1f\n" +
+	"\vlimit_value\x18\x06 \x01(\x03R\n" +
+	"limitValue\x12\x14\n" +
+	"\x05owner\x18\a \x01(\tR\x05owner\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\b \x01(\tR\texpiresAt\x12\x16\n" +
+	"\x06reason\x18\t \x01(\tR\x06reason\"+\n" +
+	"\x19SetTenantOverrideResponse\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"V\n" +
+	"\x1bRevokeTenantOverrideRequest\x12\x1f\n" +
+	"\voverride_id\x18\x01 \x01(\tR\n" +
+	"overrideId\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"`\n" +
+	"\x1cRevokeTenantOverrideResponse\x12\x1d\n" +
+	"\n" +
+	"company_id\x18\x01 \x01(\tR\tcompanyId\x12!\n" +
+	"\ffeature_code\x18\x02 \x01(\tR\vfeatureCode\"\xcc\x01\n" +
+	"\x16UpsertPlanPriceRequest\x12\x1b\n" +
+	"\tplan_code\x18\x01 \x01(\tR\bplanCode\x12#\n" +
+	"\rbilling_cycle\x18\x02 \x01(\tR\fbillingCycle\x12\x1d\n" +
+	"\n" +
+	"base_price\x18\x03 \x01(\tR\tbasePrice\x12\x1d\n" +
+	"\n" +
+	"seat_price\x18\x04 \x01(\tR\tseatPrice\x12\x1a\n" +
+	"\bcurrency\x18\x05 \x01(\tR\bcurrency\x12\x16\n" +
+	"\x06reason\x18\x06 \x01(\tR\x06reason\"\x19\n" +
+	"\x17UpsertPlanPriceResponse\"\xcb\x01\n" +
+	"\x19SetPlanEntitlementRequest\x12\x1b\n" +
+	"\tplan_code\x18\x01 \x01(\tR\bplanCode\x12!\n" +
+	"\ffeature_code\x18\x02 \x01(\tR\vfeatureCode\x12\x18\n" +
+	"\aenabled\x18\x03 \x01(\bR\aenabled\x12\x1b\n" +
+	"\tlimit_set\x18\x04 \x01(\bR\blimitSet\x12\x1f\n" +
+	"\vlimit_value\x18\x05 \x01(\x03R\n" +
+	"limitValue\x12\x16\n" +
+	"\x06reason\x18\x06 \x01(\tR\x06reason\"\x1c\n" +
+	"\x1aSetPlanEntitlementResponse\"m\n" +
+	"\x15CreateOperatorRequest\x12\x14\n" +
+	"\x05email\x18\x01 \x01(\tR\x05email\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
+	"\x04role\x18\x03 \x01(\tR\x04role\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason\"(\n" +
+	"\x16CreateOperatorResponse\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"Q\n" +
+	"\x16DisableOperatorRequest\x12\x1f\n" +
+	"\voperator_id\x18\x01 \x01(\tR\n" +
+	"operatorId\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"\x19\n" +
+	"\x17DisableOperatorResponse\"\x1e\n" +
 	"\x1cGetTenantEntitlementsRequest\"\xbf\x01\n" +
 	"\x1dGetTenantEntitlementsResponse\x12\x1b\n" +
 	"\tplan_code\x18\x01 \x01(\tR\bplanCode\x12\x1b\n" +
@@ -1502,13 +3266,27 @@ const file_platform_v1_platform_proto_rawDesc = "" +
 	"\tlimit_set\x18\x03 \x01(\bR\blimitSet\x12\x1f\n" +
 	"\vlimit_value\x18\x04 \x01(\x03R\n" +
 	"limitValue\x12\x12\n" +
-	"\x04used\x18\x05 \x01(\x03R\x04used2\xce\x03\n" +
+	"\x04used\x18\x05 \x01(\x03R\x04used2\xb5\r\n" +
 	"\x14PlatformAdminService\x12P\n" +
 	"\vListTenants\x12\x1f.platform.v1.ListTenantsRequest\x1a .platform.v1.ListTenantsResponse\x12J\n" +
 	"\tGetTenant\x12\x1d.platform.v1.GetTenantRequest\x1a\x1e.platform.v1.GetTenantResponse\x12J\n" +
 	"\tListPlans\x12\x1d.platform.v1.ListPlansRequest\x1a\x1e.platform.v1.ListPlansResponse\x12h\n" +
 	"\x13GetPlanEntitlements\x12'.platform.v1.GetPlanEntitlementsRequest\x1a(.platform.v1.GetPlanEntitlementsResponse\x12b\n" +
-	"\x11ListPlatformAudit\x12%.platform.v1.ListPlatformAuditRequest\x1a&.platform.v1.ListPlatformAuditResponse2\x8a\x01\n" +
+	"\x11ListPlatformAudit\x12%.platform.v1.ListPlatformAuditRequest\x1a&.platform.v1.ListPlatformAuditResponse\x12\\\n" +
+	"\x0fListReceivables\x12#.platform.v1.ListReceivablesRequest\x1a$.platform.v1.ListReceivablesResponse\x12V\n" +
+	"\rRecordPayment\x12!.platform.v1.RecordPaymentRequest\x1a\".platform.v1.RecordPaymentResponse\x12S\n" +
+	"\fSetSeatCount\x12 .platform.v1.SetSeatCountRequest\x1a!.platform.v1.SetSeatCountResponse\x12M\n" +
+	"\n" +
+	"ChangePlan\x12\x1e.platform.v1.ChangePlanRequest\x1a\x1f.platform.v1.ChangePlanResponse\x12e\n" +
+	"\x12CancelSubscription\x12&.platform.v1.CancelSubscriptionRequest\x1a'.platform.v1.CancelSubscriptionResponse\x12e\n" +
+	"\x12GetBillingSettings\x12&.platform.v1.GetBillingSettingsRequest\x1a'.platform.v1.GetBillingSettingsResponse\x12n\n" +
+	"\x15UpdateBillingSettings\x12).platform.v1.UpdateBillingSettingsRequest\x1a*.platform.v1.UpdateBillingSettingsResponse\x12b\n" +
+	"\x11SetTenantOverride\x12%.platform.v1.SetTenantOverrideRequest\x1a&.platform.v1.SetTenantOverrideResponse\x12k\n" +
+	"\x14RevokeTenantOverride\x12(.platform.v1.RevokeTenantOverrideRequest\x1a).platform.v1.RevokeTenantOverrideResponse\x12\\\n" +
+	"\x0fUpsertPlanPrice\x12#.platform.v1.UpsertPlanPriceRequest\x1a$.platform.v1.UpsertPlanPriceResponse\x12e\n" +
+	"\x12SetPlanEntitlement\x12&.platform.v1.SetPlanEntitlementRequest\x1a'.platform.v1.SetPlanEntitlementResponse\x12Y\n" +
+	"\x0eCreateOperator\x12\".platform.v1.CreateOperatorRequest\x1a#.platform.v1.CreateOperatorResponse\x12\\\n" +
+	"\x0fDisableOperator\x12#.platform.v1.DisableOperatorRequest\x1a$.platform.v1.DisableOperatorResponse2\x8a\x01\n" +
 	"\x18TenantEntitlementService\x12n\n" +
 	"\x15GetTenantEntitlements\x12).platform.v1.GetTenantEntitlementsRequest\x1a*.platform.v1.GetTenantEntitlementsResponseBUZSgithub.com/salesorder/sales-order-1.0/backend/internal/proto/platform/v1;platformv1b\x06proto3"
 
@@ -1524,7 +3302,7 @@ func file_platform_v1_platform_proto_rawDescGZIP() []byte {
 	return file_platform_v1_platform_proto_rawDescData
 }
 
-var file_platform_v1_platform_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_platform_v1_platform_proto_msgTypes = make([]protoimpl.MessageInfo, 49)
 var file_platform_v1_platform_proto_goTypes = []any{
 	(*TenantSummary)(nil),                 // 0: platform.v1.TenantSummary
 	(*PlatformPagination)(nil),            // 1: platform.v1.PlatformPagination
@@ -1544,9 +3322,37 @@ var file_platform_v1_platform_proto_goTypes = []any{
 	(*ListPlatformAuditRequest)(nil),      // 15: platform.v1.ListPlatformAuditRequest
 	(*ListPlatformAuditResponse)(nil),     // 16: platform.v1.ListPlatformAuditResponse
 	(*PlatformAuditEntry)(nil),            // 17: platform.v1.PlatformAuditEntry
-	(*GetTenantEntitlementsRequest)(nil),  // 18: platform.v1.GetTenantEntitlementsRequest
-	(*GetTenantEntitlementsResponse)(nil), // 19: platform.v1.GetTenantEntitlementsResponse
-	(*Usage)(nil),                         // 20: platform.v1.Usage
+	(*ListReceivablesRequest)(nil),        // 18: platform.v1.ListReceivablesRequest
+	(*ListReceivablesResponse)(nil),       // 19: platform.v1.ListReceivablesResponse
+	(*Receivable)(nil),                    // 20: platform.v1.Receivable
+	(*RecordPaymentRequest)(nil),          // 21: platform.v1.RecordPaymentRequest
+	(*RecordPaymentResponse)(nil),         // 22: platform.v1.RecordPaymentResponse
+	(*SetSeatCountRequest)(nil),           // 23: platform.v1.SetSeatCountRequest
+	(*SetSeatCountResponse)(nil),          // 24: platform.v1.SetSeatCountResponse
+	(*ChangePlanRequest)(nil),             // 25: platform.v1.ChangePlanRequest
+	(*ChangePlanResponse)(nil),            // 26: platform.v1.ChangePlanResponse
+	(*CancelSubscriptionRequest)(nil),     // 27: platform.v1.CancelSubscriptionRequest
+	(*CancelSubscriptionResponse)(nil),    // 28: platform.v1.CancelSubscriptionResponse
+	(*GetBillingSettingsRequest)(nil),     // 29: platform.v1.GetBillingSettingsRequest
+	(*GetBillingSettingsResponse)(nil),    // 30: platform.v1.GetBillingSettingsResponse
+	(*BillingSetting)(nil),                // 31: platform.v1.BillingSetting
+	(*UpdateBillingSettingsRequest)(nil),  // 32: platform.v1.UpdateBillingSettingsRequest
+	(*UpdateBillingSettingsResponse)(nil), // 33: platform.v1.UpdateBillingSettingsResponse
+	(*SetTenantOverrideRequest)(nil),      // 34: platform.v1.SetTenantOverrideRequest
+	(*SetTenantOverrideResponse)(nil),     // 35: platform.v1.SetTenantOverrideResponse
+	(*RevokeTenantOverrideRequest)(nil),   // 36: platform.v1.RevokeTenantOverrideRequest
+	(*RevokeTenantOverrideResponse)(nil),  // 37: platform.v1.RevokeTenantOverrideResponse
+	(*UpsertPlanPriceRequest)(nil),        // 38: platform.v1.UpsertPlanPriceRequest
+	(*UpsertPlanPriceResponse)(nil),       // 39: platform.v1.UpsertPlanPriceResponse
+	(*SetPlanEntitlementRequest)(nil),     // 40: platform.v1.SetPlanEntitlementRequest
+	(*SetPlanEntitlementResponse)(nil),    // 41: platform.v1.SetPlanEntitlementResponse
+	(*CreateOperatorRequest)(nil),         // 42: platform.v1.CreateOperatorRequest
+	(*CreateOperatorResponse)(nil),        // 43: platform.v1.CreateOperatorResponse
+	(*DisableOperatorRequest)(nil),        // 44: platform.v1.DisableOperatorRequest
+	(*DisableOperatorResponse)(nil),       // 45: platform.v1.DisableOperatorResponse
+	(*GetTenantEntitlementsRequest)(nil),  // 46: platform.v1.GetTenantEntitlementsRequest
+	(*GetTenantEntitlementsResponse)(nil), // 47: platform.v1.GetTenantEntitlementsResponse
+	(*Usage)(nil),                         // 48: platform.v1.Usage
 }
 var file_platform_v1_platform_proto_depIdxs = []int32{
 	0,  // 0: platform.v1.ListTenantsResponse.tenants:type_name -> platform.v1.TenantSummary
@@ -1559,24 +3365,55 @@ var file_platform_v1_platform_proto_depIdxs = []int32{
 	13, // 7: platform.v1.GetPlanEntitlementsResponse.features:type_name -> platform.v1.Feature
 	17, // 8: platform.v1.ListPlatformAuditResponse.entries:type_name -> platform.v1.PlatformAuditEntry
 	1,  // 9: platform.v1.ListPlatformAuditResponse.pagination:type_name -> platform.v1.PlatformPagination
-	20, // 10: platform.v1.GetTenantEntitlementsResponse.usage:type_name -> platform.v1.Usage
-	2,  // 11: platform.v1.PlatformAdminService.ListTenants:input_type -> platform.v1.ListTenantsRequest
-	4,  // 12: platform.v1.PlatformAdminService.GetTenant:input_type -> platform.v1.GetTenantRequest
-	7,  // 13: platform.v1.PlatformAdminService.ListPlans:input_type -> platform.v1.ListPlansRequest
-	11, // 14: platform.v1.PlatformAdminService.GetPlanEntitlements:input_type -> platform.v1.GetPlanEntitlementsRequest
-	15, // 15: platform.v1.PlatformAdminService.ListPlatformAudit:input_type -> platform.v1.ListPlatformAuditRequest
-	18, // 16: platform.v1.TenantEntitlementService.GetTenantEntitlements:input_type -> platform.v1.GetTenantEntitlementsRequest
-	3,  // 17: platform.v1.PlatformAdminService.ListTenants:output_type -> platform.v1.ListTenantsResponse
-	5,  // 18: platform.v1.PlatformAdminService.GetTenant:output_type -> platform.v1.GetTenantResponse
-	8,  // 19: platform.v1.PlatformAdminService.ListPlans:output_type -> platform.v1.ListPlansResponse
-	12, // 20: platform.v1.PlatformAdminService.GetPlanEntitlements:output_type -> platform.v1.GetPlanEntitlementsResponse
-	16, // 21: platform.v1.PlatformAdminService.ListPlatformAudit:output_type -> platform.v1.ListPlatformAuditResponse
-	19, // 22: platform.v1.TenantEntitlementService.GetTenantEntitlements:output_type -> platform.v1.GetTenantEntitlementsResponse
-	17, // [17:23] is the sub-list for method output_type
-	11, // [11:17] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	20, // 10: platform.v1.ListReceivablesResponse.rows:type_name -> platform.v1.Receivable
+	1,  // 11: platform.v1.ListReceivablesResponse.pagination:type_name -> platform.v1.PlatformPagination
+	31, // 12: platform.v1.GetBillingSettingsResponse.settings:type_name -> platform.v1.BillingSetting
+	31, // 13: platform.v1.UpdateBillingSettingsRequest.settings:type_name -> platform.v1.BillingSetting
+	31, // 14: platform.v1.UpdateBillingSettingsResponse.settings:type_name -> platform.v1.BillingSetting
+	48, // 15: platform.v1.GetTenantEntitlementsResponse.usage:type_name -> platform.v1.Usage
+	2,  // 16: platform.v1.PlatformAdminService.ListTenants:input_type -> platform.v1.ListTenantsRequest
+	4,  // 17: platform.v1.PlatformAdminService.GetTenant:input_type -> platform.v1.GetTenantRequest
+	7,  // 18: platform.v1.PlatformAdminService.ListPlans:input_type -> platform.v1.ListPlansRequest
+	11, // 19: platform.v1.PlatformAdminService.GetPlanEntitlements:input_type -> platform.v1.GetPlanEntitlementsRequest
+	15, // 20: platform.v1.PlatformAdminService.ListPlatformAudit:input_type -> platform.v1.ListPlatformAuditRequest
+	18, // 21: platform.v1.PlatformAdminService.ListReceivables:input_type -> platform.v1.ListReceivablesRequest
+	21, // 22: platform.v1.PlatformAdminService.RecordPayment:input_type -> platform.v1.RecordPaymentRequest
+	23, // 23: platform.v1.PlatformAdminService.SetSeatCount:input_type -> platform.v1.SetSeatCountRequest
+	25, // 24: platform.v1.PlatformAdminService.ChangePlan:input_type -> platform.v1.ChangePlanRequest
+	27, // 25: platform.v1.PlatformAdminService.CancelSubscription:input_type -> platform.v1.CancelSubscriptionRequest
+	29, // 26: platform.v1.PlatformAdminService.GetBillingSettings:input_type -> platform.v1.GetBillingSettingsRequest
+	32, // 27: platform.v1.PlatformAdminService.UpdateBillingSettings:input_type -> platform.v1.UpdateBillingSettingsRequest
+	34, // 28: platform.v1.PlatformAdminService.SetTenantOverride:input_type -> platform.v1.SetTenantOverrideRequest
+	36, // 29: platform.v1.PlatformAdminService.RevokeTenantOverride:input_type -> platform.v1.RevokeTenantOverrideRequest
+	38, // 30: platform.v1.PlatformAdminService.UpsertPlanPrice:input_type -> platform.v1.UpsertPlanPriceRequest
+	40, // 31: platform.v1.PlatformAdminService.SetPlanEntitlement:input_type -> platform.v1.SetPlanEntitlementRequest
+	42, // 32: platform.v1.PlatformAdminService.CreateOperator:input_type -> platform.v1.CreateOperatorRequest
+	44, // 33: platform.v1.PlatformAdminService.DisableOperator:input_type -> platform.v1.DisableOperatorRequest
+	46, // 34: platform.v1.TenantEntitlementService.GetTenantEntitlements:input_type -> platform.v1.GetTenantEntitlementsRequest
+	3,  // 35: platform.v1.PlatformAdminService.ListTenants:output_type -> platform.v1.ListTenantsResponse
+	5,  // 36: platform.v1.PlatformAdminService.GetTenant:output_type -> platform.v1.GetTenantResponse
+	8,  // 37: platform.v1.PlatformAdminService.ListPlans:output_type -> platform.v1.ListPlansResponse
+	12, // 38: platform.v1.PlatformAdminService.GetPlanEntitlements:output_type -> platform.v1.GetPlanEntitlementsResponse
+	16, // 39: platform.v1.PlatformAdminService.ListPlatformAudit:output_type -> platform.v1.ListPlatformAuditResponse
+	19, // 40: platform.v1.PlatformAdminService.ListReceivables:output_type -> platform.v1.ListReceivablesResponse
+	22, // 41: platform.v1.PlatformAdminService.RecordPayment:output_type -> platform.v1.RecordPaymentResponse
+	24, // 42: platform.v1.PlatformAdminService.SetSeatCount:output_type -> platform.v1.SetSeatCountResponse
+	26, // 43: platform.v1.PlatformAdminService.ChangePlan:output_type -> platform.v1.ChangePlanResponse
+	28, // 44: platform.v1.PlatformAdminService.CancelSubscription:output_type -> platform.v1.CancelSubscriptionResponse
+	30, // 45: platform.v1.PlatformAdminService.GetBillingSettings:output_type -> platform.v1.GetBillingSettingsResponse
+	33, // 46: platform.v1.PlatformAdminService.UpdateBillingSettings:output_type -> platform.v1.UpdateBillingSettingsResponse
+	35, // 47: platform.v1.PlatformAdminService.SetTenantOverride:output_type -> platform.v1.SetTenantOverrideResponse
+	37, // 48: platform.v1.PlatformAdminService.RevokeTenantOverride:output_type -> platform.v1.RevokeTenantOverrideResponse
+	39, // 49: platform.v1.PlatformAdminService.UpsertPlanPrice:output_type -> platform.v1.UpsertPlanPriceResponse
+	41, // 50: platform.v1.PlatformAdminService.SetPlanEntitlement:output_type -> platform.v1.SetPlanEntitlementResponse
+	43, // 51: platform.v1.PlatformAdminService.CreateOperator:output_type -> platform.v1.CreateOperatorResponse
+	45, // 52: platform.v1.PlatformAdminService.DisableOperator:output_type -> platform.v1.DisableOperatorResponse
+	47, // 53: platform.v1.TenantEntitlementService.GetTenantEntitlements:output_type -> platform.v1.GetTenantEntitlementsResponse
+	35, // [35:54] is the sub-list for method output_type
+	16, // [16:35] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_platform_v1_platform_proto_init() }
@@ -1590,7 +3427,7 @@ func file_platform_v1_platform_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_platform_v1_platform_proto_rawDesc), len(file_platform_v1_platform_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   21,
+			NumMessages:   49,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

@@ -90,8 +90,8 @@ type RecordPaymentInput struct {
 	ExternalRef string
 	InvoiceNo   string
 	// InvoiceStatus／BuyerTaxID／Carrier 為開票資訊（欄位在 platform.subscription_periods）。
-	// BillingStore 目前沒有寫這三欄的方法（範圍外，屬 store 的契約），故本方法將它們記入平台
-	// 稽核的 after：寧可留在稽核裡，也不要靜默丟掉營運輸入。
+	// 與其他付款憑據同一筆寫入（MarkPeriodPaidTx 的同一組 CASE）：開票是付款事件的一部分，
+	// 分開寫就允許「收了錢但發票欄位沒落地」。重播（已 paid 且交易號相同）不覆寫它們。
 	InvoiceStatus string
 	BuyerTaxID    string
 	Carrier       string
@@ -160,7 +160,9 @@ func (b *Billing) RecordPayment(ctx context.Context, in RecordPaymentInput) (*st
 			// 唯一落點（G8），而 store 對已經 paid 的列只寫 note（其餘憑據由 `status='open'` 的
 			// CASE 保留原值）。少了這一段，console 對已入帳期別補記差異會「回成功但什麼都沒寫」。
 			if in.Note != "" {
+				// 重播只補寫 note:其餘憑據(含開票三欄)由 store 的 `status='open'` CASE 保留原值。
 				if err := b.st.MarkPeriodPaidTx(ctx, tx, period.ID, in.PaidAt, in.InvoiceNo,
+					in.InvoiceStatus, in.BuyerTaxID, in.Carrier,
 					in.Provider, in.ExternalRef, in.Note); err != nil {
 					if errors.Is(err, sql.ErrNoRows) {
 						return errcode.SysNotFound.Wrap(err)
@@ -187,7 +189,7 @@ func (b *Billing) RecordPayment(ctx context.Context, in RecordPaymentInput) (*st
 		}
 
 		if err := b.st.MarkPeriodPaidTx(ctx, tx, period.ID, in.PaidAt, in.InvoiceNo,
-			in.Provider, in.ExternalRef, in.Note); err != nil {
+			in.InvoiceStatus, in.BuyerTaxID, in.Carrier, in.Provider, in.ExternalRef, in.Note); err != nil {
 			// 走到這裡還能失敗的只有：期別消失、或同一 provider＋交易號已入帳另一期
 			// （00029 的 periods_provider_ref_unique）。狀態問題已在上方擋掉。
 			if errors.Is(err, sql.ErrNoRows) {
@@ -195,6 +197,10 @@ func (b *Billing) RecordPayment(ctx context.Context, in RecordPaymentInput) (*st
 			}
 			return errcode.PlatformPaymentConflict.Wrap(err)
 		}
+
+		// 入帳成功 → 回傳的期別必須是**新狀態**：period 是 MarkPeriodPaidTx 之前讀出來的列，
+		// 帶著它回上層等於回應說「已付款期別仍是 open」（console 顯示未付、operator 再按一次）。
+		period.Status = "paid"
 
 		// 復原：清寬限期（補繳後不得再因舊寬限期被停用）。原本已是 active（補繳當期）時不寫事件
 		// —— 沒有「從哪裡復原」可言，寫了反而讓 consumer 對已啟用的公司再做一次復原。
@@ -227,7 +233,8 @@ func (b *Billing) RecordPayment(ctx context.Context, in RecordPaymentInput) (*st
 			"external_ref": in.ExternalRef,
 			"amount_cents": period.AmountCents,
 			"invoice_no":   in.InvoiceNo,
-			// 開票資訊目前沒有寫入期別欄位的介面：記在稽核裡，不靜默丟掉營運輸入。
+			// 開票資訊同時落地到期別欄位（見 MarkPeriodPaidTx）與稽核：欄位是帳務的事實，
+			// 稽核是「這次入帳帶了什麼」的紀錄，兩者回答的問題不同。
 			"invoice_status": in.InvoiceStatus,
 			"buyer_tax_id":   in.BuyerTaxID,
 			"carrier":        in.Carrier,

@@ -395,6 +395,466 @@ final $typed_data.Uint8List platformAuditEntryDescriptor = $convert.base64Decode
     'eXBlGAQgASgJUgp0YXJnZXRUeXBlEhsKCXRhcmdldF9pZBgFIAEoCVIIdGFyZ2V0SWQSFgoGcm'
     'Vhc29uGAYgASgJUgZyZWFzb24SHQoKY3JlYXRlZF9hdBgHIAEoCVIJY3JlYXRlZEF0');
 
+@$core.Deprecated('Use listReceivablesRequestDescriptor instead')
+const ListReceivablesRequest$json = {
+  '1': 'ListReceivablesRequest',
+  '2': [
+    {'1': 'page', '3': 1, '4': 1, '5': 5, '10': 'page'},
+    {'1': 'page_size', '3': 2, '4': 1, '5': 5, '10': 'pageSize'},
+  ],
+};
+
+/// Descriptor for `ListReceivablesRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listReceivablesRequestDescriptor =
+    $convert.base64Decode(
+        'ChZMaXN0UmVjZWl2YWJsZXNSZXF1ZXN0EhIKBHBhZ2UYASABKAVSBHBhZ2USGwoJcGFnZV9zaX'
+        'plGAIgASgFUghwYWdlU2l6ZQ==');
+
+@$core.Deprecated('Use listReceivablesResponseDescriptor instead')
+const ListReceivablesResponse$json = {
+  '1': 'ListReceivablesResponse',
+  '2': [
+    {
+      '1': 'rows',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.platform.v1.Receivable',
+      '10': 'rows'
+    },
+    {
+      '1': 'pagination',
+      '3': 2,
+      '4': 1,
+      '5': 11,
+      '6': '.platform.v1.PlatformPagination',
+      '10': 'pagination'
+    },
+  ],
+};
+
+/// Descriptor for `ListReceivablesResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listReceivablesResponseDescriptor = $convert.base64Decode(
+    'ChdMaXN0UmVjZWl2YWJsZXNSZXNwb25zZRIrCgRyb3dzGAEgAygLMhcucGxhdGZvcm0udjEuUm'
+    'VjZWl2YWJsZVIEcm93cxI/CgpwYWdpbmF0aW9uGAIgASgLMh8ucGxhdGZvcm0udjEuUGxhdGZv'
+    'cm1QYWdpbmF0aW9uUgpwYWdpbmF0aW9u');
+
+@$core.Deprecated('Use receivableDescriptor instead')
+const Receivable$json = {
+  '1': 'Receivable',
+  '2': [
+    {'1': 'company_id', '3': 1, '4': 1, '5': 9, '10': 'companyId'},
+    {'1': 'company_name', '3': 2, '4': 1, '5': 9, '10': 'companyName'},
+    {'1': 'plan_code', '3': 3, '4': 1, '5': 9, '10': 'planCode'},
+    {'1': 'period_no', '3': 4, '4': 1, '5': 5, '10': 'periodNo'},
+    {'1': 'amount', '3': 5, '4': 1, '5': 9, '10': 'amount'},
+    {'1': 'period_end', '3': 6, '4': 1, '5': 9, '10': 'periodEnd'},
+    {'1': 'status', '3': 7, '4': 1, '5': 9, '10': 'status'},
+  ],
+};
+
+/// Descriptor for `Receivable`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List receivableDescriptor = $convert.base64Decode(
+    'CgpSZWNlaXZhYmxlEh0KCmNvbXBhbnlfaWQYASABKAlSCWNvbXBhbnlJZBIhCgxjb21wYW55X2'
+    '5hbWUYAiABKAlSC2NvbXBhbnlOYW1lEhsKCXBsYW5fY29kZRgDIAEoCVIIcGxhbkNvZGUSGwoJ'
+    'cGVyaW9kX25vGAQgASgFUghwZXJpb2RObxIWCgZhbW91bnQYBSABKAlSBmFtb3VudBIdCgpwZX'
+    'Jpb2RfZW5kGAYgASgJUglwZXJpb2RFbmQSFgoGc3RhdHVzGAcgASgJUgZzdGF0dXM=');
+
+@$core.Deprecated('Use recordPaymentRequestDescriptor instead')
+const RecordPaymentRequest$json = {
+  '1': 'RecordPaymentRequest',
+  '2': [
+    {'1': 'company_id', '3': 1, '4': 1, '5': 9, '10': 'companyId'},
+    {'1': 'period_no', '3': 2, '4': 1, '5': 5, '10': 'periodNo'},
+    {'1': 'amount', '3': 3, '4': 1, '5': 9, '10': 'amount'},
+    {'1': 'provider', '3': 4, '4': 1, '5': 9, '10': 'provider'},
+    {'1': 'external_ref', '3': 5, '4': 1, '5': 9, '10': 'externalRef'},
+    {'1': 'invoice_no', '3': 6, '4': 1, '5': 9, '10': 'invoiceNo'},
+    {'1': 'invoice_status', '3': 7, '4': 1, '5': 9, '10': 'invoiceStatus'},
+    {'1': 'buyer_tax_id', '3': 8, '4': 1, '5': 9, '10': 'buyerTaxId'},
+    {'1': 'carrier', '3': 9, '4': 1, '5': 9, '10': 'carrier'},
+    {'1': 'note', '3': 10, '4': 1, '5': 9, '10': 'note'},
+    {'1': 'reason', '3': 11, '4': 1, '5': 9, '10': 'reason'},
+  ],
+};
+
+/// Descriptor for `RecordPaymentRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List recordPaymentRequestDescriptor = $convert.base64Decode(
+    'ChRSZWNvcmRQYXltZW50UmVxdWVzdBIdCgpjb21wYW55X2lkGAEgASgJUgljb21wYW55SWQSGw'
+    'oJcGVyaW9kX25vGAIgASgFUghwZXJpb2RObxIWCgZhbW91bnQYAyABKAlSBmFtb3VudBIaCghw'
+    'cm92aWRlchgEIAEoCVIIcHJvdmlkZXISIQoMZXh0ZXJuYWxfcmVmGAUgASgJUgtleHRlcm5hbF'
+    'JlZhIdCgppbnZvaWNlX25vGAYgASgJUglpbnZvaWNlTm8SJQoOaW52b2ljZV9zdGF0dXMYByAB'
+    'KAlSDWludm9pY2VTdGF0dXMSIAoMYnV5ZXJfdGF4X2lkGAggASgJUgpidXllclRheElkEhgKB2'
+    'NhcnJpZXIYCSABKAlSB2NhcnJpZXISEgoEbm90ZRgKIAEoCVIEbm90ZRIWCgZyZWFzb24YCyAB'
+    'KAlSBnJlYXNvbg==');
+
+@$core.Deprecated('Use recordPaymentResponseDescriptor instead')
+const RecordPaymentResponse$json = {
+  '1': 'RecordPaymentResponse',
+  '2': [
+    {'1': 'period_no', '3': 1, '4': 1, '5': 5, '10': 'periodNo'},
+    {'1': 'status', '3': 2, '4': 1, '5': 9, '10': 'status'},
+  ],
+};
+
+/// Descriptor for `RecordPaymentResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List recordPaymentResponseDescriptor = $convert.base64Decode(
+    'ChVSZWNvcmRQYXltZW50UmVzcG9uc2USGwoJcGVyaW9kX25vGAEgASgFUghwZXJpb2RObxIWCg'
+    'ZzdGF0dXMYAiABKAlSBnN0YXR1cw==');
+
+@$core.Deprecated('Use setSeatCountRequestDescriptor instead')
+const SetSeatCountRequest$json = {
+  '1': 'SetSeatCountRequest',
+  '2': [
+    {'1': 'company_id', '3': 1, '4': 1, '5': 9, '10': 'companyId'},
+    {'1': 'seat_count', '3': 2, '4': 1, '5': 5, '10': 'seatCount'},
+    {'1': 'reason', '3': 3, '4': 1, '5': 9, '10': 'reason'},
+  ],
+};
+
+/// Descriptor for `SetSeatCountRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List setSeatCountRequestDescriptor = $convert.base64Decode(
+    'ChNTZXRTZWF0Q291bnRSZXF1ZXN0Eh0KCmNvbXBhbnlfaWQYASABKAlSCWNvbXBhbnlJZBIdCg'
+    'pzZWF0X2NvdW50GAIgASgFUglzZWF0Q291bnQSFgoGcmVhc29uGAMgASgJUgZyZWFzb24=');
+
+@$core.Deprecated('Use setSeatCountResponseDescriptor instead')
+const SetSeatCountResponse$json = {
+  '1': 'SetSeatCountResponse',
+  '2': [
+    {'1': 'seat_count', '3': 1, '4': 1, '5': 5, '10': 'seatCount'},
+  ],
+};
+
+/// Descriptor for `SetSeatCountResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List setSeatCountResponseDescriptor = $convert.base64Decode(
+    'ChRTZXRTZWF0Q291bnRSZXNwb25zZRIdCgpzZWF0X2NvdW50GAEgASgFUglzZWF0Q291bnQ=');
+
+@$core.Deprecated('Use changePlanRequestDescriptor instead')
+const ChangePlanRequest$json = {
+  '1': 'ChangePlanRequest',
+  '2': [
+    {'1': 'company_id', '3': 1, '4': 1, '5': 9, '10': 'companyId'},
+    {'1': 'plan_code', '3': 2, '4': 1, '5': 9, '10': 'planCode'},
+    {'1': 'reason', '3': 3, '4': 1, '5': 9, '10': 'reason'},
+  ],
+};
+
+/// Descriptor for `ChangePlanRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List changePlanRequestDescriptor = $convert.base64Decode(
+    'ChFDaGFuZ2VQbGFuUmVxdWVzdBIdCgpjb21wYW55X2lkGAEgASgJUgljb21wYW55SWQSGwoJcG'
+    'xhbl9jb2RlGAIgASgJUghwbGFuQ29kZRIWCgZyZWFzb24YAyABKAlSBnJlYXNvbg==');
+
+@$core.Deprecated('Use changePlanResponseDescriptor instead')
+const ChangePlanResponse$json = {
+  '1': 'ChangePlanResponse',
+  '2': [
+    {'1': 'plan_code', '3': 1, '4': 1, '5': 9, '10': 'planCode'},
+    {'1': 'effective_from', '3': 2, '4': 1, '5': 9, '10': 'effectiveFrom'},
+  ],
+};
+
+/// Descriptor for `ChangePlanResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List changePlanResponseDescriptor = $convert.base64Decode(
+    'ChJDaGFuZ2VQbGFuUmVzcG9uc2USGwoJcGxhbl9jb2RlGAEgASgJUghwbGFuQ29kZRIlCg5lZm'
+    'ZlY3RpdmVfZnJvbRgCIAEoCVINZWZmZWN0aXZlRnJvbQ==');
+
+@$core.Deprecated('Use cancelSubscriptionRequestDescriptor instead')
+const CancelSubscriptionRequest$json = {
+  '1': 'CancelSubscriptionRequest',
+  '2': [
+    {'1': 'company_id', '3': 1, '4': 1, '5': 9, '10': 'companyId'},
+    {'1': 'at_period_end', '3': 2, '4': 1, '5': 8, '10': 'atPeriodEnd'},
+    {'1': 'reason', '3': 3, '4': 1, '5': 9, '10': 'reason'},
+  ],
+};
+
+/// Descriptor for `CancelSubscriptionRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List cancelSubscriptionRequestDescriptor = $convert.base64Decode(
+    'ChlDYW5jZWxTdWJzY3JpcHRpb25SZXF1ZXN0Eh0KCmNvbXBhbnlfaWQYASABKAlSCWNvbXBhbn'
+    'lJZBIiCg1hdF9wZXJpb2RfZW5kGAIgASgIUgthdFBlcmlvZEVuZBIWCgZyZWFzb24YAyABKAlS'
+    'BnJlYXNvbg==');
+
+@$core.Deprecated('Use cancelSubscriptionResponseDescriptor instead')
+const CancelSubscriptionResponse$json = {
+  '1': 'CancelSubscriptionResponse',
+  '2': [
+    {'1': 'cancelled_at', '3': 1, '4': 1, '5': 9, '10': 'cancelledAt'},
+    {'1': 'service_until', '3': 2, '4': 1, '5': 9, '10': 'serviceUntil'},
+  ],
+};
+
+/// Descriptor for `CancelSubscriptionResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List cancelSubscriptionResponseDescriptor =
+    $convert.base64Decode(
+        'ChpDYW5jZWxTdWJzY3JpcHRpb25SZXNwb25zZRIhCgxjYW5jZWxsZWRfYXQYASABKAlSC2Nhbm'
+        'NlbGxlZEF0EiMKDXNlcnZpY2VfdW50aWwYAiABKAlSDHNlcnZpY2VVbnRpbA==');
+
+@$core.Deprecated('Use getBillingSettingsRequestDescriptor instead')
+const GetBillingSettingsRequest$json = {
+  '1': 'GetBillingSettingsRequest',
+};
+
+/// Descriptor for `GetBillingSettingsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getBillingSettingsRequestDescriptor =
+    $convert.base64Decode('ChlHZXRCaWxsaW5nU2V0dGluZ3NSZXF1ZXN0');
+
+@$core.Deprecated('Use getBillingSettingsResponseDescriptor instead')
+const GetBillingSettingsResponse$json = {
+  '1': 'GetBillingSettingsResponse',
+  '2': [
+    {
+      '1': 'settings',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.platform.v1.BillingSetting',
+      '10': 'settings'
+    },
+  ],
+};
+
+/// Descriptor for `GetBillingSettingsResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getBillingSettingsResponseDescriptor =
+    $convert.base64Decode(
+        'ChpHZXRCaWxsaW5nU2V0dGluZ3NSZXNwb25zZRI3CghzZXR0aW5ncxgBIAMoCzIbLnBsYXRmb3'
+        'JtLnYxLkJpbGxpbmdTZXR0aW5nUghzZXR0aW5ncw==');
+
+@$core.Deprecated('Use billingSettingDescriptor instead')
+const BillingSetting$json = {
+  '1': 'BillingSetting',
+  '2': [
+    {'1': 'key', '3': 1, '4': 1, '5': 9, '10': 'key'},
+    {'1': 'value', '3': 2, '4': 1, '5': 9, '10': 'value'},
+    {'1': 'description', '3': 3, '4': 1, '5': 9, '10': 'description'},
+  ],
+};
+
+/// Descriptor for `BillingSetting`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List billingSettingDescriptor = $convert.base64Decode(
+    'Cg5CaWxsaW5nU2V0dGluZxIQCgNrZXkYASABKAlSA2tleRIUCgV2YWx1ZRgCIAEoCVIFdmFsdW'
+    'USIAoLZGVzY3JpcHRpb24YAyABKAlSC2Rlc2NyaXB0aW9u');
+
+@$core.Deprecated('Use updateBillingSettingsRequestDescriptor instead')
+const UpdateBillingSettingsRequest$json = {
+  '1': 'UpdateBillingSettingsRequest',
+  '2': [
+    {
+      '1': 'settings',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.platform.v1.BillingSetting',
+      '10': 'settings'
+    },
+    {'1': 'reason', '3': 2, '4': 1, '5': 9, '10': 'reason'},
+  ],
+};
+
+/// Descriptor for `UpdateBillingSettingsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List updateBillingSettingsRequestDescriptor =
+    $convert.base64Decode(
+        'ChxVcGRhdGVCaWxsaW5nU2V0dGluZ3NSZXF1ZXN0EjcKCHNldHRpbmdzGAEgAygLMhsucGxhdG'
+        'Zvcm0udjEuQmlsbGluZ1NldHRpbmdSCHNldHRpbmdzEhYKBnJlYXNvbhgCIAEoCVIGcmVhc29u');
+
+@$core.Deprecated('Use updateBillingSettingsResponseDescriptor instead')
+const UpdateBillingSettingsResponse$json = {
+  '1': 'UpdateBillingSettingsResponse',
+  '2': [
+    {
+      '1': 'settings',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.platform.v1.BillingSetting',
+      '10': 'settings'
+    },
+  ],
+};
+
+/// Descriptor for `UpdateBillingSettingsResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List updateBillingSettingsResponseDescriptor =
+    $convert.base64Decode(
+        'Ch1VcGRhdGVCaWxsaW5nU2V0dGluZ3NSZXNwb25zZRI3CghzZXR0aW5ncxgBIAMoCzIbLnBsYX'
+        'Rmb3JtLnYxLkJpbGxpbmdTZXR0aW5nUghzZXR0aW5ncw==');
+
+@$core.Deprecated('Use setTenantOverrideRequestDescriptor instead')
+const SetTenantOverrideRequest$json = {
+  '1': 'SetTenantOverrideRequest',
+  '2': [
+    {'1': 'company_id', '3': 1, '4': 1, '5': 9, '10': 'companyId'},
+    {'1': 'feature_code', '3': 2, '4': 1, '5': 9, '10': 'featureCode'},
+    {'1': 'enabled_set', '3': 3, '4': 1, '5': 8, '10': 'enabledSet'},
+    {'1': 'enabled', '3': 4, '4': 1, '5': 8, '10': 'enabled'},
+    {'1': 'limit_set', '3': 5, '4': 1, '5': 8, '10': 'limitSet'},
+    {'1': 'limit_value', '3': 6, '4': 1, '5': 3, '10': 'limitValue'},
+    {'1': 'owner', '3': 7, '4': 1, '5': 9, '10': 'owner'},
+    {'1': 'expires_at', '3': 8, '4': 1, '5': 9, '10': 'expiresAt'},
+    {'1': 'reason', '3': 9, '4': 1, '5': 9, '10': 'reason'},
+  ],
+};
+
+/// Descriptor for `SetTenantOverrideRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List setTenantOverrideRequestDescriptor = $convert.base64Decode(
+    'ChhTZXRUZW5hbnRPdmVycmlkZVJlcXVlc3QSHQoKY29tcGFueV9pZBgBIAEoCVIJY29tcGFueU'
+    'lkEiEKDGZlYXR1cmVfY29kZRgCIAEoCVILZmVhdHVyZUNvZGUSHwoLZW5hYmxlZF9zZXQYAyAB'
+    'KAhSCmVuYWJsZWRTZXQSGAoHZW5hYmxlZBgEIAEoCFIHZW5hYmxlZBIbCglsaW1pdF9zZXQYBS'
+    'ABKAhSCGxpbWl0U2V0Eh8KC2xpbWl0X3ZhbHVlGAYgASgDUgpsaW1pdFZhbHVlEhQKBW93bmVy'
+    'GAcgASgJUgVvd25lchIdCgpleHBpcmVzX2F0GAggASgJUglleHBpcmVzQXQSFgoGcmVhc29uGA'
+    'kgASgJUgZyZWFzb24=');
+
+@$core.Deprecated('Use setTenantOverrideResponseDescriptor instead')
+const SetTenantOverrideResponse$json = {
+  '1': 'SetTenantOverrideResponse',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+  ],
+};
+
+/// Descriptor for `SetTenantOverrideResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List setTenantOverrideResponseDescriptor =
+    $convert.base64Decode(
+        'ChlTZXRUZW5hbnRPdmVycmlkZVJlc3BvbnNlEg4KAmlkGAEgASgJUgJpZA==');
+
+@$core.Deprecated('Use revokeTenantOverrideRequestDescriptor instead')
+const RevokeTenantOverrideRequest$json = {
+  '1': 'RevokeTenantOverrideRequest',
+  '2': [
+    {'1': 'override_id', '3': 1, '4': 1, '5': 9, '10': 'overrideId'},
+    {'1': 'reason', '3': 2, '4': 1, '5': 9, '10': 'reason'},
+  ],
+};
+
+/// Descriptor for `RevokeTenantOverrideRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List revokeTenantOverrideRequestDescriptor =
+    $convert.base64Decode(
+        'ChtSZXZva2VUZW5hbnRPdmVycmlkZVJlcXVlc3QSHwoLb3ZlcnJpZGVfaWQYASABKAlSCm92ZX'
+        'JyaWRlSWQSFgoGcmVhc29uGAIgASgJUgZyZWFzb24=');
+
+@$core.Deprecated('Use revokeTenantOverrideResponseDescriptor instead')
+const RevokeTenantOverrideResponse$json = {
+  '1': 'RevokeTenantOverrideResponse',
+  '2': [
+    {'1': 'company_id', '3': 1, '4': 1, '5': 9, '10': 'companyId'},
+    {'1': 'feature_code', '3': 2, '4': 1, '5': 9, '10': 'featureCode'},
+  ],
+};
+
+/// Descriptor for `RevokeTenantOverrideResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List revokeTenantOverrideResponseDescriptor =
+    $convert.base64Decode(
+        'ChxSZXZva2VUZW5hbnRPdmVycmlkZVJlc3BvbnNlEh0KCmNvbXBhbnlfaWQYASABKAlSCWNvbX'
+        'BhbnlJZBIhCgxmZWF0dXJlX2NvZGUYAiABKAlSC2ZlYXR1cmVDb2Rl');
+
+@$core.Deprecated('Use upsertPlanPriceRequestDescriptor instead')
+const UpsertPlanPriceRequest$json = {
+  '1': 'UpsertPlanPriceRequest',
+  '2': [
+    {'1': 'plan_code', '3': 1, '4': 1, '5': 9, '10': 'planCode'},
+    {'1': 'billing_cycle', '3': 2, '4': 1, '5': 9, '10': 'billingCycle'},
+    {'1': 'base_price', '3': 3, '4': 1, '5': 9, '10': 'basePrice'},
+    {'1': 'seat_price', '3': 4, '4': 1, '5': 9, '10': 'seatPrice'},
+    {'1': 'currency', '3': 5, '4': 1, '5': 9, '10': 'currency'},
+    {'1': 'reason', '3': 6, '4': 1, '5': 9, '10': 'reason'},
+  ],
+};
+
+/// Descriptor for `UpsertPlanPriceRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List upsertPlanPriceRequestDescriptor = $convert.base64Decode(
+    'ChZVcHNlcnRQbGFuUHJpY2VSZXF1ZXN0EhsKCXBsYW5fY29kZRgBIAEoCVIIcGxhbkNvZGUSIw'
+    'oNYmlsbGluZ19jeWNsZRgCIAEoCVIMYmlsbGluZ0N5Y2xlEh0KCmJhc2VfcHJpY2UYAyABKAlS'
+    'CWJhc2VQcmljZRIdCgpzZWF0X3ByaWNlGAQgASgJUglzZWF0UHJpY2USGgoIY3VycmVuY3kYBS'
+    'ABKAlSCGN1cnJlbmN5EhYKBnJlYXNvbhgGIAEoCVIGcmVhc29u');
+
+@$core.Deprecated('Use upsertPlanPriceResponseDescriptor instead')
+const UpsertPlanPriceResponse$json = {
+  '1': 'UpsertPlanPriceResponse',
+};
+
+/// Descriptor for `UpsertPlanPriceResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List upsertPlanPriceResponseDescriptor =
+    $convert.base64Decode('ChdVcHNlcnRQbGFuUHJpY2VSZXNwb25zZQ==');
+
+@$core.Deprecated('Use setPlanEntitlementRequestDescriptor instead')
+const SetPlanEntitlementRequest$json = {
+  '1': 'SetPlanEntitlementRequest',
+  '2': [
+    {'1': 'plan_code', '3': 1, '4': 1, '5': 9, '10': 'planCode'},
+    {'1': 'feature_code', '3': 2, '4': 1, '5': 9, '10': 'featureCode'},
+    {'1': 'enabled', '3': 3, '4': 1, '5': 8, '10': 'enabled'},
+    {'1': 'limit_set', '3': 4, '4': 1, '5': 8, '10': 'limitSet'},
+    {'1': 'limit_value', '3': 5, '4': 1, '5': 3, '10': 'limitValue'},
+    {'1': 'reason', '3': 6, '4': 1, '5': 9, '10': 'reason'},
+  ],
+};
+
+/// Descriptor for `SetPlanEntitlementRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List setPlanEntitlementRequestDescriptor = $convert.base64Decode(
+    'ChlTZXRQbGFuRW50aXRsZW1lbnRSZXF1ZXN0EhsKCXBsYW5fY29kZRgBIAEoCVIIcGxhbkNvZG'
+    'USIQoMZmVhdHVyZV9jb2RlGAIgASgJUgtmZWF0dXJlQ29kZRIYCgdlbmFibGVkGAMgASgIUgdl'
+    'bmFibGVkEhsKCWxpbWl0X3NldBgEIAEoCFIIbGltaXRTZXQSHwoLbGltaXRfdmFsdWUYBSABKA'
+    'NSCmxpbWl0VmFsdWUSFgoGcmVhc29uGAYgASgJUgZyZWFzb24=');
+
+@$core.Deprecated('Use setPlanEntitlementResponseDescriptor instead')
+const SetPlanEntitlementResponse$json = {
+  '1': 'SetPlanEntitlementResponse',
+};
+
+/// Descriptor for `SetPlanEntitlementResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List setPlanEntitlementResponseDescriptor =
+    $convert.base64Decode('ChpTZXRQbGFuRW50aXRsZW1lbnRSZXNwb25zZQ==');
+
+@$core.Deprecated('Use createOperatorRequestDescriptor instead')
+const CreateOperatorRequest$json = {
+  '1': 'CreateOperatorRequest',
+  '2': [
+    {'1': 'email', '3': 1, '4': 1, '5': 9, '10': 'email'},
+    {'1': 'name', '3': 2, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'role', '3': 3, '4': 1, '5': 9, '10': 'role'},
+    {'1': 'reason', '3': 4, '4': 1, '5': 9, '10': 'reason'},
+  ],
+};
+
+/// Descriptor for `CreateOperatorRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List createOperatorRequestDescriptor = $convert.base64Decode(
+    'ChVDcmVhdGVPcGVyYXRvclJlcXVlc3QSFAoFZW1haWwYASABKAlSBWVtYWlsEhIKBG5hbWUYAi'
+    'ABKAlSBG5hbWUSEgoEcm9sZRgDIAEoCVIEcm9sZRIWCgZyZWFzb24YBCABKAlSBnJlYXNvbg==');
+
+@$core.Deprecated('Use createOperatorResponseDescriptor instead')
+const CreateOperatorResponse$json = {
+  '1': 'CreateOperatorResponse',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+  ],
+};
+
+/// Descriptor for `CreateOperatorResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List createOperatorResponseDescriptor = $convert
+    .base64Decode('ChZDcmVhdGVPcGVyYXRvclJlc3BvbnNlEg4KAmlkGAEgASgJUgJpZA==');
+
+@$core.Deprecated('Use disableOperatorRequestDescriptor instead')
+const DisableOperatorRequest$json = {
+  '1': 'DisableOperatorRequest',
+  '2': [
+    {'1': 'operator_id', '3': 1, '4': 1, '5': 9, '10': 'operatorId'},
+    {'1': 'reason', '3': 2, '4': 1, '5': 9, '10': 'reason'},
+  ],
+};
+
+/// Descriptor for `DisableOperatorRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List disableOperatorRequestDescriptor =
+    $convert.base64Decode(
+        'ChZEaXNhYmxlT3BlcmF0b3JSZXF1ZXN0Eh8KC29wZXJhdG9yX2lkGAEgASgJUgpvcGVyYXRvck'
+        'lkEhYKBnJlYXNvbhgCIAEoCVIGcmVhc29u');
+
+@$core.Deprecated('Use disableOperatorResponseDescriptor instead')
+const DisableOperatorResponse$json = {
+  '1': 'DisableOperatorResponse',
+};
+
+/// Descriptor for `DisableOperatorResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List disableOperatorResponseDescriptor =
+    $convert.base64Decode('ChdEaXNhYmxlT3BlcmF0b3JSZXNwb25zZQ==');
+
 @$core.Deprecated('Use getTenantEntitlementsRequestDescriptor instead')
 const GetTenantEntitlementsRequest$json = {
   '1': 'GetTenantEntitlementsRequest',
@@ -476,6 +936,71 @@ const $core.Map<$core.String, $core.dynamic> PlatformAdminServiceBase$json = {
       '2': '.platform.v1.ListPlatformAuditRequest',
       '3': '.platform.v1.ListPlatformAuditResponse'
     },
+    {
+      '1': 'ListReceivables',
+      '2': '.platform.v1.ListReceivablesRequest',
+      '3': '.platform.v1.ListReceivablesResponse'
+    },
+    {
+      '1': 'RecordPayment',
+      '2': '.platform.v1.RecordPaymentRequest',
+      '3': '.platform.v1.RecordPaymentResponse'
+    },
+    {
+      '1': 'SetSeatCount',
+      '2': '.platform.v1.SetSeatCountRequest',
+      '3': '.platform.v1.SetSeatCountResponse'
+    },
+    {
+      '1': 'ChangePlan',
+      '2': '.platform.v1.ChangePlanRequest',
+      '3': '.platform.v1.ChangePlanResponse'
+    },
+    {
+      '1': 'CancelSubscription',
+      '2': '.platform.v1.CancelSubscriptionRequest',
+      '3': '.platform.v1.CancelSubscriptionResponse'
+    },
+    {
+      '1': 'GetBillingSettings',
+      '2': '.platform.v1.GetBillingSettingsRequest',
+      '3': '.platform.v1.GetBillingSettingsResponse'
+    },
+    {
+      '1': 'UpdateBillingSettings',
+      '2': '.platform.v1.UpdateBillingSettingsRequest',
+      '3': '.platform.v1.UpdateBillingSettingsResponse'
+    },
+    {
+      '1': 'SetTenantOverride',
+      '2': '.platform.v1.SetTenantOverrideRequest',
+      '3': '.platform.v1.SetTenantOverrideResponse'
+    },
+    {
+      '1': 'RevokeTenantOverride',
+      '2': '.platform.v1.RevokeTenantOverrideRequest',
+      '3': '.platform.v1.RevokeTenantOverrideResponse'
+    },
+    {
+      '1': 'UpsertPlanPrice',
+      '2': '.platform.v1.UpsertPlanPriceRequest',
+      '3': '.platform.v1.UpsertPlanPriceResponse'
+    },
+    {
+      '1': 'SetPlanEntitlement',
+      '2': '.platform.v1.SetPlanEntitlementRequest',
+      '3': '.platform.v1.SetPlanEntitlementResponse'
+    },
+    {
+      '1': 'CreateOperator',
+      '2': '.platform.v1.CreateOperatorRequest',
+      '3': '.platform.v1.CreateOperatorResponse'
+    },
+    {
+      '1': 'DisableOperator',
+      '2': '.platform.v1.DisableOperatorRequest',
+      '3': '.platform.v1.DisableOperatorResponse'
+    },
   ],
 };
 
@@ -500,6 +1025,37 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.platform.v1.ListPlatformAuditRequest': ListPlatformAuditRequest$json,
   '.platform.v1.ListPlatformAuditResponse': ListPlatformAuditResponse$json,
   '.platform.v1.PlatformAuditEntry': PlatformAuditEntry$json,
+  '.platform.v1.ListReceivablesRequest': ListReceivablesRequest$json,
+  '.platform.v1.ListReceivablesResponse': ListReceivablesResponse$json,
+  '.platform.v1.Receivable': Receivable$json,
+  '.platform.v1.RecordPaymentRequest': RecordPaymentRequest$json,
+  '.platform.v1.RecordPaymentResponse': RecordPaymentResponse$json,
+  '.platform.v1.SetSeatCountRequest': SetSeatCountRequest$json,
+  '.platform.v1.SetSeatCountResponse': SetSeatCountResponse$json,
+  '.platform.v1.ChangePlanRequest': ChangePlanRequest$json,
+  '.platform.v1.ChangePlanResponse': ChangePlanResponse$json,
+  '.platform.v1.CancelSubscriptionRequest': CancelSubscriptionRequest$json,
+  '.platform.v1.CancelSubscriptionResponse': CancelSubscriptionResponse$json,
+  '.platform.v1.GetBillingSettingsRequest': GetBillingSettingsRequest$json,
+  '.platform.v1.GetBillingSettingsResponse': GetBillingSettingsResponse$json,
+  '.platform.v1.BillingSetting': BillingSetting$json,
+  '.platform.v1.UpdateBillingSettingsRequest':
+      UpdateBillingSettingsRequest$json,
+  '.platform.v1.UpdateBillingSettingsResponse':
+      UpdateBillingSettingsResponse$json,
+  '.platform.v1.SetTenantOverrideRequest': SetTenantOverrideRequest$json,
+  '.platform.v1.SetTenantOverrideResponse': SetTenantOverrideResponse$json,
+  '.platform.v1.RevokeTenantOverrideRequest': RevokeTenantOverrideRequest$json,
+  '.platform.v1.RevokeTenantOverrideResponse':
+      RevokeTenantOverrideResponse$json,
+  '.platform.v1.UpsertPlanPriceRequest': UpsertPlanPriceRequest$json,
+  '.platform.v1.UpsertPlanPriceResponse': UpsertPlanPriceResponse$json,
+  '.platform.v1.SetPlanEntitlementRequest': SetPlanEntitlementRequest$json,
+  '.platform.v1.SetPlanEntitlementResponse': SetPlanEntitlementResponse$json,
+  '.platform.v1.CreateOperatorRequest': CreateOperatorRequest$json,
+  '.platform.v1.CreateOperatorResponse': CreateOperatorResponse$json,
+  '.platform.v1.DisableOperatorRequest': DisableOperatorRequest$json,
+  '.platform.v1.DisableOperatorResponse': DisableOperatorResponse$json,
 };
 
 /// Descriptor for `PlatformAdminService`. Decode as a `google.protobuf.ServiceDescriptorProto`.
@@ -512,7 +1068,29 @@ final $typed_data.Uint8List platformAdminServiceDescriptor = $convert.base64Deco
     'RzEicucGxhdGZvcm0udjEuR2V0UGxhbkVudGl0bGVtZW50c1JlcXVlc3QaKC5wbGF0Zm9ybS52'
     'MS5HZXRQbGFuRW50aXRsZW1lbnRzUmVzcG9uc2USYgoRTGlzdFBsYXRmb3JtQXVkaXQSJS5wbG'
     'F0Zm9ybS52MS5MaXN0UGxhdGZvcm1BdWRpdFJlcXVlc3QaJi5wbGF0Zm9ybS52MS5MaXN0UGxh'
-    'dGZvcm1BdWRpdFJlc3BvbnNl');
+    'dGZvcm1BdWRpdFJlc3BvbnNlElwKD0xpc3RSZWNlaXZhYmxlcxIjLnBsYXRmb3JtLnYxLkxpc3'
+    'RSZWNlaXZhYmxlc1JlcXVlc3QaJC5wbGF0Zm9ybS52MS5MaXN0UmVjZWl2YWJsZXNSZXNwb25z'
+    'ZRJWCg1SZWNvcmRQYXltZW50EiEucGxhdGZvcm0udjEuUmVjb3JkUGF5bWVudFJlcXVlc3QaIi'
+    '5wbGF0Zm9ybS52MS5SZWNvcmRQYXltZW50UmVzcG9uc2USUwoMU2V0U2VhdENvdW50EiAucGxh'
+    'dGZvcm0udjEuU2V0U2VhdENvdW50UmVxdWVzdBohLnBsYXRmb3JtLnYxLlNldFNlYXRDb3VudF'
+    'Jlc3BvbnNlEk0KCkNoYW5nZVBsYW4SHi5wbGF0Zm9ybS52MS5DaGFuZ2VQbGFuUmVxdWVzdBof'
+    'LnBsYXRmb3JtLnYxLkNoYW5nZVBsYW5SZXNwb25zZRJlChJDYW5jZWxTdWJzY3JpcHRpb24SJi'
+    '5wbGF0Zm9ybS52MS5DYW5jZWxTdWJzY3JpcHRpb25SZXF1ZXN0GicucGxhdGZvcm0udjEuQ2Fu'
+    'Y2VsU3Vic2NyaXB0aW9uUmVzcG9uc2USZQoSR2V0QmlsbGluZ1NldHRpbmdzEiYucGxhdGZvcm'
+    '0udjEuR2V0QmlsbGluZ1NldHRpbmdzUmVxdWVzdBonLnBsYXRmb3JtLnYxLkdldEJpbGxpbmdT'
+    'ZXR0aW5nc1Jlc3BvbnNlEm4KFVVwZGF0ZUJpbGxpbmdTZXR0aW5ncxIpLnBsYXRmb3JtLnYxLl'
+    'VwZGF0ZUJpbGxpbmdTZXR0aW5nc1JlcXVlc3QaKi5wbGF0Zm9ybS52MS5VcGRhdGVCaWxsaW5n'
+    'U2V0dGluZ3NSZXNwb25zZRJiChFTZXRUZW5hbnRPdmVycmlkZRIlLnBsYXRmb3JtLnYxLlNldF'
+    'RlbmFudE92ZXJyaWRlUmVxdWVzdBomLnBsYXRmb3JtLnYxLlNldFRlbmFudE92ZXJyaWRlUmVz'
+    'cG9uc2USawoUUmV2b2tlVGVuYW50T3ZlcnJpZGUSKC5wbGF0Zm9ybS52MS5SZXZva2VUZW5hbn'
+    'RPdmVycmlkZVJlcXVlc3QaKS5wbGF0Zm9ybS52MS5SZXZva2VUZW5hbnRPdmVycmlkZVJlc3Bv'
+    'bnNlElwKD1Vwc2VydFBsYW5QcmljZRIjLnBsYXRmb3JtLnYxLlVwc2VydFBsYW5QcmljZVJlcX'
+    'Vlc3QaJC5wbGF0Zm9ybS52MS5VcHNlcnRQbGFuUHJpY2VSZXNwb25zZRJlChJTZXRQbGFuRW50'
+    'aXRsZW1lbnQSJi5wbGF0Zm9ybS52MS5TZXRQbGFuRW50aXRsZW1lbnRSZXF1ZXN0GicucGxhdG'
+    'Zvcm0udjEuU2V0UGxhbkVudGl0bGVtZW50UmVzcG9uc2USWQoOQ3JlYXRlT3BlcmF0b3ISIi5w'
+    'bGF0Zm9ybS52MS5DcmVhdGVPcGVyYXRvclJlcXVlc3QaIy5wbGF0Zm9ybS52MS5DcmVhdGVPcG'
+    'VyYXRvclJlc3BvbnNlElwKD0Rpc2FibGVPcGVyYXRvchIjLnBsYXRmb3JtLnYxLkRpc2FibGVP'
+    'cGVyYXRvclJlcXVlc3QaJC5wbGF0Zm9ybS52MS5EaXNhYmxlT3BlcmF0b3JSZXNwb25zZQ==');
 
 const $core.Map<$core.String, $core.dynamic> TenantEntitlementServiceBase$json =
     {

@@ -164,8 +164,20 @@ type BillingStore interface {
 	CurrentPriceTx(ctx context.Context, tx *sql.Tx, planID int64, cycle string) (Price, error)
 	// MarkPeriodPaidTx 標記期別已付款。note(G8)為短收／溢收的人工註記:空字串保留原值,
 	// 不得用空字串清掉既有註記。同交易號重送視為重複入帳(no-op),交易號不同則拒絕覆蓋。
+	//
+	// invoiceNo／invoiceStatus／buyerTaxID／carrier 為**開票資訊**(spec §3 的
+	// subscription_periods 欄位):期別是開票的對象,故與付款憑據同一組參數一起寫 —— 開票是
+	// 付款事件的一部分,分開一支方法等於允許「收了錢但發票欄位沒落地」(T4 的缺口)。
 	MarkPeriodPaidTx(ctx context.Context, tx *sql.Tx, id int64, paidAt time.Time,
-		invoiceNo, provider, externalRef, note string) error
+		invoiceNo, invoiceStatus, buyerTaxID, carrier, provider, externalRef, note string) error
+	// SetSeatCountTx 更新席位數(下一次產期即用新席位數計價;當期期別的金額快照不動)。
+	SetSeatCountTx(ctx context.Context, tx *sql.Tx, subID int64, seats int) error
+	// SetSubscriptionPlanTx 改訂閱的方案(下一期生效;當期期別的金額快照不動)。
+	// 訂閱不存在時回 sql.ErrNoRows(不得靜默成功)。
+	SetSubscriptionPlanTx(ctx context.Context, tx *sql.Tx, subID, planID int64) error
+	// PlanIDByCodeTx 以 code 取方案 id;不存在**或已歸檔**回 sql.ErrNoRows ——
+	// 已歸檔的方案不得再被指派(新合約只能掛在賣得動的方案上)。
+	PlanIDByCodeTx(ctx context.Context, tx *sql.Tx, code string) (int64, error)
 	// PeriodsByStatus 取指定狀態的期別(收款清單與對帳用),依 (subscription_id, period_no) 排序。
 	PeriodsByStatus(ctx context.Context, status string) ([]Period, error)
 	// ActiveSubscriptionsWithDueOpenPeriod 回 active、最新一期**仍是 open** 且已過期末者(轉 past_due)。

@@ -136,7 +136,195 @@ service PlatformAdminService {
   rpc ListPlans(ListPlansRequest) returns (ListPlansResponse);
   rpc GetPlanEntitlements(GetPlanEntitlementsRequest) returns (GetPlanEntitlementsResponse);
   rpc ListPlatformAudit(ListPlatformAuditRequest) returns (ListPlatformAuditResponse);
+
+  // --- 平台寫入(T9)。共同契約:每個寫入都必須帶 reason(平台稽核必填),
+  // actor 一律是 cookie 上的真實 operator;資料與稽核同一個交易(失敗不留半成品)。
+  rpc ListReceivables(ListReceivablesRequest) returns (ListReceivablesResponse);
+  rpc RecordPayment(RecordPaymentRequest) returns (RecordPaymentResponse);
+  rpc SetSeatCount(SetSeatCountRequest) returns (SetSeatCountResponse);
+  rpc ChangePlan(ChangePlanRequest) returns (ChangePlanResponse);
+  rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse);
+  rpc GetBillingSettings(GetBillingSettingsRequest) returns (GetBillingSettingsResponse);
+  rpc UpdateBillingSettings(UpdateBillingSettingsRequest) returns (UpdateBillingSettingsResponse);
+  rpc SetTenantOverride(SetTenantOverrideRequest) returns (SetTenantOverrideResponse);
+  rpc RevokeTenantOverride(RevokeTenantOverrideRequest) returns (RevokeTenantOverrideResponse);
+  rpc UpsertPlanPrice(UpsertPlanPriceRequest) returns (UpsertPlanPriceResponse);
+  rpc SetPlanEntitlement(SetPlanEntitlementRequest) returns (SetPlanEntitlementResponse);
+  rpc CreateOperator(CreateOperatorRequest) returns (CreateOperatorResponse);
+  rpc DisableOperator(DisableOperatorRequest) returns (DisableOperatorResponse);
 }
+
+// --- 待收款與收款 ---
+
+message ListReceivablesRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+}
+
+message ListReceivablesResponse {
+  repeated Receivable rows = 1;
+  PlatformPagination pagination = 2;
+}
+
+// Receivable:一期未付的帳(供 console 顯示與匯出 CSV)。G5 的平台自營公司不算租戶,不列入。
+message Receivable {
+  string company_id = 1;
+  string company_name = 2;
+  string plan_code = 3;
+  int32  period_no = 4;
+  string amount = 5;        // 兩位小數字串("1500.00")
+  string period_end = 6;    // RFC3339
+  string status = 7;        // open(未付;已過期末者即逾期)
+}
+
+message RecordPaymentRequest {
+  string company_id = 1;
+  int32  period_no = 2;     // 0 = 當前(最新)一期
+  string amount = 3;        // 金額字串;空 = 採用期別快照金額(不支援部分付款)
+  string provider = 4;      // manual | ecpay | …;空 = manual
+  string external_ref = 5;  // 匯款帳號／交易號(重送冪等以此比對)
+  string invoice_no = 6;
+  string invoice_status = 7;
+  string buyer_tax_id = 8;  // 統一編號
+  string carrier = 9;       // 載具
+  string note = 10;         // 短收／溢收備註(不改變期別金額)
+  string reason = 11;       // 必填
+}
+
+message RecordPaymentResponse {
+  int32  period_no = 1;
+  string status = 2;
+}
+
+// --- 訂閱生命週期(G6;v1 不做按日比例計費:變更一律下一期生效) ---
+
+message SetSeatCountRequest {
+  string company_id = 1;
+  int32  seat_count = 2;    // 新席位數;不得小於目前使用中的席次
+  string reason = 3;        // 必填
+}
+
+message SetSeatCountResponse {
+  int32 seat_count = 1;
+}
+
+message ChangePlanRequest {
+  string company_id = 1;
+  string plan_code = 2;     // 新方案;下一期生效,當期不動
+  string reason = 3;        // 必填
+}
+
+message ChangePlanResponse {
+  string plan_code = 1;
+  string effective_from = 2; // 下一期起日(RFC3339)
+}
+
+message CancelSubscriptionRequest {
+  string company_id = 1;
+  bool   at_period_end = 2;  // v1 僅支援 true(期末終止);false 回 PLAT-3001
+  string reason = 3;         // 必填
+}
+
+message CancelSubscriptionResponse {
+  string cancelled_at = 1;
+  string service_until = 2;  // 服務提供到這個時間(期末)
+}
+
+// --- 營運參數(G5/5-6:cron 讀 settings,不硬編) ---
+
+message GetBillingSettingsRequest {}
+
+message GetBillingSettingsResponse {
+  repeated BillingSetting settings = 1;
+}
+
+// BillingSetting:一項可由介面調整的營運參數(trial_days／grace_days／lead_days)。
+message BillingSetting {
+  string key = 1;
+  string value = 2;
+  string description = 3;
+}
+
+message UpdateBillingSettingsRequest {
+  repeated BillingSetting settings = 1;
+  string reason = 2;        // 必填
+}
+
+message UpdateBillingSettingsResponse {
+  repeated BillingSetting settings = 1;
+}
+
+// --- 租戶例外(override) ---
+
+message SetTenantOverrideRequest {
+  string company_id = 1;
+  string feature_code = 2;
+  bool   enabled_set = 3;   // false = 不覆寫 boolean 維度
+  bool   enabled = 4;
+  bool   limit_set = 5;     // false = 不覆寫限額維度(不限額請給 limit_set + 極大值)
+  int64  limit_value = 6;
+  string owner = 7;         // 承諾者(平台側人員)
+  string expires_at = 8;    // RFC3339;空 = 不過期
+  string reason = 9;        // 必填
+}
+
+message SetTenantOverrideResponse {
+  string id = 1;
+}
+
+message RevokeTenantOverrideRequest {
+  string override_id = 1;
+  string reason = 2;        // 必填
+}
+
+message RevokeTenantOverrideResponse {
+  string company_id = 1;
+  string feature_code = 2;
+}
+
+// --- 方案價目與權益 ---
+
+message UpsertPlanPriceRequest {
+  string plan_code = 1;
+  string billing_cycle = 2;  // monthly | yearly
+  string base_price = 3;     // 金額字串("1500.00"),後端 money.ParseCents
+  string seat_price = 4;
+  string currency = 5;       // 空 = TWD
+  string reason = 6;         // 必填
+}
+
+message UpsertPlanPriceResponse {}
+
+message SetPlanEntitlementRequest {
+  string plan_code = 1;
+  string feature_code = 2;
+  bool   enabled = 3;
+  bool   limit_set = 4;      // false = 不限額(NULL),不是 0
+  int64  limit_value = 5;
+  string reason = 6;         // 必填
+}
+
+message SetPlanEntitlementResponse {}
+
+// --- 操作者白名單(S8) ---
+
+message CreateOperatorRequest {
+  string email = 1;
+  string name = 2;
+  string role = 3;           // operator | admin;空 = operator
+  string reason = 4;         // 必填
+}
+
+message CreateOperatorResponse {
+  string id = 1;
+}
+
+message DisableOperatorRequest {
+  string operator_id = 1;
+  string reason = 2;         // 必填
+}
+
+message DisableOperatorResponse {}
 
 // GetTenantEntitlementsRequest:租戶端唯讀投影(自己的公司;前端據此 disable 按鈕與顯示用量)。
 message GetTenantEntitlementsRequest {}

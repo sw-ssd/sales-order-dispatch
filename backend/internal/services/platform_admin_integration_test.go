@@ -22,6 +22,7 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/billing"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
 	platformstore "github.com/salesorder/sales-order-1.0/backend/internal/platform/store/postgres"
 	platformv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/platform/v1"
@@ -60,7 +61,10 @@ func TestIntegrationPlatformAdmin(t *testing.T) {
 	admin := openRawDB(t, adminDSN)
 	seed := seedPlatformAdmin(t, admin)
 
-	svc := NewPlatformAdminService(platformstore.NewAdmin(admin))
+	// 讀取面之外的寫入 RPC 需要帳務狀態機與席位計數器(見 TestIntegrationPlatformAdminWrite):
+	// 這裡只用到 SetSeatCount 的稽核路徑,故注入最小依賴(沒有快取)。
+	svc := NewPlatformAdminService(platformstore.NewAdmin(admin),
+		billing.NewBilling(platformstore.New(admin)), nil, integrationSeatCounter{used: 3})
 	ctx := operatorauth.WithIdentity(t.Context(),
 		operatorauth.Identity{OperatorID: seed.operatorID, Email: "ops-a@example.com", Role: "admin"})
 
@@ -358,12 +362,12 @@ func TestIntegrationPlatformAdmin(t *testing.T) {
 		}
 	})
 
-	t.Run("RecordAudit 落 platform.audit_logs", func(t *testing.T) {
-		identity := operatorauth.Identity{OperatorID: seed.operatorID, Email: "ops-a@example.com", Role: "admin"}
-		if err := svc.recordPlatformAudit(ctx, identity, "operator.update", "operator",
-			itoa(int(seed.operatorID)), "升為管理員",
-			map[string]any{"role": "operator"}, map[string]any{"role": "admin"}); err != nil {
-			t.Fatalf("recordPlatformAudit: %v", err)
+	t.Run("寫入 RPC 的稽核落 platform.audit_logs", func(t *testing.T) {
+		// 走真的寫入 RPC(改席位):稽核與資料在同一個交易(billing 的 WithTx),故這一條同時
+		// 驗到「稽核寫得進去」與「寫入路徑確實會留痕」。actor 必須是 operator。
+		if _, err := svc.SetSeatCount(ctx, connect.NewRequest(&platformv1.SetSeatCountRequest{
+			CompanyId: itoa(int(seed.activeID)), SeatCount: 9, Reason: "擴編"})); err != nil {
+			t.Fatalf("SetSeatCount: %v", err)
 		}
 
 		var (
@@ -372,16 +376,20 @@ func TestIntegrationPlatformAdmin(t *testing.T) {
 			before, after                        []byte
 		)
 		row := admin.QueryRow(`SELECT operator_id, action, target_type, target_id, reason, before, after
-			FROM platform.audit_logs WHERE action = 'operator.update' ORDER BY id DESC LIMIT 1`)
+			FROM platform.audit_logs WHERE action = 'subscription.set_seats' ORDER BY id DESC LIMIT 1`)
 		if err := row.Scan(&operatorID, &action, &targetType, &targetID, &reason, &before, &after); err != nil {
 			t.Fatalf("讀回稽核列: %v", err)
 		}
 		if operatorID != seed.operatorID {
 			t.Fatalf("actor 必須是 operator id %d(平台操作沒有租戶使用者),got %d", seed.operatorID, operatorID)
 		}
-		if action != "operator.update" || targetType != "operator" ||
-			targetID != itoa(int(seed.operatorID)) || reason != "升為管理員" {
-			t.Fatalf("稽核欄位寫入錯誤: %q/%q/%q/%q", action, targetType, targetID, reason)
+		var subID int64
+		if err := admin.QueryRow(`SELECT id FROM platform.subscriptions WHERE company_id = $1
+			ORDER BY (status <> 'cancelled') DESC, id DESC LIMIT 1`, seed.activeID).Scan(&subID); err != nil {
+			t.Fatalf("讀訂閱: %v", err)
+		}
+		if targetType != "subscription" || targetID != itoa(int(subID)) || reason != "擴編" {
+			t.Fatalf("稽核欄位寫入錯誤: %q/%q/%q", targetType, targetID, reason)
 		}
 		beforeMap, afterMap := map[string]any{}, map[string]any{}
 		if err := json.Unmarshal(before, &beforeMap); err != nil {
@@ -390,29 +398,19 @@ func TestIntegrationPlatformAdmin(t *testing.T) {
 		if err := json.Unmarshal(after, &afterMap); err != nil {
 			t.Fatalf("after 不是合法 jsonb: %v", err)
 		}
-		if beforeMap["role"] != "operator" || afterMap["role"] != "admin" {
-			t.Fatalf("before／after 寫反或未原樣保存: %v / %v", beforeMap, afterMap)
+		if beforeMap["seat_count"] != float64(8) || afterMap["seat_count"] != float64(9) {
+			t.Fatalf("before／after 必須記下新舊席位: %v / %v", beforeMap, afterMap)
 		}
 
 		// 經 RPC 也查得到(把 target 篩選與寫入接起來)。
 		byTarget := listAudit(t, svc, ctx, &platformv1.ListPlatformAuditRequest{
-			TargetType: "operator", TargetId: itoa(int(seed.operatorID)), Page: 1, PageSize: 20,
+			TargetType: "subscription", TargetId: itoa(int(subID)), Page: 1, PageSize: 20,
 		})
-		if byTarget.GetPagination().GetTotal() != 2 || byTarget.GetEntries()[0].GetReason() != "升為管理員" {
+		// 夾具本身也有一筆 target_type=subscription 的稽核,故不斷言總數,只斷言**最新的那筆**
+		// 就是剛寫入的(排序契約:新到舊)。
+		if byTarget.GetPagination().GetTotal() < 1 ||
+			byTarget.GetEntries()[0].GetReason() != "擴編" {
 			t.Fatalf("寫入的稽核必須查得到且在最前面: %v", byTarget.GetEntries())
-		}
-
-		// nil 的 before／after 寫 SQL NULL(不是 JSON 的 null:那會被讀成「值就是 null」)。
-		if err := svc.recordPlatformAudit(ctx, identity, "operator.disable", "operator", "9", "", nil, nil); err != nil {
-			t.Fatalf("recordPlatformAudit(nil): %v", err)
-		}
-		var beforeNull, afterNull bool
-		if err := admin.QueryRow(`SELECT before IS NULL, after IS NULL FROM platform.audit_logs
-			WHERE action = 'operator.disable'`).Scan(&beforeNull, &afterNull); err != nil {
-			t.Fatalf("讀回稽核列: %v", err)
-		}
-		if !beforeNull || !afterNull {
-			t.Fatal("nil 的 before／after 應寫 SQL NULL")
 		}
 	})
 
@@ -421,7 +419,7 @@ func TestIntegrationPlatformAdmin(t *testing.T) {
 		// app.current_data_scope='all' 就靜默回 0 列(不報錯)。容器預設的 postgres 是
 		// superuser、會繞過 RLS,故必須自建一個與生產同形的角色才測得到。
 		db := openPlatformOwner(t, admin, adminDSN)
-		ownerSvc := NewPlatformAdminService(platformstore.NewAdmin(db))
+		ownerSvc := newReadOnlyPlatformService(platformstore.NewAdmin(db))
 
 		resp := listTenants(t, ownerSvc, ctx, &platformv1.ListTenantsRequest{Page: 1, PageSize: 20})
 		if resp.GetPagination().GetTotal() != 4 {
@@ -436,10 +434,12 @@ func TestIntegrationPlatformAdmin(t *testing.T) {
 		if _, err := ownerSvc.ListPlans(ctx, connect.NewRequest(&platformv1.ListPlansRequest{})); err != nil {
 			t.Fatalf("admin 連線的方案查詢: %v", err)
 		}
-		// 平台稽核的寫入也必須在同一條路徑上成立(非 superuser 的 admin 連線)。
-		if err := ownerSvc.recordPlatformAudit(ctx,
-			operatorauth.Identity{OperatorID: seed.operatorID}, "operator.update", "operator", "1", "非 superuser 寫入", nil, nil); err != nil {
-			t.Fatalf("admin 連線的稽核寫入: %v", err)
+		// 非交易式的稽核入口已移除(T9):寫入與稽核一律同一個交易,故這裡改用**真的寫入 RPC**
+		// 驗「非 superuser 的 admin 連線」也能完成一次含稽核的平台寫入。
+		if _, err := ownerSvc.SetTenantOverride(ctx, connect.NewRequest(&platformv1.SetTenantOverrideRequest{
+			CompanyId: itoa(int(seed.activeID)), FeatureCode: "feature.export", EnabledSet: true,
+			Enabled: true, Owner: "業務D", Reason: "非 superuser 寫入"})); err != nil {
+			t.Fatalf("admin 連線的平台寫入(含稽核): %v", err)
 		}
 	})
 }

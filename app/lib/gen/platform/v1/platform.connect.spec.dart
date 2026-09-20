@@ -45,6 +45,99 @@ abstract final class PlatformAdminService {
     platformv1platform.ListPlatformAuditRequest.new,
     platformv1platform.ListPlatformAuditResponse.new,
   );
+
+  /// --- 平台寫入(T9)。共同契約:每個寫入都必須帶 reason(平台稽核必填),
+  /// actor 一律是 cookie 上的真實 operator;資料與稽核同一個交易(失敗不留半成品)。
+  static const listReceivables = connect.Spec(
+    '/$name/ListReceivables',
+    connect.StreamType.unary,
+    platformv1platform.ListReceivablesRequest.new,
+    platformv1platform.ListReceivablesResponse.new,
+  );
+
+  static const recordPayment = connect.Spec(
+    '/$name/RecordPayment',
+    connect.StreamType.unary,
+    platformv1platform.RecordPaymentRequest.new,
+    platformv1platform.RecordPaymentResponse.new,
+  );
+
+  static const setSeatCount = connect.Spec(
+    '/$name/SetSeatCount',
+    connect.StreamType.unary,
+    platformv1platform.SetSeatCountRequest.new,
+    platformv1platform.SetSeatCountResponse.new,
+  );
+
+  static const changePlan = connect.Spec(
+    '/$name/ChangePlan',
+    connect.StreamType.unary,
+    platformv1platform.ChangePlanRequest.new,
+    platformv1platform.ChangePlanResponse.new,
+  );
+
+  static const cancelSubscription = connect.Spec(
+    '/$name/CancelSubscription',
+    connect.StreamType.unary,
+    platformv1platform.CancelSubscriptionRequest.new,
+    platformv1platform.CancelSubscriptionResponse.new,
+  );
+
+  static const getBillingSettings = connect.Spec(
+    '/$name/GetBillingSettings',
+    connect.StreamType.unary,
+    platformv1platform.GetBillingSettingsRequest.new,
+    platformv1platform.GetBillingSettingsResponse.new,
+  );
+
+  static const updateBillingSettings = connect.Spec(
+    '/$name/UpdateBillingSettings',
+    connect.StreamType.unary,
+    platformv1platform.UpdateBillingSettingsRequest.new,
+    platformv1platform.UpdateBillingSettingsResponse.new,
+  );
+
+  static const setTenantOverride = connect.Spec(
+    '/$name/SetTenantOverride',
+    connect.StreamType.unary,
+    platformv1platform.SetTenantOverrideRequest.new,
+    platformv1platform.SetTenantOverrideResponse.new,
+  );
+
+  static const revokeTenantOverride = connect.Spec(
+    '/$name/RevokeTenantOverride',
+    connect.StreamType.unary,
+    platformv1platform.RevokeTenantOverrideRequest.new,
+    platformv1platform.RevokeTenantOverrideResponse.new,
+  );
+
+  static const upsertPlanPrice = connect.Spec(
+    '/$name/UpsertPlanPrice',
+    connect.StreamType.unary,
+    platformv1platform.UpsertPlanPriceRequest.new,
+    platformv1platform.UpsertPlanPriceResponse.new,
+  );
+
+  static const setPlanEntitlement = connect.Spec(
+    '/$name/SetPlanEntitlement',
+    connect.StreamType.unary,
+    platformv1platform.SetPlanEntitlementRequest.new,
+    platformv1platform.SetPlanEntitlementResponse.new,
+  );
+
+  static const createOperator = connect.Spec(
+    '/$name/CreateOperator',
+    connect.StreamType.unary,
+    platformv1platform.CreateOperatorRequest.new,
+    platformv1platform.CreateOperatorResponse.new,
+  );
+
+  static const disableOperator = connect.Spec(
+    '/$name/DisableOperator',
+    connect.StreamType.unary,
+    platformv1platform.DisableOperatorRequest.new,
+    platformv1platform.DisableOperatorResponse.new,
+  );
 }
 /// TenantEntitlementService:租戶端權益投影(租戶 session;唯讀)。
 abstract final class TenantEntitlementService {

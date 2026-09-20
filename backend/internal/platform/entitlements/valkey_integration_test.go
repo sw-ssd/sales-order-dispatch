@@ -76,6 +76,21 @@ func TestIntegrationValkeyCacheRoundTrip(t *testing.T) {
 	if v, err := client.Get(ctx, "sess:keep").Result(); err != nil || v != "1" {
 		t.Fatalf("全量失效不得動到非權益鍵（session 等），got %q err=%v", v, err)
 	}
+
+	// ⑤ ttl <= 0 **不入庫**（T9 修正）：判定層的 `ttl <= 0` 意思是「不快取」，不得沿用 Valkey 的
+	// 原生語意（0 = 永不過期）—— 那會把「關掉快取」變成「永久快取這一份權益」，之後全靠寫入路徑
+	// 記得刪；漏一條就是永遠讀舊方案。兩個實作（Valkey／Memory）的語意必須逐字相同。
+	for _, ttl := range []time.Duration{0, -time.Second} {
+		if err := c.Set(ctx, "ent:nottl", []byte(`{"status":"active"}`), ttl); err != nil {
+			t.Fatalf("Set(ttl=%v): %v", ttl, err)
+		}
+		if _, ok, err := c.Get(ctx, "ent:nottl"); err != nil || ok {
+			t.Fatalf("ttl=%v 不得入庫: ok=%v err=%v", ttl, ok, err)
+		}
+		if n, err := client.Exists(ctx, "ent:nottl").Result(); err != nil || n != 0 {
+			t.Fatalf("ttl=%v 不得在 Valkey 上留下鍵: n=%d err=%v", ttl, n, err)
+		}
+	}
 }
 
 func key(companyID int) string {

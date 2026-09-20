@@ -8,6 +8,10 @@ import (
 
 // Cache 抽象權益快取：單元測試用記憶體、production 注入 Valkey 實作。
 // 失效語意：方案／override／訂閱異動時由寫入方 Delete（不靠 TTL 正確性），TTL 僅保底。
+//
+// **ttl <= 0 的契約（兩個實作必須一致，見 ValkeyCache.Set）**：呼叫端的意思是「不快取」，
+// 故實作一律**不入庫**。不得沿用 Valkey 的原生語意（0 = 永不過期）—— 那會把「關掉快取」
+// 變成「永久快取這一份權益」。
 type Cache interface {
 	Get(ctx context.Context, key string) ([]byte, bool, error)
 	Set(ctx context.Context, key string, val []byte, ttl time.Duration) error

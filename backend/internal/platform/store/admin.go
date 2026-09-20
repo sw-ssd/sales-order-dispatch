@@ -18,6 +18,13 @@ import (
 // 映射為 SYS-4002。
 var ErrNotFound = errors.New("平台資料不存在")
 
+// ErrConflict 表示**識別碼已存在**(目前只有 platform.operators.email 的唯一鍵)。
+//
+// 為什麼不讓唯一鍵的 23505 直接冒上來:它會被 toConnectError 收斂成 SYS-9000(5xx),而
+// 「這個 email 已經在名單裡」是使用者輸入問題,console 必須顯示得出來。用 `ON CONFLICT DO
+// NOTHING` + 0 列判定,比在錯誤字串裡撈 constraint 名可靠(且沒有競態)。
+var ErrConflict = errors.New("平台資料已存在")
+
 // TenantRow 為租戶列表／詳情的一列(companies × platform.subscriptions × plans 的投影)。
 //
 // 欄位橫跨業務表與平台表:spec §6.4 明訂平台方的跨租戶視圖走「admin 連線 ＋ 投影查詢」,
@@ -84,4 +91,54 @@ type PlatformAuditRow struct {
 	TargetID      string
 	Reason        string
 	CreatedAt     time.Time
+}
+
+// TenantOverrideInput 為新增一筆租戶例外(簽約承諾)的輸入。Enabled／Limit 為指標:
+// nil 代表「這個維度不覆寫」—— 只看限額的例外不得讓功能被關掉。
+//
+// CreatedBy 是 platform.operators.id(表上的 NOT NULL 欄):例外是**有人承諾的**,沒有承諾者
+// 就不該存在。Reason 由服務層擋空字串(表上 NOT NULL,但空字串是合法的 NOT NULL)。
+type TenantOverrideInput struct {
+	CompanyID   int64
+	FeatureCode string
+	Enabled     *bool
+	Limit       *int64
+	Reason      string
+	Owner       string
+	ExpiresAt   *time.Time
+	CreatedBy   int64
+}
+
+// OverrideRef 為撤銷例外後回帶的識別:權益快取的失效需要 company_id,稽核需要 feature_code。
+type OverrideRef struct {
+	CompanyID   int64
+	FeatureCode string
+}
+
+// ReceivableRow 為待收款清單的一列(公司 × 期別)。
+//
+// 金額是**字串**:期別金額在 DB 是 numeric(12,2),經過 float64 就可能在最後一位失真 ——
+// 帳務不接受 0.01 的誤差(與 PlanPriceRow 同一個理由)。SQL 端以 (amount*100)::bigint 帶出,
+// Go 端以 money.FormatCents 轉字串。
+type ReceivableRow struct {
+	CompanyID   string
+	CompanyName string
+	PlanCode    string
+	PeriodNo    int32
+	Amount      string
+	PeriodEnd   time.Time
+	Status      string
+}
+
+// PlanPriceInput 為寫入一筆方案價目的輸入。金額以**分**(int64)進出(不經 float64);
+// 寫入時由 SQL 端經 money.FormatCents 的字串轉 numeric(12,2)。
+//
+// 調價是**新增一列**(plan_prices 是價格史,現行價取 effective_from 最新者):改寫既有列等於
+// 回溯改帳 —— 舊期別的金額雖有快照,但「當時的價目」會消失,對帳時再也查不出來。
+type PlanPriceInput struct {
+	PlanCode     string
+	BillingCycle string
+	BaseCents    int64
+	SeatCents    int64
+	Currency     string
 }

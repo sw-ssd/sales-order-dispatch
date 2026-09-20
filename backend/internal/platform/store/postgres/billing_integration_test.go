@@ -441,7 +441,7 @@ func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 	paidAt := now
 	stamp := func(externalRef, note string) error {
 		return st.WithTx(ctx, func(tx *sql.Tx) error {
-			return st.MarkPeriodPaidTx(ctx, tx, opened.ID, paidAt, "INV-2026-001", "manual", externalRef, note)
+			return st.MarkPeriodPaidTx(ctx, tx, opened.ID, paidAt, "INV-2026-001", "", "", "", "manual", externalRef, note)
 		})
 	}
 	if err := stamp("REF-1", "短收 100 元"); err != nil {
@@ -474,7 +474,7 @@ func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 	// 等於把帳抹掉（G8）。
 	later := paidAt.Add(time.Hour)
 	if err := st.WithTx(ctx, func(tx *sql.Tx) error {
-		return st.MarkPeriodPaidTx(ctx, tx, opened.ID, later, "", "", "REF-1", "")
+		return st.MarkPeriodPaidTx(ctx, tx, opened.ID, later, "", "", "", "", "", "REF-1", "")
 	}); err != nil {
 		t.Fatalf("同交易號重播應為 no-op，got %v", err)
 	}
@@ -506,7 +506,7 @@ func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 		})
 	})
 	if err := st.WithTx(ctx, func(tx *sql.Tx) error {
-		return st.MarkPeriodPaidTx(ctx, tx, second.ID, paidAt, "INV-2026-002", "manual", "REF-1", "")
+		return st.MarkPeriodPaidTx(ctx, tx, second.ID, paidAt, "INV-2026-002", "", "", "", "manual", "REF-1", "")
 	}); err == nil {
 		t.Fatal("同一 provider＋交易號不得入帳兩期（唯一索引）")
 	}
@@ -522,7 +522,7 @@ func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 		t.Fatalf("作廢期別: %v", err)
 	}
 	err = st.WithTx(ctx, func(tx *sql.Tx) error {
-		return st.MarkPeriodPaidTx(ctx, tx, second.ID, paidAt, "INV-2026-002", "manual", "", "")
+		return st.MarkPeriodPaidTx(ctx, tx, second.ID, paidAt, "INV-2026-002", "", "", "", "manual", "", "")
 	})
 	if err == nil {
 		t.Fatal("作廢期別不得入帳")

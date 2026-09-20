@@ -103,6 +103,21 @@ func TestInvalidateAllUnsupportedCacheFailsLoudly(t *testing.T) {
 	}
 }
 
+// ④-b 不支援全量失效必須是**可辨識的哨兵**(T9)：呼叫端對它的處置與「掃描失敗」完全不同
+// （前者是已知的降級部署，TTL 就是收斂上界；後者是 Valkey 故障，要留下可追的痕跡）。
+// 以字串比對的話，「Valkey 回了同一句話」會被當成不支援而靜默。
+func TestInvalidateAllUnsupportedCacheReturnsSentinel(t *testing.T) {
+	err := entitlements.InvalidateAll(context.Background(), entitlements.NewMemoryCache())
+	if !errors.Is(err, entitlements.ErrScanUnsupported) {
+		t.Fatalf("必須回哨兵 ErrScanUnsupported，got %v", err)
+	}
+	// 掃描失敗**不得**被誤判成「不支援」（否則故障會被當成部署形態而靜默）。
+	c := &fakeCache{scanErr: errors.New("模擬 Valkey 故障")}
+	if err := entitlements.InvalidateAll(context.Background(), c); errors.Is(err, entitlements.ErrScanUnsupported) {
+		t.Fatalf("掃描失敗不得回 ErrScanUnsupported，got %v", err)
+	}
+}
+
 // ⑤ 掃描失敗不得當成「掃到 0 個鍵」：那是把故障偽裝成「沒有東西要清」。
 func TestInvalidateAllScanFailureIsReported(t *testing.T) {
 	c := &fakeCache{scanErr: errors.New("模擬 Valkey 故障")}

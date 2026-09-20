@@ -54,6 +54,10 @@ type Server struct {
 	// 一併建立。**平台寫入 RPC（T9）的注入點**：改方案／override／訂閱狀態後必須失效同一顆快取，
 	// 而快取的建立（連線設定）屬組裝，T9 只該拿到介面。nil = 尚未掛載。
 	entitlementCache entitlements.Cache
+	// entitlementCounter 為業務域的用量計數器（席位＝未停用帳號數），於 mountEntitlements 一併
+	// 建立。**平台寫入（T9）的注入點**：降席位必須先知道目前用了幾席，而平台域不認得業務 schema
+	// （計數只能由業務域提供）。nil = 尚未掛載，該守衛會拒絕而不是放行。
+	entitlementCounter entitlements.Counter
 	// operatorAuth 為平台工具認證(mountPlatformAuth 建立)。T9 的 PlatformAdminService 以
 	// operatorAuth.Interceptor() 擋下非 operator;nil = 平台工具未設定,該 RPC 不掛載。
 	operatorAuth *operatorauth.Service

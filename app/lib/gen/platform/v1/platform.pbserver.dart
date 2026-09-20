@@ -31,6 +31,32 @@ abstract class PlatformAdminServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.GetPlanEntitlementsRequest request);
   $async.Future<$0.ListPlatformAuditResponse> listPlatformAudit(
       $pb.ServerContext ctx, $0.ListPlatformAuditRequest request);
+  $async.Future<$0.ListReceivablesResponse> listReceivables(
+      $pb.ServerContext ctx, $0.ListReceivablesRequest request);
+  $async.Future<$0.RecordPaymentResponse> recordPayment(
+      $pb.ServerContext ctx, $0.RecordPaymentRequest request);
+  $async.Future<$0.SetSeatCountResponse> setSeatCount(
+      $pb.ServerContext ctx, $0.SetSeatCountRequest request);
+  $async.Future<$0.ChangePlanResponse> changePlan(
+      $pb.ServerContext ctx, $0.ChangePlanRequest request);
+  $async.Future<$0.CancelSubscriptionResponse> cancelSubscription(
+      $pb.ServerContext ctx, $0.CancelSubscriptionRequest request);
+  $async.Future<$0.GetBillingSettingsResponse> getBillingSettings(
+      $pb.ServerContext ctx, $0.GetBillingSettingsRequest request);
+  $async.Future<$0.UpdateBillingSettingsResponse> updateBillingSettings(
+      $pb.ServerContext ctx, $0.UpdateBillingSettingsRequest request);
+  $async.Future<$0.SetTenantOverrideResponse> setTenantOverride(
+      $pb.ServerContext ctx, $0.SetTenantOverrideRequest request);
+  $async.Future<$0.RevokeTenantOverrideResponse> revokeTenantOverride(
+      $pb.ServerContext ctx, $0.RevokeTenantOverrideRequest request);
+  $async.Future<$0.UpsertPlanPriceResponse> upsertPlanPrice(
+      $pb.ServerContext ctx, $0.UpsertPlanPriceRequest request);
+  $async.Future<$0.SetPlanEntitlementResponse> setPlanEntitlement(
+      $pb.ServerContext ctx, $0.SetPlanEntitlementRequest request);
+  $async.Future<$0.CreateOperatorResponse> createOperator(
+      $pb.ServerContext ctx, $0.CreateOperatorRequest request);
+  $async.Future<$0.DisableOperatorResponse> disableOperator(
+      $pb.ServerContext ctx, $0.DisableOperatorRequest request);
 
   $pb.GeneratedMessage createRequest($core.String methodName) {
     switch (methodName) {
@@ -44,6 +70,32 @@ abstract class PlatformAdminServiceBase extends $pb.GeneratedService {
         return $0.GetPlanEntitlementsRequest();
       case 'ListPlatformAudit':
         return $0.ListPlatformAuditRequest();
+      case 'ListReceivables':
+        return $0.ListReceivablesRequest();
+      case 'RecordPayment':
+        return $0.RecordPaymentRequest();
+      case 'SetSeatCount':
+        return $0.SetSeatCountRequest();
+      case 'ChangePlan':
+        return $0.ChangePlanRequest();
+      case 'CancelSubscription':
+        return $0.CancelSubscriptionRequest();
+      case 'GetBillingSettings':
+        return $0.GetBillingSettingsRequest();
+      case 'UpdateBillingSettings':
+        return $0.UpdateBillingSettingsRequest();
+      case 'SetTenantOverride':
+        return $0.SetTenantOverrideRequest();
+      case 'RevokeTenantOverride':
+        return $0.RevokeTenantOverrideRequest();
+      case 'UpsertPlanPrice':
+        return $0.UpsertPlanPriceRequest();
+      case 'SetPlanEntitlement':
+        return $0.SetPlanEntitlementRequest();
+      case 'CreateOperator':
+        return $0.CreateOperatorRequest();
+      case 'DisableOperator':
+        return $0.DisableOperatorRequest();
       default:
         throw $core.ArgumentError('Unknown method: $methodName');
     }
@@ -63,6 +115,34 @@ abstract class PlatformAdminServiceBase extends $pb.GeneratedService {
             ctx, request as $0.GetPlanEntitlementsRequest);
       case 'ListPlatformAudit':
         return listPlatformAudit(ctx, request as $0.ListPlatformAuditRequest);
+      case 'ListReceivables':
+        return listReceivables(ctx, request as $0.ListReceivablesRequest);
+      case 'RecordPayment':
+        return recordPayment(ctx, request as $0.RecordPaymentRequest);
+      case 'SetSeatCount':
+        return setSeatCount(ctx, request as $0.SetSeatCountRequest);
+      case 'ChangePlan':
+        return changePlan(ctx, request as $0.ChangePlanRequest);
+      case 'CancelSubscription':
+        return cancelSubscription(ctx, request as $0.CancelSubscriptionRequest);
+      case 'GetBillingSettings':
+        return getBillingSettings(ctx, request as $0.GetBillingSettingsRequest);
+      case 'UpdateBillingSettings':
+        return updateBillingSettings(
+            ctx, request as $0.UpdateBillingSettingsRequest);
+      case 'SetTenantOverride':
+        return setTenantOverride(ctx, request as $0.SetTenantOverrideRequest);
+      case 'RevokeTenantOverride':
+        return revokeTenantOverride(
+            ctx, request as $0.RevokeTenantOverrideRequest);
+      case 'UpsertPlanPrice':
+        return upsertPlanPrice(ctx, request as $0.UpsertPlanPriceRequest);
+      case 'SetPlanEntitlement':
+        return setPlanEntitlement(ctx, request as $0.SetPlanEntitlementRequest);
+      case 'CreateOperator':
+        return createOperator(ctx, request as $0.CreateOperatorRequest);
+      case 'DisableOperator':
+        return disableOperator(ctx, request as $0.DisableOperatorRequest);
       default:
         throw $core.ArgumentError('Unknown method: $methodName');
     }
