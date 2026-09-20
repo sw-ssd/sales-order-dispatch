@@ -26,6 +26,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
+	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
 	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
@@ -608,41 +609,52 @@ func parseID(s string) (int, error) {
 	return int(id), nil
 }
 
-// toConnectError 將 ent 錯誤映射為 Connect 錯誤碼。
+// toConnectError 將底層錯誤集中映射為**已註冊的錯誤碼**(internal/errcode)。本函式是全服務層
+// 的單一出口(各 service 的 DB 錯誤都經此轉換),碼與訊息由 registry 決定,呼叫點不自行拼訊息。
 //
-// 約束錯誤(ent.IsConstraintError)涵蓋唯一鍵衝突與 FK 阻擋,其 Error() 挾帶驅動層原文
-// (SQLSTATE、約束名、欄位名…),一律不外洩給客戶端:改以 FailedPrecondition + 繁中可行動
-// 訊息表示「資料現況不允許此操作」(P2-A 的原始缺陷正是 FK 阻擋被當成識別碼重複回
-// AlreadyExists 並附上整句 SQL)。需要 AlreadyExists 語意者由呼叫端自行判別(如
-// CreateCompany 以 DeletedAtIsNil 前置查詢判斷識別碼重複),語意明確且訊息不含 DB 細節。
+// 對外一律固定訊息,根因只進 server log:ent 的約束錯誤(SysConstraintViolation)與 RLS 違反
+// (SysScopeViolation)的 Error() 都挾帶驅動層原文(SQLSTATE、約束名、表名…),一律不外洩;
+// 且**不**用 errcode.Wrap 保留根因——原文一旦掛在 connect.Error 上,後續任何路徑(log 中介層、
+// detail 序列化)都有機會帶出去,log 已足以追查。
+//
+// 約束錯誤為何不是 AlreadyExists:SysConstraintViolation 涵蓋唯一鍵衝突與 FK 阻擋且無法分辨
+// (P2-A 的原始缺陷正是 FK 阻擋被當成識別碼重複回 AlreadyExists 並附上整句 SQL)。需要
+// AlreadyExists 語意者由呼叫端自行判別(如 CreateCompany 以 DeletedAtIsNil 前置查詢判斷)。
 //
 // RLS 違反(SQLSTATE 42501)是同一類「驅動層原文」,卻**不在** ent 的 constraint 判定內:
 // ent v0.14.6 的 sqlgraph.IsConstraintError 只認唯一鍵／FK／CHECK 的字串特徵,而 PG 的 RLS
 // 訊息是 `new row violates row-level security policy for table "x"` → 會落到 default 分支把
-// SQLSTATE 與表名逐字回給客戶端(違反本計畫 Global Constraints)。故在此明示攔下。
+// SQLSTATE 與表名逐字回給客戶端(違反本計畫 Global Constraints)。故在此明示攔下(見
+// isRLSPolicyViolation)。
+//
+// 伺服器端的意外(ent.IsNotSingular 與未知錯誤)一律 SYS-9000;trace_id 由 requestid
+// interceptor 在回應邊界補進 ErrorInfo,故本函式不收 ctx(176 個呼叫點不必逐點傳)。
 func toConnectError(err error) error {
 	if err == nil {
 		return nil
 	}
+	// 已是錯誤碼(registry 產物,或呼叫端自建的守衛錯誤)→ 原樣回,避免內層碼／訊息被外層蓋掉
+	// (例:各 service 的「缺少租戶交易(context)」守衛靠這條保住自己的 internal 碼)。
+	if ce, ok := err.(*connect.Error); ok {
+		return ce
+	}
 	switch {
 	case ent.IsNotFound(err):
-		return connect.NewError(connect.CodeNotFound, err)
+		return errcode.SysNotFound.Error(nil)
 	case ent.IsValidationError(err):
-		return connect.NewError(connect.CodeInvalidArgument, err)
+		return errcode.SysInvalidArgument.Error(nil)
 	case isRLSPolicyViolation(err):
 		// 根因(含 SQLSTATE 與 policy 原文,可看出是哪張表被擋)只進 log;對外固定訊息。
-		log.Printf("services: RLS 違反(已映射為 failed_precondition,不對外揭露細節): %v", err)
-		return connect.NewError(connect.CodeFailedPrecondition,
-			errors.New("資料超出目前的存取範圍,無法完成此操作"))
+		log.Printf("services: RLS 違反(已映射為 SYS-3001,不對外揭露細節): %v", err)
+		return errcode.SysScopeViolation.Error(nil)
 	case ent.IsConstraintError(err):
 		// 原始錯誤(含 SQLSTATE/約束名/欄位名)仍必須落 server log 才能追查;只對客戶端隱藏。
-		log.Printf("services: 資料庫約束錯誤(已映射為 failed_precondition,不對外揭露細節): %v", err)
-		return connect.NewError(connect.CodeFailedPrecondition,
-			errors.New("資料違反資料庫約束,無法完成此操作(請確認識別碼是否已被使用、參照對象是否仍存在)"))
-	case ent.IsNotSingular(err):
-		return connect.NewError(connect.CodeInternal, err)
+		log.Printf("services: 資料庫約束錯誤(已映射為 SYS-3002,不對外揭露細節): %v", err)
+		return errcode.SysConstraintViolation.Error(nil)
 	default:
-		return connect.NewError(connect.CodeInternal, err)
+		// ent.IsNotSingular 與其他未知錯誤:對外無可行動資訊,一律 SYS-9000。
+		log.Printf("services: 內部錯誤(對外僅回 SYS-9000): %v", err)
+		return errcode.SysInternal.Error(nil)
 	}
 }
 
