@@ -310,6 +310,17 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *connect.Reque
 	if name == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("name 必填"))
 	}
+	// 由 ctx 取請求交易:稽核寫入需要 *ent.Tx(audit.Record 的簽章),且 D18「業務寫入與稽核
+	// 同一交易」正是靠它維持。無請求交易(CLI/seed/未掛 interceptor 的路徑)即回明確錯誤,
+	// 不得默默退回 fallback client 寫入 —— 客戶域 ENABLE+FORCE 後那會靜默漏掉租戶範圍。
+	// 守衛置於本函式**第一個 DB 呼叫之前**:無交易的路徑不得先做任何未受 RLS 約束的 autocommit
+	// 讀寫(否則會在被擋下之前就先動到資料庫)。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
+	}
+	db := tx.Client() // 查詢與寫入都用它;同一個交易
+
 	// 字典/業務驗證:走 dbtenant.Client(即請求交易的 client)—— 驗證與寫入同一個交易,
 	// 任何 DB 錯誤(含約束)都會中止整個請求交易,故不另闢交易、也不吞掉錯誤。
 	payID, err := s.validateMetadictRef(ctx, id, req.Msg.GetPaymentMethodId(), "payment_method")
@@ -359,15 +370,6 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *connect.Reque
 	if err := s.ensureCustomerCounter(ctx, cid); err != nil {
 		return nil, err
 	}
-
-	// 由 ctx 取請求交易:稽核寫入需要 *ent.Tx(audit.Record 的簽章),且 D18「業務寫入與稽核
-	// 同一交易」正是靠它維持。無請求交易(CLI/seed/未掛 interceptor 的路徑)即回明確錯誤,
-	// 不得默默退回 fallback client 寫入 —— 客戶域 ENABLE+FORCE 後那會靜默漏掉租戶範圍。
-	tx, ok := dbtenant.TxFrom(ctx)
-	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
-	}
-	db := tx.Client() // 查詢與寫入都用它;同一個交易
 
 	// E1(D1 協定):did 為**身分導出的部門**,而客戶列與主/業務子帳號都會掛在它身上。這一步必須
 	// 與掛載寫入同交易並以 FOR SHARE 讀該部門(與 DeleteDepartment 的 FOR UPDATE 互斥),否則
