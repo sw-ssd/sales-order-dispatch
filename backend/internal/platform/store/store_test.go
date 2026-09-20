@@ -12,20 +12,29 @@ import (
 // 例如假實作若「順手」把過期的 override 也濾掉,判定層的到期測試就會假綠 —— 真環境裡的
 // 到期判斷是判定層的職責,store 只負責剔除已撤銷者。以下逐一釘住四方法的行為契約。
 
-// 無未取消的訂閱時必須回 (nil, nil):判定層靠它區分「沒訂閱」與「查詢失敗」,
+// 無訂閱列時必須回 (nil, nil):判定層靠它區分「沒訂閱」與「查詢失敗」,
 // 回錯誤會讓「公司尚未訂閱」變成 500。
-func TestFakeStoreSubscriptionMissingOrCancelledIsNil(t *testing.T) {
+//
+// **已取消的訂閱必須照樣回傳**（F-8）：store 不得預先濾掉 cancelled —— 否則「有取消的合約」與
+// 「完全沒有合約」在判定層不可區分，而判定層對後者是「尚未開通計費 → 不施加限制」，等於讓取消
+// 流程變成送免費方案。判定 cancelled 是判定層的職責（allow-list → PLAT-3001），與 override 的
+// 「到期由判定層判斷」同一原則。
+func TestFakeStoreSubscriptionMissingIsNilAndCancelledIsReturned(t *testing.T) {
 	ctx := context.Background()
 	f := store.NewFake()
 
 	sub, err := f.Subscription(ctx, 7)
 	if err != nil || sub != nil {
-		t.Fatalf("無訂閱的租戶應回 (nil, nil),got %+v err=%v", sub, err)
+		t.Fatalf("無訂閱列的租戶應回 (nil, nil),got %+v err=%v", sub, err)
 	}
 
 	f.PutSubscription(store.Subscription{CompanyID: 7, PlanCode: "std", Status: "cancelled"})
-	if sub, err := f.Subscription(ctx, 7); err != nil || sub != nil {
-		t.Fatalf("已取消的訂閱應視同無訂閱,got %+v err=%v", sub, err)
+	sub, err = f.Subscription(ctx, 7)
+	if err != nil || sub == nil {
+		t.Fatalf("已取消的訂閱必須回傳(不得當成沒有訂閱),got %+v err=%v", sub, err)
+	}
+	if sub.Status != "cancelled" || sub.PlanCode != "std" {
+		t.Fatalf("取消的訂閱必須帶出 status／方案(判定層據以回 PLAT-3001),got %+v", *sub)
 	}
 }
 

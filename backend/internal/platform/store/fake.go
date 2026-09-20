@@ -79,11 +79,17 @@ func (f *Fake) Overrides(_ context.Context, companyID int) ([]Override, error) {
 	return cloneOverrides(f.overs[companyID]), nil
 }
 
+// Subscription 回傳該公司的訂閱（**含已取消者**）；沒有列才回 (nil, nil)。
+//
+// 假實作與 SQL 實作的過濾語意必須一致，否則判定層的測試會失真：**cancelled 由判定層判定**
+// （allow-list → PLAT-3001），store 不得預先濾掉 —— 濾掉會讓「只有一筆已取消合約」與「完全沒有
+// 合約」不可區分，而後者的語意是「尚未開通計費 → 不施加限制」（spec §4.5），等於取消即送免費
+// 方案（F-8）。與 override 的「到期由判定層判斷」同一個原則。
 func (f *Fake) Subscription(_ context.Context, companyID int) (*Subscription, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	s, ok := f.subs[companyID]
-	if !ok || s.Status == "cancelled" {
+	if !ok {
 		return nil, nil
 	}
 	s = cloneSubscription(s)

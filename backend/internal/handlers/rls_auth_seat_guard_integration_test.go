@@ -74,6 +74,20 @@ func TestIntegrationAuthSeatGuardUnderAppRole(t *testing.T) {
 		authInsertStaffAtCompany(t, admin, noSub, fmt.Sprintf("nosub%d@example.com", i))
 	}
 
+	// **唯一的訂閱列是 cancelled**（spec §5.6 的取消是「期末終止、資料不刪除」）→ 合約不可用
+	// （PLAT-3001），**不得**被當成「從未訂閱」而落進 none 的不施加限制（F-8）。同樣擺 10 席，
+	// 讓「不施加限制」沒有任何僥倖空間。
+	cancelled := authInsertCompany(t, admin, "已取消", "cancelled.example.com")
+	for i := range 10 {
+		authInsertStaffAtCompany(t, admin, cancelled, fmt.Sprintf("cancelled%d@example.com", i))
+	}
+	subscribeSeatPlan(t, admin, cancelled, "std", "cancelled")
+
+	// 對照組：已訂閱（active）且**未滿席** → 必須照常成功（否則上面的「被擋」可能只是恆擋）。
+	roomy := authInsertCompany(t, admin, "未滿席", "roomy.example.com")
+	authInsertStaffAtCompany(t, admin, roomy, "roomy0@example.com")
+	subscribeSeatPlan(t, admin, roomy, "std", "active")
+
 	// 池 >1：守衛（無 scope）會另開一條系統範圍交易（AGENTS §9-6；池設 1 會與請求交易互鎖）。
 	client := authAppRoleClientN(t, dsn, 4)
 	env := newSeatGuardEnv(t, admin, client)
@@ -130,6 +144,54 @@ func TestIntegrationAuthSeatGuardUnderAppRole(t *testing.T) {
 		}
 		if n := authCount(t, admin, `SELECT count(*) FROM users WHERE email = $1`, "new@suspended.example.com"); n != 0 {
 			t.Fatalf("被擋後不得建立帳號，got %d 列", n)
+		}
+	})
+
+	// F-8：**唯一一列是 cancelled** 的訂閱 → 兩條建帳號路徑都必須被擋在 PLAT-3001，且不得落列。
+	// 突變：把 store 的訂閱讀取還原成 `status <> 'cancelled'`（＝預先濾掉）→ 本子測試必須紅
+	// （屆時它會被當成「從未訂閱」→ 不施加限制 → 註冊成功）。
+	t.Run("唯一訂閱列 status=cancelled → 兩條路徑都 PLAT-3001 且不落 users 列", func(t *testing.T) {
+		before := authCount(t, admin, `SELECT count(*) FROM users WHERE company_users = $1`, cancelled)
+		if before != 10 {
+			t.Fatalf("前置：已取消公司應有 10 席，got %d", before)
+		}
+		token := env.newRegistrationToken(t, "new@cancelled.example.com")
+		_, err := env.registerComplete(t, token, cancelled)
+		if got := seatErrorCode(t, err); got != "PLAT-3001" {
+			t.Fatalf("RegisterComplete 應回 PLAT-3001（合約不可用），got %q（err=%v）", got, err)
+		}
+
+		env.verifier.id = &auth.OIDCIdentity{
+			Email: "newbie@cancelled.example.com", Name: "新人", HostedDomain: "cancelled.example.com",
+		}
+		rec := env.callback(t, "seat-state-cancelled")
+		if loc := rec.Header().Get("Location"); !strings.Contains(loc, "error=PLAT-3001") {
+			t.Fatalf("OIDC 首次登入應回跳 login?error=PLAT-3001，got %q", loc)
+		}
+		if n := authCount(t, admin, `SELECT count(*) FROM users WHERE company_users = $1`, cancelled); n != before {
+			t.Fatalf("被擋後 users 列數必須不變（%d），got %d", before, n)
+		}
+
+		// 投影與守衛**對 cancelled 必須一致**：平台端投影看得到這份已取消的合約（status=cancelled），
+		// 守衛也把同一家公司擋在 PLAT-3001 —— 兩者讀的是同一列（取法逐字相同：優先未取消、
+		// 只有全是 cancelled 時才取 cancelled），不會出現「後台顯示已取消、守衛卻不限額」。
+		row, _, err := postgresstore.NewAdmin(admin).GetTenant(t.Context(), itoa(cancelled))
+		if err != nil {
+			t.Fatalf("平台端投影查詢失敗: %v", err)
+		}
+		if row.Status != "cancelled" || row.PlanCode != "std" {
+			t.Fatalf("投影應顯示 status=cancelled／方案 std（與守衛一致），got %+v", *row)
+		}
+	})
+
+	t.Run("對照組：active 且未滿席 → 照常成功", func(t *testing.T) {
+		before := authCount(t, admin, `SELECT count(*) FROM users WHERE company_users = $1`, roomy)
+		token := env.newRegistrationToken(t, "new@roomy.example.com")
+		if _, err := env.registerComplete(t, token, roomy); err != nil {
+			t.Fatalf("未滿席的 active 訂閱必須能完成註冊（否則上面的「被擋」可能只是恆擋），got %v", err)
+		}
+		if n := authCount(t, admin, `SELECT count(*) FROM users WHERE company_users = $1`, roomy); n != before+1 {
+			t.Fatalf("應建立帳號（%d → %d），got %d", before, before+1, n)
 		}
 	})
 

@@ -102,15 +102,25 @@ func (s *Store) Overrides(ctx context.Context, companyID int) ([]store.Override,
 	return out, rows.Err()
 }
 
-// Subscription 回傳未取消的訂閱;沒有則回 (nil, nil)。billing_cycle 必須帶出:期別產生
-// 靠它決定 +1 月或 +1 年(G1)。方案名取自 JOIN 的 plans.name(租戶端投影要顯示它)。
+// Subscription 回傳該公司的現行訂閱;**已取消的訂閱也要回傳**（只有一列是 cancelled 時就回它）。
+// 沒有列才回 (nil, nil)。billing_cycle 必須帶出:期別產生靠它決定 +1 月或 +1 年(G1)。
+// 方案名取自 JOIN 的 plans.name(租戶端投影要顯示它)。
+//
+// **不得**把 `s.status <> 'cancelled'` 寫進 WHERE（F-8）：那樣「只有一筆已取消訂閱」的公司與
+// 「完全沒有訂閱列」在判定層不可區分 —— 而判定層對後者是「尚未開通計費 → 不施加任何限制」
+// （spec §4.5），等於讓取消流程變成送免費方案（真容器實測：10/10 席的 cancelled 公司仍可建帳號）。
+// 取法與平台端投影（admin.go 的 tenantJoins LATERAL）**逐字相同**：優先未取消，**只有**全是
+// cancelled 時才取 cancelled，讓它真的到判定層 → allow-list 回 PLAT-3001。
+// partial unique index 保證未取消者至多一筆，故 LIMIT 1 不會少算也不會重複。
 func (s *Store) Subscription(ctx context.Context, companyID int) (*store.Subscription, error) {
 	row := s.db.QueryRowContext(ctx, `
 		SELECT s.company_id, p.code, p.name, s.status, p.id, s.seat_count,
 		       s.billing_cycle, s.trial_ends_at, s.grace_until
 		  FROM platform.subscriptions s
 		  JOIN platform.plans p ON p.id = s.plan_id
-		 WHERE s.company_id = $1 AND s.status <> 'cancelled'`, companyID)
+		 WHERE s.company_id = $1
+		 ORDER BY (s.status = 'cancelled'), s.started_at DESC, s.id DESC
+		 LIMIT 1`, companyID)
 	var sub store.Subscription
 	var trial, grace sql.NullTime
 	err := row.Scan(&sub.CompanyID, &sub.PlanCode, &sub.PlanName, &sub.Status, &sub.PlanID, &sub.SeatCount,

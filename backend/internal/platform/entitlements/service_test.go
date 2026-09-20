@@ -279,14 +279,13 @@ func TestJudgementTable(t *testing.T) {
 			wantAllows: false, wantCode: "PLAT-3001",
 		},
 		{
-			// cancelled 不會從 store 出來（Fake／SQL 都只回未取消者）→ 判定層看到的是 **none**
-			// → 依 F-7 不施加限制（cancelled 本身仍必須 PLAT-3001，見
-			// TestCancelledSubscriptionIsContractInactive 的 stubStore）。
-			name:     "store 不回 cancelled → 視同無訂閱列（尚未開通計費）→ 不施加限制",
+			// F-8：**有取消的訂閱列**必須被判定層看見（store 不得預先濾掉），否則它與「完全沒有
+			// 訂閱列」不可區分 → 落進 none 的「不施加限制」= 取消流程變成送免費方案。
+			name:     "cancelled：合約不可用 → PLAT-3001（不得當成「從未訂閱」而放行）",
 			features: []store.Feature{seatsDef}, ents: stdPlan, sub: subWithStatus("cancelled"),
-			counts:  map[string]int{seats: 100},
+			counts:  map[string]int{seats: 100}, // 就算用量爆表也一樣，擋的是合約狀態
 			feature: seats, delta: 1,
-			wantAllows: true,
+			wantAllows: false, wantCode: "PLAT-3001",
 		},
 		{
 			name:     "suspended 且功能未含方案 → 仍是 PLAT-3001（合約問題優先於功能問題）",
@@ -362,24 +361,16 @@ func TestJudgementTable(t *testing.T) {
 	}
 }
 
-// stubStore 遮蔽 Fake 的「不吐 cancelled」語意：store 契約上 cancelled 不會出現，
-// 但判定層仍須對它回 PLAT-3001（換一個 store 實作就可能看到）。
-type stubStore struct {
-	store.Store
-	sub *store.Subscription
-}
-
-func (s stubStore) Subscription(context.Context, int) (*store.Subscription, error) {
-	return s.sub, nil
-}
-
+// F-8：**只有一筆 cancelled 訂閱**的公司（spec §5.6 的取消是「期末終止、資料不刪除」）必須被擋在
+// PLAT-3001 —— 這條走的是**真 store 實作**（Fake 與 SQL 都要回 cancelled）：store 若預先濾掉
+// cancelled，判定層看到的就是「沒有訂閱列」→ 落進 none 的「不施加限制」，取消流程變成送免費方案。
 func TestCancelledSubscriptionIsContractInactive(t *testing.T) {
 	f := store.NewFake()
 	f.PutFeature(seatsDef)
 	f.PutPlan("std", stdPlan)
+	f.PutSubscription(*subWithStatus("cancelled"))
 
-	sub := store.Subscription{CompanyID: 1, PlanCode: "std", Status: "cancelled"}
-	svc := entitlements.New(stubStore{Store: f, sub: &sub}, counting{seats: 1}, entitlements.NewMemoryCache(), 0)
+	svc := newSvc(f, counting{seats: 1})
 	ctx := context.Background()
 
 	if ok, err := svc.Allows(ctx, 1, seats); err != nil || ok {
@@ -387,7 +378,7 @@ func TestCancelledSubscriptionIsContractInactive(t *testing.T) {
 	}
 	err := svc.CheckLimit(ctx, 1, seats, 1)
 	if err == nil {
-		t.Fatal("cancelled 訂閱不得放行")
+		t.Fatal("cancelled 訂閱不得放行（不得當成「從未訂閱」）")
 	}
 	if got := errorCodeOf(t, err); got != "PLAT-3001" {
 		t.Fatalf("ErrorInfo.code = %q；want %q（合約不可用不是「功能未含方案」）", got, "PLAT-3001")
@@ -406,10 +397,10 @@ func TestUnlistedSubscriptionStatusIsContractInactive(t *testing.T) {
 		f := store.NewFake()
 		f.PutFeature(seatsDef)
 		f.PutPlan("std", stdPlan)
-		// stubStore 遮蔽 Fake 的「不吐 cancelled」語意：本測試要斷言的是判定層對**任何**狀態的
-		// 立場，不能靠 store 先替我們過濾掉一部分。
-		return entitlements.New(stubStore{Store: f, sub: subWithStatus(status)},
-			counting{seats: 1}, entitlements.NewMemoryCache(), 0)
+		// 用**真 store 實作**（Fake）：它不得替判定層過濾掉任何狀態（見 F-8），否則本測試會因為
+		// 「store 先把不喜歡的狀態濾掉」而失真。
+		f.PutSubscription(*subWithStatus(status))
+		return newSvc(f, counting{seats: 1})
 	}
 
 	for _, status := range []string{"canceled", "paused", "unpaid", "whatever", "ACTIVE", ""} {

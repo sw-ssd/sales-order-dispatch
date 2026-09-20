@@ -26,8 +26,10 @@ import (
 //   - subscriptions.billing_cycle／trial_ends_at／grace_until 必須真的從資料帶出
 //     (年繳方案的期別要 +1 年,G1);
 //   - 已撤銷(revoked_at)的例外不得回傳;已到期的例外**必須**回傳(到期由判定層處理);
-//   - 已取消(status = 'cancelled')的訂閱不得當成現行訂閱(partial unique index 只管未
-//     取消者,故同一公司可同時有 active 與 cancelled 列)。
+//   - 已取消(status = 'cancelled')的訂閱**必須回傳**(F-8):store 不得預先濾掉 cancelled,否則
+//     「有取消的合約」與「完全沒有合約」在判定層不可區分,而判定層對後者是「尚未開通計費 →
+//     不施加限制」(spec §4.5)。取法與平台投影一致:優先未取消、**只有**全是 cancelled 時才取
+//     cancelled(partial unique index 保證未取消者至多一筆)。
 func TestIntegrationPlatformStore(t *testing.T) {
 	testsupport.RequiresContainer(t)
 	dsn := testsupport.Postgres(t)
@@ -65,10 +67,11 @@ func TestIntegrationPlatformStore(t *testing.T) {
 	// 42 為月繳(用預設值)、無試用／寬限;44 為年繳且兩者有值 —— 兩者相反,才驗得出欄位確實
 	//「從資料來」而不是常數或零值。
 	//
-	// 43／45 與 42 的第二列專為「未取消」這條過濾而設:partial unique index 只管未取消者,
+	// 43／45 與 42 的第二列專為「cancelled 取法」而設:partial unique index 只管未取消者,
 	// 故同一公司可以同時有 active 與 cancelled 列。43 是**唯一一列就是 cancelled** 的租戶 ——
-	// 少了 `status <> 'cancelled'` 就一定會回那一列(不依賴列的實體順序,是這條過濾的守門);
-	// 42 的 cancelled 列則驗「兩列並存時挑的是 active 那一列」;45 完全沒有列,走 ErrNoRows。
+	// 它必須被回傳(cancelled 要讓判定層看見 → PLAT-3001),躲在此處的預先過濾會讓取消流程變成
+	// 送免費方案;42 的 cancelled 列則驗「兩列並存時挑的是 active 那一列」;45 完全沒有列,走
+	// ErrNoRows。
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO platform.subscriptions (company_id, plan_id, status, seat_count) VALUES
 		(42, $1, 'active', 10),
@@ -136,7 +139,8 @@ func TestIntegrationPlatformStore(t *testing.T) {
 		t.Fatalf("未知方案應回空而非錯誤,got %+v err=%v", unknown, err)
 	}
 
-	// 42 另有一列已取消的舊訂閱(seat_count 77):未取消的過濾必須挑出 active 那一列。
+	// 42 另有一列已取消的舊訂閱(seat_count 77):取法必須挑出 active 那一列(不是「濾掉 cancelled」,
+	// 而是排序把已取消者排到最後)。
 	sub, err := st.Subscription(ctx, 42)
 	if err != nil || sub == nil {
 		t.Fatalf("Subscription(42): got %+v err=%v", sub, err)
@@ -160,10 +164,12 @@ func TestIntegrationPlatformStore(t *testing.T) {
 		sub.GraceUntil == nil || !sub.GraceUntil.Equal(graceUntil) {
 		t.Fatalf("試用到期／寬限日未帶出,got %+v", *sub)
 	}
-	// 43 的唯一一列是已取消:拿掉 `status <> 'cancelled'` 必定回那一列,故此斷言是該條件的守門
-	// (把已取消的舊約當成現行訂閱,會讓停用／退款的公司繼續享有權益)。
-	if sub, err := st.Subscription(ctx, 43); err != nil || sub != nil {
-		t.Fatalf("只有已取消訂閱的租戶應回 (nil, nil),got %+v err=%v", sub, err)
+	// 43 的唯一一列是已取消:它**必須**被回傳,判定層才看得到並回 PLAT-3001(F-8)。把 cancelled
+	// 預先濾掉會讓它與「完全沒有列」不可區分 → 判定層當成「尚未開通計費」→ 不施加任何限制。
+	if sub, err := st.Subscription(ctx, 43); err != nil || sub == nil {
+		t.Fatalf("只有已取消訂閱的租戶必須回傳該列(讓判定層擋下),got %+v err=%v", sub, err)
+	} else if sub.Status != "cancelled" || sub.SeatCount != 99 || sub.PlanCode != "std" {
+		t.Fatalf("回傳的必須是那一列已取消的訂閱(status／seat_count／方案皆要帶出),got %+v", *sub)
 	}
 	// 45 完全沒有列:走的是 ErrNoRows → (nil, nil) 的路徑,與上面那條不同。
 	if sub, err := st.Subscription(ctx, 45); err != nil || sub != nil {
