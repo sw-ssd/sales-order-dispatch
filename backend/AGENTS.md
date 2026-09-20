@@ -211,6 +211,7 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
 19. **排程（`cmd/platform-cron`）不寫 `platform.audit_logs`——這是「每個平台寫入都寫稽核」的唯一例外**。
     事實（schema）：`platform.audit_logs.operator_id` 是 `NOT NULL REFERENCES platform.operators(id)`，而排程沒有 operator；`platform.settings.system_actor_user_id` 存的是**租戶 `users.id`**（`store.SystemActor`，是給 consumer 落**租戶**稽核用的）→ 拿它去填 `operator_id` 必然 FK `23503`。
     因此排程的問責紀錄是：**同交易的 `platform.events`（每次轉移一筆）＋ consumer 經 `services.SetCompanyStatus` 落的租戶稽核**（actor＝系統 actor、reason＝欠費）。
+    **本條涵蓋每一支排程掃描**：`ExpireTrials`（試用到期，Plan C Task 15 修正輪新增）／`MarkPastDue`／`SuspendOverdue`／`ExpireCancelled`／`EnsureNextPeriod`，四支轉移全都**不寫**平台稽核（它們的紀錄分別是 `subscription.trial_ended`／`subscription.past_due`／`subscription.suspended`／`subscription.expired`；見第 20 條）。
     **營運者驅動的寫入仍必須寫平台稽核並帶真實 `operator_id`**——那才是本約束的意圖。
     為什麼：這個例外不是「方便」，是 schema 上不可滿足；硬寫的結果不是更安全，而是交易直接失敗或留下一列不存在的 actor。
 
