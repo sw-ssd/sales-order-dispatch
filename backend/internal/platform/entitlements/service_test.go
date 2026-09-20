@@ -430,6 +430,11 @@ func TestZeroTTLDisablesCache(t *testing.T) {
 
 // F-2：MemoryCache 必須自己實現 TTL —— 否則 New(..., ttl>0) 的 ttl 是空話，
 // 方案／override 異動在長跑行程裡永遠不生效（Plan C 的 Valkey 之前沒有任何失效機制）。
+//
+// 這裡只驗「過期 → 回源」這半，且是確定性的：Sleep 走 monotonic clock 保證至少睡滿
+// 5×TTL，斷言只需「已經過期」。**不**在此驗「回源後重新快取」——那需要第三次呼叫落在
+// 20ms 視窗內，滿載機器一次排程延遲就會變成 miss（見 TestCacheRefillsAfterForcedMiss，
+// 那半用長 TTL 且不 Sleep）。
 func TestCacheExpiresAfterTTL(t *testing.T) {
 	f := store.NewFake()
 	f.PutFeature(store.Feature{Code: seats, Type: "integer"})
@@ -437,7 +442,6 @@ func TestCacheExpiresAfterTTL(t *testing.T) {
 	f.PutSubscription(store.Subscription{CompanyID: 1, PlanCode: "std", Status: "active"})
 
 	cs := &countingStore{Store: f}
-	// 極短 TTL ＋ 睡 TTL 的 5 倍：monotonic clock 保證至少睡滿，不依賴排程精度（不 flaky）。
 	const ttl = 20 * time.Millisecond
 	svc := entitlements.New(cs, counting{seats: 1}, entitlements.NewMemoryCache(), ttl)
 	ctx := context.Background()
@@ -459,13 +463,47 @@ func TestCacheExpiresAfterTTL(t *testing.T) {
 	if cs.subCalls != 2 {
 		t.Fatalf("store 查詢次數 = %d；want 2（首次回源＋TTL 過後回源）", cs.subCalls)
 	}
+}
 
-	// 回源後會重新寫快取：緊接著的判定必須命中快取（TTL 生效不等於快取失效）。
-	if err := svc.CheckLimit(ctx, 1, seats, 1); err == nil {
-		t.Fatal("仍應為 PLAT-3001")
+// 回源後必須重新寫入快取（否則等於每次都打 store，快取只剩「TTL 內有效」的假象）。
+// 這裡逼近「未命中 → 回源 → 重新快取」的同一條路徑卻不需要 Sleep：長 TTL（1 分鐘）
+// 下以 Delete 造出未命中（Plan C 的失效路徑），再用「來源已改成 suspended 卻仍放行」
+// 證明第三次判定讀的是重新寫入的快取，而不是又回源了一次。
+func TestCacheRefillsAfterForcedMiss(t *testing.T) {
+	f := store.NewFake()
+	f.PutFeature(store.Feature{Code: seats, Type: "integer"})
+	f.PutPlan("std", []store.Entitlement{{FeatureCode: seats, Enabled: true, Limit: ptr(int64(2))}})
+	f.PutSubscription(store.Subscription{CompanyID: 1, PlanCode: "std", Status: "active"})
+
+	cs := &countingStore{Store: f}
+	cache := entitlements.NewMemoryCache()
+	svc := entitlements.New(cs, counting{seats: 1}, cache, time.Minute)
+	ctx := context.Background()
+
+	if err := svc.CheckLimit(ctx, 1, seats, 1); err != nil {
+		t.Fatalf("暖機應放行: %v", err)
+	}
+	if cs.subCalls != 1 {
+		t.Fatalf("暖機應回源一次（store 查詢次數 %d）", cs.subCalls)
+	}
+
+	// key 形態 ent:<companyID> 是 Cache 的對外契約（Plan C T8 的 Invalidate 用它）。
+	if err := cache.Delete(ctx, "ent:1"); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+	if err := svc.CheckLimit(ctx, 1, seats, 1); err != nil {
+		t.Fatalf("失效後應回源並放行: %v", err)
 	}
 	if cs.subCalls != 2 {
-		t.Fatalf("回源後應重新快取（store 查詢次數 %d；want 2）", cs.subCalls)
+		t.Fatalf("失效後必須回源（store 查詢次數 %d；want 2）", cs.subCalls)
+	}
+
+	f.PutSubscription(store.Subscription{CompanyID: 1, PlanCode: "std", Status: "suspended"})
+	if err := svc.CheckLimit(ctx, 1, seats, 1); err != nil {
+		t.Fatalf("回源後應已重新寫入快取（來源的 suspended 不該被看到）: %v", err)
+	}
+	if cs.subCalls != 2 {
+		t.Fatalf("回源後應命中新快取（store 查詢次數 %d；want 2）", cs.subCalls)
 	}
 }
 
