@@ -1,6 +1,7 @@
 packages:
   - backend
   - frontend
+  - platform-console
   - app
   - infra
 allowBuilds:

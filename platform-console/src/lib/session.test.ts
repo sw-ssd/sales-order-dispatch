@@ -1,0 +1,58 @@
+import { Code, ConnectError } from "@connectrpc/connect";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const listTenants = vi.fn();
+vi.mock("./api", () => ({
+  platform: { listTenants: (...args: unknown[]) => listTenants(...args) },
+  loginUrl: "/platform/auth/google",
+}));
+
+import { ensureSession, logout, resetSession, sessionStatus } from "./session";
+
+describe("ensureSession（session 探針）", () => {
+  beforeEach(() => {
+    listTenants.mockReset();
+    resetSession();
+  });
+
+  it("後端回 Unauthenticated → false，狀態 anonymous（fail-closed）", async () => {
+    listTenants.mockRejectedValue(new ConnectError("未登入", Code.Unauthenticated));
+    await expect(ensureSession()).resolves.toBe(false);
+    expect(sessionStatus()).toBe("anonymous");
+  });
+
+  it("連線失敗（非 401）一樣視為未登入：寧可擋在登入頁", async () => {
+    listTenants.mockRejectedValue(new ConnectError("後端不可用", Code.Unavailable));
+    await expect(ensureSession()).resolves.toBe(false);
+    expect(sessionStatus()).toBe("anonymous");
+  });
+
+  it("探針成功 → true，狀態 authenticated", async () => {
+    listTenants.mockResolvedValue({ tenants: [] });
+    await expect(ensureSession()).resolves.toBe(true);
+    expect(sessionStatus()).toBe("authenticated");
+  });
+
+  it("單一探針：並行與後續呼叫合計只打後端一次", async () => {
+    listTenants.mockResolvedValue({ tenants: [] });
+    await Promise.all([ensureSession(), ensureSession()]);
+    await ensureSession();
+    expect(listTenants).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("logout", () => {
+  beforeEach(() => {
+    listTenants.mockReset();
+    resetSession();
+  });
+
+  it("登出後狀態回 anonymous，且不再重新探針（cookie 是 HttpOnly，前端清不掉）", async () => {
+    listTenants.mockResolvedValue({ tenants: [] });
+    await ensureSession();
+    logout();
+    expect(sessionStatus()).toBe("anonymous");
+    await expect(ensureSession()).resolves.toBe(false);
+    expect(listTenants).toHaveBeenCalledTimes(1);
+  });
+});

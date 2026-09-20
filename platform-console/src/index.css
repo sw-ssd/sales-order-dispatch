@@ -1,0 +1,5 @@
+/* 樣式與租戶 SPA 同一份設計系統（C-10）：直接匯入它的入口 CSS，不複製 tokens。
+   Tailwind v4 會把相對 @import 內聯；共用元件庫在 ../frontend，自動掃描只涵蓋 Vite root，
+   故以 @source 明示來源（否則元件庫用到的 class 不會被產出）。 */
+@import "../../frontend/src/index.css";
+@source "../../frontend/src/components/ui";

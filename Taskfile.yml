@@ -7,6 +7,9 @@ includes:
   frontend:
     taskfile: ./frontend
     dir: ./frontend
+  console:
+    taskfile: ./platform-console
+    dir: ./platform-console
   app:
     taskfile: ./app
     dir: ./app

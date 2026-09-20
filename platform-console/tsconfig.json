@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
+    "paths": {
+      "@ui": ["../frontend/src/components/ui/index.ts"],
+      "@ui/*": ["../frontend/src/components/ui/*"],
+      "@/*": ["../frontend/src/*"],
+      "~/*": ["../frontend/src/*"]
+    },
+    "types": ["vite/client"],
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "esModuleInterop": true
+  },
+  // 只檢 src（與租戶 SPA 的 tsconfig 相同）：vite.config.ts 需要 @types/node 才檢得動，
+  // 而它由 vite／vitest 自己載入，錯了那兩條指令會直接爆。
+  "include": ["src"]
+}
