@@ -26,6 +26,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/third_party/database"
 )
 
 // seedTestMigrationsDir 相對套件目錄(go test 以套件目錄為 cwd),與 cmd/migrate 同路徑。
@@ -62,6 +63,23 @@ func TestIntegrationSeedUnderRLS(t *testing.T) {
 		}
 		if n := seedCount(t, admin, `SELECT count(*) FROM roles`); n != 0 {
 			t.Fatalf("被擋下的 seed 不得落地任何角色,got %d 列", n)
+		}
+	})
+
+	t.Run("client 未經 dbtenant.NewClient → 即使包進 SystemScopeTx 也寫不進去", func(t *testing.T) {
+		// 這是 main.go 最容易犯的錯(曾實測):SystemScopeTx 只是注入 scope 到 ctx,
+		// SET LOCAL 本身是 RLS driver 裝飾器在 Tx(ctx) 內執行的 —— 未包裝的 client
+		// (database.OpenEnt)完全沒有裝飾器,於是 scope 注入形同無效。
+		plain, err := database.OpenEnt(testsupport.AppRoleDSN(t, adminDSN))
+		if err != nil {
+			t.Fatalf("開啟未包裝的 ent client: %v", err)
+		}
+		t.Cleanup(func() { _ = plain.Close() })
+		err = dbtenant.SystemScopeTx(ctx, plain, func(tx *ent.Tx) error {
+			return SeedBuiltinRoles(ctx, tx.Client())
+		})
+		if !isSeedRLSViolation(err) {
+			t.Fatalf("未包裝的 client 應以 RLS 違反(42501)失敗,got %v", err)
 		}
 	})
 
