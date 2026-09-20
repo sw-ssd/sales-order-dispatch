@@ -912,13 +912,13 @@ git commit -m "refactor(services): toConnectError 改走錯誤碼 registry（ent
 
 ---
 
-### Task 5: 首批碼落地（auth／權限／配額／樣板域）
+### Task 5: 首批碼落地（auth／權限／樣板域）
+
+**[範圍修正（controller，開工前實查）]** 原稿的 Step 3 改 `internal/platform/{entitlements,store,billing}`，但**那些是 Plan B/C 的產物、目前不存在**（`backend/internal/platform/` 整個目錄不存在，`newUserTestServerWithEntitlement`／`NewEntitlementCounter` 亦不存在）→ 該步與對應測試 **延後**至 Plan B 落地後另立 **Task 5b** 執行。本任務只做**現在存在**的部分：`requireAuth`（`shared_service.go:26`）、`requireScope`（`company_service.go:86`）、登入／密碼路徑（`auth_handler.go`／`auth_password.go`）、樣板域（`customer_service.go` 三碼）。
 
 **Files:**
 - Modify: `internal/handlers/auth_handler.go`、`auth_password.go`
 - Modify: `internal/services/shared_service.go`（`requireAuth`）、`company_service.go`（`requireScope`）
-- Modify: `internal/platform/entitlements/service.go`（`Allows`／`CheckLimit`）
-- Modify: `internal/platform/billing/billing.go`（金額不符、重複入帳）
 - Modify: `internal/services/customer_service.go`（樣板域三碼）
 
 - [ ] **Step 1: 權限與未登入（`shared_service.go`、`company_service.go`）**
@@ -962,7 +962,9 @@ return nil, errcode.AuthRegistrationRequired.Error(nil)
 return nil, errcode.AuthTempPasswordExpired.Error(nil)
 ```
 
-- [ ] **Step 3: 配額與收款（`entitlements`、`billing`）**
+- [ ] **Step 3: 配額與收款 → 延後（見 Task 5b）**
+
+原稿此步改 `internal/platform/entitlements`（`Allows`／`CheckLimit`）與 `internal/platform/billing`（金額不符、重複入帳），**該目錄目前不存在**（Plan B/C 產物）→ 本任務跳過，待 Plan B 落地後由 **Task 5b** 執行（該步的程式碼片段與 `PLAT-*` 測試案例一併保留在 5b）。
 
 ```go
 // CheckLimit：未含功能 / 已達上限，各自帶 details 供前端導向升級
@@ -1003,8 +1005,6 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 )
 
@@ -1042,25 +1042,7 @@ func TestFirstBatchCodesAreReturned(t *testing.T) {
 				connect.NewRequest(&v1.GetCompanyRequest{CompanyId: strconv.Itoa(other.ID)}))
 			return err
 		}},
-		{"配額超限", "PLAT-5001", func(t *testing.T) error {
-			_, db := newUserTestServer(t, authz.Identity{})
-			coID, _, _ := seedUserCompany(t, db)
-			f := store.NewFake()
-			f.PutFeature(store.Feature{Code: entitlements.LimitSeats, Type: "integer"})
-			f.PutPlan("std", []store.Entitlement{{
-				FeatureCode: entitlements.LimitSeats, Enabled: true, Limit: ptr(int64(0))}})
-			f.PutSubscription(store.Subscription{CompanyID: coID, PlanCode: "std", Status: "active"})
-			svc := entitlements.New(f, NewEntitlementCounter(db), entitlements.NewMemoryCache(), 0)
-			client := newUserTestServerWithEntitlement(t, authz.Identity{
-				UserID: "1", CompanyID: uItoa(coID), Role: "company_admin",
-				Roles: []string{"company_admin"},
-			}, db, svc)
-			_, err := client.CreateUser(context.Background(),
-				connect.NewRequest(&v1.CreateUserRequest{
-					Name: "超額", Email: "over@t.com", CompanyId: uItoa(coID), Role: "staff",
-				}))
-			return err
-		}},
+		// 「配額超限 → PLAT-5001」案例屬 Task 5b（需 internal/platform/*，目前不存在）。
 	}
 
 	for _, tc := range cases {
@@ -1200,9 +1182,22 @@ Expected: 全綠
 - [ ] **Step 7: Commit**
 
 ```bash
-git add backend/internal/handlers backend/internal/services backend/internal/platform
-git commit -m "feat(errcode): 首批碼落地（未登入/權限/跨租戶/配額/收款/客戶樣板）"
+git add backend/internal/handlers backend/internal/services
+git commit -m "feat(errcode): 首批碼落地（auth／權限／樣板域）＋ toConnectError 映射"
 ```
+
+---
+
+### Task 5b（延後至 Plan B 落地後）：配額與收款碼落地
+
+**為什麼延後**：`internal/platform/{store,entitlements,billing}` 是 Plan B/C 的產物，本計畫執行時**不存在**（`backend/internal/platform/` 目錄不存在），故 `PLAT-*` 的落地點與測試 helper（`newUserTestServerWithEntitlement`／`NewEntitlementCounter`／`store.NewFake`）都還沒有。**不要**在本計畫中為了這步而先建 platform 骨架（那是 Plan B 的範圍）。
+
+**Plan B 落地後要做**：
+1. `internal/platform/entitlements/service.go` 的 `Allows`／`CheckLimit` → `errcode.PlatformFeatureNotInPlan`（`PLAT-5002`，details 帶 `feature`）／`errcode.PlatformLimitExceeded`（`PLAT-5001`，details 帶 `feature`／`used`／`limit`）／`errcode.PlatformSubscriptionInactive`（`PLAT-3001`）。
+2. `internal/platform/billing/billing.go` 的金額不符（G4）與期別已付款衝突（G3）→ `errcode.PlatformPaymentConflict`（`PLAT-3002`，details 帶 `reason`）。
+3. 測試：entitlements 的單元測試直接斷言上述碼；並在 `internal/services` 的表驅動測試補回「配額超限 → `PLAT-5001`」案例（原稿片段見 Task 5 Step 3 與其下方程式碼）。
+
+**驗收**：`PLAT-*` 四個碼在 Plan B/C 的對應路徑上真的被回傳（有測試斷言），且碼表產生器（T6）把它們列出來。
 
 ---
 
