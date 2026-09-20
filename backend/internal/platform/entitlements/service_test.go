@@ -44,7 +44,9 @@ func newSvc(f *store.Fake, counts map[string]int) *entitlements.Service {
 
 type counting map[string]int
 
-func (c counting) Count(_ context.Context, _ int, feature string) (int, error) { return c[feature], nil }
+func (c counting) Count(_ context.Context, _ int, feature string) (int, error) {
+	return c[feature], nil
+}
 
 func TestNoSubscriptionDeniesEverything(t *testing.T) {
 	f := store.NewFake()
@@ -129,7 +131,7 @@ var (
 )
 
 func subWithStatus(status string) *store.Subscription {
-	return &store.Subscription{CompanyID: 1, PlanCode: "std", PlanName: "標準", Status: status}
+	return &store.Subscription{CompanyID: 1, PlanCode: "std", Status: status}
 }
 
 // TestJudgementTable 是本套件的主表：逐列固定「買了沒有／額度夠不夠」的判定語意
@@ -150,34 +152,34 @@ func TestJudgementTable(t *testing.T) {
 		wantDetails map[string]string // 非空時逐鍵斷言 details
 	}{
 		{
-			name: "未定義的功能一律拒絕（fail-closed，不是放行）",
+			name:     "未定義的功能一律拒絕（fail-closed，不是放行）",
 			features: []store.Feature{seatsDef}, ents: stdPlan, sub: subWithStatus("active"),
 			feature:    "feature.unknown",
 			wantAllows: false, wantCode: "PLAT-5002",
 			wantDetails: map[string]string{"feature": "feature.unknown"},
 		},
 		{
-			name: "無訂閱：方案有定義也不放行",
+			name:     "無訂閱：方案有定義也不放行",
 			features: []store.Feature{seatsDef}, ents: stdPlan,
 			feature:    seats,
 			wantAllows: false, wantCode: "PLAT-5002",
 			wantDetails: map[string]string{"feature": seats},
 		},
 		{
-			name: "查無方案（訂閱指向不存在的方案）",
+			name:     "查無方案（訂閱指向不存在的方案）",
 			features: []store.Feature{seatsDef}, sub: subWithStatus("active"),
 			feature:    seats,
 			wantAllows: false, wantCode: "PLAT-5002",
 			wantDetails: map[string]string{"feature": seats},
 		},
 		{
-			name: "active：方案含 boolean 功能即允許",
+			name:     "active：方案含 boolean 功能即允許",
 			features: []store.Feature{printDef}, ents: stdPlan, sub: subWithStatus("active"),
 			feature:    entitlements.FeaturePrinting,
 			wantAllows: true,
 		},
 		{
-			name: "方案把 boolean 設為 disabled 時不得使用",
+			name:     "方案把 boolean 設為 disabled 時不得使用",
 			features: []store.Feature{printDef},
 			ents:     []store.Entitlement{{FeatureCode: entitlements.FeaturePrinting, Enabled: false}},
 			sub:      subWithStatus("active"),
@@ -187,84 +189,88 @@ func TestJudgementTable(t *testing.T) {
 			wantDetails: map[string]string{"feature": entitlements.FeaturePrinting},
 		},
 		{
-			name: "額度邊界：used+delta == limit 仍放行",
+			name:     "額度邊界：used+delta == limit 仍放行",
 			features: []store.Feature{seatsDef}, ents: stdPlan, sub: subWithStatus("active"),
 			counts: map[string]int{seats: 9}, feature: seats, delta: 1,
 			wantAllows: true,
 		},
 		{
-			name: "額度邊界：delta 0 在滿額時放行",
+			name:     "額度邊界：delta 0 在滿額時放行",
 			features: []store.Feature{seatsDef}, ents: stdPlan, sub: subWithStatus("active"),
 			counts: map[string]int{seats: 10}, feature: seats, delta: 0,
 			wantAllows: true,
 		},
 		{
-			name: "達上限 → PLAT-5001，details 帶 feature／used／limit",
+			name:     "達上限 → PLAT-5001，details 帶 feature／used／limit",
 			features: []store.Feature{seatsDef}, ents: stdPlan, sub: subWithStatus("active"),
 			counts: map[string]int{seats: 10}, feature: seats, delta: 1,
+			// 功能本身可用（Allows 為真）；擋的是「再加一個就超額」。
+			wantAllows:  true,
 			wantCode:    "PLAT-5001",
 			wantDetails: map[string]string{"feature": seats, "used": "10", "limit": "10"},
 		},
 		{
-			name: "override 只覆寫限額（Enabled=nil）不得把功能關掉",
+			name:     "override 只覆寫限額（Enabled=nil）不得把功能關掉",
 			features: []store.Feature{seatsDef}, ents: stdPlan, sub: subWithStatus("active"),
 			overrides: []store.Override{{CompanyID: 1, FeatureCode: seats, Limit: ptr(int64(50))}},
 			counts:    map[string]int{seats: 20}, feature: seats, delta: 1,
 			wantAllows: true,
 		},
 		{
-			name: "override 只覆寫 enabled（Limit=nil）→ 不限額",
+			name:     "override 只覆寫 enabled：Limit=nil 是「不覆寫限額」不是「不限」",
 			features: []store.Feature{seatsDef}, ents: stdPlan, sub: subWithStatus("active"),
 			overrides: []store.Override{{CompanyID: 1, FeatureCode: seats, Enabled: ptr(true)}},
-			counts:    map[string]int{seats: 1_000_000}, feature: seats, delta: 1,
-			wantAllows: true,
+			counts:    map[string]int{seats: 20}, feature: seats, delta: 1,
+			wantAllows: true, wantCode: "PLAT-5001",
+			wantDetails: map[string]string{"feature": seats, "used": "20", "limit": "10"},
 		},
 		{
-			name: "override 關掉 boolean 功能",
+			name:     "override 關掉 boolean 功能",
 			features: []store.Feature{printDef}, ents: stdPlan, sub: subWithStatus("active"),
-			overrides: []store.Override{{CompanyID: 1, FeatureCode: entitlements.FeaturePrinting, Enabled: ptr(false)}},
-			feature:   entitlements.FeaturePrinting,
+			overrides:  []store.Override{{CompanyID: 1, FeatureCode: entitlements.FeaturePrinting, Enabled: ptr(false)}},
+			feature:    entitlements.FeaturePrinting,
 			wantAllows: false, wantCode: "PLAT-5002",
 			wantDetails: map[string]string{"feature": entitlements.FeaturePrinting},
 		},
 		{
-			name: "已到期的 override 不生效（回到方案限額）",
+			name:     "已到期的 override 不生效（回到方案限額）",
 			features: []store.Feature{seatsDef}, ents: stdPlan, sub: subWithStatus("active"),
 			overrides: []store.Override{{CompanyID: 1, FeatureCode: seats, Limit: ptr(int64(50)), ExpiresAt: &expired}},
 			counts:    map[string]int{seats: 20}, feature: seats, delta: 1,
-			wantCode:    "PLAT-5001",
+			wantAllows: true, wantCode: "PLAT-5001",
 			wantDetails: map[string]string{"feature": seats, "used": "20", "limit": "10"},
 		},
 		{
-			name: "suspended：不得使用；CheckLimit 回 PLAT-3001（合約問題，非權限）",
+			name:     "suspended：不得使用；CheckLimit 回 PLAT-3001（合約問題，非權限）",
 			features: []store.Feature{seatsDef}, ents: stdPlan, sub: subWithStatus("suspended"),
 			feature: seats, delta: 1,
 			wantAllows: false, wantCode: "PLAT-3001",
 		},
 		{
-			name: "cancelled：同上",
+			name:     "cancelled 不會從 store 出來（Fake／SQL 都只回未取消者）→ 視同無訂閱",
 			features: []store.Feature{seatsDef}, ents: stdPlan, sub: subWithStatus("cancelled"),
 			feature: seats, delta: 1,
-			wantAllows: false, wantCode: "PLAT-3001",
+			wantAllows: false, wantCode: "PLAT-5002",
+			wantDetails: map[string]string{"feature": seats},
 		},
 		{
-			name: "suspended 且功能未含方案 → 仍是 PLAT-3001（合約問題優先於功能問題）",
+			name:     "suspended 且功能未含方案 → 仍是 PLAT-3001（合約問題優先於功能問題）",
 			features: []store.Feature{seatsDef}, sub: subWithStatus("suspended"),
 			feature: seats, delta: 1,
 			wantAllows: false, wantCode: "PLAT-3001",
 		},
 		{
-			name: "past_due 仍在寬限內（契約不可用的狀態只有 suspended／cancelled）",
+			name:     "past_due 仍在寬限內（契約不可用的狀態只有 suspended／cancelled）",
 			features: []store.Feature{seatsDef}, ents: stdPlan, sub: subWithStatus("past_due"),
 			counts: map[string]int{seats: 1}, feature: seats, delta: 1,
 			wantAllows: true,
 		},
 		{
-			name: "trialing：方案 disabled 不擋試用",
-			features: []store.Feature{printDef},
-			ents:     []store.Entitlement{{FeatureCode: entitlements.FeaturePrinting, Enabled: false}},
-			sub:      subWithStatus("trialing"),
-			feature:  entitlements.FeaturePrinting,
+			name:       "trialing：方案 disabled 不擋試用",
+			features:   []store.Feature{printDef},
+			ents:       []store.Entitlement{{FeatureCode: entitlements.FeaturePrinting, Enabled: false}},
+			sub:        subWithStatus("trialing"),
+			feature:    entitlements.FeaturePrinting,
 			wantAllows: true,
 		},
 	}
@@ -318,6 +324,38 @@ func TestJudgementTable(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// stubStore 遮蔽 Fake 的「不吐 cancelled」語意：store 契約上 cancelled 不會出現，
+// 但判定層仍須對它回 PLAT-3001（換一個 store 實作就可能看到）。
+type stubStore struct {
+	store.Store
+	sub *store.Subscription
+}
+
+func (s stubStore) Subscription(context.Context, int) (*store.Subscription, error) {
+	return s.sub, nil
+}
+
+func TestCancelledSubscriptionIsContractInactive(t *testing.T) {
+	f := store.NewFake()
+	f.PutFeature(seatsDef)
+	f.PutPlan("std", stdPlan)
+
+	sub := store.Subscription{CompanyID: 1, PlanCode: "std", Status: "cancelled"}
+	svc := entitlements.New(stubStore{Store: f, sub: &sub}, counting{seats: 1}, entitlements.NewMemoryCache(), 0)
+	ctx := context.Background()
+
+	if ok, err := svc.Allows(ctx, 1, seats); err != nil || ok {
+		t.Fatalf("Allows = (%v, %v)；want (false, nil)", ok, err)
+	}
+	err := svc.CheckLimit(ctx, 1, seats, 1)
+	if err == nil {
+		t.Fatal("cancelled 訂閱不得放行")
+	}
+	if got := errorCodeOf(t, err); got != "PLAT-3001" {
+		t.Fatalf("ErrorInfo.code = %q；want %q（合約不可用不是「功能未含方案」）", got, "PLAT-3001")
 	}
 }
 
