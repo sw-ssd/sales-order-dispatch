@@ -66,19 +66,19 @@ flowchart TB
 
 ---
 
-## 3. 現況實作對照（2026-09-18）
+## 3. 現況實作對照（2026-09-20）
 
 | 層 | 實際已實作 | 待辦 |
 |---|---|---|
-| backend | AuthService（登入/refresh/logout/註冊/QR）、AbilityService、Company/Department/RoleService、Casbin 執行層、RLS 語句、JWT/session/token、CASL ability 引擎 | middleware、UserService、developer/audit、metadicts、master-data、orders、returns、notifications、dispatch、printing、fleet（全未開始） |
-| frontend | auth（Login/403/Google）、users（Company/Department/Roles）、ability（CASL） | 其餘業務頁面待各 domain |
-| app | 骨架、auth（身分選擇/登入/token）、auto_route、connectrpc | solidart/disco/fquery/Sembast 佈線未落地 |
+| backend | AuthService（登入/refresh/logout/註冊完成/ChangePassword/ResetCustomerPassword/QR proto）、AbilityService（OpenFGA proxy）、Company/Department（皆軟刪除）/RoleService、UserService（7 RPC＋範圍控制＋稽核）、MetadictService、AuditService.List、CustomerService（含地址/聯絡人）、ProductService（含單位換算）、部門級四主檔（Warehouse/Route/ProcessingSpec/ProductCategory）、OpenFGA 內嵌＋Provision、Casbin 執行層、RLS 語句（**僅定義未 ENABLE**）、JWT/session/token_version、audit.Recorder 同事務 | 訂單、退貨、通知、派車、列印、fleet；客戶專屬商品、檔案資產、QR 兌換 handler、Logo 上傳、RLS 接線、CASL→OpenFGA 收斂 |
+| frontend | auth（Login 雙 tab/403/Google OIDC）、users（Company/Department/Roles＋PermissionMatrix＋分頁＋表頭排序）、ability 守衛（`hasPermission` 權限集合，`@casl/ability` 已移除）、UI 元件庫（Ark UI × Tailkit 語意 token，14 元件＋registry＋demo）、app shell/sidebar/深色模式、TanStack Table（manual）＋solid-query 資料層、TanStack Form＋valibot 表單 | 使用者管理頁、客戶/商品/主檔、訂單、退貨、派車看板、列印、通知/公告、稽核頁（皆待各 domain）；Pixso 9 個未建畫面 |
+| app | 骨架、雙 flavor、auth（身分選擇/登入/token/connectrpc transport）、auto_route 路由表 | solidart/disco/fquery/Sembast 佈線、core/config/errors、快取鏡像、業務畫面（客戶/訂單/退貨/QR） |
 
 ---
 
 ## 4. 功能列表（1.0 In Scope）
 
-> 標記：✅ 已實作（2026-09-18）・⬜ 規劃/未開始・🟡 部分。
+> 標記：✅ 已實作（2026-09-20）・⬜ 規劃/未開始・🟡 部分（後端已落地、前端頁面待）。
 
 ### 4.1 認證與授權（D5/D6）
 
@@ -89,13 +89,13 @@ flowchart TB
 | Web session（無證） | scs + Valkey session | Web | ✅ backend |
 | App JWT + refresh | access 1h + refresh 30d 旋轉 + token_version 撤銷 | App | ✅ backend |
 | QR 登入 | 客戶子帳號 QR 深層連結 | App | 🟡（proto 有，兌換端點待） |
-| 首登強制改密碼 | temp password 24h | Web/App/後端 | ⬜ |
-| 強制登出 | 管理員撤銷指定使用者 | Web/後端 | 🟡（BumpTokenVersion、Logout；ForceLogout API 待） |
+| 首登強制改密碼 | temp password 24h | Web/App/後端 | 🟡（後端 ChangePassword＋受限態＋效期已落地；Web/App 首登改密碼頁未做） |
+| 強制登出 | 管理員撤銷指定使用者 | Web/後端 | 🟡（後端 `UserService.ForceLogout`＋token_version 已落地；Web 頁待） |
 | AuthService 掛載 | Connect login/refresh/logout/registerComplete/qrLogin | 後端 | ✅ |
 | Ability API | GetAbility 產 CASL JSON（表驅動） | 後端/Web/App | ✅ backend + Web |
 | Casbin 執行層 | 7 內建角色 RBAC（執行層） | 後端 | ✅ |
-| RLS | 資料範圍 all/company/department/self | 後端 | ✅ 語句層；注入待 |
-| developer 逃生門 | 7 內建角色繞過 | 後端 | ⬜ |
+| RLS | 資料範圍 all/company/department/self | 後端 | 🟡（policy 已定義於 00002/00007/00009/00013；**未 ENABLE/FORCE**，每請求交易 `SET LOCAL` 待） |
+| developer 逃生門 | 7 內建角色繞過 | 後端 | ✅（`SeedDeveloper`＋`DEVELOPER_ACCOUNT_ENABLED`；production 誤開 fail-fast） |
 
 ### 4.2 多租戶與主檔（D3/D7/D10）
 
@@ -103,14 +103,14 @@ flowchart TB
 |------|------|------|:-:|
 | Company CRUD | 公司主檔 + customer_code_prefix 唯一 | Web/後端 | ✅ backend + Web |
 | Department CRUD | 部門 CRUD | Web/後端 | ✅ backend + Web |
-| 使用者管理 | UserService CRUD、角色指派、停用連鎖 | Web/後端 | ⬜ |
+| 使用者管理 | UserService CRUD、角色指派、停用連鎖 | Web/後端 | 🟡（後端 7 RPC 已落地；Web 頁待） |
 | Logo/Branding/PublicInfo | 公開資訊 + Logo 上傳 | 後端 | 🟡（PublicInfo；Logo 待） |
 | roles + role_permissions | 7 角色 + 權限表（CASL 三欄） | 後端/Web | ✅ |
 | 角色權限設置 | PermissionMatrix | Web | ✅ |
-| 客戶主檔 | customers + 取號 + 建檔連動帳號（D22） | Web/App/後端 | ⬜ |
-| 地址簿/聯絡人 | 多筆地址/聯絡人 | Web/App/後端 | ⬜ |
-| 商品主檔 | 商品 + 單位換算 + 分切規格 | Web/App/後端 | ⬜ |
-| 倉別/車次/分類 CRUD | 部門級實體表 | Web/後端 | ⬜ |
+| 客戶主檔 | customers + 取號 + 建檔連動帳號（D22） | Web/App/後端 | 🟡（後端已落地含取號/D22 帳號交付；Web/App 頁待） |
+| 地址簿/聯絡人 | 多筆地址/聯絡人 | Web/App/後端 | 🟡（後端已落地；Web/App 頁待） |
+| 商品主檔 | 商品 + 單位換算 + 分切規格 | Web/App/後端 | 🟡（後端三實體＋單位換算已落地；Web/App 頁待） |
+| 倉別/車次/分類 CRUD | 部門級實體表 | Web/後端 | 🟡（後端四主檔含 restore 已落地；Web 頁待） |
 | 客戶專屬商品 | 業務建立、別名機制 | Web/App/後端 | ⬜ |
 | 檔案資產 | FileStore 本地儲存白名單 | 後端 | ⬜ |
 
@@ -181,8 +181,8 @@ flowchart TB
 
 | 功能 | 說明 | 狀態 |
 |------|------|:-:|
-| 側邊欄導覽 / 麵包屑 / 主題 | 中台外殼 | 🟡（骨架） |
-| DataTable / Sheet | 分頁、排序、篩選、側滑表單 | 🟡（ui 元件已建） |
+| 側邊欄導覽 / 麵包屑 / 主題 | 中台外殼 | ✅（sidebar 多部件＋AppShell＋深色模式三態＋anti-FOUC；麵包屑待各業務頁） |
+| DataTable / Sheet | 分頁、排序、篩選、側滑表單 | ✅（TanStack Table manual＋伺服器端排序＋modal 表單；篩選待 domain） |
 | Cmd+K 搜尋 / 通知鈴 | 預留 | ⬜ |
 
 ---
@@ -194,21 +194,22 @@ flowchart TB
 | 登入 / 認證 | ✅ | ✅ | ✅ |
 | 公司 / 部門 CRUD | ✅ | ✅ | — |
 | 角色權限 + PermissionMatrix | ✅ | ✅ | — |
-| 使用者管理 | ⬜ | ⬜ | — |
-| 客戶 / 商品 / 主檔 | ⬜ | ⬜ | ⬜ |
+| 使用者管理 | ✅（API） | ⬜ | — |
+| 客戶 / 地址 / 商品 / 部門級主檔 | ✅（API） | ⬜ | ⬜ |
+| 客戶專屬商品 / 檔案資產 | ⬜ | ⬜ | ⬜ |
 | 銷售訂單 | ⬜ | ⬜ | ⬜ |
 | 退貨 | ⬜ | — | ⬜ |
 | 派車看板 | ⬜ | ⬜ | — |
 | 列印 | ⬜ | ⬜ | — |
 | 通知 / 公告 | ⬜ | ⬜ | ⬜ |
-| 稽核 | ⬜ | ⬜ | — |
+| 稽核 | ✅（查詢 API） | ⬜ | — |
 
 ---
 
 ## 6. 技術特色（1.0）
 
 - **Connect-RPC 唯一 API**：proto `v1` 產生三端型別（D4）
-- **雙重授權**：Casbin 執行層（OpenFGA 規劃）+ PostgreSQL RLS 資料範圍（D3/D32）
+- **雙重授權**：OpenFGA 內嵌（`OPENFGA_ENABLED=true` fail-fast；role_permissions→tuple 供給）＋ Casbin 執行層 fallback ＋ PostgreSQL RLS 資料範圍（policy 已定義、**未 ENABLE**；業務 domain 依 D33 暫走服務層 role+scope）
 - **認證雙軌**：Web 無證 session／App JWT+refresh＋token_version 撤銷（D5）
 - **樂觀鎖取號**：全部自增編號同事務取號（D7）
 - **不存金額**：訂單/明細/商品無金額（D12）
@@ -218,4 +219,4 @@ flowchart TB
 
 ---
 
-*最後更新：2026-09-18（對齊 1.0 monorepo，取代舊三倉版）*
+*最後更新：2026-09-20（對齊 1.0 monorepo 現況：backend 01–04 落地、frontend UI 四階段與表格/表單，取代舊三倉版）*

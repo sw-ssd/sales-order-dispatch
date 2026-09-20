@@ -1,6 +1,10 @@
 # 多公司訂出貨系統 1.0 — 計畫總索引
 
 > **性質**：本索引為計畫目錄導覽與狀態總表。因 2026-09-18 將 backend 01~09 計畫重建為「反映現況」型（以實際程式碼盤點為準），各計畫進度以**狀態標籤**（✅完成 / 🟡部分 / ⬜未開始 / 📦歸檔）呈現，不再以 raw checkbox 數字當唯一進度來源。
+>
+> **現況對齊：2026-09-20**（依 codebase-memory 重新索引 14,148 nodes / 74,195 edges ＋ 程式碼、CI、測試實證）。前端 2026-09-19 四個計畫（元件庫 Phase 1／表單 Phase 2／表格 Phase 3／Ark × Tailkit v2）與 OpenFGA 前端遷移已全數落地。
+>
+> 注意：`frontend/**` 計畫的 `- [ ]` 為**步驟清單**、非進度追蹤，勿以勾選數判定進度（backend 計畫才有勾選慣例）。
 
 ## 目錄導覽
 
@@ -8,7 +12,7 @@
 - `backend/`：後端分域實作計畫（01~09）
 - `backend/detail/`：後端細部功能文件。`00-index.md` 為共通規則；01~10 對應各分域（10 = fleet 執行層 D32）
 - `app/`：App 技術棧與認證基礎計畫
-- `frontend/`：Web 中台計畫（2026-09-18 新增，反映 auth/users/ability 現況）
+- `frontend/`：Web 中台計畫（2026-09-18 起，6 份）：`auth-users`（現況對齊）、`openfga-authz-frontend`（CASL→權限集合遷移）、`ui-library-phase1`、`forms-tanstack-phase2`、`tables-phase3`、`tailkit-ark`（Ark 行為 × Tailkit 視覺）
 - `reference/`：原計畫（v2.9.0）。各計畫以「原計畫 Task x.y」引用
 - `archive/`：歷史／完成／作廢文件
 
@@ -31,24 +35,29 @@ graph TD
 
 依據：02~09 沿用 01 的地基（auth/authz）；04 重用 01 的 issueTempPassword；05 對齊 04 契約；06 讀取 05 的 sales_orders 實體並採 07 的通知契約；08 與 05 共用訂單狀態機；09 的 FileStore 由 04 Task 8 提供。
 
-## 計畫一覽（2026-09-18 盤點）
+## 計畫一覽（2026-09-20 盤點）
 
 | 計畫 | 路徑 | 範圍 | 狀態 | 說明 |
 |------|------|------|------|------|
-| 主計畫 | `2026-08-05-sales-order-1.0-subproject-implementation-plan.md` | 三子專案 50 Tasks / 5 Waves | ⬜ 未開始（實作暫緩） | 供未來開工直接指派 |
-| 01-auth | `backend/2026-08-17-backend-01-auth-plan.md` | 認證授權地基 | 🟡 部分 | OIDC/登入/JWT-session/Casbin/RLS/ability/role 權限、middleware（authzMiddleware/protectedRPC）、developer 逃生門（SeedDeveloper）、audit 地基（audit.Recorder DB）已實作；RLS 接線（D3 最後防線）與 OpenFGA 待定 |
-| 02-tenancy-users | `backend/2026-08-17-backend-02-tenancy-users-plan.md` | 多租戶與使用者 | 🟡 部分 | Company/Department/Role CRUD 已實作；UserService 7 支 RPC 已落地（含稽核＋`dataScopeForUser`）；公司停用連鎖(2.1.3)已落地（2026-09-18, A2）；主帳號連鎖(D22)待 |
+| 主計畫 | `2026-08-05-sales-order-1.0-subproject-implementation-plan.md` | 三子專案 50 Tasks / 5 Waves | 🟡 部分 | Wave 1 多數、Wave 2 部分已由 backend 01~04 分批落地（見下列分域計畫）；Wave 3~5（訂單/退貨/通知/派車/列印、Web 業務頁、App 業務）未開工 |
+| 01-auth | `backend/2026-08-17-backend-01-auth-plan.md` | 認證授權地基 | 🟡 部分 | OIDC/登入/JWT-session/Casbin/RLS 語句/ability/role 權限、middleware（authzMiddleware/protectedRPC）、developer 逃生門（SeedDeveloper）、audit 地基（audit.Recorder DB）、Argon2id、首登受限態（A3）已實作；OpenFGA 內嵌＋Provision＋fail-fast（F2）、testcontainers 整合測試政策與 CI `go-integration`（2026-09-19）已落地；**RLS 僅定義未 ENABLE**、CASL 引擎仍在（D32 待遷移） |
+| 02-tenancy-users | `backend/2026-08-17-backend-02-tenancy-users-plan.md` | 多租戶與使用者 | 🟡 部分 | Company/Department/Role CRUD 已實作；UserService 7 支 RPC 已落地（含稽核＋`dataScopeForUser`）；公司停用連鎖(2.1.3)（2026-09-18, A2）；公司/部門改**軟刪除**（partial unique index）＋刪除競態互斥鎖（FOR SHARE／FOR UPDATE）＋清單 `sort/desc` 白名單（2026-09-20）；主帳號連鎖(D22)待 |
 | 03-metadicts-audit | `backend/2026-08-17-backend-03-metadicts-audit-plan.md` | 字典檔與稽核 | ✅ 完成 | metadicts（6 RPC + 合併查詢 + ListOptions）與稽核查詢 API（AuditService.List, D27 時間窗）全落地（2026-09-18）；audit.Recorder DB（00009/00010）已由 02 提前落地 |
-| 04-master-data | `backend/2026-08-17-backend-04-master-data-plan.md` | 主檔與檔案資產 | 🟡 部分 | customers 核心（3.1.1–3.1.3）已落地；D22 建檔連動主/業務子帳號＋臨時密碼交付（3.1.4）已落地（2026-09-18）；3.1.5 完整驗證待補、地址/商品/部門級主檔/檔案/QR 待 |
-| 05-sales-orders | `backend/2026-08-17-backend-05-sales-orders-plan.md` | 銷售訂單 | ⬜ 未開始 | 領域無 code |
+| 04-master-data | `backend/2026-08-17-backend-04-master-data-plan.md` | 主檔與檔案資產 | 🟡 部分 | 3.1.1–3.1.4（customers CRUD＋取號＋D22 帳號交付）、3.1.5 欄位（`preferred_delivery_days`/`promo_tag_ids`）、3.2 地址簿＋聯絡人、3.3 商品三實體＋單位換算、3.4 部門級四主檔（warehouse/route/processing_spec/product_category）已落地（2026-09-18~19）；**3.5 客戶專屬商品、3.6 檔案資產、3.8 QR 兌換（proto 已定、無 handler）待** |
+| 05-sales-orders | `backend/2026-08-17-backend-05-sales-orders-plan.md` | 銷售訂單 | ⬜ 未開始 | 領域無 code（無 proto/schema/service） |
 | 06-returns | `backend/2026-08-17-backend-06-returns-plan.md` | 退貨 | ⬜ 未開始 | 領域無 code |
 | 07-notifications | `backend/2026-08-17-backend-07-notifications-plan.md` | 通知與 FCM | ⬜ 未開始 | 領域無 code |
 | 08-dispatch | `backend/2026-08-17-backend-08-dispatch-plan.md` | 派車看板 | ⬜ 未開始 | 領域無 code |
-| 09-printing | `backend/2026-08-17-backend-09-printing-plan.md` | 列印與 PDF | ⬜ 未開始 | 領域無 code |
+| 09-printing | `backend/2026-08-17-backend-09-printing-plan.md` | 列印與 PDF | ⬜ 未開始 | 領域無 code（FileStore 亦缺，見 04 Task 8） |
 | fleet-execution（D32） | `backend/detail/10-fleet-execution.md` | Fleetbase 物流執行層 | ⬜ 未開始 | 細部文件；授權 OpenFGA/RLS 待定 |
-| app-flutter-stack | `app/2026-08-04-app-flutter-stack.md` | App 技術棧與認證基礎（D29） | 🟡 部分 | 骨架/auto_route/auth 已做；solidart/disco/fquery/Sembast 未落地 |
-| frontend | `frontend/2026-09-18-frontend-auth-users-plan.md` | Web 中台 auth/users/ability | 🟡 部分 | auth/ability 已實作；業務頁面待 domain |
-| 原計畫 | `reference/2026-07-17-sales-order-1-0-tasks.md` | v2.9.0 執行計畫 | 📦 參考 | 各計畫以「原計畫 Task x.y」引用 |
+| app-flutter-stack | `app/2026-08-04-app-flutter-stack.md` | App 技術棧與認證基礎（D29） | 🟡 部分 | Task 1（骨架）✅、Task 5/6/7（token/auth transport/router）部分；core/config、QueryCache、Sembast 鏡像、fquery 慣例、根佈線未落地 |
+| frontend-auth-users | `frontend/2026-09-18-frontend-auth-users-plan.md` | Web 中台 auth/users/ability | 🟡 部分 | 15/17 打勾：登入雙 tab、403、Google OIDC、公司/部門/角色三頁＋PermissionMatrix＋分頁、`requireAbility` 路由守衛已完成；待辦為使用者管理頁與各業務頁（相依 04/05/08/09） |
+| frontend-openfga | `frontend/2026-09-18-openfga-authz-frontend-plan.md` | CASL → 權限集合遷移 | ✅ 完成 | F1–F4 全落地：`permissions.ts`（Set 查詢）、`service.ts` 載入權限集合、`Can`/`guards` 改用 `hasPermission`、`@casl/ability` 已自依賴移除 |
+| frontend-ui-library（Phase 1） | `frontend/2026-09-19-frontend-ui-library-phase1-plan.md` | UI 元件庫化 | ✅ 完成 | barrel＋`registry.json`＋每元件 `.md`＋dev-only `/ui` demo；Field/ScrollArea/Pagination 改 Ark（對外 API 不變、刪死碼 `label.tsx`）；sidebar 多部件；深色模式三態＋anti-FOUC；AppShell 換用新 sidebar/splitter |
+| frontend-forms（Phase 2） | `frontend/2026-09-19-frontend-forms-tanstack-phase2-plan.md` | 表單 | ✅ 完成 | 登入／公司／部門三表單改 TanStack Form ＋ valibot 欄位級驗證 |
+| frontend-tables（Phase 3） | `frontend/2026-09-19-frontend-tables-phase3-plan.md` | 表格與資料層 | ✅ 完成 | 三表改 TanStack Table（manual）＋ solid-query 資料層 ＋ 伺服器端排序（後端 `sort/desc` 白名單、六清單補 id tie-break） |
+| frontend-tailkit-ark（v2） | `frontend/2026-09-19-frontend-tailkit-ark-plan.md` | Ark 行為 × Tailkit 視覺 | ✅ 完成 | T1–T10 落地：`@tailwindcss/forms`/`typography`、`dark` variant 對齊、14 個本地元件重寫（dialog/tabs/checkbox 走 Ark）、app shell、5 頁換皮、Nikala/Kobalte 清理；色階字面值 0 命中 |
+| 原計畫 | `reference/2026-07-17-sales-order-1_0-tasks.md` | v2.9.0 執行計畫 | 📦 參考 | 各計畫以「原計畫 Task x.y」引用 |
 
 ### 📦 archive（2026-09-18 歸檔）
 
