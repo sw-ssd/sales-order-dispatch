@@ -258,6 +258,97 @@ func TestIntegrationUniqueIndexForwardMigration(t *testing.T) {
 	})
 }
 
+// TestIntegrationMigrateDownChain D3 迴歸:回滾鏈必須能走完(`down-to 0` 與逐級 down),且
+// `up → down-to 0 → up` 可重複。修前(本波以真 PG16 量測)有兩條路徑紅:
+//
+//	①既有(合併前)DB:版本表留有「已被刪檔案的 00003/00004」版本列 → 回滾 00005 之後卡在
+//	  `goose: migration file not found for current version (4), error: no current version found`
+//	  → `migrate down-to: no current version found`(exit 1);00002/00001 的 Down 永遠跑不到,
+//	  pgcrypto / app_read / app_write / row_security 全留在庫上,回滾無法走完。
+//	②版本表漂移(00009/00010/00013 的版本列缺失、其表仍存活)→ 00005 的 Down 被
+//	  `audit_logs_user_id_fkey` / `customers_sales_rep_fk` 以 SQLSTATE 2BP01 擋下
+//	  (`cannot drop table users because other objects depend on it`)。
+//
+// 兩者都是「回滾到較早版本」這條路徑的實質缺陷;修法在 00005 的 Down(自行釋放指向本檔
+// 5 張表的外部 FK + 撤銷被合併的 3/4 版本列)。以下三個子測試各自對應一條路徑,把該段拿掉即紅。
+func TestIntegrationMigrateDownChain(t *testing.T) {
+	testsupport.RequiresContainer(t)
+
+	t.Run("全新庫 up→down-to 0→up 可重複", func(t *testing.T) {
+		dsn := testsupport.Postgres(t)
+		db := openDB(t, dsn)
+		defer func() { _ = db.Close() }()
+
+		// 兩趟來回:每趟都要完整還原到「只剩版本表」,再完整回到 20。
+		for round := 1; round <= 2; round++ {
+			if err := businessUp(t, dsn); err != nil {
+				t.Fatalf("第 %d 趟 migrate up: %v", round, err)
+			}
+			assertMigratedSchema(t, db)
+			if err := businessDownTo(t, dsn, 0); err != nil {
+				t.Fatalf("第 %d 趟 migrate down-to 0: %v", round, err)
+			}
+			assertRolledBack(t, db)
+		}
+	})
+
+	t.Run("既有(合併前)DB 留有 3/4 版本列仍可回滾到 0", func(t *testing.T) {
+		dsn := testsupport.Postgres(t)
+		db := openDB(t, dsn)
+		defer func() { _ = db.Close() }()
+
+		// 前置:模擬「跑過舊 00001~00004」的既有庫 —— 版本表有 3/4 的列,但檔案已刪(00005 合併)。
+		if err := businessUpTo(t, dsn, 2); err != nil {
+			t.Fatalf("升級至 2: %v", err)
+		}
+		if _, err := db.Exec(`INSERT INTO goose_db_version (version_id, is_applied) VALUES (3, true), (4, true)`); err != nil {
+			t.Fatalf("插入既有庫的 3/4 版本列: %v", err)
+		}
+		if err := businessUp(t, dsn); err != nil {
+			t.Fatalf("既有庫升級至最新: %v", err)
+		}
+
+		if err := businessDownTo(t, dsn, 0); err != nil {
+			t.Fatalf("既有庫 down-to 0 必須成功(修前:migration file not found for current version (4)): %v", err)
+		}
+		assertRolledBack(t, db)
+		if versions := versionRows(t, db, businessGooseTable); slices.Contains(versions, "3:true") || slices.Contains(versions, "4:true") {
+			t.Fatalf("被 00005 合併的 3/4 版本列應已撤銷,got %v", versions)
+		}
+
+		// 來回可重複:回滾後再 up 必須完整回到 20。
+		if err := businessUp(t, dsn); err != nil {
+			t.Fatalf("回滾後再 migrate up: %v", err)
+		}
+		assertMigratedSchema(t, db)
+	})
+
+	t.Run("版本表漂移時 00005 的 Down 不依賴後續 Down", func(t *testing.T) {
+		dsn := testsupport.Postgres(t)
+		db := openDB(t, dsn)
+		defer func() { _ = db.Close() }()
+
+		if err := businessUp(t, dsn); err != nil {
+			t.Fatalf("全新資料庫 migrate up: %v", err)
+		}
+		// 前置:製造版本表漂移 —— audit_logs(00009/00010)與 customers(00013)的表仍在,
+		// 但版本列被移除,於是它們的 Down 不會跑,00005 的 Down 直接撞上指向 users 的 FK。
+		if _, err := db.Exec(`DELETE FROM goose_db_version WHERE version_id IN (9, 10, 13)`); err != nil {
+			t.Fatalf("製造版本表漂移: %v", err)
+		}
+
+		if err := businessDownTo(t, dsn, 0); err != nil {
+			t.Fatalf("漂移庫 down-to 0 必須成功(修前:SQLSTATE 2BP01,audit_logs_user_id_fkey / customers_sales_rep_fk): %v", err)
+		}
+		// 留下的稽核/客戶表是「漂移」本身的事實(其版本列缺失);可觀測契約是回滾不再被 FK 擋下,
+		// 且重新 up 會自我修復(00009/00010/00013 的 Up 皆冪等,FK 補回)。
+		if err := businessUp(t, dsn); err != nil {
+			t.Fatalf("漂移庫回滾後重新 up: %v", err)
+		}
+		assertMigratedSchema(t, db)
+	})
+}
+
 // TestIntegrationMigrateOnNonDefaultDatabaseName 00002 收尾:00002 曾以硬編名
 // (`ALTER DATABASE salesorder SET row_security = on`)定址資料庫,schema 因此綁死庫名。
 // 以非 salesorder 的庫驗證:遷移成功且 row_security 落在本庫;該實例內不得存在名為
@@ -447,6 +538,108 @@ func businessUpTo(t *testing.T, dsn string, version int64) error {
 	goose.SetTableName(businessGooseTable)
 	goose.SetBaseFS(nil)
 	return goose.UpToContext(t.Context(), db, migrationsDir, version)
+}
+
+// businessDownTo 以 cmd/migrate 相同路徑回退業務遷移到指定版本(goose down-to:該版本保留)。
+func businessDownTo(t *testing.T, dsn string, version int64) error {
+	t.Helper()
+	db := openDB(t, dsn)
+	defer func() { _ = db.Close() }()
+	if err := goose.SetDialect("postgres"); err != nil {
+		t.Fatalf("設定 dialect: %v", err)
+	}
+	goose.SetTableName(businessGooseTable)
+	goose.SetBaseFS(nil)
+	return goose.RunContext(t.Context(), "down-to", db, migrationsDir, fmt.Sprintf("%d", version))
+}
+
+// publicTables 回傳 public schema 內的表名(依名排序)。
+func publicTables(t *testing.T, db *sql.DB) []string {
+	t.Helper()
+	rows, err := db.Query(`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name`)
+	if err != nil {
+		t.Fatalf("查 public schema 的表: %v", err)
+	}
+	defer func() { _ = rows.Close() }()
+	var out []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			t.Fatalf("掃描表名: %v", err)
+		}
+		out = append(out, name)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("讀 public schema 的表: %v", err)
+	}
+	return out
+}
+
+// assertRolledBack 斷言「回滾到 0」真的還原了 Up 建立的一切:只剩 goose 版本表、
+// pgcrypto 已移除、app_read/app_write 角色已移除、本庫的 row_security 設定已還原。
+func assertRolledBack(t *testing.T, db *sql.DB) {
+	t.Helper()
+	if got := publicTables(t, db); !slices.Equal(got, []string{businessGooseTable}) {
+		t.Fatalf("回滾到 0 後 public schema 只應剩版本表 %s,got %v", businessGooseTable, got)
+	}
+	for _, check := range []struct{ what, query string }{
+		{"pgcrypto 未移除", `SELECT count(*) FROM pg_extension WHERE extname = 'pgcrypto'`},
+		{"app_read/app_write 角色未移除", `SELECT count(*) FROM pg_roles WHERE rolname IN ('app_read', 'app_write')`},
+		{"本庫 row_security 設定未還原", `SELECT count(*) FROM pg_db_role_setting s JOIN pg_database d ON d.oid = s.setdatabase WHERE d.datname = current_database()`},
+	} {
+		var n int
+		if err := db.QueryRow(check.query).Scan(&n); err != nil {
+			t.Fatalf("查 %s: %v", check.what, err)
+		}
+		if n != 0 {
+			t.Fatalf("回滾到 0 後 %s(計數 %d ≠ 0)", check.what, n)
+		}
+	}
+}
+
+// assertMigratedSchema 斷言「up 到 20」的關鍵結果齊備:核心/稽核/客戶表、跨檔 FK、
+// 權限去重索引、RLS 讀寫角色與本庫 row_security。
+func assertMigratedSchema(t *testing.T, db *sql.DB) {
+	t.Helper()
+	got := publicTables(t, db)
+	for _, want := range []string{
+		"audit_logs", "companies", "customer_counters", "customers", "departments",
+		"metadicts", "role_permissions", "roles", "users",
+	} {
+		if !slices.Contains(got, want) {
+			t.Fatalf("up 到 20 後應有表 %s,got %v", want, got)
+		}
+	}
+	assertUniqueIndexShape(t, db)
+	// 跨檔 FK(00008/00010/00013/00014):回滾後重新 up 必須把它們一併補回,否則即為半殘 schema。
+	for _, con := range []string{
+		"role_permissions_role_id_fkey", "audit_logs_user_id_fkey",
+		"customers_sales_rep_fk", "users_customer_fk",
+	} {
+		var n int
+		if err := db.QueryRow(`SELECT count(*) FROM pg_constraint WHERE conname = $1`, con).Scan(&n); err != nil {
+			t.Fatalf("查約束 %s: %v", con, err)
+		}
+		if n != 1 {
+			t.Fatalf("up 到 20 後約束 %s 應存在,got %d", con, n)
+		}
+	}
+	var roles int
+	if err := db.QueryRow(`SELECT count(*) FROM pg_roles WHERE rolname IN ('app_read', 'app_write')`).Scan(&roles); err != nil {
+		t.Fatalf("查 RLS 讀寫角色: %v", err)
+	}
+	if roles != 2 {
+		t.Fatalf("up 到 20 後應有 app_read/app_write 兩個角色,got %d", roles)
+	}
+	var setting string
+	if err := db.QueryRow(
+		`SELECT COALESCE(array_to_string(s.setconfig, ','), '') FROM pg_db_role_setting s JOIN pg_database d ON d.oid = s.setdatabase WHERE d.datname = current_database()`,
+	).Scan(&setting); err != nil {
+		t.Fatalf("讀本庫 row_security 設定: %v", err)
+	}
+	if !strings.Contains(setting, "row_security=on") {
+		t.Fatalf("本庫 row_security 應為 on,got %q", setting)
+	}
 }
 
 // indexExists 判斷 role_permissions_unique_idx 是否存在。
