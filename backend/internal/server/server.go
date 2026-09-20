@@ -27,6 +27,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	authzopenfga "github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
+	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	salesorderv1connect "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/cache"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/database"
@@ -292,49 +293,65 @@ func httpStatusForCode(c connect.Code) int {
 	}
 }
 
+// errIdentityRejected 為「身分不成立」的內部哨兵(帳號不存在/非 active/tv 不符/developer 關閉):
+// 與 DB 錯誤一樣落到 ok=false,但不需為每一種情形各留一個回傳值。
+var errIdentityRejected = errors.New("server: 身分不成立(fail-closed)")
+
 // identityFor 由使用者載入身分與 RLS scope（company/department eager-load）。
 // sessionTokenVersion 為 session 簽發時記錄的 token_version；與 DB 目前值不符
 // （改密碼 / 停用 / 角色變更 / 強制登出已 bump）→ ok=false（fail-closed）。
 // 帳號不存在 / 非 active / developer 關閉 → ok=false（零值身分，fail-closed）。
+//
+// 查詢一律在**系統範圍**交易內執行:本函式是身分解析本身(middleware 階段,ctx 尚未有租戶 scope),
+// 而 users/roles 在 00028 之後受 RLS 約束 —— 未包系統範圍會回 0 列 → 所有已登入請求變成 401
+// 並被 middleware 順手銷毀 session。
 func (s *Server) identityFor(ctx context.Context, entClient *ent.Client, userID int, sessionTokenVersion int) (authz.Identity, auth.RLSScope, bool) {
-	u, err := entClient.User.Query().WithCompany().WithDepartment().Where(user.ID(userID)).Only(ctx)
-	if err != nil || u.Status != user.StatusActive {
-		return authz.Identity{}, auth.RLSScope{}, false
-	}
-	// token_version 比對：session 簽發時的 tv(-1 = 未記錄的舊版 session,不比對)與 DB 現值
-	// 不一致 → 身分失效(401 落點)。
-	if sessionTokenVersion >= 0 && sessionTokenVersion != u.TokenVersion {
-		return authz.Identity{}, auth.RLSScope{}, false
-	}
-	// developer 帳號僅在開關啟用時繞過 Casbin/RLS（設計書 §4.4）。
-	if u.Role == "developer" && !s.cfg.API.DeveloperAccountEnabled {
-		return authz.Identity{}, auth.RLSScope{}, false
-	}
+	var id authz.Identity
+	var scope auth.RLSScope
+	err := dbtenant.SystemScopeTx(ctx, entClient, func(tx *ent.Tx) error {
+		u, err := tx.Client().User.Query().WithCompany().WithDepartment().Where(user.ID(userID)).Only(ctx)
+		if err != nil || u.Status != user.StatusActive {
+			return errIdentityRejected
+		}
+		// token_version 比對：session 簽發時的 tv(-1 = 未記錄的舊版 session,不比對)與 DB 現值
+		// 不一致 → 身分失效(401 落點)。
+		if sessionTokenVersion >= 0 && sessionTokenVersion != u.TokenVersion {
+			return errIdentityRejected
+		}
+		// developer 帳號僅在開關啟用時繞過 Casbin/RLS（設計書 §4.4）。
+		if u.Role == "developer" && !s.cfg.API.DeveloperAccountEnabled {
+			return errIdentityRejected
+		}
 
-	var companyID, deptID string
-	if u.Edges.Company != nil {
-		companyID = strconv.FormatInt(int64(u.Edges.Company.ID), 10)
-	}
-	if u.Edges.Department != nil {
-		deptID = strconv.FormatInt(int64(u.Edges.Department.ID), 10)
-	}
-	id := authz.Identity{
-		UserID:             strconv.FormatInt(int64(u.ID), 10),
-		CompanyID:          companyID,
-		DepartmentID:       deptID,
-		Role:               u.Role,
-		Roles:              auth.RolesFor(u.Role), // 依 Casbin g 展開(含自身)
-		MustChangePassword: u.MustChangePassword,  // A3 首登/臨時密碼態
-	}
-	// A2 公司停用連鎖(2.1.3):companyActive=false 表示公司非 active(company 為 nil 視同停用),
-	// 由 middleware 阻擋該請求(unauthenticated)但不刪 session,恢復 active 後可續用。
-	companyActive := u.Edges.Company != nil && u.Edges.Company.Status == company.StatusActive
-	scope := auth.RLSScope{
-		UserID:        id.UserID,
-		CompanyID:     companyID,
-		DepartmentID:  deptID,
-		DataScope:     dataScopeForUser(ctx, entClient, u.Role),
-		CompanyActive: companyActive,
+		var companyID, deptID string
+		if u.Edges.Company != nil {
+			companyID = strconv.FormatInt(int64(u.Edges.Company.ID), 10)
+		}
+		if u.Edges.Department != nil {
+			deptID = strconv.FormatInt(int64(u.Edges.Department.ID), 10)
+		}
+		id = authz.Identity{
+			UserID:             strconv.FormatInt(int64(u.ID), 10),
+			CompanyID:          companyID,
+			DepartmentID:       deptID,
+			Role:               u.Role,
+			Roles:              auth.RolesFor(u.Role), // 依 Casbin g 展開(含自身)
+			MustChangePassword: u.MustChangePassword,  // A3 首登/臨時密碼態
+		}
+		// A2 公司停用連鎖(2.1.3):companyActive=false 表示公司非 active(company 為 nil 視同停用),
+		// 由 middleware 阻擋該請求(unauthenticated)但不刪 session,恢復 active 後可續用。
+		companyActive := u.Edges.Company != nil && u.Edges.Company.Status == company.StatusActive
+		scope = auth.RLSScope{
+			UserID:        id.UserID,
+			CompanyID:     companyID,
+			DepartmentID:  deptID,
+			DataScope:     dataScopeForUser(ctx, tx.Client(), u.Role),
+			CompanyActive: companyActive,
+		}
+		return nil
+	})
+	if err != nil {
+		return authz.Identity{}, auth.RLSScope{}, false
 	}
 	return id, scope, true
 }
@@ -344,8 +361,11 @@ func (s *Server) identityFor(ctx context.Context, entClient *ent.Client, userID 
 // (auth.ScopeForRole)。自訂角色若走硬編碼對映會回空字串→RLSStatements 不注入 data_scope,
 // 導致 RLS 啟用後範圍錯置(data_scope=department 的自訂角色反被視為全公司)。
 // 皆無法取得 → 空字串(不注入,fail-closed 由 RLS policy 承擔)。
-func dataScopeForUser(ctx context.Context, entClient *ent.Client, roleCode string) auth.DataScope {
-	if r, err := entClient.Role.Query().Where(role.CodeEQ(roleCode)).Only(ctx); err == nil && r.DataScope != "" {
+//
+// db **必須是已套用系統範圍的 client**(唯一呼叫端 identityFor 傳入 tx.Client()):roles 在 00028
+// 之後受 RLS 約束,傳入未帶 scope 的 client 會讀到 0 列 → 靜默退回內建對映 → 自訂角色範圍錯置。
+func dataScopeForUser(ctx context.Context, db *ent.Client, roleCode string) auth.DataScope {
+	if r, err := db.Role.Query().Where(role.CodeEQ(roleCode)).Only(ctx); err == nil && r.DataScope != "" {
 		return auth.DataScope(r.DataScope)
 	}
 	return auth.ScopeForRole(roleCode)

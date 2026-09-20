@@ -13,6 +13,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
+	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 )
 
 // permissionRelation 對映權限動作 → OpenFGA relation(can_read/can_write;其餘略過)。
@@ -45,9 +46,18 @@ func managedTuple(user, relation, object string) bool {
 // Provision 將 DB 授權資料全量 reconcile 至 OpenFGA(D32):讀取 store 現有 tuples,
 // 計算期望集合(role_permissions→role ability;active users→role assigned),
 // 刪除「管理範圍內但不在期望集合」的舊 tuples(使移除權限/角色變更不殘留),再補寫缺漏。
+//
+// 讀取必須跑在**系統範圍**:本函式於開機時由已裝飾的業務 client 呼叫(server.mountOpenFGA),
+// 此刻沒有任何請求 scope,而核心三表(role_permissions/users/roles)在 00028 之後受 RLS 約束 ——
+// 未包系統範圍會靜默讀到 0 列,於是「一個 tuple 都不寫」而**不報錯**(之後所有受保護 RPC 一致
+// deny,比報錯更難診斷)。
 func Provision(ctx context.Context, e *openfga.Engine, db *ent.Client) error {
-	desired, err := desiredTuples(ctx, db)
-	if err != nil {
+	var desired map[string]bool
+	if err := dbtenant.SystemScopeTx(ctx, db, func(tx *ent.Tx) error {
+		var err error
+		desired, err = desiredTuples(ctx, tx.Client())
+		return err
+	}); err != nil {
 		return err
 	}
 	existing, err := e.ListTuples(ctx)
@@ -85,6 +95,8 @@ func Provision(ctx context.Context, e *openfga.Engine, db *ent.Client) error {
 }
 
 // desiredTuples 由 DB 計算期望的 OpenFGA tuple 集合(key=user\x00relation\x00object)。
+// db **必須是已套用系統範圍的 client**(唯一呼叫端 Provision 傳入 tx.Client()):這三張表在
+// 00028 之後受 RLS 約束,未帶 scope 的查詢會回 0 列 → 靜默佈建 0 筆而不報錯。
 func desiredTuples(ctx context.Context, db *ent.Client) (map[string]bool, error) {
 	out := map[string]bool{}
 

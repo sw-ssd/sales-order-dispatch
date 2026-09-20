@@ -79,24 +79,61 @@ func refreshUserSetKey(userID int) string {
 
 // CurrentTokenVersion 回傳使用者目前 token_version(users.token_version)。
 // 使用者不存在時回傳 ErrInvalidToken(fail-closed:已刪除使用者的 token 一律失效)。
+//
+// users 在 00028 之後受 RLS 約束(ENABLE + FORCE),而 token 的 DB 存取**一律是系統範圍**:
+// 登入/refresh/middleware 的 bearer 驗證都發生在租戶 scope 建立之前,帶請求交易的 scope 查
+// 只會回 0 列 → 誤判 token 無效(全員 401)。
 func (m *TokenManager) CurrentTokenVersion(ctx context.Context, userID int) (int, error) {
-	u, err := m.db.User.Get(ctx, userID)
+	tv := 0
+	err := m.systemScopeTx(ctx, func(tx *ent.Tx) error {
+		u, err := tx.Client().User.Get(ctx, userID)
+		if err != nil {
+			return err
+		}
+		tv = u.TokenVersion
+		return nil
+	})
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return 0, fmt.Errorf("%w: 使用者 %d 不存在", ErrInvalidToken, userID)
 		}
 		return 0, err
 	}
-	return u.TokenVersion, nil
+	return tv, nil
 }
 
 // BumpTokenVersion 遞增 users.token_version,使該使用者既有 access/refresh token 全數失效(D5)。
 // 改密碼 / 停用 / 角色變更 / 強制登出時呼叫。
+//
+// 呼叫端若已在同一請求交易內改動同一列,不得再走這裡(會另開一條交易 UPDATE 同列 → 互鎖死結);
+// 該情境應在該交易內直接 AddTokenVersion(見 handlers.completeGuest)。
 func (m *TokenManager) BumpTokenVersion(ctx context.Context, userID int) error {
-	_, err := m.db.User.UpdateOneID(userID).
-		AddTokenVersion(1).
-		Save(ctx)
-	return err
+	return m.systemScopeTx(ctx, func(tx *ent.Tx) error {
+		_, err := tx.Client().User.UpdateOneID(userID).
+			AddTokenVersion(1).
+			Save(ctx)
+		return err
+	})
+}
+
+// systemScopeTx 在系統範圍(scope=all)內執行 fn:登入/refresh/middleware 的 bearer 驗證都還沒有
+// 租戶 scope,而 users 受 RLS 約束 —— 未帶 scope 的查詢回 0 列、未帶 scope 的 UPDATE 影響 0 列。
+//
+// 為何不呼叫 dbtenant.SystemScopeTx:dbtenant 匯入 auth(RLSStatements／WithRLS),auth 反向匯入
+// 會成 import cycle。此處只複製「注入 scope → 開交易 → 執行 → commit」四步;RLS 語句仍由
+// dbtenant 的 driver 裝飾器在 client.Tx(ctx) 內套用(未經 dbtenant.NewClient 的 client 如
+// sqlite 單元測試則為 no-op,故單元測試不受影響)。
+func (m *TokenManager) systemScopeTx(ctx context.Context, fn func(tx *ent.Tx) error) error {
+	ctx = WithRLS(ctx, RLSScope{DataScope: DataScopeAll})
+	tx, err := m.db.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	if err := fn(tx); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	return tx.Commit()
 }
 
 // IssueAccess 簽發 HS256 access token(exp 1h,claim 含 tv)。

@@ -21,6 +21,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
+	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 )
@@ -68,6 +69,29 @@ func (h *AuthHandler) SetOIDC(cfg *oauth2.Config, exchanger auth.OAuthExchanger,
 // ---------------------------------------------------------------------------
 // AuthService RPC
 
+// systemScope 在系統範圍(scope=all)交易內執行**未登入路徑**的 DB 工作(登入/註冊/OIDC/guest),
+// 並把該交易注入 ctx:同一段程式碼裡的 dbtenant.Client(ctx, h.deps.DB) 因而落在這條系統交易上
+// (entity 的 lazy edge 查詢也才不會落到已提交的交易上)。
+//
+// 為何需要:這些路徑都還沒有身分,而 users/companies 在 00028 之後受 RLS 約束 —— 走請求交易的
+// (無 scope)只會回 0 列 → 登入一律「客戶編號或密碼錯誤」、註冊一律「公司不存在」。
+func (h *AuthHandler) systemScope(ctx context.Context, fn func(context.Context) error) error {
+	return dbtenant.SystemScopeTx(ctx, h.deps.DB, func(tx *ent.Tx) error {
+		return fn(dbtenant.WithTenantTx(ctx, tx))
+	})
+}
+
+// userByEmail 以系統範圍載入使用者(未登入路徑的 email 查找;回傳 ent.IsNotFound 供呼叫端判別)。
+func (h *AuthHandler) userByEmail(ctx context.Context, email string) (*ent.User, error) {
+	var u *ent.User
+	err := h.systemScope(ctx, func(ctx context.Context) error {
+		var qerr error
+		u, qerr = dbtenant.Client(ctx, h.deps.DB).User.Query().Where(user.EmailEQ(email)).Only(ctx)
+		return qerr
+	})
+	return u, err
+}
+
 // Login 客戶密碼登入(T12):以 customer_code(= users.account_name)查客戶帳號,
 // bcrypt 驗證密碼;連續 5 次失敗鎖定 30 分鐘(失敗計數存 Valkey,不區分帳號是否存在)。
 func (h *AuthHandler) Login(ctx context.Context, req *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error) {
@@ -85,8 +109,13 @@ func (h *AuthHandler) Login(ctx context.Context, req *connect.Request[v1.LoginRe
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("帳號已鎖定,請 30 分鐘後再試"))
 	}
 
-	u, err := h.deps.DB.User.Query().Where(user.AccountNameEQ(customerCode), user.IsCustomerEQ(true)).WithCompany().Only(ctx)
-	if err != nil {
+	var u *ent.User
+	if err := h.systemScope(ctx, func(ctx context.Context) error {
+		var qerr error
+		u, qerr = dbtenant.Client(ctx, h.deps.DB).User.Query().
+			Where(user.AccountNameEQ(customerCode), user.IsCustomerEQ(true)).WithCompany().Only(ctx)
+		return qerr
+	}); err != nil {
 		if !ent.IsNotFound(err) {
 			return nil, internal(err)
 		}
@@ -130,15 +159,19 @@ func (h *AuthHandler) Refresh(ctx context.Context, req *connect.Request[v1.Refre
 	if liveTV != pinnedTV {
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("refresh token 已撤銷,請重新登入"))
 	}
-	u, err := h.deps.DB.User.Get(ctx, uid)
-	if err != nil {
+	var u *ent.User
+	if err := h.systemScope(ctx, func(ctx context.Context) error {
+		var qerr error
+		u, qerr = dbtenant.Client(ctx, h.deps.DB).User.Get(ctx, uid)
+		return qerr
+	}); err != nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("帳號不存在或已停用"))
 	}
 	if u.Status != user.StatusActive {
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("帳號不存在或已停用"))
 	}
 
-	subject, err := h.subjectFromUser(ctx, u)
+	subject, err := h.subjectFromUser(ctx, u.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -182,8 +215,13 @@ func (h *AuthHandler) RegisterComplete(ctx context.Context, req *connect.Request
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("公司 ID 格式錯誤"))
 	}
 	// 軟刪除(P2-A):已刪除的公司不得再作為註冊/登入的租戶。
-	co, err := h.deps.DB.Company.Query().Where(company.ID(companyID), company.DeletedAtIsNil()).Only(ctx)
-	if err != nil {
+	var co *ent.Company
+	if err := h.systemScope(ctx, func(ctx context.Context) error {
+		var qerr error
+		co, qerr = dbtenant.Client(ctx, h.deps.DB).Company.Query().
+			Where(company.ID(companyID), company.DeletedAtIsNil()).Only(ctx)
+		return qerr
+	}); err != nil {
 		if ent.IsNotFound(err) {
 			return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("公司不存在"))
 		}
@@ -263,7 +301,7 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	u, err := h.deps.DB.User.Query().Where(user.EmailEQ(id.Email)).Only(r.Context())
+	u, err := h.userByEmail(r.Context(), id.Email)
 	switch {
 	case err == nil:
 		switch u.Status {
@@ -292,16 +330,20 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 		if name == "" {
 			name = emailLocalPart(id.Email)
 		}
-		created, err := h.deps.DB.User.Create().
-			SetEmail(id.Email).
-			SetName(name).
-			SetStatus(user.StatusActive).
-			SetRole(RoleGuest).
-			SetIsCustomer(false).
-			SetPasswordHash(auth.OIDCPasswordSentinel).
-			SetCompanyID(co.ID).
-			Save(r.Context())
-		if err != nil {
+		var created *ent.User
+		if err := h.systemScope(r.Context(), func(ctx context.Context) error {
+			var cerr error
+			created, cerr = dbtenant.Client(ctx, h.deps.DB).User.Create().
+				SetEmail(id.Email).
+				SetName(name).
+				SetStatus(user.StatusActive).
+				SetRole(RoleGuest).
+				SetIsCustomer(false).
+				SetPasswordHash(auth.OIDCPasswordSentinel).
+				SetCompanyID(co.ID).
+				Save(ctx)
+			return cerr
+		}); err != nil {
 			h.redirectError(w, r, "server_error")
 			return
 		}
@@ -317,7 +359,7 @@ func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 
 // issueTokenPair 為成功登入核發 access + refresh token 對。
 func (h *AuthHandler) issueTokenPair(ctx context.Context, u *ent.User) (*connect.Response[v1.LoginResponse], error) {
-	subject, err := h.subjectFromUser(ctx, u)
+	subject, err := h.subjectFromUser(ctx, u.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -341,21 +383,34 @@ func (h *AuthHandler) issueTokenPair(ctx context.Context, u *ent.User) (*connect
 	}), nil
 }
 
-// subjectFromUser 由使用者組裝 token subject(company / department 自 edges 讀取)。
-func (h *AuthHandler) subjectFromUser(ctx context.Context, u *ent.User) (auth.TokenSubject, error) {
-	co, err := u.QueryCompany().Only(ctx)
+// subjectFromUser 由**使用者 ID**組裝 token subject(company / department 於**自己的系統範圍交易**
+// 內載入)。刻意不吃呼叫端的 entity:憑證簽發路徑(登入/OIDC/refresh)都還沒有租戶 scope,而那些
+// entity 是別的(已提交的)交易載入的 —— 對它做 lazy edge 查詢會落在已結束的交易上。
+func (h *AuthHandler) subjectFromUser(ctx context.Context, userID int) (auth.TokenSubject, error) {
+	var s auth.TokenSubject
+	err := h.systemScope(ctx, func(ctx context.Context) error {
+		u, err := dbtenant.Client(ctx, h.deps.DB).User.Query().
+			WithCompany().WithDepartment().Where(user.ID(userID)).Only(ctx)
+		if err != nil {
+			return err
+		}
+		s = auth.TokenSubject{UserID: u.ID, Role: u.Role, MustChangePassword: u.MustChangePassword}
+		if u.Edges.Company != nil {
+			s.CompanyID = u.Edges.Company.ID
+		}
+		if u.Edges.Department != nil {
+			s.DepartmentID = u.Edges.Department.ID
+		}
+		return nil
+	})
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return auth.TokenSubject{}, connect.NewError(connect.CodeFailedPrecondition, errors.New("使用者未歸屬公司"))
 		}
 		return auth.TokenSubject{}, internal(err)
 	}
-	s := auth.TokenSubject{UserID: u.ID, CompanyID: co.ID, Role: u.Role, MustChangePassword: u.MustChangePassword}
-	dep, err := u.QueryDepartment().Only(ctx)
-	if err == nil {
-		s.DepartmentID = dep.ID
-	} else if !ent.IsNotFound(err) {
-		return auth.TokenSubject{}, internal(err)
+	if s.CompanyID == 0 {
+		return auth.TokenSubject{}, connect.NewError(connect.CodeFailedPrecondition, errors.New("使用者未歸屬公司"))
 	}
 	return s, nil
 }
@@ -363,7 +418,7 @@ func (h *AuthHandler) subjectFromUser(ctx context.Context, u *ent.User) (auth.To
 // completeLogin 於 callback 登入成功後核發憑證:web 設 session cookie,app 於回跳 URL 帶 JWT。
 func (h *AuthHandler) completeLogin(w http.ResponseWriter, r *http.Request, u *ent.User, client string) {
 	ctx := r.Context()
-	subject, err := h.subjectFromUser(ctx, u)
+	subject, err := h.subjectFromUser(ctx, u.ID)
 	if err != nil {
 		h.redirectError(w, r, "server_error")
 		return
@@ -430,51 +485,67 @@ func (h *AuthHandler) registerWithToken(ctx context.Context, token, name string,
 	if !ok {
 		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("註冊憑證無效或已過期,請重新以 Google 登入"))
 	}
-	exists, err := h.deps.DB.User.Query().Where(user.EmailEQ(email)).Exist(ctx)
-	if err != nil {
-		return nil, internal(err)
-	}
-	if exists {
-		return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("該 email 已有帳號,請直接登入"))
-	}
-	if _, err := h.deps.DB.User.Create().
-		SetEmail(email).
-		SetName(name).
-		SetStatus(user.StatusPending).
-		SetRole(RoleGuest).
-		SetIsCustomer(false).
-		SetPasswordHash(auth.OIDCPasswordSentinel).
-		SetCompanyID(companyID).
-		Save(ctx); err != nil {
-		return nil, internal(err)
+	// 去重與建帳號同一條系統交易(未登入路徑;users 受 RLS 約束,見 systemScope)。
+	if err := h.systemScope(ctx, func(ctx context.Context) error {
+		db := dbtenant.Client(ctx, h.deps.DB)
+		exists, qerr := db.User.Query().Where(user.EmailEQ(email)).Exist(ctx)
+		if qerr != nil {
+			return internal(qerr)
+		}
+		if exists {
+			return connect.NewError(connect.CodeAlreadyExists, errors.New("該 email 已有帳號,請直接登入"))
+		}
+		if _, cerr := db.User.Create().
+			SetEmail(email).
+			SetName(name).
+			SetStatus(user.StatusPending).
+			SetRole(RoleGuest).
+			SetIsCustomer(false).
+			SetPasswordHash(auth.OIDCPasswordSentinel).
+			SetCompanyID(companyID).
+			Save(ctx); cerr != nil {
+			return internal(cerr)
+		}
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 	return connect.NewResponse(&v1.RegisterCompleteResponse{}), nil
 }
 
 // completeGuest 更新既有 guest:設定公司與姓名、狀態轉 pending,並使既有 token 失效。
 func (h *AuthHandler) completeGuest(ctx context.Context, uid int, name string, companyID int) (*connect.Response[v1.RegisterCompleteResponse], error) {
-	u, err := h.deps.DB.User.Get(ctx, uid)
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("帳號不存在"))
+	var resp *connect.Response[v1.RegisterCompleteResponse]
+	err := h.systemScope(ctx, func(ctx context.Context) error {
+		db := dbtenant.Client(ctx, h.deps.DB)
+		u, err := db.User.Get(ctx, uid)
+		if err != nil {
+			if ent.IsNotFound(err) {
+				return connect.NewError(connect.CodeUnauthenticated, errors.New("帳號不存在"))
+			}
+			return internal(err)
 		}
-		return nil, internal(err)
+		if u.Role != RoleGuest {
+			return connect.NewError(connect.CodeFailedPrecondition, errors.New("僅 guest 帳號可完成註冊"))
+		}
+		// 身分異動(公司歸屬、狀態)後既有 access/refresh 立即失效(D5):token_version+1 併入
+		// **同一個敘述**。為何不呼叫 Tokens.BumpTokenVersion:那會另開一條交易 UPDATE 同一列,
+		// 而本交易的列鎖尚未放開 → 兩條交易互等,死結(「同一請求內對同一列開第二條交易」是禁例)。
+		if _, err := db.User.UpdateOneID(uid).
+			SetName(name).
+			SetStatus(user.StatusPending).
+			SetCompanyID(companyID).
+			AddTokenVersion(1).
+			Save(ctx); err != nil {
+			return internal(err)
+		}
+		resp = connect.NewResponse(&v1.RegisterCompleteResponse{})
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
-	if u.Role != RoleGuest {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("僅 guest 帳號可完成註冊"))
-	}
-	if _, err := h.deps.DB.User.UpdateOneID(uid).
-		SetName(name).
-		SetStatus(user.StatusPending).
-		SetCompanyID(companyID).
-		Save(ctx); err != nil {
-		return nil, internal(err)
-	}
-	// 身分異動(公司歸屬、狀態)後既有 access/refresh 立即失效(D5)
-	if err := h.deps.Tokens.BumpTokenVersion(ctx, uid); err != nil {
-		return nil, internal(err)
-	}
-	return connect.NewResponse(&v1.RegisterCompleteResponse{}), nil
+	return resp, nil
 }
 
 // authenticateBearer 解析並驗證 App Bearer JWT。
@@ -500,9 +571,14 @@ func (h *AuthHandler) resolveCompanyByHD(ctx context.Context, hd string) (*ent.C
 	if hd == "" {
 		return nil, nil
 	}
-	co, err := h.deps.DB.Company.Query().
-		Where(company.IdentifierEQ(hd), company.StatusEQ(company.StatusActive), company.DeletedAtIsNil()).
-		Only(ctx)
+	var co *ent.Company
+	err := h.systemScope(ctx, func(ctx context.Context) error {
+		var qerr error
+		co, qerr = dbtenant.Client(ctx, h.deps.DB).Company.Query().
+			Where(company.IdentifierEQ(hd), company.StatusEQ(company.StatusActive), company.DeletedAtIsNil()).
+			Only(ctx)
+		return qerr
+	})
 	if ent.IsNotFound(err) {
 		return nil, nil
 	}
