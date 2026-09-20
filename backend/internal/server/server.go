@@ -120,14 +120,18 @@ func (s *Server) Init() error {
 		if s.cfg.Auth.JWTSecret == config.DefaultJWTSecret {
 			return fmt.Errorf("config: ENV=production 且 JWT_SECRET 仍為預設值(dev-only),拒絕啟動")
 		}
-		// 平台工具設定(D38)守護。平台設定只有兩種合法狀態:整組設好,或整組不設(不掛載平台工具)。
-		// config.New() 會替 AllowedEmailDomain 填預設值,故正常啟動(經 envconfig)的 production 恆為
-		// 非零值 → 等同 production 必須設好 PLATFORM_JWT_SECRET 與 PLATFORM_CONSOLE_URL;
-		// 只設一半會讓 operator 登入看似啟用卻走不通,而錯誤直到登入才爆 → 拒絕啟動。
-		if s.cfg.Platform != (config.Platform{}) && !s.cfg.Platform.Configured() {
-			return fmt.Errorf("config: ENV=production 平台工具設定不完整,拒絕啟動;" +
-				"請設定 PLATFORM_JWT_SECRET(平台工具專用密鑰,勿與 JWT_SECRET 共用)與" +
-				"PLATFORM_CONSOLE_URL(console 根網址),或整組留空以停用平台工具")
+		// 平台工具設定(D38)守護。平台工具採**顯式 opt-in**:整組不設 = 不啟用(與組裝處
+		// `Platform.Configured()` 的掛載判斷一致,開發環境亦可不設);一旦設了其一(secret 或 console URL)
+		// 就必須整組齊備 —— 只設一半會讓 operator 登入看似啟用卻走不通,而錯誤直到登入才爆。
+		// 注意:不可用「Platform 非零值」當條件。envconfig 會替 AllowedEmailDomain 等欄位填預設值,
+		// 故 config.New() 出來的 Platform 恆非零 → 那樣的條件連「整組不設」都擋,且訊息承諾的
+		// 「整組留空以停用」永遠無法生效(operator 清空後重啟仍被同一條守護拒絕)。
+		if (s.cfg.Platform.OperatorJWTSecret != "" || s.cfg.Platform.ConsoleURL != "") && !s.cfg.Platform.Configured() {
+			return fmt.Errorf("config: ENV=production 且平台工具只設了一部分,拒絕啟動（請補齊 PLATFORM_JWT_SECRET 與 PLATFORM_CONSOLE_URL,或整組不設以停用平台工具）")
+		}
+		// 沿用隨 repo 公開的 dev 預設值 = 任何人都能偽造 operator token,且啟動毫無警示 → 拒絕。
+		if s.cfg.Platform.Configured() && s.cfg.Platform.OperatorJWTSecret == config.DefaultJWTSecret {
+			return fmt.Errorf("config: ENV=production 且 PLATFORM_JWT_SECRET 仍為預設值(dev-only),拒絕啟動")
 		}
 		// 兩個密鑰共用等於租戶 token 可冒充平台操作者(反之亦然)→ 拒絕啟動。訊息不帶密鑰值。
 		if s.cfg.Platform.Configured() && s.cfg.Platform.OperatorJWTSecret == s.cfg.Auth.JWTSecret {
