@@ -294,7 +294,7 @@ func (s *UserService) CreateUser(ctx context.Context, req *connect.Request[v1.Cr
 	if deptRef > 0 {
 		// 部門必須屬於目標公司(I6;避免跨公司資料擺放)。必須在**本交易內**讀取才取得 FOR SHARE
 		// 列鎖(D1:與 DeleteDepartment 的條件式 UPDATE 互斥),見 validateDepartmentInCompany。
-		if err := s.validateDepartmentInCompany(ctx, tx, deptRef, cid); err != nil {
+		if err := validateDepartmentInCompany(ctx, tx, deptRef, cid); err != nil {
 			return nil, err
 		}
 		build = build.SetDepartmentID(deptRef)
@@ -400,7 +400,7 @@ func (s *UserService) UpdateUser(ctx context.Context, req *connect.Request[v1.Up
 			if companyRef == nil {
 				return nil, connect.NewError(connect.CodeInternal, errors.New("目標使用者缺少公司關聯"))
 			}
-			if err := s.validateDepartmentInCompany(ctx, tx, did, companyRef.ID); err != nil {
+			if err := validateDepartmentInCompany(ctx, tx, did, companyRef.ID); err != nil {
 				return nil, err
 			}
 			update = update.SetDepartmentID(did)
@@ -483,7 +483,7 @@ func (s *UserService) AssignRole(ctx context.Context, req *connect.Request[v1.As
 		if companyRef == nil {
 			return nil, connect.NewError(connect.CodeInternal, errors.New("目標使用者缺少公司關聯"))
 		}
-		if err := s.validateDepartmentInCompany(ctx, tx, did, companyRef.ID); err != nil {
+		if err := validateDepartmentInCompany(ctx, tx, did, companyRef.ID); err != nil {
 			return nil, err
 		}
 		update = update.SetDepartmentID(did)
@@ -709,9 +709,12 @@ func isValidRole(role string) bool {
 }
 
 // validateDepartmentInCompany 驗證 department 存在且屬於指定公司(I6)。
-// 不符 → InvalidArgument(輸入驗證失敗),不允許跨公司資料擺放。
-// 軟刪除(00020):已刪除的部門視同不存在 —— 這是唯一以請求指定 department_id 的掛載路徑
-// (CreateUser / UpdateUser / AssignRole),不擋就會把活帳號掛進已刪除的部門。
+// 不符 → InvalidArgument(輸入驗證失敗),不允許跨公司資料擺放;軟刪除(00020)的部門視同不存在。
+// 這是**所有**「把使用者/客戶帳號掛到某部門」的路徑共用的協定,沒有例外:
+//   - 以請求指定 department_id 的 CreateUser / UpdateUser / AssignRole;
+//   - 以身分推導 department_id 的 CreateCustomer(E1:建檔連帶的客戶帳號同樣會落在該部門)。
+//
+// 不擋的後果是活帳號落在已刪除的部門(該帳號之後仍能通過登入與身分解析)。
 //
 // D1(列鎖):本讀取必須與掛載寫入同交易,且以 FOR SHARE 取得該部門列鎖。原因:users 的
 // department_id FK 插入只取 FOR KEY SHARE,與 DeleteDepartment 的條件式 UPDATE(FOR NO KEY UPDATE)
@@ -720,8 +723,8 @@ func isValidRole(role string) bool {
 //   - 刪除先取鎖 → 本讀取等它提交後才讀,看到 deleted_at → InvalidArgument(fail-closed);
 //   - 本讀取先取鎖 → 刪除等本交易結束後重評 NOT EXISTS(users) → 看到新成員 → FailedPrecondition。
 //
-// 因此呼叫端必須傳入**自己交易的** tx,且交易需涵蓋掛載寫入(CreateUser 已同步調整)。
-func (s *UserService) validateDepartmentInCompany(ctx context.Context, tx *ent.Tx, deptID, companyID int) error {
+// 因此呼叫端必須傳入**自己交易的** tx,且交易需涵蓋掛載寫入(CreateUser / CreateCustomer 已同步調整)。
+func validateDepartmentInCompany(ctx context.Context, tx *ent.Tx, deptID, companyID int) error {
 	ok, err := tx.Department.Query().
 		Where(
 			department.ID(deptID),

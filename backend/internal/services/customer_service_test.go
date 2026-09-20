@@ -165,6 +165,51 @@ func TestCreateCustomerSoftDeletedCompany(t *testing.T) {
 	}
 }
 
+// TestCreateCustomerRejectsSoftDeletedDepartment E1(D1 遺留的客戶帳號建檔路徑):身分的 did 指向
+// 已軟刪除部門時,建檔必須拒絕且不得落列。
+// 可達性:CreateCustomer 的範圍是**請求當下的身分快照**(deptScope 由身分推導 did),而部門刪除只要求
+// 「該部門當下無使用者」—— 操作者被調離 D 後 D 可被刪除,但已在途的建檔請求仍帶著 did=D(驗證與寫入
+// 之間隔著字典/業務驗證與取號等步驟)。不擋的後果:客戶列與主/業務子帳號一起落在已軟刪部門,
+// 活的客戶帳號歸屬於已軟刪部門(違反「沒有使用者屬於已軟刪部門」的不變式)。
+func TestCreateCustomerRejectsSoftDeletedDepartment(t *testing.T) {
+	ctx := t.Context()
+	_, db := newCustomerTestServer(t, authz.Identity{})
+	coID, deptID := seedCustomerCompany(t, db, "TD", true)
+	repID := seedCustomerRep(t, db, coID, deptID)
+	client, _ := newCustomerTestServer(t, deptAdminID(coID, deptID))
+	// 軟刪除部門(00020 的效果;以 DB 直寫模擬 DeleteDepartment,免去「部門內不得有使用者」的前置)。
+	if _, err := db.Department.UpdateOneID(deptID).SetDeletedAt(time.Now().UTC()).Save(ctx); err != nil {
+		t.Fatalf("軟刪除部門: %v", err)
+	}
+
+	req := connect.NewRequest(&customersv1.CreateCustomerRequest{Name: "王小明", DefaultSalesRepId: uItoa(repID)})
+	if _, err := client.CreateCustomer(ctx, req); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("身分的部門已軟刪除時建檔應 invalid_argument,got %v", err)
+	}
+	// 不得落列:客戶 0 筆、客戶帳號 0 筆(主帳號與業務子帳號皆不得建立)。
+	if n, _ := db.Customer.Query().Count(ctx); n != 0 {
+		t.Fatalf("部門已軟刪除時不得建客戶,得到 %d 列", n)
+	}
+	if n, _ := db.User.Query().Where(user.IsCustomer(true)).Count(ctx); n != 0 {
+		t.Fatalf("部門已軟刪除時不得建客戶帳號,得到 %d 列", n)
+	}
+
+	// 對照組:同一公司、同一身分角色、同一形狀,但部門在營運中 → 必須成功(證明拒絕來自 deleted_at)。
+	liveDept, err := db.Department.Create().SetCompanyID(coID).SetName("門市二").Save(ctx)
+	if err != nil {
+		t.Fatalf("建立對照部門: %v", err)
+	}
+	liveRep, err := db.User.Create().SetCompanyID(coID).SetDepartmentID(liveDept.ID).
+		SetEmail("rep-live-" + t.Name() + "@t.com").SetName("業務").SetRole("staff").SetPasswordHash("x").Save(ctx)
+	if err != nil {
+		t.Fatalf("建立對照業務: %v", err)
+	}
+	liveClient, _ := newCustomerTestServer(t, deptAdminID(coID, liveDept.ID))
+	if _, err := liveClient.CreateCustomer(ctx, connect.NewRequest(&customersv1.CreateCustomerRequest{Name: "李四", DefaultSalesRepId: uItoa(liveRep.ID)})); err != nil {
+		t.Fatalf("在營運中的部門建檔必須成功(拒絕必須來自 deleted_at): %v", err)
+	}
+}
+
 // TestCreateCustomerAsCustomerDenied:客戶主帳號呼叫一律 permission_denied。
 func TestCreateCustomerAsCustomerDenied(t *testing.T) {
 	ctx := context.Background()

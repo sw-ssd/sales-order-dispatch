@@ -361,6 +361,16 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *connect.Reque
 	}
 	defer func() { _ = tx.Rollback() }()
 
+	// E1(D1 協定):did 為**身分導出的部門**,而客戶列與主/業務子帳號都會掛在它身上。這一步必須
+	// 與掛載寫入同交易並以 FOR SHARE 讀該部門(與 DeleteDepartment 的 FOR UPDATE 互斥),否則
+	// 「本驗證通過 → 部門被刪除並提交 → 本交易才提交」會留下活帳號落在已軟刪部門
+	// (詳見 validateDepartmentInCompany 的說明;同 CreateUser / UpdateUser / AssignRole)。
+	if did != nil {
+		if err := validateDepartmentInCompany(ctx, tx, *did, cid); err != nil {
+			return nil, err
+		}
+	}
+
 	code, err := nextCustomerCode(ctx, tx, cid, prefix)
 	if err != nil {
 		return nil, toConnectError(err)

@@ -19,7 +19,7 @@
 // 為何 sqlite(enttest)不足以守住:SQLite 沒有 SELECT ... FOR SHARE/FOR UPDATE(ent 於該 dialect
 // 直接讓查詢報錯),列鎖只存在於真 PG,故此驗證必須在 //go:build integration。
 //
-// A 側走的是**生產函式** (UserService).validateDepartmentInCompany,只是由測試自己開交易並
+// A 側走的是**生產函式** validateDepartmentInCompany,只是由測試自己開交易並
 // 代 CreateUser/UpdateUser/AssignRole 插入成員(服務方法會自行提交,無法在中途停住)。因此
 // 消去實驗(拿掉兩側任一列鎖)都會讓本測試 RED,見 d1-report.md。
 package services
@@ -73,7 +73,7 @@ func TestIntegrationDepartmentDeleteRace(t *testing.T) {
 		t.Fatalf("開啟掛載交易: %v", err)
 	}
 	defer func() { _ = tx.Rollback() }()
-	if err := NewUserService(db).validateDepartmentInCompany(ctx, tx, dep.ID, co.ID); err != nil {
+	if err := validateDepartmentInCompany(ctx, tx, dep.ID, co.ID); err != nil {
 		t.Fatalf("掛載路徑驗證部門(應於本交易內取 FOR SHARE 列鎖): %v", err)
 	}
 	member := tx.User.Create().
