@@ -19,6 +19,7 @@
 - **RLS 的驗證必須以非 superuser 連線**（T5 實測更正）：測試容器的 `postgres` 是 superuser，而 PostgreSQL superuser **恆繞過 RLS（`FORCE` 亦然）** → 以它連線的測試全綠**不能**當作「RLS 生效」的證據（只能當 regression gate）。凡宣稱驗 RLS 的測試，必須以 `app_rw`（或專用非 superuser 角色）建立連線／client。
 - **每個 domain 的 app_rw 探針必須走過該域所有已遷移的寫入路徑**（T5 review 教訓）：至少各一支 `Create`／`Update`／`Delete`／`Restore` ＋ 子資源（地址／聯絡人）三支，並斷言回傳資料的 `company_id` 等於身分所屬公司；**只驗 2–3 條讀取路徑不足以證明收斂**（漏掛 `dbtenant.Client` 仍會全綠）。另需一條**負向對照**：以 `app_rw` 建 server 但**不注入 scope** 時，寫入應失敗、清單應回 0 筆。
 - 建 `companies` fixture 時**不得**寫 `created_at`／`updated_at`（該表無此欄位，見 `00005`；T5 實測踩過）。
+- **policy 取值一律 `NULLIF(current_setting('app.current_*', true), '')`**（T5 實測更正）：`SET LOCAL` 對自訂 GUC 會在 session 層留下**空字串** placeholder（交易結束後仍在），於是同一條池化連線在「後續未設 scope」的查詢上會拿到 `''` 而非 NULL → `''::bigint` 直接 **22P02** 報錯，而不是回 0 列（仍 fail-closed，但把「查不到」變成「系統錯誤」，且錯誤訊息會帶 policy 文字）。以 `NULLIF` 正規化為 NULL，語意回到「未設 scope → 0 列」。T6 的 `00025` 負責重建 18 個 policy 為此形式。
 - 每個 migration 必含 `Up`/`Down`；ENABLE 的 `Down` 必含 `NO FORCE` + `DISABLE`
 - **對已 ENABLE（且 FORCE）的表做資料回填**的 migration 與 `cmd/seed`：交易內先執行 `SET LOCAL app.current_data_scope = 'all'`（FORCE 也會擋 owner）
 - 錯誤一律經既有 `toConnectError` 映射，不得回傳 SQLSTATE 或 constraint 名
@@ -1742,9 +1743,38 @@ Expected: 無輸出。四檔各自的自開交易（各 4 處）依 Global Const
 
 - [ ] **Step 4: ENABLE migration（`database/migrations/00025_rls_enable_masters.sql`）**
 
+**同一個 migration 先做「policy 取值正規化」，再 ENABLE**（T5 實測發現的 PG 行為，見 Global Constraints 最後一條）：
+
 ```sql
 -- 部門級主檔啟用 RLS（D36）。
+--
+-- 先強化既有 18 個 policy 的取值：`SET LOCAL app.current_*` 對**自訂 GUC** 會在 session 層
+-- 留下空字串 placeholder（即使交易已結束），於是同一條池化連線在「後續未設 scope」的查詢上
+-- 會拿到 ''（而非 NULL）→ `''::bigint` 直接 22P02 報錯，而不是回 0 列。T5 實測：
+-- 連線先服務過有 scope 的請求後，無 scope 的查詢會以 22P02 失敗（仍 fail-closed，但錯誤語意
+-- 與「查不到」混淆）。以 NULLIF 把 '' 正規化為 NULL，語意回到「未設 scope → 0 列」。
+--
+-- 作法：逐表 DROP POLICY 後以 NULLIF 版本重建（USING 與 WITH CHECK 其餘條件不變；
+-- core_metadicts_scope 已有較嚴的 WITH CHECK，沿用原樣但同樣加 NULLIF）。
+-- 18 張表的清單與 UPDATE 物件請照 00023 的對應關係逐一處理，不得遺漏或放寬語意。
 -- +goose Up
+-- （policy 重建：companies/departments/users/roles/role_permissions/audit_logs/metadicts/
+--   customers/customer_counters/customer_addresses/customer_contacts/
+--   warehouses/routes/processing_specs/product_categories/products/
+--   product_units/product_processing_specs）
+-- 例（companies）：
+DROP POLICY IF EXISTS core_companies_scope ON companies;
+CREATE POLICY core_companies_scope ON companies FOR ALL
+    USING (
+        COALESCE(NULLIF(current_setting('app.current_data_scope', true), ''), '') = 'all'
+        OR (NULLIF(current_setting('app.current_company_id', true), ''))::bigint = id
+    )
+    WITH CHECK (
+        COALESCE(NULLIF(current_setting('app.current_data_scope', true), ''), '') = 'all'
+        OR (NULLIF(current_setting('app.current_company_id', true), ''))::bigint = id
+    );
+-- 其餘 17 張同法：把每個 current_setting(...) 包成 NULLIF(current_setting(...), '')。
+
 ALTER TABLE warehouses          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE warehouses          FORCE  ROW LEVEL SECURITY;
 ALTER TABLE routes              ENABLE ROW LEVEL SECURITY;
@@ -1755,6 +1785,7 @@ ALTER TABLE product_categories  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE product_categories  FORCE  ROW LEVEL SECURITY;
 
 -- +goose Down
+-- （policy 還原：把 NULLIF 版重建回 00023 的版本；masters 四表關閉 RLS）
 ALTER TABLE warehouses          NO FORCE ROW LEVEL SECURITY;
 ALTER TABLE warehouses          DISABLE ROW LEVEL SECURITY;
 ALTER TABLE routes              NO FORCE ROW LEVEL SECURITY;
@@ -1764,6 +1795,8 @@ ALTER TABLE processing_specs    DISABLE ROW LEVEL SECURITY;
 ALTER TABLE product_categories  NO FORCE ROW LEVEL SECURITY;
 ALTER TABLE product_categories  DISABLE ROW LEVEL SECURITY;
 ```
+
+**驗證要求**：新增（或擴充）一條整合測試斷言「**同一條池化連線**先服務過有 scope 的請求後，未設 scope 的查詢回 **0 列**（不是 22P02 錯誤）」。這是這個 migration 唯一可觀測的行為改變，沒有這條斷言就不算完成。T5 的負向子測試因當時尚未修 policy，只能另開新連線池——修完後應可改用同一池。
 
 - [ ] **Step 5: 跑測試**
 
