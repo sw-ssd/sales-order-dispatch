@@ -1,0 +1,173 @@
+//go:build integration
+
+package services
+
+import (
+	"context"
+	"database/sql"
+	"testing"
+
+	_ "github.com/jackc/pgx/v5/stdlib" // pgx database/sql driver
+
+	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
+	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
+	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+)
+
+// TestIntegrationEntitlementCounterCountsWithinRequestScope 計數器必須以「當前請求的 scoped
+// client」查詢（dbtenant.Client），否則在請求路徑永遠回 0 —— 0 等於「用量為零」，配額守衛
+// 會全面放行（形同無限額上限）。
+//
+// 為什麼一定要 app_rw：容器／測試的 admin 是 superuser，PG 的 superuser 永遠繞過 RLS
+// （FORCE 亦然）→ 以 admin 連線計數「怎麼查都對」，測不出漏帶 scope 的實作。
+// app_rw 是 00022 的 NOBYPASSRLS 業務角色，正是生產路徑的角色：
+//
+//	① 未帶請求交易（無 scope）→ 四張表都看不到列 → 0（對照組，證明 RLS 真的擋著）；
+//	② 帶請求交易（scope=company A）→ 各 feature 拿到正確筆數（非 0），B 公司的列不計入。
+func TestIntegrationEntitlementCounterCountsWithinRequestScope(t *testing.T) {
+	testsupport.RequiresContainer(t)
+	adminDSN := testsupport.Postgres(t)
+	migrateBusinessUp(t, adminDSN)
+
+	admin := openRawDB(t, adminDSN)
+	defer func() { _ = admin.Close() }()
+
+	// scope=company 只需要公司列＋它自己的列；users/customers/products/departments 都受 RLS。
+	coA := insertRLSCompany(t, admin, "A", "CNT-A")
+	coB := insertRLSCompany(t, admin, "B", "CNT-B")
+	deptA := insertCounterDepartment(t, admin, coA, "部門甲", false)
+	insertCounterDepartment(t, admin, coA, "部門乙", true) // 軟刪除
+	insertCounterDepartment(t, admin, coB, "部門丙", false)
+
+	insertCounterUser(t, admin, coA, "a1@example.com", "active")
+	insertCounterUser(t, admin, coA, "a2@example.com", "pending") // 非 inactive → 佔席位
+	insertCounterUser(t, admin, coA, "a3@example.com", "inactive")
+	insertCounterUser(t, admin, coB, "b1@example.com", "active")
+
+	insertCounterCustomer(t, admin, coA, "CNT000001", false)
+	insertCounterCustomer(t, admin, coA, "CNT000002", true) // 軟刪除
+	insertCounterCustomer(t, admin, coB, "CNT000003", false)
+
+	insertCounterProduct(t, admin, coA, deptA, "P-1", false)
+	insertCounterProduct(t, admin, coA, deptA, "P-2", true) // 軟刪除
+	insertCounterProduct(t, admin, coB, deptA, "P-3", false)
+
+	client := dbtenant.NewClient(openAppRoleDB(t, adminDSN))
+	t.Cleanup(func() { _ = client.Close() })
+	counter := NewEntitlementCounter(client)
+
+	features := []struct {
+		feature string
+		want    int
+	}{
+		{entitlements.LimitSeats, 2},
+		{entitlements.LimitCustomers, 1},
+		{entitlements.LimitProducts, 1},
+		{entitlements.LimitDepartments, 1},
+	}
+
+	t.Run("未帶請求交易 → app_rw 看不到列,一律 0(對照組)", func(t *testing.T) {
+		for _, tc := range features {
+			got, err := counter.Count(context.Background(), coA, tc.feature)
+			if err != nil {
+				t.Fatalf("Count(%s): %v", tc.feature, err)
+			}
+			if got != 0 {
+				t.Fatalf("沒有請求 scope 時 %s 應為 0(RLS fail-closed),got %d "+
+					"(>0 代表計數走了 admin／無 RLS 的連線)", tc.feature, got)
+			}
+		}
+	})
+
+	t.Run("請求範圍內(scope=company A)→ 正確數字", func(t *testing.T) {
+		ctx := auth.WithRLS(context.Background(), auth.RLSScope{
+			DataScope: auth.DataScopeCompany, CompanyID: itoa(coA), CompanyActive: true,
+		})
+		tx, err := client.Tx(ctx)
+		if err != nil {
+			t.Fatalf("開租戶交易: %v", err)
+		}
+		defer func() { _ = tx.Rollback() }()
+		ctx = dbtenant.WithTenantTx(ctx, tx)
+
+		for _, tc := range features {
+			got, err := counter.Count(ctx, coA, tc.feature)
+			if err != nil {
+				t.Fatalf("Count(%s): %v", tc.feature, err)
+			}
+			if got != tc.want {
+				t.Errorf("公司 A 的 %s 應為 %d,got %d", tc.feature, tc.want, got)
+			}
+		}
+		// scope 只給 A：B 公司的列不得計入（計數是真的受限，不是無條件全表數）。
+		got, err := counter.Count(ctx, coB, entitlements.LimitSeats)
+		if err != nil {
+			t.Fatalf("Count(coB): %v", err)
+		}
+		if got != 0 {
+			t.Errorf("scope=company A 時不得看到公司 B 的帳號,got %d", got)
+		}
+
+		// 守衛在請求交易「之內」被呼叫，必須看見同一交易尚未提交的列（否則同一請求內
+		// 連續建立時，後一筆的守衛看不到前一筆 → 超額）。這條同時釘住 Count 走的是
+		// 請求交易本身，而不是另外開一條交易（後者因 ctx 仍帶 scope 也能查到已提交的列，
+		// 只在這條會露餡）。
+		if _, err := tx.Client().Customer.Create().
+			SetCompanyID(coA).SetCustomerCode("CNT000009").SetName("同交易客戶").Save(ctx); err != nil {
+			t.Fatalf("交易內建客戶: %v", err)
+		}
+		got, err = counter.Count(ctx, coA, entitlements.LimitCustomers)
+		if err != nil {
+			t.Fatalf("Count(同交易): %v", err)
+		}
+		if got != 2 {
+			t.Errorf("同一請求交易內剛建立的客戶必須計入(1 筆種子 ＋ 1 筆未提交),got %d", got)
+		}
+	})
+}
+
+// insertCounterUser 以 admin 連線建一位使用者；status 決定是否佔席位。
+func insertCounterUser(t *testing.T, db *sql.DB, companyID int, email, status string) {
+	t.Helper()
+	if _, err := db.Exec(
+		`INSERT INTO users (email, name, role, status, password_hash, company_users)
+		 VALUES ($1, '使用者', 'staff', $2, 'x', $3)`, email, status, companyID); err != nil {
+		t.Fatalf("建使用者 %s: %v", email, err)
+	}
+}
+
+// insertCounterDepartment 以 admin 連線建部門；softDeleted=true 時直接標記 deleted_at。
+func insertCounterDepartment(t *testing.T, db *sql.DB, companyID int, name string, softDeleted bool) int {
+	t.Helper()
+	var id int
+	if err := db.QueryRow(
+		`INSERT INTO departments (name, company_departments, deleted_at)
+		 VALUES ($1, $2, CASE WHEN $3 THEN now() ELSE NULL END) RETURNING id`,
+		name, companyID, softDeleted).Scan(&id); err != nil {
+		t.Fatalf("建部門 %s: %v", name, err)
+	}
+	return id
+}
+
+// insertCounterCustomer 以 admin 連線建客戶；softDeleted=true 時直接標記 deleted_at。
+func insertCounterCustomer(t *testing.T, db *sql.DB, companyID int, code string, softDeleted bool) {
+	t.Helper()
+	if _, err := db.Exec(
+		`INSERT INTO customers (company_id, customer_code, name, deleted_at)
+		 VALUES ($1, $2, '客戶', CASE WHEN $3 THEN now() ELSE NULL END)`,
+		companyID, code, softDeleted); err != nil {
+		t.Fatalf("建客戶 %s: %v", code, err)
+	}
+}
+
+// insertCounterProduct 以 admin 連線建商品；softDeleted=true 時直接標記 deleted_at。
+func insertCounterProduct(t *testing.T, db *sql.DB, companyID, departmentID int, code string, softDeleted bool) {
+	t.Helper()
+	if _, err := db.Exec(
+		`INSERT INTO products (company_id, department_id, code, name, deleted_at)
+		 VALUES ($1, $2, $3, '商品', CASE WHEN $4 THEN now() ELSE NULL END)`,
+		companyID, departmentID, code, softDeleted); err != nil {
+		t.Fatalf("建商品 %s: %v", code, err)
+	}
+}
