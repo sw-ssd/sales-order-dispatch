@@ -1,16 +1,43 @@
 //go:build integration
 
-// 跨租戶統一守門探針(T10):**每一個租戶端點**都以 A 公司的身分呼叫一次,斷言
+// 跨租戶統一守門探針(T10):以 A 公司的身分呼叫租戶端點,斷言
 //
 //	①看不到 B 公司的任何列(清單集合 == 該 scope 的真值;單筆取用 B 的 id → not_found);
-//	②改不到 B 公司的任何列(Update/Delete 用 B 的 id → not_found,且目標列值不變、不留稽核列)。
+//	②改不到 B 公司的任何列(寫入動詞用 B 的 id 或 B 的父列 → not_found,且目標列值不變、不留稽核列)。
+//
+// **覆蓋範圍(精確)**:
+//   - 清單:14 張租戶表的 List(companies/departments/users/roles/customers/customer_addresses/
+//     customer_contacts/warehouses/routes/processing_specs/product_categories/products/metadicts/
+//     audit_logs)＋ metadicts 的 ListOptions(下拉選項)。
+//   - 單筆讀取:companies/departments/users/customers/products/metadicts 的 Get,以及
+//     customer_addresses/customer_contacts 的父列解析(ListAddresses／ListContacts 帶 B 的客戶 id)。
+//   - 寫入動詞:Update 與 Delete 各域(companies/departments/users/customers/customer_addresses/
+//     customer_contacts/warehouses/routes/processing_specs/product_categories/products/metadicts);
+//     Restore(customers/products/warehouses/routes/processing_specs/product_categories);
+//     AddAddress／AddContact(以 B 的客戶為父列);AssignRole／ForceLogout(以 B 的使用者為目標);
+//     CreateDepartment／CreateUser(帶 B 的公司 id)、CreateProduct(帶 B 的商品分類)。
+//
+// **不在此探針、且本身沒有跨租戶語意的端點**(不用「每個端點」含混帶過):
+//   - `GetAbility`(ability.v1)、`ListConditionFields`(role.v1):回的是呼叫者自身的能力/CASL
+//     欄位集,輸入裡沒有任何租戶目標,不存在「B 的資料」可供洩漏。
+//   - `ListRoles`／`GetRolePermissions`／`UpdateRolePermissions`:roles／role_permissions 是**共用
+//     目錄**(00025 的 policy 只要求 `scope` 非空,寫入權威在服務層 ACL)。本探針只驗「共用目錄在
+//     非空 scope 下讀得到、不因 RLS 黑屏」;跨公司的寫入防線由 role_service 的 requireRole／條件
+//     驗證負責(`role_service_test.go`)。
+//   - `Login`／`Refresh`／`Logout`／`RegisterComplete`／`QRLogin`／`ChangePassword`:未登入／系統
+//     範圍路徑(尚無身分可注入租戶 scope),由 T9 的 `internal/server` 探針與 handlers 的測試涵蓋;
+//     `ResetCustomerPassword` 由 T8 的 `internal/handlers/rls_auth_password_integration_test.go` 涵蓋。
+//   - `CreateCustomer`／`CreateMetadict`:`CreateCustomer` 的公司來自身分(不吃請求的公司 id),它
+//     唯一的跨租戶向量是 `default_sales_rep_id` 指向 B 的使用者 —— 與 `CreateProduct` 的參照同型,
+//     由本探針的 CreateProduct 代表;`CreateMetadict` 對 super 一律建系統級列(department 為 NULL),
+//     沒有跨租戶向量。
 //
 // 為何需要這一支(其餘六組探針 T5–T9 已各自驗過所屬域):那些探針守的是「本域的路徑有沒有收斂」,
 // 這支守的是**跨域的統一接線** —— 「某個端點忘了掛 dbtenant.HandlerOption / dbtenant.Client」。
 // 它在單元測試(sqlite,enttest)完全看不出來:沒有 pg 的 RLS,漏掛的查詢照樣讀得到全部列。
 // 這裡的每個正向斷言(「A 必須看到自家那幾筆」)與每個負向斷言(「B 的 id 一律 not_found」)
 // 都只有在 RLS 這條接線存在時才成立:
-//   - 漏掛租戶交易 → SET LOCAL 沒被執行 → 查詢被 policy 過濾成 0 列(正向前向斷言紅);
+//   - 漏掛租戶交易 → SET LOCAL 沒被執行 → 查詢被 policy 過濾成 0 列(正向斷言紅);
 //   - 漏掛 dbtenant.Client → 同上,或跨租戶目標真的被讀出/改到(負向斷言紅)。
 //
 // 身分與 scope 刻意**錯開**:身分用 super(ACL 全開,requireScope/scopeForTarget 一律放行),
@@ -108,7 +135,7 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 			ids = append(ids, c.GetId())
 		}
 		// 公司清單在服務層**沒有**依身分過濾(僅 RLS)→ 這條是純 RLS 偵測器。
-		assertIDsOnly(t, "ListCompanies", ids, adminIDs(t, admin, `SELECT id FROM companies WHERE id = $1`, fx.coA)...)
+		assertSetEquals(t, "ListCompanies", ids, adminIDs(t, admin, `SELECT id FROM companies WHERE id = $1`, fx.coA)...)
 
 		crossCallErr(t, "GetCompany(他公司)", func(ctx context.Context) error {
 			_, err := cl.companies.GetCompany(ctx, connect.NewRequest(&v1.GetCompanyRequest{CompanyId: itoa(fx.coB)}))
@@ -138,7 +165,7 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 		for _, d := range res.Msg.GetDepartments() {
 			ids = append(ids, d.GetId())
 		}
-		assertIDsOnly(t, "ListDepartments", ids, itoa(fx.deptA))
+		assertSetEquals(t, "ListDepartments", ids, itoa(fx.deptA))
 
 		crossCallErr(t, "GetDepartment(他公司)", func(ctx context.Context) error {
 			_, err := cl.departments.GetDepartment(ctx, connect.NewRequest(&v1.GetDepartmentRequest{DepartmentId: itoa(fx.deptB)}))
@@ -169,7 +196,7 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 		for _, u := range res.Msg.GetUsers() {
 			ids = append(ids, u.GetId())
 		}
-		assertIDsOnly(t, "ListUsers", ids, adminIDs(t, admin, `SELECT id FROM users WHERE department_users = $1`, fx.deptA)...)
+		assertSetEquals(t, "ListUsers", ids, adminIDs(t, admin, `SELECT id FROM users WHERE department_users = $1`, fx.deptA)...)
 
 		crossCallErr(t, "GetUser(他公司)", func(ctx context.Context) error {
 			_, err := cl.users.GetUser(ctx, connect.NewRequest(&v1.GetUserRequest{UserId: itoa(fx.actorB)}))
@@ -222,7 +249,7 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 		for _, c := range res.Msg.GetCustomers() {
 			ids = append(ids, c.GetId())
 		}
-		assertIDsOnly(t, "ListCustomers", ids, tenantScopedIDs(t, admin, "customers", fx.coA, fx.deptA)...)
+		assertSetEquals(t, "ListCustomers", ids, tenantScopedIDs(t, admin, "customers", fx.coA, fx.deptA)...)
 
 		crossCallErr(t, "GetCustomer(他公司)", func(ctx context.Context) error {
 			_, err := cl.customers.GetCustomer(ctx, connect.NewRequest(&customersv1.GetCustomerRequest{Id: itoa(fx.custB)}))
@@ -240,6 +267,10 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 			_, err := cl.customers.DeleteCustomer(ctx, connect.NewRequest(&customersv1.DeleteCustomerRequest{Id: itoa(fx.custB)}))
 			return err
 		})
+		assertCrossTenantDenied(t, admin, "RestoreCustomer(他公司)", func() error {
+			_, err := cl.customers.RestoreCustomer(ctx, connect.NewRequest(&customersv1.RestoreCustomerRequest{Id: itoa(fx.custB)}))
+			return err
+		})
 		assertColumnValue(t, admin, "B 的客戶名稱", "customers", "name", fx.custB, "B 客戶")
 		assertNullColumn(t, admin, "B 的客戶未被軟刪除", "customers", "deleted_at", fx.custB)
 	})
@@ -252,7 +283,7 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 		for _, a := range res.Msg.GetAddresses() {
 			ids = append(ids, a.GetId())
 		}
-		assertIDsOnly(t, "ListAddresses(自家客戶)", ids, itoa(fx.addrA))
+		assertSetEquals(t, "ListAddresses(自家客戶)", ids, itoa(fx.addrA))
 
 		// 用 B 的客戶 id 查地址:子表的路徑必須先在租戶範圍內找到父列(requireCustomer)。
 		crossCallErr(t, "ListAddresses(他公司客戶)", func(ctx context.Context) error {
@@ -283,7 +314,7 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 		for _, c := range res.Msg.GetContacts() {
 			ids = append(ids, c.GetId())
 		}
-		assertIDsOnly(t, "ListContacts(自家客戶)", ids, itoa(fx.contactA))
+		assertSetEquals(t, "ListContacts(自家客戶)", ids, itoa(fx.contactA))
 
 		crossCallErr(t, "ListContacts(他公司客戶)", func(ctx context.Context) error {
 			_, err := cl.customers.ListContacts(ctx, connect.NewRequest(&customersv1.ListContactsRequest{CustomerId: itoa(fx.custB)}))
@@ -305,11 +336,100 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 		assertNullColumn(t, admin, "B 的聯絡人未被軟刪除", "customer_contacts", "deleted_at", fx.contactB)
 	})
 
+	t.Run("cross_tenant_writes_with_B_parent", func(t *testing.T) {
+		// 這一組的目標不是「B 的某一列」而是 **B 的父列／目標使用者**:子表新增、以公司 id 建部門、
+		// 以使用者 id 指派角色／強制登出。RLS 讓 B 的父列在 A 的請求交易裡不存在,故寫入一律不得成立。
+		assertCrossTenantDenied(t, admin, "AddAddress(B 的客戶)", func() error {
+			_, err := cl.customers.AddAddress(ctx, connect.NewRequest(&customersv1.AddAddressRequest{
+				CustomerId: itoa(fx.custB), Type: "shipping", RecipientName: "偷渡收件人", AddressLine: "偷渡地址",
+			}))
+			return err
+		})
+		assertCrossTenantDenied(t, admin, "AddContact(B 的客戶)", func() error {
+			_, err := cl.customers.AddContact(ctx, connect.NewRequest(&customersv1.AddContactRequest{
+				CustomerId: itoa(fx.custB), Name: "偷渡聯絡人",
+			}))
+			return err
+		})
+		assertCrossTenantDenied(t, admin, "AssignRole(B 的使用者)", func() error {
+			_, err := cl.users.AssignRole(ctx, connect.NewRequest(&v1.AssignRoleRequest{
+				UserId: itoa(fx.actorB), Role: "staff",
+			}))
+			return err
+		})
+		assertCrossTenantDenied(t, admin, "ForceLogout(B 的使用者)", func() error {
+			_, err := cl.users.ForceLogout(ctx, connect.NewRequest(&v1.ForceLogoutRequest{UserId: itoa(fx.actorB)}))
+			return err
+		})
+		assertCrossTenantDenied(t, admin, "CreateDepartment(B 的公司)", func() error {
+			_, err := cl.departments.CreateDepartment(ctx, connect.NewRequest(&v1.CreateDepartmentRequest{
+				CompanyId: itoa(fx.coB), Name: "偷渡部門",
+			}))
+			return err
+		})
+		assertCrossTenantDenied(t, admin, "CreateUser(B 的公司)", func() error {
+			_, err := cl.users.CreateUser(ctx, connect.NewRequest(&v1.CreateUserRequest{
+				Name: "偷渡帳號", Email: "smuggled@example.com", CompanyId: itoa(fx.coB), Role: "staff",
+			}))
+			return err
+		})
+
+		// 不得落地:全表計數(A 自己也不得多出列 —— 探針只建了兩家公司的等價 fixture)。
+		for _, tbl := range []string{"departments", "users", "products", "customer_addresses", "customer_contacts"} {
+			if n := countRows(t, admin, `SELECT count(*) FROM `+tbl); n != 2 {
+				t.Errorf("被拒的跨租戶寫入不得新增 %s 的列:應維持 2 列(兩家公司各一),got %d", tbl, n)
+			}
+		}
+		if n := countRows(t, admin, `SELECT count(*) FROM users WHERE email = 'smuggled@example.com'`); n != 0 {
+			t.Errorf("被拒的 CreateUser 不得落地任何帳號,got %d 列", n)
+		}
+
+		// CreateProduct 帶 B 的商品分類:服務層的參照解析以「**範圍內**恰一列存在」為準
+		// (validateCategoryRef → validateDeptMasterRef),B 的分類在 A 的請求交易裡不存在 →
+		// invalid_argument(引用非法,非權限錯誤;這是既有且刻意的契約)。本斷言釘的是
+		// 「B 的列不會被當成合法參照」與「不得落地」,錯誤碼不是 not_found。
+		beforeAudit := countRows(t, admin, `SELECT count(*) FROM audit_logs`)
+		productErr := func() error {
+			_, err := cl.products.CreateProduct(ctx, connect.NewRequest(&productsv1.CreateProductRequest{
+				Code:       "XT-SMUGGLE",
+				Name:       "偷渡商品",
+				CategoryId: fx.masters["product_categories"][1],
+				Units:      []*productsv1.ProductUnit{{UnitCode: "PCS", ConversionRate: "1", IsBase: true}},
+			}))
+			return err
+		}()
+		if connect.CodeOf(productErr) != connect.CodeInvalidArgument {
+			t.Errorf("CreateProduct 帶 B 的商品分類應 invalid_argument(參照在範圍外),got %v", productErr)
+		}
+		if after := countRows(t, admin, `SELECT count(*) FROM audit_logs`); after != beforeAudit {
+			t.Errorf("被拒的 CreateProduct 不得留下稽核列(%d → %d)", beforeAudit, after)
+		}
+		// 正向對照:同一個請求形狀、只把分類換成自家的 → 必須成功。
+		// 沒有這一段,上面那個 invalid_argument 可能只是「單位規格寫錯」之類的假證據。
+		created := crossCall(t, "CreateProduct(自家分類)", func(ctx context.Context) (*connect.Response[productsv1.CreateProductResponse], error) {
+			return cl.products.CreateProduct(ctx, connect.NewRequest(&productsv1.CreateProductRequest{
+				Code:       "XT-OWN",
+				Name:       "自家商品",
+				CategoryId: fx.masters["product_categories"][0],
+				Units:      []*productsv1.ProductUnit{{UnitCode: "PCS", ConversionRate: "1", IsBase: true}},
+			}))
+		})
+		if created.Msg.GetProduct().GetCompanyId() != itoa(fx.coA) {
+			t.Fatalf("自家分類建商品應落在公司 %d,got %+v", fx.coA, created.Msg.GetProduct())
+		}
+		assertColumnValue(t, admin, "自家新建商品的公司", "products", "company_id", mustItoa(t, created.Msg.GetProduct().GetId()), itoa(fx.coA))
+
+		// B 的使用者:角色／token_version／狀態皆不得被動到(AssignRole 會改角色、ForceLogout 會 +1)。
+		assertColumnValue(t, admin, "B 的使用者角色", "users", "role", fx.actorB, "company_admin")
+		assertColumnValue(t, admin, "B 的 token_version", "users", "token_version", fx.actorB, "0")
+		assertColumnValue(t, admin, "B 的使用者狀態", "users", "status", fx.actorB, "active")
+	})
+
 	t.Run("masters", func(t *testing.T) {
 		masters := []struct {
-			table        string
-			list         func(ctx context.Context) ([]string, error)
-			update, drop func(ctx context.Context) error
+			table                 string
+			list                  func(ctx context.Context) ([]string, error)
+			update, drop, restore func(ctx context.Context) error
 		}{
 			{"warehouses",
 				func(ctx context.Context) ([]string, error) {
@@ -330,6 +450,10 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 				},
 				func(ctx context.Context) error {
 					_, err := cl.warehouses.DeleteWarehouse(ctx, connect.NewRequest(&mastersv1.DeleteWarehouseRequest{Id: fx.masters["warehouses"][1]}))
+					return err
+				},
+				func(ctx context.Context) error {
+					_, err := cl.warehouses.RestoreWarehouse(ctx, connect.NewRequest(&mastersv1.RestoreWarehouseRequest{Id: fx.masters["warehouses"][1]}))
 					return err
 				}},
 			{"routes",
@@ -352,6 +476,10 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 				func(ctx context.Context) error {
 					_, err := cl.routes.DeleteRoute(ctx, connect.NewRequest(&mastersv1.DeleteRouteRequest{Id: fx.masters["routes"][1]}))
 					return err
+				},
+				func(ctx context.Context) error {
+					_, err := cl.routes.RestoreRoute(ctx, connect.NewRequest(&mastersv1.RestoreRouteRequest{Id: fx.masters["routes"][1]}))
+					return err
 				}},
 			{"processing_specs",
 				func(ctx context.Context) ([]string, error) {
@@ -372,6 +500,10 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 				},
 				func(ctx context.Context) error {
 					_, err := cl.specs.DeleteProcessingSpec(ctx, connect.NewRequest(&mastersv1.DeleteProcessingSpecRequest{Id: fx.masters["processing_specs"][1]}))
+					return err
+				},
+				func(ctx context.Context) error {
+					_, err := cl.specs.RestoreProcessingSpec(ctx, connect.NewRequest(&mastersv1.RestoreProcessingSpecRequest{Id: fx.masters["processing_specs"][1]}))
 					return err
 				}},
 			{"product_categories",
@@ -394,6 +526,10 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 				func(ctx context.Context) error {
 					_, err := cl.cats.DeleteProductCategory(ctx, connect.NewRequest(&mastersv1.DeleteProductCategoryRequest{Id: fx.masters["product_categories"][1]}))
 					return err
+				},
+				func(ctx context.Context) error {
+					_, err := cl.cats.RestoreProductCategory(ctx, connect.NewRequest(&mastersv1.RestoreProductCategoryRequest{Id: fx.masters["product_categories"][1]}))
+					return err
 				}},
 		}
 		for _, m := range masters {
@@ -402,9 +538,11 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 				if err != nil {
 					t.Fatalf("List %s: %v", m.table, err)
 				}
-				assertIDsOnly(t, "List "+m.table, ids, fx.masters[m.table][0])
+				assertSetEquals(t, "List "+m.table, ids, fx.masters[m.table][0])
 				assertCrossTenantDenied(t, admin, "Update "+m.table, func() error { return m.update(ctx) })
 				assertCrossTenantDenied(t, admin, "Delete "+m.table, func() error { return m.drop(ctx) })
+				// Restore 與 Delete 同型:軟刪除路徑不得成為「以 id 復原他家的列」的後門。
+				assertCrossTenantDenied(t, admin, "Restore "+m.table, func() error { return m.restore(ctx) })
 				assertColumnValue(t, admin, "B 的 "+m.table+" 名稱", m.table, "name", mustItoa(t, fx.masters[m.table][1]), "B 列")
 				assertNullColumn(t, admin, "B 的 "+m.table+" 未被軟刪除", m.table, "deleted_at", mustItoa(t, fx.masters[m.table][1]))
 			})
@@ -419,8 +557,8 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 		for _, p := range res.Msg.GetProducts() {
 			ids = append(ids, p.GetId())
 		}
-		assertIDsOnly(t, "ListProducts", ids, tenantScopedIDs(t, admin, "products", fx.coA, fx.deptA)...)
-		if !containsID(ids, itoa(fx.productA)) {
+		assertSetEquals(t, "ListProducts", ids, tenantScopedIDs(t, admin, "products", fx.coA, fx.deptA)...)
+		if !containsValue(ids, itoa(fx.productA)) {
 			t.Fatalf("A 自家的商品必須看得到(id=%d),got %v", fx.productA, ids)
 		}
 
@@ -440,6 +578,10 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 			_, err := cl.products.DeleteProduct(ctx, connect.NewRequest(&productsv1.DeleteProductRequest{Id: itoa(fx.productB)}))
 			return err
 		})
+		assertCrossTenantDenied(t, admin, "RestoreProduct(他公司)", func() error {
+			_, err := cl.products.RestoreProduct(ctx, connect.NewRequest(&productsv1.RestoreProductRequest{Id: itoa(fx.productB)}))
+			return err
+		})
 		assertColumnValue(t, admin, "B 的商品名稱", "products", "name", fx.productB, "商品")
 		assertNullColumn(t, admin, "B 的商品未被軟刪除", "products", "deleted_at", fx.productB)
 	})
@@ -456,10 +598,10 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 		for _, m := range res.Msg.GetItems() {
 			ids = append(ids, m.GetId())
 		}
-		assertIDsOnly(t, "ListMetadicts", ids, adminIDs(t, admin,
+		assertSetEquals(t, "ListMetadicts", ids, adminIDs(t, admin,
 			`SELECT id FROM metadicts WHERE type = 'unit' AND deleted_at IS NULL
 			   AND (department_id IS NULL OR department_id = $1)`, fx.deptA)...)
-		if !containsID(ids, itoa(fx.metadictA)) {
+		if !containsValue(ids, itoa(fx.metadictA)) {
 			t.Fatalf("A 部門自家的字典擴充列必須看得到(id=%d),got %v", fx.metadictA, ids)
 		}
 
@@ -483,6 +625,24 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 		assertNullColumn(t, admin, "B 的字典未被軟刪除", "metadicts", "deleted_at", fx.metadictB)
 	})
 
+	t.Run("metadict_list_options", func(t *testing.T) {
+		// 表單下拉選項:super 身分只回系統預設列(服務層已限縮,RLS 再擋一次);斷言集合恰為
+		// 真值,且不得出現 B 部門的私有值。
+		res := crossCall(t, "ListOptions", func(ctx context.Context) (*connect.Response[metadictv1.ListOptionsResponse], error) {
+			return cl.metadicts.ListOptions(ctx, connect.NewRequest(&metadictv1.ListOptionsRequest{Type: "unit"}))
+		})
+		codes := make([]string, 0, len(res.Msg.GetOptions()))
+		for _, o := range res.Msg.GetOptions() {
+			codes = append(codes, o.GetCode())
+		}
+		assertSetEquals(t, "ListOptions", codes, adminTexts(t, admin,
+			`SELECT code FROM metadicts WHERE type = 'unit' AND is_active AND deleted_at IS NULL
+			   AND department_id IS NULL`)...)
+		if containsValue(codes, "XT-B") {
+			t.Fatalf("下拉選項洩漏了 B 部門的字典值(XT-B)")
+		}
+	})
+
 	t.Run("audits", func(t *testing.T) {
 		// 稽核清單在 super 身分下**沒有**服務層的 company 過濾(company_admin 才有)→ 純 RLS 偵測器。
 		res := crossCall(t, "ListAuditLogs", func(ctx context.Context) (*connect.Response[auditv1.ListAuditLogsResponse], error) {
@@ -493,11 +653,11 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 			ids = append(ids, a.GetId())
 		}
 		// 真值包含本探針正向對照寫下的稽核(A 客戶的 update)。
-		assertIDsOnly(t, "ListAuditLogs", ids, adminIDs(t, admin, `SELECT id FROM audit_logs WHERE company_id = $1`, fx.coA)...)
-		if !containsID(ids, itoa(fx.auditA)) {
+		assertSetEquals(t, "ListAuditLogs", ids, adminIDs(t, admin, `SELECT id FROM audit_logs WHERE company_id = $1`, fx.coA)...)
+		if !containsValue(ids, itoa(fx.auditA)) {
 			t.Fatalf("A 自家的稽核列必須看得到(id=%d),got %v", fx.auditA, ids)
 		}
-		if containsID(ids, itoa(fx.auditB)) {
+		if containsValue(ids, itoa(fx.auditB)) {
 			t.Fatalf("稽核清單洩漏了 B 公司的稽核列(id=%d)", fx.auditB)
 		}
 	})
@@ -613,19 +773,23 @@ func assertCrossTenantDenied(t *testing.T, admin *sql.DB, endpoint string, attem
 	}
 }
 
-// assertIDsOnly 斷言端點回傳的 id 集合與期望集合完全相同(少了自家的列或多出他家的列都要紅)。
-func assertIDsOnly(t *testing.T, endpoint string, got []string, want ...string) {
+// assertSetEquals 斷言端點回傳的識別值集合與期望集合完全相同(少了自家的列或多出他家的列都要紅)。
+func assertSetEquals(t *testing.T, endpoint string, got []string, want ...string) {
 	t.Helper()
+	if len(want) == 0 {
+		// 期望集合算成空集合時,任何「剛好也回空」的實作都會假通過 → 這種斷言沒有偵測力,直接紅。
+		t.Fatalf("%s:真值集合為空,本斷言不成立(修正真值查詢或 fixture)", endpoint)
+	}
 	gotSet := map[string]bool{}
 	for _, id := range got {
 		if gotSet[id] {
-			t.Errorf("%s:重複的 id %s", endpoint, id)
+			t.Errorf("%s:重複的值 %s", endpoint, id)
 		}
 		gotSet[id] = true
 	}
 	for _, id := range want {
 		if !gotSet[id] {
-			t.Errorf("%s:缺少本租戶的列 id=%s(實際 %v)", endpoint, id, got)
+			t.Errorf("%s:缺少期望值 %s(實際 %v)", endpoint, id, got)
 		}
 	}
 	if len(gotSet) != len(want) {
@@ -654,6 +818,28 @@ func adminIDs(t *testing.T, admin *sql.DB, query string, args ...any) []string {
 		t.Fatalf("讀真值: %v", err)
 	}
 	return ids
+}
+
+// adminTexts 以 admin(superuser)取單一文字欄的真值集合(供非 id 欄位:字典 code、角色 code 等)。
+func adminTexts(t *testing.T, admin *sql.DB, query string, args ...any) []string {
+	t.Helper()
+	rows, err := admin.Query(query, args...)
+	if err != nil {
+		t.Fatalf("取文字真值(%s): %v", query, err)
+	}
+	defer func() { _ = rows.Close() }()
+	var out []string
+	for rows.Next() {
+		var v string
+		if err := rows.Scan(&v); err != nil {
+			t.Fatalf("掃描文字真值: %v", err)
+		}
+		out = append(out, v)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("讀文字真值: %v", err)
+	}
+	return out
 }
 
 // tenantScopedIDs 取「本部門 scope 可見」的租戶表列 id:公司相符且(公司層列或本部門列)。
@@ -689,10 +875,10 @@ func assertNullColumn(t *testing.T, admin *sql.DB, what, table, column string, i
 	}
 }
 
-// containsID 判斷 id 是否在集合中。
-func containsID(ids []string, want string) bool {
-	for _, id := range ids {
-		if id == want {
+// containsValue 判斷值是否在集合中(供 id／code 等識別值共用)。
+func containsValue(values []string, want string) bool {
+	for _, v := range values {
+		if v == want {
 			return true
 		}
 	}
