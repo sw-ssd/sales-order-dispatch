@@ -1,0 +1,393 @@
+package postgres
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"errors"
+	"strconv"
+	"strings"
+
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
+)
+
+// Admin 為平台營運工具(PlatformAdminService)的存取層:跨租戶投影查詢 ＋ 平台稽核寫入。
+// 一律 admin(owner)連線:platform schema 對業務角色 app_rw 零權限(00029/S9)。
+//
+// 為什麼不併進 Store:
+//   - Store 服務權益**判定**(方案／權益／訂閱／例外,供四個業務服務的配額守衛),本型別
+//     服務**顯示與稽核**(operator console);
+//   - 更硬的理由是同名不同義:Store.PlanEntitlements 只回權益,本型別還要一併帶出完整功能
+//     清單(權益矩陣要顯示未設定的格),同一型別上放不下兩個同名方法。
+//
+// 投影查詢會讀 companies(業務表):spec §6.4 明訂平台方跨租戶視圖走「admin 連線 ＋ 投影查詢」,
+// 不開 super 的 data_scope=all 那條路。本檔不 JOIN 寫入、不碰 ent、也沒有跨域 FK。
+type Admin struct{ db *sql.DB }
+
+// NewAdmin 建立 Admin(呼叫端負責 admin DSN;業務連線沒有 platform schema 的權限)。
+func NewAdmin(db *sql.DB) *Admin { return &Admin{db: db} }
+
+// tenantCols 為租戶投影的欄位清單;tenantJoins 為其來源。列表與詳情共用同一份,欄位順序
+// 不會在兩處之間漂移(掃描函式 scanTenant 也是同一份)。
+//
+// 三個刻意的選擇:
+//   - subscriptions 只在 status <> 'cancelled' 才 JOIN:partial unique index 保證一家公司至多
+//     一列未取消訂閱,但同一家公司可以有已取消的歷史列;不濾掉會多出「現實不存在的租戶」;
+//   - current_period_end 取「**已開始**的最後一期」:期別會在到期前 14/7/1 天預先建立(spec §5.4),
+//     取 MAX(period_no) 會把還沒到的下一期算成本期到期日 —— 看起來像客戶已經預繳一期;
+//   - overdue 為「已過期未付的 open 期別」(spec §5.4 的待收款定義)。本查詢只看 platform 表,
+//     不碰業務表的帳務欄位。
+const tenantCols = `SELECT c.id, c.name, COALESCE(p.code, ''), COALESCE(p.name, ''),
+	       COALESCE(s.status, 'none'), COALESCE(s.seat_count, 0),
+	       (SELECT pp.period_end
+	          FROM platform.subscription_periods pp
+	         WHERE pp.subscription_id = s.id AND pp.period_start <= now()
+	         ORDER BY pp.period_no DESC LIMIT 1),
+	       EXISTS (SELECT 1 FROM platform.subscription_periods op
+	                WHERE op.subscription_id = s.id AND op.status = 'open' AND op.period_end < now())`
+
+const tenantJoins = `
+	  FROM companies c
+	  LEFT JOIN platform.subscriptions s ON s.company_id = c.id AND s.status <> 'cancelled'
+	  LEFT JOIN platform.plans p ON p.id = s.plan_id`
+
+// tenantFilter 為列表與計數共用的篩選($1 = keyword 原文判斷空、$2 = LIKE 樣式、$3 = 訂閱狀態)。
+//
+// keyword 一律先 trim 再由服務層傳入:前後空白的 keyword 不得變成「篩掉全部」的樣式 %  %。
+const tenantFilter = `
+	 WHERE c.deleted_at IS NULL
+	   AND ($1 = '' OR c.name ILIKE $2 OR c.identifier ILIKE $2)
+	   AND ($3 = '' OR COALESCE(s.status, 'none') = $3)`
+
+// ListTenants 分頁列出租戶(含未訂閱者),可依 keyword(公司名稱／識別碼模糊)與訂閱狀態篩選,
+// 回傳符合篩選的總數(分頁用)。
+//
+// page／pageSize 由服務層正規化後傳入(page ≥ 1、1 ≤ pageSize ≤ maxPageSize):上下限只留在
+// 服務層一處,免得兩個地方各有一套(改了一邊就會出現「第 0 頁」這種查詢)。
+func (s *Admin) ListTenants(ctx context.Context, keyword, status string, page, pageSize int32) ([]store.TenantRow, int, error) {
+	pattern := likeContains(keyword)
+	var total int
+	if err := s.db.QueryRowContext(ctx, `SELECT count(*)`+tenantJoins+tenantFilter,
+		keyword, pattern, status).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	rows, err := s.db.QueryContext(ctx, tenantCols+tenantJoins+tenantFilter+`
+	 ORDER BY c.id
+	 LIMIT $4 OFFSET $5`, keyword, pattern, status, pageSize, (page-1)*pageSize)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	out := make([]store.TenantRow, 0, pageSize)
+	for rows.Next() {
+		row, err := scanTenant(rows)
+		if err != nil {
+			return nil, 0, err
+		}
+		out = append(out, row)
+	}
+	return out, total, rows.Err()
+}
+
+// GetTenant 取單一租戶的概況與其未撤銷的例外;公司不存在(或已軟刪除)回 store.ErrNotFound。
+//
+// companyID 為 bigint 的文字形(proto 是 string):服務層已驗證格式,這裡的 ParseInt 失敗
+// 屬程式錯誤(回原錯誤,SYS-9000),不是使用者輸入問題。
+func (s *Admin) GetTenant(ctx context.Context, companyID string) (*store.TenantRow, []store.TenantOverrideRow, error) {
+	id, err := strconv.ParseInt(strings.TrimSpace(companyID), 10, 64)
+	if err != nil {
+		return nil, nil, err
+	}
+	row := s.db.QueryRowContext(ctx, tenantCols+tenantJoins+`
+	 WHERE c.id = $1 AND c.deleted_at IS NULL`, id)
+	tenant, err := scanTenant(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil, store.ErrNotFound
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+	overrides, err := s.tenantOverrides(ctx, id)
+	if err != nil {
+		return nil, nil, err
+	}
+	return &tenant, overrides, nil
+}
+
+// tenantOverrides 取某公司未撤銷的例外(已到期者照樣回傳;到期與否由判定層／UI 判斷)。
+func (s *Admin) tenantOverrides(ctx context.Context, companyID int64) ([]store.TenantOverrideRow, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, feature_code, enabled, limit_value, reason, owner, expires_at
+		  FROM platform.tenant_overrides
+		 WHERE company_id = $1 AND revoked_at IS NULL
+		 ORDER BY feature_code`, companyID)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var out []store.TenantOverrideRow
+	for rows.Next() {
+		var (
+			id      int64
+			row     store.TenantOverrideRow
+			enabled sql.NullBool
+			limit   sql.NullInt64
+			expires sql.NullTime
+		)
+		if err := rows.Scan(&id, &row.FeatureCode, &enabled, &limit, &row.Reason, &row.Owner, &expires); err != nil {
+			return nil, err
+		}
+		row.ID = strconv.FormatInt(id, 10)
+		if enabled.Valid {
+			v := enabled.Bool
+			row.Enabled = &v
+		}
+		if limit.Valid {
+			v := limit.Int64
+			row.Limit = &v
+		}
+		if expires.Valid {
+			v := expires.Time
+			row.ExpiresAt = &v
+		}
+		out = append(out, row)
+	}
+	return out, rows.Err()
+}
+
+// ListPlans 回傳全部方案(含已歸檔)與各計費週期的現行價目,依 sort_order／id 排序。
+//
+// 現行價目在 SQL 端以 DISTINCT ON 取每週期 effective_from 最新者:調價後 plan_prices 只增不減,
+// 在 Go 端分組會讓「哪一筆才是現行價」變成散在各處的判斷。
+func (s *Admin) ListPlans(ctx context.Context) ([]store.PlanRow, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT p.id, p.code, p.name, p.status, p.sort_order,
+		       pr.billing_cycle, pr.base_price, pr.seat_price, pr.currency, pr.effective_from
+		  FROM platform.plans p
+		  LEFT JOIN LATERAL (
+		        SELECT DISTINCT ON (billing_cycle)
+		               billing_cycle,
+		               base_price::text AS base_price,
+		               seat_price::text AS seat_price,
+		               currency, effective_from
+		          FROM platform.plan_prices
+		         WHERE plan_id = p.id
+		         ORDER BY billing_cycle, effective_from DESC
+		       ) pr ON true
+		 ORDER BY p.sort_order, p.id, pr.billing_cycle`)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var out []store.PlanRow
+	for rows.Next() {
+		var (
+			id        int64
+			plan      store.PlanRow
+			sortOrder int32
+			cycle     sql.NullString
+			base      sql.NullString
+			seat      sql.NullString
+			currency  sql.NullString
+			effective sql.NullTime
+		)
+		if err := rows.Scan(&id, &plan.Code, &plan.Name, &plan.Status, &sortOrder,
+			&cycle, &base, &seat, &currency, &effective); err != nil {
+			return nil, err
+		}
+		plan.ID = strconv.FormatInt(id, 10)
+		plan.SortOrder = sortOrder
+		// 同一方案的多列(每個計費週期一列)在 SQL 端相鄰:以 id 分組即可,不需要 map
+		// (map 會打亂 ORDER BY 建立的順序,而價目的順序是 UI 的顯示順序)。
+		if n := len(out); n > 0 && out[n-1].ID == plan.ID {
+			out[n-1].Prices = append(out[n-1].Prices, planPriceRow(cycle, base, seat, currency, effective))
+			continue
+		}
+		if cycle.Valid {
+			plan.Prices = []store.PlanPriceRow{planPriceRow(cycle, base, seat, currency, effective)}
+		}
+		out = append(out, plan)
+	}
+	return out, rows.Err()
+}
+
+// planPriceRow 把一個 LEFT JOIN LATERAL 的價目欄位轉為 DTO(全部欄位都可能為 NULL:方案沒有價目)。
+func planPriceRow(cycle, base, seat, currency sql.NullString, effective sql.NullTime) store.PlanPriceRow {
+	return store.PlanPriceRow{
+		BillingCycle: cycle.String, BasePrice: base.String, SeatPrice: seat.String,
+		Currency: currency.String, EffectiveFrom: effective.Time,
+	}
+}
+
+// PlanEntitlements 回傳某方案(以 code 指定)的權益 ＋ **完整**功能清單(權益矩陣要顯示未設定
+// 的格,故清單不可只回有權益的項目)。查無此方案回 store.ErrNotFound —— 「方案沒有權益」與
+// 「方案不存在」必須分得開,否則 console 會把打錯的 code 顯示成空矩陣。
+func (s *Admin) PlanEntitlements(ctx context.Context, planCode string) ([]store.Entitlement, []store.Feature, error) {
+	var planID int64
+	err := s.db.QueryRowContext(ctx, `SELECT id FROM platform.plans WHERE code = $1`, planCode).Scan(&planID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil, store.ErrNotFound
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+
+	entRows, err := s.db.QueryContext(ctx, `
+		SELECT feature_code, enabled, limit_value
+		  FROM platform.plan_entitlements
+		 WHERE plan_id = $1
+		 ORDER BY feature_code`, planID)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer func() { _ = entRows.Close() }()
+
+	var ents []store.Entitlement
+	for entRows.Next() {
+		var (
+			e     store.Entitlement
+			limit sql.NullInt64
+		)
+		if err := entRows.Scan(&e.FeatureCode, &e.Enabled, &limit); err != nil {
+			return nil, nil, err
+		}
+		if limit.Valid {
+			v := limit.Int64
+			e.Limit = &v
+		}
+		ents = append(ents, e)
+	}
+	if err := entRows.Err(); err != nil {
+		return nil, nil, err
+	}
+
+	featureRows, err := s.db.QueryContext(ctx, `
+		SELECT code, type, unit, description
+		  FROM platform.features
+		 ORDER BY code`)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer func() { _ = featureRows.Close() }()
+
+	var features []store.Feature
+	for featureRows.Next() {
+		var f store.Feature
+		if err := featureRows.Scan(&f.Code, &f.Type, &f.Unit, &f.Description); err != nil {
+			return nil, nil, err
+		}
+		features = append(features, f)
+	}
+	return ents, features, featureRows.Err()
+}
+
+// ListPlatformAudit 分頁列出平台稽核(新到舊),可依 target_type／target_id 篩選,回傳符合
+// 篩選的總數。
+//
+// 排序為 created_at DESC, id DESC:created_at 同值(同一批寫入)時仍要有**穩定**順序,
+// 否則翻頁會漏掉或重複列。
+func (s *Admin) ListPlatformAudit(ctx context.Context, targetType, targetID string, page, pageSize int32) ([]store.PlatformAuditRow, int, error) {
+	const filter = `
+	 WHERE ($1 = '' OR a.target_type = $1)
+	   AND ($2 = '' OR a.target_id = $2)`
+
+	var total int
+	if err := s.db.QueryRowContext(ctx, `SELECT count(*) FROM platform.audit_logs a`+filter,
+		targetType, targetID).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT a.id, o.email, a.action, a.target_type, a.target_id, a.reason, a.created_at
+		  FROM platform.audit_logs a
+		  JOIN platform.operators o ON o.id = a.operator_id`+filter+`
+		 ORDER BY a.created_at DESC, a.id DESC
+		 LIMIT $3 OFFSET $4`, targetType, targetID, pageSize, (page-1)*pageSize)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	out := make([]store.PlatformAuditRow, 0, pageSize)
+	for rows.Next() {
+		var (
+			id  int64
+			row store.PlatformAuditRow
+		)
+		if err := rows.Scan(&id, &row.OperatorEmail, &row.Action, &row.TargetType, &row.TargetID,
+			&row.Reason, &row.CreatedAt); err != nil {
+			return nil, 0, err
+		}
+		row.ID = strconv.FormatInt(id, 10)
+		out = append(out, row)
+	}
+	return out, total, rows.Err()
+}
+
+// RecordAudit 寫入平台稽核(S9:actor 為 operator_id,不 FK 租戶 users —— 平台操作沒有租戶身分)。
+//
+// before／after 為 nil 時寫 SQL NULL,不是 JSON 的 null:稽核上「沒有這個資訊」與「值就是
+// null」是兩件事,而 json.Marshal(nil map) 會得到後者。
+func (s *Admin) RecordAudit(ctx context.Context, operatorID int64, action, targetType, targetID, reason string,
+	before, after map[string]any) error {
+	b, err := jsonbParam(before)
+	if err != nil {
+		return err
+	}
+	a, err := jsonbParam(after)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(ctx, `
+		INSERT INTO platform.audit_logs (operator_id, action, target_type, target_id, reason, before, after)
+		VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb)`,
+		operatorID, action, targetType, targetID, reason, b, a)
+	return err
+}
+
+// scanTenant 讀取 tenantCols 的一列(*sql.Row 與 *sql.Rows 共用)。
+func scanTenant(sc rowScanner) (store.TenantRow, error) {
+	var (
+		id        int64
+		row       store.TenantRow
+		periodEnd sql.NullTime
+	)
+	if err := sc.Scan(&id, &row.CompanyName, &row.PlanCode, &row.PlanName, &row.Status,
+		&row.SeatCount, &periodEnd, &row.Overdue); err != nil {
+		return store.TenantRow{}, err
+	}
+	row.CompanyID = strconv.FormatInt(id, 10)
+	if periodEnd.Valid {
+		v := periodEnd.Time
+		row.CurrentPeriodEnd = &v
+	}
+	return row, nil
+}
+
+// rowScanner 為 *sql.Row 與 *sql.Rows 的共用面(兩者的 Scan 形狀相同)。
+type rowScanner interface {
+	Scan(dest ...any) error
+}
+
+// likeContains 把使用者輸入轉為 ILIKE 的「包含」樣式,並跳脫 LIKE 的萬用字元。
+//
+// 為什麼要跳脫:keyword 打 "%" 會變成「符合全部」,打 "_" 會變成「任一字元」—— 使用者以為在
+// 搜一個字面字元,卻得到另一種結果。跳脫字元在 PG 的 ILIKE 預設是反斜線。
+func likeContains(keyword string) string {
+	r := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+	return "%" + r.Replace(keyword) + "%"
+}
+
+// jsonbParam 把 JSON 物件轉為可綁進 jsonb 欄位的參數(nil → SQL NULL)。
+func jsonbParam(m map[string]any) (any, error) {
+	if m == nil {
+		return nil, nil
+	}
+	raw, err := json.Marshal(m)
+	if err != nil {
+		return nil, err
+	}
+	return string(raw), nil
+}
