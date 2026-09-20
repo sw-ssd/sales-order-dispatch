@@ -2517,6 +2517,36 @@ type Params struct {
 	EventBatch int
 }
 
+// LoadParams 由 platform.settings 讀取排程參數（key：grace_days／lead_days）。
+// 缺席或值不合理一律回錯誤 —— **不得默默用預設值**：那會讓「忘記 seed」變成
+// 無聲的錯誤寬限期（帳務參數的預設值不能是猜的）。
+func LoadParams(ctx context.Context, st store.BillingStore) (Params, error) {
+	parse := func(key string) (int, error) {
+		raw, err := st.Setting(ctx, key)
+		if err != nil {
+			return 0, fmt.Errorf("缺少設定 %s: %w", key, err)
+		}
+		n, err := strconv.Atoi(strings.TrimSpace(raw))
+		if err != nil {
+			return 0, fmt.Errorf("設定 %s 不是整數: %q", key, raw)
+		}
+		if n < 0 || n > 365 {
+			return 0, fmt.Errorf("設定 %s 的值不合理（應為 0..365 天）: %d", key, n)
+		}
+		return n, nil
+	}
+	var p Params
+	var err error
+	if p.GraceDays, err = parse("grace_days"); err != nil {
+		return Params{}, err
+	}
+	if p.LeadDays, err = parse("lead_days"); err != nil {
+		return Params{}, err
+	}
+	p.EventBatch = 200 // 每趟派送上限；非營運參數，留在程式碼
+	return p, nil
+}
+
 type Summary struct {
 	PastDue          int `json:"past_due"`
 	Suspended        int `json:"suspended"`
@@ -2631,19 +2661,30 @@ func main() {
 		Consumer: consumer.New(st, setter, systemActor),
 		Store:    st,
 	}
-	summary, err := platformcron.RunOnce(context.Background(), deps, now,
-		platformcron.Params{GraceDays: 7, LeadDays: 14, EventBatch: 200})
+	// 參數一律來自 platform.settings（可於營運工具調整；首次由 seed 以 env 預設值寫入）。
+	// 不硬編在程式碼裡：寬限天數與提前天數是營運參數，會隨客戶與季節調整。
+	params, err := platformcron.LoadParams(context.Background(), st)
+	if err != nil {
+		log.Fatalf("讀取排程參數失敗: %v\n"+
+			"修復：執行 `task seed` 建立預設值（grace_days／lead_days／trial_days）。", err)
+	}
+
+	summary, err := platformcron.RunOnce(context.Background(), deps, now, params)
 	if err != nil {
 		log.Fatalf("排程執行失敗: %v", err)
 	}
-	raw, _ := json.Marshal(summary)
+	// 摘要帶 finished_at：缺席偵測以「最後一次摘要的時間」判斷排程是否還在跑（見 Step 4）。
+	raw, _ := json.Marshal(struct {
+		platformcron.Summary
+		FinishedAt string `json:"finished_at"`
+	}{Summary: summary, FinishedAt: time.Now().UTC().Format(time.RFC3339)})
 	log.Printf("platform-cron 完成（now=%s）: %s", now.Format(time.RFC3339), raw)
 }
 ```
 
 （`services.NewCompanyStatusSetter(db)` 為 Task 1 `SetCompanyStatus` 的介面轉接（實作 `consumer.CompanyStatusSetter`）；`database.OpenEntForCron` 沿用既有 `database.OpenEnt`，不需新函式——實作時直接呼叫 `database.OpenEnt`。）
 
-- [ ] **Step 4: Taskfile 任務**
+- [ ] **Step 4: 執行環境（compose cron）＋ Taskfile ＋最小告警**
 
 ```yaml
   platform:cron:
@@ -2652,6 +2693,69 @@ func main() {
     cmds:
       - go run ./cmd/platform-cron {{.CLI_ARGS}}
 ```
+
+**排程不能只靠人工執行**（排序文件 P1-5：沒有部署就沒有排程，逾期凍結等於不會發生）。`docker-compose.dev.yml` 追加一個獨立的 cron 容器：
+
+```yaml
+  # 平台排程：每日執行一趟 platform-cron（k8s CronJob 於 D19 接手）。
+  # 以 profiles 隔離：不隨 `task infra:start` 起（排程是常駐服務，不該混進每次開發的基礎設施）。
+  platform-cron:
+    profiles: ["cron"]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile          # 沿用既有 backend image；若無則以 golang image 編譯
+    command: ["sh", "-c", "while true; do /app/platform-cron; sleep 86400; done"]
+    environment:
+      DATABASE_URL: postgres://app_rw:app_rw@postgres:5432/salesorder?sslmode=disable
+      DATABASE_ADMIN_URL: postgres://postgres:postgres@postgres:5432/salesorder?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+```
+
+```yaml
+  platform:cron:up:
+    desc: 啟動排程容器（profiles=cron）
+    cmd: DOCKER_HOST="unix://{{.PODMAN_SOCK}}" docker-compose -f docker-compose.dev.yml --profile cron up -d platform-cron
+
+  platform:cron:check:
+    desc: 缺席偵測——檢查排程是否在容許間隔內執行過（正式環境由告警系統接手）
+    cmds:
+      - ./scripts/check_cron_freshness.sh 26
+```
+
+**最小告警（P1-6）**：無聲故障是最貴的故障——排程沒跑、凍結沒生效，帳就直接漏。兩層：
+
+1. **每次執行留摘要**：`cmd/platform-cron` 的摘要 JSON 追加 `finished_at`（於 `main` 印出時填入 `time.Now().UTC()`；**不進 `RunOnce` 回傳值**，避免排程邏輯依賴時鐘），並把 stdout 導到固定 log。
+2. **缺席偵測**：以「最近一次摘要的時間」判斷，而不是看 exit code（沒跑與跑失敗是兩件事）。
+
+```bash
+#!/usr/bin/env bash
+# check_cron_freshness.sh：檢查 platform-cron 是否在容許間隔內執行過。
+# 判斷依據是 log 中最後一筆摘要的 finished_at，而非 exit code —— 排程最常見的失效是
+# 「根本沒被執行」（容器沒起、cron 沒設），不是「執行失敗」。
+set -euo pipefail
+max_hours="${1:-26}"
+log="${PLATFORM_CRON_LOG:-/var/log/platform-cron.log}"
+
+if [[ ! -f "$log" ]]; then
+  echo "ALERT: 找不到排程 log（$log）——排程可能從未執行" >&2
+  exit 1
+fi
+last=$(grep -o '"finished_at":"[^"]*"' "$log" | tail -1 | cut -d'"' -f4 || true)
+if [[ -z "$last" ]]; then
+  echo "ALERT: 排程 log 沒有摘要紀錄" >&2
+  exit 1
+fi
+age_h=$(( ( $(date -u +%s) - $(date -u -j -f "%Y-%m-%dT%H:%M:%SZ" "$last" +%s 2>/dev/null || date -u -d "$last" +%s) ) / 3600 ))
+if (( age_h > max_hours )); then
+  echo "ALERT: 排程已 ${age_h} 小時未執行（上限 ${max_hours}）" >&2
+  exit 1
+fi
+echo "OK: 排程最後執行於 ${last}"
+```
+
+（GNU/BSD `date` 的 `-d` 與 `-j -f` 寫法不同：上面的 `||` 已同時涵蓋 macOS 與 Linux；實作時若嫌醜，改用 `python3 -c` 或讓 `platform-cron` 另外寫一個 epoch 秒數的檔——**重點是判斷依據必須是時間，不是 exit code**。）
 
 - [ ] **Step 5: 跑測試**
 
@@ -2897,6 +3001,9 @@ service PlatformAdminService {
   rpc SetSeatCount(SetSeatCountRequest) returns (SetSeatCountResponse);
   rpc ChangePlan(ChangePlanRequest) returns (ChangePlanResponse);
   rpc CancelSubscription(CancelSubscriptionRequest) returns (CancelSubscriptionResponse);
+  // 營運參數（G5/5-6）：試用／寬限／提前天數可由介面調整，cron 讀 settings 而非硬編。
+  rpc GetBillingSettings(GetBillingSettingsRequest) returns (GetBillingSettingsResponse);
+  rpc UpdateBillingSettings(UpdateBillingSettingsRequest) returns (UpdateBillingSettingsResponse);
   rpc SetTenantOverride(SetTenantOverrideRequest) returns (SetTenantOverrideResponse);
   rpc RevokeTenantOverride(RevokeTenantOverrideRequest) returns (RevokeTenantOverrideResponse);
   rpc UpsertPlanPrice(UpsertPlanPriceRequest) returns (UpsertPlanPriceResponse);

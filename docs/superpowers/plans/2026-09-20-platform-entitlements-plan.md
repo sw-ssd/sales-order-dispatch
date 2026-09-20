@@ -114,12 +114,33 @@ package config
 type Platform struct {
 	// OperatorJWTSecret 與租戶 JWTSecret **必須不同**：跨用等於平台工具可被租戶 token 冒充。
 	OperatorJWTSecret string `envconfig:"PLATFORM_JWT_SECRET"`
-	// AllowedEmailDomain 限制 OIDC 登入的 email 網域（例如 example.com）。
-	AllowedEmailDomain string `envconfig:"PLATFORM_ALLOWED_EMAIL_DOMAIN"`
+	// AllowedEmailDomain 限制 OIDC 登入的 email 網域。
+	// 以 email 網域比對（不依賴 Workspace 專屬的 hd claim）→ 相容 Workspace 帳號與
+	// 既有 Google 帳號的已驗證別名兩種情況。
+	AllowedEmailDomain string `envconfig:"PLATFORM_ALLOWED_EMAIL_DOMAIN" default:"sowinsoft.com"`
 	// ConsoleURL 為 OIDC 完成後導回的 console 根網址。
 	ConsoleURL string `envconfig:"PLATFORM_CONSOLE_URL"`
-	// CookieDomain 為 operator session cookie 的 Domain（例如 .example.com）。
+	// CookieDomain 為 operator session cookie 的 Domain（空 = host-only，開發環境用）。
 	CookieDomain string `envconfig:"PLATFORM_COOKIE_DOMAIN"`
+
+	// --- seed 與排程的預設值（上線前請改為真實值；**執行期以 platform.settings 為準**）---
+	// 這些只是「首次建立時寫入 settings」的來源；之後由營運工具調整，重跑 seed 不覆寫。
+	SeedOperatorEmail    string `envconfig:"PLATFORM_SEED_OPERATOR_EMAIL" default:"ssd@sowinsoft.com"`
+	SeedOperatorName     string `envconfig:"PLATFORM_SEED_OPERATOR_NAME" default:"ssd"`
+	SeedSystemActorEmail string `envconfig:"PLATFORM_SEED_SYSTEM_ACTOR_EMAIL" default:"system@sowinsoft.com"`
+	DefaultTrialDays     int    `envconfig:"PLATFORM_DEFAULT_TRIAL_DAYS" default:"14"`
+	DefaultGraceDays     int    `envconfig:"PLATFORM_DEFAULT_GRACE_DAYS" default:"7"`
+	DefaultLeadDays      int    `envconfig:"PLATFORM_DEFAULT_LEAD_DAYS" default:"14"`
+
+	// --- 方案價目的 seed 預設（金額字串，兩位小數）---
+	// **這些是佔位數字**：首次建立 `plan_prices` 時使用，之後由營運工具（UpsertPlanPrice）維護；
+	// 上線前務必改為真實定價。重跑 seed 不覆寫既有價目。
+	SeedPriceFreeBase string `envconfig:"SEED_PRICE_FREE_BASE" default:"0"`
+	SeedPriceFreeSeat string `envconfig:"SEED_PRICE_FREE_SEAT" default:"0"`
+	SeedPriceStdBase  string `envconfig:"SEED_PRICE_STD_BASE" default:"1500"`
+	SeedPriceStdSeat  string `envconfig:"SEED_PRICE_STD_SEAT" default:"150"`
+	SeedPriceProBase  string `envconfig:"SEED_PRICE_PRO_BASE" default:"4500"`
+	SeedPriceProSeat  string `envconfig:"SEED_PRICE_PRO_SEAT" default:"150"`
 }
 
 // Configured 表示必要設定齊備，可掛載平台工具。
@@ -2822,9 +2843,12 @@ var platformPlans = []struct {
 	}},
 }
 
-// SeedPlatform 冪等建立平台基礎資料;operatorEmail 為首位平台操作者,
-// systemActorEmail 為系統排程用的 actor（G5，見下方說明）。
-func SeedPlatform(ctx context.Context, db *sql.DB, operatorEmail, systemActorEmail string) error {
+// SeedPlatform 冪等建立平台基礎資料。**設定一律由 config.Platform 帶入（env 驅動）**，
+// 使「上線前改預設值」不必改程式碼：
+//   - SeedOperatorEmail／SeedSystemActorEmail：首位操作者與系統 actor（G5）
+//   - DefaultTrialDays／DefaultGraceDays／DefaultLeadDays：寫入 platform.settings（可再於營運工具調整）
+//   - SeedPrice{Free,Std,Pro}{Base,Seat}：方案價目的首次預設值（佔位數字，上線前務必改）
+func SeedPlatform(ctx context.Context, db *sql.DB, cfg config.Platform) error {
 	for _, f := range platformFeatures {
 		if _, err := db.ExecContext(ctx, `
 			INSERT INTO platform.features (code, type, unit, description)
@@ -2846,6 +2870,16 @@ func SeedPlatform(ctx context.Context, db *sql.DB, operatorEmail, systemActorEma
 		}
 		for _, cycle := range []string{"monthly", "yearly"} {
 			base, seat := p.BasePrice, p.SeatPrice
+			// 價目預設值由 env 覆寫（SEED_PRICE_*）。下方 INSERT 帶 NOT EXISTS，
+			// 因此重跑 seed **不會覆寫營運已調整的價目**（只補缺的週期）。
+			switch p.Code {
+			case "free":
+				base, seat = cfg.SeedPriceFreeBase, cfg.SeedPriceFreeSeat
+			case "std":
+				base, seat = cfg.SeedPriceStdBase, cfg.SeedPriceStdSeat
+			case "pro":
+				base, seat = cfg.SeedPriceProBase, cfg.SeedPriceProSeat
+			}
 			if cycle == "yearly" { // 年繳 = 月費 × 12 × 0.9（取整到元）
 				base = fmt.Sprintf("%.0f", mustFloat(base)*12*0.9)
 				seat = fmt.Sprintf("%.0f", mustFloat(seat)*12*0.9)
@@ -2878,8 +2912,8 @@ func SeedPlatform(ctx context.Context, db *sql.DB, operatorEmail, systemActorEma
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO platform.operators (email, name, role)
-		VALUES ($1, $1, 'admin')
-		ON CONFLICT (email) DO NOTHING`, operatorEmail); err != nil {
+		VALUES ($1, $2, 'admin')
+		ON CONFLICT (email) DO NOTHING`, cfg.SeedOperatorEmail, cfg.SeedOperatorName); err != nil {
 		return fmt.Errorf("seed operator: %w", err)
 	}
 
@@ -2920,7 +2954,7 @@ func SeedPlatform(ctx context.Context, db *sql.DB, operatorEmail, systemActorEma
 		SELECT id FROM ins
 		UNION ALL
 		SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL
-		LIMIT 1`, systemActorEmail, platformCompanyID).Scan(&systemUserID); err != nil {
+		LIMIT 1`, cfg.SeedSystemActorEmail, platformCompanyID).Scan(&systemUserID); err != nil {
 		return fmt.Errorf("seed 系統使用者: %w", err)
 	}
 
@@ -2929,6 +2963,23 @@ func SeedPlatform(ctx context.Context, db *sql.DB, operatorEmail, systemActorEma
 		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
 		strconv.FormatInt(systemUserID, 10)); err != nil {
 		return fmt.Errorf("seed system_actor_user_id: %w", err)
+	}
+
+	// 營運參數（試用／寬限／提前天數）：**只補缺、不覆寫** —— 營運調過的值不能被重跑 seed 蓋回去。
+	// 之後由 UpdateBillingSettings（Plan C Task 9）與 console 維護。
+	for _, kv := range []struct {
+		key   string
+		value int
+	}{
+		{"trial_days", cfg.DefaultTrialDays},
+		{"grace_days", cfg.DefaultGraceDays},
+		{"lead_days", cfg.DefaultLeadDays},
+	} {
+		if _, err := db.ExecContext(ctx, `
+			INSERT INTO platform.settings (key, value) VALUES ($1, $2)
+			ON CONFLICT (key) DO NOTHING`, kv.key, strconv.Itoa(kv.value)); err != nil {
+			return fmt.Errorf("seed setting %s: %w", kv.key, err)
+		}
 	}
 	return nil
 }
@@ -2942,6 +2993,27 @@ func mustFloat(s string) float64 {
 }
 ```
 
+**seeds 的預設值由 env 提供、UI 可再變更**（G5 的系統 actor 一併在此定案）：
+
+| env | 預設 | 用途 |
+|---|---|---|
+| `PLATFORM_ALLOWED_EMAIL_DOMAIN` | `sowinsoft.com` | 平台工具登入網域（email 網域比對，相容 Workspace 帳號與已驗證的 Google 別名） |
+| `PLATFORM_SEED_OPERATOR_EMAIL` | `ssd@sowinsoft.com` | 首位平台操作者 |
+| `PLATFORM_SEED_OPERATOR_NAME` | `ssd` | 顯示名稱 |
+| `PLATFORM_SEED_SYSTEM_ACTOR_EMAIL` | `system@sowinsoft.com` | 系統排程 actor（`password_hash='!'`，不可登入） |
+| `PLATFORM_DEFAULT_TRIAL_DAYS` | `14` | 開通時的試用天數 |
+| `PLATFORM_DEFAULT_GRACE_DAYS` | `7` | 逾期寬限天數 |
+| `PLATFORM_DEFAULT_LEAD_DAYS` | `14` | 提前產生下一期的天數 |
+| `SEED_PRICE_{FREE,STD,PRO}_{BASE,SEAT}` | 見下方佔位值 | 首次建立方案價目時的預設 |
+
+**「可變更」要三個環節一起做到，否則只是 env 換個地方硬編**：
+
+1. `SeedPlatform` 的價目改讀 `SEED_PRICE_*`，且**只作為首次建立的預設**——`plan_prices` 已有值即不覆寫（避免重跑 seed 把營運調過的價格蓋回去）。
+2. 試用／寬限／提前天數寫入 `platform.settings`（key：`trial_days`／`grace_days`／`lead_days`）；**cron 讀 settings 而非硬編**（Plan C Task 7 Step 3）。
+3. 營運工具提供編輯入口：Plan C Task 9 的 `UpdateBillingSettings` RPC ＋ console「方案與價目」頁的設定區塊。
+
+**注意**：`SEED_PRICE_*` 的數字（免費 0／標準 1500＋150／專業 4500＋150）是為了讓計畫可執行而填的**佔位值**，上線前必須換成真實定價；`.env.example` 需標明這點。
+
 - [ ] **Step 4: 接上 `cmd/seed/main.go` 與 `.env.example`**
 
 ```go
@@ -2951,7 +3023,7 @@ func mustFloat(s string) float64 {
 		log.Fatalf("連線 admin 資料庫: %v", err)
 	}
 	defer adminDB.Close()
-	if err := SeedPlatform(ctx, adminDB, cfg.Platform.SeedOperatorEmail); err != nil {
+	if err := SeedPlatform(ctx, adminDB, cfg.Platform); err != nil {
 		log.Fatalf("seed 平台域: %v", err)
 	}
 ```
@@ -2960,12 +3032,27 @@ func mustFloat(s string) float64 {
 
 ```dotenv
 # --- config/platform.go (Platform) ---
-# 平台工具未設定則不掛載；production 由 Init() 要求齊備
-# PLATFORM_JWT_SECRET=（獨立於 JWT_SECRET）
-# PLATFORM_ALLOWED_EMAIL_DOMAIN=example.com
-# PLATFORM_CONSOLE_URL=https://console.example.com
-# PLATFORM_COOKIE_DOMAIN=.example.com
-# PLATFORM_SEED_OPERATOR_EMAIL=ops@example.com
+# 平台工具未設定則不掛載（開發環境可不設）
+PLATFORM_JWT_SECRET=（獨立於 JWT_SECRET，兩者相同則拒絕啟動）
+PLATFORM_ALLOWED_EMAIL_DOMAIN=sowinsoft.com
+PLATFORM_CONSOLE_URL=http://localhost:5173          # 開發；正式為 console 的網址
+# PLATFORM_COOKIE_DOMAIN=.sowinsoft.com             # 正式設；開發留空（host-only cookie）
+
+# --- seed 預設值（上線前請改為真實值；執行期以 platform.settings 為準）---
+PLATFORM_SEED_OPERATOR_EMAIL=ssd@sowinsoft.com
+PLATFORM_SEED_OPERATOR_NAME=ssd
+PLATFORM_SEED_SYSTEM_ACTOR_EMAIL=system@sowinsoft.com
+PLATFORM_DEFAULT_TRIAL_DAYS=14
+PLATFORM_DEFAULT_GRACE_DAYS=7
+PLATFORM_DEFAULT_LEAD_DAYS=14
+
+# --- 方案價目 seed 預設（**佔位數字，上線前務必改為真實定價**）---
+SEED_PRICE_FREE_BASE=0
+SEED_PRICE_FREE_SEAT=0
+SEED_PRICE_STD_BASE=1500
+SEED_PRICE_STD_SEAT=150
+SEED_PRICE_PRO_BASE=4500
+SEED_PRICE_PRO_SEAT=150
 ```
 
 （`SeedOperatorEmail` 需加進 `config.Platform` 並在 Task 1 的測試補一行綁定斷言。）

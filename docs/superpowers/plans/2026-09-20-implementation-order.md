@@ -58,7 +58,9 @@ flowchart LR
 | P0-2 | **修 G1–G5**（③ 的 billing_cycle／日期算術／空交易號冪等／金額驗證；② 的系統 actor seed） | 五個都是「不修就會做出錯的帳或開不了機」，且都在 P1 的檔案內；先修計畫再開工，比開工後回頭改便宜 |
 | P0-3 | **定調 G6／G7**（三個寫入 RPC 與 cancelled 到期行為）並同步 spec | 這兩個會改變 P1 的 RPC 介面；介面定了才好寫測試 |
 | P0-4 | **在 AGENTS.md 寫入 G15**（平台授權只有一層） | 一行慣例，避免 P1 的新路徑漏檢查 |
-| P0-5 | **Plan D T1–T4（錯誤碼骨架）**：`ErrorInfo` proto、registry、`trace_id`、`toConnectError` 改走 registry | **與 P0-1 並行、檔案不重疊**（Plan D 動 proto／handlers／錯誤建構；Plan A 動 DSN／policy／交易邊界）。理由是錯誤碼是**對外契約**：P1 一旦出貨，補碼就是 breaking change；且 P1 的配額錯誤（`PLAT-5001/5002`）必須在 Plan B 開工前可用，否則 B／C 的錯誤建構要重寫一次。T5–T6（首批碼落地與基線守門）可與 P1 交錯進行 |
+| P0-5 | **Plan D T1–T3（錯誤碼骨架）**：`ErrorInfo` proto、registry、`trace_id` | **只有 T1–T3 可與 P0-1 並行**（proto／registry／obs，檔案不重疊）。**T4–T5 必須排在 Plan A 之後**：兩者都改 `company_service.go`（A 改交易取得、D 改 `toConnectError`／`requireScope`）與 `auth_handler.go`（A 加系統範圍包裝、D 改錯誤碼）——同檔並行只會換來 rebase 衝突。T6–T7（基線、文件）不受限 |
+
+**為什麼錯誤碼不能等 P1 之後**：它是**對外契約**，P1 一旦出貨，補碼就是 breaking change；且 P1 的配額錯誤（`PLAT-5001/5002`）必須在 Plan B 開工前可用，否則 B／C 的錯誤建構要重寫一次。
 
 **驗收**：P0-1＋P0-2 為 `task test:integration` 全綠、以 `app_rw` 直連看不到他租戶資料、跨租戶寫入被擋（Plan A 的紅→綠測試）；**P0-5 為** `go test ./internal/errcode/` 全綠、`TestIntegrationErrorInfoReachesClient` 通過（碼與 trace_id 跨網路到得了客戶端）。
 
@@ -70,9 +72,12 @@ flowchart LR
 | P1-2 | **Plan B T7–T12**（platform/v1、operator 認證、唯讀 RPC、投影、seeds） | 與 P1-1 同計畫；seeds 必須含 G5 的系統 actor |
 | P1-3 | **Plan C T1–T7**（狀態入口、money、帳務 store、`RecordPayment`、生命週期、consumer、cron） | 依賴 P1-1／P1-2 的 store 與 seeds |
 | P1-4 | **Plan C 的 G6／G7 三支 RPC ＋ cancelled 到期排程** | 收費能力的一部分（沒有「取消」就無法處理解約） |
+| P1-5 | **排程執行環境**：`docker-compose.dev.yml` 加 cron 容器（每日跑一次 `cmd/platform-cron`；k8s CronJob 待 D19 接手） | **沒有部署就沒有排程**——P1 的「逾期自動凍結」若只靠人工 `task platform:cron`，等於不會發生 |
+| P1-6 | **最小告警**：cron 每日摘要落固定 log ＋「連續 N 天無摘要即告警」（v1 用郵件或 webhook，或最小可用的 log 檢查） | 收費上線後「排程沒跑」「凍結沒生效」是**無聲故障**，直接漏錢；Prometheus 在 P4，但這條不能等 |
+| P1-7 | **帳務備份演練**：`platform` schema 的還原演練**至少一次**（證明救得回 `subscription_periods` 與 `platform.audit_logs`） | D19 的 RTO 4h／RPO 1h 是整體指標、未分辨帳務；這兩個表遺失＝**無法證明收過錢** |
 
-**交付判準（可執行的場景）**：以 CLI/seed 開通一家租戶 → `RecordPayment` 記一筆匯款 → 到期未付自動 `past_due` → 寬限後自動 `suspended`（登入被擋、資料保留）→ 補款自動復原；每一步都有 `platform.audit_logs` 與 `events`。
-**注意**：此時尚無 console UI，靠 `task platform:cron` ＋ 直接呼叫 RPC（可接受：v1 租戶數少）。
+**交付判準（可執行的場景）**：以 CLI/seed 開通一家租戶 → `RecordPayment` 記一筆匯款 → 到期未付自動 `past_due` → 寬限後自動 `suspended`（登入被擋、資料保留）→ 補款自動復原；每一步都有 `platform.audit_logs` 與 `events`。**並確認**：① compose cron 容器已自動執行過至少一次且留下摘要；② 帳務資料還原演練通過（可從備份還原 `subscription_periods` 與平台稽核）。
+**注意**：此時尚無 console UI，靠 CLI ＋ 直接呼叫 RPC 做營運（可接受：v1 租戶數少）；但**排程與告警必須自動**，這兩者是「不做就會漏錢」的部分。
 
 ### P2：產品可賣性（可與 P3 並行）
 

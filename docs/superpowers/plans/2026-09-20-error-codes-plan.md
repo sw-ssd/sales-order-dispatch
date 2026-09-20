@@ -10,9 +10,18 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-20-saas-billing-entitlements-design.md`（§2.2 錯誤語意、§4.3 失敗碼分工）
 
-**排序**：`docs/superpowers/plans/2026-09-20-implementation-order.md` 的 **P0-5**，與 P0-1（Plan A / RLS）並行——兩者不重疊檔案（本計畫動 proto、handlers、少數服務的錯誤建構；Plan A 動 DSN／policy／交易邊界）。
+**排序**：`docs/superpowers/plans/2026-09-20-implementation-order.md` 的 **P0-5**。
 
-**依賴**：與 **Plan B／C 有交集**（配額與收款錯誤改碼，見 Task 5、Task 7）。建議順序：**Plan D 的 T1–T4 先做完**（骨架），Plan B 開始時直接用碼，就不必回頭改。
+**與 Plan A（RLS）的並行範圍（重要）**：**只有 T1–T3 可與 Plan A 並行**（proto／registry／trace_id，完全不重疊）。**T4–T5 必須排在 Plan A 之後**：兩者改到同一批檔案——
+
+| 檔案 | Plan A | Plan D |
+|---|---|---|
+| `internal/services/company_service.go` | T9：19 處 `s.db.` → `dbtenant.Client` ＋交易三段 | T4：`toConnectError`；T5：`requireScope` |
+| `internal/handlers/auth_handler.go` | T9：加 `SystemScopeTx` 包裝 | T5：登入／鎖定／停用的錯誤碼 |
+
+同時改一個檔案會造成無謂的 rebase 衝突；序列化的成本遠低於衝突的處理成本。T6（基線與產生器）與 T7（文件對齊）不受此限。
+
+**依賴**：與 **Plan B／C 有交集**（配額與收款錯誤改碼，見 Task 5、Task 7）。建議順序：**T1–T3 與 Plan A 並行先做完**（骨架），**T4–T5 等 Plan A 完成**（同檔重疊，見上表），Plan B 開始時直接用碼，就不必回頭改。
 
 ## Global Constraints
 

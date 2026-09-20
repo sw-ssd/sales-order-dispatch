@@ -97,6 +97,7 @@ flowchart LR
 | `tenant_overrides` | `company_id`、`feature_code`、`enabled`、`limit_value`、`reason`、`owner`、`expires_at`、`revoked_at` | 例外唯一入口；`UNIQUE (company_id, feature_code) WHERE revoked_at IS NULL` |
 | `events` | `aggregate_type/id`、`event_type`、`payload jsonb`、`dispatched_at`、`attempts` | outbox；跨域副作用由此驅動 |
 | `operators` | `email`(uniq)、`name`、`role`、`status`、`last_login_at` | 平台操作者白名單（S8）。**不與租戶 `users` 有任何關聯**；新增操作者＝平台側動作，須落 `audit_logs` |
+| `settings` | `key`(PK)、`value`、`updated_at` | 平台營運參數（`system_actor_user_id`、`trial_days`、`grace_days`、`lead_days`…）。**首次由 seed 以 env 預設值寫入，之後由營運工具調整**——參數可調是需求，不是方便（寬限天數隨客戶與季節變動） |
 | `audit_logs`（platform） | `operator_id`、`action`、`target_type`/`target_id`（如 `company:42`）、`reason`、`before`/`after` jsonb、`created_at` | 平台側稽核（S9）。actor 為 `operator_id`，**不 FK 租戶 `users`**；與租戶 `audit_logs` 同形狀但完全分離 |
 
 ### 3.1 四個「不可回填」欄位
@@ -209,7 +210,7 @@ repo 目前**完全沒有** ticker／cron。新增 `cmd/platform-cron`（獨立 
 
 ### 5.5 期別產生與催收提醒
 
-到期前 14/7/1 天建下一期（`status=open`）＋產出「待收款清單」。**自動通知依賴 07-notifications（未實作）** → v1 以「營運後台待辦清單＋CSV 匯出」替代，07 落地後接上（已知依賴，不假裝能做）。
+到期前 14/7/1 天建下一期（`status=open`）＋產出「待收款清單」。**這三個天數（提前天數、寬限天數、試用天數）存在 `platform.settings`，可由營運工具調整**——首次由 seed 以 env 預設值寫入（`PLATFORM_DEFAULT_*`），之後由 `UpdateBillingSettings` 修改；`cmd/platform-cron` 每次執行前讀 settings，程式碼內不得硬編（寬限天數會隨客戶與季節變動）。**自動通知依賴 07-notifications（未實作）** → v1 以「營運後台待辦清單＋CSV 匯出」替代，07 落地後接上（已知依賴，不假裝能做）。
 
 ### 5.6 取消語意
 
