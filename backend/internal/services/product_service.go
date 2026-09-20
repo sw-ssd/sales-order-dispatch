@@ -122,7 +122,9 @@ func (s *ProductService) validateUnits(ctx context.Context, units []*productsv1.
 
 // validateUnitCode 驗證單位字值存在於 metadicts type=unit 字典(系統預設 + 所在部門擴充)。
 func (s *ProductService) validateUnitCode(ctx context.Context, code string, did *int) error {
-	q := s.db.Metadict.Query().Where(
+	// 字典讀取同樣走請求交易:metadicts 由 T8 啟用 RLS,屆時裸 s.db(池化連線、無 scope)會讀不到
+	// 系統字典而讓所有商品的單位驗證 fail-closed。
+	q := dbtenant.Client(ctx, s.db).Metadict.Query().Where(
 		metadict.TypeEQ("unit"), metadict.CodeEQ(code), metadict.IsActiveEQ(true), metadict.DeletedAtIsNil(),
 	)
 	if did != nil {
@@ -149,7 +151,7 @@ func (s *ProductService) validateCategoryRef(ctx context.Context, idStr string, 
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("category_id 格式錯誤"))
 	}
-	q := s.db.ProductCategory.Query().Where(productcategory.ID(id), productcategory.CompanyIDEQ(cid), productcategory.DeletedAtIsNil())
+	q := dbtenant.Client(ctx, s.db).ProductCategory.Query().Where(productcategory.ID(id), productcategory.CompanyIDEQ(cid), productcategory.DeletedAtIsNil())
 	if did != nil {
 		q = q.Where(productcategory.DepartmentIDEQ(*did))
 	}
@@ -167,7 +169,7 @@ func (s *ProductService) validateWarehouseRef(ctx context.Context, idStr, field 
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("%s 格式錯誤", field))
 	}
-	q := s.db.Warehouse.Query().Where(warehouse.ID(id), warehouse.CompanyIDEQ(cid), warehouse.DeletedAtIsNil())
+	q := dbtenant.Client(ctx, s.db).Warehouse.Query().Where(warehouse.ID(id), warehouse.CompanyIDEQ(cid), warehouse.DeletedAtIsNil())
 	if did != nil {
 		q = q.Where(warehouse.DepartmentIDEQ(*did))
 	}
@@ -190,7 +192,7 @@ func (s *ProductService) validateSpecRefs(ctx context.Context, specs []*products
 			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("處理規格重複: %d", sid))
 		}
 		seen[sid] = true
-		q := s.db.ProcessingSpec.Query().Where(processingspec.ID(sid), processingspec.CompanyIDEQ(cid), processingspec.DeletedAtIsNil())
+		q := dbtenant.Client(ctx, s.db).ProcessingSpec.Query().Where(processingspec.ID(sid), processingspec.CompanyIDEQ(cid), processingspec.DeletedAtIsNil())
 		if did != nil {
 			q = q.Where(processingspec.DepartmentIDEQ(*did))
 		}
@@ -243,8 +245,10 @@ func productToProto(p *ent.Product) *productsv1.Product {
 }
 
 // fetchNested 讀取商品之單位與處理規格關聯,填入 proto(Get/Create/Update 回傳用)。
+// 兩張子表無 company_id,可見性由父表 products 的存在性傳遞 → 一律走請求交易(dbtenant.Client),
+// 否則 RLS 生效後(00026)這裡會永遠回空清單。
 func (s *ProductService) fetchNested(ctx context.Context, pr *productsv1.Product, pid int) error {
-	units, err := s.db.ProductUnit.Query().Where(productunit.ProductIDEQ(pid)).Order(ent.Desc(productunit.FieldIsBase), ent.Asc(productunit.FieldSortOrder), ent.Asc(productunit.FieldUnitCode)).All(ctx)
+	units, err := dbtenant.Client(ctx, s.db).ProductUnit.Query().Where(productunit.ProductIDEQ(pid)).Order(ent.Desc(productunit.FieldIsBase), ent.Asc(productunit.FieldSortOrder), ent.Asc(productunit.FieldUnitCode)).All(ctx)
 	if err != nil {
 		return toConnectError(err)
 	}
@@ -260,7 +264,7 @@ func (s *ProductService) fetchNested(ctx context.Context, pr *productsv1.Product
 		}
 		pr.Units = append(pr.Units, pu)
 	}
-	specs, err := s.db.ProductProcessingSpec.Query().Where(productprocessingspec.ProductIDEQ(pid)).Order(ent.Asc(productprocessingspec.FieldID)).All(ctx)
+	specs, err := dbtenant.Client(ctx, s.db).ProductProcessingSpec.Query().Where(productprocessingspec.ProductIDEQ(pid)).Order(ent.Asc(productprocessingspec.FieldID)).All(ctx)
 	if err != nil {
 		return toConnectError(err)
 	}
@@ -298,7 +302,7 @@ func (s *ProductService) ListProducts(ctx context.Context, req *connect.Request[
 	if err != nil {
 		return nil, err
 	}
-	q := prodScopeQuery(s.db.Product.Query(), cid, did)
+	q := prodScopeQuery(dbtenant.Client(ctx, s.db).Product.Query(), cid, did)
 	if !req.Msg.GetIncludeDeleted() {
 		q = q.Where(product.DeletedAtIsNil())
 	}
@@ -333,7 +337,7 @@ func (s *ProductService) GetProduct(ctx context.Context, req *connect.Request[pr
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("product id 格式錯誤"))
 	}
-	row, err := prodScopeQuery(s.db.Product.Query(), cid, did).Where(product.ID(pid), product.DeletedAtIsNil()).Only(ctx)
+	row, err := prodScopeQuery(dbtenant.Client(ctx, s.db).Product.Query(), cid, did).Where(product.ID(pid), product.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -378,13 +382,15 @@ func (s *ProductService) CreateProduct(ctx context.Context, req *connect.Request
 	if err != nil {
 		return nil, err
 	}
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見 customer_service.CreateCustomer:
+	// 商品域(含子表)ENABLE+FORCE 後,自開交易(池化連線、未帶 scope)會被 policy 過濾成 0 列/擋下。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 	actor, _ := parseID(id.UserID)
-	build := tx.Product.Create().
+	build := db.Product.Create().
 		SetCompanyID(cid).SetCode(code).SetName(name).
 		SetIsActive(req.Msg.GetIsActive()).SetCreatedBy(actor).SetUpdatedBy(actor)
 	if did != nil {
@@ -415,9 +421,6 @@ func (s *ProductService) CreateProduct(ctx context.Context, req *connect.Request
 	if err := recordAudit(ctx, tx, "product", "create", created.ID, cid, created.DepartmentID, actor, map[string]any{"code": created.Code, "name": created.Name}); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := tx.Commit(); err != nil {
-		return nil, toConnectError(err)
-	}
 	pr := productToProto(created)
 	if err := s.fetchNested(ctx, pr, created.ID); err != nil {
 		return nil, err
@@ -439,7 +442,7 @@ func (s *ProductService) UpdateProduct(ctx context.Context, req *connect.Request
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("product id 格式錯誤"))
 	}
-	if _, err := prodScopeQuery(s.db.Product.Query(), cid, did).Where(product.ID(pid), product.DeletedAtIsNil()).Only(ctx); err != nil {
+	if _, err := prodScopeQuery(dbtenant.Client(ctx, s.db).Product.Query(), cid, did).Where(product.ID(pid), product.DeletedAtIsNil()).Only(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
 	// 有異動欄位才重驗參照;未提供欄位沿用現值。
@@ -476,13 +479,14 @@ func (s *ProductService) UpdateProduct(ctx context.Context, req *connect.Request
 			return nil, err
 		}
 	}
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由同 CreateProduct。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 	actor, _ := parseID(id.UserID)
-	upd := tx.Product.UpdateOneID(pid)
+	upd := db.Product.UpdateOneID(pid)
 	if req.Msg.Code != nil {
 		c, err := trimNonEmpty(*req.Msg.Code, "code 不可為空")
 		if err != nil {
@@ -541,9 +545,6 @@ func (s *ProductService) UpdateProduct(ctx context.Context, req *connect.Request
 	if err := recordAudit(ctx, tx, "product", "update", pid, cid, updated.DepartmentID, actor, map[string]any{"code": updated.Code, "name": updated.Name}); err != nil {
 		return nil, toConnectError(err)
 	}
-	if err := tx.Commit(); err != nil {
-		return nil, toConnectError(err)
-	}
 	pr := productToProto(updated)
 	if err := s.fetchNested(ctx, pr, pid); err != nil {
 		return nil, err
@@ -565,23 +566,21 @@ func (s *ProductService) DeleteProduct(ctx context.Context, req *connect.Request
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("product id 格式錯誤"))
 	}
-	cur, err := prodScopeQuery(s.db.Product.Query(), cid, did).Where(product.ID(pid), product.DeletedAtIsNil()).Only(ctx)
+	cur, err := prodScopeQuery(dbtenant.Client(ctx, s.db).Product.Query(), cid, did).Where(product.ID(pid), product.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由同 CreateProduct。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 	actor, _ := parseID(id.UserID)
-	if err := tx.Product.UpdateOneID(pid).SetDeletedAt(time.Now().UTC()).SetUpdatedBy(actor).Exec(ctx); err != nil {
+	if err := db.Product.UpdateOneID(pid).SetDeletedAt(time.Now().UTC()).SetUpdatedBy(actor).Exec(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := recordAudit(ctx, tx, "product", "delete", pid, cid, cur.DepartmentID, actor, map[string]any{"code": cur.Code, "name": cur.Name}); err != nil {
-		return nil, toConnectError(err)
-	}
-	if err := tx.Commit(); err != nil {
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&productsv1.DeleteProductResponse{}), nil
@@ -601,7 +600,7 @@ func (s *ProductService) RestoreProduct(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("product id 格式錯誤"))
 	}
-	cur, err := prodScopeQuery(s.db.Product.Query(), cid, did).Where(product.ID(pid)).Only(ctx)
+	cur, err := prodScopeQuery(dbtenant.Client(ctx, s.db).Product.Query(), cid, did).Where(product.ID(pid)).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -612,20 +611,18 @@ func (s *ProductService) RestoreProduct(ctx context.Context, req *connect.Reques
 		}
 		return connect.NewResponse(&productsv1.RestoreProductResponse{Product: pr}), nil
 	}
-	tx, err := s.db.Tx(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
+	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由同 CreateProduct。
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
 	}
-	defer func() { _ = tx.Rollback() }()
+	db := tx.Client()
 	actor, _ := parseID(id.UserID)
-	restored, err := tx.Product.UpdateOneID(pid).ClearDeletedAt().SetUpdatedBy(actor).Save(ctx)
+	restored, err := db.Product.UpdateOneID(pid).ClearDeletedAt().SetUpdatedBy(actor).Save(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
 	if err := recordAudit(ctx, tx, "product", "update", pid, cid, restored.DepartmentID, actor, map[string]any{"restored": true, "code": restored.Code}); err != nil {
-		return nil, toConnectError(err)
-	}
-	if err := tx.Commit(); err != nil {
 		return nil, toConnectError(err)
 	}
 	pr := productToProto(restored)
