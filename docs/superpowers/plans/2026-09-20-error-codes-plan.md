@@ -127,12 +127,14 @@ type Code struct {
 	Deprecated  bool
 }
 
-func (c Code) Error(params map[string]string) *connect.Error
-func (c Code) Wrap(err error, params ...map[string]string) *connect.Error
+func (c Code) Error(ctx context.Context, params map[string]string) *connect.Error
+func (c Code) Wrap(ctx context.Context, err error, params ...map[string]string) *connect.Error
 func (c Code) Render(params map[string]string) string
 func Lookup(id string) (Code, bool)
 func All() []Code // 已排序，供產生器與文件
 ```
+
+**[執行順序（修正）] T2 硬相依 T3**：`code.go` 的 `Error`／`Wrap`／`ErrorInfo.TraceId` 用 `requestid.From(ctx)`，而 `internal/obs/requestid`（`From`／`With`／`Interceptor`）是 **T3** 的產物。因此本計畫的實際執行順序是 **T1 → T3 → T2 → T4 → T5 → T6 → T7**（T3 先建立 `requestid` 並接上 handler options，T2 才編得過）。`Error`／`Wrap` 的第一個參數是 `ctx`（見上列 Interfaces；Step 1 的測試已對齊）。
 
 - [ ] **Step 1: 寫失敗測試（`registry_test.go`）**
 
@@ -150,9 +152,24 @@ import (
 
 	commonv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
+	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 )
 
 var idFormat = regexp.MustCompile(`^[A-Z]{2,6}-\d{4}$`)
+
+// errorInfoOf 取出 connect error detail 內的 ErrorInfo（找不到即失敗）。
+func errorInfoOf(t *testing.T, err *connect.Error) *commonv1.ErrorInfo {
+	t.Helper()
+	for _, d := range err.Details() {
+		if m, ok := d.(proto.Message); ok {
+			if ei, ok := m.(*commonv1.ErrorInfo); ok {
+				return ei
+			}
+		}
+	}
+	t.Fatalf("錯誤未帶 ErrorInfo detail")
+	return nil
+}
 
 // 契約 1：每個碼格式正確、有訊息、有 domain，且區段與 connect 碼一致。
 func TestRegistryInvariants(t *testing.T) {
@@ -214,7 +231,8 @@ func TestRegisterPanicsOnViolations(t *testing.T) {
 
 // 契約 3：Error() 產生帶 ErrorInfo 的 connect error（碼與 details 可被客戶端讀取）。
 func TestErrorCarriesErrorInfo(t *testing.T) {
-	err := errcode.PlatformLimitExceeded.Error(map[string]string{"used": "10", "limit": "10"})
+	ctx := t.Context()
+	err := errcode.PlatformLimitExceeded.Error(ctx, map[string]string{"used": "10", "limit": "10"})
 	if connect.CodeOf(err) != connect.CodeFailedPrecondition {
 		t.Fatalf("connect 碼應為 FailedPrecondition，got %v", connect.CodeOf(err))
 	}
@@ -239,17 +257,31 @@ func TestErrorCarriesErrorInfo(t *testing.T) {
 
 // 契約 4：缺參數不得讓錯誤處理爆掉（回樣板原文），且 Wrap 保留底層錯誤供 log 追查。
 func TestRenderMissingParamFallsBackAndWrapKeepsCause(t *testing.T) {
+	ctx := t.Context()
 	msg := errcode.PlatformLimitExceeded.Render(nil)
 	if !strings.Contains(msg, "{used}") {
 		t.Fatalf("缺參數時應保留樣板原文，got %q", msg)
 	}
 	cause := errors.New("db: connection reset")
-	err := errcode.SysInternal.Wrap(cause)
+	err := errcode.SysInternal.Wrap(ctx, cause)
 	if !errors.Is(err, cause) {
 		t.Fatal("Wrap 應保留底層錯誤（Unwrap），否則 log 追不到原因")
 	}
 	if strings.Contains(err.Message(), "connection reset") {
 		t.Fatal("底層錯誤細節不得進對外訊息")
+	}
+}
+
+// 契約 5：trace_id 由 ctx 帶出（T3 的 requestid interceptor 注入；未注入則為空）。
+func TestErrorCarriesTraceIDFromContext(t *testing.T) {
+	ctx := requestid.With(t.Context(), "trace-1")
+	err := errcode.SysNotFound.Error(ctx, nil)
+	if got := errorInfoOf(t, err).GetTraceId(); got != "trace-1" {
+		t.Fatalf("trace_id 應為 trace-1，got %q", got)
+	}
+	// 未注入時不得爆掉，只需為空。
+	if got := errorInfoOf(t, errcode.SysNotFound.Error(t.Context(), nil)).GetTraceId(); got != "" {
+		t.Fatalf("未注入 trace_id 時應為空，got %q", got)
 	}
 }
 ```
