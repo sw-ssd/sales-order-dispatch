@@ -43,6 +43,9 @@
 - enttest 每個 subtest 建獨立 client + cleanup;sqlite DSN 避免共享 cache(日後加 `t.Parallel` 才安全)。
 - Valkey 依賴的測試需有 skip 保護(本機無 Valkey 時自動略過);整合測試同理,但界線較嚴:**容器執行環境連不上 → `t.Skip`(附可行動訊息);runtime 可用而設定/起容器流程壞掉 → 必須 fail**。理由是後者若也 skip,整包會靜默全綠卻一個測試都沒跑(且會遺留殘留容器)。無論哪種情況,`go test ./...`(預設路徑)都不得因環境而紅。
 - 授權門檻測試必含矩陣:未登入 / guest / staff / dept_admin / company_admin / super。
+- **分頁清單一律要有唯一次序鍵**:任何以 `ORDER BY <非唯一鍵>` 搭配 `LIMIT/OFFSET` 的清單,**必須**追加 `ent.Asc(<entity>.FieldID)` 作為 tie-break,否則同值群跨頁邊界時 PG 會讓某些列重複出現、某些列完全不出現(本專案已於公司/部門/角色/客戶/稽核與六個主檔清單實證)。
+  - **這類缺陷只在真 PostgreSQL 看得到**:sqlite(enttest)對同值群給穩定次序、`LIMIT/OFFSET` 只是切片,同構探針會全綠 → 守門測試必須是 `//go:build integration` + testcontainers,並以「**逐頁掃描 == 單次全量**(筆數、id 集合、無重複)」為斷言(樣板:`internal/services/list_pagination_integration_test.go`)。
+  - **固定排序的端點也要釘住方向**(`sort_order` 升冪、稽核最新在前…):只比對集合會讓 `Asc`/`Desc` 互換而測試全綠 → 需逐位比對序列或斷言預期極值。
 
 ## 5. Modern Go Guidelines(必備)
 
@@ -68,3 +71,15 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
 ## 7. 程式碼索引與查詢（codebase-memory-mcp）
 
 本專案**程式碼索引與查詢皆需先經過 codebase-memory-mcp**（見根目錄 `docs/AGENTS.md` §4.0）：找定義／實作／呼叫端、追蹤呼叫路徑、影響範圍分析、跨專案跳轉等一律先以 codebase-memory 知識圖譜查詢，不足處再以 grep／直接讀檔補足；改動既有程式碼前先確認目標檔的索引覆蓋狀態。
+
+## 8. 資料庫 schema 真相、刪除語意與軟刪除（實戰教訓）
+
+1. **`database/migrations/**` 是 schema 的唯一真相**；`ent/schema/**` 用來生成查詢碼,**不**用來改既有庫。
+   - **禁止**對 goose 管理的庫執行 ent 的 `Schema.Create`／`auto-migrate`:它會把遷移建立的外鍵與索引當作多餘而 `DROP`(本專案 33 個 FK 中 ent 只宣告 4 個),且實測在既有庫上會直接以 atlas 逆向工程錯誤失敗。新庫由 `cmd/migrate up` 建;`ent` 僅在測試(enttest sqlite)與查詢碼生成中使用。
+   - 改 ent schema 後必 `go generate ./ent`;**同時**新增 Goose 遷移(兩者對齊,型別/主鍵/唯一性/NULL 性都要一致)。已實證的落差類型:`id` 主鍵缺漏(`customer_counters` 曾是如此,真 PG 上 `CreateCustomer` 必然 `42703`)、`integer` vs `bigint`、DB `NOT NULL` vs ent `Optional`。
+2. **刪除語意一旦改變(硬刪→軟刪),必須重掃「所有碰得到該實體的路徑」**:硬刪除的 FK 曾是**隱性的不變式保護**,軟刪後列還在、保護消失。實證漏點:`CreateUser` 沒有公司存在性檢查、`Login` 未檢查公司是否軟刪除(已刪公司的使用者仍能登入取得 token)、`UpdateDepartment` 會改到已刪部門、`DeleteCompany` 的「仍有部門」前置檢查會被軟刪部門永久擋住。
+   - 軟刪除的識別碼唯一性要用 **partial unique index**(`WHERE deleted_at IS NULL`),並移除舊的表層 UNIQUE。
+   - 「刪除前的前置檢查」與「掛載資料到該列」之間有競態:需**兩側對同一列取互斥鎖**(掛載端 `FOR SHARE`、刪除端先 `FOR UPDATE` 再條件式 `UPDATE`)。**單側鎖不足**:READ COMMITTED 只重評目標列,`NOT EXISTS` 子查詢仍用敘述開始的快照。方言判斷用 `sql.Selector.Dialect()`(sqlite 不支援 `FOR ...`,不可寫入鎖子句)。
+3. **RLS policy 目前「只定義、未 ENABLE/FORCE」**(待每請求交易層 `SET LOCAL app.*` 落定後才會啟用,見 `00007`/`00009`/`00013` 的檔頭)。**不得**假設 RLS 正在保護資料;授權仍以服務層門檻為準。
+4. **`toConnectError` 之類的全域錯誤映射**:不要把 DB 原始訊息(含 `SQLSTATE`/constraint 名)回給客戶端;約束類錯誤回 `FailedPrecondition` 並落 server log,`AlreadyExists` 僅用於真正的「已存在」語意(需在建立路徑自行前置判別)。
+
