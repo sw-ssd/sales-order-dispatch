@@ -27,10 +27,15 @@
 //   - `Login`／`Refresh`／`Logout`／`RegisterComplete`／`QRLogin`／`ChangePassword`:未登入／系統
 //     範圍路徑(尚無身分可注入租戶 scope),由 T9 的 `internal/server` 探針與 handlers 的測試涵蓋;
 //     `ResetCustomerPassword` 由 T8 的 `internal/handlers/rls_auth_password_integration_test.go` 涵蓋。
-//   - `CreateCustomer`／`CreateMetadict`:`CreateCustomer` 的公司來自身分(不吃請求的公司 id),它
-//     唯一的跨租戶向量是 `default_sales_rep_id` 指向 B 的使用者 —— 與 `CreateProduct` 的參照同型,
-//     由本探針的 CreateProduct 代表;`CreateMetadict` 對 super 一律建系統級列(department 為 NULL),
-//     沒有跨租戶向量。
+//   - `CreateCustomer`／`CreateCompany`／`CreateMetadict`／`CreateWarehouse`／`CreateRoute`／
+//     `CreateProcessingSpec`／`CreateProductCategory`:請求 body 都不含「他人的租戶參照」——
+//     `CreateCustomer` 的公司來自身分(唯一可能的跨租戶向量是 `default_sales_rep_id` 指向 B 的使用者,
+//     與 `CreateProduct` 的參照同型,由本探針的 CreateProduct 代表);其餘四支主檔的 company/department
+//     同樣來自身分與 scope(`deptScope`),沒有任何可指向 B 的 id 欄位;`CreateMetadict` 對 super 一律建
+//     系統級列(department 為 NULL),沒有跨租戶向量。它們的代理建立生命週期已在別處驗過:
+//     `rls_masters_integration_test.go:407/446/486/525`(`TestIntegrationMastersUnderAppRole` 的
+//     create 閉包,app_rw ＋ 真 handler)與 `rls_core_integration_test.go:234`
+//     (`TestIntegrationCoreServicesUnderAppRole` 的 `CreateCompany`)。
 //
 // 為何需要這一支(其餘六組探針 T5–T9 已各自驗過所屬域):那些探針守的是「本域的路徑有沒有收斂」,
 // 這支守的是**跨域的統一接線** —— 「某個端點忘了掛 dbtenant.HandlerOption / dbtenant.Client」。
@@ -267,12 +272,22 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 			_, err := cl.customers.DeleteCustomer(ctx, connect.NewRequest(&customersv1.DeleteCustomerRequest{Id: itoa(fx.custB)}))
 			return err
 		})
+		assertColumnValue(t, admin, "B 的客戶名稱", "customers", "name", fx.custB, "B 客戶")
+		// 事前狀態檢查在軟刪之前(此時 B 的列是活的)。
+		assertNullColumn(t, admin, "B 的客戶未被軟刪除", "customers", "deleted_at", fx.custB)
+
+		// Restore 必須在「已軟刪」的前置狀態下才觀測得到東西:對活列 Restore 會 early-return 成功
+		// 且不寫稽核(customer_service.go:657-661),那麼「未變／未復原／無稽核」三條都會恆真。
+		// 鑑別力:若 RestoreCustomer 的範圍查詢被拿掉,復原會成功 → deleted_at 被清空、且留下
+		// action=update 的稽核 → 兩條斷言與 code 斷言一起紅(消去實驗見報告 §11.2)。
+		softDeleteRow(t, admin, "customers", fx.custB)
+		assertNotNullColumn(t, admin, "Restore 前置:B 的客戶已軟刪", "customers", "deleted_at", fx.custB)
 		assertCrossTenantDenied(t, admin, "RestoreCustomer(他公司)", func() error {
 			_, err := cl.customers.RestoreCustomer(ctx, connect.NewRequest(&customersv1.RestoreCustomerRequest{Id: itoa(fx.custB)}))
 			return err
 		})
-		assertColumnValue(t, admin, "B 的客戶名稱", "customers", "name", fx.custB, "B 客戶")
-		assertNullColumn(t, admin, "B 的客戶未被軟刪除", "customers", "deleted_at", fx.custB)
+		assertNotNullColumn(t, admin, "Restore 未得逞:B 的客戶未被復原", "customers", "deleted_at", fx.custB)
+		assertNoAuditForResource(t, admin, "被拒的 RestoreCustomer", "customer", itoa(fx.custB))
 	})
 
 	t.Run("customer_addresses", func(t *testing.T) {
@@ -426,12 +441,15 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 	})
 
 	t.Run("masters", func(t *testing.T) {
+		// resource 為稽核的 resource_type(供「被拒的 Restore 不得留下稽核」斷言):
+		// 這四張表的 Restore 成功時會寫 action=update 的稽核(warehouse_service.go:270 等),
+		// 故稽核列的有無就是「復原有沒有得逞」的第二個觀測點。
 		masters := []struct {
-			table                 string
+			table, resource       string
 			list                  func(ctx context.Context) ([]string, error)
 			update, drop, restore func(ctx context.Context) error
 		}{
-			{"warehouses",
+			{"warehouses", "warehouse",
 				func(ctx context.Context) ([]string, error) {
 					res, err := cl.warehouses.ListWarehouses(ctx, connect.NewRequest(&mastersv1.ListWarehousesRequest{Page: 1, PageSize: 50}))
 					if err != nil {
@@ -456,7 +474,7 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 					_, err := cl.warehouses.RestoreWarehouse(ctx, connect.NewRequest(&mastersv1.RestoreWarehouseRequest{Id: fx.masters["warehouses"][1]}))
 					return err
 				}},
-			{"routes",
+			{"routes", "route",
 				func(ctx context.Context) ([]string, error) {
 					res, err := cl.routes.ListRoutes(ctx, connect.NewRequest(&mastersv1.ListRoutesRequest{Page: 1, PageSize: 50}))
 					if err != nil {
@@ -481,7 +499,7 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 					_, err := cl.routes.RestoreRoute(ctx, connect.NewRequest(&mastersv1.RestoreRouteRequest{Id: fx.masters["routes"][1]}))
 					return err
 				}},
-			{"processing_specs",
+			{"processing_specs", "processing_spec",
 				func(ctx context.Context) ([]string, error) {
 					res, err := cl.specs.ListProcessingSpecs(ctx, connect.NewRequest(&mastersv1.ListProcessingSpecsRequest{Page: 1, PageSize: 50}))
 					if err != nil {
@@ -506,7 +524,7 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 					_, err := cl.specs.RestoreProcessingSpec(ctx, connect.NewRequest(&mastersv1.RestoreProcessingSpecRequest{Id: fx.masters["processing_specs"][1]}))
 					return err
 				}},
-			{"product_categories",
+			{"product_categories", "product_category",
 				func(ctx context.Context) ([]string, error) {
 					res, err := cl.cats.ListProductCategories(ctx, connect.NewRequest(&mastersv1.ListProductCategoriesRequest{Page: 1, PageSize: 50}))
 					if err != nil {
@@ -538,13 +556,25 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 				if err != nil {
 					t.Fatalf("List %s: %v", m.table, err)
 				}
+				bID := mustItoa(t, fx.masters[m.table][1])
 				assertSetEquals(t, "List "+m.table, ids, fx.masters[m.table][0])
 				assertCrossTenantDenied(t, admin, "Update "+m.table, func() error { return m.update(ctx) })
 				assertCrossTenantDenied(t, admin, "Delete "+m.table, func() error { return m.drop(ctx) })
-				// Restore 與 Delete 同型:軟刪除路徑不得成為「以 id 復原他家的列」的後門。
+				assertColumnValue(t, admin, "B 的 "+m.table+" 名稱", m.table, "name", bID, "B 列")
+				// 事前狀態檢查必須在軟刪**之前**:此時 B 的列是活的。
+				assertNullColumn(t, admin, "B 的 "+m.table+" 未被軟刪除", m.table, "deleted_at", bID)
+
+				// 軟刪 B 的列之後再打跨租戶 Restore —— 這是本組斷言的關鍵:
+				// Restore 對「已活的列」會 early-return 成功且**不寫稽核**(warehouse_service.go:255),
+				// 在那種前置狀態下「列未變」「未復原」「無稽核」三條都恆真、什麼都觀測不到。
+				// 前置改成「已軟刪」後兩個觀測點才有鑑別力:若 Restore 的範圍查詢被拿掉(變成跨租戶可及),
+				// 復原會成功 → deleted_at 被清空、並留下 action=update 的稽核 → 兩條連同 code 斷言一起紅
+				// (消去實驗見報告 §11.2)。
+				softDeleteRow(t, admin, m.table, bID)
+				assertNotNullColumn(t, admin, "Restore 前置:B 的 "+m.table+" 已軟刪", m.table, "deleted_at", bID)
 				assertCrossTenantDenied(t, admin, "Restore "+m.table, func() error { return m.restore(ctx) })
-				assertColumnValue(t, admin, "B 的 "+m.table+" 名稱", m.table, "name", mustItoa(t, fx.masters[m.table][1]), "B 列")
-				assertNullColumn(t, admin, "B 的 "+m.table+" 未被軟刪除", m.table, "deleted_at", mustItoa(t, fx.masters[m.table][1]))
+				assertNotNullColumn(t, admin, "Restore 未得逞:B 的 "+m.table+" 未被復原", m.table, "deleted_at", bID)
+				assertNoAuditForResource(t, admin, "被拒的 Restore "+m.table, m.resource, itoa(bID))
 			})
 		}
 	})
@@ -578,12 +608,18 @@ func TestIntegrationRLSCrossTenantEndpoints(t *testing.T) {
 			_, err := cl.products.DeleteProduct(ctx, connect.NewRequest(&productsv1.DeleteProductRequest{Id: itoa(fx.productB)}))
 			return err
 		})
+		assertColumnValue(t, admin, "B 的商品名稱", "products", "name", fx.productB, "商品")
+		// 同客戶域:事前狀態檢查在軟刪之前,Restore 的斷言則必須在「已軟刪」的前置狀態下打
+		// (對活列的 Restore 會 early-return 成功且不寫稽核 → 斷言會恆真)。
+		assertNullColumn(t, admin, "B 的商品未被軟刪除", "products", "deleted_at", fx.productB)
+		softDeleteRow(t, admin, "products", fx.productB)
+		assertNotNullColumn(t, admin, "Restore 前置:B 的商品已軟刪", "products", "deleted_at", fx.productB)
 		assertCrossTenantDenied(t, admin, "RestoreProduct(他公司)", func() error {
 			_, err := cl.products.RestoreProduct(ctx, connect.NewRequest(&productsv1.RestoreProductRequest{Id: itoa(fx.productB)}))
 			return err
 		})
-		assertColumnValue(t, admin, "B 的商品名稱", "products", "name", fx.productB, "商品")
-		assertNullColumn(t, admin, "B 的商品未被軟刪除", "products", "deleted_at", fx.productB)
+		assertNotNullColumn(t, admin, "Restore 未得逞:B 的商品未被復原", "products", "deleted_at", fx.productB)
+		assertNoAuditForResource(t, admin, "被拒的 RestoreProduct", "product", itoa(fx.productB))
 	})
 
 	t.Run("metadicts", func(t *testing.T) {
@@ -770,6 +806,48 @@ func assertCrossTenantDenied(t *testing.T, admin *sql.DB, endpoint string, attem
 	}
 	if after := countRows(t, admin, `SELECT count(*) FROM audit_logs`); after != before {
 		t.Errorf("%s:被拒的跨租戶寫入不得留下稽核列(audit_logs %d → %d)", endpoint, before, after)
+	}
+}
+
+// assertNotNullColumn 以 admin 真值斷言某列某欄**不為 NULL**:用於 Restore 的前置狀態檢查
+// 與「未被復原」的斷言(復原成功會清空 deleted_at)。
+func assertNotNullColumn(t *testing.T, admin *sql.DB, what, table, column string, id int) {
+	t.Helper()
+	var got sql.NullString
+	if err := admin.QueryRow(`SELECT `+column+`::text FROM `+table+` WHERE id = $1`, id).Scan(&got); err != nil {
+		t.Fatalf("查 %s(%s.id=%d): %v", what, table, id, err)
+	}
+	if !got.Valid {
+		t.Errorf("%s:應有值(非 NULL),got NULL", what)
+	}
+}
+
+// softDeleteRow 以 admin(夾具,superuser 不受 RLS 影響)把某列軟刪除。
+//
+// 為何需要:Restore 對**已活的列**會 early-return 成功且不寫稽核(如 warehouse_service.go:255),
+// 在那種前置狀態下「列未變／未復原／無稽核」全部恆真 —— 本探針要觀測「跨租戶 Restore 有沒有得逞」,
+// 就必須先把目標列置於「已軟刪」(否則復原成功與失敗在資料上長得一樣)。
+func softDeleteRow(t *testing.T, admin *sql.DB, table string, id int) {
+	t.Helper()
+	res, err := admin.Exec(`UPDATE `+table+` SET deleted_at = now() WHERE id = $1 AND deleted_at IS NULL`, id)
+	if err != nil {
+		t.Fatalf("軟刪 %s(id=%d): %v", table, id, err)
+	}
+	if n, err := res.RowsAffected(); err != nil || n != 1 {
+		t.Fatalf("軟刪 %s(id=%d)應影響 1 列,got n=%d err=%v", table, id, n, err)
+	}
+}
+
+// assertNoAuditForResource 斷言某資源 id 完全沒有任何稽核列(不限動詞)。
+//
+// 為何是一條獨立斷言:服務層的每個成功寫入都在同一交易寫稽核(D18),故「有沒有稽核列」
+// 是「寫入有沒有得逞」的第二個觀測點 —— 只斷言回應碼會漏掉「回應錯但其實已寫入」的實作。
+func assertNoAuditForResource(t *testing.T, admin *sql.DB, what, resourceType, resourceID string) {
+	t.Helper()
+	if n := countRows(t, admin,
+		`SELECT count(*) FROM audit_logs WHERE resource_type = $1 AND resource_id = $2`,
+		resourceType, resourceID); n != 0 {
+		t.Errorf("%s:%s(resource_id=%s)不得留下任何稽核列,got %d", what, resourceType, resourceID, n)
 	}
 }
 
