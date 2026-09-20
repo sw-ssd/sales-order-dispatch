@@ -20,7 +20,7 @@ func main() {
 		os.Exit(2)
 	}
 	cfg := config.New()
-	db, err := sql.Open("pgx", cfg.Database.DatabaseURL)
+	db, err := sql.Open("pgx", cfg.Database.AdminDSN())
 	if err != nil {
 		log.Fatalf("開啟資料庫: %v", err)
 	}

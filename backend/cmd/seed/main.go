@@ -11,14 +11,15 @@ import (
 
 func main() {
 	cfg := config.New()
-	pool, err := database.Open(context.Background(), cfg.Database.DatabaseURL)
+	pool, err := database.Open(context.Background(), cfg.Database.AdminDSN())
 	if err != nil {
 		log.Fatalf("連線資料庫: %v", err)
 	}
 	defer pool.Close()
 
-	// seeder 以 ent client 操作角色/使用者;與 server 共用同一初始化路徑(D31)。
-	client, err := database.OpenEnt(cfg.Database.DatabaseURL)
+	// seeder 以 ent client 操作角色/使用者;與 server 共用同一初始化函式(D31),
+	// 連線改用 owner DSN(AdminDSN):seed 與遷移/OpenFGA 同屬平台側寫入。
+	client, err := database.OpenEnt(cfg.Database.AdminDSN())
 	if err != nil {
 		log.Fatalf("開啟 ent client: %v", err)
 	}

@@ -20,7 +20,7 @@ const openFGAGooseTable = "openfga_goose_db_version"
 // migrateOpenFGA 以 OpenFGA 官方公開遷移入口(pkg/storage/migrate.RunMigrations,
 // doc 明示支援嵌入方自管 schema)建立/升級 OpenFGA datastore 表。
 // 版本表為 goose 全域狀態,故設定後還原,避免汙染業務遷移;
-// dsn 與 server 端一致:OpenFGA.DatabaseURL 空則沿用 Database.DatabaseURL。
+// dsn 與 server 端一致:OpenFGA.DatabaseURL 空則沿用 owner DSN(AdminDSN)。
 // OPENFGA_ENABLED=false 時跳過(config.OpenFGA.Enabled 語意:關閉 = 回退)。
 func migrateOpenFGA(ctx context.Context, cfg *config.Config) error {
 	if !cfg.OpenFGA.Enabled {
@@ -29,7 +29,7 @@ func migrateOpenFGA(ctx context.Context, cfg *config.Config) error {
 	}
 	dsn := cfg.OpenFGA.DatabaseURL
 	if dsn == "" {
-		dsn = cfg.Database.DatabaseURL
+		dsn = cfg.Database.AdminDSN()
 	}
 	prevTable := goose.TableName()
 	goose.SetTableName(openFGAGooseTable)

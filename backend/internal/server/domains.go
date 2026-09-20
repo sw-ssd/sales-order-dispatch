@@ -112,7 +112,7 @@ func (s *Server) openEntClient() (*ent.Client, error) {
 }
 
 // mountOpenFGA 建立內嵌 OpenFGA 授權引擎(D32)並注入 Server。
-// datastore 與業務共用 PostgreSQL(單一 store);dsn 沿用 Database.DatabaseURL。
+// datastore 與業務共用 PostgreSQL(單一 store);dsn 沿用 owner DSN(AdminDSN)。
 // OPENFGA_ENABLED=true 即 fail-fast(F2 裁定):所有環境 bootstrap 失敗都終止啟動,
 // 因為引擎缺席(或零 tuple)會讓 GetAbility 永遠回空、前端守衛 fail-closed 把全站
 // 使用者擋在 /403,比啟動失敗更難診斷。OPENFGA_ENABLED=false 為文件化退路(語意不變)。
@@ -122,7 +122,7 @@ func (s *Server) mountOpenFGA(db *ent.Client) {
 	}
 	dsn := s.cfg.OpenFGA.DatabaseURL
 	if dsn == "" {
-		dsn = s.cfg.Database.DatabaseURL
+		dsn = s.cfg.Database.AdminDSN()
 	}
 	client, err := ofga.NewPostgres(context.Background(), dsn, s.cfg.OpenFGA.StoreName)
 	if err != nil {
