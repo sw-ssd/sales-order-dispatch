@@ -47,6 +47,8 @@ flowchart LR
 - handler：`services.RegisterPlatformServices(apiMux, ...)`，由 `internal/server/domains.go` 的 `InitDomains()` **唯一組裝點**掛載（D31 慣例）
 - DB：獨立 **`platform` schema**，migration 接在 `00021` 之後；表**不與業務表 JOIN**，只靠 `company_id` 對照
 
+**實作現況（Plan B，2026-09-20）**：package 實際切為 `internal/platform/{store,store/postgres,entitlements,operatorauth}`（`plans`／`subscriptions` 目前由 `store` 的讀取介面與 `entitlements` 承載，寫入路徑留 Plan C）；proto 是 `platform/v1` 的 **`PlatformAdminService`（operator，掛 `/platform/`）＋ `TenantEntitlementService`（租戶，掛 `/api/v1`）**；DB 為 `00029_platform_schema.sql`（Plan A 用到 `00028`，Plan C 的 `platform.settings` 為 `00030`）。
+
 ### 2.2 三種接觸面（其他一律禁止）
 
 1. **同 process Go 介面**：`entitlement.Service{ Allows(ctx, companyID, feature); CheckLimit(ctx, companyID, feature, delta) }` —— 服務層守衛用，零延遲
@@ -106,11 +108,12 @@ flowchart LR
 
 `status` 含 `past_due`／`grace_until`／`dunning_attempts`；人工收款時 `dunning_attempts` 恆 0 —— 這是日後接金流**不改狀態機**的關鍵（§8.2）。
 
-### 3.2 配額計數三規則（寫入 `features.unit` 定義並由測試釘住）
+### 3.2 配額計數規則（寫入 `features.unit` 定義並由測試釘住）
 
-1. **席位** = `users WHERE company_id=? AND deleted_at IS NULL AND status <> 'inactive'`（停用可釋放席位 → 客戶能自助降級）
+1. **席位** = 同公司的 `users` 且 `status <> 'inactive'`（實作：`user.HasCompanyWith(...)`，即經 `company_users` 連結；**`users` 沒有 `deleted_at`**，`company_id` 亦非該表欄位）—— 停用即釋放席位 → 客戶能自助降級。**本條與 §4.5 的守衛清單互相矛盾（未解，見 §4.3「已知不一致」第 3 項）**：客戶帳號也是一列 active `users`，但建立客戶的路徑只檢查 `limit.customers`。
 2. **資料筆數**（客戶/商品/部門）只算 `deleted_at IS NULL` —— 否則刪除後仍被卡死
 3. v1 直接 `COUNT(*)`（既有 `(company_id)` 索引足夠），**先不做快取**：`ponytail: 計數直查；若熱路徑延遲可感再加 Valkey 快取＋事件失效`
+4. **計數一律在公司層**：`department`／`self` scope 的請求走 `dbtenant.SystemScopeTx`（scope=all、唯讀）計數。**理由（實測）**：在請求交易內計數會被 RLS 過濾成「本部門可見列」，而 `dept_admin`／`staff` 本來就能建客戶／商品／使用者 → 部門 scope 會變成「每部門一份上限」而繞過配額。`company`／`all`／無 scope 維持請求交易內計數（保留「同請求未提交列可見」）。
 
 ### 3.3 平台域的硬邊界
 
@@ -168,9 +171,15 @@ type Counter interface {
 1. **公司停用的對外碼兩個路徑不同**：middleware 閘門（`internal/server/server.go` 的 `authzMiddleware`）回**裸 `unauthenticated`／HTTP 401**（`internal/server/server_test.go` 明文釘住 401，且該處註解說明「不刪 session、公司恢復後可續用」的設計），登入路徑則回 `AUTH-4002` `AuthCompanyInactive`／`permission_denied`／HTTP 403。選項：(a) 改閘門＋測試（動既有對外 HTTP 狀態與前端 401 處理）；(b) 另立一個 Unauthenticated 語意的公司停用碼（會把這個不一致固化成兩個碼）。**需 auth／spec 擁有者裁定**，不宜由文件對齊單方面決定。
 2. **`httpStatusForCode` 的映射不完整**（`internal/server/server.go`）：middleware 閘門的 HTTP 狀態只映射 unauthenticated→401／permission_denied→403／invalid_argument→400，**其餘一律 500**。可查證的對照：Connect 規格（<https://connectrpc.com/docs/protocol>「Error codes」表）與 connect-go v1.21.0 的 `connectCodeToHTTP` 都把 `failed_precondition` 映射為 **400 Bad Request**（不是 412）。故「首登受限」閘門（`AUTH-3004`）目前實際回 **HTTP 500**，`not_found`（→404）／`already_exists`（→409）同樣落到 500。**碼與訊息正確，只有 HTTP 狀態不符**；改它會動既有對外 HTTP 狀態，故與上一項一併待裁定（RPC 路徑不受影響：那條走 connect-go 自己的映射）。
 
+3. **席位與客戶帳號的口徑矛盾**（Plan B 執行期間發現，**需產品／spec 定調**）：`CreateCustomer` 會建立一列 **active 的 `users`**（主帳號，`customer_service.go` 的 `buildCustomerAccount`），而 §3.2 的席位計數把**所有** `status <> 'inactive'` 的帳號算成席位 → 但建立客戶的路徑只受 `limit.customers` 守衛（§4.5 清單）⇒ **已達席位上限的租戶仍可藉「建立客戶」超額佔用席位**。
+   選項：(a) 席位改為**只算非客戶帳號**（`is_customer = false`）——SaaS 直覺（席位＝內部人員；客戶由 `limit.customers` 管），需改 §3.2 與計數器（**建議**）；(b) `CreateCustomer` 同時檢查 `limit.customers` **與** `limit.seats`——與現行 §3.2 一致，但「加一個客戶吃掉一個員工席位」。
+   歸屬：產品／spec 擁有者（會動計費語意，Plan B 未自行修改）。
+
 ### 4.4 快取
 
 Valkey key `ent:{companyID}`；方案變更／override／訂閱狀態異動即 **delete**（不靠 TTL 正確性），TTL 60s 僅保底（與既有 ability 60s 慣例一致）。
+
+**實作現況（Plan B）**：介面 `entitlements.Cache` 已就位且 `MemoryCache` **真的實現 TTL**（`ttl<=0` 表示不快取，兩端語意一致）；server 目前注入的是**行程內 `MemoryCache`**（`domains.go` 的 `entitlementCacheTTL = 60s`），Valkey 實作與「寫入後 `Delete`」屬 Plan C 的訂閱寫入路徑。單實例下兩者判定結果等價，差別只在多實例時各自過期。
 
 ### 4.5 守衛掛點清單（v1，spec 為準，漏掛即測試紅）
 
@@ -184,11 +193,20 @@ Valkey key `ent:{companyID}`；方案變更／override／訂閱狀態異動即 *
 
 **復原也要擋**：復原會增加有效筆數，這是軟刪除設計下的專屬漏洞。boolean 功能即使未落地，`features` 清單 v1 先建好，避免日後改表。
 
-**v1 `features` 清單（定案，不增不減）**：`limit.seats`、`limit.customers`、`limit.products`、`limit.departments`、`limit.storage_gb`（integer）；`feature.printing`、`feature.dispatch`、`feature.returns`（boolean）。`feature.printing` 等三個隨 05/08/09 落地才有守衛掛點，`limit.storage_gb` 隨 04 §3.6 檔案資產落地才有掛點，但方案與價目表 v1 就能賣。
+**實作現況與更正（Plan B Task 6，2026-09-20）** — 已登錄於 `internal/services/entitlement_guard_test.go` 的 `guardCases`，共 **6 項**：
+
+1. **`UserService.UpdateUser` 漏列**：`inactive → 非 inactive` 是與 `Restore*` 同型漏洞的另一個入口（滿席時把停用帳號改回 active 即超額），實作已補上守衛（只在該轉換檢查、配額對象為目標使用者的公司；普通更新不受影響）。**建議本表補列此列**（本次未改，與下方第 2、3 項同屬需 spec 擁有者裁定的清單）。
+2. **「部門復原」在本 repo 不存在**：`proto/salesorder/v1/company.proto` 的 `DepartmentService` 只有 List/Get/Create/Update/Delete（00020 的部門軟刪除只做了 Delete 側）→ 無 RPC 可掛，`guardCases` 以**具名缺口註解**記錄。要嘛補 `RestoreDepartment`（含守衛），要嘛刪本表該列；歸屬 `backend-02-tenancy-users`。
+3. **§3.2 的席位口徑與本表衝突**（客戶帳號也佔席位卻只檢查 `limit.customers`），見 §4.3「已知不一致」第 3 項。
+
+**v1 `features` 清單**：`limit.seats`、`limit.customers`、`limit.products`、`limit.departments`（integer）；`feature.printing`、`feature.dispatch`、`feature.returns`（boolean）。
+**更正（Plan B Task 11，2026-09-20）**：`limit.storage_gb` **已自 v1 清單移除**（原「定案，不增不減」的 8 項現為 7 項）——計數器沒有檔案空間的來源可量，而判定層的 `Snapshot` 對每個 integer feature 都要用量，種了它會讓**租戶端權益投影對所有租戶失敗**。`feature.printing`／`dispatch`／`returns` 隨 05/08/09 落地才有守衛掛點；`limit.storage_gb` 隨 04 §3.6 檔案資產（P2-1）落地並補上計數器後再加回 seed。
 
 ### 4.6 UI 投影與守衛的分工
 
 新增 `GetTenantEntitlements`（回方案、配額用量 `8/10`、試用到期）供前端 disable 與提示。**載入中或失敗 → 按鈕維持可用**，由後端擋；單一事實來源永遠在後端（與既有「前端守衛不構成授權」一致）。
+
+**實作現況（Plan B Task 10）**：`TenantEntitlementService` 掛在**租戶** `apiMux`（對外 `/api/v1/platform.v1.TenantEntitlementService/GetTenantEntitlements`，**不是** `/platform/`），以租戶 session 身分為準、只回自己公司、唯讀；缺計數器的 integer feature 降級為「略過該筆＋log」（否則多一個 feature 就讓整張卡片失敗）。
 
 ---
 

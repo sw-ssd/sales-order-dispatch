@@ -3329,6 +3329,7 @@ git commit -m "feat(backend): 平台寫入 RPC（收款、override、方案價�
 
 **Interfaces:**
 - Produces: 可跑的 console 骨架（登入 → 六頁路由 → 未登入導向登入）
+- **前置缺口（Plan B Task 8 遺留，2026-09-20 記）**：operator 認證 **v1 沒有登出端點** —— `platform_session` 效期 12h 內只能靠停用 `operators.status` 即時失效（已有測試）。選項：(a) console 只做「清 cookie」的登出（純前端即可，不動後端）；(b) 後端 `Logout` RPC ＋ Valkey 黑名單（需要一個可撤銷清單）。本頁要一併決定，否則使用者按不到登出。
 
 - [ ] **Step 1: workspace 與 proto 輸出**
 

@@ -27,7 +27,71 @@
 
 ---
 
-## File Structure
+## Progress
+
+> 執行記錄與逐任務細節（含每次審查的判定、裁決與更正）見 `.superpowers/sdd/2026-09-20-platform-entitlements-plan/progress.md`。狀態：**12/12 任務完成**（2026-09-20）。下表依**任務編號**排列（與計畫相符）。
+
+| # | 任務 | 狀態 | 產出（commit） | 驗證 |
+|---|---|---|---|---|
+| 1 | `config.Platform` 與啟動防護 | ✅ | `1c6ac7c`＋`ef3135f`／`79ce7e6` | 7 子測（全以 `config.New()`＋env 驅動）、真容器啟動防護實跑 |
+| 2 | `platform` schema 與 10 張表（`00029`） | ✅ | `e3a193b`＋`ceccc8c` | 10 表＋6 索引（含 3 partial UNIQUE 的 `pg_get_expr` 謂詞）、`app_rw` 零權限雙路實證、Down 可 up→down→up |
+| 3 | 平台 store（介面＋假實作＋PG） | ✅ | `edf436b`＋`a88408c`／`96a17ec`／`2b6cf1b` | 5 契約測試（免 Docker）＋真 PG 種子（NULL 限額／cancelled／已到期 override） |
+| 4 | 權益判定（`entitlements.Service`） | ✅ | `875a623`／`1139e00`／`b3f685d`／`5b479c4`＋`72e7386`／`fd7ccc3`／`c66c9a4`／`8c268e1` | 17 列判定表、三碼含 details、快取 TTL 兩測試（無斷言落在緊湊時間窗） |
+| 5 | 計數器與服務注入（編譯器驅動） | ✅ | `933de22`＋`d2bd170`→`193926b`→`6b2be85`→`fb41808` | app_rw 整合探針（含「無請求交易→四 feature 皆 0」對照組）；部門 scope 改公司層計數（探針留成子測） |
+| 6 | 配額守衛掛點與表驅動測試 | ✅ | `cde1808`（RED）→`3bed56c`＋`7122767` | 矩陣 6/6＋語意＋真 PG；`dept_admin` 超額被擋（附突變）；`UpdateUser` 復原守衛跑完整序列 |
+| 7 | `platform/v1` proto 與三端生成 | ✅ | `9f6a683` | 10 檔重生成 byte-identical、三語言執行期 smoke 全通 |
+| 8 | 平台操作者認證（OIDC＋operator JWT） | ✅ | `5deaf04`…`d425818`＋`c3733c0` | 16 條（cookie 旗標／audience／`exp` 缺／HS384／空密鑰 fail-closed／state 驗完即清） |
+| 9 | `PlatformAdminService` 唯讀 RPC 與平台稽核 | ✅ | `e0088d9`（RED）→`345ed2e`＋`41e620d`＋`9548c55`＋`90155a5` | `/platform/` 掛載 path-match；交易內 `SET LOCAL` 解 FORCE RLS（附突變）；LATERAL 挑 cancelled；排除平台自營公司 |
+| 10 | 租戶端權益投影（`TenantEntitlementService`） | ✅ | `9270cba`（RED）→`22b00ed` | 4 條新測試；掛在租戶 `apiMux`（`/api/v1`，非 `/platform/`）；無計數器的 integer feature 降級略過＋log；守門 233/98 未加寬 |
+| 11 | Seeds（features／方案／價目／權益／首位 operator） | ✅ | `6ee4f37`（RED）→`67646d3`＋`9bd96e1`＋`bfc33dc`＋`511c889`＋`0b0bc95`＋`2855964` | 真容器連跑 2 次列數不動 `7/3/6/16/1/1/1`；值未變則不推進 `settings.updated_at` |
+| 12 | 慣例文件、CI 與計畫索引 | ✅ | 本表所在 commit | `git diff --stat` 僅文件與 CI；引用數字全以指令重驗（見下表） |
+
+**現況數字（以程式與產生檔為準，勿抄舊稿）**：
+
+| 數字 | 值 | 確認指令 |
+|---|---|---|
+| `platform` 表數 | **10** | `grep -c "CREATE TABLE IF NOT EXISTS platform\." backend/database/migrations/00029_platform_schema.sql` |
+| seed features | **7**（`limit.storage_gb` 刻意不在內） | `grep -c '^\s*{"limit\.\|^\s*{"feature\.' backend/cmd/seed/platform.go` |
+| seed 方案權益列 | **16**（free 4／std 5／pro 7） | `grep -o '"limit\.[a-z_]*": *[-0-9]*\|"feature\.[a-z_]*": *[-0-9]*' backend/cmd/seed/platform.go \| wc -l` |
+| 守衛清單 | **6**（spec 的「部門復原」是缺口） | `grep -c '^\t{"' backend/internal/services/entitlement_guard_test.go` |
+| errcode 基線 | **98 行／233 呼叫點**（只減不增） | `wc -l < backend/internal/services/errcode_baseline.txt`；`awk -F: '{s+=$NF} END {print s}' …` |
+| 錯誤碼 | **21**（SYS 7／AUTH 7／PLAT 4／CUST 3），**17 已落點** | `grep -oE "(AUTH\|SYS\|PLAT\|CUST)-[0-9]{4}" docs/error-codes.md \| sort -u \| wc -l` |
+| 權益快取 TTL | **60s**（保底；失效由寫入方 `Delete`） | `grep -n entitlementCacheTTL backend/internal/server/domains.go` |
+| migration 編號 | 至 **`00029`** | `ls backend/database/migrations` |
+
+### 執行期間的計畫更正（已寫回內文或程式碼註解）
+
+| # | 更正 | 理由 |
+|---|---|---|
+| 1 | 守衛清單 **7 → 6**（`DepartmentService.RestoreDepartment` 不存在） | `proto/salesorder/v1/company.proto` 的 `DepartmentService` 只有 List/Get/Create/Update/Delete；00020 的部門軟刪除只做了 Delete 側。第 7 項記為**具名缺口**（測試檔有註解），**不**在守衛任務裡新增 RPC |
+| 2 | `domains.go` 的 `mountEntitlements` **fail-fast**（計畫原為「log＋略過」） | 略過會讓四個業務 `register` 落空＝四個業務 RPC **整組不掛載**，比無守衛更糟 |
+| 3 | 建構子收 **consumer 端最小介面** `entitlementChecker` | 計畫讓建構子吃具體型別 `*entitlements.Service`，T6 的記錄式假物件無法注入 |
+| 4 | 錯誤一律走 **`errcode` 註冊碼**（計畫多處寫裸 `connect.NewError`） | Plan D 的守門測試會紅；啟動防護則用 `fmt.Errorf`（不是對外契約） |
+| 5 | `limit.storage_gb` **自 v1 seed 移除**（features 8→7、entitlements 19→16） | 無計數器 → 種下去會讓租戶端權益投影對所有租戶失敗 |
+| 6 | 席位計數在 `department`／`self` scope 改走 **`SystemScopeTx` 公司層**讀取 | T5 審查實測：請求交易內計數會被 RLS 過濾 → 部門 scope 可「每部門一份上限」繞過配額 |
+| 7 | **super／developer 略過配額**（spec §4.3 有、計畫 §4.5 漏）集中在 `guardQuota`；並補 `UpdateUser` 復原守衛 | 平台方不受單一租戶合約限制（S10／R8）；`inactive→active` 與 `Restore*` 是同型漏洞的另一入口 |
+| 8 | 平台 RPC 掛在**字面 `/platform/` 之下** | operator cookie `Path=/platform` 與 Connect procedure `/platform.v1.…` 不合 RFC 6265 path-match → 瀏覽器不送 cookie；放寬 cookie 成 `/` 又會送往租戶 API |
+| 9 | T11（seeds）以**計畫 Task 11 段落**為權威實作 | 派工用的 `task-10-brief.md` 內容其實是計畫 Task 10（租戶端投影），兩者編號不一致（已如實記錄在該任務報告） |
+| 10 | T12 追加 **proto 產生檔的 CI 漂移閘門**（`.github/workflows/ci.yml` 的「Proto generated files up to date」） | 計畫只涵蓋 errcode 產生檔（Plan D）；proto 的漂移原本要等到「編譯不過」才會被發現，而三端生成檔一旦漂移，前端／App 的型別錯誤會在更晚才爆 |
+| 11 | T12 的 `backend/AGENTS.md` §11 由草案 8 條長成 **13 條** | 執行期間新增的硬約束（守衛唯一入口、check-then-act、`/platform/` 前綴、`requestid`、跨租戶 `SET LOCAL`、seed 冪等定義）都是實測換來的，不寫進慣例很快就會被下一個實作者踩回去 |
+| 12 | 計畫 Step 3 的「本地 `task check` ＋ `task test:integration`」由 **CI（含新增的兩個產生檔閘門）＋全域驗證**取代 | 收尾時同一工作樹仍有其他任務在動（並行派工的已知代價），本地全套驗證會與半成品互斥 |
+
+### 未結項（deferred：現況、選項、歸屬）
+
+| # | 項目 | 現況 | 選項 | 歸屬 |
+|---|---|---|---|---|
+| 1 | **席位 vs 客戶帳號的口徑矛盾** | `CreateCustomer` 會建一列 active 的 `users`（`customer_service.go:747`），而席位計數含所有非 `inactive` 帳號（`counters.go`）→ 但該路徑只受 `LimitCustomers` 守衛 → 已達席位上限仍可藉「建客戶」超額佔席位。spec §3.2（席位＝未停用帳號）與 §4.5（只有 `CreateUser` 綁 `limit.seats`）互相打架 | (a) 席位只算**非客戶**帳號（`is_customer=false`）——SaaS 直覺，需改 spec §3.2＋計數器（**建議**）；(b) `CreateCustomer` 也檢查 `limit.seats`——與現行 spec 一致但「加一個客戶吃掉一個員工席位」 | 產品／spec 擁有者定調（會動計費語意，本計畫不自行改） |
+| 2 | **spec §4.5 守衛清單缺 `UpdateUser`** | 實作已含 inactive→active 的席位守衛（`7122767`），spec 清單未列 | 回寫 spec §4.5 | spec 擁有者（T12 已在 spec §4.5 補註記） |
+| 3 | **`RestoreDepartment` 不存在** | spec §4.5 列了「部門復原」，repo 無此 RPC；`guardCases` 記為具名缺口 | 補 RPC（含守衛）或從 spec 刪列 | `backend-02-tenancy-users`（T12 已在 spec §4.5 補註記） |
+| 4 | **`platform.settings` 由 Plan C 的 `00030` 建立** | Plan B 的 seed 對該表採「有表才寫、跳過並印提示」；形狀已與 Plan C 對齊（`key`／`value` 皆 TEXT） | — （已寫成跨計畫硬契約） | Plan C：落地後**必須重跑 `cmd/seed`**，否則 `cmd/platform-cron` 一開跑就 Fatal |
+| 5 | **seed 對 `features`／`plans`／`plan_entitlements` 是 `DO UPDATE`** | 重跑會覆寫這三張表的既有值（v1 是產品初始定案，可接受） | console 若開放營運編輯方案權益 → 改成「只補缺」（`NOT EXISTS`／`DO NOTHING`） | Plan C（console 編輯能力落地時） |
+| 6 | **`limit.storage_gb` 不在 v1 seed** | 無計數器可量（`internal/services/counters.go` 四種 feature 皆無數量來源） | 檔案功能（04 §3.6，P2-1）落地時連同計數器一起加回 | P2-1（FileStore）＋ spec §4.5 |
+| 7 | **v1 無登出端點** | operator token 效期 12h 內只能靠停用 `operators.status` 即時失效（已有測試） | 補 `Logout`（清 cookie／黑名單）或縮短效期 | Plan C／operator auth |
+| 8 | **`platform-console/` 未落地** | 目錄不存在 → errcode 產生器對它是 no-op，CI 的 errcode 與 proto 閘門都已把路徑列入（一落地就自動納管） | — | Plan C（T1–T14） |
+| 9 | **平台 admin 連線池有兩條** | `mountEntitlements` 與 `mountPlatformAuth` 各自 `database.OpenSQL(AdminDSN())`（process 級、成本可忽略；收斂成單池需改 T5 的 `mountEntitlements` 簽章） | 收斂成一池 | Plan C |
+
+---
+
 
 | 路徑 | 職責 |
 |---|---|
@@ -3128,7 +3192,7 @@ git commit -m "feat(backend): 平台域 seeder（8 features、3 方案與價目�
 
 - [ ] **Step 1: `backend/AGENTS.md` 新增平台域小節**
 
-（**編號**：`backend/AGENTS.md` §10 已由 Plan D 的「錯誤碼」佔用，故本節為 **§11**。）
+（**編號**：`backend/AGENTS.md` §10 已由 Plan D 的「錯誤碼」佔用，故本節為 **§11**。**定稿為 13 條**——下面區塊是起草時期的 8 條草案，實作期間另外長出「守衛唯一入口與平台層略過」「配額是 check-then-act」「`/platform/` 前綴與 `requestid` interceptor」「跨租戶讀業務表的 `SET LOCAL`」「seed 的冪等定義」等條目；**唯一權威是 `backend/AGENTS.md` §11**，本區塊僅留為歷史記錄。）
 
 ```markdown
 ## 11. 平台域（SaaS 訂閱與權益，D34–D39）
