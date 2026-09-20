@@ -101,7 +101,7 @@ func TestGuardUsesIdentityCompanyNotRequestedCompany(t *testing.T) {
 	id := authz.Identity{UserID: "1", CompanyID: uItoa(coA), Role: "company_admin", Roles: []string{"company_admin"}}
 	rec := &guardRecorder{results: map[string]error{}}
 	client := salesorderv1connect.NewDepartmentServiceClient(http.DefaultClient,
-		guardURL(t, db, id, companyScope(coA), rec, func(m *http.ServeMux, e entitlementChecker) {
+		guardURL(t, db, id, guardCompanyScope(coA), rec, func(m *http.ServeMux, e entitlementChecker) {
 			RegisterCompanyServices(m, db, e)
 		}))
 	if _, err := client.CreateDepartment(t.Context(), connect.NewRequest(&v1.CreateDepartmentRequest{
@@ -126,7 +126,7 @@ func runGuardedRPC(t *testing.T, rec *guardRecorder, name string) {
 		co, _, _ := seedUserCompany(t, db)
 		id := authz.Identity{UserID: "1", CompanyID: uItoa(co), Role: "company_admin", Roles: []string{"company_admin"}}
 		client := salesorderv1connect.NewUserServiceClient(http.DefaultClient,
-			guardURL(t, db, id, companyScope(co), rec, func(m *http.ServeMux, e entitlementChecker) {
+			guardURL(t, db, id, guardCompanyScope(co), rec, func(m *http.ServeMux, e entitlementChecker) {
 				RegisterUserServices(m, db, e)
 			}))
 		if _, err := client.CreateUser(ctx, connect.NewRequest(&v1.CreateUserRequest{
@@ -140,7 +140,7 @@ func runGuardedRPC(t *testing.T, rec *guardRecorder, name string) {
 		co, dept := seedCustomerCompany(t, db, "GD", true)
 		rep := seedCustomerRep(t, db, co, dept)
 		client := customersv1connect.NewCustomerServiceClient(http.DefaultClient,
-			guardURL(t, db, deptAdminID(co, dept), departmentScope(co, dept), rec,
+			guardURL(t, db, deptAdminID(co, dept), guardDepartmentScope(co, dept), rec,
 				func(m *http.ServeMux, e entitlementChecker) {
 					RegisterCustomerServices(m, db, "http://localhost:3000", e)
 				}))
@@ -156,7 +156,7 @@ func runGuardedRPC(t *testing.T, rec *guardRecorder, name string) {
 		deleted := db.Customer.Create().SetCompanyID(co).SetDepartmentID(dept).
 			SetCustomerCode("GD900001").SetName("已刪客戶").SetDeletedAt(time.Now()).SaveX(ctx)
 		client := customersv1connect.NewCustomerServiceClient(http.DefaultClient,
-			guardURL(t, db, deptAdminID(co, dept), departmentScope(co, dept), rec,
+			guardURL(t, db, deptAdminID(co, dept), guardDepartmentScope(co, dept), rec,
 				func(m *http.ServeMux, e entitlementChecker) {
 					RegisterCustomerServices(m, db, "http://localhost:3000", e)
 				}))
@@ -171,7 +171,7 @@ func runGuardedRPC(t *testing.T, rec *guardRecorder, name string) {
 		co, dept := seedMasterDept(t, db, t.Name())
 		catID, whID, specID := seedProductEnv(t, db, co, dept)
 		client := productsv1connect.NewProductServiceClient(http.DefaultClient,
-			guardURL(t, db, deptAdminID(co, dept), departmentScope(co, dept), rec,
+			guardURL(t, db, deptAdminID(co, dept), guardDepartmentScope(co, dept), rec,
 				func(m *http.ServeMux, e entitlementChecker) { RegisterProductService(m, db, e) }))
 		if _, err := client.CreateProduct(ctx, connect.NewRequest(validProductReq(catID, whID, specID))); err != nil {
 			t.Fatalf("CreateProduct: %v", err)
@@ -183,7 +183,7 @@ func runGuardedRPC(t *testing.T, rec *guardRecorder, name string) {
 		deleted := db.Product.Create().SetCompanyID(co).SetDepartmentID(dept).
 			SetCode("P-RST").SetName("已刪商品").SetDeletedAt(time.Now()).SaveX(ctx)
 		client := productsv1connect.NewProductServiceClient(http.DefaultClient,
-			guardURL(t, db, deptAdminID(co, dept), departmentScope(co, dept), rec,
+			guardURL(t, db, deptAdminID(co, dept), guardDepartmentScope(co, dept), rec,
 				func(m *http.ServeMux, e entitlementChecker) { RegisterProductService(m, db, e) }))
 		if _, err := client.RestoreProduct(ctx, connect.NewRequest(&productsv1.RestoreProductRequest{
 			Id: uItoa(deleted.ID),
@@ -196,7 +196,7 @@ func runGuardedRPC(t *testing.T, rec *guardRecorder, name string) {
 		co, _, _ := seedUserCompany(t, db)
 		id := authz.Identity{UserID: "1", CompanyID: uItoa(co), Role: "company_admin", Roles: []string{"company_admin"}}
 		client := salesorderv1connect.NewDepartmentServiceClient(http.DefaultClient,
-			guardURL(t, db, id, companyScope(co), rec, func(m *http.ServeMux, e entitlementChecker) {
+			guardURL(t, db, id, guardCompanyScope(co), rec, func(m *http.ServeMux, e entitlementChecker) {
 				RegisterCompanyServices(m, db, e)
 			}))
 		if _, err := client.CreateDepartment(ctx, connect.NewRequest(&v1.CreateDepartmentRequest{
@@ -225,7 +225,7 @@ func TestCreateUserBlockedAtSeatLimit(t *testing.T) {
 
 	id := authz.Identity{UserID: "1", CompanyID: uItoa(co), Role: "company_admin", Roles: []string{"company_admin"}}
 	client := salesorderv1connect.NewUserServiceClient(http.DefaultClient,
-		guardURL(t, db, id, companyScope(co), entSvc, func(m *http.ServeMux, e entitlementChecker) {
+		guardURL(t, db, id, guardCompanyScope(co), entSvc, func(m *http.ServeMux, e entitlementChecker) {
 			RegisterUserServices(m, db, e)
 		}))
 
@@ -281,7 +281,7 @@ func TestCreateCustomerBlockedForDeptAdminAtCompanyLimit(t *testing.T) {
 	entSvc := guardEntitlements(t, db, co, entitlements.LimitCustomers, 10)
 
 	client := customersv1connect.NewCustomerServiceClient(http.DefaultClient,
-		guardURL(t, db, deptAdminID(co, deptA), departmentScope(co, deptA), entSvc,
+		guardURL(t, db, deptAdminID(co, deptA), guardDepartmentScope(co, deptA), entSvc,
 			func(m *http.ServeMux, e entitlementChecker) {
 				RegisterCustomerServices(m, db, "http://localhost:3000", e)
 			}))
@@ -339,12 +339,13 @@ func guardEntitlements(t *testing.T, db *ent.Client, companyID int, feature stri
 	return entitlements.New(f, NewEntitlementCounter(db), entitlements.NewMemoryCache(), 0)
 }
 
-// companyScope／departmentScope 組出與生產 authzMiddleware 相同的 RLS scope。
-func companyScope(companyID int) auth.RLSScope {
+// guardCompanyScope／guardDepartmentScope 組出與生產 authzMiddleware 相同的 RLS scope
+// （命名加 guard 前綴：整合測試檔已有同名的 []string 版 helper）。
+func guardCompanyScope(companyID int) auth.RLSScope {
 	return auth.RLSScope{DataScope: auth.DataScopeCompany, CompanyID: uItoa(companyID), CompanyActive: true}
 }
 
-func departmentScope(companyID, departmentID int) auth.RLSScope {
+func guardDepartmentScope(companyID, departmentID int) auth.RLSScope {
 	return auth.RLSScope{
 		DataScope:     auth.DataScopeDepartment,
 		CompanyID:     uItoa(companyID),

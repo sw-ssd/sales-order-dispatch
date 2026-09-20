@@ -34,6 +34,22 @@ type entitlementChecker interface {
 	CheckLimit(ctx context.Context, companyID int, feature string, delta int) error
 }
 
+// guardCompanyID 回傳配額守衛要檢查的租戶：**以身分為準**（authz.IdentityFrom(ctx)），
+// 不得採用請求帶入的 company_id —— 否則可以用別人方案的額度替自己的寫入背書。
+//
+// 只有 super／developer 例外：他們沒有租戶範圍（在任意公司代營運），此時目標公司就是請求
+// 指定的公司 —— 它的存在與操作權限已於守衛之前驗證完畢（CreateUser 的公司存在檢查、
+// CreateDepartment 的 requireScope 與存在檢查）。
+func guardCompanyID(id authz.Identity, requested int) int {
+	if isSuperIdentity(id) {
+		return requested
+	}
+	if own, err := parseID(id.CompanyID); err == nil {
+		return own
+	}
+	return requested
+}
+
 // requireAuth 取得已登入身分;未登入 → AUTH-4001(對外 Unauthenticated,所有主檔方法共用)。
 //
 // 「未登入」的判定沿用既有語意(無任何角色):注入工具的測試以 Roles-only 身分驗「缺租戶範圍」

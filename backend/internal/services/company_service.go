@@ -28,6 +28,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
 	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 
@@ -478,6 +479,16 @@ func (s *DepartmentService) CreateDepartment(ctx context.Context, req *connect.R
 	}
 	if !exists {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("公司 %d 不存在", companyID))
+	}
+
+	// 配額守衛（部門數）：驗證完成、任何寫入之前。company id 來自身分（company_admin 的
+	// 權限閘門不比對公司，請求帶入的 id 不得作為配額依據）；super 無租戶範圍時才落回目標公司。
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.ent.CheckLimit(ctx, guardCompanyID(id, companyID), entitlements.LimitDepartments, 1); err != nil {
+		return nil, err
 	}
 
 	created, err := dbtenant.Client(ctx, s.db).Department.Create().

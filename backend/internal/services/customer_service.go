@@ -26,6 +26,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
 	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1/customersv1connect"
 )
@@ -369,6 +370,13 @@ func (s *CustomerService) CreateCustomer(ctx context.Context, req *connect.Reque
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("公司未設定客戶編號前綴"))
 	}
 
+	// 配額守衛（客戶數）：驗證完成、任何寫入之前（含下面的 counter 列）。配額是**公司層**的，
+	// cid 來自身分（deptScope）；計數器在 department scope 下另開系統範圍交易取公司總數，
+	// 否則只數到本部門 → 低報 → 超額放行。
+	if err := s.ent.CheckLimit(ctx, guardCompanyID(id, cid), entitlements.LimitCustomers, 1); err != nil {
+		return nil, err
+	}
+
 	// 建前步驟:確保 counter 列存在。它在**請求交易內**執行(見 ensureCustomerCounter)——
 	// 併發首建時後到者撞唯一索引即整請求失敗(重試即成功),不會、也無法吞掉該衝突再繼續。
 	if err := s.ensureCustomerCounter(ctx, cid); err != nil {
@@ -667,6 +675,11 @@ func (s *CustomerService) RestoreCustomer(ctx context.Context, req *connect.Requ
 	if cur.DeletedAt == nil {
 		// 已是 active,冪等回傳。
 		return connect.NewResponse(&customersv1.RestoreCustomerResponse{Customer: customerToProto(cur)}), nil
+	}
+	// 配額守衛（客戶數）：**復原會增加有效筆數**（軟刪除設計下的專屬漏洞），故守衛在
+	// 「確認該列存在且已刪除」之後、復原寫入之前 —— 已 active 的冪等回傳不佔用新額度。
+	if err := s.ent.CheckLimit(ctx, guardCompanyID(id, cid), entitlements.LimitCustomers, 1); err != nil {
+		return nil, err
 	}
 	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見本檔 CreateCustomer。
 	tx, ok := dbtenant.TxFrom(ctx)

@@ -26,6 +26,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 )
@@ -278,6 +279,13 @@ func (s *UserService) CreateUser(ctx context.Context, req *connect.Request[v1.Cr
 			return nil, err
 		}
 		deptRef = did
+	}
+
+	// 配額守衛（席位）：驗證完成、任何寫入之前。company id 來自身分（不得用請求帶入的 id，
+	// 否則能拿別家公司的額度替這裡的寫入背書）；super 無租戶範圍時才落回目標公司。
+	// 錯誤帶 PLAT-3001／5002／5001 與 details，前端據以導向收款或升級方案。
+	if err := s.ent.CheckLimit(ctx, guardCompanyID(id, cid), entitlements.LimitSeats, 1); err != nil {
+		return nil, err
 	}
 
 	// 建帳號為關鍵操作:業務異動 + 稽核(D18)同一交易。

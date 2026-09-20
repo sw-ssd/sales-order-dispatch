@@ -27,6 +27,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	domainproducts "github.com/salesorder/sales-order-1.0/backend/internal/domain/products"
 	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	productsv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/products/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/products/v1/productsv1connect"
 )
@@ -387,6 +388,11 @@ func (s *ProductService) CreateProduct(ctx context.Context, req *connect.Request
 	if err != nil {
 		return nil, err
 	}
+	// 配額守衛（商品數）：驗證完成、任何寫入之前。配額是**公司層**的（cid 來自身分），
+	// department scope 的計數器另開系統範圍交易取公司總數。
+	if err := s.ent.CheckLimit(ctx, guardCompanyID(id, cid), entitlements.LimitProducts, 1); err != nil {
+		return nil, err
+	}
 	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由見 customer_service.CreateCustomer:
 	// 商品域(含子表)ENABLE+FORCE 後,自開交易(池化連線、未帶 scope)會被 policy 過濾成 0 列/擋下。
 	tx, ok := dbtenant.TxFrom(ctx)
@@ -615,6 +621,11 @@ func (s *ProductService) RestoreProduct(ctx context.Context, req *connect.Reques
 			return nil, err
 		}
 		return connect.NewResponse(&productsv1.RestoreProductResponse{Product: pr}), nil
+	}
+	// 配額守衛（商品數）：**復原會增加有效筆數**（軟刪除設計下的專屬漏洞），守衛在
+	// 「確認該列存在且已刪除」之後、復原寫入之前（已 active 的冪等回傳不佔用新額度）。
+	if err := s.ent.CheckLimit(ctx, guardCompanyID(id, cid), entitlements.LimitProducts, 1); err != nil {
+		return nil, err
 	}
 	// 取請求交易:查詢/寫入用 db,稽核續用 tx(同一交易,D18);理由同 CreateProduct。
 	tx, ok := dbtenant.TxFrom(ctx)
