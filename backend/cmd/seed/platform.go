@@ -35,9 +35,12 @@ const platformCompanyIdentifier = "platform"
 // platformFeatures 為 v1 定案清單（spec §4.5）：4 個數值上限 ＋ 3 個 boolean 功能。
 //
 // `limit.storage_gb` **刻意不在清單內**（controller 2026-09-20 裁定）：計數器
-// （internal/services/counters.go）沒有檔案空間的來源可以量，而判定層的 Snapshot 對每個
-// integer feature 都要用量 → 種了它只會讓租戶端權益投影對**所有租戶**失敗。檔案功能（P2-1）
-// 落地並補上計數器後再加回來。
+// （internal/services/counters.go）沒有檔案空間的來源可以量。
+//
+// 注意別把它記成「種了會大聲失敗」：判定層的 Snapshot 對**沒有計數器**的 integer feature 是
+// 「略過該筆用量 ＋ 記一行 log」，**不會擋整筆投影**（T10 的整合測試正是種了它並斷言 200）
+// —— 少了計數器只會讓那個 feature 的用量**無聲消失**（前端看到的是「這個 feature 不在清單裡」）。
+// 故日後要提供 storage 用量，必須**同時**補上計數器與檔案功能（P2-1）再加回 seed。
 var platformFeatures = []struct{ Code, Type, Unit, Desc string }{
 	{"limit.seats", "integer", "席", "帳號席位上線"},
 	{"limit.customers", "integer", "客戶", "客戶筆數上線"},

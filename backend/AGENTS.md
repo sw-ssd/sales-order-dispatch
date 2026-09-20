@@ -184,5 +184,5 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
     為什麼：`companies` 等業務表是 `ENABLE`＋**`FORCE`** RLS，`FORCE` 讓 **table owner（admin 連線）也受 policy 約束** → 少了這個 `SET LOCAL`，平台端的租戶列表會**靜默回 0 列**（真容器實測；用容器預設的 superuser 連線測不出來）。
 13. **seed 的「冪等」定義**：重跑 `task seed` 不新增列、不覆寫營運已調整的值；**`updated_at` 與 sequence 跳號不算變更**。
     為什麼：`platform.settings` 只寫「值真的不同」的那幾筆（`WHERE value IS DISTINCT FROM EXCLUDED.value`），否則每次重跑都推進 `updated_at`，「有沒有被改過」就失去意義；`plans` 的 `INSERT … ON CONFLICT DO UPDATE … RETURNING id` 即使走 UPDATE 分支也會消耗一次 `nextval`（id 不變、跳號無實害），把它算成變更只會逼出「先 SELECT 再 UPDATE」的複雜寫法。
-    註：`limit.storage_gb` 目前**不在** v1 seed 清單（無計數器 → 種下去會讓租戶端權益投影全面失敗），檔案功能與其計數器落地後再加回（見 spec §4.5 的註記）。
+    註：`limit.storage_gb` 目前**不在** v1 seed 清單（無計數器）。別把理由記成「種了會讓租戶端權益投影全面失敗」——缺計數器的 integer feature 在投影中是「**靜默略過該筆 ＋ 一行 log**」，不會擋整筆回應；換句話說沒有計數器時用量是**無聲消失**，不是大聲失敗。故日後要提供 storage 用量，必須**同時**補上計數器（見 spec §4.5 的註記）。
 

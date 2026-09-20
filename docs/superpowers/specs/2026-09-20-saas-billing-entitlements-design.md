@@ -200,7 +200,7 @@ Valkey key `ent:{companyID}`；方案變更／override／訂閱狀態異動即 *
 3. **§3.2 的席位口徑與本表衝突**（客戶帳號也佔席位卻只檢查 `limit.customers`），見 §4.3「已知不一致」第 3 項。
 
 **v1 `features` 清單**：`limit.seats`、`limit.customers`、`limit.products`、`limit.departments`（integer）；`feature.printing`、`feature.dispatch`、`feature.returns`（boolean）。
-**更正（Plan B Task 11，2026-09-20）**：`limit.storage_gb` **已自 v1 清單移除**（原「定案，不增不減」的 8 項現為 7 項）——計數器沒有檔案空間的來源可量，而判定層的 `Snapshot` 對每個 integer feature 都要用量，種了它會讓**租戶端權益投影對所有租戶失敗**。`feature.printing`／`dispatch`／`returns` 隨 05/08/09 落地才有守衛掛點；`limit.storage_gb` 隨 04 §3.6 檔案資產（P2-1）落地並補上計數器後再加回 seed。
+**更正（Plan B Task 11，2026-09-20）**：`limit.storage_gb` **已自 v1 清單移除**（原「定案，不增不減」的 8 項現為 7 項）——計數器沒有檔案空間的來源可量。**移除理由的更正（最終全分支審查 F-3）**：不是「種了會讓租戶端權益投影對所有租戶失敗」——判定層的 `Snapshot` 對**沒有計數器**的 integer feature 是「略過該筆 ＋ 記一行 log」，**不會擋整筆回應**（T10 的整合測試正是種了它並斷言 200）；少了計數器的下場是那個 feature 的用量**無聲消失**。故日後要提供 storage 用量，必須**同時**補上計數器。`feature.printing`／`dispatch`／`returns` 隨 05/08/09 落地才有守衛掛點；`limit.storage_gb` 隨 04 §3.6 檔案資產（P2-1）落地並補上計數器後再加回 seed。
 
 ### 4.6 UI 投影與守衛的分工
 

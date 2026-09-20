@@ -67,7 +67,7 @@
 | 2 | `domains.go` 的 `mountEntitlements` **fail-fast**（計畫原為「log＋略過」） | 略過會讓四個業務 `register` 落空＝四個業務 RPC **整組不掛載**，比無守衛更糟 |
 | 3 | 建構子收 **consumer 端最小介面** `entitlementChecker` | 計畫讓建構子吃具體型別 `*entitlements.Service`，T6 的記錄式假物件無法注入 |
 | 4 | 錯誤一律走 **`errcode` 註冊碼**（計畫多處寫裸 `connect.NewError`） | Plan D 的守門測試會紅；啟動防護則用 `fmt.Errorf`（不是對外契約） |
-| 5 | `limit.storage_gb` **自 v1 seed 移除**（features 8→7、entitlements 19→16） | 無計數器 → 種下去會讓租戶端權益投影對所有租戶失敗 |
+| 5 | `limit.storage_gb` **自 v1 seed 移除**（features 8→7、entitlements 19→16） | 無計數器可量（`internal/services/counters.go` 四種 feature 皆無數量來源）。**理由更正（F-3）**：不是「種了會讓投影失敗」——缺計數器的 integer feature 在投影中**靜默略過該筆 ＋ 一行 log**，不擋整筆回應，故少了計數器時用量是**無聲消失**而非大聲失敗 |
 | 6 | 席位計數在 `department`／`self` scope 改走 **`SystemScopeTx` 公司層**讀取 | T5 審查實測：請求交易內計數會被 RLS 過濾 → 部門 scope 可「每部門一份上限」繞過配額 |
 | 7 | **super／developer 略過配額**（spec §4.3 有、計畫 §4.5 漏）集中在 `guardQuota`；並補 `UpdateUser` 復原守衛 | 平台方不受單一租戶合約限制（S10／R8）；`inactive→active` 與 `Restore*` 是同型漏洞的另一入口 |
 | 8 | 平台 RPC 掛在**字面 `/platform/` 之下** | operator cookie `Path=/platform` 與 Connect procedure `/platform.v1.…` 不合 RFC 6265 path-match → 瀏覽器不送 cookie；放寬 cookie 成 `/` 又會送往租戶 API |
