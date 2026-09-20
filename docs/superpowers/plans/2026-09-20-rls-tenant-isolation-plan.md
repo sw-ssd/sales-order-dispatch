@@ -1656,7 +1656,7 @@ for f in warehouse_service route_service processingspec_service productcategory_
 done
 grep -n 's\.db\.\|db.Tx(ctx)' internal/services/warehouse_service.go internal/services/route_service.go internal/services/processingspec_service.go internal/services/productcategory_service.go
 ```
-Expected: 無輸出。四檔各自的自開交易（各 4 處）依 Global Constraints「交易改寫樣式」改寫��使用請求交易；若 `department_master.go` 內有共用存取，一併處理。
+Expected: 無輸出。四檔各自的自開交易（各 4 處）依 Global Constraints「交易改寫樣式」改寫為使用請求交易；若 `department_master.go` 內有共用存取，一併處理。
 
 - [ ] **Step 4: ENABLE migration（`database/migrations/00025_rls_enable_masters.sql`）**
 
@@ -1811,7 +1811,7 @@ cd backend
 sd 's\.db\.' 'dbtenant.Client(ctx, s.db).' internal/services/product_service.go
 grep -n 's\.db\.\|db.Tx(ctx)' internal/services/product_service.go   # 期望無輸出
 ```
-四處自開交易依 Global Constraints「交易改寫樣式」改寫��使用請求交易。
+四處自開交易依 Global Constraints「交易改寫樣式」改寫為使用請求交易。
 
 - [ ] **Step 4: ENABLE migration（`database/migrations/00026_rls_enable_products.sql`）**
 
@@ -1968,7 +1968,7 @@ sd 's\.db\.' 'dbtenant.Client(ctx, s.db).' internal/services/metadict_service.go
 sd 's\.db\.' 'dbtenant.Client(ctx, s.db).' internal/services/audit_service.go
 grep -n 's\.db\.\|db.Tx(ctx)' internal/services/metadict_service.go internal/services/audit_service.go   # 期望無輸出
 ```
-三處自開交易依 Global Constraints「交易改寫樣式」改寫��使用請求交易；`internal/audit/recorder.go` 確認以呼叫端傳入的 `*ent.Tx` 寫入（同事務稽核 D18），非自開交易。
+三處自開交易依 Global Constraints「交易改寫樣式」改寫為使用請求交易；`internal/audit/recorder.go` 確認以呼叫端傳入的 `*ent.Tx` 寫入（同事務稽核 D18），非自開交易。
 
 - [ ] **Step 4: ENABLE migration（`database/migrations/00027_rls_enable_metadicts_audit.sql`）**
 
@@ -2251,7 +2251,7 @@ for f in company_service user_service role_service; do
 done
 grep -n 's\.db\.\|db.Tx(ctx)' internal/services/company_service.go internal/services/user_service.go internal/services/role_service.go   # 期望無輸出
 ```
-- 三檔的自開交易（3／5／1 處）依 Global Constraints「交易改寫樣式」改寫�交易。
+- 三檔的自開交易（3／5／1 處）依 Global Constraints「交易改寫樣式」改寫為使用請求交易。
 - `internal/server/server.go:167-210` 的 `authzMiddleware`：把查 `users`／`companies`／`departments`／`roles` 的段落以 `dbtenant.SystemScopeTx` 包起來（該階段尚無身分，scope 由資料推導）。**只包身分解析所需查詢**，不得把整個請求處理搬進系統範圍。
 - `internal/handlers/auth_handler.go`：登入（email 查找 + 密碼驗證）、QR 兌換前的身分查詢比照辦理。
 
