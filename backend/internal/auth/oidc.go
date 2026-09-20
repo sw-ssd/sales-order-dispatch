@@ -136,6 +136,15 @@ func (o *OneTimeStore) Put(ctx context.Context, key, value string, ttl time.Dura
 	return o.kv.Set(ctx, key, value, ttl)
 }
 
+// Peek 取出一次性 token 但**不刪除**（不存在 ok=false）。
+//
+// 為什麼需要它：消費（GetAndDelete）必須是**最後一個**動作 —— 呼叫端在拿到值之後還要跑一串
+// 會拒絕的前置檢查（席位守衛、email 去重），若先消費再檢查，一次註冊必然失敗的請求就白燒了
+// 使用者的憑證（他得重走一次 OIDC 才能拿到新的）。Peek 讓那些檢查都先過，最後才消費。
+func (o *OneTimeStore) Peek(ctx context.Context, key string) (string, bool, error) {
+	return o.kv.Get(ctx, key)
+}
+
 // GetAndDelete 取出並刪除一次性 token(用完即刪;不存在 ok=false)。
 func (o *OneTimeStore) GetAndDelete(ctx context.Context, key string) (string, bool, error) {
 	v, ok, err := o.kv.Get(ctx, key)

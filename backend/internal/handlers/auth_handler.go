@@ -534,13 +534,21 @@ func (h *AuthHandler) issueRegistration(w http.ResponseWriter, r *http.Request, 
 }
 
 // registerWithToken 以 registration token 建立 guest(role=guest,status=pending,歸屬所選公司)。
+//
+// **一次性憑證的消費是最後一步**（F-5）：先 Peek 取 email，跑完所有會拒絕的前置檢查（席位守衛、
+// email 去重），最後才 GetAndDelete。反過來（先消費再檢查）會讓「註冊必然失敗」的請求白燒掉
+// 使用者的憑證 —— 他得重走一次 Google 登入才能拿到新的，反覆重試就每次燒一個。
 func (h *AuthHandler) registerWithToken(ctx context.Context, token, name string, companyID int) (*connect.Response[v1.RegisterCompleteResponse], error) {
-	email, ok, err := h.deps.OneTime.GetAndDelete(ctx, auth.RegistrationKey(token))
+	// 憑證無效一律同一個錯誤（沿用既有語意：不區分「不存在」與「已過期」）；單一呼叫點，
+	// 也讓「未消費前失敗」與「消費時落敗」兩處回同一個碼。
+	invalidToken := connect.NewError(connect.CodeUnauthenticated, errors.New("註冊憑證無效或已過期,請重新以 Google 登入"))
+
+	email, ok, err := h.deps.OneTime.Peek(ctx, auth.RegistrationKey(token))
 	if err != nil {
 		return nil, internal(err)
 	}
 	if !ok {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("註冊憑證無效或已過期,請重新以 Google 登入"))
+		return nil, invalidToken
 	}
 	// 席位守衛：這條路徑會新增 users 列（＝佔一個席位），公司由請求帶入但已在上游驗證
 	// （RegisterComplete 先確認公司存在、未軟刪除且啟用）；此處仍不採身分推導（無身分）。
@@ -557,6 +565,12 @@ func (h *AuthHandler) registerWithToken(ctx context.Context, token, name string,
 		if exists {
 			// 已知的識別碼（email）重複 → SYS-2001；email 放 details（訊息樣板不含參數）。
 			return errcode.SysConflict.Error(map[string]string{"email": email})
+		}
+		// 前置檢查都過了 → 現在才消費憑證（同一個憑證的併發重複使用只有一個能走到這裡）。
+		if _, ok, derr := h.deps.OneTime.GetAndDelete(ctx, auth.RegistrationKey(token)); derr != nil {
+			return internal(derr)
+		} else if !ok {
+			return invalidToken
 		}
 		if _, cerr := db.User.Create().
 			SetEmail(email).

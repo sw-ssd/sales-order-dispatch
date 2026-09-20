@@ -800,5 +800,49 @@ func TestRegisterCompleteChecksSeatLimit(t *testing.T) {
 		if n := e.db.User.Query().Where(user.EmailEQ("new@other.example")).CountX(e.ctx); n != 0 {
 			t.Fatalf("達上限時不得建立 users 列,count=%d", n)
 		}
+
+		// F-5：被席位守衛擋下的那一次**不得燒掉一次性 registration token** —— 席位守衛（以及任何
+		// 會拒絕的前置檢查）必須在消費憑證之前。這裡換一個未滿席的公司、帶著**同一個憑證**重試：
+		// 憑證若已被消費，第二次會是 unauthenticated 而不是成功。
+		e.seatGuard.err = nil
+		other := mustCreateCompany(t, e, "co-room")
+		req2 := connect.NewRequest(&v1.RegisterCompleteRequest{CompanyId: itoa(other), Name: "李四"})
+		req2.Header().Set("Cookie", RegistrationTokenCookie+"="+token)
+		if _, err := e.rpc.RegisterComplete(e.ctx, req2); err != nil {
+			t.Fatalf("同一個 registration token 在未滿席的公司應仍有效（被擋那一次不得消費憑證）: %v", err)
+		}
+		u := e.db.User.Query().Where(user.EmailEQ("new@other.example")).OnlyX(e.ctx)
+		if co, err := u.QueryCompany().Only(e.ctx); err != nil || co.ID != other {
+			t.Fatalf("重試應把 guest 建在未滿席的公司 %d,got %v err=%v", other, co, err)
+		}
+	})
+
+	t.Run("email 已註冊（SYS-2001）：不得燒掉憑證", func(t *testing.T) {
+		e := newTestEnv(t)
+		coID := mustCreateCompany(t, e, "co-dup")
+		e.db.User.Create().
+			SetEmail("dup@other.example").SetName("既有").SetStatus(user.StatusActive).
+			SetRole("staff").SetIsCustomer(false).SetPasswordHash(auth.OIDCPasswordSentinel).
+			SetCompanyID(coID).SaveX(e.ctx)
+		token := newRegisterToken(t, e, "dup@other.example")
+
+		attempt := func() error {
+			req := connect.NewRequest(&v1.RegisterCompleteRequest{CompanyId: itoa(coID), Name: "李四"})
+			req.Header().Set("Cookie", RegistrationTokenCookie+"="+token)
+			_, err := e.rpc.RegisterComplete(e.ctx, req)
+			return err
+		}
+		err := attempt()
+		if got := authErrorInfo(t, err).GetCode(); got != "SYS-2001" {
+			t.Fatalf("email 重複應回 SYS-2001,got %v", err)
+		}
+		// 第二次仍必須走到同一個「前置檢查失敗」（而不是 unauthenticated）→ 憑證沒被消費。
+		err = attempt()
+		if connect.CodeOf(err) == connect.CodeUnauthenticated {
+			t.Fatalf("被前置檢查擋下不得消費 registration token（第二次應仍是 SYS-2001）,got %v", err)
+		}
+		if got := authErrorInfo(t, err).GetCode(); got != "SYS-2001" {
+			t.Fatalf("第二次應仍是 SYS-2001,got %q err=%v", got, err)
+		}
 	})
 }
