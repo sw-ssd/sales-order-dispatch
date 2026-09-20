@@ -28,13 +28,16 @@ jobs:
       - name: Test
         run: go test ./...
       # 產生檔（碼表與三端常數）必須與 registry 同步：跑完 go generate 後不得有 diff。
-      # platform-console/src/lib/errcode.ts 是 Plan C 的產物，尚未落地；路徑不存在時 git diff 對它是
+      # git diff 對 **untracked** 檔無感（產生器新建了檔案卻忘記 commit 時會放行），故另以
+      # git status --porcelain 檢查同一組路徑。
+      # platform-console/src/lib/errcode.ts 是 Plan C 的產物，尚未落地；路徑不存在時兩個檢查對它是
       # no-op，Plan C 落地後會自動納入（產生器只在該目錄存在時輸出該檔）。
       - name: Error codes up to date
         run: |
+          paths="../docs/error-codes.md ../frontend/src/lib/errcode.ts ../platform-console/src/lib/errcode.ts ../app/lib/gen/errcode.dart"
           go generate ./internal/errcode
-          git diff --exit-code -- ../docs/error-codes.md ../frontend/src/lib/errcode.ts \
-            ../platform-console/src/lib/errcode.ts ../app/lib/gen/errcode.dart
+          git diff --exit-code -- $paths
+          test -z "$(git status --porcelain -- $paths)"
       - name: Build
         run: go build ./cmd/server
       - name: Vulnerability scan(D31-2)
