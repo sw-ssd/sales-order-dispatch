@@ -186,8 +186,9 @@ func registeredID(v ast.Expr) string {
 func renderMarkdown(rows []row) string {
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "<!-- %s -->\n\n# 錯誤碼一覽\n\n", notice)
-	fmt.Fprintf(&b, "對外錯誤一律帶 `ErrorInfo`（`code` 與 `trace_id`）。**唯一真相來源**是 `backend/internal/errcode`，\n")
-	fmt.Fprintf(&b, "本檔是它的投影——要改碼表請改 `codes_*.go` 後重跑 `go generate ./internal/errcode`。\n\n")
+	fmt.Fprintf(&b, "**已遷移路徑**的對外錯誤一律帶 `ErrorInfo`（`code` 與 `trace_id`）；**尚未遷移者**列於\n")
+	fmt.Fprintf(&b, "`backend/internal/services/errcode_baseline.txt`（基線只減不增，由守門測試強制）。\n")
+	fmt.Fprintf(&b, "**唯一真相來源**是 `backend/internal/errcode`，本檔是它的投影——要改碼表請改 `codes_*.go` 後重跑 `go generate ./internal/errcode`。\n\n")
 	fmt.Fprintf(&b, "- 碼的形態為 `域-4位數`；對外 connect 碼由區段決定（見 `sectionRules`）。\n")
 	fmt.Fprintf(&b, "- **碼發佈後不得重用或改義**，廢止只標狀態；訊息中的 `{param}` 由 `ErrorInfo.details` 帶入（前端顯示前請自行填入）。\n")
 	fmt.Fprintf(&b, "- 共 %d 碼（%s）。\n\n", len(rows), domainSummary(rows))

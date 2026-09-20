@@ -2,8 +2,9 @@
 
 # 錯誤碼一覽
 
-對外錯誤一律帶 `ErrorInfo`（`code` 與 `trace_id`）。**唯一真相來源**是 `backend/internal/errcode`，
-本檔是它的投影——要改碼表請改 `codes_*.go` 後重跑 `go generate ./internal/errcode`。
+**已遷移路徑**的對外錯誤一律帶 `ErrorInfo`（`code` 與 `trace_id`）；**尚未遷移者**列於
+`backend/internal/services/errcode_baseline.txt`（基線只減不增，由守門測試強制）。
+**唯一真相來源**是 `backend/internal/errcode`，本檔是它的投影——要改碼表請改 `codes_*.go` 後重跑 `go generate ./internal/errcode`。
 
 - 碼的形態為 `域-4位數`；對外 connect 碼由區段決定（見 `sectionRules`）。
 - **碼發佈後不得重用或改義**，廢止只標狀態；訊息中的 `{param}` 由 `ErrorInfo.details` 帶入（前端顯示前請自行填入）。

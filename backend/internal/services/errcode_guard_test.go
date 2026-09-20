@@ -24,6 +24,9 @@ package services
 //
 //	go test ./internal/services/ -run TestNoUnregisteredErrorConstruction -update-errcode-baseline
 //
+// 該旗標同樣只准縮小：出現新增鍵或筆數增加時直接 fatal 且不寫檔（逃生口為 -allow-baseline-growth，
+// 用了它會印出加寬清單，PR 需說明理由）。
+//
 // 不掃的檔案：
 //   - `_test.go`：測試自造錯誤不是對外錯誤路徑。
 //   - `internal/errcode/`：碼的定義處本來就得呼叫 connect.NewError。
@@ -55,12 +58,17 @@ const (
 var updateErrcodeBaseline = flag.Bool("update-errcode-baseline", false,
 	"重寫 errcode_baseline.txt 為目前掃描結果（僅在有意縮小基線時使用，並在 PR 說明）")
 
+// allowBaselineGrowth 是加寬基線的逃生口：預設情況下 -update-errcode-baseline 遇到「新增鍵」或
+// 「筆數增加」會 fatal 且不寫檔，讓「基線只減不增」是強制而非口頭承諾。
+var allowBaselineGrowth = flag.Bool("allow-baseline-growth", false,
+	"允許 -update-errcode-baseline 加寬基線（新增未註冊錯誤建構）；用了它必須在 PR 說明理由"+
+		"（go test 會吞掉通過套件的輸出，加 -v 才看得到加寬清單）")
+
 func TestNoUnregisteredErrorConstruction(t *testing.T) {
 	sites := scanConnectNewError(t)
 
 	if *updateErrcodeBaseline {
-		writeBaseline(t, sites)
-		t.Logf("已更新 %s：%d 個呼叫點位置", errcodeBaselineFile, len(sites))
+		updateBaselineShrinkOnly(t, sites)
 		return
 	}
 
@@ -130,6 +138,64 @@ func TestNoUnregisteredErrorConstruction(t *testing.T) {
 	if len(sections) > 0 {
 		t.Fatalf("錯誤碼基線守門失敗:\n\n%s", strings.Join(sections, "\n\n"))
 	}
+}
+
+// updateBaselineShrinkOnly 是 -update-errcode-baseline 的實作：先與舊基線比對，只有在「鍵減少／筆數減少」
+// 或「基線不存在（首次建立）」時才寫檔；出現新增鍵或筆數增加即 fatal（不寫檔），除非明確指定
+// -allow-baseline-growth——這樣「基線只減不增」才是強制的，而不是誰跑一次更新旗標就能加寬。
+func updateBaselineShrinkOnly(t *testing.T, sites map[string]int) {
+	t.Helper()
+
+	raw, err := os.ReadFile(errcodeBaselineFile)
+	if os.IsNotExist(err) {
+		writeBaseline(t, sites)
+		t.Logf("首次建立 %s：%d 處、%d 筆", errcodeBaselineFile, len(sites), totalSites(sites))
+		return
+	}
+	if err != nil {
+		t.Fatalf("讀取 %s 失敗: %v", errcodeBaselineFile, err)
+	}
+	baseline, err := parseBaseline(string(raw))
+	if err != nil {
+		t.Fatalf("%s 格式錯誤（應為 path:歸屬名:筆數）: %v", errcodeBaselineFile, err)
+	}
+
+	var growth []string
+	for key, n := range sites {
+		switch old, ok := baseline[key]; {
+		case !ok:
+			growth = append(growth, fmt.Sprintf("  %s（新增，%d 筆）", key, n))
+		case n > old:
+			growth = append(growth, fmt.Sprintf("  %s（基線 %d 筆 → 現 %d 筆）", key, old, n))
+		}
+	}
+	sort.Strings(growth)
+
+	if len(growth) > 0 && !*allowBaselineGrowth {
+		t.Fatalf("拒絕加寬 %s（基線只能縮小，%s 未變更）:\n\n以下位置是未使用註冊碼的錯誤建構，"+
+			"請改用 errcode.<Code>.Error(…)／Wrap(…)，而非把它們寫進基線:\n\n%s\n\n"+
+			"確有必要加寬時，需明確指定 -allow-baseline-growth，並在 PR 說明理由。",
+			errcodeBaselineFile, errcodeBaselineFile, strings.Join(growth, "\n"))
+	}
+
+	writeBaseline(t, sites)
+	if len(growth) > 0 {
+		// 走逃生口時出聲：不加這行的話，加寬後的 PR 看不出基線是被「合法」放寬的。
+		fmt.Fprintf(os.Stderr, "\n⚠️  %s 已被加寬（%d 處）——基線只減不增，PR 必須說明理由:\n%s\n\n",
+			errcodeBaselineFile, len(growth), strings.Join(growth, "\n"))
+		t.Logf("已加寬 %s：%d 處、%d 筆", errcodeBaselineFile, len(sites), totalSites(sites))
+		return
+	}
+	t.Logf("已更新 %s（僅縮小，無加寬）：%d 處、%d 筆", errcodeBaselineFile, len(sites), totalSites(sites))
+}
+
+// totalSites 回傳基線筆數總和（訊息用）。
+func totalSites(sites map[string]int) int {
+	total := 0
+	for _, n := range sites {
+		total += n
+	}
+	return total
 }
 
 // writeBaseline 以 "path:歸屬名:筆數" 排序後覆寫基線。
