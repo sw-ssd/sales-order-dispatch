@@ -18,22 +18,29 @@ import (
 // TestToConnectErrorMapsToRegisteredCodes 釘住 toConnectError 的「輸入錯誤型別 → 註冊碼」映射。
 // 意圖不是「有回錯誤」而是「回哪一個碼」:唯一真相來源是 errcode registry(碼一旦發佈不得改義),
 // 故這裡同時斷言 connect 碼與註冊碼一致 —— 只改其中一邊就會紅。
+//
+// 另兩條對每個分支都成立的契約:①對外訊息必須是 registry 的樣板(對 RLS 逐字釘住 Plan A 的固定
+// 訊息);②**對外錯誤不得保留根因**(`errors.Is` 追溯得到即為用 Wrap 附了根因 —— 那條路徑會讓
+// 原文隨 Unwrap/detail 帶出去)。
 func TestToConnectErrorMapsToRegisteredCodes(t *testing.T) {
 	cases := []struct {
 		name string
 		in   error
 		id   string
 		cc   connect.Code
+		msg  string // 非空即逐字斷言對外訊息
 	}{
-		{"找不到", &ent.NotFoundError{}, "SYS-4002", connect.CodeNotFound},
-		{"驗證失敗", &ent.ValidationError{Name: "name"}, "SYS-1001", connect.CodeInvalidArgument},
-		{"約束錯誤", &ent.ConstraintError{}, "SYS-3002", connect.CodeFailedPrecondition},
+		{"找不到", &ent.NotFoundError{}, "SYS-4002", connect.CodeNotFound, ""},
+		{"驗證失敗", &ent.ValidationError{Name: "name"}, "SYS-1001", connect.CodeInvalidArgument, ""},
+		{"約束錯誤", &ent.ConstraintError{}, "SYS-3002", connect.CodeFailedPrecondition, ""},
 		{"RLS 違反(42501 不在 ent 的 constraint 判定內)", &pgconn.PgError{
 			Code:    "42501",
 			Message: `new row violates row-level security policy for table "customers"`,
-		}, "SYS-3001", connect.CodeFailedPrecondition},
-		{"多列單值", &ent.NotSingularError{}, "SYS-9000", connect.CodeInternal},
-		{"未知錯誤", errors.New("boom"), "SYS-9000", connect.CodeInternal},
+		}, "SYS-3001", connect.CodeFailedPrecondition,
+			// Plan A(T11)的對外固定訊息:與改動前的字面逐字相同,前端與維運手冊已依此描述。
+			"資料超出目前的存取範圍,無法完成此操作"},
+		{"多列單值", &ent.NotSingularError{}, "SYS-9000", connect.CodeInternal, ""},
+		{"未知錯誤", errors.New("boom"), "SYS-9000", connect.CodeInternal, ""},
 	}
 
 	for _, tc := range cases {
@@ -53,6 +60,15 @@ func TestToConnectErrorMapsToRegisteredCodes(t *testing.T) {
 			}
 			if reg.ConnectCode() != tc.cc {
 				t.Fatalf("%s 的註冊 connect 碼 = %v；測試期望 %v", tc.id, reg.ConnectCode(), tc.cc)
+			}
+			if tc.msg != "" {
+				if got := out.(*connect.Error).Message(); got != tc.msg {
+					t.Fatalf("對外訊息 = %q；want %q", got, tc.msg)
+				}
+			}
+			// 六個分支一律不得把輸入錯誤掛進對外錯誤(用 Wrap 就會):原文會隨 Unwrap/序列化帶出去。
+			if errors.Is(out, tc.in) {
+				t.Fatalf("對外錯誤不得保留根因(不得用 Wrap),got %v", out)
 			}
 		})
 	}
