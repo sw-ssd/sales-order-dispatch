@@ -53,7 +53,9 @@ flowchart LR
 現況實測：
 
 - `internal/auth/rls.go` **已具備** `ApplyRLS` / `RLSStatements` / `WithRLS` / `RLSFrom` / `ScopeForRole`（`SET LOCAL` 語句有純函式測試）→ 缺的是**呼叫點與權限模型**
-- 只有 `companies` / `departments` / `users` 三張表有 policy（`00007`），且註解明載「僅定義、不 ENABLE」
+- policy **已存在 15 個**（散於 `00007`/`00010`/`00011`/`00013`/`00015`/`00016`/`00017`：`companies`、`departments`、`users`、`roles`、`role_permissions`、`audit_logs`、`metadicts`、`customers`、`customer_addresses`、`customer_contacts`、`warehouses`、`routes`、`processing_specs`、`product_categories`、`products`）。逐條審計：**14 個只有 `USING`、缺 `WITH CHECK`**；唯一例外是 `core_metadicts_scope`（已有 `WITH CHECK`，且**刻意比 `USING` 嚴**——不含 `department_id IS NULL`，系統預設字典只有 `scope=all` 能寫）。`customer_counters`／`product_units`／`product_processing_specs` 三表**完全無 policy**
+- **沒有任何表被 ENABLE**（`00002` 只做 `ALTER DATABASE … SET row_security = on`，那不是啟用 RLS）
+- 服務層存取面：`s.db.` 直接查詢 **124 處**、`db.Tx(ctx)` **42 處**，分佈 13 個 service 檔 → 覆蓋策略必須讓「取 client」本身 scope 感知（見 §6.3）
 - `config/database.go` 目前**只有** `DATABASE_URL` → 需新增 `DATABASE_ADMIN_URL`
 - 內嵌 OpenFGA 與業務**共用同一 datastore**（`domains.go` `mountOpenFGA` 沿用 `Database.DatabaseURL`）
 
@@ -202,14 +204,23 @@ repo 目前**完全沒有** ticker／cron。新增 `cmd/platform-cron`（獨立 
 
 ### 6.2 兩次 migration（先 policy 後 ENABLE，可分別回滾）
 
-1. **補齊租戶表 policy，並修補現存缺口**：`00007` 只有 `USING`，缺 `WITH CHECK`。`USING` 管讀取與既有列，**`WITH CHECK` 才管寫入的新列** —— 缺它意味著「可以把列寫成別的 `company_id`」。新 policy 一律 `FOR ALL ... USING (...) WITH CHECK (...)`，既有三張核心表一併補。
+1. **補齊 policy 並修補現存缺口**：現有 15 個 policy 中 **14 個只有 `USING`、缺 `WITH CHECK`**（唯一例外 `core_metadicts_scope` 已有，且較 `USING` 嚴）。`USING` 管讀取與既有列，**`WITH CHECK` 才管寫入的新列** —— 缺它意味著「可以把列寫成別的 `company_id`」。故 **14 個 policy 全數 `DROP` 後以 `FOR ALL … USING (…) WITH CHECK (…)` 重建**（`WITH CHECK` 一律等於或嚴於原 `USING`；`core_metadicts_scope` 沿用原樣、不得放寬），並為三張漏網表（`customer_counters`、`product_units`、`product_processing_specs`）新增 policy（子表以 `EXISTS` 父表 `products` 表達）。
 2. `ENABLE ROW LEVEL SECURITY`，並對**業務表加 `FORCE`**（`FORCE` 只作用於被 ENABLE 的表，OpenFGA 自有表不在其中，故安全且更硬——連誤用 owner 連線查業務表也受約束）。`platform` schema 不套 RLS。
+3. **`FORCE` 也擋 owner**，所以「對已 ENABLE 的表做資料回填」的 migration（含 `cmd/seed`）必須在自身交易內 `SET LOCAL app.current_data_scope = 'all'`；goose 每個 migration 跑在單一交易內，故可行。此慣例寫入 `backend/AGENTS.md`。
 
 **租戶表判準**：凡有 `company_id` 欄位者即租戶表 → 必須有 policy 且 ENABLE。無租戶欄位者（`roles`、`role_permissions`、metadicts 系統預設列、`goose_db_version`）沿用 `00007` 的「已設定身分即可讀」許容政策。`audit_logs` 有 `company_id` → 租戶表；平台域寫稽核走 admin 連線。
 
-### 6.3 查詢路徑全包（含唯讀）
+### 6.3 查詢路徑全包（含唯讀）：請求層租戶交易
 
-新增單一入口 `database.WithTenantTx(ctx, client, fn)`：開交易 → `auth.ApplyRLS` → 執行 fn → commit/rollback。服務內既有的 `client.Tx(ctx)` 與直呼查詢全數遷移。**唯讀也必須包**（否則 fail-closed 黑屏）。「寫入路徑必包租戶交易」寫進 `backend/AGENTS.md` 慣例（沿用本 repo 將分頁 tie-break 寫成慣例的先例）。
+範圍實測：`s.db.` 直接查詢 **124 處**、`db.Tx(ctx)` **42 處**（13 個 service 檔）→ 逐呼叫點包交易不可行，採**請求層單一交易**：
+
+1. connect `Interceptor` 於每個 unary RPC 開交易 → `auth.ApplyRLS`（套用 ctx 內的 scope）→ 呼叫 handler → **`err == nil` 則 commit，否則 rollback**（interceptor 看得到 domain error，比依 HTTP 狀態碼判斷可靠）；
+2. 交易放入 ctx（`database.TenantTxFrom`）；服務端把 `s.db.` 機械替換為 `database.TenantClient(ctx, s.db)`（無請求交易時退回原 client，供 CLI／測試）；
+3. 既有 `db.Tx(ctx)` 42 處改為**直接使用請求交易**（移除外層 tx／commit／rollback 三段）；交易邊界改由請求擁有；
+4. 兩組 REST 端點（OIDC 回調、QR 兌換）以等價 HTTP middleware 包；**未登入的憑證查詢**走 `WithSystemScopeTx`（`scope=all`，見 §6.4）；
+5. `ponytail: 請求層長交易`：串流 RPC（未來 `WatchBoard`）與 PDF 產出不得沿用此法，屆時另立短交易邊界。
+
+**未遷移的路徑在啟用 RLS 後會 fail-closed 黑屏**，因此每個 domain 的 ENABLE 與其路徑遷移必須同一任務完成，並由該 domain 的既有整合測試＋跨租戶探針守住。
 
 ### 6.4 營運後台不靠 `scope=all` 掃業務表
 
