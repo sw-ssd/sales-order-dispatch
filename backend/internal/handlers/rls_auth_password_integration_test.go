@@ -206,12 +206,18 @@ func TestIntegrationResetCustomerPasswordAuditUnderAppRole(t *testing.T) {
 		t.Fatalf("稽核不得落盤臨時密碼明文,got %d 列", n)
 	}
 
-	// 跨公司(同為 deptB 的客戶)→ permission_denied,且不得落地任何稽核或改動。
-	if err := callAuthErr(t, func(ctx context.Context) error {
+	// 跨公司(同為 deptB 的客戶)→ 必拒且不得落地任何稽核或改動。
+	// 錯誤碼為 not_found(單一碼):00028(核心表 ENABLE+FORCE)之後目標讀取先被 RLS 過濾,服務層的
+	// resetScopeOK 根本沒機會回報「權限不足」——這是與 T5–T7 一致的既有慣例(跨租戶讀取 → NotFound),
+	// 也比 permission_denied 少洩漏「該帳號存在」。
+	// resetScopeOK 的 permission_denied 分支由 sqlite 單元測試守著(無 RLS 語意,ACL 是唯一閘門):
+	// TestResetCustomerPasswordScopeDenied 的 staff 與「跨公司 company_admin」兩個案例。
+	err := callAuthErr(t, func(ctx context.Context) error {
 		_, err := svc.ResetCustomerPassword(ctx, connect.NewRequest(&v1.ResetCustomerPasswordRequest{UserId: itoa(otherCo)}))
 		return err
-	}); connect.CodeOf(err) != connect.CodePermissionDenied {
-		t.Fatalf("跨公司重發應 permission_denied,got %v", err)
+	})
+	if connect.CodeOf(err) != connect.CodeNotFound {
+		t.Fatalf("跨公司重發應被 RLS 擋成 not_found,got %v", err)
 	}
 	if n := authCount(t, admin, `SELECT count(*) FROM audit_logs WHERE resource_id = $1`, itoa(otherCo)); n != 0 {
 		t.Fatalf("被擋下的重發不得留下稽核列,got %d", n)
