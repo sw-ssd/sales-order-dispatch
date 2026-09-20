@@ -1016,9 +1016,13 @@ git commit -m "feat(backend): RLS policy 補 WITH CHECK 並補三張漏網表（
 - Create: `internal/dbtenant/tenant_integration_test.go`
 - Modify: `internal/server/domains.go`（每個 `NewXServiceHandler` 加 handler option）
 
+> **⚠️ 設計更正（2026-09-20，開工後實測）**：原版計畫要 `auth.ApplyRLS(ctx, tx, scope)` 直接套在 `*ent.Tx` 上。實測本專案產生的 ent 型別（ent v0.14.6）**沒有** `ExecContext`（`ent/tx.go` 只有 `Commit`／`Rollback`／`Client`／`OnCommit`／`OnRollback`），且模組內**沒有** `entsql.OpenTx`（只有 `Open`／`OpenDB`）——所以原版程式碼**編譯不過**。改採 **`dialect.Driver` 裝飾器**：ent 的 `client.Tx(ctx)` 會呼叫 `driver.Tx(ctx)`，我們在那裡把 ctx 的 RLS scope 用 `dialect.Tx.Exec` 套進剛開好的交易。好處：**服務層既有的 42 處 `client.Tx(ctx)` 自動變成 RLS 安全，不必逐一改**；代價：仍須改讀取路徑（未包交易的查詢會 fail-closed 黑屏）。**對外 API 不變**（interceptor 仍持有 `*ent.Tx` 並負責 commit／rollback）。
+
 **Interfaces:**
-- Consumes: `auth.RLSFrom(ctx)`、`auth.ApplyRLS(ctx, exec, scope)`、`auth.RLSStatements(scope)`
+- Consumes: `auth.RLSFrom(ctx)`、`auth.RLSStatements(scope)`、`dialect.Driver`／`dialect.Tx`／`entsql.OpenDB`
 - Produces:
+  - `dbtenant.NewClient(db *sql.DB) *ent.Client`（＝`ent.NewClient(ent.Driver(Wrap(entsql.OpenDB(dialect.Postgres, db))))`；**業務 client 必須由它建立**，裝飾器才會生效）
+  - `dbtenant.Wrap(inner dialect.Driver) dialect.Driver`
   - `dbtenant.Client(ctx context.Context, fallback *ent.Client) *ent.Client`
   - `dbtenant.WithTenantTx(ctx context.Context, tx *ent.Tx) context.Context`
   - `dbtenant.TxFrom(ctx context.Context) (*ent.Tx, bool)`
@@ -1108,23 +1112,72 @@ Expected: FAIL —`undefined: Client`／`WithTenantTx`／`TxFrom`
 - [ ] **Step 3: 實作（`internal/dbtenant/dbtenant.go`）**
 
 ```go
-// Package dbtenant 提供「請求層租戶交易」：每個 unary RPC 開一個交易並以
+// Package dbtenant 提供「請求層租戶交易」：每個 unary RPC 開一個交易，交易內以
 // SET LOCAL app.* 套用 RLS scope，服務層統一由 Client(ctx, s.db) 取得被約束的 client。
+//
 // 為何不是逐呼叫點包交易：服務層有 124 處直呼查詢與 42 處自開交易，逐點包會漏；
-// 交易邊界改由請求擁有（spec §6.3）。串流 RPC 與長時工作(未來 WatchBoard/PDF)
+// 交易邊界改由請求擁有（spec §6.3）。串流 RPC 與長時工作（未來 WatchBoard／PDF）
 // 不得沿用此法，屆時另立短交易邊界。
+//
+// 為何用 driver 裝飾器而不是 auth.ApplyRLS(ctx, tx, scope)：本專案產生的 ent 型別
+// 沒有 ExecContext，ent 也沒有 OpenTx 可把 *sql.Tx 綁成 client。ent 的 client.Tx(ctx)
+// 會呼叫 driver.Tx(ctx)，我們就在那裡把 ctx 的 RLS scope 套進剛開好的交易 ——
+// 於是**服務層任何 client.Tx(ctx) 都自動 RLS 安全**（42 處不必逐一改）。
 package dbtenant
 
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"connectrpc.com/connect"
+	"entgo.io/ent/dialect"
+	entsql "entgo.io/ent/dialect/sql"
+
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 )
 
 type txCtxKey struct{}
+
+// NewClient 建立業務 ent client：**必須**經此建立，RLS 裝飾器才會生效。
+// 其他 ent client（CLI／seed／測試 fixture）走原本的 entsql.OpenDB，不受影響。
+func NewClient(db *sql.DB) *ent.Client {
+	return ent.NewClient(ent.Driver(Wrap(entsql.OpenDB(dialect.Postgres, db))))
+}
+
+// Wrap 以 RLS 裝飾器包住 dialect driver。
+func Wrap(inner dialect.Driver) dialect.Driver { return &rlsDriver{inner: inner} }
+
+type rlsDriver struct{ inner dialect.Driver }
+
+func (d *rlsDriver) Exec(ctx context.Context, query string, args, v any) error {
+	return d.inner.Exec(ctx, query, args, v)
+}
+
+func (d *rlsDriver) Query(ctx context.Context, query string, args, v any) error {
+	return d.inner.Query(ctx, query, args, v)
+}
+
+func (d *rlsDriver) Close() error     { return d.inner.Close() }
+func (d *rlsDriver) Dialect() string  { return d.inner.Dialect() }
+
+// Tx 開交易並**立刻**套用 ctx 的 RLS scope：SET LOCAL 只在當前交易有效，
+// 而這裡正是交易剛開好、任何業務查詢之前 —— 錯過這個點就再也補不上。
+func (d *rlsDriver) Tx(ctx context.Context) (dialect.Tx, error) {
+	tx, err := d.inner.Tx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, stmt := range auth.RLSStatements(auth.RLSFrom(ctx)) {
+		// dialect.Tx.Exec 的 v 參數對 SQL driver 而言是 *sql.Result（見 ent dialect 文件）。
+		if err := tx.Exec(ctx, stmt, []any{}, &entsql.Result{}); err != nil {
+			_ = tx.Rollback()
+			return nil, fmt.Errorf("dbtenant: 套用 RLS 失敗(%s): %w", stmt, err)
+		}
+	}
+	return tx, nil
+}
 
 // WithTenantTx 把請求交易放進 ctx。
 func WithTenantTx(ctx context.Context, tx *ent.Tx) context.Context {
@@ -1145,8 +1198,8 @@ func Client(ctx context.Context, fallback *ent.Client) *ent.Client {
 	return fallback
 }
 
-// Interceptor 為 unary RPC 開租戶交易：開交易 → SET LOCAL app.*（取自 ctx 的 RLS scope）
-// → 呼叫 handler → err == nil 則 commit、否則 rollback。
+// Interceptor 為 unary RPC 開租戶交易：開交易（RLS 由 Wrap 的 driver 裝飾器在
+// Tx(ctx) 內套用，此處只負責交易邊界）→ 呼叫 handler → err == nil 則 commit、否則 rollback。
 // 以 interceptor 而非 HTTP middleware 的理由：interceptor 看得到 domain error
 // （HTTP 狀態碼在 connect 下與錯誤碼的對應是間接的）。
 func Interceptor(client *ent.Client) connect.Interceptor {
@@ -1155,10 +1208,6 @@ func Interceptor(client *ent.Client) connect.Interceptor {
 			tx, err := client.Tx(ctx)
 			if err != nil {
 				return nil, connect.NewError(connect.CodeInternal, errors.New("開啟租戶交易失敗"))
-			}
-			if err := auth.ApplyRLS(ctx, tx, auth.RLSFrom(ctx)); err != nil {
-				_ = tx.Rollback()
-				return nil, connect.NewError(connect.CodeInternal, errors.New("套用租戶範圍失敗"))
 			}
 			resp, err := next(WithTenantTx(ctx, tx), req)
 			if err != nil {
@@ -1182,13 +1231,10 @@ func HandlerOption(client *ent.Client) connect.HandlerOption {
 // （登入憑證查詢、authzMiddleware 的身分解析、seed）。刻意獨立成一個入口，
 // 讓「系統範圍」在呼叫點顯眼可審計，而不是散落的 SET LOCAL。
 func SystemScopeTx(ctx context.Context, client *ent.Client, fn func(*ent.Tx) error) error {
+	// scope=all 必須在**開交易之前**注入 ctx：driver 裝飾器在 Tx(ctx) 內讀它。
+	ctx = auth.WithRLS(ctx, auth.RLSScope{DataScope: auth.DataScopeAll})
 	tx, err := client.Tx(ctx)
 	if err != nil {
-		return err
-	}
-	scope := auth.RLSScope{DataScope: auth.DataScopeAll}
-	if err := auth.ApplyRLS(ctx, tx, scope); err != nil {
-		_ = tx.Rollback()
 		return err
 	}
 	if err := fn(tx); err != nil {
