@@ -2493,10 +2493,12 @@ package services
 
 import (
 	"context"
+	"database/sql"
 	"strconv"
 	"testing"
 
 	"connectrpc.com/connect"
+	_ "github.com/jackc/pgx/v5/stdlib" // 以 app_rw DSN 開 sql.DB（見 Global Constraints：superuser 恆繞過 RLS）
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
