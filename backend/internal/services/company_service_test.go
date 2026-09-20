@@ -15,6 +15,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 )
@@ -58,7 +59,7 @@ func newTestServerWithIdentity(t *testing.T, id authz.Identity) (salesorderv1con
 	t.Cleanup(func() { _ = db.Close() })
 
 	mux := http.NewServeMux()
-	RegisterCompanyServices(mux, db)
+	RegisterCompanyServices(mux, db, entitlements.Unlimited())
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := authz.WithIdentity(r.Context(), id)
 		ctx = authz.WithCASLEnabled(ctx, true)

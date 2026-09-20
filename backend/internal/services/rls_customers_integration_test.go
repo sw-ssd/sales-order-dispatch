@@ -16,6 +16,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1/customersv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
@@ -370,7 +371,7 @@ func TestIntegrationCreateCustomerRequiresTenantTxBeforeWrites(t *testing.T) {
 	t.Cleanup(func() { _ = client.Close() })
 
 	mux := http.NewServeMux()
-	path, handler := customersv1connect.NewCustomerServiceHandler(NewCustomerService(client, "http://localhost:3000"))
+	path, handler := customersv1connect.NewCustomerServiceHandler(NewCustomerService(client, "http://localhost:3000", entitlements.Unlimited()))
 	mux.Handle(path, handler)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := authz.WithIdentity(r.Context(), authz.Identity{
@@ -409,7 +410,7 @@ func TestIntegrationCreateCustomerRequiresTenantTxBeforeWrites(t *testing.T) {
 func newCustomerAppRoleServer(t *testing.T, client *ent.Client, actor, companyID int, withScope bool) customersv1connect.CustomerServiceClient {
 	t.Helper()
 	mux := http.NewServeMux()
-	RegisterCustomerServices(mux, client, "http://localhost:3000")
+	RegisterCustomerServices(mux, client, "http://localhost:3000", entitlements.Unlimited())
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := authz.WithIdentity(r.Context(), authz.Identity{
 			UserID: itoa(actor), CompanyID: itoa(companyID), Role: "company_admin", Roles: []string{"company_admin"},

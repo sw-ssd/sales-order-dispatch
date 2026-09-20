@@ -26,6 +26,7 @@ import (
 	authzopenfga "github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/handlers"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/internal/services"
@@ -423,7 +424,7 @@ func newCoreHTTPServer(t *testing.T, client *ent.Client, cfg *config.Config, kv 
 	apiMux := http.NewServeMux()
 	authPath, authConnectHandler := salesorderv1connect.NewAuthServiceHandler(authHandler, dbtenant.HandlerOption(client))
 	apiMux.Handle(authPath, authConnectHandler)
-	services.RegisterUserServices(apiMux, client)
+	services.RegisterUserServices(apiMux, client, entitlements.Unlimited())
 	s.router.Mount("/api/v1", http.StripPrefix("/api/v1", sessions.LoadAndSave(s.authzMiddleware(client, sessions, apiMux))))
 
 	ts := httptest.NewServer(s.Handler())

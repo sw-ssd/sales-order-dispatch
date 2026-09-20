@@ -12,6 +12,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	productsv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/products/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/products/v1/productsv1connect"
 )
@@ -23,7 +24,7 @@ func newProductTestServer(t *testing.T, id authz.Identity) (*ent.Client, product
 	db := enttest.Open(t, "sqlite3", dsn)
 	t.Cleanup(func() { _ = db.Close() })
 	mux := http.NewServeMux()
-	RegisterProductService(mux, db)
+	RegisterProductService(mux, db, entitlements.Unlimited())
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := authz.WithIdentity(r.Context(), id)
 		ctx = authz.WithDB(ctx, db)

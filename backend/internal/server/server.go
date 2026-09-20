@@ -31,6 +31,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
 	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	salesorderv1connect "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/cache"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/database"
@@ -45,6 +46,9 @@ type Server struct {
 	router *chi.Mux
 	fga    *authzopenfga.Engine // 可選:OpenFGA 授權引擎(設入後 middleware 對受保護 RPC 做 Check,D32)
 	tokens *auth.TokenManager   // JWT access/refresh 管理(01 1.6;App Bearer 路徑逐請求驗證)
+	// entitlements 為平台權益判定(配額守衛的來源,由 mountAuth 建立);T9/T10 的平台端與
+	// 租戶端投影亦由此取用,故留在 Server 上而非只傳進四個業務服務。
+	entitlements *entitlements.Service
 }
 
 // rpcAuth 為受保護 RPC path 的 OpenFGA 對映(resource, action)。

@@ -70,6 +70,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/warehouse"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	auditv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/audit/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/audit/v1/auditv1connect"
 	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
@@ -596,16 +597,16 @@ func newListScanServerWithScope(t *testing.T, db *ent.Client, scope auth.RLSScop
 		UserID: scope.UserID, CompanyID: scope.CompanyID, Role: "super", Roles: []string{"super"},
 	}
 	mux := http.NewServeMux()
-	RegisterCompanyServices(mux, db)
+	RegisterCompanyServices(mux, db, entitlements.Unlimited())
 	RegisterAuditServices(mux, db)
-	RegisterUserServices(mux, db)
+	RegisterUserServices(mux, db, entitlements.Unlimited())
 	RegisterRoleServices(mux, db)
-	RegisterCustomerServices(mux, db, "http://localhost:3000")
+	RegisterCustomerServices(mux, db, "http://localhost:3000", entitlements.Unlimited())
 	RegisterProcessingSpecService(mux, db)
 	RegisterProductCategoryService(mux, db)
 	RegisterRouteService(mux, db)
 	RegisterMetadictServices(mux, db)
-	RegisterProductService(mux, db)
+	RegisterProductService(mux, db, entitlements.Unlimited())
 	RegisterWarehouseService(mux, db)
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := authz.WithIdentity(r.Context(), super)

@@ -16,6 +16,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	auditv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/audit/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/audit/v1/auditv1connect"
 	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
@@ -558,7 +559,7 @@ func TestIntegrationDepartmentScopeWriteAuditLanding(t *testing.T) {
 	t.Cleanup(func() { _ = client.Close() })
 
 	mux := http.NewServeMux()
-	RegisterCustomerServices(mux, client, "http://localhost:3000")
+	RegisterCustomerServices(mux, client, "http://localhost:3000", entitlements.Unlimited())
 	id := authz.Identity{
 		UserID: itoa(actor), CompanyID: itoa(coA), DepartmentID: itoa(deptA),
 		Role: "dept_admin", Roles: []string{"dept_admin"},

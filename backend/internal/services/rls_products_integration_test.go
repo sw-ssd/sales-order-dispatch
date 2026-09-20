@@ -15,6 +15,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	productsv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/products/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/products/v1/productsv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
@@ -461,7 +462,7 @@ func insertRLSProductSpecLink(t *testing.T, db *sql.DB, productID, specID int) i
 func newProductAppRoleServer(t *testing.T, client *ent.Client, actor, companyID int, withScope bool) productsv1connect.ProductServiceClient {
 	t.Helper()
 	mux := http.NewServeMux()
-	RegisterProductService(mux, client)
+	RegisterProductService(mux, client, entitlements.Unlimited())
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := authz.WithIdentity(r.Context(), authz.Identity{
 			UserID: itoa(actor), CompanyID: itoa(companyID), Role: "company_admin", Roles: []string{"company_admin"},

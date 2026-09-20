@@ -19,6 +19,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 )
@@ -36,7 +37,7 @@ func newUserTestServer(t *testing.T, id authz.Identity) (salesorderv1connect.Use
 func newUserTestServerWithDB(t *testing.T, id authz.Identity, db *ent.Client) salesorderv1connect.UserServiceClient {
 	t.Helper()
 	mux := http.NewServeMux()
-	RegisterUserServices(mux, db)
+	RegisterUserServices(mux, db, entitlements.Unlimited())
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := authz.WithIdentity(r.Context(), id)
 		ctx = authz.WithDB(ctx, db)

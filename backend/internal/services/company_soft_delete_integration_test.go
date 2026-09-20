@@ -34,6 +34,7 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
@@ -410,8 +411,8 @@ func openPGEntClientFromGoose(t *testing.T, dsn string) (*sql.DB, *ent.Client) {
 func newCompanySoftDeleteServer(t *testing.T, db *ent.Client, id authz.Identity) (salesorderv1connect.CompanyServiceClient, salesorderv1connect.UserServiceClient) {
 	t.Helper()
 	mux := http.NewServeMux()
-	RegisterCompanyServices(mux, db)
-	RegisterUserServices(mux, db)
+	RegisterCompanyServices(mux, db, entitlements.Unlimited())
+	RegisterUserServices(mux, db, entitlements.Unlimited())
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := authz.WithIdentity(r.Context(), id)
 		ctx = authz.WithCASLEnabled(ctx, true)

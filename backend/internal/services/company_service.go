@@ -28,6 +28,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
 	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 
@@ -48,23 +49,27 @@ var validCompanyStatuses = map[string]bool{
 // write 限 company_admin(超集:super 全權)。
 type CompanyService struct {
 	db *ent.Client
+	// ent 為權益判定（配額守衛）；建構子強制注入，呼叫端無法靜默漏掛。
+	ent *entitlements.Service
 	salesorderv1connect.UnimplementedCompanyServiceHandler
 }
 
 // NewCompanyService 建立 CompanyService。
-func NewCompanyService(db *ent.Client) *CompanyService {
-	return &CompanyService{db: db}
+func NewCompanyService(db *ent.Client, entSvc *entitlements.Service) *CompanyService {
+	return &CompanyService{db: db, ent: entSvc}
 }
 
 // DepartmentService 實作 salesorder.v1.DepartmentService(部門主檔 CRUD)。
 type DepartmentService struct {
 	db *ent.Client
+	// ent 為權益判定（配額守衛）；建構子強制注入，呼叫端無法靜默漏掛。
+	ent *entitlements.Service
 	salesorderv1connect.UnimplementedDepartmentServiceHandler
 }
 
 // NewDepartmentService 建立 DepartmentService。
-func NewDepartmentService(db *ent.Client) *DepartmentService {
-	return &DepartmentService{db: db}
+func NewDepartmentService(db *ent.Client, entSvc *entitlements.Service) *DepartmentService {
+	return &DepartmentService{db: db, ent: entSvc}
 }
 
 // RegisterCompanyServices 將 CompanyService 與 DepartmentService 的 Connect handler
@@ -73,12 +78,12 @@ func NewDepartmentService(db *ent.Client) *DepartmentService {
 // server 掛載範例(InitDomains):
 //
 //	mux := http.NewServeMux()
-//	services.RegisterCompanyServices(mux, db)
+//	services.RegisterCompanyServices(mux, db, entSvc)
 //	s.router.Mount("/api/v1", mux) // chi Mount 會剝除 /api/v1 前綴,前端 baseUrl "/api/v1" 可直接對應
-func RegisterCompanyServices(mux *http.ServeMux, db *ent.Client) {
-	companyPath, companyHandler := salesorderv1connect.NewCompanyServiceHandler(NewCompanyService(db), connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(db)))
+func RegisterCompanyServices(mux *http.ServeMux, db *ent.Client, entSvc *entitlements.Service) {
+	companyPath, companyHandler := salesorderv1connect.NewCompanyServiceHandler(NewCompanyService(db, entSvc), connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(db)))
 	mux.Handle(companyPath, companyHandler)
-	departmentPath, departmentHandler := salesorderv1connect.NewDepartmentServiceHandler(NewDepartmentService(db), connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(db)))
+	departmentPath, departmentHandler := salesorderv1connect.NewDepartmentServiceHandler(NewDepartmentService(db, entSvc), connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(db)))
 	mux.Handle(departmentPath, departmentHandler)
 }
 

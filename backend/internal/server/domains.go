@@ -6,6 +6,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"time"
 
 	"connectrpc.com/connect"
 
@@ -19,12 +20,18 @@ import (
 	domainauth "github.com/salesorder/sales-order-1.0/backend/internal/domain/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/handlers"
 	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
+	postgresstore "github.com/salesorder/sales-order-1.0/backend/internal/platform/store/postgres"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/internal/services"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/cache"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/database"
 	ofga "github.com/salesorder/sales-order-1.0/backend/third_party/openfga"
 )
+
+// entitlementCacheTTL 為權益快照的行程內快取 TTL（縮短＝更即時、更多平台庫查詢；
+// Plan C 換成 Valkey 快取時一併調整）。
+const entitlementCacheTTL = 60 * time.Second
 
 // InitDomains 逐 domain 組裝 repo→usecase→handler 並掛上 router。
 // 新增 domain 只動此一檔（D31）：於 InitDomains() 加一行呼叫對應的 mountXxx()，
@@ -69,6 +76,8 @@ func (s *Server) mountAuth() {
 	// /api/v1 底下所有 Connect-RPC 共用一個 ServeMux:connect 產生的 handler 依
 	// r.URL.Path 全路徑分派,掛載時剝除 /api/v1 前綴(與 RegisterCompanyServices 慣例一致)。
 	// LoadAndSave + authzMiddleware 包在最外層:session 身分 → authz.Identity/RLS ctx(T14 Step 4)。
+	// 權益守衛（平台域）先建立再掛載四個業務服務：建構子要求表態，漏掛即編譯失敗。
+	entSvc := s.mountEntitlements(entClient)
 	apiMux := http.NewServeMux()
 	authPath, authHandler := salesorderv1connect.NewAuthServiceHandler(h, connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(entClient)))
 	apiMux.Handle(authPath, authHandler)
@@ -76,17 +85,17 @@ func (s *Server) mountAuth() {
 	// AbilityService(T9/D30):CASL 規則下發給前端 @casl/ability 初始化。
 	abilityPath, abilityHandler := salesorderv1connect.NewAbilityServiceHandler(domainauth.NewAbilityHandler(entClient, domainauth.Config{DeveloperAccountEnabled: s.cfg.API.DeveloperAccountEnabled}), connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(entClient)))
 	apiMux.Handle(abilityPath, abilityHandler)
-	services.RegisterCompanyServices(apiMux, entClient)                          // CompanyService/DepartmentService(T20)
-	services.RegisterUserServices(apiMux, entClient)                             // UserService(02 Task 3)
-	services.RegisterMetadictServices(apiMux, entClient)                         // MetadictService(03 Task 2)
-	services.RegisterAuditServices(apiMux, entClient)                            // AuditService(03 Task 6, A4)
-	services.RegisterCustomerServices(apiMux, entClient, s.cfg.Auth.FrontendURL) // CustomerService(04 Task 1-2 + D22 帳號交付 URL)
+	services.RegisterCompanyServices(apiMux, entClient, entSvc)                          // CompanyService/DepartmentService(T20)
+	services.RegisterUserServices(apiMux, entClient, entSvc)                             // UserService(02 Task 3)
+	services.RegisterMetadictServices(apiMux, entClient)                                 // MetadictService(03 Task 2)
+	services.RegisterAuditServices(apiMux, entClient)                                    // AuditService(03 Task 6, A4)
+	services.RegisterCustomerServices(apiMux, entClient, s.cfg.Auth.FrontendURL, entSvc) // CustomerService(04 Task 1-2 + D22 帳號交付 URL)
 	// 04 Task 3.4 部門級主檔(Warehouse/Route/ProcessingSpec/ProductCategory)。
 	services.RegisterWarehouseService(apiMux, entClient)
 	services.RegisterRouteService(apiMux, entClient)
 	services.RegisterProcessingSpecService(apiMux, entClient)
 	services.RegisterProductCategoryService(apiMux, entClient)
-	services.RegisterProductService(apiMux, entClient) // 04 Task 3.3 商品主檔
+	services.RegisterProductService(apiMux, entClient, entSvc) // 04 Task 3.3 商品主檔
 	s.router.Mount("/api/v1", http.StripPrefix("/api/v1", sessions.LoadAndSave(s.authzMiddleware(entClient, sessions, apiMux))))
 
 	// OIDC 公開端點：需 Google client id 與 discovery 可用
@@ -108,6 +117,24 @@ func (s *Server) mountAuth() {
 		r.Get("/api/v1/auth/google", h.GoogleLogin)
 		r.Get("/api/v1/auth/google/callback", h.GoogleCallback)
 	})
+}
+
+// mountEntitlements 建立平台權益判定服務並寫入 Server（供四個業務服務的配額守衛、
+// 以及 T9/T10 的平台端／租戶端投影取用）。
+// 平台域走 admin 連線：platform schema 對業務角色 app_rw 零權限（S9），store 只能是 owner 池。
+// 連線不可用即拒絕啟動（比照 mountOpenFGA 的立場）：靜默降級成 Unlimited() 等於關掉全部配額，
+// 而業務服務的建構子已強制每個呼叫端表態，不提供「未掛守衛」的 production 退路。
+func (s *Server) mountEntitlements(db *ent.Client) *entitlements.Service {
+	adminDB, err := database.OpenSQL(s.cfg.Database.AdminDSN())
+	if err != nil {
+		log.Fatalf("platform: admin 連線不可用,拒絕以無守衛狀態啟動(守衛缺席＝配額形同虛設): %v", err)
+	}
+	// 快取：v1 用行程內 MemoryCache；Valkey 實作與寫入後失效屬 Plan C 的訂閱寫入路徑,屆時換此處。
+	svc := entitlements.New(postgresstore.New(adminDB), services.NewEntitlementCounter(db),
+		entitlements.NewMemoryCache(), entitlementCacheTTL)
+	s.entitlements = svc
+	log.Println("platform: 權益守衛已掛載（entitlements.Service → 四個業務服務）")
+	return svc
 }
 
 // openEntClient 開啟業務 PostgreSQL ent client:連線仍委派 third_party/database(D31),

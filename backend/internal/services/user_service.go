@@ -26,6 +26,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 )
@@ -103,17 +104,19 @@ func (s *UserService) roleActive(ctx context.Context, code string) (bool, error)
 // 授權閘門由 middleware OpenFGA Check(prod)承擔,本層以 scopeForTarget 做範圍控制 + RLS 兜底。
 type UserService struct {
 	db *ent.Client
+	// ent 為權益判定（配額守衛）；建構子強制注入，呼叫端無法靜默漏掛。
+	ent *entitlements.Service
 	salesorderv1connect.UnimplementedUserServiceHandler
 }
 
 // NewUserService 建立 UserService。
-func NewUserService(db *ent.Client) *UserService {
-	return &UserService{db: db}
+func NewUserService(db *ent.Client, entSvc *entitlements.Service) *UserService {
+	return &UserService{db: db, ent: entSvc}
 }
 
 // RegisterUserServices 將 UserService 的 Connect handler 掛到 mux。
-func RegisterUserServices(mux *http.ServeMux, db *ent.Client) {
-	path, handler := salesorderv1connect.NewUserServiceHandler(NewUserService(db), connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(db)))
+func RegisterUserServices(mux *http.ServeMux, db *ent.Client, entSvc *entitlements.Service) {
+	path, handler := salesorderv1connect.NewUserServiceHandler(NewUserService(db, entSvc), connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(db)))
 	mux.Handle(path, handler)
 }
 

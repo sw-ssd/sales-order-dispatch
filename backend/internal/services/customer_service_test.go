@@ -18,6 +18,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1/customersv1connect"
 )
@@ -29,7 +30,7 @@ func newCustomerTestServer(t *testing.T, id authz.Identity) (customersv1connect.
 	db := enttest.Open(t, "sqlite3", dsn)
 	t.Cleanup(func() { _ = db.Close() })
 	mux := http.NewServeMux()
-	RegisterCustomerServices(mux, db, "http://localhost:3000")
+	RegisterCustomerServices(mux, db, "http://localhost:3000", entitlements.Unlimited())
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := authz.WithIdentity(r.Context(), id)
 		ctx = authz.WithDB(ctx, db)

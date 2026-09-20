@@ -21,6 +21,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	authzopenfga "github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
@@ -914,11 +915,11 @@ func newCoreAppRoleServer(t *testing.T, client *ent.Client, id authz.Identity, s
 // mountCoreHandlers 以 opts 掛上核心域四支 handler(與 RegisterCompanyServices／RegisterUserServices／
 // RegisterRoleServices 相同的組裝,差別是能把額外 interceptor 疊在 dbtenant.Interceptor 之後)。
 func mountCoreHandlers(mux *http.ServeMux, client *ent.Client, opts ...connect.HandlerOption) {
-	companyPath, companyHandler := salesorderv1connect.NewCompanyServiceHandler(NewCompanyService(client), opts...)
+	companyPath, companyHandler := salesorderv1connect.NewCompanyServiceHandler(NewCompanyService(client, entitlements.Unlimited()), opts...)
 	mux.Handle(companyPath, companyHandler)
-	departmentPath, departmentHandler := salesorderv1connect.NewDepartmentServiceHandler(NewDepartmentService(client), opts...)
+	departmentPath, departmentHandler := salesorderv1connect.NewDepartmentServiceHandler(NewDepartmentService(client, entitlements.Unlimited()), opts...)
 	mux.Handle(departmentPath, departmentHandler)
-	userPath, userHandler := salesorderv1connect.NewUserServiceHandler(NewUserService(client), opts...)
+	userPath, userHandler := salesorderv1connect.NewUserServiceHandler(NewUserService(client, entitlements.Unlimited()), opts...)
 	mux.Handle(userPath, userHandler)
 	rolePath, roleHandler := salesorderv1connect.NewRoleServiceHandler(NewRoleService(client), opts...)
 	mux.Handle(rolePath, roleHandler)

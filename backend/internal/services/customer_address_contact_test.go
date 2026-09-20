@@ -11,6 +11,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1/customersv1connect"
 )
@@ -41,7 +42,7 @@ func newAddressContactClient(t *testing.T) (customersv1connect.CustomerServiceCl
 	}
 	id := deptAdminID(co.ID, d.ID)
 	mux := http.NewServeMux()
-	RegisterCustomerServices(mux, db, "http://localhost:3000")
+	RegisterCustomerServices(mux, db, "http://localhost:3000", entitlements.Unlimited())
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cctx := authz.WithIdentity(r.Context(), id)
 		cctx = authz.WithDB(cctx, db)
@@ -290,7 +291,7 @@ func TestAddressContactUnauthenticated(t *testing.T) {
 	db := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared&_fk=1")
 	t.Cleanup(func() { _ = db.Close() })
 	mux := http.NewServeMux()
-	RegisterCustomerServices(mux, db, "http://localhost:3000")
+	RegisterCustomerServices(mux, db, "http://localhost:3000", entitlements.Unlimited())
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cctx := authz.WithIdentity(r.Context(), authz.Identity{})
 		cctx = authz.WithDB(cctx, db)
