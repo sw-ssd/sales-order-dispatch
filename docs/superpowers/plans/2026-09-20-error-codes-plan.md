@@ -106,6 +106,15 @@ git commit -m "feat(proto): 追加 ErrorInfo（code/details/trace_id）三端生
 - Create: `internal/errcode/code.go`、`codes_sys.go`、`codes_auth.go`、`codes_platform.go`、`codes_customer.go`
 - Create: `internal/errcode/registry_test.go`
 
+**[已落地：以 `internal/errcode` 實作為準（commit `3e095fe`＋`28a6d4e`）]** 本段下方的程式碼片段是**設計原稿**，實作已在其上收斂；後續任務（T4–T7）請以**程式碼**為唯一真相來源，不要從本文件抄簽章或欄位：
+- `Code` 的欄位**全部未匯出**（`id`／`domain`／`connectCode`／`message`／`deprecated`），外部只能以存取子 `ID()`／`Domain()`／`ConnectCode()`／`Message()`／`IsDeprecated()` 讀取 → 「未註冊的碼無法建構」由**編譯期**保證（外部套件寫 `errcode.Code{ID:…}` 會編譯失敗；已實測）。
+- **零值守門**：零值 `Code` 是外部唯一還造得出來的，`Render` 對它直接 panic（訊息指明「未經 MustRegister 的零值 Code」）——程式錯誤要在最早可達點爆掉，不要回一個沒有碼、沒有訊息的錯誤。
+- `Render` 以**樣板佔位符集合**判定缺參數（不是看渲染結果含不含 `{`），且逐佔位符替換（不會二次替換剛帶入的值）。
+- 測試切兩檔：`code_internal_test.go`（package `errcode`，放需要構造不合法碼的 panic 案例）與 `registry_test.go`（外部套件，測契約 1／3／4／6）。
+- `AUTH` 首批碼的 ID 為 `AUTH-4003`（帳密錯誤）／`AUTH-3003`（鎖定）——原稿的 `AUTH-1001`／`AUTH-1002` 違反 1xxx 區段規則、會 init panic（見該檔註解）。
+
+**以下是設計原稿（僅供理解意圖）：**
+
 **Interfaces:**
 - Produces:
 
@@ -1225,6 +1234,7 @@ git commit -m "feat(errcode): 首批碼落地（auth／權限／樣板域）＋ 
 **Files:**
 - Create: `internal/services/errcode_guard_test.go`、`internal/services/errcode_baseline.txt`
 - Create: `internal/errcode/generate.go`
+- 產生器讀 `errcode.All()` ＋ **存取子**（`ID()`／`Domain()`／`ConnectCode()`／`Message()`／`IsDeprecated()`）；`All()` 已保證依 ID 遞增排序（T6 的 `git diff --exit-code` 靠它穩定）。
 - Generated: `docs/error-codes.md`、`frontend/src/lib/errcode.ts`、`platform-console/src/lib/errcode.ts`、`app/lib/gen/errcode.dart`
 - Modify: `.github/workflows/ci.yml`
 
