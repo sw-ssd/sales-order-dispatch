@@ -16,6 +16,20 @@
 -- UNIQUE 換成部分唯一索引 —— 本檔只加欄位。若日後新增部門唯一鍵,必須比照 00019 以
 -- `WHERE deleted_at IS NULL` 的部分唯一索引表達,否則已刪除列會永久佔用該鍵。
 --
+-- 設計取捨(A/B 複審 M4,只記錄後果、不改 SQL 語意):刪除部門的唯一前置條件是「該部門沒有成員」,
+-- 但被軟刪除的部門仍可能持有其他資料列的 department_id —— customers(00013)、customer_addresses /
+-- customer_contacts(00015)、warehouses / routes / processing_specs / product_categories(00016)、
+-- products(00017)、metadicts 的部門擴充(00011;該欄無 FK)、audit_logs(00010,這正是本波軟刪除的
+-- 理由)。後果:
+--   1. 這些列不會被搬遷或清除,仍在原部門歸屬下;而部門身分(deptScope/metadictScope)只在該部門
+--      **有成員**時才存在(成員被調離後就沒有該部門的活身分),故它們自此對「部門」視角不可見 ——
+--      只有 super / company_admin 的公司層(不含部門篩選)仍看得到。
+--   2. 目前沒有回收路徑:客戶的部門只能在建立時由身分決定(CreateCustomer 的 department_id 來自
+--      deptScope;UpdateCustomerRequest 沒有 department_id 欄位,客戶 RPC 也沒有改部門的方法),
+--      其餘主檔的 department_id 同樣出自 deptScope/metadictScope 而非請求參數 —— 因此「把資料
+--      搬到別的部門」在 API 上做不到。本波只做除役(撤銷該部門的存取身分),不做事後搬遷;
+--      若日後要支援搬遷,必須另設計 RPC(並以資料列範圍授權把關),而不是回頭改這支遷移。
+--
 -- 影響(呼叫端必須配合,已於同一波修改):
 --   1. 所有部門查詢/存在性檢查都必須排除軟刪除列(`deleted_at IS NULL`):
 --      ListDepartments(含 company_id 篩選)、GetDepartment、UpdateDepartment、DeleteDepartment。

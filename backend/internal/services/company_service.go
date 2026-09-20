@@ -514,6 +514,7 @@ func (s *DepartmentService) UpdateDepartment(ctx context.Context, req *connect.R
 
 // DeleteDepartment 軟刪除部門(00020):標記 deleted_at 而非刪列,同一交易寫 action=delete 稽核。
 // 部門仍有使用者時回 FailedPrecondition;已刪除或不存在 → NotFound。
+// 「部門仍有使用者」的限制與寫入是同一個敘述式條件更新(複審 M1),理由見下方 WHERE 的說明。
 //
 // 為何軟刪除:audit_logs.department_id 是 FK(00010),而以「目標使用者部門」寫入的稽核
 // (recordUserAudit)以及倉別/路線/加工規格/產品分類/客戶的 department_id,在成員被調離後
@@ -528,27 +529,31 @@ func (s *DepartmentService) DeleteDepartment(ctx context.Context, req *connect.R
 	if err != nil {
 		return nil, err
 	}
-	cur, err := s.db.Department.Query().WithCompany().
-		Where(department.ID(id), department.DeletedAtIsNil()).Only(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
-	}
-	hasUsers, err := s.db.User.Query().Where(user.HasDepartmentWith(department.ID(id))).Exist(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
-	}
-	if hasUsers {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("部門仍有使用者,無法刪除"))
-	}
-
 	tx, err := s.db.Tx(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	if err := tx.Department.UpdateOneID(id).SetDeletedAt(time.Now().UTC()).Exec(ctx); err != nil {
+	// 快照(存在性 + 稽核 before 值)與寫入同交易。
+	cur, err := tx.Department.Query().WithCompany().
+		Where(department.ID(id), department.DeletedAtIsNil()).Only(ctx)
+	if err != nil {
 		return nil, toConnectError(err)
+	}
+	// 「部門仍有使用者」的限制與寫入必須是同一個敘述:兩者分開(各自取快照)時,併發的
+	// CreateUser/UpdateUser/AssignRole 可在「檢查通過」之後才把活帳號掛進本部門,產生
+	// 「活帳號位於已軟刪部門」。條件式更新讓資料庫對同一個快照判定限制與列鎖。
+	affected, err := tx.Department.Update().
+		Where(department.ID(id), department.DeletedAtIsNil(), department.Not(department.HasUsers())).
+		SetDeletedAt(time.Now().UTC()).
+		Save(ctx)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	if affected == 0 {
+		// 上一句已確認該列存在且未刪除,故未更新只剩「仍有使用者」一個原因。
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("部門仍有使用者,無法刪除"))
 	}
 	companyID := 0
 	if cur.Edges.Company != nil {

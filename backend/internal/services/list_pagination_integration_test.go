@@ -21,6 +21,12 @@
 // `(department_id, code)`,而 super/company_admin 的 deptScope 回 did=nil → 可見集合跨部門,
 // 同 code 一覽無遺。六處同法修:排序鍵後追加 `ent.Asc(<entity>.FieldID)`。
 //
+// M2(A/B 複審,2026-09-20):稽核清單(ListAuditLogs)同型 —— 只以 `created_at` 降冪排序,
+// 而 created_at 是**交易時間**:同一業務交易內寫入的多筆稽核(2.6.2/D18 同事務寫稽核)時間戳
+// 完全相同,同值群真實存在且常大於一頁。故排序鍵後追加 `ent.Desc(auditlog.FieldID)`(方向與
+// 主鍵一致),並納入本測試(fixture 造出同 created_at 的多筆稽核,且頁邊界切在 tie 群內;
+// 稽核的預設時間窗 auditDefaultWindow = 近 3 個月,fixture 時間戳因此取「現在」附近)。
+//
 // 為何 sqlite(enttest)不足以守住:sqlite 的 sorter 對相同查詢給出穩定的 tie 順序,
 // LIMIT/OFFSET 只是同一結果的切片,故本缺陷在 sqlite 上無法重現(已實測:96 筆 tie 資料、
 // 每頁 20 筆逐頁掃描,全部白名單欄位 × 升/降冪皆為全綠)。此測試因此必須跑真 PostgreSQL:
@@ -45,6 +51,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib" // pgx database/sql driver(ent 以 OpenDB 包裝)
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
+	"github.com/salesorder/sales-order-1.0/backend/ent/auditlog"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customer"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
@@ -56,6 +63,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/route"
 	"github.com/salesorder/sales-order-1.0/backend/ent/warehouse"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
+	auditv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/audit/v1"
+	"github.com/salesorder/sales-order-1.0/backend/internal/proto/audit/v1/auditv1connect"
 	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1/customersv1connect"
 	mastersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/masters/v1"
@@ -88,6 +97,9 @@ const (
 	// listScanMaxPages 是逐頁掃描的安全上限:正常情況會在最後一頁(不足 listScanPageSize)就結束,
 	// 只有「重複/遺漏嚴重到掃不完」時才會撞上此上限而 fail(比照 F1 的終止保護)。
 	listScanMaxPages = 32
+	// listScanAuditStampGroups 為稽核 fixture 的 created_at 同值群數(M2):96 / 4 = 每群 24 筆
+	// (> listScanPageSize 且 listScanPageSize 不整除 24 → 頁邊界必落在同一交易時間的稽核群內)。
+	listScanAuditStampGroups = 4
 )
 
 // listScanner 以指定排序取回「某一頁」的 id 序列(逐頁掃描與全量掃描共用同一個呼叫點)。
@@ -140,6 +152,7 @@ func TestIntegrationListPageScanMatchesFullScan(t *testing.T) {
 	seedListScanMetadicts(t, ctx, db, depts[0].ID)
 	seedListScanProducts(t, ctx, db, co.ID, deptIDs(depts[:listScanCodeScopes]))
 	seedListScanWarehouses(t, ctx, db, co.ID, deptIDs(depts[:listScanCodeScopes]))
+	seedListScanAuditLogs(t, ctx, db, co.ID)
 
 	cl := newListScanServer(t, db, co.ID)
 
@@ -259,6 +272,17 @@ func TestIntegrationListPageScanMatchesFullScan(t *testing.T) {
 			}
 			return res.Msg.GetWarehouses(), nil
 		}, func(w *mastersv1.Warehouse) string { return w.GetId() })
+	// M2:稽核端點同樣沒有排序參數(proto 無 sort/desc),服務端固定 created_at 降冪 + id 降冪。
+	auditScan := newListScanner("ListAuditLogs",
+		func(_ string, _ bool, page, pageSize int32) ([]*auditv1.AuditLog, error) {
+			res, err := cl.audits.ListAuditLogs(ctx, connect.NewRequest(&auditv1.ListAuditLogsRequest{
+				Page: page, PageSize: pageSize,
+			}))
+			if err != nil {
+				return nil, err
+			}
+			return res.Msg.GetItems(), nil
+		}, func(a *auditv1.AuditLog) string { return a.GetId() })
 
 	// 白名單欄位(空字串 = 服務預設排序)皆須涵蓋,含升/降冪;F2 的六個端點沒有排序參數,
 	// 只有固定排序鍵,故僅 "" 一列。
@@ -296,6 +320,10 @@ func TestIntegrationListPageScanMatchesFullScan(t *testing.T) {
 		"倉別": allIDs(t, func() ([]int, error) {
 			return db.Warehouse.Query().Where(warehouse.CompanyIDEQ(co.ID)).Select(warehouse.FieldID).Ints(ctx)
 		}),
+		// M2:稽核 fixture 全部落在預設時間窗(近 3 個月)內,故全量 = 該表全部列。
+		"稽核": allIDs(t, func() ([]int, error) {
+			return db.AuditLog.Query().Select(auditlog.FieldID).Ints(ctx)
+		}),
 	}
 	for _, tc := range []struct {
 		entity string
@@ -329,6 +357,7 @@ func TestIntegrationListPageScanMatchesFullScan(t *testing.T) {
 		{"字典(併當前部門)", "", metadictDeptScan, true},
 		{"商品", "", productScan, true},
 		{"倉別", "", warehouseScan, true},
+		{"稽核", "", auditScan, true},
 	} {
 		descs := []bool{false, true}
 		if tc.ascOnly {
@@ -447,10 +476,11 @@ type listScanClients struct {
 	metadicts   metadictv1connect.MetadictServiceClient
 	products    productsv1connect.ProductServiceClient
 	warehouses  mastersv1connect.WarehouseServiceClient
+	audits      auditv1connect.AuditServiceClient
 }
 
 // newListScanServer 以 super 身分(全權,涵蓋 requireScope/requireRole 門檻與 deptScope 的
-// 公司範圍)把十張清單的 handler 掛在單一 mux 上(與 sqlite 版 newTestServer 同構,只換 DB)。
+// 公司範圍)把十一張清單的 handler 掛在單一 mux 上(與 sqlite 版 newTestServer 同構,只換 DB)。
 // companyID 為 fixture 所屬公司:各端點以 deptScope 解析身分的 CompanyID 作為可見範圍,
 // 故須為數字。
 func newListScanServer(t *testing.T, db *ent.Client, companyID int) listScanClients {
@@ -458,6 +488,7 @@ func newListScanServer(t *testing.T, db *ent.Client, companyID int) listScanClie
 	super := authz.Identity{UserID: "1", CompanyID: strconv.Itoa(companyID), Role: "super", Roles: []string{"super"}}
 	mux := http.NewServeMux()
 	RegisterCompanyServices(mux, db)
+	RegisterAuditServices(mux, db)
 	RegisterRoleServices(mux, db)
 	RegisterCustomerServices(mux, db, "http://localhost:3000")
 	RegisterProcessingSpecService(mux, db)
@@ -486,6 +517,7 @@ func newListScanServer(t *testing.T, db *ent.Client, companyID int) listScanClie
 		metadicts:   metadictv1connect.NewMetadictServiceClient(http.DefaultClient, ts.URL),
 		products:    productsv1connect.NewProductServiceClient(http.DefaultClient, ts.URL),
 		warehouses:  mastersv1connect.NewWarehouseServiceClient(http.DefaultClient, ts.URL),
+		audits:      auditv1connect.NewAuditServiceClient(http.DefaultClient, ts.URL),
 	}
 }
 
@@ -701,5 +733,29 @@ func seedListScanWarehouses(t *testing.T, ctx context.Context, db *ent.Client, c
 	}
 	if _, err := db.Warehouse.CreateBulk(builders...).Save(ctx); err != nil {
 		t.Fatalf("建立倉別 fixture: %v", err)
+	}
+}
+
+// seedListScanAuditLogs 建立 listScanRows 筆稽核(M2):`created_at` 每 24 筆同一時間戳
+// (listScanAuditStampGroups 群)—— 同一業務交易會以同一交易時間寫入多筆稽核(2.6.2/D18),
+// 故「同一 created_at 的稽核遠多於一頁」是生產資料的常態形狀,而非特例。
+//
+// 時間戳取「現在附近」:ListAuditLogs 未帶 from/to 時套用預設時間窗(auditDefaultWindow =
+// 近 3 個月),fixture 必須落在窗內才看得到(固定日期會隨時間滑出窗外)。
+func seedListScanAuditLogs(t *testing.T, ctx context.Context, db *ent.Client, companyID int) {
+	t.Helper()
+	base := time.Now().UTC().Add(-time.Hour).Truncate(time.Second)
+	builders := make([]*ent.AuditLogCreate, 0, listScanRows)
+	for i := range listScanRows {
+		builders = append(builders, db.AuditLog.Create().
+			SetCompanyID(companyID).
+			SetUserID(1).
+			SetAction(auditlog.ActionCreate).
+			SetResourceType("customer").
+			SetResourceID(fmt.Sprintf("AUD-%03d", i)).
+			SetCreatedAt(base.Add(time.Duration(i/(listScanRows/listScanAuditStampGroups))*time.Second)))
+	}
+	if _, err := db.AuditLog.CreateBulk(builders...).Save(ctx); err != nil {
+		t.Fatalf("建立稽核 fixture: %v", err)
 	}
 }

@@ -6,6 +6,8 @@
 //	① 00020 的欄位成立,且 departments **沒有**表層 UNIQUE(00005 只建 id/name/company_departments)
 //	   → 因此不像公司 P2-A 需要把表層 UNIQUE 換成部分唯一索引,本檔只加欄位;若日後新增部門
 //	   唯一鍵,必須比照 00019 用 `WHERE deleted_at IS NULL` 的部分唯一索引表達。
+//	   該斷言以 pg_constraint(contype='u')與 pg_index(indisunique AND indpred IS NULL)兩者合看 ——
+//	   只看前者抓不到 `CREATE UNIQUE INDEX`(複審 M3)。
 //	② 原始缺陷在真 PG 上已不可重現:部門成員被稽核(recordUserAudit 以目標使用者的部門寫
 //	   department_id)後被調離部門 → DeleteDepartment 成功且稽核留痕。舊行為在此必被
 //	   audit_logs_department_id_fkey 擋下 → failed_precondition(訊息與原因無關)。
@@ -67,6 +69,18 @@ func TestIntegrationDepartmentSoftDelete(t *testing.T) {
 		}
 		if tableUnique != 0 {
 			t.Fatalf("departments 不應有表層 UNIQUE(有則必須比照 00019 改為部分唯一索引),got %d", tableUnique)
+		}
+		// `CREATE UNIQUE INDEX`(含條件式唯一索引)不會出現在 pg_constraint,故另以 pg_index 直查:
+		// **無條件**唯一索引只能有 pkey 一個。帶 WHERE 的部分唯一索引是允許的(00019 對公司 identifier
+		// 的做法),但必須以 `WHERE deleted_at IS NULL` 表達,否則已刪除列會永久佔用該鍵。
+		var unconditionalUnique int
+		if err := sqlDB.QueryRow(
+			`SELECT count(*) FROM pg_index WHERE indrelid = 'departments'::regclass AND indisunique AND indpred IS NULL`,
+		).Scan(&unconditionalUnique); err != nil {
+			t.Fatalf("查 departments 的唯一索引: %v", err)
+		}
+		if unconditionalUnique != 1 {
+			t.Fatalf("departments 的無條件唯一索引只應有 pkey 一個(部分唯一索引須以 WHERE deleted_at IS NULL 表達),got %d", unconditionalUnique)
 		}
 		// ② 的前提:audit_logs.department_id 的 FK 真的存在。
 		var fk int

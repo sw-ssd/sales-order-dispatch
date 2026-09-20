@@ -11,6 +11,10 @@ package services
 // 被刪部門)、所有部門查詢排除已刪除列、前置檢查(仍有成員)不變、已軟刪除的部門不得再被
 // 掛載(CreateUser/UpdateUser/AssignRole),且軟刪除的部門不得再阻擋公司刪除
 // (軟刪除拿走了硬刪除的隱性保護)。真 PG 的 FK 行為由 department_soft_delete_integration_test.go 守住。
+//
+// M1(複審):刪除的前置條件與寫入已收斂成**單一敘述式條件更新**(見 company_service.DeleteDepartment),
+// 本檔以「仍有成員 → failed_precondition / 已刪除或不存在 → not_found」的兩條分支守住該收斂的語意
+// (`TestDeleteDepartmentFailureBranches`)。
 
 import (
 	"testing"
@@ -133,6 +137,63 @@ func TestDeleteDepartmentSoftDelete(t *testing.T) {
 	}
 	if got := db.Department.GetX(ctx, keep.ID); got.DeletedAt != nil {
 		t.Fatal("前置檢查失敗時不得標記 deleted_at")
+	}
+}
+
+// TestDeleteDepartmentFailureBranches 00020 + M1:DeleteDepartment 的「該列未被更新」只由**單一**
+// 條件式更新判定(條件 = 存在 且未軟刪除 且無使用者),失敗的兩種原因必須可區分 —— 否則重複刪除會
+// 回「部門仍有使用者」(真正原因是不存在),而真有成員時會回 404(真正原因是現況不允許):
+//
+//	仍有成員    → failed_precondition(部門還在,現況不允許刪)
+//	已刪除/不存在 → not_found(重複刪除的正確答案)
+func TestDeleteDepartmentFailureBranches(t *testing.T) {
+	ctx := t.Context()
+	super := authz.Identity{UserID: "1", CompanyID: "1", Role: "super", Roles: []string{"super"}}
+	_, dc, db := newTestServerWithIdentity(t, super)
+
+	co := db.Company.Create().SetName("公司A").SetIdentifier("DEPT-BRANCH").SaveX(ctx)
+
+	// ① 仍有成員 → failed_precondition,且不得標記 deleted_at。
+	occupied := db.Department.Create().SetName("有成員").SetCompanyID(co.ID).SaveX(ctx)
+	db.User.Create().SetEmail("occupied@example.com").SetName("佔用").SetStatus("active").
+		SetRole("staff").SetPasswordHash("x").SetCompanyID(co.ID).SetDepartmentID(occupied.ID).SaveX(ctx)
+	if _, err := dc.DeleteDepartment(ctx, connect.NewRequest(&v1.DeleteDepartmentRequest{
+		DepartmentId: uItoa(occupied.ID),
+	})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Fatalf("仍有成員的部門應 failed_precondition(不是 not_found),got %v", err)
+	}
+	if got := db.Department.GetX(ctx, occupied.ID); got.DeletedAt != nil {
+		t.Fatal("仍有成員時不得標記 deleted_at")
+	}
+
+	// ② 已軟刪除(歷史列)與 ③ 從未存在 → not_found,不得被講成「仍有使用者」。
+	gone := db.Department.Create().SetName("已刪").SetCompanyID(co.ID).SaveX(ctx)
+	if _, err := db.Department.UpdateOneID(gone.ID).SetDeletedAt(time.Now().UTC()).Save(ctx); err != nil {
+		t.Fatalf("標記軟刪除: %v", err)
+	}
+	for _, tc := range []struct {
+		name string
+		id   int
+	}{
+		{"已軟刪除", gone.ID},
+		{"不存在", gone.ID + 1000},
+	} {
+		if _, err := dc.DeleteDepartment(ctx, connect.NewRequest(&v1.DeleteDepartmentRequest{
+			DepartmentId: uItoa(tc.id),
+		})); connect.CodeOf(err) != connect.CodeNotFound {
+			t.Fatalf("%s 的部門應 not_found(不是 failed_precondition),got %v", tc.name, err)
+		}
+	}
+
+	// 對照組:存續且無成員者仍可刪 —— 證明上面兩個失敗不是「條件永遠不成立」。
+	free := db.Department.Create().SetName("可刪").SetCompanyID(co.ID).SaveX(ctx)
+	if _, err := dc.DeleteDepartment(ctx, connect.NewRequest(&v1.DeleteDepartmentRequest{
+		DepartmentId: uItoa(free.ID),
+	})); err != nil {
+		t.Fatalf("無成員的存續部門必須可刪除: %v", err)
+	}
+	if got := db.Department.GetX(ctx, free.ID); got.DeletedAt == nil {
+		t.Fatal("刪除必須標記 deleted_at")
 	}
 }
 

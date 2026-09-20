@@ -138,7 +138,10 @@ func (s *AuditService) ListAuditLogs(ctx context.Context, req *connect.Request[a
 		return nil, toConnectError(err)
 	}
 	items, err := q.Clone().
-		Order(ent.Desc(auditlog.FieldCreatedAt)).
+		// M2:created_at 由同一業務交易的多筆稽核寫入(同一交易時間),同值群真實存在且常大於
+		// 一頁;排序鍵非唯一時 PostgreSQL 對 ties 的順序在 bounded top-N 與完整排序之間不保證
+		// 一致,逐頁 LIMIT/OFFSET 會重複與遺漏資料,故以 id 為次序鍵(與 F1/F2 同法,方向一致)。
+		Order(ent.Desc(auditlog.FieldCreatedAt), ent.Desc(auditlog.FieldID)).
 		Offset((page - 1) * pageSize).Limit(pageSize).
 		All(ctx)
 	if err != nil {
