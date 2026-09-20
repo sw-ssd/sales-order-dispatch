@@ -19,4 +19,13 @@ var (
 	// PlatformPaymentConflict 為收款衝突（期別已付款、金額不符）。
 	PlatformPaymentConflict = MustRegister(Code{id: "PLAT-3002", domain: DomainPlatform,
 		connectCode: connect.CodeFailedPrecondition, message: "收款衝突：{reason}"})
+
+	// PlatformOperatorGovernance 為**操作者治理的不變式**被違反（停用自己、停用最後一位 admin）。
+	//
+	// 為什麼要有專碼而不是共用 SYS-3002：這不是「資料庫約束」也不是「參數錯」，而是「這個操作
+	// 會讓平台**失去可管理性**」（沒有任何 admin 能再管理白名單），處置方式與其他失敗都不同
+	// （換一個 admin 來做，而不是改參數或重試）；訊息帶著可行動的 reason（例：請先新增另一位
+	// admin），前端可以直接顯示。
+	PlatformOperatorGovernance = MustRegister(Code{id: "PLAT-3003", domain: DomainPlatform,
+		connectCode: connect.CodeFailedPrecondition, message: "此操作會讓平台失去可管理性：{reason}"})
 )

@@ -596,6 +596,116 @@ func TestIntegrationPlatformAdminWrite(t *testing.T) {
 		}
 	})
 
+	t.Run("operator 管理需要 admin 角色", func(t *testing.T) {
+		opCtx := operatorauth.WithIdentity(t.Context(),
+			operatorauth.Identity{OperatorID: rig.seed.operatorID, Email: "ops-a@example.com", Role: "operator"})
+		if _, err := rig.svc.CreateOperator(opCtx, connect.NewRequest(&platformv1.CreateOperatorRequest{
+			Email: "self-promote@example.com", Role: "admin", Reason: "自我提權"})); connect.CodeOf(err) != connect.CodePermissionDenied {
+			t.Fatalf("operator 角色建立 admin 應 PermissionDenied,got %v", err)
+		}
+		var n int
+		if err := rig.admin.QueryRowContext(t.Context(),
+			`SELECT count(*) FROM platform.operators WHERE email = 'self-promote@example.com'`).Scan(&n); err != nil {
+			t.Fatalf("統計 operator: %v", err)
+		}
+		if n != 0 {
+			t.Fatal("被拒絕的提權不得留下任何白名單列")
+		}
+		if _, err := rig.svc.DisableOperator(opCtx, connect.NewRequest(&platformv1.DisableOperatorRequest{
+			OperatorId: itoa(int(rig.seed.operatorID)), Reason: "停用自己"})); connect.CodeOf(err) != connect.CodePermissionDenied {
+			t.Fatalf("operator 角色停用他人應 PermissionDenied,got %v", err)
+		}
+	})
+
+	t.Run("不得停用自己與最後一位 admin(真 SQL)", func(t *testing.T) {
+		// ① 自己:即使是 admin,停用自己等於當場把自己鎖在門外(operatorauth 每次請求都查
+		// status),而「誰停的」會是那位已經進不來的人 → 服務層擋下。
+		_, err := rig.svc.DisableOperator(rig.ctx, connect.NewRequest(&platformv1.DisableOperatorRequest{
+			OperatorId: itoa(int(rig.seed.operatorID)), Reason: "停用自己"}))
+		if info := errorInfoOf(t, err); info.GetCode() != "PLAT-3003" ||
+			!strings.Contains(info.GetMessage(), "不得停用自己") {
+			t.Fatalf("停用自己應 PLAT-3003 且訊息可行動,got %v", err)
+		}
+
+		// ② 最後一位 admin:夾具裡只有 ops-a 是 active admin。
+		// 由**另一位 admin 身分**停用他 —— 那位的白名單列已停用(身分與列不同步:併發互停、
+		// 或 token 內的角色已被改掉),這正是 SQL 條件要擋的那條路;服務層的自停用檢查管不到
+		// 「別人」。
+		var ghostAdminID int64
+		if err := rig.admin.QueryRowContext(t.Context(), `
+			INSERT INTO platform.operators (email, name, role, status)
+			VALUES ('ops-ghost@example.com','已停用的管理員','admin','disabled') RETURNING id`).
+			Scan(&ghostAdminID); err != nil {
+			t.Fatalf("seed 已停用的 admin: %v", err)
+		}
+		ghostCtx := operatorauth.WithIdentity(t.Context(),
+			operatorauth.Identity{OperatorID: ghostAdminID, Email: "ops-ghost@example.com", Role: "admin"})
+		before := rig.auditCount(t, "operator.disable")
+		_, err = rig.svc.DisableOperator(ghostCtx, connect.NewRequest(&platformv1.DisableOperatorRequest{
+			OperatorId: itoa(int(rig.seed.operatorID)), Reason: "停用最後一位 admin"}))
+		if info := errorInfoOf(t, err); info.GetCode() != "PLAT-3003" ||
+			!strings.Contains(info.GetMessage(), "最後一位 admin") {
+			t.Fatalf("停用最後一位 admin 應 PLAT-3003 且訊息可行動,got %v", err)
+		}
+		var status string
+		if err := rig.admin.QueryRowContext(t.Context(),
+			`SELECT status FROM platform.operators WHERE id = $1`, rig.seed.operatorID).Scan(&status); err != nil {
+			t.Fatalf("讀 operator: %v", err)
+		}
+		if status != "active" {
+			t.Fatalf("被擋下時不得改動狀態,got %q", status)
+		}
+		if got := rig.auditCount(t, "operator.disable"); got != before {
+			t.Fatalf("被擋下時不得寫稽核(失敗不留半成品): %d → %d", before, got)
+		}
+
+		// ③ 對照組:有**第二位 active admin** 之後,停用 ops-a 就應該成功(條件不是「一律不得
+		// 停用 admin」)。第二位用自己的身分停用自己也不行,故由第三位來停 —— 這裡直接用
+		// ops-a 的身分(他不能停自己,故用剛剛那位 ghost 的位置改為 active 後由它執行)。
+		if _, err := rig.admin.ExecContext(t.Context(),
+			`UPDATE platform.operators SET status = 'active' WHERE id = $1`, ghostAdminID); err != nil {
+			t.Fatalf("還原 ghost admin: %v", err)
+		}
+		if _, err := rig.svc.DisableOperator(ghostCtx, connect.NewRequest(&platformv1.DisableOperatorRequest{
+			OperatorId: itoa(int(rig.seed.operatorID)), Reason: "職務輪替"})); err != nil {
+			t.Fatalf("還有另一位 active admin 時應可停用: %v", err)
+		}
+		if err := rig.admin.QueryRowContext(t.Context(),
+			`SELECT status FROM platform.operators WHERE id = $1`, rig.seed.operatorID).Scan(&status); err != nil {
+			t.Fatalf("讀 operator: %v", err)
+		}
+		if status != "disabled" {
+			t.Fatalf("停用應即時生效,got %q", status)
+		}
+		// 收尾:把 ops-a 還原成 active(後續子測試的語意是「他就是那位 operator」)。
+		if _, err := rig.admin.ExecContext(t.Context(),
+			`UPDATE platform.operators SET status = 'active' WHERE id = $1`, rig.seed.operatorID); err != nil {
+			t.Fatalf("還原 ops-a: %v", err)
+		}
+	})
+
+	t.Run("負的限額一律拒絕(真容器)", func(t *testing.T) {
+		before := rig.auditCount(t, "override.set")
+		if _, err := rig.svc.SetTenantOverride(rig.ctx, connect.NewRequest(&platformv1.SetTenantOverrideRequest{
+			CompanyId: itoa(company), FeatureCode: "feature.export", LimitSet: true, LimitValue: -1,
+			Owner: "業務E", Reason: "誤填負值"})); connect.CodeOf(err) != connect.CodeInvalidArgument {
+			t.Fatalf("負的限額應 InvalidArgument,got %v", err)
+		}
+		var n int
+		if err := rig.admin.QueryRowContext(t.Context(), `
+			SELECT count(*) FROM platform.tenant_overrides
+			 WHERE company_id = $1 AND feature_code = 'feature.export' AND revoked_at IS NULL`,
+			company).Scan(&n); err != nil {
+			t.Fatalf("統計例外: %v", err)
+		}
+		if n != 0 {
+			t.Fatal("負值的限額不得寫入(判定層會把它讀成「任何用量都超額」)")
+		}
+		if got := rig.auditCount(t, "override.set"); got != before {
+			t.Fatalf("被拒絕的呼叫不得寫稽核: %d → %d", before, got)
+		}
+	})
+
 	t.Run("reason 全空白一律拒絕且不留痕跡", func(t *testing.T) {
 		before := rig.auditCount(t, "record_payment")
 		_, err := rig.svc.RecordPayment(rig.ctx, connect.NewRequest(&platformv1.RecordPaymentRequest{

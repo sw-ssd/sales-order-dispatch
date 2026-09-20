@@ -8,7 +8,7 @@
 
 - 碼的形態為 `域-4位數`；對外 connect 碼由區段決定（見 `sectionRules`）。
 - **碼發佈後不得重用或改義**，廢止只標狀態；訊息中的 `{param}` 由 `ErrorInfo.details` 帶入（前端顯示前請自行填入）。
-- 共 21 碼（AUTH 7／CUST 3／PLAT 4／SYS 7）。
+- 共 22 碼（AUTH 7／CUST 3／PLAT 5／SYS 7）。
 
 | 碼 | 域 | Go 常數 | connect 碼 | 訊息 | 參數 | 狀態 |
 |---|---|---|---|---|---|---|
@@ -24,6 +24,7 @@
 | CUST-3001 | CUST | `CustomerDeleted` | failed_precondition | 客戶已刪除，無法更新 | — | 使用中 |
 | PLAT-3001 | PLAT | `PlatformSubscriptionInactive` | failed_precondition | 訂閱狀態不允許此操作 | — | 使用中 |
 | PLAT-3002 | PLAT | `PlatformPaymentConflict` | failed_precondition | 收款衝突：{reason} | `reason` | 使用中 |
+| PLAT-3003 | PLAT | `PlatformOperatorGovernance` | failed_precondition | 此操作會讓平台失去可管理性：{reason} | `reason` | 使用中 |
 | PLAT-5001 | PLAT | `PlatformLimitExceeded` | failed_precondition | 已達方案上限（{used}/{limit}），請升級方案 | `used`, `limit` | 使用中 |
 | PLAT-5002 | PLAT | `PlatformFeatureNotInPlan` | failed_precondition | 目前方案未包含此功能，請升級方案 | — | 使用中 |
 | SYS-1001 | SYS | `SysInvalidArgument` | invalid_argument | 參數驗證失敗 | — | 使用中 |

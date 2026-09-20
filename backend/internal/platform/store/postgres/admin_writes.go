@@ -20,6 +20,11 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
 )
 
+// operatorGovernanceLockKey 為「操作者治理」的交易級 advisory lock key
+// (pg_advisory_xact_lock 的 bigint;交易結束即自動釋放):常數即識別,不另建表。
+// 值取自 ASCII "PLATOPER"(0x504C41544F504552),與 cron 的 "PLATCRON" 不撞號。
+const operatorGovernanceLockKey int64 = 0x504C41544F504552
+
 // zeroRows 把「INSERT…SELECT 沒有寫入任何列」轉成哨兵錯誤:這些寫入的 0 列一律代表
 // **來源不存在**(方案不存在／方案已歸檔／功能不存在),不是成功 —— 靜默回 nil 會讓服務層
 // 在同一交易內寫下一筆「改了一個不存在的方案」的稽核。
@@ -166,13 +171,61 @@ func (s *Admin) CreateOperatorTx(ctx context.Context, tx *sql.Tx, email, name, r
 // DisableOperatorTx 停用一個 operator(status='disabled')。不存在或已停用 → sql.ErrNoRows:
 // 重複停用不是「成功」,它會在稽核上留下一筆沒有實際效果的紀錄。
 //
-// 停用是**即時生效**的:operatorauth 每次請求都查 status(見 operatorauth.Store),故不需要
-// 撤銷已簽發的 token。
+// **不得停用最後一位 admin**:條件寫在 UPDATE 的 WHERE —— 「標的不是 admin」或「還有別的
+// active admin」才放行。停用最後一位 admin 的後果是 console 全鎖死(沒有人能再維護白名單、
+// 方案或收款),而修復只能直接動資料庫 —— 這是唯一會讓平台失去可管理性的操作,故多一道鎖也
+// 要擋住。
+//
+// **寫成「放行條件」而不是「禁止條件」**:反過來寫(禁止 = 沒有其他 active admin 就擋)會讓
+// 一般 operator 也停用不了 —— 那個缺陷在真容器上立刻現形(停用新建立的 operator 回 SYS-4002),
+// 而單元測試的假 store 不會執行 SQL,只有整合測試擋得住。
+//
+// 為什麼還要 advisory lock(條件句本身不足):**兩個 admin 同時停用對方**時,在 READ COMMITTED
+// 下各自的 EXISTS 都看得到「對方還是 active」而雙雙通過 → 兩個人都被停用、一個 admin 都不剩。
+// 交易級鎖把這兩個請求序列化:後到者拿鎖時前者已提交,它的 EXISTS 就會看到「沒有其他 active
+// admin」而被擋下。key 取自 ASCII "PLATOPER"(見 operatorGovernanceLockKey)。
+//
+// 0 列被改到時,再查一次該列以分辨「不存在／已停用」與「被治理條件擋下」—— 呼叫端要能顯示
+// 可行動的訊息(見 store.ErrLastAdmin)。與 MarkPeriodPaidTx 的 0 列處理同一個形狀。
 func (s *Admin) DisableOperatorTx(ctx context.Context, tx *sql.Tx, operatorID int64) error {
-	return execOneTx(ctx, tx, `
-		UPDATE platform.operators
+	if _, err := tx.ExecContext(ctx,
+		`SELECT pg_advisory_xact_lock($1)`, operatorGovernanceLockKey); err != nil {
+		return err
+	}
+	res, err := tx.ExecContext(ctx, `
+		UPDATE platform.operators o
 		   SET status = 'disabled', updated_at = now()
-		 WHERE id = $1 AND status <> 'disabled'`, operatorID)
+		 WHERE o.id = $1
+		   AND o.status <> 'disabled'
+		   AND (o.role <> 'admin'
+		        OR EXISTS (SELECT 1 FROM platform.operators x
+		                    WHERE x.status = 'active' AND x.role = 'admin' AND x.id <> o.id))`,
+		operatorID)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n > 0 {
+		return nil
+	}
+	var activeAdmin bool
+	err = tx.QueryRowContext(ctx, `
+		SELECT status = 'active' AND role = 'admin' FROM platform.operators WHERE id = $1`,
+		operatorID).Scan(&activeAdmin)
+	if errors.Is(err, sql.ErrNoRows) {
+		return sql.ErrNoRows // 不存在
+	}
+	if err != nil {
+		return err
+	}
+	if activeAdmin {
+		// 條件句只剩這一種可能:他是 active admin,且沒有**其他** active admin。
+		return store.ErrLastAdmin
+	}
+	return sql.ErrNoRows // 已停用(或非 admin 且已停用)
 }
 
 // Settings 讀出全部營運參數(key → value)。回傳整份而不是單鍵:console 的設定頁要顯示

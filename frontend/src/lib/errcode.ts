@@ -14,6 +14,7 @@ export const ERR_CUSTOMER_CODE_EXISTS = "CUST-2001";
 export const ERR_CUSTOMER_DELETED = "CUST-3001";
 export const ERR_PLATFORM_SUBSCRIPTION_INACTIVE = "PLAT-3001";
 export const ERR_PLATFORM_PAYMENT_CONFLICT = "PLAT-3002";
+export const ERR_PLATFORM_OPERATOR_GOVERNANCE = "PLAT-3003";
 export const ERR_PLATFORM_LIMIT_EXCEEDED = "PLAT-5001";
 export const ERR_PLATFORM_FEATURE_NOT_IN_PLAN = "PLAT-5002";
 export const ERR_SYS_INVALID_ARGUMENT = "SYS-1001";
@@ -38,6 +39,7 @@ export const CODE_MESSAGES: Record<string, string> = {
   "CUST-3001": "客戶已刪除，無法更新",
   "PLAT-3001": "訂閱狀態不允許此操作",
   "PLAT-3002": "收款衝突：{reason}",
+  "PLAT-3003": "此操作會讓平台失去可管理性：{reason}",
   "PLAT-5001": "已達方案上限（{used}/{limit}），請升級方案",
   "PLAT-5002": "目前方案未包含此功能，請升級方案",
   "SYS-1001": "參數驗證失敗",

@@ -14,6 +14,7 @@ const String errCustomerCodeExists = 'CUST-2001';
 const String errCustomerDeleted = 'CUST-3001';
 const String errPlatformSubscriptionInactive = 'PLAT-3001';
 const String errPlatformPaymentConflict = 'PLAT-3002';
+const String errPlatformOperatorGovernance = 'PLAT-3003';
 const String errPlatformLimitExceeded = 'PLAT-5001';
 const String errPlatformFeatureNotInPlan = 'PLAT-5002';
 const String errSysInvalidArgument = 'SYS-1001';
@@ -38,6 +39,7 @@ const Map<String, String> errCodeMessages = {
   'CUST-3001': '客戶已刪除，無法更新',
   'PLAT-3001': '訂閱狀態不允許此操作',
   'PLAT-3002': '收款衝突：{reason}',
+  'PLAT-3003': '此操作會讓平台失去可管理性：{reason}',
   'PLAT-5001': '已達方案上限（{used}/{limit}），請升級方案',
   'PLAT-5002': '目前方案未包含此功能，請升級方案',
   'SYS-1001': '參數驗證失敗',

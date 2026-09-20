@@ -25,6 +25,10 @@ var ErrNotFound = errors.New("平台資料不存在")
 // NOTHING` + 0 列判定,比在錯誤字串裡撈 constraint 名可靠(且沒有競態)。
 var ErrConflict = errors.New("平台資料已存在")
 
+// ErrLastAdmin 表示「停用這位 operator 會讓平台**沒有任何 admin**」——治理上的不變式,不是
+// 資料不存在。呼叫端(服務層)據此回 PLAT-3003 並附上可行動的原因,而不是含糊的「查無此人」。
+var ErrLastAdmin = errors.New("不得停用最後一位 admin")
+
 // TenantRow 為租戶列表／詳情的一列(companies × platform.subscriptions × plans 的投影)。
 //
 // 欄位橫跨業務表與平台表:spec §6.4 明訂平台方的跨租戶視圖走「admin 連線 ＋ 投影查詢」,

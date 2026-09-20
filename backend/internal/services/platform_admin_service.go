@@ -691,6 +691,11 @@ func (s *PlatformAdminService) SetTenantOverride(ctx context.Context,
 	}
 	if req.Msg.GetLimitSet() {
 		limit := req.Msg.GetLimitValue()
+		if limit < 0 {
+			// 負的上限在判定層等於「任何用量都超額」→ 該租戶的功能被永久關掉,而 console 顯示
+			// 「已設定限額」。負值不是「不限」(不限用 limit_set=false 表達),一律拒絕。
+			return nil, errcode.SysInvalidArgument.Error(map[string]string{"field": "limit_value"})
+		}
 		in.Limit = &limit
 	}
 	if raw := strings.TrimSpace(req.Msg.GetExpiresAt()); raw != "" {
@@ -842,6 +847,10 @@ func (s *PlatformAdminService) SetPlanEntitlement(ctx context.Context,
 	var limit *int64
 	if req.Msg.GetLimitSet() {
 		v := req.Msg.GetLimitValue()
+		if v < 0 {
+			// 同 SetTenantOverride:負的上限等於把這個功能對**所有用該方案的租戶**關掉。
+			return nil, errcode.SysInvalidArgument.Error(map[string]string{"field": "limit_value"})
+		}
 		limit = &v
 	}
 	after := map[string]any{"enabled": req.Msg.GetEnabled()}
@@ -868,7 +877,7 @@ func (s *PlatformAdminService) SetPlanEntitlement(ctx context.Context,
 // 不失效權益快取:白名單是**平台端**的身分,不進租戶的判定快照。
 func (s *PlatformAdminService) CreateOperator(ctx context.Context,
 	req *connect.Request[platformv1.CreateOperatorRequest]) (*connect.Response[platformv1.CreateOperatorResponse], error) {
-	id, err := requireOperatorIdentity(ctx)
+	id, err := requireAdmin(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -905,7 +914,7 @@ func (s *PlatformAdminService) CreateOperator(ctx context.Context,
 // 故不需要撤銷已簽發的 token;已停用者重複呼叫 → SYS-4002(不是成功)。
 func (s *PlatformAdminService) DisableOperator(ctx context.Context,
 	req *connect.Request[platformv1.DisableOperatorRequest]) (*connect.Response[platformv1.DisableOperatorResponse], error) {
-	id, err := requireOperatorIdentity(ctx)
+	id, err := requireAdmin(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -915,6 +924,13 @@ func (s *PlatformAdminService) DisableOperator(ctx context.Context,
 	operatorID, err := strconv.ParseInt(strings.TrimSpace(req.Msg.GetOperatorId()), 10, 64)
 	if err != nil || operatorID <= 0 {
 		return nil, errcode.SysInvalidArgument.Error(map[string]string{"field": "operator_id"})
+	}
+	// 不得停用自己:停用是即時的(operatorauth 每次請求都查 status),自己停自己等於當場把自己
+	// 鎖在門外,而「誰停的」會是那位已經進不來的人。要離職請由另一位 admin 操作。
+	if operatorID == id.OperatorID {
+		return nil, errcode.PlatformOperatorGovernance.Error(map[string]string{
+			"reason": "不得停用自己（請由另一位 admin 操作）",
+		})
 	}
 	err = s.writeTx(ctx, id, "operator.disable", "operator",
 		req.Msg.GetReason(), map[string]any{"status": "active"}, map[string]any{"status": "disabled"},
@@ -973,6 +989,28 @@ func marshalAuditImage(m map[string]any) ([]byte, error) {
 	return json.Marshal(m)
 }
 
+// requireAdmin 為**操作者管理** RPC 的角色檢查(先驗身分再驗角色),不足即 SYS-4001。
+//
+// 為什麼只有這兩支 RPC 限 admin(v1 的角色矩陣,判斷見報告):`operator | admin` 兩個角色
+// 在 spec 只有「白名單」的語意,而**建立／停用 operator 就是治理動作本身** —— 讓 operator
+// 能做,等於任何一個 operator 都能憑空替自己或別人加一個 admin(提權),或停用其他 admin
+// (破壞可管理性)。其餘寫入(收款、方案價目、權益、參數、override)是日常營運,維持 operator
+// 即可;要收緊必須先有一份明訂的權限矩陣,那不是本任務能自行擴大的範圍。
+//
+// 角色來自 operatorauth 從**資料庫白名單列**讀出的身分(token 只是載體;每次請求都查 status
+// 與 role),故改了 role 立刻生效。
+func requireAdmin(ctx context.Context) (operatorauth.Identity, error) {
+	id, err := requireOperatorIdentity(ctx)
+	if err != nil {
+		return operatorauth.Identity{}, err
+	}
+	if id.Role != "admin" {
+		return operatorauth.Identity{}, errcode.SysPermissionDenied.Error(
+			map[string]string{"required_role": "admin"})
+	}
+	return id, nil
+}
+
 // platformReason 為所有平台寫入的共同必填檢查:reason 全空白即拒絕(SYS-1001)。
 func platformReason(reason string) error {
 	if strings.TrimSpace(reason) == "" {
@@ -994,6 +1032,11 @@ func platformWriteError(err error) error {
 	switch {
 	case errors.Is(err, platformstore.ErrConflict):
 		return errcode.SysConflict.Error(nil)
+	case errors.Is(err, platformstore.ErrLastAdmin):
+		// 治理不變式:要說出「該怎麼做」,不是「查無此人」。
+		return errcode.PlatformOperatorGovernance.Error(map[string]string{
+			"reason": "不得停用最後一位 admin（請先新增另一位 admin）",
+		})
 	case errors.Is(err, platformstore.ErrNotFound), errors.Is(err, sql.ErrNoRows):
 		return errcode.SysNotFound.Error(nil)
 	default:

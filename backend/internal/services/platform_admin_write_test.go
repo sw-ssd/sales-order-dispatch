@@ -17,6 +17,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -201,6 +202,9 @@ func (f *fakePlatformStore) CreateOperatorTx(_ context.Context, _ *sql.Tx,
 }
 
 func (f *fakePlatformStore) DisableOperatorTx(_ context.Context, _ *sql.Tx, operatorID int64) error {
+	if f.disableLastAdmin {
+		return platformstore.ErrLastAdmin
+	}
 	if f.writes.failWrite {
 		return errors.New("模擬寫入失敗")
 	}
@@ -234,11 +238,14 @@ func (f *fakePlatformStore) ListReceivables(context.Context, int32, int32) ([]Re
 	return f.receivables, len(f.receivables), nil
 }
 
-// withOperator 注入平台身分(operator id 固定為 42)。身分由 interceptor 在真實路徑上注入,
-// 單元測試直接放進 ctx —— 服務層的第二層檢查看的就是這件事。
-func withOperator(ctx context.Context) context.Context {
+// withOperator 注入平台身分(operator id 固定為 42、角色 admin)。身分由 interceptor 在真實路徑
+// 上注入,單元測試直接放進 ctx —— 服務層的第二層檢查看的就是這件事。
+func withOperator(ctx context.Context) context.Context { return withOperatorRole(ctx, "admin") }
+
+// withOperatorRole 注入指定角色的平台身分(operator id 固定為 42):角色守衛的測試用。
+func withOperatorRole(ctx context.Context, role string) context.Context {
 	return operatorauth.WithIdentity(ctx,
-		operatorauth.Identity{OperatorID: 42, Email: "ops@example.com", Role: "admin"})
+		operatorauth.Identity{OperatorID: 42, Email: "ops@example.com", Role: role})
 }
 
 // newWriteHarness 建構一組乾淨的服務:假 store ＋ 真帳務(假 BillingStore)＋ 記錄版快取
@@ -741,6 +748,129 @@ func TestCreateOperatorConflictIsAlreadyExists(t *testing.T) {
 	}
 	if got := errorInfoOf(t, err).GetCode(); got != "SYS-2001" {
 		t.Fatalf("必須是註冊碼 SYS-2001,got %q", got)
+	}
+}
+
+// TestOperatorManagementRequiresAdmin 驗**操作者管理**只能由 admin 執行(裁決:operator 可
+// 自我提權 / 停用所有 admin 的漏洞修補)。
+//
+// 為什麼 role 一定要檢查:此 patch 之前唯一建立 operator 的途徑是 seed,而後果是不可回復的
+// 治理破壞 —— 任何一個 operator 都能 `CreateOperator(role="admin")` 憑空新增 admin,或停用
+// 種子 admin 乃至最後一位 admin(console 全鎖死,只能直接改資料庫救)。
+func TestOperatorManagementRequiresAdmin(t *testing.T) {
+	calls := map[string]func(svc *PlatformAdminService, ctx context.Context) error{
+		"CreateOperator": func(svc *PlatformAdminService, ctx context.Context) error {
+			_, err := svc.CreateOperator(ctx, connect.NewRequest(&platformv1.CreateOperatorRequest{
+				Email: "new@example.com", Role: "admin", Reason: "新增同事"}))
+			return err
+		},
+		"DisableOperator": func(svc *PlatformAdminService, ctx context.Context) error {
+			_, err := svc.DisableOperator(ctx, connect.NewRequest(&platformv1.DisableOperatorRequest{
+				OperatorId: "9", Reason: "離職"}))
+			return err
+		},
+	}
+	for name, call := range calls {
+		t.Run(name+"/operator 角色被拒", func(t *testing.T) {
+			svc, st, _, _ := newWriteHarness(0)
+			err := call(svc, withOperatorRole(context.Background(), "operator"))
+			if connect.CodeOf(err) != connect.CodePermissionDenied {
+				t.Fatalf("operator 角色應 PermissionDenied,got %v", err)
+			}
+			if got := errorInfoOf(t, err).GetCode(); got != "SYS-4001" {
+				t.Fatalf("必須是註冊碼 SYS-4001,got %q", got)
+			}
+			assertNoWrites(t, st)
+		})
+		t.Run(name+"/admin 角色可執行", func(t *testing.T) {
+			svc, st, _, _ := newWriteHarness(0)
+			if err := call(svc, withOperator(context.Background())); err != nil {
+				t.Fatalf("admin 角色應可執行: %v", err)
+			}
+			if len(st.writes.writes) != 1 || len(st.writes.audits) != 1 {
+				t.Fatalf("admin 路徑必須寫入並留下稽核: %+v", st.writes)
+			}
+		})
+	}
+}
+
+// TestDisableOperatorRejectsSelfAndLastAdmin 驗治理不變式:不得停用自己(當場把自己鎖在門外)、
+// 不得停用最後一位 admin(console 全鎖死)。兩者都回 PLAT-3003 且訊息可行動。
+func TestDisableOperatorRejectsSelfAndLastAdmin(t *testing.T) {
+	t.Run("不得停用自己", func(t *testing.T) {
+		svc, st, _, _ := newWriteHarness(0)
+		_, err := svc.DisableOperator(withOperator(context.Background()),
+			connect.NewRequest(&platformv1.DisableOperatorRequest{
+				OperatorId: "42", Reason: "離職"})) // 42 = 呼叫者自己
+		if connect.CodeOf(err) != connect.CodeFailedPrecondition {
+			t.Fatalf("停用自己應 FailedPrecondition,got %v", err)
+		}
+		info := errorInfoOf(t, err)
+		if info.GetCode() != "PLAT-3003" {
+			t.Fatalf("必須是註冊碼 PLAT-3003,got %q", info.GetCode())
+		}
+		if !strings.Contains(info.GetMessage(), "不得停用自己") {
+			t.Fatalf("訊息必須可行動(說出為什麼),got %q", info.GetMessage())
+		}
+		assertNoWrites(t, st)
+	})
+
+	t.Run("不得停用最後一位 admin", func(t *testing.T) {
+		svc, st, _, _ := newWriteHarness(0)
+		st.disableLastAdmin = true
+
+		_, err := svc.DisableOperator(withOperator(context.Background()),
+			connect.NewRequest(&platformv1.DisableOperatorRequest{
+				OperatorId: "7", Reason: "離職"}))
+		if connect.CodeOf(err) != connect.CodeFailedPrecondition {
+			t.Fatalf("停用最後一位 admin 應 FailedPrecondition,got %v", err)
+		}
+		info := errorInfoOf(t, err)
+		if info.GetCode() != "PLAT-3003" {
+			t.Fatalf("必須是註冊碼 PLAT-3003,got %q", info.GetCode())
+		}
+		if !strings.Contains(info.GetMessage(), "最後一位 admin") ||
+			!strings.Contains(info.GetMessage(), "新增另一位") {
+			t.Fatalf("訊息必須可行動(說出怎麼做),got %q", info.GetMessage())
+		}
+		assertNoWrites(t, st)
+	})
+}
+
+// TestWriteRPCPayloadGuards 驗兩個「缺少守衛就會造成破壞性營運狀態」的輸入:
+//   - 負的 limit_value 在判定層等於「任何用量都超額」→ 該租戶/該方案的功能被永久關掉,
+//     而 console 顯示「已設定限額」;
+//   - 兩處都要在寫入**之前**拒絕(否則會留下一筆已改壞的權益)。
+func TestWriteRPCsRejectNegativeLimit(t *testing.T) {
+	calls := map[string]func(svc *PlatformAdminService) error{
+		"SetTenantOverride": func(svc *PlatformAdminService) error {
+			_, err := svc.SetTenantOverride(withOperator(context.Background()),
+				connect.NewRequest(&platformv1.SetTenantOverrideRequest{
+					CompanyId: "42", FeatureCode: entitlements.LimitSeats, LimitSet: true, LimitValue: -1,
+					Owner: "業務", Reason: "誤填"}))
+			return err
+		},
+		"SetPlanEntitlement": func(svc *PlatformAdminService) error {
+			_, err := svc.SetPlanEntitlement(withOperator(context.Background()),
+				connect.NewRequest(&platformv1.SetPlanEntitlementRequest{
+					PlanCode: "std", FeatureCode: entitlements.LimitSeats, Enabled: true,
+					LimitSet: true, LimitValue: -1, Reason: "誤填"}))
+			return err
+		},
+	}
+	for name, call := range calls {
+		t.Run(name, func(t *testing.T) {
+			svc, st, _, _ := newWriteHarness(0)
+			err := call(svc)
+			if connect.CodeOf(err) != connect.CodeInvalidArgument {
+				t.Fatalf("負的限額應 InvalidArgument,got %v", err)
+			}
+			info := errorInfoOf(t, err)
+			if info.GetCode() != "SYS-1001" || info.GetDetails()["field"] != "limit_value" {
+				t.Fatalf("必須是 SYS-1001 且指出 limit_value,got %q %v", info.GetCode(), info.GetDetails())
+			}
+			assertNoWrites(t, st)
+		})
 	}
 }
 

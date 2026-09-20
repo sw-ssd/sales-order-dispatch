@@ -261,8 +261,10 @@ type fakePlatformStore struct {
 	// writes 為 T9 寫入路徑的記錄器(定義在 platform_admin_write_test.go):寫入方法全部掛在
 	// 它上面,讓「一次寫入恰一筆稽核」與「失敗不留半成品」可以逐項斷言。
 	writes *fakeWrites
-	// createOperatorConflict 模擬 email 唯一鍵衝突(store.ErrConflict)。
+	// createOperatorConflict 模擬 email 唯一鍵衝突(store.ErrConflict);
+	// disableLastAdmin 模擬治理條件擋下(store.ErrLastAdmin)。
 	createOperatorConflict bool
+	disableLastAdmin       bool
 
 	// calls 為 store 被查詢的次數:「擋下來了」不能只是回應長得像——資料庫早已被讀過一遍
 	// 也算越界,故授權／參數檢查必須在查詢之前。
