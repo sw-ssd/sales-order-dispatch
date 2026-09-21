@@ -412,3 +412,31 @@ func TestDispatchOnceResolvesSystemActorOnlyForMappedEvents(t *testing.T) {
 		}
 	})
 }
+
+// 未結項 #16:actor 解析失敗時，每個 mapped 事件各 append 一條同根因錯誤 → errors.Join 訊息
+// O(N) 膨脹（僅 log 噪音）。同一趟內平台設定不會自己變好，actor 失敗只應記一次。
+func TestDispatchOnceDedupesActorFailure(t *testing.T) {
+	events := []store.Event{
+		{ID: 1, EventType: "subscription.suspended", Payload: []byte(`{"company_id":42,"reason":"overdue"}`)},
+		{ID: 2, EventType: "subscription.suspended", Payload: []byte(`{"company_id":43,"reason":"overdue"}`)},
+		{ID: 3, EventType: "subscription.suspended", Payload: []byte(`{"company_id":44,"reason":"overdue"}`)},
+	}
+	c, src, _, _ := newConsumer(t, events...)
+	src.actorErr = errors.New("模擬平台設定缺失")
+
+	_, err := c.DispatchOnce(context.Background(), 10)
+	if err == nil {
+		t.Fatal("actor 失敗應回錯誤")
+	}
+	// 同根因只記一次：外層只有一條「事件 1 …無法派送」（定位用），不因三筆事件變三條。
+	joined := err.Error()
+	if n := strings.Count(joined, "無法派送"); n != 1 {
+		t.Fatalf("同根因錯誤應只記一次，got %d 次: %v", n, err)
+	}
+	if !strings.Contains(joined, "事件 1(subscription.suspended)") {
+		t.Fatalf("應記下第一個事件的 id 與型別（定位用）: %v", err)
+	}
+	if got := src.actorCalls; got != 1 {
+		t.Fatalf("同一趟 actor 只應解析一次，got %d 次", got)
+	}
+}

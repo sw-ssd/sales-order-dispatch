@@ -153,6 +153,11 @@ func (c *Consumer) DispatchOnce(ctx context.Context, limit int) (int, error) {
 	var actorErr error
 	var errs []error
 	done := 0
+	// actorFailed 記住本趟是否已記錄過 actor 失敗：同一趟內平台設定不會自己變好，
+	// 後續同根因的失敗不再 append（否則 errors.Join 訊息 O(N) 膨脹，僅 log 噪音）。
+	// 不用 errors.Is 比對 errs[0]：actorErr 經 Wrap 後每次 fmt 都不同字串，
+	// 且 errs[0] 可能是別的錯誤（companyIDOf 先失敗），用旗標才準。
+	actorFailed := false
 	for _, ev := range events {
 		act, mapped := actions[ev.EventType]
 		var companyID int
@@ -165,7 +170,12 @@ func (c *Consumer) DispatchOnce(ctx context.Context, limit int) (int, error) {
 				actor, actorErr = c.systemActor(ctx)
 			}
 			if actorErr != nil {
-				errs = append(errs, fmt.Errorf("事件 %d(%s) 無法派送: %w", ev.ID, ev.EventType, actorErr))
+				// 未結項 #16:同一趟內平台設定不會自己變好 —— actor 失敗只記一次。
+				// 記下第一個事件的 id 與型別即可（定位用）。
+				if !actorFailed {
+					actorFailed = true
+					errs = append(errs, fmt.Errorf("事件 %d(%s) 無法派送: %w", ev.ID, ev.EventType, actorErr))
+				}
 				continue
 			}
 		} else {
