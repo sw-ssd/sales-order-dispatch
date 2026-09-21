@@ -88,6 +88,16 @@ message QRLoginResponse {
   repeated Account accounts = 5;
 }
 
+// GetCustomerQRCodeRequest:為指定客戶產生登入 QR。
+message GetCustomerQRCodeRequest {
+  string customer_id = 1;
+}
+
+// GetCustomerQRCodeResponse:深層連結(App 未裝導商店、已裝直開)。
+message GetCustomerQRCodeResponse {
+  string qr_url = 1;
+}
+
 // AuthService:認證相關 RPC。
 service AuthService {
   // Login:客戶帳號密碼登入。
@@ -100,6 +110,8 @@ service AuthService {
   rpc RegisterComplete(RegisterCompleteRequest) returns (RegisterCompleteResponse);
   // QRLogin:QR token 兌換,回公司/客戶與可選子帳號清單。
   rpc QRLogin(QRLoginRequest) returns (QRLoginResponse);
+  // GetCustomerQRCode:為本部門客戶產生登入 QR(dept_admin/staff 限本部門;回深層連結,token 另存)。
+  rpc GetCustomerQRCode(GetCustomerQRCodeRequest) returns (GetCustomerQRCodeResponse);
   // ChangePassword:登入態修改密碼(1.5.2;must_change_password 時唯一可用)。
   rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
   // ResetCustomerPassword:密碼重置,重新發臨時密碼(1.5.4;dept_admin 以上)。

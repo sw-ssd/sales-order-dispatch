@@ -115,4 +115,12 @@ abstract final class CustomerService {
     customersv1customer.DeleteContactRequest.new,
     customersv1customer.DeleteContactResponse.new,
   );
+
+  /// GetCustomerQRCode:為本部門客戶產生登入 QR(dept_admin/staff 限本部門)。
+  static const getCustomerQRCode = connect.Spec(
+    '/$name/GetCustomerQRCode',
+    connect.StreamType.unary,
+    customersv1customer.GetCustomerQRCodeRequest.new,
+    customersv1customer.GetCustomerQRCodeResponse.new,
+  );
 }

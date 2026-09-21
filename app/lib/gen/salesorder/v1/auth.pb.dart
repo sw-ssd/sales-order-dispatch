@@ -1027,6 +1027,129 @@ class QRLoginResponse extends $pb.GeneratedMessage {
   $pb.PbList<QRLoginResponse_Account> get accounts => $_getList(4);
 }
 
+/// GetCustomerQRCodeRequest:為指定客戶產生登入 QR。
+class GetCustomerQRCodeRequest extends $pb.GeneratedMessage {
+  factory GetCustomerQRCodeRequest({
+    $core.String? customerId,
+  }) {
+    final result = GetCustomerQRCodeRequest._();
+    if (customerId != null) result.customerId = customerId;
+    return result;
+  }
+
+  GetCustomerQRCodeRequest._();
+
+  factory GetCustomerQRCodeRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetCustomerQRCodeRequest()..mergeFromBuffer(data, registry);
+  factory GetCustomerQRCodeRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetCustomerQRCodeRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetCustomerQRCodeRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: GetCustomerQRCodeRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'customerId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetCustomerQRCodeRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetCustomerQRCodeRequest copyWith(
+          void Function(GetCustomerQRCodeRequest) updates) =>
+      super.copyWith((message) => updates(message as GetCustomerQRCodeRequest))
+          as GetCustomerQRCodeRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetCustomerQRCodeRequest() / GetCustomerQRCodeRequest.new instead')
+  static GetCustomerQRCodeRequest create() => GetCustomerQRCodeRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetCustomerQRCodeRequest._();
+  @$core.override
+  GetCustomerQRCodeRequest createEmptyInstance() =>
+      GetCustomerQRCodeRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetCustomerQRCodeRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetCustomerQRCodeRequest>(
+          GetCustomerQRCodeRequest.$_createMessage);
+  static GetCustomerQRCodeRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get customerId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set customerId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasCustomerId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCustomerId() => $_clearField(1);
+}
+
+/// GetCustomerQRCodeResponse:深層連結(App 未裝導商店、已裝直開)。
+class GetCustomerQRCodeResponse extends $pb.GeneratedMessage {
+  factory GetCustomerQRCodeResponse({
+    $core.String? qrUrl,
+  }) {
+    final result = GetCustomerQRCodeResponse._();
+    if (qrUrl != null) result.qrUrl = qrUrl;
+    return result;
+  }
+
+  GetCustomerQRCodeResponse._();
+
+  factory GetCustomerQRCodeResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetCustomerQRCodeResponse()..mergeFromBuffer(data, registry);
+  factory GetCustomerQRCodeResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetCustomerQRCodeResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetCustomerQRCodeResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: GetCustomerQRCodeResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'qrUrl')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetCustomerQRCodeResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetCustomerQRCodeResponse copyWith(
+          void Function(GetCustomerQRCodeResponse) updates) =>
+      super.copyWith((message) => updates(message as GetCustomerQRCodeResponse))
+          as GetCustomerQRCodeResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetCustomerQRCodeResponse() / GetCustomerQRCodeResponse.new instead')
+  static GetCustomerQRCodeResponse create() => GetCustomerQRCodeResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      GetCustomerQRCodeResponse._();
+  @$core.override
+  GetCustomerQRCodeResponse createEmptyInstance() =>
+      GetCustomerQRCodeResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetCustomerQRCodeResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetCustomerQRCodeResponse>(
+          GetCustomerQRCodeResponse.$_createMessage);
+  static GetCustomerQRCodeResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get qrUrl => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set qrUrl($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasQrUrl() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearQrUrl() => $_clearField(1);
+}
+
 /// AuthService:認證相關 RPC。
 class AuthServiceApi {
   final $pb.RpcClient _client;
@@ -1062,6 +1185,12 @@ class AuthServiceApi {
           $pb.ClientContext? ctx, QRLoginRequest request) =>
       _client.invoke<QRLoginResponse>(
           ctx, 'AuthService', 'QRLogin', request, QRLoginResponse());
+
+  /// GetCustomerQRCode:為本部門客戶產生登入 QR(dept_admin/staff 限本部門;回深層連結,token 另存)。
+  $async.Future<GetCustomerQRCodeResponse> getCustomerQRCode(
+          $pb.ClientContext? ctx, GetCustomerQRCodeRequest request) =>
+      _client.invoke<GetCustomerQRCodeResponse>(ctx, 'AuthService',
+          'GetCustomerQRCode', request, GetCustomerQRCodeResponse());
 
   /// ChangePassword:登入態修改密碼(1.5.2;must_change_password 時唯一可用)。
   $async.Future<ChangePasswordResponse> changePassword(

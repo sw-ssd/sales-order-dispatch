@@ -118,6 +118,7 @@ func (s *Server) mountAuth() {
 	services.RegisterMetadictServices(apiMux, entClient)                                 // MetadictService(03 Task 2)
 	services.RegisterAuditServices(apiMux, entClient)                                    // AuditService(03 Task 6, A4)
 	services.RegisterCustomerServices(apiMux, entClient, s.cfg.Auth.FrontendURL, entSvc) // CustomerService(04 Task 1-2 + D22 帳號交付 URL)
+	services.SetQRSecret(s.cfg.Auth.JWTSecret)                                           // QR 簽章密鑰(JWT 複用;04 Task 3.8.1)
 	// 04 Task 3.4 部門級主檔(Warehouse/Route/ProcessingSpec/ProductCategory)。
 	services.RegisterWarehouseService(apiMux, entClient)
 	services.RegisterRouteService(apiMux, entClient)

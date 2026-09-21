@@ -806,6 +806,33 @@ const DeleteContactResponse$json = {
 final $typed_data.Uint8List deleteContactResponseDescriptor =
     $convert.base64Decode('ChVEZWxldGVDb250YWN0UmVzcG9uc2U=');
 
+@$core.Deprecated('Use getCustomerQRCodeRequestDescriptor instead')
+const GetCustomerQRCodeRequest$json = {
+  '1': 'GetCustomerQRCodeRequest',
+  '2': [
+    {'1': 'customer_id', '3': 1, '4': 1, '5': 9, '10': 'customerId'},
+  ],
+};
+
+/// Descriptor for `GetCustomerQRCodeRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getCustomerQRCodeRequestDescriptor =
+    $convert.base64Decode(
+        'ChhHZXRDdXN0b21lclFSQ29kZVJlcXVlc3QSHwoLY3VzdG9tZXJfaWQYASABKAlSCmN1c3RvbW'
+        'VySWQ=');
+
+@$core.Deprecated('Use getCustomerQRCodeResponseDescriptor instead')
+const GetCustomerQRCodeResponse$json = {
+  '1': 'GetCustomerQRCodeResponse',
+  '2': [
+    {'1': 'qr_url', '3': 1, '4': 1, '5': 9, '10': 'qrUrl'},
+  ],
+};
+
+/// Descriptor for `GetCustomerQRCodeResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getCustomerQRCodeResponseDescriptor =
+    $convert.base64Decode(
+        'ChlHZXRDdXN0b21lclFSQ29kZVJlc3BvbnNlEhUKBnFyX3VybBgBIAEoCVIFcXJVcmw=');
+
 const $core.Map<$core.String, $core.dynamic> CustomerServiceBase$json = {
   '1': 'CustomerService',
   '2': [
@@ -879,6 +906,11 @@ const $core.Map<$core.String, $core.dynamic> CustomerServiceBase$json = {
       '2': '.customers.v1.DeleteContactRequest',
       '3': '.customers.v1.DeleteContactResponse'
     },
+    {
+      '1': 'GetCustomerQRCode',
+      '2': '.customers.v1.GetCustomerQRCodeRequest',
+      '3': '.customers.v1.GetCustomerQRCodeResponse'
+    },
   ],
 };
 
@@ -917,6 +949,8 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.customers.v1.UpdateContactResponse': UpdateContactResponse$json,
   '.customers.v1.DeleteContactRequest': DeleteContactRequest$json,
   '.customers.v1.DeleteContactResponse': DeleteContactResponse$json,
+  '.customers.v1.GetCustomerQRCodeRequest': GetCustomerQRCodeRequest$json,
+  '.customers.v1.GetCustomerQRCodeResponse': GetCustomerQRCodeResponse$json,
 };
 
 /// Descriptor for `CustomerService`. Decode as a `google.protobuf.ServiceDescriptorProto`.
@@ -943,4 +977,6 @@ final $typed_data.Uint8List customerServiceDescriptor = $convert.base64Decode(
     'N1c3RvbWVycy52MS5BZGRDb250YWN0UmVzcG9uc2USWAoNVXBkYXRlQ29udGFjdBIiLmN1c3Rv'
     'bWVycy52MS5VcGRhdGVDb250YWN0UmVxdWVzdBojLmN1c3RvbWVycy52MS5VcGRhdGVDb250YW'
     'N0UmVzcG9uc2USWAoNRGVsZXRlQ29udGFjdBIiLmN1c3RvbWVycy52MS5EZWxldGVDb250YWN0'
-    'UmVxdWVzdBojLmN1c3RvbWVycy52MS5EZWxldGVDb250YWN0UmVzcG9uc2U=');
+    'UmVxdWVzdBojLmN1c3RvbWVycy52MS5EZWxldGVDb250YWN0UmVzcG9uc2USZAoRR2V0Q3VzdG'
+    '9tZXJRUkNvZGUSJi5jdXN0b21lcnMudjEuR2V0Q3VzdG9tZXJRUkNvZGVSZXF1ZXN0GicuY3Vz'
+    'dG9tZXJzLnYxLkdldEN1c3RvbWVyUVJDb2RlUmVzcG9uc2U=');

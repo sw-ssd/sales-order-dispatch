@@ -49,6 +49,8 @@ abstract class CustomerServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $1.UpdateContactRequest request);
   $async.Future<$1.DeleteContactResponse> deleteContact(
       $pb.ServerContext ctx, $1.DeleteContactRequest request);
+  $async.Future<$1.GetCustomerQRCodeResponse> getCustomerQRCode(
+      $pb.ServerContext ctx, $1.GetCustomerQRCodeRequest request);
 
   $pb.GeneratedMessage createRequest($core.String methodName) {
     switch (methodName) {
@@ -80,6 +82,8 @@ abstract class CustomerServiceBase extends $pb.GeneratedService {
         return $1.UpdateContactRequest();
       case 'DeleteContact':
         return $1.DeleteContactRequest();
+      case 'GetCustomerQRCode':
+        return $1.GetCustomerQRCodeRequest();
       default:
         throw $core.ArgumentError('Unknown method: $methodName');
     }
@@ -116,6 +120,8 @@ abstract class CustomerServiceBase extends $pb.GeneratedService {
         return updateContact(ctx, request as $1.UpdateContactRequest);
       case 'DeleteContact':
         return deleteContact(ctx, request as $1.DeleteContactRequest);
+      case 'GetCustomerQRCode':
+        return getCustomerQRCode(ctx, request as $1.GetCustomerQRCodeRequest);
       default:
         throw $core.ArgumentError('Unknown method: $methodName');
     }

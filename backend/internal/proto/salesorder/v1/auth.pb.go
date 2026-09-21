@@ -731,6 +731,96 @@ func (x *QRLoginResponse) GetAccounts() []*QRLoginResponse_Account {
 	return nil
 }
 
+// GetCustomerQRCodeRequest:為指定客戶產生登入 QR。
+type GetCustomerQRCodeRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CustomerId    string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCustomerQRCodeRequest) Reset() {
+	*x = GetCustomerQRCodeRequest{}
+	mi := &file_salesorder_v1_auth_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCustomerQRCodeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCustomerQRCodeRequest) ProtoMessage() {}
+
+func (x *GetCustomerQRCodeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_auth_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCustomerQRCodeRequest.ProtoReflect.Descriptor instead.
+func (*GetCustomerQRCodeRequest) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *GetCustomerQRCodeRequest) GetCustomerId() string {
+	if x != nil {
+		return x.CustomerId
+	}
+	return ""
+}
+
+// GetCustomerQRCodeResponse:深層連結(App 未裝導商店、已裝直開)。
+type GetCustomerQRCodeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	QrUrl         string                 `protobuf:"bytes,1,opt,name=qr_url,json=qrUrl,proto3" json:"qr_url,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCustomerQRCodeResponse) Reset() {
+	*x = GetCustomerQRCodeResponse{}
+	mi := &file_salesorder_v1_auth_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCustomerQRCodeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCustomerQRCodeResponse) ProtoMessage() {}
+
+func (x *GetCustomerQRCodeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_auth_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCustomerQRCodeResponse.ProtoReflect.Descriptor instead.
+func (*GetCustomerQRCodeResponse) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_auth_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *GetCustomerQRCodeResponse) GetQrUrl() string {
+	if x != nil {
+		return x.QrUrl
+	}
+	return ""
+}
+
 // Account:可選店家子帳號(僅店家子帳號;不含主帳號與業務子帳號)。
 type QRLoginResponse_Account struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -742,7 +832,7 @@ type QRLoginResponse_Account struct {
 
 func (x *QRLoginResponse_Account) Reset() {
 	*x = QRLoginResponse_Account{}
-	mi := &file_salesorder_v1_auth_proto_msgTypes[14]
+	mi := &file_salesorder_v1_auth_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -754,7 +844,7 @@ func (x *QRLoginResponse_Account) String() string {
 func (*QRLoginResponse_Account) ProtoMessage() {}
 
 func (x *QRLoginResponse_Account) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_auth_proto_msgTypes[14]
+	mi := &file_salesorder_v1_auth_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -834,13 +924,19 @@ const file_salesorder_v1_auth_proto_rawDesc = "" +
 	"\baccounts\x18\x05 \x03(\v2&.salesorder.v1.QRLoginResponse.AccountR\baccounts\x1a<\n" +
 	"\aAccount\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
-	"\faccount_name\x18\x02 \x01(\tR\vaccountName2\xe4\x04\n" +
+	"\faccount_name\x18\x02 \x01(\tR\vaccountName\";\n" +
+	"\x18GetCustomerQRCodeRequest\x12\x1f\n" +
+	"\vcustomer_id\x18\x01 \x01(\tR\n" +
+	"customerId\"2\n" +
+	"\x19GetCustomerQRCodeResponse\x12\x15\n" +
+	"\x06qr_url\x18\x01 \x01(\tR\x05qrUrl2\xcc\x05\n" +
 	"\vAuthService\x12B\n" +
 	"\x05Login\x12\x1b.salesorder.v1.LoginRequest\x1a\x1c.salesorder.v1.LoginResponse\x12H\n" +
 	"\aRefresh\x12\x1d.salesorder.v1.RefreshRequest\x1a\x1e.salesorder.v1.RefreshResponse\x12E\n" +
 	"\x06Logout\x12\x1c.salesorder.v1.LogoutRequest\x1a\x1d.salesorder.v1.LogoutResponse\x12c\n" +
 	"\x10RegisterComplete\x12&.salesorder.v1.RegisterCompleteRequest\x1a'.salesorder.v1.RegisterCompleteResponse\x12H\n" +
-	"\aQRLogin\x12\x1d.salesorder.v1.QRLoginRequest\x1a\x1e.salesorder.v1.QRLoginResponse\x12]\n" +
+	"\aQRLogin\x12\x1d.salesorder.v1.QRLoginRequest\x1a\x1e.salesorder.v1.QRLoginResponse\x12f\n" +
+	"\x11GetCustomerQRCode\x12'.salesorder.v1.GetCustomerQRCodeRequest\x1a(.salesorder.v1.GetCustomerQRCodeResponse\x12]\n" +
 	"\x0eChangePassword\x12$.salesorder.v1.ChangePasswordRequest\x1a%.salesorder.v1.ChangePasswordResponse\x12r\n" +
 	"\x15ResetCustomerPassword\x12+.salesorder.v1.ResetCustomerPasswordRequest\x1a,.salesorder.v1.ResetCustomerPasswordResponseBYZWgithub.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1b\x06proto3"
 
@@ -856,7 +952,7 @@ func file_salesorder_v1_auth_proto_rawDescGZIP() []byte {
 	return file_salesorder_v1_auth_proto_rawDescData
 }
 
-var file_salesorder_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_salesorder_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_salesorder_v1_auth_proto_goTypes = []any{
 	(*ChangePasswordRequest)(nil),         // 0: salesorder.v1.ChangePasswordRequest
 	(*ChangePasswordResponse)(nil),        // 1: salesorder.v1.ChangePasswordResponse
@@ -872,26 +968,30 @@ var file_salesorder_v1_auth_proto_goTypes = []any{
 	(*RegisterCompleteResponse)(nil),      // 11: salesorder.v1.RegisterCompleteResponse
 	(*QRLoginRequest)(nil),                // 12: salesorder.v1.QRLoginRequest
 	(*QRLoginResponse)(nil),               // 13: salesorder.v1.QRLoginResponse
-	(*QRLoginResponse_Account)(nil),       // 14: salesorder.v1.QRLoginResponse.Account
+	(*GetCustomerQRCodeRequest)(nil),      // 14: salesorder.v1.GetCustomerQRCodeRequest
+	(*GetCustomerQRCodeResponse)(nil),     // 15: salesorder.v1.GetCustomerQRCodeResponse
+	(*QRLoginResponse_Account)(nil),       // 16: salesorder.v1.QRLoginResponse.Account
 }
 var file_salesorder_v1_auth_proto_depIdxs = []int32{
-	14, // 0: salesorder.v1.QRLoginResponse.accounts:type_name -> salesorder.v1.QRLoginResponse.Account
+	16, // 0: salesorder.v1.QRLoginResponse.accounts:type_name -> salesorder.v1.QRLoginResponse.Account
 	4,  // 1: salesorder.v1.AuthService.Login:input_type -> salesorder.v1.LoginRequest
 	6,  // 2: salesorder.v1.AuthService.Refresh:input_type -> salesorder.v1.RefreshRequest
 	8,  // 3: salesorder.v1.AuthService.Logout:input_type -> salesorder.v1.LogoutRequest
 	10, // 4: salesorder.v1.AuthService.RegisterComplete:input_type -> salesorder.v1.RegisterCompleteRequest
 	12, // 5: salesorder.v1.AuthService.QRLogin:input_type -> salesorder.v1.QRLoginRequest
-	0,  // 6: salesorder.v1.AuthService.ChangePassword:input_type -> salesorder.v1.ChangePasswordRequest
-	2,  // 7: salesorder.v1.AuthService.ResetCustomerPassword:input_type -> salesorder.v1.ResetCustomerPasswordRequest
-	5,  // 8: salesorder.v1.AuthService.Login:output_type -> salesorder.v1.LoginResponse
-	7,  // 9: salesorder.v1.AuthService.Refresh:output_type -> salesorder.v1.RefreshResponse
-	9,  // 10: salesorder.v1.AuthService.Logout:output_type -> salesorder.v1.LogoutResponse
-	11, // 11: salesorder.v1.AuthService.RegisterComplete:output_type -> salesorder.v1.RegisterCompleteResponse
-	13, // 12: salesorder.v1.AuthService.QRLogin:output_type -> salesorder.v1.QRLoginResponse
-	1,  // 13: salesorder.v1.AuthService.ChangePassword:output_type -> salesorder.v1.ChangePasswordResponse
-	3,  // 14: salesorder.v1.AuthService.ResetCustomerPassword:output_type -> salesorder.v1.ResetCustomerPasswordResponse
-	8,  // [8:15] is the sub-list for method output_type
-	1,  // [1:8] is the sub-list for method input_type
+	14, // 6: salesorder.v1.AuthService.GetCustomerQRCode:input_type -> salesorder.v1.GetCustomerQRCodeRequest
+	0,  // 7: salesorder.v1.AuthService.ChangePassword:input_type -> salesorder.v1.ChangePasswordRequest
+	2,  // 8: salesorder.v1.AuthService.ResetCustomerPassword:input_type -> salesorder.v1.ResetCustomerPasswordRequest
+	5,  // 9: salesorder.v1.AuthService.Login:output_type -> salesorder.v1.LoginResponse
+	7,  // 10: salesorder.v1.AuthService.Refresh:output_type -> salesorder.v1.RefreshResponse
+	9,  // 11: salesorder.v1.AuthService.Logout:output_type -> salesorder.v1.LogoutResponse
+	11, // 12: salesorder.v1.AuthService.RegisterComplete:output_type -> salesorder.v1.RegisterCompleteResponse
+	13, // 13: salesorder.v1.AuthService.QRLogin:output_type -> salesorder.v1.QRLoginResponse
+	15, // 14: salesorder.v1.AuthService.GetCustomerQRCode:output_type -> salesorder.v1.GetCustomerQRCodeResponse
+	1,  // 15: salesorder.v1.AuthService.ChangePassword:output_type -> salesorder.v1.ChangePasswordResponse
+	3,  // 16: salesorder.v1.AuthService.ResetCustomerPassword:output_type -> salesorder.v1.ResetCustomerPasswordResponse
+	9,  // [9:17] is the sub-list for method output_type
+	1,  // [1:9] is the sub-list for method input_type
 	1,  // [1:1] is the sub-list for extension type_name
 	1,  // [1:1] is the sub-list for extension extendee
 	0,  // [0:1] is the sub-list for field type_name
@@ -908,7 +1008,7 @@ func file_salesorder_v1_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_salesorder_v1_auth_proto_rawDesc), len(file_salesorder_v1_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

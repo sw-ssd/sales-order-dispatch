@@ -44,6 +44,9 @@ const (
 	AuthServiceRegisterCompleteProcedure = "/salesorder.v1.AuthService/RegisterComplete"
 	// AuthServiceQRLoginProcedure is the fully-qualified name of the AuthService's QRLogin RPC.
 	AuthServiceQRLoginProcedure = "/salesorder.v1.AuthService/QRLogin"
+	// AuthServiceGetCustomerQRCodeProcedure is the fully-qualified name of the AuthService's
+	// GetCustomerQRCode RPC.
+	AuthServiceGetCustomerQRCodeProcedure = "/salesorder.v1.AuthService/GetCustomerQRCode"
 	// AuthServiceChangePasswordProcedure is the fully-qualified name of the AuthService's
 	// ChangePassword RPC.
 	AuthServiceChangePasswordProcedure = "/salesorder.v1.AuthService/ChangePassword"
@@ -64,6 +67,8 @@ type AuthServiceClient interface {
 	RegisterComplete(context.Context, *connect.Request[v1.RegisterCompleteRequest]) (*connect.Response[v1.RegisterCompleteResponse], error)
 	// QRLogin:QR token 兌換,回公司/客戶與可選子帳號清單。
 	QRLogin(context.Context, *connect.Request[v1.QRLoginRequest]) (*connect.Response[v1.QRLoginResponse], error)
+	// GetCustomerQRCode:為本部門客戶產生登入 QR(dept_admin/staff 限本部門;回深層連結,token 另存)。
+	GetCustomerQRCode(context.Context, *connect.Request[v1.GetCustomerQRCodeRequest]) (*connect.Response[v1.GetCustomerQRCodeResponse], error)
 	// ChangePassword:登入態修改密碼(1.5.2;must_change_password 時唯一可用)。
 	ChangePassword(context.Context, *connect.Request[v1.ChangePasswordRequest]) (*connect.Response[v1.ChangePasswordResponse], error)
 	// ResetCustomerPassword:密碼重置,重新發臨時密碼(1.5.4;dept_admin 以上)。
@@ -111,6 +116,12 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(authServiceMethods.ByName("QRLogin")),
 			connect.WithClientOptions(opts...),
 		),
+		getCustomerQRCode: connect.NewClient[v1.GetCustomerQRCodeRequest, v1.GetCustomerQRCodeResponse](
+			httpClient,
+			baseURL+AuthServiceGetCustomerQRCodeProcedure,
+			connect.WithSchema(authServiceMethods.ByName("GetCustomerQRCode")),
+			connect.WithClientOptions(opts...),
+		),
 		changePassword: connect.NewClient[v1.ChangePasswordRequest, v1.ChangePasswordResponse](
 			httpClient,
 			baseURL+AuthServiceChangePasswordProcedure,
@@ -133,6 +144,7 @@ type authServiceClient struct {
 	logout                *connect.Client[v1.LogoutRequest, v1.LogoutResponse]
 	registerComplete      *connect.Client[v1.RegisterCompleteRequest, v1.RegisterCompleteResponse]
 	qRLogin               *connect.Client[v1.QRLoginRequest, v1.QRLoginResponse]
+	getCustomerQRCode     *connect.Client[v1.GetCustomerQRCodeRequest, v1.GetCustomerQRCodeResponse]
 	changePassword        *connect.Client[v1.ChangePasswordRequest, v1.ChangePasswordResponse]
 	resetCustomerPassword *connect.Client[v1.ResetCustomerPasswordRequest, v1.ResetCustomerPasswordResponse]
 }
@@ -162,6 +174,11 @@ func (c *authServiceClient) QRLogin(ctx context.Context, req *connect.Request[v1
 	return c.qRLogin.CallUnary(ctx, req)
 }
 
+// GetCustomerQRCode calls salesorder.v1.AuthService.GetCustomerQRCode.
+func (c *authServiceClient) GetCustomerQRCode(ctx context.Context, req *connect.Request[v1.GetCustomerQRCodeRequest]) (*connect.Response[v1.GetCustomerQRCodeResponse], error) {
+	return c.getCustomerQRCode.CallUnary(ctx, req)
+}
+
 // ChangePassword calls salesorder.v1.AuthService.ChangePassword.
 func (c *authServiceClient) ChangePassword(ctx context.Context, req *connect.Request[v1.ChangePasswordRequest]) (*connect.Response[v1.ChangePasswordResponse], error) {
 	return c.changePassword.CallUnary(ctx, req)
@@ -184,6 +201,8 @@ type AuthServiceHandler interface {
 	RegisterComplete(context.Context, *connect.Request[v1.RegisterCompleteRequest]) (*connect.Response[v1.RegisterCompleteResponse], error)
 	// QRLogin:QR token 兌換,回公司/客戶與可選子帳號清單。
 	QRLogin(context.Context, *connect.Request[v1.QRLoginRequest]) (*connect.Response[v1.QRLoginResponse], error)
+	// GetCustomerQRCode:為本部門客戶產生登入 QR(dept_admin/staff 限本部門;回深層連結,token 另存)。
+	GetCustomerQRCode(context.Context, *connect.Request[v1.GetCustomerQRCodeRequest]) (*connect.Response[v1.GetCustomerQRCodeResponse], error)
 	// ChangePassword:登入態修改密碼(1.5.2;must_change_password 時唯一可用)。
 	ChangePassword(context.Context, *connect.Request[v1.ChangePasswordRequest]) (*connect.Response[v1.ChangePasswordResponse], error)
 	// ResetCustomerPassword:密碼重置,重新發臨時密碼(1.5.4;dept_admin 以上)。
@@ -227,6 +246,12 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(authServiceMethods.ByName("QRLogin")),
 		connect.WithHandlerOptions(opts...),
 	)
+	authServiceGetCustomerQRCodeHandler := connect.NewUnaryHandler(
+		AuthServiceGetCustomerQRCodeProcedure,
+		svc.GetCustomerQRCode,
+		connect.WithSchema(authServiceMethods.ByName("GetCustomerQRCode")),
+		connect.WithHandlerOptions(opts...),
+	)
 	authServiceChangePasswordHandler := connect.NewUnaryHandler(
 		AuthServiceChangePasswordProcedure,
 		svc.ChangePassword,
@@ -251,6 +276,8 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 			authServiceRegisterCompleteHandler.ServeHTTP(w, r)
 		case AuthServiceQRLoginProcedure:
 			authServiceQRLoginHandler.ServeHTTP(w, r)
+		case AuthServiceGetCustomerQRCodeProcedure:
+			authServiceGetCustomerQRCodeHandler.ServeHTTP(w, r)
 		case AuthServiceChangePasswordProcedure:
 			authServiceChangePasswordHandler.ServeHTTP(w, r)
 		case AuthServiceResetCustomerPasswordProcedure:
@@ -282,6 +309,10 @@ func (UnimplementedAuthServiceHandler) RegisterComplete(context.Context, *connec
 
 func (UnimplementedAuthServiceHandler) QRLogin(context.Context, *connect.Request[v1.QRLoginRequest]) (*connect.Response[v1.QRLoginResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("salesorder.v1.AuthService.QRLogin is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) GetCustomerQRCode(context.Context, *connect.Request[v1.GetCustomerQRCodeRequest]) (*connect.Response[v1.GetCustomerQRCodeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("salesorder.v1.AuthService.GetCustomerQRCode is not implemented"))
 }
 
 func (UnimplementedAuthServiceHandler) ChangePassword(context.Context, *connect.Request[v1.ChangePasswordRequest]) (*connect.Response[v1.ChangePasswordResponse], error) {

@@ -31,6 +31,8 @@ abstract class AuthServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.RegisterCompleteRequest request);
   $async.Future<$0.QRLoginResponse> qRLogin(
       $pb.ServerContext ctx, $0.QRLoginRequest request);
+  $async.Future<$0.GetCustomerQRCodeResponse> getCustomerQRCode(
+      $pb.ServerContext ctx, $0.GetCustomerQRCodeRequest request);
   $async.Future<$0.ChangePasswordResponse> changePassword(
       $pb.ServerContext ctx, $0.ChangePasswordRequest request);
   $async.Future<$0.ResetCustomerPasswordResponse> resetCustomerPassword(
@@ -48,6 +50,8 @@ abstract class AuthServiceBase extends $pb.GeneratedService {
         return $0.RegisterCompleteRequest();
       case 'QRLogin':
         return $0.QRLoginRequest();
+      case 'GetCustomerQRCode':
+        return $0.GetCustomerQRCodeRequest();
       case 'ChangePassword':
         return $0.ChangePasswordRequest();
       case 'ResetCustomerPassword':
@@ -70,6 +74,8 @@ abstract class AuthServiceBase extends $pb.GeneratedService {
         return registerComplete(ctx, request as $0.RegisterCompleteRequest);
       case 'QRLogin':
         return qRLogin(ctx, request as $0.QRLoginRequest);
+      case 'GetCustomerQRCode':
+        return getCustomerQRCode(ctx, request as $0.GetCustomerQRCodeRequest);
       case 'ChangePassword':
         return changePassword(ctx, request as $0.ChangePasswordRequest);
       case 'ResetCustomerPassword':

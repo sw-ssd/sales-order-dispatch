@@ -14,10 +14,32 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
+	"github.com/salesorder/sales-order-1.0/backend/ent/customer"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customercontact"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
+	"github.com/salesorder/sales-order-1.0/backend/internal/domain/customers/qrcode"
+	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
 	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
 )
+
+// qrSecret 取 QR 簽章密鑰(JWT_SECRET 複用)。預設 dev 值;server 組裝時以
+// config.Auth.JWTSecret 呼叫 SetQRSecret 覆寫(正式環境由 Server.Init 防護)。
+// 包級變數而非構造子參數:CustomerService 已有 10+ 測試呼叫點,改簽名全數陪葬。
+var qrSecretValue = "dev-only-jwt-secret-change-me"
+
+// SetQRSecret 設定 QR 簽章密鑰(僅 server 組裝鏈呼叫)。
+func SetQRSecret(s string) {
+	if s != "" {
+		qrSecretValue = s
+	}
+}
+
+func qrSecret() string { return qrSecretValue }
+
+// qrDeepLink 組深層連結(App 未裝導商店、已裝直開)。
+func qrDeepLink(base, token string) string {
+	return strings.TrimRight(base, "/") + "/customer_account_qrcode/" + token
+}
 
 // contactEmailRe 為輕量 email 格式驗證(3.2.2 步驟 4:僅格式,不做投遞驗證)。
 var contactEmailRe = regexp.MustCompile(`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
@@ -276,4 +298,44 @@ func (s *CustomerService) DeleteContact(ctx context.Context, req *connect.Reques
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&customersv1.DeleteContactResponse{}), nil
+}
+
+// GetCustomerQRCode 為本部門客戶產生登入 QR(3.8.2 產生端):驗客戶可見 → 產生簽章 token →
+// 組深層連結 → 寫稽核。每呼叫產生新 token(舊 token 各自有效,不互作廢)。
+// 簽章密鑰複用 JWT_SECRET(環境注入,不進版控);token 本身不回傳(前端由 qr_url 取 token)。
+func (s *CustomerService) GetCustomerQRCode(ctx context.Context, req *connect.Request[customersv1.GetCustomerQRCodeRequest]) (*connect.Response[customersv1.GetCustomerQRCodeResponse], error) {
+	id, err := requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+	cid, did, err := deptScope(id)
+	if err != nil {
+		return nil, err
+	}
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, errcode.SysInternal.Error(nil)
+	}
+	db := tx.Client()
+	custID, err := parseID(req.Msg.GetCustomerId())
+	if err != nil {
+		return nil, err
+	}
+	cust, err := customerScopeQuery(db.Customer.Query(), cid, did).
+		Where(customer.ID(custID), customer.DeletedAtIsNil()).Only(ctx)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	token, _, err := qrcode.Generate(qrSecret(), cust.CompanyID, cust.CustomerCode, 0)
+	if err != nil {
+		return nil, err
+	}
+	actor, _ := parseID(id.UserID)
+	if err := recordAudit(ctx, tx, "customer", "qr_produce", cust.ID, cid, cust.DepartmentID, actor,
+		map[string]any{"customer_code": cust.CustomerCode}); err != nil {
+		return nil, toConnectError(err)
+	}
+	return connect.NewResponse(&customersv1.GetCustomerQRCodeResponse{
+		QrUrl: qrDeepLink(s.accountManageBaseURL, token),
+	}), nil
 }

@@ -379,6 +379,42 @@ export declare type QRLoginResponse_Account = Message<"salesorder.v1.QRLoginResp
 export declare const QRLoginResponse_AccountSchema: GenMessage<QRLoginResponse_Account>;
 
 /**
+ * GetCustomerQRCodeRequest:為指定客戶產生登入 QR。
+ *
+ * @generated from message salesorder.v1.GetCustomerQRCodeRequest
+ */
+export declare type GetCustomerQRCodeRequest = Message<"salesorder.v1.GetCustomerQRCodeRequest"> & {
+  /**
+   * @generated from field: string customer_id = 1;
+   */
+  customerId: string;
+};
+
+/**
+ * Describes the message salesorder.v1.GetCustomerQRCodeRequest.
+ * Use `create(GetCustomerQRCodeRequestSchema)` to create a new message.
+ */
+export declare const GetCustomerQRCodeRequestSchema: GenMessage<GetCustomerQRCodeRequest>;
+
+/**
+ * GetCustomerQRCodeResponse:深層連結(App 未裝導商店、已裝直開)。
+ *
+ * @generated from message salesorder.v1.GetCustomerQRCodeResponse
+ */
+export declare type GetCustomerQRCodeResponse = Message<"salesorder.v1.GetCustomerQRCodeResponse"> & {
+  /**
+   * @generated from field: string qr_url = 1;
+   */
+  qrUrl: string;
+};
+
+/**
+ * Describes the message salesorder.v1.GetCustomerQRCodeResponse.
+ * Use `create(GetCustomerQRCodeResponseSchema)` to create a new message.
+ */
+export declare const GetCustomerQRCodeResponseSchema: GenMessage<GetCustomerQRCodeResponse>;
+
+/**
  * AuthService:認證相關 RPC。
  *
  * @generated from service salesorder.v1.AuthService
@@ -433,6 +469,16 @@ export declare const AuthService: GenService<{
     methodKind: "unary";
     input: typeof QRLoginRequestSchema;
     output: typeof QRLoginResponseSchema;
+  },
+  /**
+   * GetCustomerQRCode:為本部門客戶產生登入 QR(dept_admin/staff 限本部門;回深層連結,token 另存)。
+   *
+   * @generated from rpc salesorder.v1.AuthService.GetCustomerQRCode
+   */
+  getCustomerQRCode: {
+    methodKind: "unary";
+    input: typeof GetCustomerQRCodeRequestSchema;
+    output: typeof GetCustomerQRCodeResponseSchema;
   },
   /**
    * ChangePassword:登入態修改密碼(1.5.2;must_change_password 時唯一可用)。

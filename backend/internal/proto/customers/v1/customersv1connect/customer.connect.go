@@ -75,6 +75,9 @@ const (
 	// CustomerServiceDeleteContactProcedure is the fully-qualified name of the CustomerService's
 	// DeleteContact RPC.
 	CustomerServiceDeleteContactProcedure = "/customers.v1.CustomerService/DeleteContact"
+	// CustomerServiceGetCustomerQRCodeProcedure is the fully-qualified name of the CustomerService's
+	// GetCustomerQRCode RPC.
+	CustomerServiceGetCustomerQRCodeProcedure = "/customers.v1.CustomerService/GetCustomerQRCode"
 )
 
 // CustomerServiceClient is a client for the customers.v1.CustomerService service.
@@ -100,6 +103,8 @@ type CustomerServiceClient interface {
 	AddContact(context.Context, *connect.Request[v1.AddContactRequest]) (*connect.Response[v1.AddContactResponse], error)
 	UpdateContact(context.Context, *connect.Request[v1.UpdateContactRequest]) (*connect.Response[v1.UpdateContactResponse], error)
 	DeleteContact(context.Context, *connect.Request[v1.DeleteContactRequest]) (*connect.Response[v1.DeleteContactResponse], error)
+	// GetCustomerQRCode:為本部門客戶產生登入 QR(dept_admin/staff 限本部門)。
+	GetCustomerQRCode(context.Context, *connect.Request[v1.GetCustomerQRCodeRequest]) (*connect.Response[v1.GetCustomerQRCodeResponse], error)
 }
 
 // NewCustomerServiceClient constructs a client for the customers.v1.CustomerService service. By
@@ -197,25 +202,32 @@ func NewCustomerServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(customerServiceMethods.ByName("DeleteContact")),
 			connect.WithClientOptions(opts...),
 		),
+		getCustomerQRCode: connect.NewClient[v1.GetCustomerQRCodeRequest, v1.GetCustomerQRCodeResponse](
+			httpClient,
+			baseURL+CustomerServiceGetCustomerQRCodeProcedure,
+			connect.WithSchema(customerServiceMethods.ByName("GetCustomerQRCode")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // customerServiceClient implements CustomerServiceClient.
 type customerServiceClient struct {
-	listCustomers   *connect.Client[v1.ListCustomersRequest, v1.ListCustomersResponse]
-	getCustomer     *connect.Client[v1.GetCustomerRequest, v1.GetCustomerResponse]
-	createCustomer  *connect.Client[v1.CreateCustomerRequest, v1.CreateCustomerResponse]
-	updateCustomer  *connect.Client[v1.UpdateCustomerRequest, v1.UpdateCustomerResponse]
-	deleteCustomer  *connect.Client[v1.DeleteCustomerRequest, v1.DeleteCustomerResponse]
-	restoreCustomer *connect.Client[v1.RestoreCustomerRequest, v1.RestoreCustomerResponse]
-	listAddresses   *connect.Client[v1.ListAddressesRequest, v1.ListAddressesResponse]
-	addAddress      *connect.Client[v1.AddAddressRequest, v1.AddAddressResponse]
-	updateAddress   *connect.Client[v1.UpdateAddressRequest, v1.UpdateAddressResponse]
-	deleteAddress   *connect.Client[v1.DeleteAddressRequest, v1.DeleteAddressResponse]
-	listContacts    *connect.Client[v1.ListContactsRequest, v1.ListContactsResponse]
-	addContact      *connect.Client[v1.AddContactRequest, v1.AddContactResponse]
-	updateContact   *connect.Client[v1.UpdateContactRequest, v1.UpdateContactResponse]
-	deleteContact   *connect.Client[v1.DeleteContactRequest, v1.DeleteContactResponse]
+	listCustomers     *connect.Client[v1.ListCustomersRequest, v1.ListCustomersResponse]
+	getCustomer       *connect.Client[v1.GetCustomerRequest, v1.GetCustomerResponse]
+	createCustomer    *connect.Client[v1.CreateCustomerRequest, v1.CreateCustomerResponse]
+	updateCustomer    *connect.Client[v1.UpdateCustomerRequest, v1.UpdateCustomerResponse]
+	deleteCustomer    *connect.Client[v1.DeleteCustomerRequest, v1.DeleteCustomerResponse]
+	restoreCustomer   *connect.Client[v1.RestoreCustomerRequest, v1.RestoreCustomerResponse]
+	listAddresses     *connect.Client[v1.ListAddressesRequest, v1.ListAddressesResponse]
+	addAddress        *connect.Client[v1.AddAddressRequest, v1.AddAddressResponse]
+	updateAddress     *connect.Client[v1.UpdateAddressRequest, v1.UpdateAddressResponse]
+	deleteAddress     *connect.Client[v1.DeleteAddressRequest, v1.DeleteAddressResponse]
+	listContacts      *connect.Client[v1.ListContactsRequest, v1.ListContactsResponse]
+	addContact        *connect.Client[v1.AddContactRequest, v1.AddContactResponse]
+	updateContact     *connect.Client[v1.UpdateContactRequest, v1.UpdateContactResponse]
+	deleteContact     *connect.Client[v1.DeleteContactRequest, v1.DeleteContactResponse]
+	getCustomerQRCode *connect.Client[v1.GetCustomerQRCodeRequest, v1.GetCustomerQRCodeResponse]
 }
 
 // ListCustomers calls customers.v1.CustomerService.ListCustomers.
@@ -288,6 +300,11 @@ func (c *customerServiceClient) DeleteContact(ctx context.Context, req *connect.
 	return c.deleteContact.CallUnary(ctx, req)
 }
 
+// GetCustomerQRCode calls customers.v1.CustomerService.GetCustomerQRCode.
+func (c *customerServiceClient) GetCustomerQRCode(ctx context.Context, req *connect.Request[v1.GetCustomerQRCodeRequest]) (*connect.Response[v1.GetCustomerQRCodeResponse], error) {
+	return c.getCustomerQRCode.CallUnary(ctx, req)
+}
+
 // CustomerServiceHandler is an implementation of the customers.v1.CustomerService service.
 type CustomerServiceHandler interface {
 	// ListCustomers:分頁查詢(keyword 模糊比對 name/customer_code/tax_id;可 include_deleted)。
@@ -311,6 +328,8 @@ type CustomerServiceHandler interface {
 	AddContact(context.Context, *connect.Request[v1.AddContactRequest]) (*connect.Response[v1.AddContactResponse], error)
 	UpdateContact(context.Context, *connect.Request[v1.UpdateContactRequest]) (*connect.Response[v1.UpdateContactResponse], error)
 	DeleteContact(context.Context, *connect.Request[v1.DeleteContactRequest]) (*connect.Response[v1.DeleteContactResponse], error)
+	// GetCustomerQRCode:為本部門客戶產生登入 QR(dept_admin/staff 限本部門)。
+	GetCustomerQRCode(context.Context, *connect.Request[v1.GetCustomerQRCodeRequest]) (*connect.Response[v1.GetCustomerQRCodeResponse], error)
 }
 
 // NewCustomerServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -404,6 +423,12 @@ func NewCustomerServiceHandler(svc CustomerServiceHandler, opts ...connect.Handl
 		connect.WithSchema(customerServiceMethods.ByName("DeleteContact")),
 		connect.WithHandlerOptions(opts...),
 	)
+	customerServiceGetCustomerQRCodeHandler := connect.NewUnaryHandler(
+		CustomerServiceGetCustomerQRCodeProcedure,
+		svc.GetCustomerQRCode,
+		connect.WithSchema(customerServiceMethods.ByName("GetCustomerQRCode")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/customers.v1.CustomerService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case CustomerServiceListCustomersProcedure:
@@ -434,6 +459,8 @@ func NewCustomerServiceHandler(svc CustomerServiceHandler, opts ...connect.Handl
 			customerServiceUpdateContactHandler.ServeHTTP(w, r)
 		case CustomerServiceDeleteContactProcedure:
 			customerServiceDeleteContactHandler.ServeHTTP(w, r)
+		case CustomerServiceGetCustomerQRCodeProcedure:
+			customerServiceGetCustomerQRCodeHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -497,4 +524,8 @@ func (UnimplementedCustomerServiceHandler) UpdateContact(context.Context, *conne
 
 func (UnimplementedCustomerServiceHandler) DeleteContact(context.Context, *connect.Request[v1.DeleteContactRequest]) (*connect.Response[v1.DeleteContactResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("customers.v1.CustomerService.DeleteContact is not implemented"))
+}
+
+func (UnimplementedCustomerServiceHandler) GetCustomerQRCode(context.Context, *connect.Request[v1.GetCustomerQRCodeRequest]) (*connect.Response[v1.GetCustomerQRCodeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("customers.v1.CustomerService.GetCustomerQRCode is not implemented"))
 }

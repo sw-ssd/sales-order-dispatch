@@ -51,6 +51,14 @@ abstract final class AuthService {
     salesorderv1auth.QRLoginResponse.new,
   );
 
+  /// GetCustomerQRCode:為本部門客戶產生登入 QR(dept_admin/staff 限本部門;回深層連結,token 另存)。
+  static const getCustomerQRCode = connect.Spec(
+    '/$name/GetCustomerQRCode',
+    connect.StreamType.unary,
+    salesorderv1auth.GetCustomerQRCodeRequest.new,
+    salesorderv1auth.GetCustomerQRCodeResponse.new,
+  );
+
   /// ChangePassword:登入態修改密碼(1.5.2;must_change_password 時唯一可用)。
   static const changePassword = connect.Spec(
     '/$name/ChangePassword',

@@ -253,4 +253,22 @@ extension type CustomerServiceClient (connect.Transport _transport) {
       onTrailer: onTrailer,
     );
   }
+
+  /// GetCustomerQRCode:為本部門客戶產生登入 QR(dept_admin/staff 限本部門)。
+  Future<customersv1customer.GetCustomerQRCodeResponse> getCustomerQRCode(
+    customersv1customer.GetCustomerQRCodeRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.CustomerService.getCustomerQRCode,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
 }

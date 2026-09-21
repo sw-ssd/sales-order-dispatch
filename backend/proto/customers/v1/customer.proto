@@ -54,6 +54,8 @@ service CustomerService {
   rpc AddContact(AddContactRequest) returns (AddContactResponse);
   rpc UpdateContact(UpdateContactRequest) returns (UpdateContactResponse);
   rpc DeleteContact(DeleteContactRequest) returns (DeleteContactResponse);
+  // GetCustomerQRCode:為本部門客戶產生登入 QR(dept_admin/staff 限本部門)。
+  rpc GetCustomerQRCode(GetCustomerQRCodeRequest) returns (GetCustomerQRCodeResponse);
 }
 
 message ListCustomersRequest {
@@ -246,3 +248,13 @@ message DeleteContactRequest {
 }
 
 message DeleteContactResponse {}
+
+// GetCustomerQRCodeRequest:為指定客戶產生登入 QR(3.8.2 產生端)。
+message GetCustomerQRCodeRequest {
+  string customer_id = 1;
+}
+
+// GetCustomerQRCodeResponse:深層連結(App 未裝導商店、已裝直開)。
+message GetCustomerQRCodeResponse {
+  string qr_url = 1;
+}

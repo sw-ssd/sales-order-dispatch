@@ -2078,6 +2078,96 @@ func (*DeleteContactResponse) Descriptor() ([]byte, []int) {
 	return file_customers_v1_customer_proto_rawDescGZIP(), []int{30}
 }
 
+// GetCustomerQRCodeRequest:為指定客戶產生登入 QR(3.8.2 產生端)。
+type GetCustomerQRCodeRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CustomerId    string                 `protobuf:"bytes,1,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCustomerQRCodeRequest) Reset() {
+	*x = GetCustomerQRCodeRequest{}
+	mi := &file_customers_v1_customer_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCustomerQRCodeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCustomerQRCodeRequest) ProtoMessage() {}
+
+func (x *GetCustomerQRCodeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCustomerQRCodeRequest.ProtoReflect.Descriptor instead.
+func (*GetCustomerQRCodeRequest) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *GetCustomerQRCodeRequest) GetCustomerId() string {
+	if x != nil {
+		return x.CustomerId
+	}
+	return ""
+}
+
+// GetCustomerQRCodeResponse:深層連結(App 未裝導商店、已裝直開)。
+type GetCustomerQRCodeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	QrUrl         string                 `protobuf:"bytes,1,opt,name=qr_url,json=qrUrl,proto3" json:"qr_url,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCustomerQRCodeResponse) Reset() {
+	*x = GetCustomerQRCodeResponse{}
+	mi := &file_customers_v1_customer_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCustomerQRCodeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCustomerQRCodeResponse) ProtoMessage() {}
+
+func (x *GetCustomerQRCodeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCustomerQRCodeResponse.ProtoReflect.Descriptor instead.
+func (*GetCustomerQRCodeResponse) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *GetCustomerQRCodeResponse) GetQrUrl() string {
+	if x != nil {
+		return x.QrUrl
+	}
+	return ""
+}
+
 var File_customers_v1_customer_proto protoreflect.FileDescriptor
 
 const file_customers_v1_customer_proto_rawDesc = "" +
@@ -2280,7 +2370,13 @@ const file_customers_v1_customer_proto_rawDesc = "" +
 	"\acontact\x18\x01 \x01(\v2\x1d.customers.v1.CustomerContactR\acontact\"&\n" +
 	"\x14DeleteContactRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x17\n" +
-	"\x15DeleteContactResponse2\xf1\t\n" +
+	"\x15DeleteContactResponse\";\n" +
+	"\x18GetCustomerQRCodeRequest\x12\x1f\n" +
+	"\vcustomer_id\x18\x01 \x01(\tR\n" +
+	"customerId\"2\n" +
+	"\x19GetCustomerQRCodeResponse\x12\x15\n" +
+	"\x06qr_url\x18\x01 \x01(\tR\x05qrUrl2\xd7\n" +
+	"\n" +
 	"\x0fCustomerService\x12X\n" +
 	"\rListCustomers\x12\".customers.v1.ListCustomersRequest\x1a#.customers.v1.ListCustomersResponse\x12R\n" +
 	"\vGetCustomer\x12 .customers.v1.GetCustomerRequest\x1a!.customers.v1.GetCustomerResponse\x12[\n" +
@@ -2297,7 +2393,8 @@ const file_customers_v1_customer_proto_rawDesc = "" +
 	"\n" +
 	"AddContact\x12\x1f.customers.v1.AddContactRequest\x1a .customers.v1.AddContactResponse\x12X\n" +
 	"\rUpdateContact\x12\".customers.v1.UpdateContactRequest\x1a#.customers.v1.UpdateContactResponse\x12X\n" +
-	"\rDeleteContact\x12\".customers.v1.DeleteContactRequest\x1a#.customers.v1.DeleteContactResponseBWZUgithub.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1;customersv1b\x06proto3"
+	"\rDeleteContact\x12\".customers.v1.DeleteContactRequest\x1a#.customers.v1.DeleteContactResponse\x12d\n" +
+	"\x11GetCustomerQRCode\x12&.customers.v1.GetCustomerQRCodeRequest\x1a'.customers.v1.GetCustomerQRCodeResponseBWZUgithub.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1;customersv1b\x06proto3"
 
 var (
 	file_customers_v1_customer_proto_rawDescOnce sync.Once
@@ -2311,44 +2408,46 @@ func file_customers_v1_customer_proto_rawDescGZIP() []byte {
 	return file_customers_v1_customer_proto_rawDescData
 }
 
-var file_customers_v1_customer_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
+var file_customers_v1_customer_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
 var file_customers_v1_customer_proto_goTypes = []any{
-	(*Customer)(nil),                // 0: customers.v1.Customer
-	(*ListCustomersRequest)(nil),    // 1: customers.v1.ListCustomersRequest
-	(*ListCustomersResponse)(nil),   // 2: customers.v1.ListCustomersResponse
-	(*GetCustomerRequest)(nil),      // 3: customers.v1.GetCustomerRequest
-	(*GetCustomerResponse)(nil),     // 4: customers.v1.GetCustomerResponse
-	(*CreateCustomerRequest)(nil),   // 5: customers.v1.CreateCustomerRequest
-	(*CreateCustomerResponse)(nil),  // 6: customers.v1.CreateCustomerResponse
-	(*UpdateCustomerRequest)(nil),   // 7: customers.v1.UpdateCustomerRequest
-	(*UpdateCustomerResponse)(nil),  // 8: customers.v1.UpdateCustomerResponse
-	(*DeleteCustomerRequest)(nil),   // 9: customers.v1.DeleteCustomerRequest
-	(*DeleteCustomerResponse)(nil),  // 10: customers.v1.DeleteCustomerResponse
-	(*RestoreCustomerRequest)(nil),  // 11: customers.v1.RestoreCustomerRequest
-	(*RestoreCustomerResponse)(nil), // 12: customers.v1.RestoreCustomerResponse
-	(*CustomerAddress)(nil),         // 13: customers.v1.CustomerAddress
-	(*ListAddressesRequest)(nil),    // 14: customers.v1.ListAddressesRequest
-	(*ListAddressesResponse)(nil),   // 15: customers.v1.ListAddressesResponse
-	(*AddAddressRequest)(nil),       // 16: customers.v1.AddAddressRequest
-	(*AddAddressResponse)(nil),      // 17: customers.v1.AddAddressResponse
-	(*UpdateAddressRequest)(nil),    // 18: customers.v1.UpdateAddressRequest
-	(*UpdateAddressResponse)(nil),   // 19: customers.v1.UpdateAddressResponse
-	(*DeleteAddressRequest)(nil),    // 20: customers.v1.DeleteAddressRequest
-	(*DeleteAddressResponse)(nil),   // 21: customers.v1.DeleteAddressResponse
-	(*CustomerContact)(nil),         // 22: customers.v1.CustomerContact
-	(*ListContactsRequest)(nil),     // 23: customers.v1.ListContactsRequest
-	(*ListContactsResponse)(nil),    // 24: customers.v1.ListContactsResponse
-	(*AddContactRequest)(nil),       // 25: customers.v1.AddContactRequest
-	(*AddContactResponse)(nil),      // 26: customers.v1.AddContactResponse
-	(*UpdateContactRequest)(nil),    // 27: customers.v1.UpdateContactRequest
-	(*UpdateContactResponse)(nil),   // 28: customers.v1.UpdateContactResponse
-	(*DeleteContactRequest)(nil),    // 29: customers.v1.DeleteContactRequest
-	(*DeleteContactResponse)(nil),   // 30: customers.v1.DeleteContactResponse
-	(*v1.Pagination)(nil),           // 31: salesorder.v1.Pagination
+	(*Customer)(nil),                  // 0: customers.v1.Customer
+	(*ListCustomersRequest)(nil),      // 1: customers.v1.ListCustomersRequest
+	(*ListCustomersResponse)(nil),     // 2: customers.v1.ListCustomersResponse
+	(*GetCustomerRequest)(nil),        // 3: customers.v1.GetCustomerRequest
+	(*GetCustomerResponse)(nil),       // 4: customers.v1.GetCustomerResponse
+	(*CreateCustomerRequest)(nil),     // 5: customers.v1.CreateCustomerRequest
+	(*CreateCustomerResponse)(nil),    // 6: customers.v1.CreateCustomerResponse
+	(*UpdateCustomerRequest)(nil),     // 7: customers.v1.UpdateCustomerRequest
+	(*UpdateCustomerResponse)(nil),    // 8: customers.v1.UpdateCustomerResponse
+	(*DeleteCustomerRequest)(nil),     // 9: customers.v1.DeleteCustomerRequest
+	(*DeleteCustomerResponse)(nil),    // 10: customers.v1.DeleteCustomerResponse
+	(*RestoreCustomerRequest)(nil),    // 11: customers.v1.RestoreCustomerRequest
+	(*RestoreCustomerResponse)(nil),   // 12: customers.v1.RestoreCustomerResponse
+	(*CustomerAddress)(nil),           // 13: customers.v1.CustomerAddress
+	(*ListAddressesRequest)(nil),      // 14: customers.v1.ListAddressesRequest
+	(*ListAddressesResponse)(nil),     // 15: customers.v1.ListAddressesResponse
+	(*AddAddressRequest)(nil),         // 16: customers.v1.AddAddressRequest
+	(*AddAddressResponse)(nil),        // 17: customers.v1.AddAddressResponse
+	(*UpdateAddressRequest)(nil),      // 18: customers.v1.UpdateAddressRequest
+	(*UpdateAddressResponse)(nil),     // 19: customers.v1.UpdateAddressResponse
+	(*DeleteAddressRequest)(nil),      // 20: customers.v1.DeleteAddressRequest
+	(*DeleteAddressResponse)(nil),     // 21: customers.v1.DeleteAddressResponse
+	(*CustomerContact)(nil),           // 22: customers.v1.CustomerContact
+	(*ListContactsRequest)(nil),       // 23: customers.v1.ListContactsRequest
+	(*ListContactsResponse)(nil),      // 24: customers.v1.ListContactsResponse
+	(*AddContactRequest)(nil),         // 25: customers.v1.AddContactRequest
+	(*AddContactResponse)(nil),        // 26: customers.v1.AddContactResponse
+	(*UpdateContactRequest)(nil),      // 27: customers.v1.UpdateContactRequest
+	(*UpdateContactResponse)(nil),     // 28: customers.v1.UpdateContactResponse
+	(*DeleteContactRequest)(nil),      // 29: customers.v1.DeleteContactRequest
+	(*DeleteContactResponse)(nil),     // 30: customers.v1.DeleteContactResponse
+	(*GetCustomerQRCodeRequest)(nil),  // 31: customers.v1.GetCustomerQRCodeRequest
+	(*GetCustomerQRCodeResponse)(nil), // 32: customers.v1.GetCustomerQRCodeResponse
+	(*v1.Pagination)(nil),             // 33: salesorder.v1.Pagination
 }
 var file_customers_v1_customer_proto_depIdxs = []int32{
 	0,  // 0: customers.v1.ListCustomersResponse.customers:type_name -> customers.v1.Customer
-	31, // 1: customers.v1.ListCustomersResponse.pagination:type_name -> salesorder.v1.Pagination
+	33, // 1: customers.v1.ListCustomersResponse.pagination:type_name -> salesorder.v1.Pagination
 	0,  // 2: customers.v1.GetCustomerResponse.customer:type_name -> customers.v1.Customer
 	0,  // 3: customers.v1.CreateCustomerResponse.customer:type_name -> customers.v1.Customer
 	0,  // 4: customers.v1.UpdateCustomerResponse.customer:type_name -> customers.v1.Customer
@@ -2373,22 +2472,24 @@ var file_customers_v1_customer_proto_depIdxs = []int32{
 	25, // 23: customers.v1.CustomerService.AddContact:input_type -> customers.v1.AddContactRequest
 	27, // 24: customers.v1.CustomerService.UpdateContact:input_type -> customers.v1.UpdateContactRequest
 	29, // 25: customers.v1.CustomerService.DeleteContact:input_type -> customers.v1.DeleteContactRequest
-	2,  // 26: customers.v1.CustomerService.ListCustomers:output_type -> customers.v1.ListCustomersResponse
-	4,  // 27: customers.v1.CustomerService.GetCustomer:output_type -> customers.v1.GetCustomerResponse
-	6,  // 28: customers.v1.CustomerService.CreateCustomer:output_type -> customers.v1.CreateCustomerResponse
-	8,  // 29: customers.v1.CustomerService.UpdateCustomer:output_type -> customers.v1.UpdateCustomerResponse
-	10, // 30: customers.v1.CustomerService.DeleteCustomer:output_type -> customers.v1.DeleteCustomerResponse
-	12, // 31: customers.v1.CustomerService.RestoreCustomer:output_type -> customers.v1.RestoreCustomerResponse
-	15, // 32: customers.v1.CustomerService.ListAddresses:output_type -> customers.v1.ListAddressesResponse
-	17, // 33: customers.v1.CustomerService.AddAddress:output_type -> customers.v1.AddAddressResponse
-	19, // 34: customers.v1.CustomerService.UpdateAddress:output_type -> customers.v1.UpdateAddressResponse
-	21, // 35: customers.v1.CustomerService.DeleteAddress:output_type -> customers.v1.DeleteAddressResponse
-	24, // 36: customers.v1.CustomerService.ListContacts:output_type -> customers.v1.ListContactsResponse
-	26, // 37: customers.v1.CustomerService.AddContact:output_type -> customers.v1.AddContactResponse
-	28, // 38: customers.v1.CustomerService.UpdateContact:output_type -> customers.v1.UpdateContactResponse
-	30, // 39: customers.v1.CustomerService.DeleteContact:output_type -> customers.v1.DeleteContactResponse
-	26, // [26:40] is the sub-list for method output_type
-	12, // [12:26] is the sub-list for method input_type
+	31, // 26: customers.v1.CustomerService.GetCustomerQRCode:input_type -> customers.v1.GetCustomerQRCodeRequest
+	2,  // 27: customers.v1.CustomerService.ListCustomers:output_type -> customers.v1.ListCustomersResponse
+	4,  // 28: customers.v1.CustomerService.GetCustomer:output_type -> customers.v1.GetCustomerResponse
+	6,  // 29: customers.v1.CustomerService.CreateCustomer:output_type -> customers.v1.CreateCustomerResponse
+	8,  // 30: customers.v1.CustomerService.UpdateCustomer:output_type -> customers.v1.UpdateCustomerResponse
+	10, // 31: customers.v1.CustomerService.DeleteCustomer:output_type -> customers.v1.DeleteCustomerResponse
+	12, // 32: customers.v1.CustomerService.RestoreCustomer:output_type -> customers.v1.RestoreCustomerResponse
+	15, // 33: customers.v1.CustomerService.ListAddresses:output_type -> customers.v1.ListAddressesResponse
+	17, // 34: customers.v1.CustomerService.AddAddress:output_type -> customers.v1.AddAddressResponse
+	19, // 35: customers.v1.CustomerService.UpdateAddress:output_type -> customers.v1.UpdateAddressResponse
+	21, // 36: customers.v1.CustomerService.DeleteAddress:output_type -> customers.v1.DeleteAddressResponse
+	24, // 37: customers.v1.CustomerService.ListContacts:output_type -> customers.v1.ListContactsResponse
+	26, // 38: customers.v1.CustomerService.AddContact:output_type -> customers.v1.AddContactResponse
+	28, // 39: customers.v1.CustomerService.UpdateContact:output_type -> customers.v1.UpdateContactResponse
+	30, // 40: customers.v1.CustomerService.DeleteContact:output_type -> customers.v1.DeleteContactResponse
+	32, // 41: customers.v1.CustomerService.GetCustomerQRCode:output_type -> customers.v1.GetCustomerQRCodeResponse
+	27, // [27:42] is the sub-list for method output_type
+	12, // [12:27] is the sub-list for method input_type
 	12, // [12:12] is the sub-list for extension type_name
 	12, // [12:12] is the sub-list for extension extendee
 	0,  // [0:12] is the sub-list for field type_name
@@ -2408,7 +2509,7 @@ func file_customers_v1_customer_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_customers_v1_customer_proto_rawDesc), len(file_customers_v1_customer_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   31,
+			NumMessages:   33,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

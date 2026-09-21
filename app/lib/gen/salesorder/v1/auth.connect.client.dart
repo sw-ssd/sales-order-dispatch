@@ -99,6 +99,24 @@ extension type AuthServiceClient (connect.Transport _transport) {
     );
   }
 
+  /// GetCustomerQRCode:為本部門客戶產生登入 QR(dept_admin/staff 限本部門;回深層連結,token 另存)。
+  Future<salesorderv1auth.GetCustomerQRCodeResponse> getCustomerQRCode(
+    salesorderv1auth.GetCustomerQRCodeRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.AuthService.getCustomerQRCode,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
   /// ChangePassword:登入態修改密碼(1.5.2;must_change_password 時唯一可用)。
   Future<salesorderv1auth.ChangePasswordResponse> changePassword(
     salesorderv1auth.ChangePasswordRequest input, {

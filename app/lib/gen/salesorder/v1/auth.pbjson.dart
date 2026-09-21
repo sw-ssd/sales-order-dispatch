@@ -228,6 +228,33 @@ final $typed_data.Uint8List qRLoginResponseDescriptor = $convert.base64Decode(
     'bnRzGjwKB0FjY291bnQSDgoCaWQYASABKAlSAmlkEiEKDGFjY291bnRfbmFtZRgCIAEoCVILYW'
     'Njb3VudE5hbWU=');
 
+@$core.Deprecated('Use getCustomerQRCodeRequestDescriptor instead')
+const GetCustomerQRCodeRequest$json = {
+  '1': 'GetCustomerQRCodeRequest',
+  '2': [
+    {'1': 'customer_id', '3': 1, '4': 1, '5': 9, '10': 'customerId'},
+  ],
+};
+
+/// Descriptor for `GetCustomerQRCodeRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getCustomerQRCodeRequestDescriptor =
+    $convert.base64Decode(
+        'ChhHZXRDdXN0b21lclFSQ29kZVJlcXVlc3QSHwoLY3VzdG9tZXJfaWQYASABKAlSCmN1c3RvbW'
+        'VySWQ=');
+
+@$core.Deprecated('Use getCustomerQRCodeResponseDescriptor instead')
+const GetCustomerQRCodeResponse$json = {
+  '1': 'GetCustomerQRCodeResponse',
+  '2': [
+    {'1': 'qr_url', '3': 1, '4': 1, '5': 9, '10': 'qrUrl'},
+  ],
+};
+
+/// Descriptor for `GetCustomerQRCodeResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getCustomerQRCodeResponseDescriptor =
+    $convert.base64Decode(
+        'ChlHZXRDdXN0b21lclFSQ29kZVJlc3BvbnNlEhUKBnFyX3VybBgBIAEoCVIFcXJVcmw=');
+
 const $core.Map<$core.String, $core.dynamic> AuthServiceBase$json = {
   '1': 'AuthService',
   '2': [
@@ -257,6 +284,11 @@ const $core.Map<$core.String, $core.dynamic> AuthServiceBase$json = {
       '3': '.salesorder.v1.QRLoginResponse'
     },
     {
+      '1': 'GetCustomerQRCode',
+      '2': '.salesorder.v1.GetCustomerQRCodeRequest',
+      '3': '.salesorder.v1.GetCustomerQRCodeResponse'
+    },
+    {
       '1': 'ChangePassword',
       '2': '.salesorder.v1.ChangePasswordRequest',
       '3': '.salesorder.v1.ChangePasswordResponse'
@@ -283,6 +315,8 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.salesorder.v1.QRLoginRequest': QRLoginRequest$json,
   '.salesorder.v1.QRLoginResponse': QRLoginResponse$json,
   '.salesorder.v1.QRLoginResponse.Account': QRLoginResponse_Account$json,
+  '.salesorder.v1.GetCustomerQRCodeRequest': GetCustomerQRCodeRequest$json,
+  '.salesorder.v1.GetCustomerQRCodeResponse': GetCustomerQRCodeResponse$json,
   '.salesorder.v1.ChangePasswordRequest': ChangePasswordRequest$json,
   '.salesorder.v1.ChangePasswordResponse': ChangePasswordResponse$json,
   '.salesorder.v1.ResetCustomerPasswordRequest':
@@ -300,8 +334,9 @@ final $typed_data.Uint8List authServiceDescriptor = $convert.base64Decode(
     'b25zZRJjChBSZWdpc3RlckNvbXBsZXRlEiYuc2FsZXNvcmRlci52MS5SZWdpc3RlckNvbXBsZX'
     'RlUmVxdWVzdBonLnNhbGVzb3JkZXIudjEuUmVnaXN0ZXJDb21wbGV0ZVJlc3BvbnNlEkgKB1FS'
     'TG9naW4SHS5zYWxlc29yZGVyLnYxLlFSTG9naW5SZXF1ZXN0Gh4uc2FsZXNvcmRlci52MS5RUk'
-    'xvZ2luUmVzcG9uc2USXQoOQ2hhbmdlUGFzc3dvcmQSJC5zYWxlc29yZGVyLnYxLkNoYW5nZVBh'
-    'c3N3b3JkUmVxdWVzdBolLnNhbGVzb3JkZXIudjEuQ2hhbmdlUGFzc3dvcmRSZXNwb25zZRJyCh'
-    'VSZXNldEN1c3RvbWVyUGFzc3dvcmQSKy5zYWxlc29yZGVyLnYxLlJlc2V0Q3VzdG9tZXJQYXNz'
-    'd29yZFJlcXVlc3QaLC5zYWxlc29yZGVyLnYxLlJlc2V0Q3VzdG9tZXJQYXNzd29yZFJlc3Bvbn'
-    'Nl');
+    'xvZ2luUmVzcG9uc2USZgoRR2V0Q3VzdG9tZXJRUkNvZGUSJy5zYWxlc29yZGVyLnYxLkdldEN1'
+    'c3RvbWVyUVJDb2RlUmVxdWVzdBooLnNhbGVzb3JkZXIudjEuR2V0Q3VzdG9tZXJRUkNvZGVSZX'
+    'Nwb25zZRJdCg5DaGFuZ2VQYXNzd29yZBIkLnNhbGVzb3JkZXIudjEuQ2hhbmdlUGFzc3dvcmRS'
+    'ZXF1ZXN0GiUuc2FsZXNvcmRlci52MS5DaGFuZ2VQYXNzd29yZFJlc3BvbnNlEnIKFVJlc2V0Q3'
+    'VzdG9tZXJQYXNzd29yZBIrLnNhbGVzb3JkZXIudjEuUmVzZXRDdXN0b21lclBhc3N3b3JkUmVx'
+    'dWVzdBosLnNhbGVzb3JkZXIudjEuUmVzZXRDdXN0b21lclBhc3N3b3JkUmVzcG9uc2U=');
