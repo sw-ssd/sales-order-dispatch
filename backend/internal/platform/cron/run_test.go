@@ -129,8 +129,20 @@ type fakeTx struct{ f *store.FakeBilling }
 // Client 在單元測試裡沒有 ent:產品域入口是假的,不會用到它。
 func (fakeTx) Client() *ent.Client { return nil }
 
-func (t fakeTx) Claim(ctx context.Context, eventID int64) (bool, error) {
-	return true, t.f.MarkEventDispatchedTx(ctx, nil, eventID)
+// Claim 條件式認領：已被別趟認領即回 false（與 consumer_test.go 的 fakeTx 同語意）。
+// 未結項 #43：此前經 MarkEventDispatchedTx（無條件標記），並行語意由該方法保證；
+// 改為條件式後，Claim 即唯一認領語意，MarkEventDispatchedTx 只剩「造中間狀態」測試用。
+func (t fakeTx) Claim(_ context.Context, eventID int64) (bool, error) {
+	pending, err := t.f.UndispatchedEvents(context.Background(), 0)
+	if err != nil {
+		return false, err
+	}
+	for _, e := range pending {
+		if e.ID == eventID {
+			return true, t.f.MarkEventDispatchedTx(context.Background(), nil, eventID)
+		}
+	}
+	return false, nil
 }
 
 // recordingSetter 記下產品域收到的狀態變更(凍結有沒有真的走到唯一入口)。

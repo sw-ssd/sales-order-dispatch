@@ -237,9 +237,10 @@ type BillingStore interface {
 	UndispatchedEvents(ctx context.Context, limit int) ([]Event, error)
 	// MarkEventDispatchedTx 標記事件已派送(重試次數記在 attempts)。
 	//
-	// **目前無生產呼叫端**:consumer 走自己的條件式認領(consumer.go 的 claimSQL,同一句 UPDATE
-	// 外加 dispatched_at IS NULL 的條件),本方法只剩測試在用。留著是因為 fake 與整合測試需要
-	// 「無條件標記」來造出已派送／未派送的中間狀態;實作與 fake 必須一起改(介面契約仍在)。
+	// **測試專用**（未結項 #43）：生產認領走 consumer.Tx.Claim（條件式：0 列＝別趟已認領）。
+	// 本方法「無條件標記」，只用於測試造出已派送／未派送的中間狀態（fake_billing_test、
+	// billing_integration_test、cron run_test 的 fakeTx 條件式認領亦經它落標記）。
+	// 不得新增生產呼叫端：第二個認領入口即第二份併發語意。
 	MarkEventDispatchedTx(ctx context.Context, tx *sql.Tx, id int64) error
 	// RecordAuditTx 寫入平台稽核(S9:actor 為 operator_id,不 FK 租戶 users)。
 	// reason 必填:空字串即拒絕 —— 動到錢與權限的操作必須留下「為什麼」。
