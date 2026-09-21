@@ -2,7 +2,7 @@
 
 > **性質**：原為目標型執行計畫（含內嵌目標程式碼）。經 2026-09-18 盤點（codebase-memory 知識圖譜 + git）重建，為**反映現況的執行計畫**。
 >
-> **狀態基準**：2026-09-18 盤點。**本計畫對應領域（銷售訂單）實際尚未實作**——ent/schema 僅 company/department/role/rolepermission/user、migrations 僅 4 個、無 sales_orders 實體。以下為保留的目標計畫架構，全數 ⬜ 未開始。
+> **狀態基準**：2026-09-22 實作對齊。後端已落地：訂單三表 schema（00031）＋order_counters 樂觀鎖取號＋狀態機 `TransitionOrder`＋`SalesOrderService` 9 RPC（List/Get/Create/Update/Cancel/Complete/Void/Delete＋ListOrderEvents）＋00032 RLS ENABLE＋FORCE；Web/App 業務頁待。以下保留目標架構供追溯。
 >
 > **對應設計**：`docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（v1.0.34）、決策 `D7/D12/D13`
 > **細部文件**：`docs/superpowers/plans/backend/detail/05-sales-orders.md`、共通規則 `detail/00-index.md` §3
@@ -14,13 +14,13 @@
 
 | Task | 內容 | 狀態 |
 |---|---|---|
-| 1 | 訂單三表 schema（細部 4.1.1） | ⬜ 未開始 |
-| 2 | order_counters 樂觀鎖取號（細部 4.1.2，D7） | ⬜ 未開始 |
-| 3 | 訂單狀態機（細部 4.1.3，D13） | ⬜ 未開始 |
-| 4 | SalesOrderService CRUD 與 ListEvents（細部 4.1.4–4.1.5） | ⬜ 未開始 |
-| 5 | 下單組裝邏輯（細部 4.2.1–4.2.5） | ⬜ 未開始 |
+| 1 | 訂單三表 schema（細部 4.1.1） | ✅ 完成（00031） |
+| 2 | order_counters 樂觀鎖取號（細部 4.1.2，D7） | ✅ 完成（同交易取號） |
+| 3 | 訂單狀態機（細部 4.1.3，D13） | ✅ 完成（`TransitionOrder` 集中模組） |
+| 4 | SalesOrderService CRUD 與 ListEvents（細部 4.1.4–4.1.5） | ✅ 完成（9 RPC 後端；Web/App 頁待） |
+| 5 | 下單組裝邏輯（細部 4.2.1–4.2.5） | ✅ 完成（後端組裝＋客戶專屬清單守衛） |
 
-**實作範圍**：0%（全部待辦）。
+**實作範圍**：後端 100%（Web/App 業務頁待）。
 
 ---
 
@@ -50,4 +50,4 @@
 
 ---
 
-*最後更新：2026-09-18（05-sales-orders 現況對齊重建；領域未實作）*
+*最後更新：2026-09-22（05-sales-orders 後端落地對齊；Web/App 頁待）*
