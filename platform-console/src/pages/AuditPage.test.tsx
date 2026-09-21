@@ -31,6 +31,23 @@ const ENTRIES = [
   },
 ];
 
+describe("groupedEntries", () => {
+  it("同 trace 相鄰列併為一組，空 trace 不成組", async () => {
+    const { groupedEntries } = await import("./AuditPage");
+    const groups = groupedEntries([
+      { traceId: "t1" },
+      { traceId: "t1" },
+      { traceId: "" },
+      { traceId: "" },
+      { traceId: "t2" },
+    ]);
+    expect(groups.length).toBe(4);
+    expect(groups[0].entries.length).toBe(2);
+    expect(groups[1].entries.length).toBe(1);
+    expect(groups[2].entries.length).toBe(1);
+  });
+});
+
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(() => (

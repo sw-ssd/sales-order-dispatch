@@ -26,6 +26,23 @@ const PAGE_SIZE = 20;
  */
 const TARGET_TYPES = ["settings", "company", "plan", "operator", "subscription"];
 
+/**
+ * 未結項 #4：同 trace_id 的列為同一請求所寫 —— 相鄰且 trace 相同的列併為一組，
+ * 續列標「同上筆請求」。trace 為空（排程／歷史列）不成組：各列獨立顯示。
+ */
+export function groupedEntries<T extends { traceId: string }>(entries: readonly T[]) {
+  const groups: { traceId: string; entries: T[] }[] = [];
+  for (const entry of entries) {
+    const last = groups[groups.length - 1];
+    if (entry.traceId !== "" && last !== undefined && last.traceId === entry.traceId) {
+      last.entries.push(entry);
+    } else {
+      groups.push({ traceId: entry.traceId, entries: [entry] });
+    }
+  }
+  return groups;
+}
+
 export default function AuditPage() {
   // 送出中的草稿與「已套用」的查詢條件分開：打字的每個字不該各打一次後端。
   const [targetType, setTargetType] = createSignal("");
@@ -137,18 +154,30 @@ export default function AuditPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <For each={data.entries}>
-                  {(entry) => (
-                    <TableRow>
-                      <TableCell>{entry.createdAt}</TableCell>
-                      <TableCell>{entry.operatorEmail}</TableCell>
-                      <TableCell>{entry.action}</TableCell>
-                      <TableCell>
-                        {entry.targetType}
-                        {entry.targetId ? `：${entry.targetId}` : ""}
-                      </TableCell>
-                      <TableCell>{entry.reason}</TableCell>
-                    </TableRow>
+                <For each={groupedEntries(data.entries)}>
+                  {(group) => (
+                    <>
+                      <For each={group.entries}>
+                        {(entry, i) => (
+                          <TableRow>
+                            <TableCell>{entry.createdAt}</TableCell>
+                            <TableCell>{entry.operatorEmail}</TableCell>
+                            <TableCell>{entry.action}</TableCell>
+                            <TableCell>
+                              {entry.targetType}
+                              {entry.targetId ? `：${entry.targetId}` : ""}
+                            </TableCell>
+                            <TableCell>
+                              {entry.reason}
+                              {/* 未結項 #4：同請求多列共用 trace_id —— 續列標「同上筆請求」，否則一次請求寫 2 列看起來像兩次操作。 */}
+                              <Show when={i() > 0 && group.traceId !== ""}>
+                                <span class="text-muted-foreground">（同上筆請求）</span>
+                              </Show>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </For>
+                    </>
                   )}
                 </For>
               </TableBody>
