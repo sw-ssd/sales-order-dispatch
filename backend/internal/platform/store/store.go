@@ -187,11 +187,19 @@ type BillingStore interface {
 	// 對後者(連線中斷、死鎖)只能回 5xx —— 把後者也講成資料問題會讓 operator 去改一個沒壞的設定。
 	CurrentPriceTx(ctx context.Context, tx *sql.Tx, planID int64, cycle string) (Price, error)
 	// MarkPeriodPaidTx 標記期別已付款。note(G8)為短收／溢收的人工註記:空字串保留原值,
-	// 不得用空字串清掉既有註記。同交易號重送視為重複入帳(no-op),交易號不同則拒絕覆蓋。
+	// 不得用空字串清掉既有註記。
+	//
+	// 三種「沒有改到列」的分流（真 store 以 0 列觸發，假實作逐條對齊）：
+	//   - 期別不存在 → sql.ErrNoRows（呼叫端只認它代表「不存在」）；
+	//   - 狀態不得入帳（void 等非 open／非同交易號 paid）→ 格式化錯誤並說出真正狀態，
+	//     其中「同 provider＋交易號已入帳另一期」是 00029 的 periods_provider_ref_unique；
+	//   - 同交易號重送（含兩邊都空）→ 完全 no-op：已入帳的憑據一個都不動，
+	//     但 note 仍可補寫（短收／溢收的唯一落點）。
 	//
 	// invoiceNo／invoiceStatus／buyerTaxID／carrier 為**開票資訊**(spec §3 的
 	// subscription_periods 欄位):期別是開票的對象,故與付款憑據同一組參數一起寫 —— 開票是
 	// 付款事件的一部分,分開一支方法等於允許「收了錢但發票欄位沒落地」(T4 的缺口)。
+	// 首次入帳才寫憑據：重送時四個付款欄位由 `status='open'` 的 CASE 保留原值（真假一致）。
 	MarkPeriodPaidTx(ctx context.Context, tx *sql.Tx, id int64, paidAt time.Time,
 		invoiceNo, invoiceStatus, buyerTaxID, carrier, provider, externalRef, note string) error
 	// SetSeatCountTx 更新席位數(下一次產期即用新席位數計價;當期期別的金額快照不動)。
