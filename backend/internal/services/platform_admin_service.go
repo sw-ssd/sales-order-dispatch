@@ -555,6 +555,10 @@ func (s *PlatformAdminService) SetSeatCount(ctx context.Context,
 	if seats <= 0 {
 		return nil, errcode.SysInvalidArgument.Error(map[string]string{"field": "seat_count"})
 	}
+	// 未結項 #22：守衛的交易外讀取（TOCTOU）—— Count 與隨後的 SetSeatCount 不在同一交易，
+	// 併發超額時可多放行一席。收斂方向是 billing.SetSeatCount 內复核（交易內重讀用量），
+	// 不是把 Count 搬進交易（平台表與業務表分屬不同連線／交易，見 store.go 的交易歸屬）。
+	// 今日缺口僅一席且下一判定即收斂（快取 TTL 60s），故先註記不修。
 	if s.counters == nil {
 		// 沒有計數器等於無法判斷「是否低於使用量」→ 必須拒絕,不得當成 0 放行。
 		return nil, errcode.SysInternal.Error(map[string]string{"reason": "未注入席位計數器"})
@@ -698,6 +702,10 @@ func (s *PlatformAdminService) UpdateBillingSettings(ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
+	// 未結項 #22：before 在交易外讀取 —— 併發改同一鍵時稽核的 before 可能不是寫入當下的值。
+	// 稽核的 before 是「本次請求開始時的值」（可解釋），不是「寫入原子快照」；
+	// 要後者需把 Settings 讀進交易（SettingsTx），而讀-改-寫同交易會把 settings 行鎖引入
+	// 寫入路徑。稽核差一版不影響錢與權限，故先註記不修。
 	before, err := s.st.Settings(ctx)
 	if err != nil {
 		return nil, platformError(err)
