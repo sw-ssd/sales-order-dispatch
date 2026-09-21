@@ -49,6 +49,14 @@ func main() {
 			log.Fatalf("--date 格式錯誤(需 RFC3339,例 2026-10-01T03:00:00Z): %v", err)
 		}
 		now = parsed.UTC()
+		// 未結項 #18：--date 可任意倒回 —— 倒回會把 grace_until 設成過去（MarkPastDue／
+		// ExpireTrials 以 now＋graceDays 起算），下一趟即凍結本不該凍的租戶。
+		// 補跑的「過去」應由呼叫端顯式承擔：未來 1 天內視為時鐘偏差容忍，超過即拒絕。
+		// 要重演歷史請用測試（cron.RunOnce 的 now 可注入），不要用生產 binary 倒回。
+		if time.Now().UTC().Sub(now) > 24*time.Hour {
+			log.Fatalf("--date 不得早於現在 24 小時以上（倒回會把 grace_until 設成過去，見註解）: %s",
+				now.Format(time.RFC3339))
+		}
 	}
 
 	cfg := config.New()
