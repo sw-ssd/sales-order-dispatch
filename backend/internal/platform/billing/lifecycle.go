@@ -21,6 +21,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
@@ -78,8 +79,11 @@ func (b *Billing) EnsureNextPeriod(ctx context.Context, companyID int, now time.
 		case err == nil:
 			anchorDay = first.PeriodStart.Day()
 		case errors.Is(err, sql.ErrNoRows):
-			// 第一期不在（資料被清理或由外部寫入）：退回「當期起日的日號」—— 那是唯一還帶著
-			// 客戶帳單日的線索；不猜、也不讓這一筆資料擋住整趟排程。
+			// 未結項 #13:第一期不在（資料被清理或由外部寫入）是資料完整性問題 ——
+			// 退回「當期起日的日號」仍會開期（不擋整趟排程），但必須留痕，否則帳單日
+			// 在哪沒人知道。排程的 log 是 operator 唯一能看到它的地方。
+			log.Printf("billing: 訂閱 %d 缺少第一期(anchor fallback)：以當期(period_no=%d)起日 %s 的日號 %d 為錨；請檢查資料完整性",
+				sub.ID, cur.PeriodNo, cur.PeriodStart.UTC().Format(time.RFC3339), anchorDay)
 		default:
 			return errcode.SysInternal.Wrap(err)
 		}

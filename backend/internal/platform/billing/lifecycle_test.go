@@ -438,6 +438,33 @@ func TestEnsureNextPeriodOpensOnceWithPriceSnapshot(t *testing.T) {
 
 // 價格快照：新期別取「當期生效價」，不得沿用舊期別的金額與價格欄位（調價不得回溯改帳，
 // 新期別也不得用舊價）。
+// 未結項 #13：第一期不在時的 anchor fallback 必須留痕（log）—— 靜默退回「當期起日的日號」
+// 會讓帳單日在哪沒人知道。行為不斷言 log 內容（行程級 logger 難測），只斷言 fallback
+// 照樣開期（不擋整趟排程）、且錨用的是當期起日的日號。
+func TestEnsureNextPeriodWithoutFirstPeriodStillOpens(t *testing.T) {
+	now := at(2026, time.October, 1, 3)
+	f := store.NewFakeBilling()
+	// 只種第 2 期（period_no=2，起日 10/03），第一期缺席 → fallback 走 cur.PeriodStart.Day()=3。
+	subID := f.PutSubscription(store.Subscription{CompanyID: 42, Status: "active", PlanID: 1,
+		SeatCount: 3, BillingCycle: "monthly"})
+	f.PutPeriod(store.Period{SubscriptionID: subID, PeriodNo: 2, Status: "open",
+		PeriodStart: at(2026, time.October, 3, 3), PeriodEnd: at(2026, time.November, 3, 3),
+		PlanID: 1, SeatCount: 3, AmountCents: amountCents, Currency: "TWD"})
+	f.PutPlanPrice(1, "monthly", store.Price{BaseCents: 150000, SeatCents: 15000, Currency: "TWD"})
+	b := billing.NewBilling(f)
+
+	created, err := b.EnsureNextPeriod(context.Background(), 42, now.AddDate(0, 0, 25), 14)
+	if err != nil || !created {
+		t.Fatalf("fallback 不得擋住開期: created=%v err=%v", created, err)
+	}
+	// 錨＝當期起日的日號（3）：下一期應為 11/03 → 12/03。
+	next := readPeriod(t, f, subID, 3)
+	if !next.PeriodStart.Equal(at(2026, time.November, 3, 3)) ||
+		!next.PeriodEnd.Equal(at(2026, time.December, 3, 3)) {
+		t.Fatalf("fallback 錨應為當期起日的日號: %+v", next)
+	}
+}
+
 func TestEnsureNextPeriodSnapshotUsesCurrentPrice(t *testing.T) {
 	now := at(2026, time.October, 1, 3)
 	f := store.NewFakeBilling()
