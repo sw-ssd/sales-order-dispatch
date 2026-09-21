@@ -11,6 +11,7 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/auditlog"
+	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 )
 
 // Entry 為一筆稽核內容（action / resource / 前後快照）。
@@ -26,6 +27,10 @@ type Entry struct {
 	After        map[string]any // 可空
 	IPAddress    string
 	UserAgent    string
+	// TraceID 為發起請求的 trace_id（requestid.Interceptor 產生，未結項 #4）：
+	// 同一次請求寫出的多筆稽核（含 name＋status 的兩筆）以此關聯 —— console 端
+	// 自行合併的前提。呼叫端不填時由 Record 自 ctx 取（測試直呼 Record 時 ctx 無值即空）。
+	TraceID string
 }
 
 // sensitiveKeys 為不得落入稽核快照的欄位鍵（密碼/雜湊/密鑰/權杖等）。
@@ -58,10 +63,6 @@ func sanitize(snap map[string]any) map[string]any {
 	}
 	return out
 }
-
-// Record 於 t 所在的交易內寫入一筆 audit_logs。
-// 呼叫方必須已在業務交易中（tx），寫入與業務異動共用同一 commit / rollback（D18）。
-// 稽核寫入失敗 → 回傳錯誤，呼叫方應使整個交易回滾（不降級為略過）。
 func Record(ctx context.Context, tx *ent.Tx, e Entry) error {
 	companyID := e.CompanyID
 	if companyID == 0 {
@@ -70,7 +71,22 @@ func Record(ctx context.Context, tx *ent.Tx, e Entry) error {
 	if e.UserID == 0 {
 		return errors.New("audit: user_id 為 0,缺操作者脈絡")
 	}
-
+	// 未結項 #4：TraceID 未填時自 ctx 取 —— 各 domain 的 recordAuditBA 照樣只傳 ctx，
+	// 不必逐點改 30+ 呼叫點；trace_id 本來就只有邊界（interceptor）知道。
+	// 落點：after_snapshot 的 `_trace_id` 鍵 —— 不加 migration／不改 ent schema：
+	// audit_logs 專屬欄位要動 00009＋ent＋codegen，而快照本來就是「變更摘要＋關聯鍵」
+	// 的半結構欄位；console 合併只讀此鍵，不影響既有快照斷言（鍵名底線前綴防碰撞）。
+	traceID := e.TraceID
+	if traceID == "" {
+		traceID = requestid.From(ctx)
+	}
+	after := sanitize(e.After)
+	if traceID != "" {
+		if after == nil {
+			after = map[string]any{}
+		}
+		after["_trace_id"] = traceID
+	}
 	build := tx.AuditLog.Create().
 		SetCompanyID(companyID).
 		SetUserID(e.UserID).
@@ -85,7 +101,7 @@ func Record(ctx context.Context, tx *ent.Tx, e Entry) error {
 	if before := sanitize(e.Before); before != nil {
 		build = build.SetBeforeSnapshot(before)
 	}
-	if after := sanitize(e.After); after != nil {
+	if after != nil {
 		build = build.SetAfterSnapshot(after)
 	}
 	_, err := build.Save(ctx)

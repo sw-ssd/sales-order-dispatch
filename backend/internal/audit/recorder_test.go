@@ -13,6 +13,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/auditlog"
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
+	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 )
 
 // newAuditDB 建立 enttest sqlite client。
@@ -107,6 +108,48 @@ func TestRecordWritesSnapshot(t *testing.T) {
 	}
 	if r.AfterSnapshot == nil || r.AfterSnapshot["name"] != "新員工" {
 		t.Errorf("after_snapshot 缺失: %+v", r.AfterSnapshot)
+	}
+}
+
+// 未結項 #4（RED）：同一次請求的 trace_id 必須落進 after_snapshot 的 _trace_id ——
+// console 合併「一次請求兩筆稽核」的前提。呼叫端不填 TraceID 時由 Record 自 ctx 取。
+func TestRecordStampsTraceIDFromContext(t *testing.T) {
+	db := newAuditDB(t)
+	c := mustCompany(t, db)
+	u := mustUser(t, db, c.ID)
+
+	tx, err := db.Tx(context.Background())
+	if err != nil {
+		t.Fatalf("開交易: %v", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	ctx := requestid.With(context.Background(), "trace-4-abc")
+	for _, after := range []map[string]any{
+		{"name": "新名"},
+		nil, // after 為空時也要能攜帶（login/logout 兩者皆 null 的形狀）
+	} {
+		if err := audit.Record(ctx, tx, audit.Entry{
+			Action: "update", ResourceType: "company", ResourceID: "c-1",
+			CompanyID: c.ID, UserID: u.ID, After: after,
+		}); err != nil {
+			t.Fatalf("Record: %v", err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatalf("commit: %v", err)
+	}
+	rows, err := db.AuditLog.Query().All(context.Background())
+	if err != nil {
+		t.Fatalf("查 audit: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("期望 2 筆 audit,得到 %d", len(rows))
+	}
+	for _, r := range rows {
+		if r.AfterSnapshot["_trace_id"] != "trace-4-abc" {
+			t.Fatalf("after_snapshot 應帶 _trace_id，got %+v", r.AfterSnapshot)
+		}
 	}
 }
 
