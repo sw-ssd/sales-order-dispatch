@@ -14,11 +14,15 @@ export function Pagination(props: {
   onPage: (page: number) => void;
 }): JSX.Element {
   const lastPage = () => Math.max(1, Math.ceil(props.total / props.pageSize));
+  // 未結項 #31:當頁被清空時（例：最後一頁的唯一一列被收款），後端回的 page 仍是舊頁碼，
+  // 而 total 已縮水 → 顯示會變成「第 2 / 1 頁」的矛盾頁碼。顯示值夾住（不改呼叫端的 signal）：
+  // 按鈕的 enabled 仍以真實 page 為準（「上一頁」可按），只有「第 N 頁」這個文字不說謊。
+  const shownPage = () => Math.min(props.page, lastPage());
 
   return (
     <div class="flex items-center gap-3 text-sm text-muted-foreground">
       <span>
-        第 {props.page} / {lastPage()} 頁（共 {props.total} 筆）
+        第 {shownPage()} / {lastPage()} 頁（共 {props.total} 筆）
       </span>
       <Button
         variant="outline"

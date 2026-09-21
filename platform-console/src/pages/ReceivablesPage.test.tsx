@@ -171,6 +171,9 @@ describe("ReceivablesPage", () => {
     // 死路的判準：分頁控制必須還在，否則營運回不了第 1 頁。
     expect(screen.getByRole("button", { name: "上一頁" })).toBeTruthy();
     expect(screen.getByText(/共 50 筆/)).toBeTruthy();
+    // 未結項 #31:頁碼顯示不得矛盾 —— 後端回 page=2、total=50（lastPage=1），
+    // 顯示必須夾成「第 1 / 1 頁」，不能是「第 2 / 1 頁」。
+    expect(screen.getByText(/第 1 \/ 1 頁（共 50 筆）/)).toBeTruthy();
   });
 
   it("金額手動輸入時原樣送上線；格式錯誤先擋（後端 ParseCents 才是真偽決定者）", async () => {
