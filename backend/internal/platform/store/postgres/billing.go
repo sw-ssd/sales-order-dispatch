@@ -493,7 +493,10 @@ func (s *Store) RecordAuditTx(ctx context.Context, tx *sql.Tx, operatorID int64,
 // 沒提供時是 SQL NULL,不是 jsonb 的 'null'(見 nullJSON)。
 func recordAuditTx(ctx context.Context, tx *sql.Tx, operatorID int64,
 	action, targetType, targetID, reason string, before, after []byte) error {
-	if reason == "" {
+	// 未結項 #34:全空白的原因也拒絕。表上 reason 是 NOT NULL 但空字串合法 —— 未來新增
+	// 寫入點若忘了 trim，"   " 會寫成一列看起來有值卻沒有理由的稽核。進入點
+	// (requireReason／platformReason)本來就擋全空白，這裡是最後一道閘。
+	if strings.TrimSpace(reason) == "" {
 		return errors.New("平台稽核必須提供原因")
 	}
 	_, err := tx.ExecContext(ctx, `

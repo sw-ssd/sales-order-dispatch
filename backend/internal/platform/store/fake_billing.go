@@ -508,10 +508,10 @@ func (f *FakeBilling) MarkEventDispatchedTx(_ context.Context, _ *sql.Tx, id int
 	return nil
 }
 
-// RecordAuditTx 寫入平台稽核;reason 必填(空字串即拒絕,不寫半筆)。
+// RecordAuditTx 寫入平台稽核;reason 必填(空字串與全空白即拒絕,不寫半筆)。
 func (f *FakeBilling) RecordAuditTx(_ context.Context, _ *sql.Tx, operatorID int64,
 	action, targetType, targetID, reason string, before, after []byte) error {
-	if reason == "" {
+	if strings.TrimSpace(reason) == "" {
 		return errors.New("平台稽核必須提供原因")
 	}
 	f.mu.Lock()

@@ -154,6 +154,11 @@ func TestFakeBillingAuditPriceAndDueQueries(t *testing.T) {
 	if err := f.RecordAuditTx(ctx, nil, 1, "record_payment", "subscription", "7", "", nil, nil); err == nil {
 		t.Fatal("平台稽核的原因為空字串時必須拒絕")
 	}
+	// 未結項 #34:全空白的原因也必須拒絕 —— 表上 reason 是 NOT NULL 但空字串合法，
+	// 未來新增寫入點若忘了 trim，"   " 會寫成一列看起來有值卻沒有理由的稽核。
+	if err := f.RecordAuditTx(ctx, nil, 1, "record_payment", "subscription", "7", "   ", nil, nil); err == nil {
+		t.Fatal("平台稽核的原因為全空白時必須拒絕")
+	}
 	if err := f.RecordAuditTx(ctx, nil, 1, "record_payment", "subscription", "7", "匯款入帳", nil, nil); err != nil {
 		t.Fatalf("RecordAuditTx: %v", err)
 	}
