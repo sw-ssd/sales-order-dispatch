@@ -231,6 +231,10 @@ func (f *fakePlatformStore) UpsertSettingTx(_ context.Context, _ *sql.Tx, key, v
 	return nil
 }
 
+func (f *fakePlatformStore) PeriodsBySubscription(_ context.Context, _ string) ([]platformstore.Period, error) {
+	return f.periods, nil
+}
+
 func (f *fakePlatformStore) ListReceivables(context.Context, int32, int32) ([]ReceivableRow, int, error) {
 	if f.err != nil {
 		return nil, 0, f.err
@@ -374,6 +378,32 @@ func writeCalls() []writeCall {
 //
 // 「擋下來了」不能只看回應:擋下時**不得寫任何資料、不得寫任何稽核** —— 一筆沒有 operator 的
 // 稽核在 schema 上就寫不進去(operator_id NOT NULL),而一筆無人的寫入是無法回溯的變更。
+// 未結項 #28：ListSubscriptionPeriods 回期別歷史（只讀投影，無訂閱即空）。
+func TestListSubscriptionPeriodsReturnsHistory(t *testing.T) {
+	svc, st, _, _ := newWriteHarness(0)
+	ctx := withOperator(context.Background())
+	st.periods = []platformstore.Period{
+		{SubscriptionID: 7, PeriodNo: 1, Status: "paid", AmountCents: 150000},
+		{SubscriptionID: 7, PeriodNo: 2, Status: "open", AmountCents: 150000},
+	}
+	resp, err := svc.ListSubscriptionPeriods(ctx,
+		connect.NewRequest(&platformv1.ListSubscriptionPeriodsRequest{CompanyId: "42"}))
+	if err != nil {
+		t.Fatalf("ListSubscriptionPeriods: %v", err)
+	}
+	got := resp.Msg.GetPeriods()
+	if len(got) != 2 || got[0].GetPeriodNo() != 1 || got[1].GetPeriodNo() != 2 {
+		t.Fatalf("期別應照號遞增回兩筆，got %+v", got)
+	}
+	if got[0].GetStatus() != "paid" || got[0].GetAmount() != "1500.00" {
+		t.Fatalf("狀態與金額投影錯誤，got %+v", got[0])
+	}
+	if _, err := svc.ListSubscriptionPeriods(context.Background(),
+		connect.NewRequest(&platformv1.ListSubscriptionPeriodsRequest{CompanyId: "42"})); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("未登入應 Unauthenticated，got %v", err)
+	}
+}
+
 // 未結項 #23：GetOperatorSelf 回自己的身分（console 依角色隱藏操作）。
 // 未登入即 AUTH-4001；角色原樣回傳（admin／operator），前端只據此 disable。
 func TestGetOperatorSelfReturnsIdentity(t *testing.T) {

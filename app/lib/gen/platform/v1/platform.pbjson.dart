@@ -935,6 +935,65 @@ final $typed_data.Uint8List getOperatorSelfResponseDescriptor =
         'ChdHZXRPcGVyYXRvclNlbGZSZXNwb25zZRIfCgtvcGVyYXRvcl9pZBgBIAEoCVIKb3BlcmF0b3'
         'JJZBIUCgVlbWFpbBgCIAEoCVIFZW1haWwSEgoEcm9sZRgDIAEoCVIEcm9sZQ==');
 
+@$core.Deprecated('Use listSubscriptionPeriodsRequestDescriptor instead')
+const ListSubscriptionPeriodsRequest$json = {
+  '1': 'ListSubscriptionPeriodsRequest',
+  '2': [
+    {'1': 'company_id', '3': 1, '4': 1, '5': 9, '10': 'companyId'},
+  ],
+};
+
+/// Descriptor for `ListSubscriptionPeriodsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listSubscriptionPeriodsRequestDescriptor =
+    $convert.base64Decode(
+        'Ch5MaXN0U3Vic2NyaXB0aW9uUGVyaW9kc1JlcXVlc3QSHQoKY29tcGFueV9pZBgBIAEoCVIJY2'
+        '9tcGFueUlk');
+
+@$core.Deprecated('Use subscriptionPeriodDescriptor instead')
+const SubscriptionPeriod$json = {
+  '1': 'SubscriptionPeriod',
+  '2': [
+    {'1': 'period_no', '3': 1, '4': 1, '5': 5, '10': 'periodNo'},
+    {'1': 'period_start', '3': 2, '4': 1, '5': 9, '10': 'periodStart'},
+    {'1': 'period_end', '3': 3, '4': 1, '5': 9, '10': 'periodEnd'},
+    {'1': 'status', '3': 4, '4': 1, '5': 9, '10': 'status'},
+    {'1': 'amount', '3': 5, '4': 1, '5': 9, '10': 'amount'},
+    {'1': 'paid_at', '3': 6, '4': 1, '5': 9, '10': 'paidAt'},
+    {'1': 'invoice_no', '3': 7, '4': 1, '5': 9, '10': 'invoiceNo'},
+    {'1': 'external_ref', '3': 8, '4': 1, '5': 9, '10': 'externalRef'},
+    {'1': 'note', '3': 9, '4': 1, '5': 9, '10': 'note'},
+  ],
+};
+
+/// Descriptor for `SubscriptionPeriod`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List subscriptionPeriodDescriptor = $convert.base64Decode(
+    'ChJTdWJzY3JpcHRpb25QZXJpb2QSGwoJcGVyaW9kX25vGAEgASgFUghwZXJpb2RObxIhCgxwZX'
+    'Jpb2Rfc3RhcnQYAiABKAlSC3BlcmlvZFN0YXJ0Eh0KCnBlcmlvZF9lbmQYAyABKAlSCXBlcmlv'
+    'ZEVuZBIWCgZzdGF0dXMYBCABKAlSBnN0YXR1cxIWCgZhbW91bnQYBSABKAlSBmFtb3VudBIXCg'
+    'dwYWlkX2F0GAYgASgJUgZwYWlkQXQSHQoKaW52b2ljZV9ubxgHIAEoCVIJaW52b2ljZU5vEiEK'
+    'DGV4dGVybmFsX3JlZhgIIAEoCVILZXh0ZXJuYWxSZWYSEgoEbm90ZRgJIAEoCVIEbm90ZQ==');
+
+@$core.Deprecated('Use listSubscriptionPeriodsResponseDescriptor instead')
+const ListSubscriptionPeriodsResponse$json = {
+  '1': 'ListSubscriptionPeriodsResponse',
+  '2': [
+    {
+      '1': 'periods',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.platform.v1.SubscriptionPeriod',
+      '10': 'periods'
+    },
+  ],
+};
+
+/// Descriptor for `ListSubscriptionPeriodsResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listSubscriptionPeriodsResponseDescriptor =
+    $convert.base64Decode(
+        'Ch9MaXN0U3Vic2NyaXB0aW9uUGVyaW9kc1Jlc3BvbnNlEjkKB3BlcmlvZHMYASADKAsyHy5wbG'
+        'F0Zm9ybS52MS5TdWJzY3JpcHRpb25QZXJpb2RSB3BlcmlvZHM=');
+
 @$core.Deprecated('Use getTenantEntitlementsRequestDescriptor instead')
 const GetTenantEntitlementsRequest$json = {
   '1': 'GetTenantEntitlementsRequest',
@@ -1091,6 +1150,11 @@ const $core.Map<$core.String, $core.dynamic> PlatformAdminServiceBase$json = {
       '2': '.platform.v1.GetOperatorSelfRequest',
       '3': '.platform.v1.GetOperatorSelfResponse'
     },
+    {
+      '1': 'ListSubscriptionPeriods',
+      '2': '.platform.v1.ListSubscriptionPeriodsRequest',
+      '3': '.platform.v1.ListSubscriptionPeriodsResponse'
+    },
   ],
 };
 
@@ -1150,6 +1214,11 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.platform.v1.DisableOperatorResponse': DisableOperatorResponse$json,
   '.platform.v1.GetOperatorSelfRequest': GetOperatorSelfRequest$json,
   '.platform.v1.GetOperatorSelfResponse': GetOperatorSelfResponse$json,
+  '.platform.v1.ListSubscriptionPeriodsRequest':
+      ListSubscriptionPeriodsRequest$json,
+  '.platform.v1.ListSubscriptionPeriodsResponse':
+      ListSubscriptionPeriodsResponse$json,
+  '.platform.v1.SubscriptionPeriod': SubscriptionPeriod$json,
 };
 
 /// Descriptor for `PlatformAdminService`. Decode as a `google.protobuf.ServiceDescriptorProto`.
@@ -1188,7 +1257,9 @@ final $typed_data.Uint8List platformAdminServiceDescriptor = $convert.base64Deco
     'Nwb25zZRJcCg9EaXNhYmxlT3BlcmF0b3ISIy5wbGF0Zm9ybS52MS5EaXNhYmxlT3BlcmF0b3JS'
     'ZXF1ZXN0GiQucGxhdGZvcm0udjEuRGlzYWJsZU9wZXJhdG9yUmVzcG9uc2USXAoPR2V0T3Blcm'
     'F0b3JTZWxmEiMucGxhdGZvcm0udjEuR2V0T3BlcmF0b3JTZWxmUmVxdWVzdBokLnBsYXRmb3Jt'
-    'LnYxLkdldE9wZXJhdG9yU2VsZlJlc3BvbnNl');
+    'LnYxLkdldE9wZXJhdG9yU2VsZlJlc3BvbnNlEnQKF0xpc3RTdWJzY3JpcHRpb25QZXJpb2RzEi'
+    'sucGxhdGZvcm0udjEuTGlzdFN1YnNjcmlwdGlvblBlcmlvZHNSZXF1ZXN0GiwucGxhdGZvcm0u'
+    'djEuTGlzdFN1YnNjcmlwdGlvblBlcmlvZHNSZXNwb25zZQ==');
 
 const $core.Map<$core.String, $core.dynamic> TenantEntitlementServiceBase$json =
     {

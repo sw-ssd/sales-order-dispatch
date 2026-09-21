@@ -157,6 +157,35 @@ func TestIntegrationPlatformAdmin(t *testing.T) {
 		}
 	})
 
+	t.Run("ListSubscriptionPeriods 期別歷史", func(t *testing.T) {
+
+		// 未結項 #28：active 租戶回兩期（皆 open：期別 1 已過期未付、期別 2 未到期；
+		// paid 的那家是 cancelled 夾具。金額快照透出）。
+		resp, err := svc.ListSubscriptionPeriods(ctx,
+			connect.NewRequest(&platformv1.ListSubscriptionPeriodsRequest{CompanyId: itoa(int(seed.activeID))}))
+		if err != nil {
+			t.Fatalf("ListSubscriptionPeriods: %v", err)
+		}
+		got := resp.Msg.GetPeriods()
+		if len(got) != 2 || got[0].GetPeriodNo() != 1 || got[1].GetPeriodNo() != 2 {
+			t.Fatalf("應回兩期且照號遞增，got %+v", got)
+		}
+		if got[0].GetStatus() != "open" || got[0].GetAmount() != "2600.00" {
+			t.Fatalf("第 1 期應為 open（已過期未付）／2600.00，got %+v", got[0])
+		}
+		if got[1].GetStatus() != "open" || got[1].GetInvoiceNo() != "" {
+			t.Fatalf("第 2 期應為 open 且無發票號，got %+v", got[1])
+		}
+		// 無訂閱回空（不是 404）。
+		empty, err := svc.ListSubscriptionPeriods(ctx,
+			connect.NewRequest(&platformv1.ListSubscriptionPeriodsRequest{CompanyId: itoa(int(seed.noneID))}))
+		if err != nil {
+			t.Fatalf("無訂閱 ListSubscriptionPeriods: %v", err)
+		}
+		if len(empty.Msg.GetPeriods()) != 0 {
+			t.Fatalf("無訂閱應回空，got %+v", empty.Msg.GetPeriods())
+		}
+	})
 	t.Run("ListTenants 篩選與分頁", func(t *testing.T) {
 		// 公司名稱模糊搜尋
 		if got := listTenants(t, svc, ctx,

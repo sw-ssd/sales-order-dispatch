@@ -352,6 +352,24 @@ extension type PlatformAdminServiceClient (connect.Transport _transport) {
       onTrailer: onTrailer,
     );
   }
+
+  /// 未結項 #28：某訂閱的期別歷史（租戶詳情的「期別」段；spec §2.4）。
+  Future<platformv1platform.ListSubscriptionPeriodsResponse> listSubscriptionPeriods(
+    platformv1platform.ListSubscriptionPeriodsRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.PlatformAdminService.listSubscriptionPeriods,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
 }
 /// TenantEntitlementService:租戶端權益投影(租戶 session;唯讀)。
 extension type TenantEntitlementServiceClient (connect.Transport _transport) {

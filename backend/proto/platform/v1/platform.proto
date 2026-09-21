@@ -158,6 +158,8 @@ service PlatformAdminService {
   // 未結項 #23：自己的身分（console 依角色隱藏操作）。後端仍是唯一決策者；
   // 前端只據此 disable 按鈕，不做授權判斷。
   rpc GetOperatorSelf(GetOperatorSelfRequest) returns (GetOperatorSelfResponse);
+  // 未結項 #28：某訂閱的期別歷史（租戶詳情的「期別」段；spec §2.4）。
+  rpc ListSubscriptionPeriods(ListSubscriptionPeriodsRequest) returns (ListSubscriptionPeriodsResponse);
 }
 
 // --- 待收款與收款 ---
@@ -361,6 +363,26 @@ message GetOperatorSelfResponse {
   string operator_id = 1;
   string email = 2;
   string role = 3;  // operator | admin
+}
+
+message ListSubscriptionPeriodsRequest {
+  string company_id = 1;
+}
+
+message SubscriptionPeriod {
+  int32  period_no = 1;
+  string period_start = 2;   // RFC3339
+  string period_end = 3;     // RFC3339
+  string status = 4;         // open | paid | void
+  string amount = 5;         // 兩位小數字串
+  string paid_at = 6;        // RFC3339，可空
+  string invoice_no = 7;
+  string external_ref = 8;
+  string note = 9;
+}
+
+message ListSubscriptionPeriodsResponse {
+  repeated SubscriptionPeriod periods = 1;
 }
 
 // GetTenantEntitlementsRequest:租戶端唯讀投影(自己的公司;前端據此 disable 按鈕與顯示用量)。

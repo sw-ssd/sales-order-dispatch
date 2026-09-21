@@ -95,6 +95,9 @@ const (
 	// PlatformAdminServiceGetOperatorSelfProcedure is the fully-qualified name of the
 	// PlatformAdminService's GetOperatorSelf RPC.
 	PlatformAdminServiceGetOperatorSelfProcedure = "/platform.v1.PlatformAdminService/GetOperatorSelf"
+	// PlatformAdminServiceListSubscriptionPeriodsProcedure is the fully-qualified name of the
+	// PlatformAdminService's ListSubscriptionPeriods RPC.
+	PlatformAdminServiceListSubscriptionPeriodsProcedure = "/platform.v1.PlatformAdminService/ListSubscriptionPeriods"
 	// TenantEntitlementServiceGetTenantEntitlementsProcedure is the fully-qualified name of the
 	// TenantEntitlementService's GetTenantEntitlements RPC.
 	TenantEntitlementServiceGetTenantEntitlementsProcedure = "/platform.v1.TenantEntitlementService/GetTenantEntitlements"
@@ -126,6 +129,8 @@ type PlatformAdminServiceClient interface {
 	// 未結項 #23：自己的身分（console 依角色隱藏操作）。後端仍是唯一決策者；
 	// 前端只據此 disable 按鈕，不做授權判斷。
 	GetOperatorSelf(context.Context, *connect.Request[v1.GetOperatorSelfRequest]) (*connect.Response[v1.GetOperatorSelfResponse], error)
+	// 未結項 #28：某訂閱的期別歷史（租戶詳情的「期別」段；spec §2.4）。
+	ListSubscriptionPeriods(context.Context, *connect.Request[v1.ListSubscriptionPeriodsRequest]) (*connect.Response[v1.ListSubscriptionPeriodsResponse], error)
 }
 
 // NewPlatformAdminServiceClient constructs a client for the platform.v1.PlatformAdminService
@@ -259,31 +264,38 @@ func NewPlatformAdminServiceClient(httpClient connect.HTTPClient, baseURL string
 			connect.WithSchema(platformAdminServiceMethods.ByName("GetOperatorSelf")),
 			connect.WithClientOptions(opts...),
 		),
+		listSubscriptionPeriods: connect.NewClient[v1.ListSubscriptionPeriodsRequest, v1.ListSubscriptionPeriodsResponse](
+			httpClient,
+			baseURL+PlatformAdminServiceListSubscriptionPeriodsProcedure,
+			connect.WithSchema(platformAdminServiceMethods.ByName("ListSubscriptionPeriods")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // platformAdminServiceClient implements PlatformAdminServiceClient.
 type platformAdminServiceClient struct {
-	listTenants           *connect.Client[v1.ListTenantsRequest, v1.ListTenantsResponse]
-	getTenant             *connect.Client[v1.GetTenantRequest, v1.GetTenantResponse]
-	listPlans             *connect.Client[v1.ListPlansRequest, v1.ListPlansResponse]
-	getPlanEntitlements   *connect.Client[v1.GetPlanEntitlementsRequest, v1.GetPlanEntitlementsResponse]
-	listPlatformAudit     *connect.Client[v1.ListPlatformAuditRequest, v1.ListPlatformAuditResponse]
-	listReceivables       *connect.Client[v1.ListReceivablesRequest, v1.ListReceivablesResponse]
-	recordPayment         *connect.Client[v1.RecordPaymentRequest, v1.RecordPaymentResponse]
-	createSubscription    *connect.Client[v1.CreateSubscriptionRequest, v1.CreateSubscriptionResponse]
-	setSeatCount          *connect.Client[v1.SetSeatCountRequest, v1.SetSeatCountResponse]
-	changePlan            *connect.Client[v1.ChangePlanRequest, v1.ChangePlanResponse]
-	cancelSubscription    *connect.Client[v1.CancelSubscriptionRequest, v1.CancelSubscriptionResponse]
-	getBillingSettings    *connect.Client[v1.GetBillingSettingsRequest, v1.GetBillingSettingsResponse]
-	updateBillingSettings *connect.Client[v1.UpdateBillingSettingsRequest, v1.UpdateBillingSettingsResponse]
-	setTenantOverride     *connect.Client[v1.SetTenantOverrideRequest, v1.SetTenantOverrideResponse]
-	revokeTenantOverride  *connect.Client[v1.RevokeTenantOverrideRequest, v1.RevokeTenantOverrideResponse]
-	upsertPlanPrice       *connect.Client[v1.UpsertPlanPriceRequest, v1.UpsertPlanPriceResponse]
-	setPlanEntitlement    *connect.Client[v1.SetPlanEntitlementRequest, v1.SetPlanEntitlementResponse]
-	createOperator        *connect.Client[v1.CreateOperatorRequest, v1.CreateOperatorResponse]
-	disableOperator       *connect.Client[v1.DisableOperatorRequest, v1.DisableOperatorResponse]
-	getOperatorSelf       *connect.Client[v1.GetOperatorSelfRequest, v1.GetOperatorSelfResponse]
+	listTenants             *connect.Client[v1.ListTenantsRequest, v1.ListTenantsResponse]
+	getTenant               *connect.Client[v1.GetTenantRequest, v1.GetTenantResponse]
+	listPlans               *connect.Client[v1.ListPlansRequest, v1.ListPlansResponse]
+	getPlanEntitlements     *connect.Client[v1.GetPlanEntitlementsRequest, v1.GetPlanEntitlementsResponse]
+	listPlatformAudit       *connect.Client[v1.ListPlatformAuditRequest, v1.ListPlatformAuditResponse]
+	listReceivables         *connect.Client[v1.ListReceivablesRequest, v1.ListReceivablesResponse]
+	recordPayment           *connect.Client[v1.RecordPaymentRequest, v1.RecordPaymentResponse]
+	createSubscription      *connect.Client[v1.CreateSubscriptionRequest, v1.CreateSubscriptionResponse]
+	setSeatCount            *connect.Client[v1.SetSeatCountRequest, v1.SetSeatCountResponse]
+	changePlan              *connect.Client[v1.ChangePlanRequest, v1.ChangePlanResponse]
+	cancelSubscription      *connect.Client[v1.CancelSubscriptionRequest, v1.CancelSubscriptionResponse]
+	getBillingSettings      *connect.Client[v1.GetBillingSettingsRequest, v1.GetBillingSettingsResponse]
+	updateBillingSettings   *connect.Client[v1.UpdateBillingSettingsRequest, v1.UpdateBillingSettingsResponse]
+	setTenantOverride       *connect.Client[v1.SetTenantOverrideRequest, v1.SetTenantOverrideResponse]
+	revokeTenantOverride    *connect.Client[v1.RevokeTenantOverrideRequest, v1.RevokeTenantOverrideResponse]
+	upsertPlanPrice         *connect.Client[v1.UpsertPlanPriceRequest, v1.UpsertPlanPriceResponse]
+	setPlanEntitlement      *connect.Client[v1.SetPlanEntitlementRequest, v1.SetPlanEntitlementResponse]
+	createOperator          *connect.Client[v1.CreateOperatorRequest, v1.CreateOperatorResponse]
+	disableOperator         *connect.Client[v1.DisableOperatorRequest, v1.DisableOperatorResponse]
+	getOperatorSelf         *connect.Client[v1.GetOperatorSelfRequest, v1.GetOperatorSelfResponse]
+	listSubscriptionPeriods *connect.Client[v1.ListSubscriptionPeriodsRequest, v1.ListSubscriptionPeriodsResponse]
 }
 
 // ListTenants calls platform.v1.PlatformAdminService.ListTenants.
@@ -386,6 +398,11 @@ func (c *platformAdminServiceClient) GetOperatorSelf(ctx context.Context, req *c
 	return c.getOperatorSelf.CallUnary(ctx, req)
 }
 
+// ListSubscriptionPeriods calls platform.v1.PlatformAdminService.ListSubscriptionPeriods.
+func (c *platformAdminServiceClient) ListSubscriptionPeriods(ctx context.Context, req *connect.Request[v1.ListSubscriptionPeriodsRequest]) (*connect.Response[v1.ListSubscriptionPeriodsResponse], error) {
+	return c.listSubscriptionPeriods.CallUnary(ctx, req)
+}
+
 // PlatformAdminServiceHandler is an implementation of the platform.v1.PlatformAdminService service.
 type PlatformAdminServiceHandler interface {
 	ListTenants(context.Context, *connect.Request[v1.ListTenantsRequest]) (*connect.Response[v1.ListTenantsResponse], error)
@@ -412,6 +429,8 @@ type PlatformAdminServiceHandler interface {
 	// 未結項 #23：自己的身分（console 依角色隱藏操作）。後端仍是唯一決策者；
 	// 前端只據此 disable 按鈕，不做授權判斷。
 	GetOperatorSelf(context.Context, *connect.Request[v1.GetOperatorSelfRequest]) (*connect.Response[v1.GetOperatorSelfResponse], error)
+	// 未結項 #28：某訂閱的期別歷史（租戶詳情的「期別」段；spec §2.4）。
+	ListSubscriptionPeriods(context.Context, *connect.Request[v1.ListSubscriptionPeriodsRequest]) (*connect.Response[v1.ListSubscriptionPeriodsResponse], error)
 }
 
 // NewPlatformAdminServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -541,6 +560,12 @@ func NewPlatformAdminServiceHandler(svc PlatformAdminServiceHandler, opts ...con
 		connect.WithSchema(platformAdminServiceMethods.ByName("GetOperatorSelf")),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformAdminServiceListSubscriptionPeriodsHandler := connect.NewUnaryHandler(
+		PlatformAdminServiceListSubscriptionPeriodsProcedure,
+		svc.ListSubscriptionPeriods,
+		connect.WithSchema(platformAdminServiceMethods.ByName("ListSubscriptionPeriods")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/platform.v1.PlatformAdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PlatformAdminServiceListTenantsProcedure:
@@ -583,6 +608,8 @@ func NewPlatformAdminServiceHandler(svc PlatformAdminServiceHandler, opts ...con
 			platformAdminServiceDisableOperatorHandler.ServeHTTP(w, r)
 		case PlatformAdminServiceGetOperatorSelfProcedure:
 			platformAdminServiceGetOperatorSelfHandler.ServeHTTP(w, r)
+		case PlatformAdminServiceListSubscriptionPeriodsProcedure:
+			platformAdminServiceListSubscriptionPeriodsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -670,6 +697,10 @@ func (UnimplementedPlatformAdminServiceHandler) DisableOperator(context.Context,
 
 func (UnimplementedPlatformAdminServiceHandler) GetOperatorSelf(context.Context, *connect.Request[v1.GetOperatorSelfRequest]) (*connect.Response[v1.GetOperatorSelfResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("platform.v1.PlatformAdminService.GetOperatorSelf is not implemented"))
+}
+
+func (UnimplementedPlatformAdminServiceHandler) ListSubscriptionPeriods(context.Context, *connect.Request[v1.ListSubscriptionPeriodsRequest]) (*connect.Response[v1.ListSubscriptionPeriodsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("platform.v1.PlatformAdminService.ListSubscriptionPeriods is not implemented"))
 }
 
 // TenantEntitlementServiceClient is a client for the platform.v1.TenantEntitlementService service.

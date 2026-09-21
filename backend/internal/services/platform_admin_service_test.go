@@ -255,7 +255,9 @@ type fakePlatformStore struct {
 	features  []FeatureRow
 	audit     []PlatformAuditRow
 	// receivables 為 ListReceivables 的來源(T9);settings 為營運參數(T9)。
+	// periods 為 ListSubscriptionPeriods 的來源（未結項 #28）。
 	receivables []ReceivableRow
+	periods     []platformstore.Period
 	settings    map[string]string
 	err         error
 	// writes 為 T9 寫入路徑的記錄器(定義在 platform_admin_write_test.go):寫入方法全部掛在

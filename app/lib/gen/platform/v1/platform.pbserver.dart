@@ -61,6 +61,8 @@ abstract class PlatformAdminServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.DisableOperatorRequest request);
   $async.Future<$0.GetOperatorSelfResponse> getOperatorSelf(
       $pb.ServerContext ctx, $0.GetOperatorSelfRequest request);
+  $async.Future<$0.ListSubscriptionPeriodsResponse> listSubscriptionPeriods(
+      $pb.ServerContext ctx, $0.ListSubscriptionPeriodsRequest request);
 
   $pb.GeneratedMessage createRequest($core.String methodName) {
     switch (methodName) {
@@ -104,6 +106,8 @@ abstract class PlatformAdminServiceBase extends $pb.GeneratedService {
         return $0.DisableOperatorRequest();
       case 'GetOperatorSelf':
         return $0.GetOperatorSelfRequest();
+      case 'ListSubscriptionPeriods':
+        return $0.ListSubscriptionPeriodsRequest();
       default:
         throw $core.ArgumentError('Unknown method: $methodName');
     }
@@ -155,6 +159,9 @@ abstract class PlatformAdminServiceBase extends $pb.GeneratedService {
         return disableOperator(ctx, request as $0.DisableOperatorRequest);
       case 'GetOperatorSelf':
         return getOperatorSelf(ctx, request as $0.GetOperatorSelfRequest);
+      case 'ListSubscriptionPeriods':
+        return listSubscriptionPeriods(
+            ctx, request as $0.ListSubscriptionPeriodsRequest);
       default:
         throw $core.ArgumentError('Unknown method: $methodName');
     }

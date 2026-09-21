@@ -67,6 +67,55 @@ const tenantJoins = `
 // 排序鍵的第一項是「已取消」的布林:ASC 讓 false(未取消)排在最前面,取消的才排在後面
 // —— 寫成 `status <> 'cancelled'` 會反向(未取消 = true 反而排在後面),投影就會挑到歷史合約。
 
+// periodColumnsAliased 與 billing 的 periodColumns 同列、同序，差別只在首欄加表別名：
+// 本查詢 JOIN subscriptions（兩表都有 id），裸 id 會 42702。
+const periodColumnsAliased = `per.id, per.subscription_id, per.period_no, per.period_start, per.period_end, per.plan_id,
+	(per.unit_price*100)::bigint, (per.seat_price*100)::bigint, per.seat_count,
+	(per.amount*100)::bigint, per.currency, per.status, per.paid_at, COALESCE(per.invoice_no,''),
+	per.payment_provider, COALESCE(per.external_ref,''), per.note`
+
+// PeriodsBySubscription 取某公司現行訂閱的全部期別（期別號遞增；未結項 #28）。
+// 公司無訂閱回空（不是 ErrNotFound：GetTenant 已判定公司存在；「無訂閱」與「無公司」
+// 是兩件事，前者是空歷史）。期別列掃描與 billing 的 scanPeriod 同形狀（periodColumns）。
+func (s *Admin) PeriodsBySubscription(ctx context.Context, companyID string) ([]store.Period, error) {
+	id, err := strconv.ParseInt(strings.TrimSpace(companyID), 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	// 未結項 #28：經 withSystemScope —— 與 ListReceivables 同（它 JOIN companies，
+	// 而 companies 已 FORCE RLS；本查詢雖只碰 platform 表，但與 GetTenant 同 scope
+	// 才不會在「admin 非 superuser」容器下行為分叉）。
+	var out []store.Period
+	err = s.withSystemScope(ctx, func(tx *sql.Tx) error {
+		rows, qerr := tx.QueryContext(ctx, `
+		SELECT `+periodColumnsAliased+`
+		  FROM platform.subscription_periods per
+		  JOIN platform.subscriptions s ON s.id = per.subscription_id
+		 WHERE s.company_id = $1
+		 ORDER BY (s.status = 'cancelled'), s.started_at DESC, s.id DESC, per.period_no
+		 LIMIT 1000`, id)
+		// LIMIT 1000：期別歷史是人看的（console 一頁），不是對帳匯出；真到千期即截斷，
+		// 不讓一個髒訂閱把回應撐爆。ORDER 與 tenantJoins 的 LATERAL 同序（優先現行訂閱），
+		// 故歷史 cancelled 與現行並存時現行的排前面。
+		if qerr != nil {
+			return qerr
+		}
+		defer func() { _ = rows.Close() }()
+		for rows.Next() {
+			p, qerr := scanPeriod(rows)
+			if qerr != nil {
+				return qerr
+			}
+			out = append(out, *p)
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // tenantFilter 為列表與計數共用的篩選($1 = keyword 原文判斷空、$2 = LIKE 樣式、$3 = 訂閱狀態)。
 //
 // keyword 一律先 trim 再由服務層傳入:前後空白的 keyword 不得變成「篩掉全部」的樣式 %  %。

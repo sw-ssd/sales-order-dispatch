@@ -4268,6 +4268,280 @@ class GetOperatorSelfResponse extends $pb.GeneratedMessage {
   void clearRole() => $_clearField(3);
 }
 
+class ListSubscriptionPeriodsRequest extends $pb.GeneratedMessage {
+  factory ListSubscriptionPeriodsRequest({
+    $core.String? companyId,
+  }) {
+    final result = ListSubscriptionPeriodsRequest._();
+    if (companyId != null) result.companyId = companyId;
+    return result;
+  }
+
+  ListSubscriptionPeriodsRequest._();
+
+  factory ListSubscriptionPeriodsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListSubscriptionPeriodsRequest()..mergeFromBuffer(data, registry);
+  factory ListSubscriptionPeriodsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListSubscriptionPeriodsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListSubscriptionPeriodsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: ListSubscriptionPeriodsRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'companyId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListSubscriptionPeriodsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListSubscriptionPeriodsRequest copyWith(
+          void Function(ListSubscriptionPeriodsRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as ListSubscriptionPeriodsRequest))
+          as ListSubscriptionPeriodsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListSubscriptionPeriodsRequest() / ListSubscriptionPeriodsRequest.new instead')
+  static ListSubscriptionPeriodsRequest create() =>
+      ListSubscriptionPeriodsRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      ListSubscriptionPeriodsRequest._();
+  @$core.override
+  ListSubscriptionPeriodsRequest createEmptyInstance() =>
+      ListSubscriptionPeriodsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ListSubscriptionPeriodsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListSubscriptionPeriodsRequest>(
+          ListSubscriptionPeriodsRequest.$_createMessage);
+  static ListSubscriptionPeriodsRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get companyId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set companyId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasCompanyId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearCompanyId() => $_clearField(1);
+}
+
+class SubscriptionPeriod extends $pb.GeneratedMessage {
+  factory SubscriptionPeriod({
+    $core.int? periodNo,
+    $core.String? periodStart,
+    $core.String? periodEnd,
+    $core.String? status,
+    $core.String? amount,
+    $core.String? paidAt,
+    $core.String? invoiceNo,
+    $core.String? externalRef,
+    $core.String? note,
+  }) {
+    final result = SubscriptionPeriod._();
+    if (periodNo != null) result.periodNo = periodNo;
+    if (periodStart != null) result.periodStart = periodStart;
+    if (periodEnd != null) result.periodEnd = periodEnd;
+    if (status != null) result.status = status;
+    if (amount != null) result.amount = amount;
+    if (paidAt != null) result.paidAt = paidAt;
+    if (invoiceNo != null) result.invoiceNo = invoiceNo;
+    if (externalRef != null) result.externalRef = externalRef;
+    if (note != null) result.note = note;
+    return result;
+  }
+
+  SubscriptionPeriod._();
+
+  factory SubscriptionPeriod.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SubscriptionPeriod()..mergeFromBuffer(data, registry);
+  factory SubscriptionPeriod.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      SubscriptionPeriod()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'SubscriptionPeriod',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: SubscriptionPeriod.$_createMessage)
+    ..aI(1, _omitFieldNames ? '' : 'periodNo')
+    ..aOS(2, _omitFieldNames ? '' : 'periodStart')
+    ..aOS(3, _omitFieldNames ? '' : 'periodEnd')
+    ..aOS(4, _omitFieldNames ? '' : 'status')
+    ..aOS(5, _omitFieldNames ? '' : 'amount')
+    ..aOS(6, _omitFieldNames ? '' : 'paidAt')
+    ..aOS(7, _omitFieldNames ? '' : 'invoiceNo')
+    ..aOS(8, _omitFieldNames ? '' : 'externalRef')
+    ..aOS(9, _omitFieldNames ? '' : 'note')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SubscriptionPeriod clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  SubscriptionPeriod copyWith(void Function(SubscriptionPeriod) updates) =>
+      super.copyWith((message) => updates(message as SubscriptionPeriod))
+          as SubscriptionPeriod;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use SubscriptionPeriod() / SubscriptionPeriod.new instead')
+  static SubscriptionPeriod create() => SubscriptionPeriod._();
+  static $pb.GeneratedMessage $_createMessage() => SubscriptionPeriod._();
+  @$core.override
+  SubscriptionPeriod createEmptyInstance() => SubscriptionPeriod._();
+  @$core.pragma('dart2js:noInline')
+  static SubscriptionPeriod getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<SubscriptionPeriod>(
+          SubscriptionPeriod.$_createMessage);
+  static SubscriptionPeriod? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.int get periodNo => $_getIZ(0);
+  @$pb.TagNumber(1)
+  set periodNo($core.int value) => $_setSignedInt32(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPeriodNo() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPeriodNo() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get periodStart => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set periodStart($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasPeriodStart() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearPeriodStart() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get periodEnd => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set periodEnd($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasPeriodEnd() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearPeriodEnd() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get status => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set status($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasStatus() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearStatus() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get amount => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set amount($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasAmount() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearAmount() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get paidAt => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set paidAt($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasPaidAt() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearPaidAt() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get invoiceNo => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set invoiceNo($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasInvoiceNo() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearInvoiceNo() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.String get externalRef => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set externalRef($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasExternalRef() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearExternalRef() => $_clearField(8);
+
+  @$pb.TagNumber(9)
+  $core.String get note => $_getSZ(8);
+  @$pb.TagNumber(9)
+  set note($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasNote() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearNote() => $_clearField(9);
+}
+
+class ListSubscriptionPeriodsResponse extends $pb.GeneratedMessage {
+  factory ListSubscriptionPeriodsResponse({
+    $core.Iterable<SubscriptionPeriod>? periods,
+  }) {
+    final result = ListSubscriptionPeriodsResponse._();
+    if (periods != null) result.periods.addAll(periods);
+    return result;
+  }
+
+  ListSubscriptionPeriodsResponse._();
+
+  factory ListSubscriptionPeriodsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListSubscriptionPeriodsResponse()..mergeFromBuffer(data, registry);
+  factory ListSubscriptionPeriodsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListSubscriptionPeriodsResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListSubscriptionPeriodsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: ListSubscriptionPeriodsResponse.$_createMessage)
+    ..pPM<SubscriptionPeriod>(1, _omitFieldNames ? '' : 'periods',
+        subBuilder: SubscriptionPeriod.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListSubscriptionPeriodsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListSubscriptionPeriodsResponse copyWith(
+          void Function(ListSubscriptionPeriodsResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as ListSubscriptionPeriodsResponse))
+          as ListSubscriptionPeriodsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListSubscriptionPeriodsResponse() / ListSubscriptionPeriodsResponse.new instead')
+  static ListSubscriptionPeriodsResponse create() =>
+      ListSubscriptionPeriodsResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      ListSubscriptionPeriodsResponse._();
+  @$core.override
+  ListSubscriptionPeriodsResponse createEmptyInstance() =>
+      ListSubscriptionPeriodsResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ListSubscriptionPeriodsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListSubscriptionPeriodsResponse>(
+          ListSubscriptionPeriodsResponse.$_createMessage);
+  static ListSubscriptionPeriodsResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<SubscriptionPeriod> get periods => $_getList(0);
+}
+
 /// GetTenantEntitlementsRequest:租戶端唯讀投影(自己的公司;前端據此 disable 按鈕與顯示用量)。
 class GetTenantEntitlementsRequest extends $pb.GeneratedMessage {
   factory GetTenantEntitlementsRequest() => GetTenantEntitlementsRequest._();
@@ -4618,6 +4892,16 @@ class PlatformAdminServiceApi {
           $pb.ClientContext? ctx, GetOperatorSelfRequest request) =>
       _client.invoke<GetOperatorSelfResponse>(ctx, 'PlatformAdminService',
           'GetOperatorSelf', request, GetOperatorSelfResponse());
+
+  /// 未結項 #28：某訂閱的期別歷史（租戶詳情的「期別」段；spec §2.4）。
+  $async.Future<ListSubscriptionPeriodsResponse> listSubscriptionPeriods(
+          $pb.ClientContext? ctx, ListSubscriptionPeriodsRequest request) =>
+      _client.invoke<ListSubscriptionPeriodsResponse>(
+          ctx,
+          'PlatformAdminService',
+          'ListSubscriptionPeriods',
+          request,
+          ListSubscriptionPeriodsResponse());
 }
 
 /// TenantEntitlementService:租戶端權益投影(租戶 session;唯讀)。

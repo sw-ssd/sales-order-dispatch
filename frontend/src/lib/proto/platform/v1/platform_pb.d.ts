@@ -1506,6 +1506,104 @@ export declare type GetOperatorSelfResponse = Message<"platform.v1.GetOperatorSe
 export declare const GetOperatorSelfResponseSchema: GenMessage<GetOperatorSelfResponse>;
 
 /**
+ * @generated from message platform.v1.ListSubscriptionPeriodsRequest
+ */
+export declare type ListSubscriptionPeriodsRequest = Message<"platform.v1.ListSubscriptionPeriodsRequest"> & {
+  /**
+   * @generated from field: string company_id = 1;
+   */
+  companyId: string;
+};
+
+/**
+ * Describes the message platform.v1.ListSubscriptionPeriodsRequest.
+ * Use `create(ListSubscriptionPeriodsRequestSchema)` to create a new message.
+ */
+export declare const ListSubscriptionPeriodsRequestSchema: GenMessage<ListSubscriptionPeriodsRequest>;
+
+/**
+ * @generated from message platform.v1.SubscriptionPeriod
+ */
+export declare type SubscriptionPeriod = Message<"platform.v1.SubscriptionPeriod"> & {
+  /**
+   * @generated from field: int32 period_no = 1;
+   */
+  periodNo: number;
+
+  /**
+   * RFC3339
+   *
+   * @generated from field: string period_start = 2;
+   */
+  periodStart: string;
+
+  /**
+   * RFC3339
+   *
+   * @generated from field: string period_end = 3;
+   */
+  periodEnd: string;
+
+  /**
+   * open | paid | void
+   *
+   * @generated from field: string status = 4;
+   */
+  status: string;
+
+  /**
+   * 兩位小數字串
+   *
+   * @generated from field: string amount = 5;
+   */
+  amount: string;
+
+  /**
+   * RFC3339，可空
+   *
+   * @generated from field: string paid_at = 6;
+   */
+  paidAt: string;
+
+  /**
+   * @generated from field: string invoice_no = 7;
+   */
+  invoiceNo: string;
+
+  /**
+   * @generated from field: string external_ref = 8;
+   */
+  externalRef: string;
+
+  /**
+   * @generated from field: string note = 9;
+   */
+  note: string;
+};
+
+/**
+ * Describes the message platform.v1.SubscriptionPeriod.
+ * Use `create(SubscriptionPeriodSchema)` to create a new message.
+ */
+export declare const SubscriptionPeriodSchema: GenMessage<SubscriptionPeriod>;
+
+/**
+ * @generated from message platform.v1.ListSubscriptionPeriodsResponse
+ */
+export declare type ListSubscriptionPeriodsResponse = Message<"platform.v1.ListSubscriptionPeriodsResponse"> & {
+  /**
+   * @generated from field: repeated platform.v1.SubscriptionPeriod periods = 1;
+   */
+  periods: SubscriptionPeriod[];
+};
+
+/**
+ * Describes the message platform.v1.ListSubscriptionPeriodsResponse.
+ * Use `create(ListSubscriptionPeriodsResponseSchema)` to create a new message.
+ */
+export declare const ListSubscriptionPeriodsResponseSchema: GenMessage<ListSubscriptionPeriodsResponse>;
+
+/**
  * GetTenantEntitlementsRequest:租戶端唯讀投影(自己的公司;前端據此 disable 按鈕與顯示用量)。
  *
  * @generated from message platform.v1.GetTenantEntitlementsRequest
@@ -1764,6 +1862,16 @@ export declare const PlatformAdminService: GenService<{
     methodKind: "unary";
     input: typeof GetOperatorSelfRequestSchema;
     output: typeof GetOperatorSelfResponseSchema;
+  },
+  /**
+   * 未結項 #28：某訂閱的期別歷史（租戶詳情的「期別」段；spec §2.4）。
+   *
+   * @generated from rpc platform.v1.PlatformAdminService.ListSubscriptionPeriods
+   */
+  listSubscriptionPeriods: {
+    methodKind: "unary";
+    input: typeof ListSubscriptionPeriodsRequestSchema;
+    output: typeof ListSubscriptionPeriodsResponseSchema;
   },
 }>;
 

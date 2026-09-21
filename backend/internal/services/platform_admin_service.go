@@ -51,6 +51,7 @@ type platformStore interface {
 	PlanEntitlements(ctx context.Context, planCode string) ([]FeatureEntitlementRow, []FeatureRow, error)
 	ListPlatformAudit(ctx context.Context, targetType, targetID string, page, pageSize int32) ([]PlatformAuditRow, int, error)
 	ListReceivables(ctx context.Context, page, pageSize int32) ([]ReceivableRow, int, error)
+	PeriodsBySubscription(ctx context.Context, companyID string) ([]platformstore.Period, error)
 
 	// --- T9 的寫入(資料與稽核同一個交易) ---
 	//
@@ -1090,6 +1091,38 @@ func marshalAuditImage(m map[string]any) ([]byte, error) {
 //
 // 角色來自 operatorauth 從**資料庫白名單列**讀出的身分(token 只是載體;每次請求都查 status
 // 與 role),故改了 role 立刻生效。
+// ListSubscriptionPeriods 回某租戶現行訂閱的期別歷史（未結項 #28：租戶詳情的「期別」段）。
+// 只讀投影：無訂閱回空（不是 404 —— GetTenant 已判定公司存在）；金额以兩位小數字串出。
+func (s *PlatformAdminService) ListSubscriptionPeriods(ctx context.Context,
+	req *connect.Request[platformv1.ListSubscriptionPeriodsRequest]) (*connect.Response[platformv1.ListSubscriptionPeriodsResponse], error) {
+	if _, err := requireOperatorIdentity(ctx); err != nil {
+		return nil, err
+	}
+	rawID := strings.TrimSpace(req.Msg.GetCompanyId())
+	if _, err := platformCompanyID(rawID); err != nil {
+		return nil, err
+	}
+	periods, err := s.st.PeriodsBySubscription(ctx, rawID)
+	if err != nil {
+		return nil, platformError(err)
+	}
+	out := make([]*platformv1.SubscriptionPeriod, 0, len(periods))
+	for _, p := range periods {
+		out = append(out, &platformv1.SubscriptionPeriod{
+			PeriodNo:    int32(p.PeriodNo),
+			PeriodStart: formatTime(&p.PeriodStart),
+			PeriodEnd:   formatTime(&p.PeriodEnd),
+			Status:      p.Status,
+			Amount:      money.FormatCents(p.AmountCents),
+			PaidAt:      formatTime(p.PaidAt),
+			InvoiceNo:   p.InvoiceNo,
+			ExternalRef: p.ExternalRef,
+			Note:        p.Note,
+		})
+	}
+	return connect.NewResponse(&platformv1.ListSubscriptionPeriodsResponse{Periods: out}), nil
+}
+
 // GetOperatorSelf 回自己的 operator 身分（未結項 #23：console 依角色隱藏操作）。
 // 後端仍是唯一決策者（各 RPC 的 requireAdmin／Interceptor 照擋）；前端只據此 disable。
 func (s *PlatformAdminService) GetOperatorSelf(ctx context.Context,

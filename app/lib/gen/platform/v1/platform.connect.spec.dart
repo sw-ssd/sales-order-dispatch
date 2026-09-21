@@ -154,6 +154,14 @@ abstract final class PlatformAdminService {
     platformv1platform.GetOperatorSelfRequest.new,
     platformv1platform.GetOperatorSelfResponse.new,
   );
+
+  /// 未結項 #28：某訂閱的期別歷史（租戶詳情的「期別」段；spec §2.4）。
+  static const listSubscriptionPeriods = connect.Spec(
+    '/$name/ListSubscriptionPeriods',
+    connect.StreamType.unary,
+    platformv1platform.ListSubscriptionPeriodsRequest.new,
+    platformv1platform.ListSubscriptionPeriodsResponse.new,
+  );
 }
 /// TenantEntitlementService:租戶端權益投影(租戶 session;唯讀)。
 abstract final class TenantEntitlementService {
