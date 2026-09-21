@@ -147,6 +147,11 @@ func (b *Billing) EnsureNextPeriod(ctx context.Context, companyID int, now time.
 // ExpireTrials 掃描 **trialing 且試用已到期**的訂閱 → past_due（設 grace_until = now + graceDays），
 // 回傳實際轉移的筆數。
 //
+// 未結項 #41：試用期長於一期時，第一期在試用期間到期**不被催收**（MarkPastDue 只掃 active）
+// —— 但這是刻意的：催收 trialing 等於向試用客戶要錢；試用到期由本函式轉 past_due 後，
+// 既有催收／凍結鏈照常接手。「試用期不開帳」是另一個產品選項（需同時改 EnsureNextPeriod
+// 不替 trialing 開期＋催收謂詞），改之前不得動此謂詞。
+//
 // 為什麼需要（這是開通介面的閉環；沒有它，試用就是無上界的免費放行）：
 //   - 判定層把 trialing 當**可用**（entitlements.usable）→ 試用到期的租戶照樣使用全部權益；
 //   - EnsureNextPeriod 把 trialing 當**服務中** → 每期繼續開出 open 的未付期別（帳一直累積）；
