@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<style>
+body { font-family: "Noto Sans CJK TC", sans-serif; font-size: 12px; }
+h1 { font-size: 20px; }
+h2 { font-size: 16px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { border: 1px solid #333; padding: 4px 6px; text-align: left; }
+thead { display: table-header-group; }
+</style>
+</head>
+<body>
+<h1>加工單</h1>
+<p>{{.CompanyName}}｜車次 {{.RouteCode}} {{.RouteName}}｜出貨日期 {{.TargetDate}}</p>
+<h2>加工室揀</h2>
+<table>
+<thead><tr><th>倉別</th><th>品名</th><th>原始數量</th><th>單位</th><th>處理規格</th><th>加工後數量</th></tr></thead>
+<tbody>
+{{range .Workshop}}<tr><td>{{.Warehouse}}</td><td>{{.Name}}</td><td>{{.Qty}}</td><td>{{.Unit}}</td><td>{{.Spec}}</td><td></td></tr>{{end}}
+</tbody>
+</table>
+<h2>配送揀</h2>
+<table>
+<thead><tr><th>店家</th><th>品名</th><th>原始數量</th><th>單位</th><th>備註</th><th>加工後數量</th></tr></thead>
+<tbody>
+{{range .Delivery}}<tr><td>{{.Store}}</td><td>{{.Name}}</td><td>{{.Qty}}</td><td>{{.Unit}}</td><td>{{.Spec}}</td><td></td></tr>{{end}}
+</tbody>
+</table>
+</body>
+</html>

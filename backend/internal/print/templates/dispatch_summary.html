@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<style>
+body { font-family: "Noto Sans CJK TC", sans-serif; font-size: 12px; }
+h1 { font-size: 20px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { border: 1px solid #333; padding: 4px 6px; text-align: left; }
+thead { display: table-header-group; }
+.store { page-break-inside: avoid; }
+</style>
+</head>
+<body>
+<h1>單車總表</h1>
+<p>{{.CompanyName}}｜車次 {{.RouteCode}} {{.RouteName}}｜出貨日期 {{.TargetDate}}｜列印時間 {{.PrintedAt}}</p>
+{{range .Stores}}
+<div class="store">
+<h2>{{.Sequence}} {{.Name}} ({{.CustomerCode}}) — {{.Address}}</h2>
+<table>
+<thead><tr><th>品名</th><th>數量</th><th>單位</th><th>備註</th></tr></thead>
+<tbody>
+{{range .Items}}<tr><td>{{.Name}}</td><td>{{.Qty}}</td><td>{{.Unit}}</td><td>{{.SpecialCut}}</td></tr>{{end}}
+</tbody>
+</table>
+</div>
+{{end}}
+</body>
+</html>

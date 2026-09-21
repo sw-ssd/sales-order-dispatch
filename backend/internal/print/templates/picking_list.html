@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<style>
+body { font-family: "Noto Sans CJK TC", sans-serif; font-size: 12px; }
+h1 { font-size: 20px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { border: 1px solid #333; padding: 4px 6px; text-align: left; }
+thead { display: table-header-group; }
+</style>
+</head>
+<body>
+<h1>揀貨單</h1>
+<p>{{.CompanyName}}｜車次 {{.RouteCode}} {{.RouteName}}｜出貨日期 {{.TargetDate}}｜倉別 {{.WarehouseName}}</p>
+<table>
+<thead><tr><th>分類</th><th>品名</th><th>數量(基本單位)</th><th>單位</th><th>需加工</th><th>核對</th></tr></thead>
+<tbody>
+{{range .Rows}}<tr><td>{{.Category}}</td><td>{{.Name}}</td><td>{{.BaseQty}}</td><td>{{.Unit}}</td><td>{{if .NeedsCut}}需加工{{end}}</td><td></td></tr>{{end}}
+</tbody>
+</table>
+</body>
+</html>
