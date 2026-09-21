@@ -60,8 +60,12 @@ type eventAction struct {
 // 寬限期內仍提供服務(凍結由 subscription.suspended 負責),期別事件目前只供通知。它們走未對應分支:
 // 記一行 log 後認領 —— 不認領的話排程每趟都會重掃同一筆(無限循環)。
 var actions = map[string]eventAction{
-	"subscription.suspended":   {company.StatusSuspended, "訂閱逾期未付（排程凍結）"},
-	"subscription.expired":     {company.StatusSuspended, "訂閱已取消且期末已過（排程凍結）"},
+	"subscription.suspended": {company.StatusSuspended, "訂閱逾期未付（排程凍結）"},
+	"subscription.expired":   {company.StatusSuspended, "訂閱已取消且期末已過（排程凍結）"},
+	// 未結項 #17:reactivated 不分停用來源 —— 公司狀態只有一個列舉，管理員手動停用
+	// （UpdateCompany 的 suspended）與排程凍結共用同一個值，故補款復原會一併解除
+	// 手動停用。這是裁定映射表所定（spec §5.2：suspended → active 由收款觸發），
+	// 非缺陷；若產品要區分停用來源，需另加來源欄位（migration＋狀態機＋consumer 三處）。
 	"subscription.reactivated": {company.StatusActive, "訂閱補款復原（排程解除凍結）"},
 }
 
