@@ -497,12 +497,21 @@ func (s *PlatformAdminService) CreateSubscription(ctx context.Context,
 		ActorOperatorID: id.OperatorID,
 		Reason:          req.Msg.GetReason(),
 	}
+	// 未結項 #36:先驗公司存在。沒有這道閘，不存在的 company_id 會一路走到 INSERT 才被
+	// subscriptions_company_id_fkey 擋下 —— 而 FK 23503 走 toConnectError 的 default 分支，
+	// 對外是 SYS-9000(5xx＝「重試」)，但重試永遠不會成功。GetTenant 已是「公司存在」的
+	// 唯一讀取(不存在 → store.ErrNotFound → SYS-4002)，故不另開查詢。
+	// 順序在 trial_ends_at 解析**之後**：參數錯誤(SYS-1001)優先於存在檢查(SYS-4002)，
+	// 否則格式錯誤的請求會先被報成「公司不存在」。
 	if raw := strings.TrimSpace(req.Msg.GetTrialEndsAt()); raw != "" {
 		trialEnds, err := time.Parse(time.RFC3339, raw)
 		if err != nil {
 			return nil, errcode.SysInvalidArgument.Error(map[string]string{"field": "trial_ends_at"})
 		}
 		in.TrialEnds = &trialEnds
+	}
+	if _, _, err := s.st.GetTenant(ctx, req.Msg.GetCompanyId()); err != nil {
+		return nil, platformError(err)
 	}
 	created, err := s.billing.CreateSubscription(ctx, in)
 	if err != nil {

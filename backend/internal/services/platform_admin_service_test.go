@@ -284,6 +284,11 @@ func (f *fakePlatformStore) GetTenant(context.Context, string) (*TenantRow, []Te
 	if f.err != nil {
 		return nil, nil, f.err
 	}
+	// nil tenant ＝ 公司不存在（真實作的 store.ErrNotFound）：回 nil,nil,nil 等於
+	// 「公司存在但沒有任何資料」，呼叫端無法分辨。
+	if f.tenant == nil {
+		return nil, nil, platformstore.ErrNotFound
+	}
 	return f.tenant, f.overrides, nil
 }
 

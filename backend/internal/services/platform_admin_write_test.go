@@ -254,6 +254,9 @@ func newWriteHarness(used int) (*PlatformAdminService, *fakePlatformStore, *reco
 	st := &fakePlatformStore{
 		writes:   &fakeWrites{},
 		settings: map[string]string{"trial_days": "14", "grace_days": "7", "lead_days": "14"},
+		// tenant 供 CreateSubscription 的「公司存在」檢查:nil 會被 GetTenant 當成
+		// store.ErrNotFound（見 fakePlatformStore.GetTenant），故夾具預設要有一家公司。
+		tenant: &TenantRow{CompanyID: "42", CompanyName: "甲公司", Status: "none"},
 	}
 	book := platformstore.NewFakeBilling()
 	book.PutPlan("std", 1)
@@ -667,6 +670,27 @@ func TestChangePlanSamePlanIsNoOpWithoutAudit(t *testing.T) {
 // TestCreateSubscriptionRPCValidatesTrialEndsAt 驗 RPC 這一層的兩個參數決定:
 // trial_ends_at 必須是 RFC3339(只填日期會被擋 —— 那會被解析成「當天 00:00」而看起來像過期),
 // 以及成功的回應要帶得出 console 需要的東西(訂閱 id／狀態／方案／週期／席位／第一期)。
+// 未結項 #36:開通時傳入不存在的 company_id → FK 23503 被收成 SYS-9000。
+// console 只能選既有租戶故僅自製客戶端可達，但 5xx 等於告訴呼叫端「重試」，而重試永遠不會成功。
+func TestCreateSubscriptionRejectsUnknownCompany(t *testing.T) {
+	svc, st, cache, _ := newWriteHarness(0)
+	st.tenant = nil
+	_, err := svc.CreateSubscription(withOperator(context.Background()),
+		connect.NewRequest(&platformv1.CreateSubscriptionRequest{
+			CompanyId: "987654", PlanCode: "std", BillingCycle: "monthly", SeatCount: 3,
+			Reason: "開通"}))
+	if err == nil {
+		t.Fatal("不存在的公司不得開通")
+	}
+	if got := errorInfoOf(t, err).GetCode(); got != "SYS-4002" {
+		t.Fatalf("必須是 SYS-4002（不存在）,got %q (%v)", got, err)
+	}
+	assertNoWrites(t, st)
+	if len(cache.deleted) != 0 {
+		t.Fatalf("失敗不得失效快取,got %v", cache.deleted)
+	}
+}
+
 func TestCreateSubscriptionRPCValidatesTrialEndsAt(t *testing.T) {
 	svc, st, cache, _ := newWriteHarness(0)
 	ctx := withOperator(context.Background())
