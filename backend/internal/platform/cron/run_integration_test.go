@@ -163,12 +163,25 @@ func TestIntegrationRunOnceOverdueFreesTenant(t *testing.T) {
 		`REVOKE EXECUTE ON FUNCTION pg_advisory_unlock(bigint) FROM PUBLIC`); err != nil {
 		t.Fatalf("收回 pg_advisory_unlock 的執行權: %v", err)
 	}
+	// 未結項 #19:還原排在 t.Fatalf 之後 —— REVOKE 成功後若解鎖斷言失敗，
+	// 整個庫的 pg_advisory_unlock 執行權就殘缺，後續測試全滅。還原必須走 Cleanup。
+	// Cleanup 跑在 adminDB.Close() 的 defer 之後（:48 先註冊先跑？不 —— defer 後註冊先跑，
+	// Cleanup 總是在所有 defer 之前），故還原不得用 adminDB 池 —— 開一條新連線。
+	// （教訓：第一版用 adminDB 直接還原，Cleanup 時池已關 → sql: database is closed。）
+	t.Cleanup(func() {
+		db, err := sql.Open("pgx", dsn)
+		if err != nil {
+			t.Errorf("還原 pg_advisory_unlock：開連線: %v", err)
+			return
+		}
+		defer func() { _ = db.Close() }()
+		if _, err := db.ExecContext(context.Background(),
+			`GRANT EXECUTE ON FUNCTION pg_advisory_unlock(bigint) TO PUBLIC`); err != nil {
+			t.Errorf("還原 pg_advisory_unlock 的執行權: %v", err)
+		}
+	})
 	if err := releaseDoomed(ctx); err == nil {
 		t.Fatal("解鎖失敗必須回報錯誤,不得靜默宣稱已釋放")
-	}
-	if _, err := adminDB.ExecContext(ctx,
-		`GRANT EXECUTE ON FUNCTION pg_advisory_unlock(bigint) TO PUBLIC`); err != nil {
-		t.Fatalf("還原 pg_advisory_unlock 的執行權: %v", err)
 	}
 	if !waitLockFree(t, ctx, adminDB) {
 		t.Fatal("解鎖失敗後那條連線必須被丟棄(鎖已真的放掉),否則同一行程的下一趟會擋住自己")
