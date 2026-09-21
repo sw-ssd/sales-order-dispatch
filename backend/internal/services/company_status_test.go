@@ -115,6 +115,8 @@ func TestSetCompanyStatusRequiresTenantTx(t *testing.T) {
 
 	if err := SetCompanyStatus(bg, db, co.ID, company.StatusSuspended, "欠費停用", statusActor); err == nil {
 		t.Fatal("沒有請求交易不得變更狀態")
+	} else if connect.CodeOf(err) != connect.CodeInternal {
+		t.Fatalf("缺交易應回 Internal（呼叫端未提供交易邊界）,got %v", err)
 	}
 	if got := db.Company.GetX(bg, co.ID); got.Status != company.StatusActive {
 		t.Fatalf("被拒的變更不得改到狀態,got %s", got.Status)
