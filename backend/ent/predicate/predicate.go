@@ -54,6 +54,15 @@ type RolePermission func(*sql.Selector)
 // Route is the predicate function for route builders.
 type Route func(*sql.Selector)
 
+// SalesOrder is the predicate function for salesorder builders.
+type SalesOrder func(*sql.Selector)
+
+// SalesOrderEvent is the predicate function for salesorderevent builders.
+type SalesOrderEvent func(*sql.Selector)
+
+// SalesOrderItem is the predicate function for salesorderitem builders.
+type SalesOrderItem func(*sql.Selector)
+
 // User is the predicate function for user builders.
 type User func(*sql.Selector)
 

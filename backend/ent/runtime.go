@@ -21,6 +21,9 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/ent/rolepermission"
 	"github.com/salesorder/sales-order-1.0/backend/ent/route"
+	"github.com/salesorder/sales-order-1.0/backend/ent/salesorder"
+	"github.com/salesorder/sales-order-1.0/backend/ent/salesorderevent"
+	"github.com/salesorder/sales-order-1.0/backend/ent/salesorderitem"
 	"github.com/salesorder/sales-order-1.0/backend/ent/schema"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/ent/warehouse"
@@ -368,6 +371,78 @@ func init() {
 	route.DefaultUpdatedAt = routeDescUpdatedAt.Default.(func() time.Time)
 	// route.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	route.UpdateDefaultUpdatedAt = routeDescUpdatedAt.UpdateDefault.(func() time.Time)
+	salesorderFields := schema.SalesOrder{}.Fields()
+	_ = salesorderFields
+	// salesorderDescOrderNo is the schema descriptor for order_no field.
+	salesorderDescOrderNo := salesorderFields[2].Descriptor()
+	// salesorder.OrderNoValidator is a validator for the "order_no" field. It is called by the builders before save.
+	salesorder.OrderNoValidator = salesorderDescOrderNo.Validators[0].(func(string) error)
+	// salesorderDescSource is the schema descriptor for source field.
+	salesorderDescSource := salesorderFields[4].Descriptor()
+	// salesorder.SourceValidator is a validator for the "source" field. It is called by the builders before save.
+	salesorder.SourceValidator = salesorderDescSource.Validators[0].(func(string) error)
+	// salesorderDescStatus is the schema descriptor for status field.
+	salesorderDescStatus := salesorderFields[5].Descriptor()
+	// salesorder.DefaultStatus holds the default value on creation for the status field.
+	salesorder.DefaultStatus = salesorderDescStatus.Default.(string)
+	// salesorder.StatusValidator is a validator for the "status" field. It is called by the builders before save.
+	salesorder.StatusValidator = salesorderDescStatus.Validators[0].(func(string) error)
+	// salesorderDescVersion is the schema descriptor for version field.
+	salesorderDescVersion := salesorderFields[13].Descriptor()
+	// salesorder.DefaultVersion holds the default value on creation for the version field.
+	salesorder.DefaultVersion = salesorderDescVersion.Default.(int)
+	// salesorderDescCreatedAt is the schema descriptor for created_at field.
+	salesorderDescCreatedAt := salesorderFields[16].Descriptor()
+	// salesorder.DefaultCreatedAt holds the default value on creation for the created_at field.
+	salesorder.DefaultCreatedAt = salesorderDescCreatedAt.Default.(func() time.Time)
+	// salesorderDescUpdatedAt is the schema descriptor for updated_at field.
+	salesorderDescUpdatedAt := salesorderFields[17].Descriptor()
+	// salesorder.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	salesorder.DefaultUpdatedAt = salesorderDescUpdatedAt.Default.(func() time.Time)
+	// salesorder.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	salesorder.UpdateDefaultUpdatedAt = salesorderDescUpdatedAt.UpdateDefault.(func() time.Time)
+	salesordereventFields := schema.SalesOrderEvent{}.Fields()
+	_ = salesordereventFields
+	// salesordereventDescEventType is the schema descriptor for event_type field.
+	salesordereventDescEventType := salesordereventFields[2].Descriptor()
+	// salesorderevent.EventTypeValidator is a validator for the "event_type" field. It is called by the builders before save.
+	salesorderevent.EventTypeValidator = salesordereventDescEventType.Validators[0].(func(string) error)
+	// salesordereventDescCreatedAt is the schema descriptor for created_at field.
+	salesordereventDescCreatedAt := salesordereventFields[6].Descriptor()
+	// salesorderevent.DefaultCreatedAt holds the default value on creation for the created_at field.
+	salesorderevent.DefaultCreatedAt = salesordereventDescCreatedAt.Default.(func() time.Time)
+	salesorderitemFields := schema.SalesOrderItem{}.Fields()
+	_ = salesorderitemFields
+	// salesorderitemDescDisplayName is the schema descriptor for display_name field.
+	salesorderitemDescDisplayName := salesorderitemFields[4].Descriptor()
+	// salesorderitem.DisplayNameValidator is a validator for the "display_name" field. It is called by the builders before save.
+	salesorderitem.DisplayNameValidator = salesorderitemDescDisplayName.Validators[0].(func(string) error)
+	// salesorderitemDescQty is the schema descriptor for qty field.
+	salesorderitemDescQty := salesorderitemFields[5].Descriptor()
+	// salesorderitem.QtyValidator is a validator for the "qty" field. It is called by the builders before save.
+	salesorderitem.QtyValidator = salesorderitemDescQty.Validators[0].(func(string) error)
+	// salesorderitemDescUnit is the schema descriptor for unit field.
+	salesorderitemDescUnit := salesorderitemFields[6].Descriptor()
+	// salesorderitem.UnitValidator is a validator for the "unit" field. It is called by the builders before save.
+	salesorderitem.UnitValidator = salesorderitemDescUnit.Validators[0].(func(string) error)
+	// salesorderitemDescBaseQty is the schema descriptor for base_qty field.
+	salesorderitemDescBaseQty := salesorderitemFields[7].Descriptor()
+	// salesorderitem.BaseQtyValidator is a validator for the "base_qty" field. It is called by the builders before save.
+	salesorderitem.BaseQtyValidator = salesorderitemDescBaseQty.Validators[0].(func(string) error)
+	// salesorderitemDescSortOrder is the schema descriptor for sort_order field.
+	salesorderitemDescSortOrder := salesorderitemFields[11].Descriptor()
+	// salesorderitem.DefaultSortOrder holds the default value on creation for the sort_order field.
+	salesorderitem.DefaultSortOrder = salesorderitemDescSortOrder.Default.(int)
+	// salesorderitemDescCreatedAt is the schema descriptor for created_at field.
+	salesorderitemDescCreatedAt := salesorderitemFields[12].Descriptor()
+	// salesorderitem.DefaultCreatedAt holds the default value on creation for the created_at field.
+	salesorderitem.DefaultCreatedAt = salesorderitemDescCreatedAt.Default.(func() time.Time)
+	// salesorderitemDescUpdatedAt is the schema descriptor for updated_at field.
+	salesorderitemDescUpdatedAt := salesorderitemFields[13].Descriptor()
+	// salesorderitem.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	salesorderitem.DefaultUpdatedAt = salesorderitemDescUpdatedAt.Default.(func() time.Time)
+	// salesorderitem.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	salesorderitem.UpdateDefaultUpdatedAt = salesorderitemDescUpdatedAt.UpdateDefault.(func() time.Time)
 	userFields := schema.User{}.Fields()
 	_ = userFields
 	// userDescEmail is the schema descriptor for email field.

@@ -28,6 +28,9 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/ent/rolepermission"
 	"github.com/salesorder/sales-order-1.0/backend/ent/route"
+	"github.com/salesorder/sales-order-1.0/backend/ent/salesorder"
+	"github.com/salesorder/sales-order-1.0/backend/ent/salesorderevent"
+	"github.com/salesorder/sales-order-1.0/backend/ent/salesorderitem"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/ent/warehouse"
 )
@@ -106,6 +109,9 @@ func checkColumn(t, c string) error {
 			role.Table:                  role.ValidColumn,
 			rolepermission.Table:        rolepermission.ValidColumn,
 			route.Table:                 route.ValidColumn,
+			salesorder.Table:            salesorder.ValidColumn,
+			salesorderevent.Table:       salesorderevent.ValidColumn,
+			salesorderitem.Table:        salesorderitem.ValidColumn,
 			user.Table:                  user.ValidColumn,
 			warehouse.Table:             warehouse.ValidColumn,
 		})

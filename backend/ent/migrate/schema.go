@@ -445,6 +445,108 @@ var (
 			},
 		},
 	}
+	// SalesOrdersColumns holds the columns for the "sales_orders" table.
+	SalesOrdersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "company_id", Type: field.TypeInt},
+		{Name: "department_id", Type: field.TypeInt, Nullable: true},
+		{Name: "order_no", Type: field.TypeString},
+		{Name: "customer_id", Type: field.TypeInt},
+		{Name: "source", Type: field.TypeString},
+		{Name: "status", Type: field.TypeString, Default: "pending"},
+		{Name: "expected_delivery_date", Type: field.TypeTime, Nullable: true},
+		{Name: "sales_rep_id", Type: field.TypeInt, Nullable: true},
+		{Name: "note", Type: field.TypeString, Nullable: true},
+		{Name: "dispatched_at", Type: field.TypeTime, Nullable: true},
+		{Name: "dispatched_by", Type: field.TypeInt, Nullable: true},
+		{Name: "route_id", Type: field.TypeInt, Nullable: true},
+		{Name: "delivery_sequence", Type: field.TypeInt, Nullable: true},
+		{Name: "version", Type: field.TypeInt, Default: 1},
+		{Name: "created_by", Type: field.TypeInt, Nullable: true},
+		{Name: "updated_by", Type: field.TypeInt, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+	}
+	// SalesOrdersTable holds the schema information for the "sales_orders" table.
+	SalesOrdersTable = &schema.Table{
+		Name:       "sales_orders",
+		Columns:    SalesOrdersColumns,
+		PrimaryKey: []*schema.Column{SalesOrdersColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "salesorder_company_id_order_no",
+				Unique:  false,
+				Columns: []*schema.Column{SalesOrdersColumns[1], SalesOrdersColumns[3]},
+			},
+			{
+				Name:    "salesorder_company_id_department_id_status_expected_delivery_date",
+				Unique:  false,
+				Columns: []*schema.Column{SalesOrdersColumns[1], SalesOrdersColumns[2], SalesOrdersColumns[6], SalesOrdersColumns[7]},
+			},
+			{
+				Name:    "salesorder_customer_id",
+				Unique:  false,
+				Columns: []*schema.Column{SalesOrdersColumns[4]},
+			},
+		},
+	}
+	// SalesOrderEventsColumns holds the columns for the "sales_order_events" table.
+	SalesOrderEventsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "sales_order_id", Type: field.TypeInt},
+		{Name: "company_id", Type: field.TypeInt},
+		{Name: "event_type", Type: field.TypeString},
+		{Name: "actor_id", Type: field.TypeInt},
+		{Name: "reason", Type: field.TypeString, Nullable: true},
+		{Name: "payload", Type: field.TypeJSON, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// SalesOrderEventsTable holds the schema information for the "sales_order_events" table.
+	SalesOrderEventsTable = &schema.Table{
+		Name:       "sales_order_events",
+		Columns:    SalesOrderEventsColumns,
+		PrimaryKey: []*schema.Column{SalesOrderEventsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "salesorderevent_sales_order_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{SalesOrderEventsColumns[1], SalesOrderEventsColumns[7]},
+			},
+		},
+	}
+	// SalesOrderItemsColumns holds the columns for the "sales_order_items" table.
+	SalesOrderItemsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "sales_order_id", Type: field.TypeInt},
+		{Name: "company_id", Type: field.TypeInt},
+		{Name: "department_id", Type: field.TypeInt, Nullable: true},
+		{Name: "product_id", Type: field.TypeInt, Nullable: true},
+		{Name: "display_name", Type: field.TypeString},
+		{Name: "qty", Type: field.TypeString},
+		{Name: "unit", Type: field.TypeString},
+		{Name: "base_qty", Type: field.TypeString},
+		{Name: "processing_spec_id", Type: field.TypeInt, Nullable: true},
+		{Name: "special_cut_note", Type: field.TypeString, Nullable: true},
+		{Name: "warehouse_id", Type: field.TypeInt, Nullable: true},
+		{Name: "sort_order", Type: field.TypeInt, Default: 0},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+	}
+	// SalesOrderItemsTable holds the schema information for the "sales_order_items" table.
+	SalesOrderItemsTable = &schema.Table{
+		Name:       "sales_order_items",
+		Columns:    SalesOrderItemsColumns,
+		PrimaryKey: []*schema.Column{SalesOrderItemsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "salesorderitem_sales_order_id",
+				Unique:  false,
+				Columns: []*schema.Column{SalesOrderItemsColumns[1]},
+			},
+		},
+	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -532,6 +634,9 @@ var (
 		RolesTable,
 		RolePermissionsTable,
 		RoutesTable,
+		SalesOrdersTable,
+		SalesOrderEventsTable,
+		SalesOrderItemsTable,
 		UsersTable,
 		WarehousesTable,
 	}

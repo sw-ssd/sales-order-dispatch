@@ -44,6 +44,12 @@ type Tx struct {
 	RolePermission *RolePermissionClient
 	// Route is the client for interacting with the Route builders.
 	Route *RouteClient
+	// SalesOrder is the client for interacting with the SalesOrder builders.
+	SalesOrder *SalesOrderClient
+	// SalesOrderEvent is the client for interacting with the SalesOrderEvent builders.
+	SalesOrderEvent *SalesOrderEventClient
+	// SalesOrderItem is the client for interacting with the SalesOrderItem builders.
+	SalesOrderItem *SalesOrderItemClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 	// Warehouse is the client for interacting with the Warehouse builders.
@@ -195,6 +201,9 @@ func (tx *Tx) init() {
 	tx.Role = NewRoleClient(tx.config)
 	tx.RolePermission = NewRolePermissionClient(tx.config)
 	tx.Route = NewRouteClient(tx.config)
+	tx.SalesOrder = NewSalesOrderClient(tx.config)
+	tx.SalesOrderEvent = NewSalesOrderEventClient(tx.config)
+	tx.SalesOrderItem = NewSalesOrderItemClient(tx.config)
 	tx.User = NewUserClient(tx.config)
 	tx.Warehouse = NewWarehouseClient(tx.config)
 }
