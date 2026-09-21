@@ -22,6 +22,12 @@ import TenantsPage from "./pages/TenantsPage";
 /** 唯一不需要 operator 的路徑；也是唯一不套外框的路徑。 */
 const LOGIN_ROUTE = "/login";
 
+// 未結項 #25 後半：精確字串對未來的「/login/verify」子路由會誤套外框。
+// 登入家族以後綴「/」邊界判定：/login 與 /login/* 不套外框，/loginox 仍是 console 內頁。
+export function isLoginTree(pathname: string): boolean {
+  return pathname === LOGIN_ROUTE || pathname.startsWith(`${LOGIN_ROUTE}/`);
+}
+
 /**
  * console 自己的路由樹（**不共用**租戶 SPA 的 router 或守衛）。
  *
@@ -35,7 +41,7 @@ const rootRoute = createRootRoute({
   component: () => {
     const pathname = useRouterState({ select: (state) => state.location.pathname });
     return (
-      <Show when={pathname() !== LOGIN_ROUTE} fallback={<Outlet />}>
+      <Show when={!isLoginTree(pathname())} fallback={<Outlet />}>
         <App>
           <Outlet />
         </App>

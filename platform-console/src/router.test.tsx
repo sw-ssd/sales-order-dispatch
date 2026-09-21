@@ -77,4 +77,15 @@ describe("路由守衛", () => {
     expect(screen.queryByRole("button", { name: "登出" })).toBeNull();
     expect(listTenants).not.toHaveBeenCalled();
   });
+
+  // 未結項 #25 後半：「/login」精確字串對未來的「/login/verify」子路由會誤套外框。
+  // RED：目前以 !== 比對，子路由會被包進 console 外框（含需登入的主導覽）。
+  it("未來的 /login 子路由同樣不套外框（前綴比對）", async () => {
+    // 子路由尚未註冊、無法走整棵 router 證明 —— 直接驗外框判定函式（RED：舊寫法對子路由回 false）。
+    const { isLoginTree } = await import("./router");
+    expect(isLoginTree("/login")).toBe(true);
+    expect(isLoginTree("/login/verify")).toBe(true);
+    expect(isLoginTree("/loginox")).toBe(false);
+    expect(isLoginTree("/tenants")).toBe(false);
+  });
 });
