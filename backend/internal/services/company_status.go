@@ -39,7 +39,11 @@ func SetCompanyStatus(ctx context.Context, db *ent.Client, companyID int,
 	if err != nil {
 		return err // InvalidArgument:稽核必須有可歸屬的觸發者,不接受無來源的 actor
 	}
-	cur, err := dbtenant.Client(ctx, db).Company.Query().
+	// 未結項 #3:只用 tx.Client() —— dbtenant.Client(ctx, db) 在 ctx 帶請求交易時回的
+	// 正是同一個 tx.Client()，兩種寫法並存只會讓下一個人以為它們語意不同。
+	// （TxFrom 已保證交易存在，故此處不再需要 fallback 語意。）
+	scoped := tx.Client()
+	cur, err := scoped.Company.Query().
 		Where(company.ID(companyID), company.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return toConnectError(err)
@@ -56,7 +60,7 @@ func SetCompanyStatus(ctx context.Context, db *ent.Client, companyID int,
 
 	// 條件更新:「已軟刪除的公司不得改狀態」是敘述式條件的一部分,不只是前置查詢 ——
 	// 中間沒有可插入的縫(比照 DeleteDepartment 的條件式刪除)。
-	updated, err := tx.Client().Company.UpdateOneID(companyID).
+	updated, err := scoped.Company.UpdateOneID(companyID).
 		Where(company.DeletedAtIsNil()).SetStatus(status).Save(ctx)
 	if err != nil {
 		return toConnectError(err)
