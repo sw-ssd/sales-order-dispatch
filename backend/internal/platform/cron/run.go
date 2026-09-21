@@ -29,8 +29,20 @@ import (
 	"strings"
 	"time"
 
+	"connectrpc.com/connect"
+
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
 )
+
+// isBillingDataError 判斷 EnsureNextPeriod 的失敗是否為「資料問題」(缺價目／週期非法)：
+// 兩者都落在 PlatformSubscriptionInactive → 對外 connect 碼 FailedPrecondition。基礎設施問題
+// (連線中斷／死鎖)是 errcode.SysInternal → Internal，**不得**計入 Unbilled —— 否則一次連線
+// 抖動會讓 Unbilled誤報(而真正的基礎設施錯誤已經在 periodErr 裡)。
+// 用 connect 碼而非字串比對：同一個碼家族代表同一類可行動性(見 PLAT-3002 的字串比對教訓，
+// console 曾依 details.reason 的中文關鍵詞分流 —— 脆弱)。
+func isBillingDataError(err error) bool {
+	return connect.CodeOf(err) == connect.CodeFailedPrecondition
+}
 
 // Billing 為排程驅動的帳務掃描(實作:billing.Billing)。宣告成介面(C-08)是為了讓 RunOnce
 // 能用假 deps 測 —— 掃描語意屬 Task 5,編排語意屬本套件,兩者不該互相綁進容器。
@@ -152,6 +164,10 @@ type Summary struct {
 	PeriodsOpened    int  `json:"periods_opened"`
 	Dispatched       int  `json:"dispatched"`
 	Receivables      int  `json:"receivables"`
+	// Unbilled 為「服務中卻沒有 open 期別」的租戶數(未結項 #14):最新一期已 paid／void 且
+	// 下一期開不出來(價目缺失／週期非法)的訂閱，會永遠停在 active —— 既不被催收(只掃 open)、
+	// 也不再被開帳(逐租戶失敗只記進 log)。這個數字是 operator 唯一能從摘要看見它的地方。
+	Unbilled int `json:"unbilled"`
 }
 
 // RunOnce 執行一趟完整排程:**試用到期 → 逾期 → 凍結(停用欠費、取消到期) → 產生期別 → 派送事件**。
@@ -216,6 +232,13 @@ func runOnceGuarded(ctx context.Context, deps Deps, now time.Time, p Params) (s 
 			// 每個租戶各自一個交易,其他租戶的期別照開。
 			if periodErr == nil {
 				periodErr = fmt.Errorf("產生期別(company=%d): %w", sub.CompanyID, err)
+			}
+			// 未結項 #14:服務中卻沒有 open 期別 → 摘要必須看得見。下一期開不出來的兩種
+			// 「資料問題」(缺價目／週期非法)都落在 errcode.PlatformSubscriptionInactive，
+			// 而「基礎設施問題」(連線中斷／死鎖)是 errcode.SysInternal —— 只數前者，
+			// 否則一次連線抖動會讓 Unbilled 誤報(而真正的基礎設施錯誤已經在 periodErr 裡)。
+			if isBillingDataError(err) {
+				s.Unbilled++
 			}
 			continue
 		}

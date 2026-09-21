@@ -225,6 +225,26 @@ func (g *gateStore) PeriodsByStatus(ctx context.Context, status string) ([]store
 	return g.inner.PeriodsByStatus(ctx, status)
 }
 
+// 未結項 #14:服務中卻沒有 open 期別的租戶，排程每一趟都靜默跳過。最新一期已 paid 且下一期
+// 又開不出來(價目缺失)的訂閱，會永遠停在 active —— 既不被催收(只掃 open)，也不再被開帳
+// (逐租戶失敗只記進 log)。這筆狀態必須從 cron 摘要看得見，否則 operator 的帳務視圖與
+// 排程行為長期不一致。
+func TestRunOnceCountsServiceableButUnbilled(t *testing.T) {
+	f := store.NewFakeBilling()
+	// 沒有價目:EnsureNextPeriod 開不出下一期(只記錯誤、不中斷)。
+	seedSub(f, 42, "active", "monthly", nil, at(2026, time.October, 3, 3))
+	deps, _, _, _ := newDeps(f)
+	now := at(2026, time.October, 1, 3)
+
+	s, err := cron.RunOnce(context.Background(), deps, now, cron.Params{GraceDays: 7, LeadDays: 14, EventBatch: 200})
+	if err == nil {
+		t.Fatal("缺價目應讓本趟帶錯誤回來")
+	}
+	if s.Unbilled != 1 {
+		t.Fatalf("服務中卻無 open 期別的租戶應被計入摘要，got %d", s.Unbilled)
+	}
+}
+
 // seedSub 種一列訂閱與它的第 1 期(open),期末由呼叫端決定;回傳訂閱 id。
 func seedSub(f *store.FakeBilling, companyID int, status, cycle string, graceUntil *time.Time, end time.Time) int64 {
 	id := f.PutSubscription(store.Subscription{

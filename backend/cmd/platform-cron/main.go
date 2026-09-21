@@ -111,8 +111,8 @@ func main() {
 	// 同一份摘要兩種呈現:繁中一行給人看、JSON 一行給機器(grep／告警)。
 	// 語意要準:dispatched 是「**本趟認領**的事件數」,不是「已派送 N 筆」—— 沒有產品域動作的
 	// 型別(period.opened…)只被認領,被別的執行搶先認領的也不算。
-	log.Printf("platform-cron 完成(now=%s):逾期 %d 筆、停用 %d 筆、取消到期 %d 筆、產生期別 %d 筆、認領事件 %d 筆、待收款 %d 筆",
+	log.Printf("platform-cron 完成(now=%s):逾期 %d 筆、停用 %d 筆、取消到期 %d 筆、產生期別 %d 筆、認領事件 %d 筆、待收款 %d 筆、服務中無帳單 %d 筆",
 		now.Format(time.RFC3339), summary.PastDue, summary.Suspended, summary.ExpiredCancelled,
-		summary.PeriodsOpened, summary.Dispatched, summary.Receivables)
+		summary.PeriodsOpened, summary.Dispatched, summary.Receivables, summary.Unbilled)
 	log.Printf("platform-cron 摘要(now=%s):%s", now.Format(time.RFC3339), raw)
 }
