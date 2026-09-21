@@ -329,6 +329,20 @@ describe("TenantDetailPage", () => {
     expect(getTenant).toHaveBeenCalledTimes(1);
   });
 
+  it("canOfferSubscription：只在沒有可服務的合約時提供開通（未結項 #39）", async () => {
+    // 與 00029 的部分唯一索引同義：同一家公司只能有一份未取消的合約。
+    // 後端若放寬成「同公司多份合約」，這個函式與本測試要同步放寬。
+    const { canOfferSubscription } = await import("./TenantDetailPage");
+    expect(canOfferSubscription("active")).toBe(false);
+    expect(canOfferSubscription("trialing")).toBe(false);
+    expect(canOfferSubscription("past_due")).toBe(false);
+    expect(canOfferSubscription("suspended")).toBe(false);
+    expect(canOfferSubscription("cancelled")).toBe(true);
+    expect(canOfferSubscription("none")).toBe(true);
+    expect(canOfferSubscription("")).toBe(true);
+    expect(canOfferSubscription(undefined)).toBe(true);
+  });
+
   it("有生效中的合約時不提供開通（後端會回 SYS-2001：同一家公司只能有一份未取消的合約）", async () => {
     renderAt();
     await ready();

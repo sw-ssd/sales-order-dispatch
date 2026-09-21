@@ -244,9 +244,19 @@ function inDaysRFC3339(days: number): string {
 }
 
 /**
- * 開通（CreateSubscription）：建立訂閱與第一期（後端同一個交易）。
+ * canOfferSubscription 判斷是否提供「開通訂閱」按鈕：只在「沒有可服務的合約」時提供。
+ * 已經有生效中的合約時後端會回 SYS-2001（00029 的部分唯一索引：
+ * 同一家公司只能有一份未取消的合約），按了只是白跑一趟。
  *
- * 為什麼要有這個表單：`RecordPayment` 對**沒有合約**的公司回 `PLAT-3001`、`EnsureNextPeriod`
+ * 未結項 #39：後端若放寬成「同公司多份合約」，這個函式要同步放寬
+ * （否則介面比後端保守而不自知）。改這裡時，測試的「生效中合約不提供開通」也要同步改。
+ */
+export function canOfferSubscription(status: string | undefined): boolean {
+  return ["", "none", "cancelled"].includes(status ?? "");
+}
+
+/**
+ * 開通（CreateSubscription）：建立訂閱與第一期（後端同一個交易）。
  * 沒有期別即 no-op、`SetSeatCount`／`ChangePlan` 都先要一份可服務的合約 —— 少了開通，收款、
  * 期別、催收、凍結全部停擺（只能靠手工 SQL 開合約）。
  *
@@ -496,10 +506,10 @@ export default function TenantDetailPage() {
               <CardHeader class="flex flex-row flex-wrap items-center justify-between gap-2">
                 <CardTitle>{summary?.companyName || companyId()}</CardTitle>
                 {/* 只在「沒有可服務的合約」時提供開通：已經有生效中的合約時後端會回 SYS-2001
-                    （同一家公司只能有一份未取消的合約），按了只是白跑一趟。 */}
-                <Show
-                  when={["", "none", "cancelled"].includes(summary?.subscriptionStatus ?? "")}
-                >
+                    （同一家公司只能有一份未取消的合約），按了只是白跑一趟。
+                    判定邏輯見 canOfferSubscription（與 00029 的部分唯一索引同義；
+                    後端若放寬成「同公司多份合約」，那裡要同步放寬 —— 未結項 #39）。 */}
+                <Show when={canOfferSubscription(summary?.subscriptionStatus)}>
                   <Button size="sm" onClick={() => setCreateOpen(true)}>
                     開通訂閱
                   </Button>
