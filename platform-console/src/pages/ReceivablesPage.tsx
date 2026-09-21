@@ -51,6 +51,11 @@ function PaymentForm(props: { row: Receivable; onDone: () => void }) {
   const [provider, setProvider] = createSignal("manual");
   const [externalRef, setExternalRef] = createSignal("");
   const [invoiceNo, setInvoiceNo] = createSignal("");
+  // 未結項 #30：開票三欄（invoice_status／buyer_tax_id／carrier）proto 有、後端同筆可寫入，
+  // 但表單沒收 —— 補上，否則開票資訊要另起一筆流程才寫得進去。
+  const [invoiceStatus, setInvoiceStatus] = createSignal("");
+  const [buyerTaxId, setBuyerTaxId] = createSignal("");
+  const [carrier, setCarrier] = createSignal("");
   const [note, setNote] = createSignal("");
 
   const mutation = createMutation(() => ({
@@ -63,6 +68,9 @@ function PaymentForm(props: { row: Receivable; onDone: () => void }) {
         provider: provider(),
         externalRef: externalRef().trim(),
         invoiceNo: invoiceNo().trim(),
+        invoiceStatus: invoiceStatus().trim(),
+        buyerTaxId: buyerTaxId().trim(),
+        carrier: carrier().trim(),
         note: note().trim(),
         reason,
       }),
@@ -144,6 +152,36 @@ function PaymentForm(props: { row: Receivable; onDone: () => void }) {
           id="pay-invoice"
           value={invoiceNo()}
           onInput={(e) => setInvoiceNo(e.currentTarget.value)}
+        />
+      </Field>
+
+      <Field>
+        <FieldLabel for="pay-invoice-status">發票狀態（選填）</FieldLabel>
+        <Input
+          id="pay-invoice-status"
+          value={invoiceStatus()}
+          placeholder="例：已開立、作廢"
+          onInput={(e) => setInvoiceStatus(e.currentTarget.value)}
+        />
+      </Field>
+
+      <Field>
+        <FieldLabel for="pay-buyer-tax">買方統編（選填）</FieldLabel>
+        <Input
+          id="pay-buyer-tax"
+          value={buyerTaxId()}
+          placeholder="例：12345678"
+          onInput={(e) => setBuyerTaxId(e.currentTarget.value)}
+        />
+      </Field>
+
+      <Field>
+        <FieldLabel for="pay-carrier">載具（選填）</FieldLabel>
+        <Input
+          id="pay-carrier"
+          value={carrier()}
+          placeholder="例：手機條碼、自然人憑證"
+          onInput={(e) => setCarrier(e.currentTarget.value)}
         />
       </Field>
 

@@ -104,6 +104,10 @@ describe("ReceivablesPage", () => {
     await openPaymentDialog();
 
     fireEvent.input(screen.getByLabelText(/發票號/), { target: { value: "AB12345678" } });
+    // 未結項 #30：開票三欄隨同一筆收款送出（proto 有、後端同筆可寫入）。
+    fireEvent.input(screen.getByLabelText(/發票狀態/), { target: { value: "已開立" } });
+    fireEvent.input(screen.getByLabelText(/買方統編/), { target: { value: "12345678" } });
+    fireEvent.input(screen.getByLabelText(/載具/), { target: { value: "/ABC123" } });
     fireEvent.input(screen.getByLabelText(/交易號/), { target: { value: "TX-1" } });
     fireEvent.input(screen.getByLabelText(/備註/), { target: { value: "溢收 100 元" } });
     fillReason("  匯款入帳  ");
@@ -119,6 +123,9 @@ describe("ReceivablesPage", () => {
       provider: "manual",
       externalRef: "TX-1",
       invoiceNo: "AB12345678",
+      invoiceStatus: "已開立",
+      buyerTaxId: "12345678",
+      carrier: "/ABC123",
       note: "溢收 100 元",
       reason: "匯款入帳",
     });
