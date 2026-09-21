@@ -103,6 +103,9 @@ type PlatformAuditRow struct {
 	TargetID      string
 	Reason        string
 	CreatedAt     time.Time
+	// After 為稽核的 after 映像（未結項 #4：同一請求的多列共用 `_trace_id` 鍵，
+	// console 據此合併顯示。空映像即無快照，不代表無 trace）。
+	After []byte
 }
 
 // TenantOverrideInput 為新增一筆租戶例外(簽約承諾)的輸入。Enabled／Limit 為指標:

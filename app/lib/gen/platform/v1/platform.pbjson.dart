@@ -388,6 +388,7 @@ const PlatformAuditEntry$json = {
     {'1': 'target_id', '3': 5, '4': 1, '5': 9, '10': 'targetId'},
     {'1': 'reason', '3': 6, '4': 1, '5': 9, '10': 'reason'},
     {'1': 'created_at', '3': 7, '4': 1, '5': 9, '10': 'createdAt'},
+    {'1': 'trace_id', '3': 8, '4': 1, '5': 9, '10': 'traceId'},
   ],
 };
 
@@ -396,7 +397,8 @@ final $typed_data.Uint8List platformAuditEntryDescriptor = $convert.base64Decode
     'ChJQbGF0Zm9ybUF1ZGl0RW50cnkSDgoCaWQYASABKAlSAmlkEiUKDm9wZXJhdG9yX2VtYWlsGA'
     'IgASgJUg1vcGVyYXRvckVtYWlsEhYKBmFjdGlvbhgDIAEoCVIGYWN0aW9uEh8KC3RhcmdldF90'
     'eXBlGAQgASgJUgp0YXJnZXRUeXBlEhsKCXRhcmdldF9pZBgFIAEoCVIIdGFyZ2V0SWQSFgoGcm'
-    'Vhc29uGAYgASgJUgZyZWFzb24SHQoKY3JlYXRlZF9hdBgHIAEoCVIJY3JlYXRlZEF0');
+    'Vhc29uGAYgASgJUgZyZWFzb24SHQoKY3JlYXRlZF9hdBgHIAEoCVIJY3JlYXRlZEF0EhkKCHRy'
+    'YWNlX2lkGAggASgJUgd0cmFjZUlk');
 
 @$core.Deprecated('Use listReceivablesRequestDescriptor instead')
 const ListReceivablesRequest$json = {

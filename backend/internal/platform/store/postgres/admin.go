@@ -413,7 +413,7 @@ func (s *Admin) ListPlatformAudit(ctx context.Context, targetType, targetID stri
 		return nil, 0, err
 	}
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT a.id, o.email, a.action, a.target_type, a.target_id, a.reason, a.created_at
+		SELECT a.id, o.email, a.action, a.target_type, a.target_id, a.reason, a.created_at, a.after
 		  FROM platform.audit_logs a
 		  JOIN platform.operators o ON o.id = a.operator_id`+filter+`
 		 ORDER BY a.created_at DESC, a.id DESC
@@ -429,11 +429,15 @@ func (s *Admin) ListPlatformAudit(ctx context.Context, targetType, targetID stri
 			id  int64
 			row store.PlatformAuditRow
 		)
+		var after sql.NullString
 		if err := rows.Scan(&id, &row.OperatorEmail, &row.Action, &row.TargetType, &row.TargetID,
-			&row.Reason, &row.CreatedAt); err != nil {
+			&row.Reason, &row.CreatedAt, &after); err != nil {
 			return nil, 0, err
 		}
 		row.ID = strconv.FormatInt(id, 10)
+		if after.Valid {
+			row.After = []byte(after.String)
+		}
 		out = append(out, row)
 	}
 	return out, total, rows.Err()

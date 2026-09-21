@@ -375,7 +375,22 @@ func platformAuditToProto(r PlatformAuditRow) *platformv1.PlatformAuditEntry {
 		TargetId:      r.TargetID,
 		Reason:        r.Reason,
 		CreatedAt:     r.CreatedAt.UTC().Format(time.RFC3339),
+		TraceId:       auditTraceID(r.After),
 	}
+}
+
+// auditTraceID 取 after 映像的 `_trace_id` 鍵（未結項 #4：writeTx 與 audit.Record
+// 共用同一落點、同一鍵名）。映像為空或鍵缺席即回空 —— 排程與歷史列本來就沒有 trace。
+func auditTraceID(after []byte) string {
+	if len(after) == 0 {
+		return ""
+	}
+	var m map[string]any
+	if err := json.Unmarshal(after, &m); err != nil {
+		return ""
+	}
+	s, _ := m["_trace_id"].(string)
+	return s
 }
 
 // ---------------------------------------------------------------------------
@@ -1059,6 +1074,17 @@ func (s *PlatformAdminService) writeTx(ctx context.Context, id operatorauth.Iden
 	rawAfter, err := marshalAuditImage(after)
 	if err != nil {
 		return errcode.SysInternal.Wrap(err)
+	}
+	// 未結項 #4：after 映像帶 `_trace_id` —— 同一請求的多列稽核共用同一個 trace_id，
+	// console 據此合併顯示（與租戶 audit.Record 同一落點、同一鍵名，不加欄位不改 schema）。
+	if tid := requestid.From(ctx); tid != "" {
+		afterWithTrace := map[string]any{"_trace_id": tid}
+		for k, v := range after {
+			afterWithTrace[k] = v
+		}
+		if rawAfter, err = marshalAuditImage(afterWithTrace); err != nil {
+			return errcode.SysInternal.Wrap(err)
+		}
 	}
 	return s.st.WithTx(ctx, func(tx *sql.Tx) error {
 		targetID, err := apply(tx)

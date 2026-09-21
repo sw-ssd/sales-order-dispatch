@@ -1501,6 +1501,7 @@ class PlatformAuditEntry extends $pb.GeneratedMessage {
     $core.String? targetId,
     $core.String? reason,
     $core.String? createdAt,
+    $core.String? traceId,
   }) {
     final result = PlatformAuditEntry._();
     if (id != null) result.id = id;
@@ -1510,6 +1511,7 @@ class PlatformAuditEntry extends $pb.GeneratedMessage {
     if (targetId != null) result.targetId = targetId;
     if (reason != null) result.reason = reason;
     if (createdAt != null) result.createdAt = createdAt;
+    if (traceId != null) result.traceId = traceId;
     return result;
   }
 
@@ -1533,6 +1535,7 @@ class PlatformAuditEntry extends $pb.GeneratedMessage {
     ..aOS(5, _omitFieldNames ? '' : 'targetId')
     ..aOS(6, _omitFieldNames ? '' : 'reason')
     ..aOS(7, _omitFieldNames ? '' : 'createdAt')
+    ..aOS(8, _omitFieldNames ? '' : 'traceId')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1619,6 +1622,17 @@ class PlatformAuditEntry extends $pb.GeneratedMessage {
   $core.bool hasCreatedAt() => $_has(6);
   @$pb.TagNumber(7)
   void clearCreatedAt() => $_clearField(7);
+
+  /// trace_id 為同一請求的關聯鍵（未結項 #4：一次請求寫多列稽核時共用，
+  /// console 據此合併顯示；空即寫入時無 trace，多見於排程／歷史列）。
+  @$pb.TagNumber(8)
+  $core.String get traceId => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set traceId($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasTraceId() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearTraceId() => $_clearField(8);
 }
 
 class ListReceivablesRequest extends $pb.GeneratedMessage {

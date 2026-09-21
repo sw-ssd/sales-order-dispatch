@@ -129,6 +129,9 @@ message PlatformAuditEntry {
   string target_id = 5;
   string reason = 6;
   string created_at = 7;
+  // trace_id 為同一請求的關聯鍵（未結項 #4：一次請求寫多列稽核時共用，
+  // console 據此合併顯示；空即寫入時無 trace，多見於排程／歷史列）。
+  string trace_id = 8;
 }
 
 // PlatformAdminService:平台營運(operator session;租戶身分一律拒絕)。

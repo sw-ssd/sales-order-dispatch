@@ -1127,6 +1127,9 @@ type PlatformAuditEntry struct {
 	TargetId      string                 `protobuf:"bytes,5,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
 	Reason        string                 `protobuf:"bytes,6,opt,name=reason,proto3" json:"reason,omitempty"`
 	CreatedAt     string                 `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// trace_id 為同一請求的關聯鍵（未結項 #4：一次請求寫多列稽核時共用，
+	// console 據此合併顯示；空即寫入時無 trace，多見於排程／歷史列）。
+	TraceId       string `protobuf:"bytes,8,opt,name=trace_id,json=traceId,proto3" json:"trace_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1206,6 +1209,13 @@ func (x *PlatformAuditEntry) GetReason() string {
 func (x *PlatformAuditEntry) GetCreatedAt() string {
 	if x != nil {
 		return x.CreatedAt
+	}
+	return ""
+}
+
+func (x *PlatformAuditEntry) GetTraceId() string {
+	if x != nil {
+		return x.TraceId
 	}
 	return ""
 }
@@ -3616,7 +3626,7 @@ const file_platform_v1_platform_proto_rawDesc = "" +
 	"\aentries\x18\x01 \x03(\v2\x1f.platform.v1.PlatformAuditEntryR\aentries\x12?\n" +
 	"\n" +
 	"pagination\x18\x02 \x01(\v2\x1f.platform.v1.PlatformPaginationR\n" +
-	"pagination\"\xd8\x01\n" +
+	"pagination\"\xf3\x01\n" +
 	"\x12PlatformAuditEntry\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12%\n" +
 	"\x0eoperator_email\x18\x02 \x01(\tR\roperatorEmail\x12\x16\n" +
@@ -3626,7 +3636,8 @@ const file_platform_v1_platform_proto_rawDesc = "" +
 	"\ttarget_id\x18\x05 \x01(\tR\btargetId\x12\x16\n" +
 	"\x06reason\x18\x06 \x01(\tR\x06reason\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\a \x01(\tR\tcreatedAt\"I\n" +
+	"created_at\x18\a \x01(\tR\tcreatedAt\x12\x19\n" +
+	"\btrace_id\x18\b \x01(\tR\atraceId\"I\n" +
 	"\x16ListReceivablesRequest\x12\x12\n" +
 	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\"\x87\x01\n" +

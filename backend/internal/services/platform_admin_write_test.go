@@ -16,6 +16,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -23,6 +24,7 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/billing"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
@@ -453,6 +455,57 @@ func TestWriteRPCsRequireOperatorAndReason(t *testing.T) {
 // TestWriteRPCsWriteExactlyOneAudit 驗每個寫入 RPC 成功時**恰好一筆**稽核,且 actor 是真的
 // operator id(42,來自 ctx 的身分,不是租戶 user id);稽核與資料落在同一個交易(billing 寫入的
 // 狀態轉移由 billing 自己寫稽核,服務層不再寫第二筆 —— 兩處各寫一筆就是兩份「誰改的」)。
+// 未結項 #4 續：writeTx 把當次請求的 trace_id 寫進 after 映像（同請求多列合併的鍵）。
+func TestWriteTxStampsTraceIDIntoAfterImage(t *testing.T) {
+	svc, _, _, _ := newWriteHarness(0)
+	ctx := requestid.With(withOperator(context.Background()), "trace-wtx-1")
+	before := len(svc.st.(*fakePlatformStore).writes.audits)
+	if err := svc.writeTx(ctx, operatorauth.Identity{OperatorID: 42, Email: "ops@example.com", Role: "admin"}, "plan.price_upsert", "plan", "調價",
+		nil, map[string]any{"base_price": "100.00"},
+		func(tx *sql.Tx) (string, error) { return "std", nil }); err != nil {
+		t.Fatalf("writeTx: %v", err)
+	}
+	got := svc.st.(*fakePlatformStore).writes.audits
+	if len(got) != before+1 {
+		t.Fatalf("應恰寫一筆稽核，got %d", len(got)-before)
+	}
+	var m map[string]any
+	if err := json.Unmarshal(got[len(got)-1].after, &m); err != nil {
+		t.Fatalf("after 映像應為合法 JSON: %v", err)
+	}
+	if m["_trace_id"] != "trace-wtx-1" || m["base_price"] != "100.00" {
+		t.Fatalf("after 應帶 trace 與原欄位，got %v", m)
+	}
+}
+
+// 未結項 #4：after 映像的 `_trace_id` 投影為 entry.trace_id（同請求多列合併的鍵）。
+// 空映像／壞 JSON／缺鍵一律回空（排程與歷史列本來就沒有 trace）。
+func TestAuditTraceIDProjectsFromAfterImage(t *testing.T) {
+	svc, st, _, _ := newWriteHarness(0)
+	ctx := withOperator(context.Background())
+	st.audit = []PlatformAuditRow{
+		{ID: "1", Action: "company.update", After: []byte(`{"status":"x","_trace_id":"trace-abc"}`)},
+		{ID: "2", Action: "company.update", After: []byte(`{"status":"y","_trace_id":"trace-abc"}`)},
+		{ID: "3", Action: "company.update"},
+		{ID: "4", Action: "company.update", After: []byte(`not-json`)},
+	}
+	resp, err := svc.ListPlatformAudit(ctx,
+		connect.NewRequest(&platformv1.ListPlatformAuditRequest{Page: 1, PageSize: 10}))
+	if err != nil {
+		t.Fatalf("ListPlatformAudit: %v", err)
+	}
+	got := resp.Msg.GetEntries()
+	if len(got) != 4 {
+		t.Fatalf("應回 4 列，got %d", len(got))
+	}
+	if got[0].GetTraceId() != "trace-abc" || got[1].GetTraceId() != "trace-abc" {
+		t.Fatalf("同請求兩列應共用 trace，got %q／%q", got[0].GetTraceId(), got[1].GetTraceId())
+	}
+	if got[2].GetTraceId() != "" || got[3].GetTraceId() != "" {
+		t.Fatalf("空映像／壞 JSON 應回空 trace，got %q／%q", got[2].GetTraceId(), got[3].GetTraceId())
+	}
+}
+
 func TestWriteRPCsWriteExactlyOneAudit(t *testing.T) {
 	for _, c := range writeCalls() {
 		t.Run(c.name, func(t *testing.T) {

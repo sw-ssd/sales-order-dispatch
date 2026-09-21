@@ -566,6 +566,14 @@ export declare type PlatformAuditEntry = Message<"platform.v1.PlatformAuditEntry
    * @generated from field: string created_at = 7;
    */
   createdAt: string;
+
+  /**
+   * trace_id 為同一請求的關聯鍵（未結項 #4：一次請求寫多列稽核時共用，
+   * console 據此合併顯示；空即寫入時無 trace，多見於排程／歷史列）。
+   *
+   * @generated from field: string trace_id = 8;
+   */
+  traceId: string;
 };
 
 /**
