@@ -30,6 +30,11 @@ type Snapshot struct {
 // Snapshot 組裝租戶權益與用量；feature 清單以 store 的定義為準（未定義者不出現）。
 // 前端據此 disable 按鈕與顯示用量——**前端 disable 不構成授權**，真正的擋在 CheckLimit 與 RLS。
 //
+// 未結項 #33（Plan B #13）：無訂閱列（status=none）時仍逐 feature 列出 enabled=false ——
+// 「尚未開通計費」與「方案不含」在投影形狀上不可區分，前端以 isUnprovisioned
+// （status=none 或 planCode 空）因應。守衛面不受影響：Allows／CheckLimit 對 none
+// 一律不施加限制（見 service.go 的 statusNone），與投影的 false 無關。
+//
 // **缺計數器的降級（不得讓整筆投影失敗）**：integer feature 若沒有對應的計數器（新的 feature
 // 忘記配 Count 分支）或計數失敗，**略過該筆用量並記一行 log**——不回 0（0 會被前端讀成「用量為
 // 零」）、不回 -1、也不把整個投影變成 SYS-9000。理由：一個配置錯誤不得升級成全站故障（所有租戶
