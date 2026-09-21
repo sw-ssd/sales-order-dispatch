@@ -277,6 +277,34 @@ func TestRecordPaymentStateMachine(t *testing.T) {
 }
 
 // 缺原因即拒絕：平台稽核必填，而且這是人工動錢的操作（沒有理由的入帳無法對帳）。
+// 未結項 #11:ActorOperatorID 未驗證 —— 0 會一路走到 INSERT 才被
+// audit_logs_operator_id_fkey 擋下，而 FK 23503 走預設分支對外是 SYS-9000(5xx＝「重試」)，
+// 但重試永遠不會成功（actor 不是會自己變好的東西）。必須在寫入前擋成 SYS-1001。
+func TestRecordPaymentRequiresActor(t *testing.T) {
+	f := store.NewFakeBilling()
+	f.PutSubscription(store.Subscription{ID: 5, CompanyID: 42, Status: "active"})
+	f.PutPeriod(store.Period{ID: 9, SubscriptionID: 5, PeriodNo: 1, Status: "open", AmountCents: amountCents})
+
+	_, err := billing.NewBilling(f).RecordPayment(context.Background(), billing.RecordPaymentInput{
+		CompanyID: 42, PaidAt: time.Now(), Provider: "manual", ActorOperatorID: 0, Reason: "匯款入帳",
+	})
+	if connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("缺 actor 應回 invalid_argument，got %v", err)
+	}
+	if code := errorCodeOf(t, err); code != "SYS-1001" {
+		t.Fatalf("ErrorInfo.code = %q；want SYS-1001", code)
+	}
+	if evs := eventTypes(f); len(evs) != 0 {
+		t.Fatalf("拒絕不得寫事件，got %v", evs)
+	}
+	if p := readPeriod(t, f, 5, 1); p.Status != "open" {
+		t.Fatalf("拒絕後期別不得變動，got %+v", p)
+	}
+	if audits := f.Audits(); len(audits) != 0 {
+		t.Fatalf("拒絕不得寫稽核，got %+v", audits)
+	}
+}
+
 func TestRecordPaymentRequiresReason(t *testing.T) {
 	f := store.NewFakeBilling()
 	f.PutSubscription(store.Subscription{ID: 5, CompanyID: 42, Status: "active"})

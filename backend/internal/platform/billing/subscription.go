@@ -81,6 +81,9 @@ func (b *Billing) CreateSubscription(ctx context.Context, in CreateSubscriptionI
 	if err := requireReason(in.Reason); err != nil {
 		return nil, err
 	}
+	if err := requireActor(in.ActorOperatorID); err != nil {
+		return nil, err
+	}
 	if planCode == "" {
 		return nil, errcode.SysInvalidArgument.Error(map[string]string{"field": "plan_code"})
 	}
@@ -203,6 +206,9 @@ func (b *Billing) SetSeatCount(ctx context.Context, in SetSeatCountInput) (int, 
 	if err := requireReason(in.Reason); err != nil {
 		return 0, err
 	}
+	if err := requireActor(in.ActorOperatorID); err != nil {
+		return 0, err
+	}
 	if in.SeatCount <= 0 {
 		return 0, errcode.SysInvalidArgument.Error(map[string]string{"field": "seat_count"})
 	}
@@ -243,6 +249,9 @@ type ChangePlanInput struct {
 func (b *Billing) ChangePlan(ctx context.Context, in ChangePlanInput) (time.Time, error) {
 	planCode := strings.TrimSpace(in.PlanCode)
 	if err := requireReason(in.Reason); err != nil {
+		return time.Time{}, err
+	}
+	if err := requireActor(in.ActorOperatorID); err != nil {
 		return time.Time{}, err
 	}
 	var effectiveFrom time.Time
@@ -307,6 +316,9 @@ type Cancellation struct {
 //     再發一次 subscription.expired(那會讓 consumer 重複處理同一件事)。
 func (b *Billing) CancelSubscription(ctx context.Context, in CancelSubscriptionInput) (Cancellation, error) {
 	if err := requireReason(in.Reason); err != nil {
+		return Cancellation{}, err
+	}
+	if err := requireActor(in.ActorOperatorID); err != nil {
 		return Cancellation{}, err
 	}
 	if !in.AtPeriodEnd {
@@ -421,6 +433,17 @@ func (b *Billing) audit(ctx context.Context, tx *sql.Tx, operatorID int64, actio
 func requireReason(reason string) error {
 	if strings.TrimSpace(reason) == "" {
 		return errcode.SysInvalidArgument.Error(map[string]string{"field": "reason"})
+	}
+	return nil
+}
+
+// requireActor 是所有平台寫入的共同必填檢查(0 即拒絕):稽核的 operator_id 是 FK 到
+// platform.operators(id) 的 NOT NULL 欄位，0 會一路走到 INSERT 才被 FK 23503 擋下 ——
+// 而 FK 錯誤走預設分支對外是 SYS-9000(5xx＝「重試」)，但 actor 不是會自己變好的東西，
+// 重試永遠不會成功。必須在寫入前擋成 SYS-1001（與 requireReason 同一碼家族）。
+func requireActor(operatorID int64) error {
+	if operatorID <= 0 {
+		return errcode.SysInvalidArgument.Error(map[string]string{"field": "actor_operator_id"})
 	}
 	return nil
 }

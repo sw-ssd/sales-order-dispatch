@@ -109,6 +109,9 @@ type RecordPaymentInput struct {
 //
 // 冪等：期別已付款且交易號相同時為 no-op（webhook 重送安全，不重複寫事件與稽核）。
 func (b *Billing) RecordPayment(ctx context.Context, in RecordPaymentInput) (*store.Period, error) {
+	if err := requireActor(in.ActorOperatorID); err != nil {
+		return nil, err
+	}
 	if strings.TrimSpace(in.Reason) == "" {
 		return nil, errcode.SysInvalidArgument.Error(map[string]string{"field": "reason"})
 	}
