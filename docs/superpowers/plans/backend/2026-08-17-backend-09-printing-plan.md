@@ -2,7 +2,7 @@
 
 > **性質**：原為目標型執行計畫（含內嵌目標程式碼）。經 2026-09-18 盤點（codebase-memory 知識圖譜 + git）重建，為**反映現況的執行計畫**。
 >
-> **狀態基準**：2026-09-18 盤點。**本計畫對應領域（單據列印/PDF）實際尚未實作**——ent/schema 無 print 實體、internal 無 print/prints 目錄、無 Gotenberg client、無模板。以下為保留的目標計畫架構，全數 ⬜ 未開始。
+> **狀態基準**：2026-09-22 實作完成。Tasks 1–4 全數落地（commits ead74f0／7445e92／2ed66f1／ae0d610）：`ent/schema` 有 printlog／printpreview 實體、`internal/print`（view model＋模板＋Gotenberg client＋PDF 產線）、Preview／Print／ListLogs RPC、00037 schema＋00038 RLS ENABLE＋FORCE。以下保留目標架構供追溯。
 >
 > **對應設計**：`docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（v1.0.34）、決策 `D15`
 > **細部文件**：`docs/superpowers/plans/backend/detail/09-printing.md`、共通規則 `detail/00-index.md` §3
@@ -14,12 +14,12 @@
 
 | Task | 內容 | 狀態 |
 |---|---|---|
-| 1 | 四種單據 view model 與模板（細部 5.3.1–5.3.4） | ⬜ 未開始 |
-| 2 | Gotenberg client + 資料組合 + PDF 產線（細部 5.4.1–5.4.3） | ⬜ 未開始 |
-| 3 | print_logs / print_previews schema + Preview API（細部 5.5.1–5.5.2） | ⬜ 未開始 |
-| 4 | Print API + 重印 + ListLogs（細部 5.5.3–5.5.4） | ⬜ 未開始 |
+| 1 | 四種單據 view model 與模板（細部 5.3.1–5.3.4） | ✅ 完成（ead74f0） |
+| 2 | Gotenberg client + 資料組合 + PDF 產線（細部 5.4.1–5.4.3） | ✅ 完成（7445e92） |
+| 3 | print_logs / print_previews schema + Preview API（細部 5.5.1–5.5.2） | ✅ 完成（2ed66f1，含 00037／AppRole 白名單 26） |
+| 4 | Print API + 重印 + ListLogs（細部 5.5.3–5.5.4） | ✅ 完成（ae0d610，含 00038 RLS ENABLE＋FORCE） |
 
-**實作範圍**：0%（全部待辦）。
+**實作範圍**：100%（全數完成；`task test:integration -count=1` 全套 ok=30 fail=0）。
 
 ---
 
@@ -46,4 +46,4 @@ Gotenberg HTML→PDF client（有限重試）；資料組合與 PDF 產線（空
 
 ---
 
-*最後更新：2026-09-18（09-printing 現況對齊重建；領域未實作）*
+*最後更新：2026-09-22（09-printing 實作完成對齊；全整合綠 ok=30 fail=0）*
