@@ -181,3 +181,29 @@ func TestJudgementSurvivesCacheFailure(t *testing.T) {
 		t.Fatalf("快取故障必須留下 log，got %q", got)
 	}
 }
+
+// 未結項 #20：快取故障 log 節流 —— Valkey 掛掉時每請求一行 log，故障期間 log 量與請求量
+// 成正比。同一類故障 1 分鐘只記一次（首錯即記），期間的次數在下一次記時補上。
+func TestCacheFailureLogIsThrottled(t *testing.T) {
+	f := store.NewFake()
+	f.PutFeature(seatsDef)
+	f.PutPlan("std", stdPlan)
+	f.PutSubscription(*subWithStatus("active"))
+
+	var logs bytes.Buffer
+	prev := log.Writer()
+	log.SetOutput(&logs)
+	defer log.SetOutput(prev)
+
+	broken := &fakeCache{getErr: errors.New("模擬 Valkey 不可用")}
+	svc := entitlements.New(f, counting{seats: 1}, broken, time.Minute)
+
+	for i := 0; i < 5; i++ {
+		if err := svc.CheckLimit(context.Background(), 1, seats, 1); err != nil {
+			t.Fatalf("快取故障時判定仍須放行（回源），got %v", err)
+		}
+	}
+	if n := strings.Count(logs.String(), "權益快取讀取失敗"); n != 1 {
+		t.Fatalf("5 次同類故障應只記 1 行 log，got %d 行：%q", n, logs.String())
+	}
+}

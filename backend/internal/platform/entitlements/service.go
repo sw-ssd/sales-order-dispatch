@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
@@ -93,16 +94,47 @@ type Service struct {
 	ttl       time.Duration
 	now       func() time.Time
 	unlimited bool
+	// 未結項 #20：快取故障 log 節流 —— Valkey 掛掉時每個請求都打一行 log，
+	// 故障期間的 log 量與請求量成正比（行程還在、Valkey 不在＝最吵的時候最需要安靜）。
+	// 同一類訊息 1 分鐘只記一次（首錯即記、後續按分鐘補一行計數）。
+	logMu     sync.Mutex
+	logLast   map[string]time.Time
+	logMissed map[string]int
 }
 
 // New 建立判定服務；ttl <= 0 表示不快取。
 func New(st store.Store, counters Counter, c Cache, ttl time.Duration) *Service {
-	return &Service{st: st, counters: counters, cache: c, ttl: ttl, now: time.Now}
+	return &Service{st: st, counters: counters, cache: c, ttl: ttl, now: time.Now,
+		logLast: map[string]time.Time{}, logMissed: map[string]int{}}
 }
 
 // Unlimited 回傳「全部允許、不限額」的實例：測試與 CLI 使用，不進 production 路徑。
-func Unlimited() *Service { return &Service{unlimited: true, now: time.Now} }
+func Unlimited() *Service {
+	return &Service{unlimited: true, now: time.Now,
+		logLast: map[string]time.Time{}, logMissed: map[string]int{}}
+}
 
+// logThrottled 同一類訊息 1 分鐘只記一次：首錯即記，1 分鐘內再壞只計數，
+// 下一次記時把「期間另有 N 次同類故障」補上。key 為故障類別（讀／寫），
+// 不帶 companyID —— 否則每個租戶各自計數，節流等於沒做。
+func (s *Service) logThrottled(key, format string, args ...any) {
+	s.logMu.Lock()
+	defer s.logMu.Unlock()
+	if s.logLast == nil {
+		s.logLast = map[string]time.Time{}
+		s.logMissed = map[string]int{}
+	}
+	if last, ok := s.logLast[key]; ok && s.now().Sub(last) < time.Minute {
+		s.logMissed[key]++
+		return
+	}
+	if n := s.logMissed[key]; n > 0 {
+		format += fmt.Sprintf("（期間另有 %d 次同類故障未記）", n)
+		s.logMissed[key] = 0
+	}
+	s.logLast[key] = s.now()
+	log.Printf(format, args...)
+}
 func cacheKey(companyID int) string { return fmt.Sprintf("ent:%d", companyID) }
 
 // state 取得租戶權益來源：快取命中即回，未命中則從 store 組裝並寫回。
@@ -114,7 +146,7 @@ func (s *Service) state(ctx context.Context, companyID int) (*tenantState, error
 			// **快取是加速器，不是資料來源**：Valkey 掛掉（或設定錯）時回源，不得因此拒絕服務。
 			// 判定是配額守衛的來源，讓它失敗等於全站業務寫入失敗 —— 那比「這陣子每個租戶都打一次
 			// 平台庫」貴得多。log 要吵：效能問題必須看得見，但不可以變成可用性問題。
-			log.Printf("entitlements: 權益快取讀取失敗(company=%d)，改為回源: %v", companyID, err)
+			s.logThrottled("cache-read", "entitlements: 權益快取讀取失敗(company=%d)，改為回源: %v", companyID, err)
 		} else if ok {
 			var st tenantState
 			if err := json.Unmarshal(raw, &st); err == nil {
@@ -165,7 +197,7 @@ func (s *Service) state(ctx context.Context, companyID int) (*tenantState, error
 		if raw, err := json.Marshal(out); err == nil {
 			if err := s.cache.Set(ctx, cacheKey(companyID), raw, s.ttl); err != nil {
 				// 寫不進去只是「下次還要回源」，同樣不得讓判定失敗（見上方 Get 的說明）。
-				log.Printf("entitlements: 權益快取寫入失敗(company=%d)，本次不快取: %v", companyID, err)
+				s.logThrottled("cache-write", "entitlements: 權益快取寫入失敗(company=%d)，本次不快取: %v", companyID, err)
 			}
 		}
 	}
