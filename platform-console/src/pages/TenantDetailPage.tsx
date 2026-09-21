@@ -538,6 +538,10 @@ export default function TenantDetailPage() {
                 <p>
                   待收款：{summary?.overdue ? "有未付期別" : "無"}
                 </p>
+                {/* 未結項 #27：試用到期／寬限期（proto trial_ends_at／grace_until；
+                    空字串＝無，trialing 才有前者、past_due 才有後者）。 */}
+                <p>試用到期：{summary?.trialEndsAt || "—"}</p>
+                <p>寬限期至：{summary?.graceUntil || "—"}</p>
               </CardContent>
             </Card>
 

@@ -147,6 +147,14 @@ describe("TenantDetailPage", () => {
     });
   });
 
+  it("租戶卡片顯示試用到期與寬限期（未結項 #27：空即『—』）", async () => {
+    renderAt();
+    await ready();
+    // 夾具是 active 無試用：兩欄皆「—」，不斷言 trial 中形狀（後端整合測試覆蓋有值路徑）。
+    expect(screen.getByText("試用到期：—")).toBeTruthy();
+    expect(screen.getByText("寬限期至：—")).toBeTruthy();
+  });
+
   it("列出訂閱概況與例外；投影為方案 ⊕ 例外，且已過期的例外不列入生效值", async () => {
     renderAt();
     const projection = await ready();
