@@ -145,6 +145,15 @@ abstract final class PlatformAdminService {
     platformv1platform.DisableOperatorRequest.new,
     platformv1platform.DisableOperatorResponse.new,
   );
+
+  /// 未結項 #23：自己的身分（console 依角色隱藏操作）。後端仍是唯一決策者；
+  /// 前端只據此 disable 按鈕，不做授權判斷。
+  static const getOperatorSelf = connect.Spec(
+    '/$name/GetOperatorSelf',
+    connect.StreamType.unary,
+    platformv1platform.GetOperatorSelfRequest.new,
+    platformv1platform.GetOperatorSelfResponse.new,
+  );
 }
 /// TenantEntitlementService:租戶端權益投影(租戶 session;唯讀)。
 abstract final class TenantEntitlementService {

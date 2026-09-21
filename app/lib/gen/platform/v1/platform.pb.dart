@@ -4142,6 +4142,132 @@ class DisableOperatorResponse extends $pb.GeneratedMessage {
   static DisableOperatorResponse? _defaultInstance;
 }
 
+class GetOperatorSelfRequest extends $pb.GeneratedMessage {
+  factory GetOperatorSelfRequest() => GetOperatorSelfRequest._();
+
+  GetOperatorSelfRequest._();
+
+  factory GetOperatorSelfRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetOperatorSelfRequest()..mergeFromBuffer(data, registry);
+  factory GetOperatorSelfRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetOperatorSelfRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetOperatorSelfRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: GetOperatorSelfRequest.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetOperatorSelfRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetOperatorSelfRequest copyWith(
+          void Function(GetOperatorSelfRequest) updates) =>
+      super.copyWith((message) => updates(message as GetOperatorSelfRequest))
+          as GetOperatorSelfRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetOperatorSelfRequest() / GetOperatorSelfRequest.new instead')
+  static GetOperatorSelfRequest create() => GetOperatorSelfRequest._();
+  static $pb.GeneratedMessage $_createMessage() => GetOperatorSelfRequest._();
+  @$core.override
+  GetOperatorSelfRequest createEmptyInstance() => GetOperatorSelfRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetOperatorSelfRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetOperatorSelfRequest>(
+          GetOperatorSelfRequest.$_createMessage);
+  static GetOperatorSelfRequest? _defaultInstance;
+}
+
+class GetOperatorSelfResponse extends $pb.GeneratedMessage {
+  factory GetOperatorSelfResponse({
+    $core.String? operatorId,
+    $core.String? email,
+    $core.String? role,
+  }) {
+    final result = GetOperatorSelfResponse._();
+    if (operatorId != null) result.operatorId = operatorId;
+    if (email != null) result.email = email;
+    if (role != null) result.role = role;
+    return result;
+  }
+
+  GetOperatorSelfResponse._();
+
+  factory GetOperatorSelfResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetOperatorSelfResponse()..mergeFromBuffer(data, registry);
+  factory GetOperatorSelfResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetOperatorSelfResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetOperatorSelfResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'platform.v1'),
+      createEmptyInstance: GetOperatorSelfResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'operatorId')
+    ..aOS(2, _omitFieldNames ? '' : 'email')
+    ..aOS(3, _omitFieldNames ? '' : 'role')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetOperatorSelfResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetOperatorSelfResponse copyWith(
+          void Function(GetOperatorSelfResponse) updates) =>
+      super.copyWith((message) => updates(message as GetOperatorSelfResponse))
+          as GetOperatorSelfResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetOperatorSelfResponse() / GetOperatorSelfResponse.new instead')
+  static GetOperatorSelfResponse create() => GetOperatorSelfResponse._();
+  static $pb.GeneratedMessage $_createMessage() => GetOperatorSelfResponse._();
+  @$core.override
+  GetOperatorSelfResponse createEmptyInstance() => GetOperatorSelfResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetOperatorSelfResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetOperatorSelfResponse>(
+          GetOperatorSelfResponse.$_createMessage);
+  static GetOperatorSelfResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get operatorId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set operatorId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasOperatorId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearOperatorId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get email => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set email($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasEmail() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearEmail() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get role => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set role($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasRole() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearRole() => $_clearField(3);
+}
+
 /// GetTenantEntitlementsRequest:租戶端唯讀投影(自己的公司;前端據此 disable 按鈕與顯示用量)。
 class GetTenantEntitlementsRequest extends $pb.GeneratedMessage {
   factory GetTenantEntitlementsRequest() => GetTenantEntitlementsRequest._();
@@ -4485,6 +4611,13 @@ class PlatformAdminServiceApi {
           $pb.ClientContext? ctx, DisableOperatorRequest request) =>
       _client.invoke<DisableOperatorResponse>(ctx, 'PlatformAdminService',
           'DisableOperator', request, DisableOperatorResponse());
+
+  /// 未結項 #23：自己的身分（console 依角色隱藏操作）。後端仍是唯一決策者；
+  /// 前端只據此 disable 按鈕，不做授權判斷。
+  $async.Future<GetOperatorSelfResponse> getOperatorSelf(
+          $pb.ClientContext? ctx, GetOperatorSelfRequest request) =>
+      _client.invoke<GetOperatorSelfResponse>(ctx, 'PlatformAdminService',
+          'GetOperatorSelf', request, GetOperatorSelfResponse());
 }
 
 /// TenantEntitlementService:租戶端權益投影(租戶 session;唯讀)。

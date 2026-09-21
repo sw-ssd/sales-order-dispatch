@@ -374,6 +374,25 @@ func writeCalls() []writeCall {
 //
 // 「擋下來了」不能只看回應:擋下時**不得寫任何資料、不得寫任何稽核** —— 一筆沒有 operator 的
 // 稽核在 schema 上就寫不進去(operator_id NOT NULL),而一筆無人的寫入是無法回溯的變更。
+// 未結項 #23：GetOperatorSelf 回自己的身分（console 依角色隱藏操作）。
+// 未登入即 AUTH-4001；角色原樣回傳（admin／operator），前端只據此 disable。
+func TestGetOperatorSelfReturnsIdentity(t *testing.T) {
+	svc, _, _, _ := newWriteHarness(0)
+	resp, err := svc.GetOperatorSelf(withOperator(context.Background()),
+		connect.NewRequest(&platformv1.GetOperatorSelfRequest{}))
+	if err != nil {
+		t.Fatalf("GetOperatorSelf: %v", err)
+	}
+	if resp.Msg.GetOperatorId() != "42" || resp.Msg.GetEmail() != "ops@example.com" ||
+		resp.Msg.GetRole() != "admin" {
+		t.Fatalf("身分應原樣回傳，got %+v", resp.Msg)
+	}
+	if _, err := svc.GetOperatorSelf(context.Background(),
+		connect.NewRequest(&platformv1.GetOperatorSelfRequest{})); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("未登入應 Unauthenticated，got %v", err)
+	}
+}
+
 func TestWriteRPCsRequireOperatorAndReason(t *testing.T) {
 	for _, c := range writeCalls() {
 		t.Run(c.name+"/無身分", func(t *testing.T) {

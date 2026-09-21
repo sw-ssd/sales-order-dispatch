@@ -5,9 +5,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { connectErrorWithInfo } from "../test-helpers";
 
 const listTenants = vi.fn();
+const getOperatorSelf = vi.fn();
 vi.mock("../lib/api", () => ({
   loginUrl: "/platform/auth/google",
-  platform: { listTenants: (...args: unknown[]) => listTenants(...args) },
+  platform: {
+    listTenants: (...args: unknown[]) => listTenants(...args),
+    getOperatorSelf: (...args: unknown[]) => getOperatorSelf(...args),
+  },
 }));
 
 import { resetSession } from "../lib/session";
@@ -80,6 +84,8 @@ describe("TenantsPage", () => {
   beforeEach(() => {
     resetSession();
     listTenants.mockReset();
+    getOperatorSelf.mockReset();
+    getOperatorSelf.mockResolvedValue({ operatorId: "42", email: "ops@example.com", role: "admin" });
     respond(rows);
   });
 

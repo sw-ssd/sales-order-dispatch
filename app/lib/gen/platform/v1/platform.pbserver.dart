@@ -59,6 +59,8 @@ abstract class PlatformAdminServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.CreateOperatorRequest request);
   $async.Future<$0.DisableOperatorResponse> disableOperator(
       $pb.ServerContext ctx, $0.DisableOperatorRequest request);
+  $async.Future<$0.GetOperatorSelfResponse> getOperatorSelf(
+      $pb.ServerContext ctx, $0.GetOperatorSelfRequest request);
 
   $pb.GeneratedMessage createRequest($core.String methodName) {
     switch (methodName) {
@@ -100,6 +102,8 @@ abstract class PlatformAdminServiceBase extends $pb.GeneratedService {
         return $0.CreateOperatorRequest();
       case 'DisableOperator':
         return $0.DisableOperatorRequest();
+      case 'GetOperatorSelf':
+        return $0.GetOperatorSelfRequest();
       default:
         throw $core.ArgumentError('Unknown method: $methodName');
     }
@@ -149,6 +153,8 @@ abstract class PlatformAdminServiceBase extends $pb.GeneratedService {
         return createOperator(ctx, request as $0.CreateOperatorRequest);
       case 'DisableOperator':
         return disableOperator(ctx, request as $0.DisableOperatorRequest);
+      case 'GetOperatorSelf':
+        return getOperatorSelf(ctx, request as $0.GetOperatorSelfRequest);
       default:
         throw $core.ArgumentError('Unknown method: $methodName');
     }

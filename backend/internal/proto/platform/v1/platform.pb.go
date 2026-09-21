@@ -3036,6 +3036,102 @@ func (*DisableOperatorResponse) Descriptor() ([]byte, []int) {
 	return file_platform_v1_platform_proto_rawDescGZIP(), []int{47}
 }
 
+type GetOperatorSelfRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetOperatorSelfRequest) Reset() {
+	*x = GetOperatorSelfRequest{}
+	mi := &file_platform_v1_platform_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetOperatorSelfRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOperatorSelfRequest) ProtoMessage() {}
+
+func (x *GetOperatorSelfRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetOperatorSelfRequest.ProtoReflect.Descriptor instead.
+func (*GetOperatorSelfRequest) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{48}
+}
+
+type GetOperatorSelfResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OperatorId    string                 `protobuf:"bytes,1,opt,name=operator_id,json=operatorId,proto3" json:"operator_id,omitempty"`
+	Email         string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
+	Role          string                 `protobuf:"bytes,3,opt,name=role,proto3" json:"role,omitempty"` // operator | admin
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetOperatorSelfResponse) Reset() {
+	*x = GetOperatorSelfResponse{}
+	mi := &file_platform_v1_platform_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetOperatorSelfResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOperatorSelfResponse) ProtoMessage() {}
+
+func (x *GetOperatorSelfResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_platform_v1_platform_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetOperatorSelfResponse.ProtoReflect.Descriptor instead.
+func (*GetOperatorSelfResponse) Descriptor() ([]byte, []int) {
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *GetOperatorSelfResponse) GetOperatorId() string {
+	if x != nil {
+		return x.OperatorId
+	}
+	return ""
+}
+
+func (x *GetOperatorSelfResponse) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *GetOperatorSelfResponse) GetRole() string {
+	if x != nil {
+		return x.Role
+	}
+	return ""
+}
+
 // GetTenantEntitlementsRequest:租戶端唯讀投影(自己的公司;前端據此 disable 按鈕與顯示用量)。
 type GetTenantEntitlementsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -3045,7 +3141,7 @@ type GetTenantEntitlementsRequest struct {
 
 func (x *GetTenantEntitlementsRequest) Reset() {
 	*x = GetTenantEntitlementsRequest{}
-	mi := &file_platform_v1_platform_proto_msgTypes[48]
+	mi := &file_platform_v1_platform_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3057,7 +3153,7 @@ func (x *GetTenantEntitlementsRequest) String() string {
 func (*GetTenantEntitlementsRequest) ProtoMessage() {}
 
 func (x *GetTenantEntitlementsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[48]
+	mi := &file_platform_v1_platform_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3070,7 +3166,7 @@ func (x *GetTenantEntitlementsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTenantEntitlementsRequest.ProtoReflect.Descriptor instead.
 func (*GetTenantEntitlementsRequest) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{48}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{50}
 }
 
 type GetTenantEntitlementsResponse struct {
@@ -3086,7 +3182,7 @@ type GetTenantEntitlementsResponse struct {
 
 func (x *GetTenantEntitlementsResponse) Reset() {
 	*x = GetTenantEntitlementsResponse{}
-	mi := &file_platform_v1_platform_proto_msgTypes[49]
+	mi := &file_platform_v1_platform_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3098,7 +3194,7 @@ func (x *GetTenantEntitlementsResponse) String() string {
 func (*GetTenantEntitlementsResponse) ProtoMessage() {}
 
 func (x *GetTenantEntitlementsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[49]
+	mi := &file_platform_v1_platform_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3111,7 +3207,7 @@ func (x *GetTenantEntitlementsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTenantEntitlementsResponse.ProtoReflect.Descriptor instead.
 func (*GetTenantEntitlementsResponse) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{49}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *GetTenantEntitlementsResponse) GetPlanCode() string {
@@ -3163,7 +3259,7 @@ type Usage struct {
 
 func (x *Usage) Reset() {
 	*x = Usage{}
-	mi := &file_platform_v1_platform_proto_msgTypes[50]
+	mi := &file_platform_v1_platform_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3175,7 +3271,7 @@ func (x *Usage) String() string {
 func (*Usage) ProtoMessage() {}
 
 func (x *Usage) ProtoReflect() protoreflect.Message {
-	mi := &file_platform_v1_platform_proto_msgTypes[50]
+	mi := &file_platform_v1_platform_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3188,7 +3284,7 @@ func (x *Usage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Usage.ProtoReflect.Descriptor instead.
 func (*Usage) Descriptor() ([]byte, []int) {
-	return file_platform_v1_platform_proto_rawDescGZIP(), []int{50}
+	return file_platform_v1_platform_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *Usage) GetFeatureCode() string {
@@ -3484,7 +3580,13 @@ const file_platform_v1_platform_proto_rawDesc = "" +
 	"\voperator_id\x18\x01 \x01(\tR\n" +
 	"operatorId\x12\x16\n" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\"\x19\n" +
-	"\x17DisableOperatorResponse\"\x1e\n" +
+	"\x17DisableOperatorResponse\"\x18\n" +
+	"\x16GetOperatorSelfRequest\"d\n" +
+	"\x17GetOperatorSelfResponse\x12\x1f\n" +
+	"\voperator_id\x18\x01 \x01(\tR\n" +
+	"operatorId\x12\x14\n" +
+	"\x05email\x18\x02 \x01(\tR\x05email\x12\x12\n" +
+	"\x04role\x18\x03 \x01(\tR\x04role\"\x1e\n" +
 	"\x1cGetTenantEntitlementsRequest\"\xbf\x01\n" +
 	"\x1dGetTenantEntitlementsResponse\x12\x1b\n" +
 	"\tplan_code\x18\x01 \x01(\tR\bplanCode\x12\x1b\n" +
@@ -3498,7 +3600,7 @@ const file_platform_v1_platform_proto_rawDesc = "" +
 	"\tlimit_set\x18\x03 \x01(\bR\blimitSet\x12\x1f\n" +
 	"\vlimit_value\x18\x04 \x01(\x03R\n" +
 	"limitValue\x12\x12\n" +
-	"\x04used\x18\x05 \x01(\x03R\x04used2\x9c\x0e\n" +
+	"\x04used\x18\x05 \x01(\x03R\x04used2\xfa\x0e\n" +
 	"\x14PlatformAdminService\x12P\n" +
 	"\vListTenants\x12\x1f.platform.v1.ListTenantsRequest\x1a .platform.v1.ListTenantsResponse\x12J\n" +
 	"\tGetTenant\x12\x1d.platform.v1.GetTenantRequest\x1a\x1e.platform.v1.GetTenantResponse\x12J\n" +
@@ -3519,7 +3621,8 @@ const file_platform_v1_platform_proto_rawDesc = "" +
 	"\x0fUpsertPlanPrice\x12#.platform.v1.UpsertPlanPriceRequest\x1a$.platform.v1.UpsertPlanPriceResponse\x12e\n" +
 	"\x12SetPlanEntitlement\x12&.platform.v1.SetPlanEntitlementRequest\x1a'.platform.v1.SetPlanEntitlementResponse\x12Y\n" +
 	"\x0eCreateOperator\x12\".platform.v1.CreateOperatorRequest\x1a#.platform.v1.CreateOperatorResponse\x12\\\n" +
-	"\x0fDisableOperator\x12#.platform.v1.DisableOperatorRequest\x1a$.platform.v1.DisableOperatorResponse2\x8a\x01\n" +
+	"\x0fDisableOperator\x12#.platform.v1.DisableOperatorRequest\x1a$.platform.v1.DisableOperatorResponse\x12\\\n" +
+	"\x0fGetOperatorSelf\x12#.platform.v1.GetOperatorSelfRequest\x1a$.platform.v1.GetOperatorSelfResponse2\x8a\x01\n" +
 	"\x18TenantEntitlementService\x12n\n" +
 	"\x15GetTenantEntitlements\x12).platform.v1.GetTenantEntitlementsRequest\x1a*.platform.v1.GetTenantEntitlementsResponseBUZSgithub.com/salesorder/sales-order-1.0/backend/internal/proto/platform/v1;platformv1b\x06proto3"
 
@@ -3535,7 +3638,7 @@ func file_platform_v1_platform_proto_rawDescGZIP() []byte {
 	return file_platform_v1_platform_proto_rawDescData
 }
 
-var file_platform_v1_platform_proto_msgTypes = make([]protoimpl.MessageInfo, 51)
+var file_platform_v1_platform_proto_msgTypes = make([]protoimpl.MessageInfo, 53)
 var file_platform_v1_platform_proto_goTypes = []any{
 	(*TenantSummary)(nil),                 // 0: platform.v1.TenantSummary
 	(*PlatformPagination)(nil),            // 1: platform.v1.PlatformPagination
@@ -3585,9 +3688,11 @@ var file_platform_v1_platform_proto_goTypes = []any{
 	(*CreateOperatorResponse)(nil),        // 45: platform.v1.CreateOperatorResponse
 	(*DisableOperatorRequest)(nil),        // 46: platform.v1.DisableOperatorRequest
 	(*DisableOperatorResponse)(nil),       // 47: platform.v1.DisableOperatorResponse
-	(*GetTenantEntitlementsRequest)(nil),  // 48: platform.v1.GetTenantEntitlementsRequest
-	(*GetTenantEntitlementsResponse)(nil), // 49: platform.v1.GetTenantEntitlementsResponse
-	(*Usage)(nil),                         // 50: platform.v1.Usage
+	(*GetOperatorSelfRequest)(nil),        // 48: platform.v1.GetOperatorSelfRequest
+	(*GetOperatorSelfResponse)(nil),       // 49: platform.v1.GetOperatorSelfResponse
+	(*GetTenantEntitlementsRequest)(nil),  // 50: platform.v1.GetTenantEntitlementsRequest
+	(*GetTenantEntitlementsResponse)(nil), // 51: platform.v1.GetTenantEntitlementsResponse
+	(*Usage)(nil),                         // 52: platform.v1.Usage
 }
 var file_platform_v1_platform_proto_depIdxs = []int32{
 	0,  // 0: platform.v1.ListTenantsResponse.tenants:type_name -> platform.v1.TenantSummary
@@ -3605,7 +3710,7 @@ var file_platform_v1_platform_proto_depIdxs = []int32{
 	33, // 12: platform.v1.GetBillingSettingsResponse.settings:type_name -> platform.v1.BillingSetting
 	33, // 13: platform.v1.UpdateBillingSettingsRequest.settings:type_name -> platform.v1.BillingSetting
 	33, // 14: platform.v1.UpdateBillingSettingsResponse.settings:type_name -> platform.v1.BillingSetting
-	50, // 15: platform.v1.GetTenantEntitlementsResponse.usage:type_name -> platform.v1.Usage
+	52, // 15: platform.v1.GetTenantEntitlementsResponse.usage:type_name -> platform.v1.Usage
 	2,  // 16: platform.v1.PlatformAdminService.ListTenants:input_type -> platform.v1.ListTenantsRequest
 	4,  // 17: platform.v1.PlatformAdminService.GetTenant:input_type -> platform.v1.GetTenantRequest
 	7,  // 18: platform.v1.PlatformAdminService.ListPlans:input_type -> platform.v1.ListPlansRequest
@@ -3625,29 +3730,31 @@ var file_platform_v1_platform_proto_depIdxs = []int32{
 	42, // 32: platform.v1.PlatformAdminService.SetPlanEntitlement:input_type -> platform.v1.SetPlanEntitlementRequest
 	44, // 33: platform.v1.PlatformAdminService.CreateOperator:input_type -> platform.v1.CreateOperatorRequest
 	46, // 34: platform.v1.PlatformAdminService.DisableOperator:input_type -> platform.v1.DisableOperatorRequest
-	48, // 35: platform.v1.TenantEntitlementService.GetTenantEntitlements:input_type -> platform.v1.GetTenantEntitlementsRequest
-	3,  // 36: platform.v1.PlatformAdminService.ListTenants:output_type -> platform.v1.ListTenantsResponse
-	5,  // 37: platform.v1.PlatformAdminService.GetTenant:output_type -> platform.v1.GetTenantResponse
-	8,  // 38: platform.v1.PlatformAdminService.ListPlans:output_type -> platform.v1.ListPlansResponse
-	12, // 39: platform.v1.PlatformAdminService.GetPlanEntitlements:output_type -> platform.v1.GetPlanEntitlementsResponse
-	16, // 40: platform.v1.PlatformAdminService.ListPlatformAudit:output_type -> platform.v1.ListPlatformAuditResponse
-	19, // 41: platform.v1.PlatformAdminService.ListReceivables:output_type -> platform.v1.ListReceivablesResponse
-	22, // 42: platform.v1.PlatformAdminService.RecordPayment:output_type -> platform.v1.RecordPaymentResponse
-	24, // 43: platform.v1.PlatformAdminService.CreateSubscription:output_type -> platform.v1.CreateSubscriptionResponse
-	26, // 44: platform.v1.PlatformAdminService.SetSeatCount:output_type -> platform.v1.SetSeatCountResponse
-	28, // 45: platform.v1.PlatformAdminService.ChangePlan:output_type -> platform.v1.ChangePlanResponse
-	30, // 46: platform.v1.PlatformAdminService.CancelSubscription:output_type -> platform.v1.CancelSubscriptionResponse
-	32, // 47: platform.v1.PlatformAdminService.GetBillingSettings:output_type -> platform.v1.GetBillingSettingsResponse
-	35, // 48: platform.v1.PlatformAdminService.UpdateBillingSettings:output_type -> platform.v1.UpdateBillingSettingsResponse
-	37, // 49: platform.v1.PlatformAdminService.SetTenantOverride:output_type -> platform.v1.SetTenantOverrideResponse
-	39, // 50: platform.v1.PlatformAdminService.RevokeTenantOverride:output_type -> platform.v1.RevokeTenantOverrideResponse
-	41, // 51: platform.v1.PlatformAdminService.UpsertPlanPrice:output_type -> platform.v1.UpsertPlanPriceResponse
-	43, // 52: platform.v1.PlatformAdminService.SetPlanEntitlement:output_type -> platform.v1.SetPlanEntitlementResponse
-	45, // 53: platform.v1.PlatformAdminService.CreateOperator:output_type -> platform.v1.CreateOperatorResponse
-	47, // 54: platform.v1.PlatformAdminService.DisableOperator:output_type -> platform.v1.DisableOperatorResponse
-	49, // 55: platform.v1.TenantEntitlementService.GetTenantEntitlements:output_type -> platform.v1.GetTenantEntitlementsResponse
-	36, // [36:56] is the sub-list for method output_type
-	16, // [16:36] is the sub-list for method input_type
+	48, // 35: platform.v1.PlatformAdminService.GetOperatorSelf:input_type -> platform.v1.GetOperatorSelfRequest
+	50, // 36: platform.v1.TenantEntitlementService.GetTenantEntitlements:input_type -> platform.v1.GetTenantEntitlementsRequest
+	3,  // 37: platform.v1.PlatformAdminService.ListTenants:output_type -> platform.v1.ListTenantsResponse
+	5,  // 38: platform.v1.PlatformAdminService.GetTenant:output_type -> platform.v1.GetTenantResponse
+	8,  // 39: platform.v1.PlatformAdminService.ListPlans:output_type -> platform.v1.ListPlansResponse
+	12, // 40: platform.v1.PlatformAdminService.GetPlanEntitlements:output_type -> platform.v1.GetPlanEntitlementsResponse
+	16, // 41: platform.v1.PlatformAdminService.ListPlatformAudit:output_type -> platform.v1.ListPlatformAuditResponse
+	19, // 42: platform.v1.PlatformAdminService.ListReceivables:output_type -> platform.v1.ListReceivablesResponse
+	22, // 43: platform.v1.PlatformAdminService.RecordPayment:output_type -> platform.v1.RecordPaymentResponse
+	24, // 44: platform.v1.PlatformAdminService.CreateSubscription:output_type -> platform.v1.CreateSubscriptionResponse
+	26, // 45: platform.v1.PlatformAdminService.SetSeatCount:output_type -> platform.v1.SetSeatCountResponse
+	28, // 46: platform.v1.PlatformAdminService.ChangePlan:output_type -> platform.v1.ChangePlanResponse
+	30, // 47: platform.v1.PlatformAdminService.CancelSubscription:output_type -> platform.v1.CancelSubscriptionResponse
+	32, // 48: platform.v1.PlatformAdminService.GetBillingSettings:output_type -> platform.v1.GetBillingSettingsResponse
+	35, // 49: platform.v1.PlatformAdminService.UpdateBillingSettings:output_type -> platform.v1.UpdateBillingSettingsResponse
+	37, // 50: platform.v1.PlatformAdminService.SetTenantOverride:output_type -> platform.v1.SetTenantOverrideResponse
+	39, // 51: platform.v1.PlatformAdminService.RevokeTenantOverride:output_type -> platform.v1.RevokeTenantOverrideResponse
+	41, // 52: platform.v1.PlatformAdminService.UpsertPlanPrice:output_type -> platform.v1.UpsertPlanPriceResponse
+	43, // 53: platform.v1.PlatformAdminService.SetPlanEntitlement:output_type -> platform.v1.SetPlanEntitlementResponse
+	45, // 54: platform.v1.PlatformAdminService.CreateOperator:output_type -> platform.v1.CreateOperatorResponse
+	47, // 55: platform.v1.PlatformAdminService.DisableOperator:output_type -> platform.v1.DisableOperatorResponse
+	49, // 56: platform.v1.PlatformAdminService.GetOperatorSelf:output_type -> platform.v1.GetOperatorSelfResponse
+	51, // 57: platform.v1.TenantEntitlementService.GetTenantEntitlements:output_type -> platform.v1.GetTenantEntitlementsResponse
+	37, // [37:58] is the sub-list for method output_type
+	16, // [16:37] is the sub-list for method input_type
 	16, // [16:16] is the sub-list for extension type_name
 	16, // [16:16] is the sub-list for extension extendee
 	0,  // [0:16] is the sub-list for field type_name
@@ -3664,7 +3771,7 @@ func file_platform_v1_platform_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_platform_v1_platform_proto_rawDesc), len(file_platform_v1_platform_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   51,
+			NumMessages:   53,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

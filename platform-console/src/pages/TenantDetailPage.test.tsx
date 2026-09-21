@@ -5,7 +5,8 @@ import { fireEvent, render, screen, waitFor, within } from "@solidjs/testing-lib
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { connectErrorWithInfo } from "../test-helpers";
 
-const listTenants = vi.fn(); // 路由守衛的探針
+const listTenants = vi.fn(); // 頁面本身的租戶查詢（守衛探針另見 getOperatorSelf）
+const getOperatorSelf = vi.fn(); // 路由守衛的探針
 const getTenant = vi.fn();
 const getPlanEntitlements = vi.fn();
 const setTenantOverride = vi.fn();
@@ -17,6 +18,7 @@ vi.mock("../lib/api", () => ({
   loginUrl: "/platform/auth/google",
   platform: {
     listTenants: (...args: unknown[]) => listTenants(...args),
+    getOperatorSelf: (...args: unknown[]) => getOperatorSelf(...args),
     getTenant: (...args: unknown[]) => getTenant(...args),
     getPlanEntitlements: (...args: unknown[]) => getPlanEntitlements(...args),
     setTenantOverride: (...args: unknown[]) => setTenantOverride(...args),
@@ -121,6 +123,7 @@ describe("TenantDetailPage", () => {
     resetSession();
     for (const fn of [
       listTenants,
+      getOperatorSelf,
       getTenant,
       getPlanEntitlements,
       setTenantOverride,
@@ -132,6 +135,7 @@ describe("TenantDetailPage", () => {
       fn.mockReset();
     }
     listTenants.mockResolvedValue({ tenants: [], pagination: { page: 1, pageSize: 1, total: 0 } });
+    getOperatorSelf.mockResolvedValue({ operatorId: "42", email: "ops@example.com", role: "admin" });
     getTenant.mockResolvedValue({ tenant, overrides: [activeOverride, expiredOverride] });
     getPlanEntitlements.mockResolvedValue(planEntitlements);
     setTenantOverride.mockResolvedValue({ id: "13" });

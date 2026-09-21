@@ -10,6 +10,23 @@ const [status, setStatus] = createSignal<SessionStatus>("unknown");
 export const sessionStatus = status;
 
 /**
+ * 自己的 operator 身分（未結項 #23：console 依角色隱藏操作）。
+ * 後端仍是唯一決策者（各 RPC 照擋）；前端只據此 disable 按鈕，不做授權判斷。
+ * 與探針共用 TTL：身分隨登入狀態走，登出即清空。
+ */
+export type OperatorSelf = { operatorId: string; email: string; role: string } | undefined;
+
+const [self, setSelf] = createSignal<OperatorSelf>(undefined);
+
+/** 自己的身分訊號（唯讀）：探針成功時一併取回，登出時清空。 */
+export const operatorSelf = self;
+
+/** 測試用：直接塞身分（正式流程由探針取回）。 */
+export function setOperatorSelfForTest(v: OperatorSelf) {
+  setSelf(v);
+}
+
+/**
  * 探針結果的 TTL：HttpOnly cookie 的效期只有後端知道，前端只能「過一陣子回頭問一次」。
  *
  * 永久快取會讓 session 失效後（12h 到期、operator 被停用）導航仍穿過守衛，只看到頁面上的
@@ -39,21 +56,27 @@ export async function ensureSession(): Promise<boolean> {
   if (!probe || Date.now() - probeAt >= PROBE_TTL_MS) {
     probeAt = Date.now();
     const gen = ++probeGen;
-    probe = platform.listTenants({ page: 1, pageSize: 1 }).then(
-      () => {
-        // 未結項 #25 前半：logout 不取消已在飛行的探針 —— 其 .then 回來必須檢查 loggedOut，
+    probe = (async () => {
+      try {
+        const me = await platform.getOperatorSelf({});
+        if (loggedOut || gen !== probeGen) return false;
+        // 未結項 #25 前半：logout 不取消已在飛行的探針 —— 其回來必須檢查 loggedOut，
         // 否則「登出 → 飛行探針成功」會把狀態翻回 authenticated（守衛仍 fail-closed、
         // 後端仍擋，但使用者會被閃回主控台再看到 401 文案）。
-        if (loggedOut || gen !== probeGen) return false;
+        setSelf({
+          operatorId: me.operatorId,
+          email: me.email,
+          role: me.role,
+        });
         setStatus("authenticated");
         return true;
-      },
-      () => {
+      } catch {
         if (loggedOut || gen !== probeGen) return false;
+        setSelf(undefined);
         setStatus("anonymous");
         return false;
-      },
-    );
+      }
+    })();
   }
   return probe;
 }
@@ -70,6 +93,7 @@ export async function ensureSession(): Promise<boolean> {
 export function logout() {
   loggedOut = true;
   setStatus("anonymous");
+  setSelf(undefined);
   probe = Promise.resolve(false);
 }
 
@@ -80,5 +104,6 @@ export function resetSession() {
   probeAt = 0;
   probeGen++;
   setStatus("unknown");
+  setSelf(undefined);
   probe = undefined;
 }

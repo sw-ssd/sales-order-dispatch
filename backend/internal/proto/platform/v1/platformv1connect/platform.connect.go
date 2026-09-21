@@ -92,6 +92,9 @@ const (
 	// PlatformAdminServiceDisableOperatorProcedure is the fully-qualified name of the
 	// PlatformAdminService's DisableOperator RPC.
 	PlatformAdminServiceDisableOperatorProcedure = "/platform.v1.PlatformAdminService/DisableOperator"
+	// PlatformAdminServiceGetOperatorSelfProcedure is the fully-qualified name of the
+	// PlatformAdminService's GetOperatorSelf RPC.
+	PlatformAdminServiceGetOperatorSelfProcedure = "/platform.v1.PlatformAdminService/GetOperatorSelf"
 	// TenantEntitlementServiceGetTenantEntitlementsProcedure is the fully-qualified name of the
 	// TenantEntitlementService's GetTenantEntitlements RPC.
 	TenantEntitlementServiceGetTenantEntitlementsProcedure = "/platform.v1.TenantEntitlementService/GetTenantEntitlements"
@@ -120,6 +123,9 @@ type PlatformAdminServiceClient interface {
 	SetPlanEntitlement(context.Context, *connect.Request[v1.SetPlanEntitlementRequest]) (*connect.Response[v1.SetPlanEntitlementResponse], error)
 	CreateOperator(context.Context, *connect.Request[v1.CreateOperatorRequest]) (*connect.Response[v1.CreateOperatorResponse], error)
 	DisableOperator(context.Context, *connect.Request[v1.DisableOperatorRequest]) (*connect.Response[v1.DisableOperatorResponse], error)
+	// 未結項 #23：自己的身分（console 依角色隱藏操作）。後端仍是唯一決策者；
+	// 前端只據此 disable 按鈕，不做授權判斷。
+	GetOperatorSelf(context.Context, *connect.Request[v1.GetOperatorSelfRequest]) (*connect.Response[v1.GetOperatorSelfResponse], error)
 }
 
 // NewPlatformAdminServiceClient constructs a client for the platform.v1.PlatformAdminService
@@ -247,6 +253,12 @@ func NewPlatformAdminServiceClient(httpClient connect.HTTPClient, baseURL string
 			connect.WithSchema(platformAdminServiceMethods.ByName("DisableOperator")),
 			connect.WithClientOptions(opts...),
 		),
+		getOperatorSelf: connect.NewClient[v1.GetOperatorSelfRequest, v1.GetOperatorSelfResponse](
+			httpClient,
+			baseURL+PlatformAdminServiceGetOperatorSelfProcedure,
+			connect.WithSchema(platformAdminServiceMethods.ByName("GetOperatorSelf")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -271,6 +283,7 @@ type platformAdminServiceClient struct {
 	setPlanEntitlement    *connect.Client[v1.SetPlanEntitlementRequest, v1.SetPlanEntitlementResponse]
 	createOperator        *connect.Client[v1.CreateOperatorRequest, v1.CreateOperatorResponse]
 	disableOperator       *connect.Client[v1.DisableOperatorRequest, v1.DisableOperatorResponse]
+	getOperatorSelf       *connect.Client[v1.GetOperatorSelfRequest, v1.GetOperatorSelfResponse]
 }
 
 // ListTenants calls platform.v1.PlatformAdminService.ListTenants.
@@ -368,6 +381,11 @@ func (c *platformAdminServiceClient) DisableOperator(ctx context.Context, req *c
 	return c.disableOperator.CallUnary(ctx, req)
 }
 
+// GetOperatorSelf calls platform.v1.PlatformAdminService.GetOperatorSelf.
+func (c *platformAdminServiceClient) GetOperatorSelf(ctx context.Context, req *connect.Request[v1.GetOperatorSelfRequest]) (*connect.Response[v1.GetOperatorSelfResponse], error) {
+	return c.getOperatorSelf.CallUnary(ctx, req)
+}
+
 // PlatformAdminServiceHandler is an implementation of the platform.v1.PlatformAdminService service.
 type PlatformAdminServiceHandler interface {
 	ListTenants(context.Context, *connect.Request[v1.ListTenantsRequest]) (*connect.Response[v1.ListTenantsResponse], error)
@@ -391,6 +409,9 @@ type PlatformAdminServiceHandler interface {
 	SetPlanEntitlement(context.Context, *connect.Request[v1.SetPlanEntitlementRequest]) (*connect.Response[v1.SetPlanEntitlementResponse], error)
 	CreateOperator(context.Context, *connect.Request[v1.CreateOperatorRequest]) (*connect.Response[v1.CreateOperatorResponse], error)
 	DisableOperator(context.Context, *connect.Request[v1.DisableOperatorRequest]) (*connect.Response[v1.DisableOperatorResponse], error)
+	// 未結項 #23：自己的身分（console 依角色隱藏操作）。後端仍是唯一決策者；
+	// 前端只據此 disable 按鈕，不做授權判斷。
+	GetOperatorSelf(context.Context, *connect.Request[v1.GetOperatorSelfRequest]) (*connect.Response[v1.GetOperatorSelfResponse], error)
 }
 
 // NewPlatformAdminServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -514,6 +535,12 @@ func NewPlatformAdminServiceHandler(svc PlatformAdminServiceHandler, opts ...con
 		connect.WithSchema(platformAdminServiceMethods.ByName("DisableOperator")),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformAdminServiceGetOperatorSelfHandler := connect.NewUnaryHandler(
+		PlatformAdminServiceGetOperatorSelfProcedure,
+		svc.GetOperatorSelf,
+		connect.WithSchema(platformAdminServiceMethods.ByName("GetOperatorSelf")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/platform.v1.PlatformAdminService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PlatformAdminServiceListTenantsProcedure:
@@ -554,6 +581,8 @@ func NewPlatformAdminServiceHandler(svc PlatformAdminServiceHandler, opts ...con
 			platformAdminServiceCreateOperatorHandler.ServeHTTP(w, r)
 		case PlatformAdminServiceDisableOperatorProcedure:
 			platformAdminServiceDisableOperatorHandler.ServeHTTP(w, r)
+		case PlatformAdminServiceGetOperatorSelfProcedure:
+			platformAdminServiceGetOperatorSelfHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -637,6 +666,10 @@ func (UnimplementedPlatformAdminServiceHandler) CreateOperator(context.Context, 
 
 func (UnimplementedPlatformAdminServiceHandler) DisableOperator(context.Context, *connect.Request[v1.DisableOperatorRequest]) (*connect.Response[v1.DisableOperatorResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("platform.v1.PlatformAdminService.DisableOperator is not implemented"))
+}
+
+func (UnimplementedPlatformAdminServiceHandler) GetOperatorSelf(context.Context, *connect.Request[v1.GetOperatorSelfRequest]) (*connect.Response[v1.GetOperatorSelfResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("platform.v1.PlatformAdminService.GetOperatorSelf is not implemented"))
 }
 
 // TenantEntitlementServiceClient is a client for the platform.v1.TenantEntitlementService service.

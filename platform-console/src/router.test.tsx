@@ -5,8 +5,12 @@ import { Code, ConnectError } from "@connectrpc/connect";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const listTenants = vi.fn();
+const getOperatorSelf = vi.fn();
 vi.mock("./lib/api", () => ({
-  platform: { listTenants: (...args: unknown[]) => listTenants(...args) },
+  platform: {
+    listTenants: (...args: unknown[]) => listTenants(...args),
+    getOperatorSelf: (...args: unknown[]) => getOperatorSelf(...args),
+  },
   loginUrl: "/platform/auth/google",
 }));
 
@@ -32,11 +36,13 @@ function renderAt(path: string) {
 describe("路由守衛", () => {
   beforeEach(() => {
     listTenants.mockReset();
+    getOperatorSelf.mockReset();
+    getOperatorSelf.mockResolvedValue({ operatorId: "42", email: "ops@example.com", role: "admin" });
     resetSession();
   });
 
   it("未登入：/tenants 被導向 /login，且不渲染任何租戶資料", async () => {
-    listTenants.mockRejectedValue(new ConnectError("未登入", Code.Unauthenticated));
+    getOperatorSelf.mockRejectedValue(new ConnectError("未登入", Code.Unauthenticated));
     const router = renderAt("/tenants");
 
     await waitFor(() => expect(screen.getByRole("link", { name: "以 Google 登入" })).toBeTruthy());
@@ -76,6 +82,7 @@ describe("路由守衛", () => {
     expect(screen.queryByRole("navigation", { name: "主導覽" })).toBeNull();
     expect(screen.queryByRole("button", { name: "登出" })).toBeNull();
     expect(listTenants).not.toHaveBeenCalled();
+    expect(getOperatorSelf).not.toHaveBeenCalled();
   });
 
   // 未結項 #25 後半：「/login」精確字串對未來的「/login/verify」子路由會誤套外框。

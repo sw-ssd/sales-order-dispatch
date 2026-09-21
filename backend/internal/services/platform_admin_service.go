@@ -1090,6 +1090,21 @@ func marshalAuditImage(m map[string]any) ([]byte, error) {
 //
 // 角色來自 operatorauth 從**資料庫白名單列**讀出的身分(token 只是載體;每次請求都查 status
 // 與 role),故改了 role 立刻生效。
+// GetOperatorSelf 回自己的 operator 身分（未結項 #23：console 依角色隱藏操作）。
+// 後端仍是唯一決策者（各 RPC 的 requireAdmin／Interceptor 照擋）；前端只據此 disable。
+func (s *PlatformAdminService) GetOperatorSelf(ctx context.Context,
+	_ *connect.Request[platformv1.GetOperatorSelfRequest]) (*connect.Response[platformv1.GetOperatorSelfResponse], error) {
+	id, err := requireOperatorIdentity(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(&platformv1.GetOperatorSelfResponse{
+		OperatorId: strconv.FormatInt(id.OperatorID, 10),
+		Email:      id.Email,
+		Role:       id.Role,
+	}), nil
+}
+
 func requireAdmin(ctx context.Context) (operatorauth.Identity, error) {
 	id, err := requireOperatorIdentity(ctx)
 	if err != nil {

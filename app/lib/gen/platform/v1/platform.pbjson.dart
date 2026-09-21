@@ -910,6 +910,31 @@ const DisableOperatorResponse$json = {
 final $typed_data.Uint8List disableOperatorResponseDescriptor =
     $convert.base64Decode('ChdEaXNhYmxlT3BlcmF0b3JSZXNwb25zZQ==');
 
+@$core.Deprecated('Use getOperatorSelfRequestDescriptor instead')
+const GetOperatorSelfRequest$json = {
+  '1': 'GetOperatorSelfRequest',
+};
+
+/// Descriptor for `GetOperatorSelfRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getOperatorSelfRequestDescriptor =
+    $convert.base64Decode('ChZHZXRPcGVyYXRvclNlbGZSZXF1ZXN0');
+
+@$core.Deprecated('Use getOperatorSelfResponseDescriptor instead')
+const GetOperatorSelfResponse$json = {
+  '1': 'GetOperatorSelfResponse',
+  '2': [
+    {'1': 'operator_id', '3': 1, '4': 1, '5': 9, '10': 'operatorId'},
+    {'1': 'email', '3': 2, '4': 1, '5': 9, '10': 'email'},
+    {'1': 'role', '3': 3, '4': 1, '5': 9, '10': 'role'},
+  ],
+};
+
+/// Descriptor for `GetOperatorSelfResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getOperatorSelfResponseDescriptor =
+    $convert.base64Decode(
+        'ChdHZXRPcGVyYXRvclNlbGZSZXNwb25zZRIfCgtvcGVyYXRvcl9pZBgBIAEoCVIKb3BlcmF0b3'
+        'JJZBIUCgVlbWFpbBgCIAEoCVIFZW1haWwSEgoEcm9sZRgDIAEoCVIEcm9sZQ==');
+
 @$core.Deprecated('Use getTenantEntitlementsRequestDescriptor instead')
 const GetTenantEntitlementsRequest$json = {
   '1': 'GetTenantEntitlementsRequest',
@@ -1061,6 +1086,11 @@ const $core.Map<$core.String, $core.dynamic> PlatformAdminServiceBase$json = {
       '2': '.platform.v1.DisableOperatorRequest',
       '3': '.platform.v1.DisableOperatorResponse'
     },
+    {
+      '1': 'GetOperatorSelf',
+      '2': '.platform.v1.GetOperatorSelfRequest',
+      '3': '.platform.v1.GetOperatorSelfResponse'
+    },
   ],
 };
 
@@ -1118,6 +1148,8 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.platform.v1.CreateOperatorResponse': CreateOperatorResponse$json,
   '.platform.v1.DisableOperatorRequest': DisableOperatorRequest$json,
   '.platform.v1.DisableOperatorResponse': DisableOperatorResponse$json,
+  '.platform.v1.GetOperatorSelfRequest': GetOperatorSelfRequest$json,
+  '.platform.v1.GetOperatorSelfResponse': GetOperatorSelfResponse$json,
 };
 
 /// Descriptor for `PlatformAdminService`. Decode as a `google.protobuf.ServiceDescriptorProto`.
@@ -1154,7 +1186,9 @@ final $typed_data.Uint8List platformAdminServiceDescriptor = $convert.base64Deco
     'NldFBsYW5FbnRpdGxlbWVudFJlc3BvbnNlElkKDkNyZWF0ZU9wZXJhdG9yEiIucGxhdGZvcm0u'
     'djEuQ3JlYXRlT3BlcmF0b3JSZXF1ZXN0GiMucGxhdGZvcm0udjEuQ3JlYXRlT3BlcmF0b3JSZX'
     'Nwb25zZRJcCg9EaXNhYmxlT3BlcmF0b3ISIy5wbGF0Zm9ybS52MS5EaXNhYmxlT3BlcmF0b3JS'
-    'ZXF1ZXN0GiQucGxhdGZvcm0udjEuRGlzYWJsZU9wZXJhdG9yUmVzcG9uc2U=');
+    'ZXF1ZXN0GiQucGxhdGZvcm0udjEuRGlzYWJsZU9wZXJhdG9yUmVzcG9uc2USXAoPR2V0T3Blcm'
+    'F0b3JTZWxmEiMucGxhdGZvcm0udjEuR2V0T3BlcmF0b3JTZWxmUmVxdWVzdBokLnBsYXRmb3Jt'
+    'LnYxLkdldE9wZXJhdG9yU2VsZlJlc3BvbnNl');
 
 const $core.Map<$core.String, $core.dynamic> TenantEntitlementServiceBase$json =
     {

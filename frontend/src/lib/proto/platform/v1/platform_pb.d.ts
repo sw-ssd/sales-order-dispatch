@@ -1466,6 +1466,46 @@ export declare type DisableOperatorResponse = Message<"platform.v1.DisableOperat
 export declare const DisableOperatorResponseSchema: GenMessage<DisableOperatorResponse>;
 
 /**
+ * @generated from message platform.v1.GetOperatorSelfRequest
+ */
+export declare type GetOperatorSelfRequest = Message<"platform.v1.GetOperatorSelfRequest"> & {
+};
+
+/**
+ * Describes the message platform.v1.GetOperatorSelfRequest.
+ * Use `create(GetOperatorSelfRequestSchema)` to create a new message.
+ */
+export declare const GetOperatorSelfRequestSchema: GenMessage<GetOperatorSelfRequest>;
+
+/**
+ * @generated from message platform.v1.GetOperatorSelfResponse
+ */
+export declare type GetOperatorSelfResponse = Message<"platform.v1.GetOperatorSelfResponse"> & {
+  /**
+   * @generated from field: string operator_id = 1;
+   */
+  operatorId: string;
+
+  /**
+   * @generated from field: string email = 2;
+   */
+  email: string;
+
+  /**
+   * operator | admin
+   *
+   * @generated from field: string role = 3;
+   */
+  role: string;
+};
+
+/**
+ * Describes the message platform.v1.GetOperatorSelfResponse.
+ * Use `create(GetOperatorSelfResponseSchema)` to create a new message.
+ */
+export declare const GetOperatorSelfResponseSchema: GenMessage<GetOperatorSelfResponse>;
+
+/**
  * GetTenantEntitlementsRequest:租戶端唯讀投影(自己的公司;前端據此 disable 按鈕與顯示用量)。
  *
  * @generated from message platform.v1.GetTenantEntitlementsRequest
@@ -1713,6 +1753,17 @@ export declare const PlatformAdminService: GenService<{
     methodKind: "unary";
     input: typeof DisableOperatorRequestSchema;
     output: typeof DisableOperatorResponseSchema;
+  },
+  /**
+   * 未結項 #23：自己的身分（console 依角色隱藏操作）。後端仍是唯一決策者；
+   * 前端只據此 disable 按鈕，不做授權判斷。
+   *
+   * @generated from rpc platform.v1.PlatformAdminService.GetOperatorSelf
+   */
+  getOperatorSelf: {
+    methodKind: "unary";
+    input: typeof GetOperatorSelfRequestSchema;
+    output: typeof GetOperatorSelfResponseSchema;
   },
 }>;
 

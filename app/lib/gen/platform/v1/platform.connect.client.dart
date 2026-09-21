@@ -333,6 +333,25 @@ extension type PlatformAdminServiceClient (connect.Transport _transport) {
       onTrailer: onTrailer,
     );
   }
+
+  /// 未結項 #23：自己的身分（console 依角色隱藏操作）。後端仍是唯一決策者；
+  /// 前端只據此 disable 按鈕，不做授權判斷。
+  Future<platformv1platform.GetOperatorSelfResponse> getOperatorSelf(
+    platformv1platform.GetOperatorSelfRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.PlatformAdminService.getOperatorSelf,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
 }
 /// TenantEntitlementService:租戶端權益投影(租戶 session;唯讀)。
 extension type TenantEntitlementServiceClient (connect.Transport _transport) {
