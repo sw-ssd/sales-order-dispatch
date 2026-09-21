@@ -25,8 +25,8 @@ jobs:
         uses: golangci/golangci-lint-action@v8
         with:
           working-directory: backend
-      - name: Test
-        run: go test ./...
+      - name: Test # -count=1 關結果快取(未結項 #35:快取命中會假綠)
+        run: go test -count=1 ./...
       # 產生檔（碼表與三端常數）必須與 registry 同步：跑完 go generate 後不得有 diff。
       # git diff 對 **untracked** 檔無感（產生器新建了檔案卻忘記 commit 時會放行），故另以
       # git status --porcelain 檢查同一組路徑。

@@ -10,8 +10,8 @@ tasks:
     cmd: go run ./cmd/server
 
   test:
-    desc: 全部測試
-    cmd: go test ./...
+    desc: 全部測試（-count=1 關結果快取，未結項 #35）
+    cmd: go test -count=1 ./...
 
   test:integration:
     desc: 整合測試(testcontainers;需本機容器 runtime,env 已固化於此)
@@ -30,12 +30,12 @@ tasks:
     #   task test:integration -- -run TestIntegrationOpenFGAMigration -v
 
   check:
-    desc: fmt + vet + lint + test（D31-2）
+    desc: fmt + vet + lint + test（D31-2；test 帶 -count=1，未結項 #35）
     cmds:
       - go fmt ./...
       - go vet ./...
       - golangci-lint run
-      - go test ./...
+      - go test -count=1 ./...
 
   vuln:
     desc: govulncheck 弱點掃描（D31-2）
