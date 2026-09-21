@@ -225,6 +225,30 @@ func (f ProductUnitFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value,
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProductUnitMutation", m)
 }
 
+// The ReturnRequestFunc type is an adapter to allow the use of ordinary
+// function as ReturnRequest mutator.
+type ReturnRequestFunc func(context.Context, *ent.ReturnRequestMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ReturnRequestFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ReturnRequestMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ReturnRequestMutation", m)
+}
+
+// The ReturnRequestItemFunc type is an adapter to allow the use of ordinary
+// function as ReturnRequestItem mutator.
+type ReturnRequestItemFunc func(context.Context, *ent.ReturnRequestItemMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ReturnRequestItemFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ReturnRequestItemMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ReturnRequestItemMutation", m)
+}
+
 // The RoleFunc type is an adapter to allow the use of ordinary
 // function as Role mutator.
 type RoleFunc func(context.Context, *ent.RoleMutation) (ent.Value, error)

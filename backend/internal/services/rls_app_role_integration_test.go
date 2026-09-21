@@ -13,8 +13,8 @@ import (
 )
 
 // businessTables 為明確授權的業務表白名單（00022 的 18 張 ＋ 00031 的訂單四表 ＋
-// 00033 的 customer_products ＋ 00035 的 file_assets ＋ 00037 的列印兩表，共 26 張；
-// 各表授權由其 migration 明示列舉）。
+// 00033 的 customer_products ＋ 00035 的 file_assets ＋ 00037 的列印兩表 ＋
+// 00039 的退貨兩表，共 28 張；各表授權由其 migration 明示列舉）。
 // 授權必須恰好落在這些表，多一張即為權限外洩（如內嵌 OpenFGA 的授權表）。
 var businessTables = map[string]bool{
 	"companies": true, "departments": true, "users": true, "roles": true,
@@ -26,6 +26,7 @@ var businessTables = map[string]bool{
 	"sales_orders": true, "sales_order_items": true, "sales_order_events": true,
 	"order_counters": true, "customer_products": true, "file_assets": true,
 	"print_logs": true, "print_previews": true,
+	"return_requests": true, "return_request_items": true,
 }
 
 // TestIntegrationAppRolePrivileges 驗證業務角色是非 owner、且對業務表有 DML 權限：

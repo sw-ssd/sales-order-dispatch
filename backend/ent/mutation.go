@@ -30,6 +30,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/productcategory"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productprocessingspec"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productunit"
+	"github.com/salesorder/sales-order-1.0/backend/ent/returnrequest"
+	"github.com/salesorder/sales-order-1.0/backend/ent/returnrequestitem"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/ent/rolepermission"
 	"github.com/salesorder/sales-order-1.0/backend/ent/route"
@@ -67,6 +69,8 @@ const (
 	TypeProductCategory       = "ProductCategory"
 	TypeProductProcessingSpec = "ProductProcessingSpec"
 	TypeProductUnit           = "ProductUnit"
+	TypeReturnRequest         = "ReturnRequest"
+	TypeReturnRequestItem     = "ReturnRequestItem"
 	TypeRole                  = "Role"
 	TypeRolePermission        = "RolePermission"
 	TypeRoute                 = "Route"
@@ -19398,6 +19402,2841 @@ func (m *ProductUnitMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *ProductUnitMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown ProductUnit edge %s", name)
+}
+
+// ReturnRequestMutation represents an operation that mutates the ReturnRequest nodes in the graph.
+type ReturnRequestMutation struct {
+	config
+	op                     Op
+	typ                    string
+	id                     *int
+	company_id             *int
+	addcompany_id          *int
+	department_id          *int
+	adddepartment_id       *int
+	customer_id            *int
+	addcustomer_id         *int
+	created_by_user_id     *int
+	addcreated_by_user_id  *int
+	status                 *string
+	remark                 *string
+	reviewed_by_user_id    *int
+	addreviewed_by_user_id *int
+	reviewed_at            *time.Time
+	reject_reason          *string
+	version                *int
+	addversion             *int
+	created_at             *time.Time
+	updated_at             *time.Time
+	deleted_at             *time.Time
+	clearedFields          map[string]struct{}
+	done                   bool
+	oldValue               func(context.Context) (*ReturnRequest, error)
+	predicates             []predicate.ReturnRequest
+}
+
+var _ ent.Mutation = (*ReturnRequestMutation)(nil)
+
+// returnrequestOption allows management of the mutation configuration using functional options.
+type returnrequestOption func(*ReturnRequestMutation)
+
+// newReturnRequestMutation creates new mutation for the ReturnRequest entity.
+func newReturnRequestMutation(c config, op Op, opts ...returnrequestOption) *ReturnRequestMutation {
+	m := &ReturnRequestMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeReturnRequest,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withReturnRequestID sets the ID field of the mutation.
+func withReturnRequestID(id int) returnrequestOption {
+	return func(m *ReturnRequestMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ReturnRequest
+		)
+		m.oldValue = func(ctx context.Context) (*ReturnRequest, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ReturnRequest.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withReturnRequest sets the old ReturnRequest of the mutation.
+func withReturnRequest(node *ReturnRequest) returnrequestOption {
+	return func(m *ReturnRequestMutation) {
+		m.oldValue = func(context.Context) (*ReturnRequest, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ReturnRequestMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ReturnRequestMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ReturnRequestMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ReturnRequestMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ReturnRequest.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCompanyID sets the "company_id" field.
+func (m *ReturnRequestMutation) SetCompanyID(i int) {
+	m.company_id = &i
+	m.addcompany_id = nil
+}
+
+// CompanyID returns the value of the "company_id" field in the mutation.
+func (m *ReturnRequestMutation) CompanyID() (r int, exists bool) {
+	v := m.company_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCompanyID returns the old "company_id" field's value of the ReturnRequest entity.
+// If the ReturnRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestMutation) OldCompanyID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCompanyID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCompanyID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCompanyID: %w", err)
+	}
+	return oldValue.CompanyID, nil
+}
+
+// AddCompanyID adds i to the "company_id" field.
+func (m *ReturnRequestMutation) AddCompanyID(i int) {
+	if m.addcompany_id != nil {
+		*m.addcompany_id += i
+	} else {
+		m.addcompany_id = &i
+	}
+}
+
+// AddedCompanyID returns the value that was added to the "company_id" field in this mutation.
+func (m *ReturnRequestMutation) AddedCompanyID() (r int, exists bool) {
+	v := m.addcompany_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCompanyID resets all changes to the "company_id" field.
+func (m *ReturnRequestMutation) ResetCompanyID() {
+	m.company_id = nil
+	m.addcompany_id = nil
+}
+
+// SetDepartmentID sets the "department_id" field.
+func (m *ReturnRequestMutation) SetDepartmentID(i int) {
+	m.department_id = &i
+	m.adddepartment_id = nil
+}
+
+// DepartmentID returns the value of the "department_id" field in the mutation.
+func (m *ReturnRequestMutation) DepartmentID() (r int, exists bool) {
+	v := m.department_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDepartmentID returns the old "department_id" field's value of the ReturnRequest entity.
+// If the ReturnRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestMutation) OldDepartmentID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDepartmentID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDepartmentID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDepartmentID: %w", err)
+	}
+	return oldValue.DepartmentID, nil
+}
+
+// AddDepartmentID adds i to the "department_id" field.
+func (m *ReturnRequestMutation) AddDepartmentID(i int) {
+	if m.adddepartment_id != nil {
+		*m.adddepartment_id += i
+	} else {
+		m.adddepartment_id = &i
+	}
+}
+
+// AddedDepartmentID returns the value that was added to the "department_id" field in this mutation.
+func (m *ReturnRequestMutation) AddedDepartmentID() (r int, exists bool) {
+	v := m.adddepartment_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetDepartmentID resets all changes to the "department_id" field.
+func (m *ReturnRequestMutation) ResetDepartmentID() {
+	m.department_id = nil
+	m.adddepartment_id = nil
+}
+
+// SetCustomerID sets the "customer_id" field.
+func (m *ReturnRequestMutation) SetCustomerID(i int) {
+	m.customer_id = &i
+	m.addcustomer_id = nil
+}
+
+// CustomerID returns the value of the "customer_id" field in the mutation.
+func (m *ReturnRequestMutation) CustomerID() (r int, exists bool) {
+	v := m.customer_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCustomerID returns the old "customer_id" field's value of the ReturnRequest entity.
+// If the ReturnRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestMutation) OldCustomerID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCustomerID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCustomerID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCustomerID: %w", err)
+	}
+	return oldValue.CustomerID, nil
+}
+
+// AddCustomerID adds i to the "customer_id" field.
+func (m *ReturnRequestMutation) AddCustomerID(i int) {
+	if m.addcustomer_id != nil {
+		*m.addcustomer_id += i
+	} else {
+		m.addcustomer_id = &i
+	}
+}
+
+// AddedCustomerID returns the value that was added to the "customer_id" field in this mutation.
+func (m *ReturnRequestMutation) AddedCustomerID() (r int, exists bool) {
+	v := m.addcustomer_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCustomerID resets all changes to the "customer_id" field.
+func (m *ReturnRequestMutation) ResetCustomerID() {
+	m.customer_id = nil
+	m.addcustomer_id = nil
+}
+
+// SetCreatedByUserID sets the "created_by_user_id" field.
+func (m *ReturnRequestMutation) SetCreatedByUserID(i int) {
+	m.created_by_user_id = &i
+	m.addcreated_by_user_id = nil
+}
+
+// CreatedByUserID returns the value of the "created_by_user_id" field in the mutation.
+func (m *ReturnRequestMutation) CreatedByUserID() (r int, exists bool) {
+	v := m.created_by_user_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedByUserID returns the old "created_by_user_id" field's value of the ReturnRequest entity.
+// If the ReturnRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestMutation) OldCreatedByUserID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedByUserID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedByUserID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedByUserID: %w", err)
+	}
+	return oldValue.CreatedByUserID, nil
+}
+
+// AddCreatedByUserID adds i to the "created_by_user_id" field.
+func (m *ReturnRequestMutation) AddCreatedByUserID(i int) {
+	if m.addcreated_by_user_id != nil {
+		*m.addcreated_by_user_id += i
+	} else {
+		m.addcreated_by_user_id = &i
+	}
+}
+
+// AddedCreatedByUserID returns the value that was added to the "created_by_user_id" field in this mutation.
+func (m *ReturnRequestMutation) AddedCreatedByUserID() (r int, exists bool) {
+	v := m.addcreated_by_user_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCreatedByUserID resets all changes to the "created_by_user_id" field.
+func (m *ReturnRequestMutation) ResetCreatedByUserID() {
+	m.created_by_user_id = nil
+	m.addcreated_by_user_id = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *ReturnRequestMutation) SetStatus(s string) {
+	m.status = &s
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *ReturnRequestMutation) Status() (r string, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the ReturnRequest entity.
+// If the ReturnRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestMutation) OldStatus(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *ReturnRequestMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetRemark sets the "remark" field.
+func (m *ReturnRequestMutation) SetRemark(s string) {
+	m.remark = &s
+}
+
+// Remark returns the value of the "remark" field in the mutation.
+func (m *ReturnRequestMutation) Remark() (r string, exists bool) {
+	v := m.remark
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRemark returns the old "remark" field's value of the ReturnRequest entity.
+// If the ReturnRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestMutation) OldRemark(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRemark is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRemark requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRemark: %w", err)
+	}
+	return oldValue.Remark, nil
+}
+
+// ClearRemark clears the value of the "remark" field.
+func (m *ReturnRequestMutation) ClearRemark() {
+	m.remark = nil
+	m.clearedFields[returnrequest.FieldRemark] = struct{}{}
+}
+
+// RemarkCleared returns if the "remark" field was cleared in this mutation.
+func (m *ReturnRequestMutation) RemarkCleared() bool {
+	_, ok := m.clearedFields[returnrequest.FieldRemark]
+	return ok
+}
+
+// ResetRemark resets all changes to the "remark" field.
+func (m *ReturnRequestMutation) ResetRemark() {
+	m.remark = nil
+	delete(m.clearedFields, returnrequest.FieldRemark)
+}
+
+// SetReviewedByUserID sets the "reviewed_by_user_id" field.
+func (m *ReturnRequestMutation) SetReviewedByUserID(i int) {
+	m.reviewed_by_user_id = &i
+	m.addreviewed_by_user_id = nil
+}
+
+// ReviewedByUserID returns the value of the "reviewed_by_user_id" field in the mutation.
+func (m *ReturnRequestMutation) ReviewedByUserID() (r int, exists bool) {
+	v := m.reviewed_by_user_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReviewedByUserID returns the old "reviewed_by_user_id" field's value of the ReturnRequest entity.
+// If the ReturnRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestMutation) OldReviewedByUserID(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReviewedByUserID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReviewedByUserID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReviewedByUserID: %w", err)
+	}
+	return oldValue.ReviewedByUserID, nil
+}
+
+// AddReviewedByUserID adds i to the "reviewed_by_user_id" field.
+func (m *ReturnRequestMutation) AddReviewedByUserID(i int) {
+	if m.addreviewed_by_user_id != nil {
+		*m.addreviewed_by_user_id += i
+	} else {
+		m.addreviewed_by_user_id = &i
+	}
+}
+
+// AddedReviewedByUserID returns the value that was added to the "reviewed_by_user_id" field in this mutation.
+func (m *ReturnRequestMutation) AddedReviewedByUserID() (r int, exists bool) {
+	v := m.addreviewed_by_user_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearReviewedByUserID clears the value of the "reviewed_by_user_id" field.
+func (m *ReturnRequestMutation) ClearReviewedByUserID() {
+	m.reviewed_by_user_id = nil
+	m.addreviewed_by_user_id = nil
+	m.clearedFields[returnrequest.FieldReviewedByUserID] = struct{}{}
+}
+
+// ReviewedByUserIDCleared returns if the "reviewed_by_user_id" field was cleared in this mutation.
+func (m *ReturnRequestMutation) ReviewedByUserIDCleared() bool {
+	_, ok := m.clearedFields[returnrequest.FieldReviewedByUserID]
+	return ok
+}
+
+// ResetReviewedByUserID resets all changes to the "reviewed_by_user_id" field.
+func (m *ReturnRequestMutation) ResetReviewedByUserID() {
+	m.reviewed_by_user_id = nil
+	m.addreviewed_by_user_id = nil
+	delete(m.clearedFields, returnrequest.FieldReviewedByUserID)
+}
+
+// SetReviewedAt sets the "reviewed_at" field.
+func (m *ReturnRequestMutation) SetReviewedAt(t time.Time) {
+	m.reviewed_at = &t
+}
+
+// ReviewedAt returns the value of the "reviewed_at" field in the mutation.
+func (m *ReturnRequestMutation) ReviewedAt() (r time.Time, exists bool) {
+	v := m.reviewed_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReviewedAt returns the old "reviewed_at" field's value of the ReturnRequest entity.
+// If the ReturnRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestMutation) OldReviewedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReviewedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReviewedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReviewedAt: %w", err)
+	}
+	return oldValue.ReviewedAt, nil
+}
+
+// ClearReviewedAt clears the value of the "reviewed_at" field.
+func (m *ReturnRequestMutation) ClearReviewedAt() {
+	m.reviewed_at = nil
+	m.clearedFields[returnrequest.FieldReviewedAt] = struct{}{}
+}
+
+// ReviewedAtCleared returns if the "reviewed_at" field was cleared in this mutation.
+func (m *ReturnRequestMutation) ReviewedAtCleared() bool {
+	_, ok := m.clearedFields[returnrequest.FieldReviewedAt]
+	return ok
+}
+
+// ResetReviewedAt resets all changes to the "reviewed_at" field.
+func (m *ReturnRequestMutation) ResetReviewedAt() {
+	m.reviewed_at = nil
+	delete(m.clearedFields, returnrequest.FieldReviewedAt)
+}
+
+// SetRejectReason sets the "reject_reason" field.
+func (m *ReturnRequestMutation) SetRejectReason(s string) {
+	m.reject_reason = &s
+}
+
+// RejectReason returns the value of the "reject_reason" field in the mutation.
+func (m *ReturnRequestMutation) RejectReason() (r string, exists bool) {
+	v := m.reject_reason
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRejectReason returns the old "reject_reason" field's value of the ReturnRequest entity.
+// If the ReturnRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestMutation) OldRejectReason(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRejectReason is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRejectReason requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRejectReason: %w", err)
+	}
+	return oldValue.RejectReason, nil
+}
+
+// ClearRejectReason clears the value of the "reject_reason" field.
+func (m *ReturnRequestMutation) ClearRejectReason() {
+	m.reject_reason = nil
+	m.clearedFields[returnrequest.FieldRejectReason] = struct{}{}
+}
+
+// RejectReasonCleared returns if the "reject_reason" field was cleared in this mutation.
+func (m *ReturnRequestMutation) RejectReasonCleared() bool {
+	_, ok := m.clearedFields[returnrequest.FieldRejectReason]
+	return ok
+}
+
+// ResetRejectReason resets all changes to the "reject_reason" field.
+func (m *ReturnRequestMutation) ResetRejectReason() {
+	m.reject_reason = nil
+	delete(m.clearedFields, returnrequest.FieldRejectReason)
+}
+
+// SetVersion sets the "version" field.
+func (m *ReturnRequestMutation) SetVersion(i int) {
+	m.version = &i
+	m.addversion = nil
+}
+
+// Version returns the value of the "version" field in the mutation.
+func (m *ReturnRequestMutation) Version() (r int, exists bool) {
+	v := m.version
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldVersion returns the old "version" field's value of the ReturnRequest entity.
+// If the ReturnRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestMutation) OldVersion(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldVersion is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldVersion requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldVersion: %w", err)
+	}
+	return oldValue.Version, nil
+}
+
+// AddVersion adds i to the "version" field.
+func (m *ReturnRequestMutation) AddVersion(i int) {
+	if m.addversion != nil {
+		*m.addversion += i
+	} else {
+		m.addversion = &i
+	}
+}
+
+// AddedVersion returns the value that was added to the "version" field in this mutation.
+func (m *ReturnRequestMutation) AddedVersion() (r int, exists bool) {
+	v := m.addversion
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetVersion resets all changes to the "version" field.
+func (m *ReturnRequestMutation) ResetVersion() {
+	m.version = nil
+	m.addversion = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *ReturnRequestMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *ReturnRequestMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the ReturnRequest entity.
+// If the ReturnRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *ReturnRequestMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *ReturnRequestMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *ReturnRequestMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the ReturnRequest entity.
+// If the ReturnRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *ReturnRequestMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (m *ReturnRequestMutation) SetDeletedAt(t time.Time) {
+	m.deleted_at = &t
+}
+
+// DeletedAt returns the value of the "deleted_at" field in the mutation.
+func (m *ReturnRequestMutation) DeletedAt() (r time.Time, exists bool) {
+	v := m.deleted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeletedAt returns the old "deleted_at" field's value of the ReturnRequest entity.
+// If the ReturnRequest object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
+	}
+	return oldValue.DeletedAt, nil
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (m *ReturnRequestMutation) ClearDeletedAt() {
+	m.deleted_at = nil
+	m.clearedFields[returnrequest.FieldDeletedAt] = struct{}{}
+}
+
+// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
+func (m *ReturnRequestMutation) DeletedAtCleared() bool {
+	_, ok := m.clearedFields[returnrequest.FieldDeletedAt]
+	return ok
+}
+
+// ResetDeletedAt resets all changes to the "deleted_at" field.
+func (m *ReturnRequestMutation) ResetDeletedAt() {
+	m.deleted_at = nil
+	delete(m.clearedFields, returnrequest.FieldDeletedAt)
+}
+
+// Where appends a list predicates to the ReturnRequestMutation builder.
+func (m *ReturnRequestMutation) Where(ps ...predicate.ReturnRequest) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ReturnRequestMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ReturnRequestMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ReturnRequest, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ReturnRequestMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ReturnRequestMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ReturnRequest).
+func (m *ReturnRequestMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ReturnRequestMutation) Fields() []string {
+	fields := make([]string, 0, 13)
+	if m.company_id != nil {
+		fields = append(fields, returnrequest.FieldCompanyID)
+	}
+	if m.department_id != nil {
+		fields = append(fields, returnrequest.FieldDepartmentID)
+	}
+	if m.customer_id != nil {
+		fields = append(fields, returnrequest.FieldCustomerID)
+	}
+	if m.created_by_user_id != nil {
+		fields = append(fields, returnrequest.FieldCreatedByUserID)
+	}
+	if m.status != nil {
+		fields = append(fields, returnrequest.FieldStatus)
+	}
+	if m.remark != nil {
+		fields = append(fields, returnrequest.FieldRemark)
+	}
+	if m.reviewed_by_user_id != nil {
+		fields = append(fields, returnrequest.FieldReviewedByUserID)
+	}
+	if m.reviewed_at != nil {
+		fields = append(fields, returnrequest.FieldReviewedAt)
+	}
+	if m.reject_reason != nil {
+		fields = append(fields, returnrequest.FieldRejectReason)
+	}
+	if m.version != nil {
+		fields = append(fields, returnrequest.FieldVersion)
+	}
+	if m.created_at != nil {
+		fields = append(fields, returnrequest.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, returnrequest.FieldUpdatedAt)
+	}
+	if m.deleted_at != nil {
+		fields = append(fields, returnrequest.FieldDeletedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ReturnRequestMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case returnrequest.FieldCompanyID:
+		return m.CompanyID()
+	case returnrequest.FieldDepartmentID:
+		return m.DepartmentID()
+	case returnrequest.FieldCustomerID:
+		return m.CustomerID()
+	case returnrequest.FieldCreatedByUserID:
+		return m.CreatedByUserID()
+	case returnrequest.FieldStatus:
+		return m.Status()
+	case returnrequest.FieldRemark:
+		return m.Remark()
+	case returnrequest.FieldReviewedByUserID:
+		return m.ReviewedByUserID()
+	case returnrequest.FieldReviewedAt:
+		return m.ReviewedAt()
+	case returnrequest.FieldRejectReason:
+		return m.RejectReason()
+	case returnrequest.FieldVersion:
+		return m.Version()
+	case returnrequest.FieldCreatedAt:
+		return m.CreatedAt()
+	case returnrequest.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case returnrequest.FieldDeletedAt:
+		return m.DeletedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ReturnRequestMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case returnrequest.FieldCompanyID:
+		return m.OldCompanyID(ctx)
+	case returnrequest.FieldDepartmentID:
+		return m.OldDepartmentID(ctx)
+	case returnrequest.FieldCustomerID:
+		return m.OldCustomerID(ctx)
+	case returnrequest.FieldCreatedByUserID:
+		return m.OldCreatedByUserID(ctx)
+	case returnrequest.FieldStatus:
+		return m.OldStatus(ctx)
+	case returnrequest.FieldRemark:
+		return m.OldRemark(ctx)
+	case returnrequest.FieldReviewedByUserID:
+		return m.OldReviewedByUserID(ctx)
+	case returnrequest.FieldReviewedAt:
+		return m.OldReviewedAt(ctx)
+	case returnrequest.FieldRejectReason:
+		return m.OldRejectReason(ctx)
+	case returnrequest.FieldVersion:
+		return m.OldVersion(ctx)
+	case returnrequest.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case returnrequest.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case returnrequest.FieldDeletedAt:
+		return m.OldDeletedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown ReturnRequest field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ReturnRequestMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case returnrequest.FieldCompanyID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCompanyID(v)
+		return nil
+	case returnrequest.FieldDepartmentID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDepartmentID(v)
+		return nil
+	case returnrequest.FieldCustomerID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCustomerID(v)
+		return nil
+	case returnrequest.FieldCreatedByUserID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedByUserID(v)
+		return nil
+	case returnrequest.FieldStatus:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case returnrequest.FieldRemark:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRemark(v)
+		return nil
+	case returnrequest.FieldReviewedByUserID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReviewedByUserID(v)
+		return nil
+	case returnrequest.FieldReviewedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReviewedAt(v)
+		return nil
+	case returnrequest.FieldRejectReason:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRejectReason(v)
+		return nil
+	case returnrequest.FieldVersion:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetVersion(v)
+		return nil
+	case returnrequest.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case returnrequest.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case returnrequest.FieldDeletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeletedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ReturnRequest field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ReturnRequestMutation) AddedFields() []string {
+	var fields []string
+	if m.addcompany_id != nil {
+		fields = append(fields, returnrequest.FieldCompanyID)
+	}
+	if m.adddepartment_id != nil {
+		fields = append(fields, returnrequest.FieldDepartmentID)
+	}
+	if m.addcustomer_id != nil {
+		fields = append(fields, returnrequest.FieldCustomerID)
+	}
+	if m.addcreated_by_user_id != nil {
+		fields = append(fields, returnrequest.FieldCreatedByUserID)
+	}
+	if m.addreviewed_by_user_id != nil {
+		fields = append(fields, returnrequest.FieldReviewedByUserID)
+	}
+	if m.addversion != nil {
+		fields = append(fields, returnrequest.FieldVersion)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ReturnRequestMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case returnrequest.FieldCompanyID:
+		return m.AddedCompanyID()
+	case returnrequest.FieldDepartmentID:
+		return m.AddedDepartmentID()
+	case returnrequest.FieldCustomerID:
+		return m.AddedCustomerID()
+	case returnrequest.FieldCreatedByUserID:
+		return m.AddedCreatedByUserID()
+	case returnrequest.FieldReviewedByUserID:
+		return m.AddedReviewedByUserID()
+	case returnrequest.FieldVersion:
+		return m.AddedVersion()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ReturnRequestMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case returnrequest.FieldCompanyID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCompanyID(v)
+		return nil
+	case returnrequest.FieldDepartmentID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddDepartmentID(v)
+		return nil
+	case returnrequest.FieldCustomerID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCustomerID(v)
+		return nil
+	case returnrequest.FieldCreatedByUserID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCreatedByUserID(v)
+		return nil
+	case returnrequest.FieldReviewedByUserID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddReviewedByUserID(v)
+		return nil
+	case returnrequest.FieldVersion:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddVersion(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ReturnRequest numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ReturnRequestMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(returnrequest.FieldRemark) {
+		fields = append(fields, returnrequest.FieldRemark)
+	}
+	if m.FieldCleared(returnrequest.FieldReviewedByUserID) {
+		fields = append(fields, returnrequest.FieldReviewedByUserID)
+	}
+	if m.FieldCleared(returnrequest.FieldReviewedAt) {
+		fields = append(fields, returnrequest.FieldReviewedAt)
+	}
+	if m.FieldCleared(returnrequest.FieldRejectReason) {
+		fields = append(fields, returnrequest.FieldRejectReason)
+	}
+	if m.FieldCleared(returnrequest.FieldDeletedAt) {
+		fields = append(fields, returnrequest.FieldDeletedAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ReturnRequestMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ReturnRequestMutation) ClearField(name string) error {
+	switch name {
+	case returnrequest.FieldRemark:
+		m.ClearRemark()
+		return nil
+	case returnrequest.FieldReviewedByUserID:
+		m.ClearReviewedByUserID()
+		return nil
+	case returnrequest.FieldReviewedAt:
+		m.ClearReviewedAt()
+		return nil
+	case returnrequest.FieldRejectReason:
+		m.ClearRejectReason()
+		return nil
+	case returnrequest.FieldDeletedAt:
+		m.ClearDeletedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown ReturnRequest nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ReturnRequestMutation) ResetField(name string) error {
+	switch name {
+	case returnrequest.FieldCompanyID:
+		m.ResetCompanyID()
+		return nil
+	case returnrequest.FieldDepartmentID:
+		m.ResetDepartmentID()
+		return nil
+	case returnrequest.FieldCustomerID:
+		m.ResetCustomerID()
+		return nil
+	case returnrequest.FieldCreatedByUserID:
+		m.ResetCreatedByUserID()
+		return nil
+	case returnrequest.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case returnrequest.FieldRemark:
+		m.ResetRemark()
+		return nil
+	case returnrequest.FieldReviewedByUserID:
+		m.ResetReviewedByUserID()
+		return nil
+	case returnrequest.FieldReviewedAt:
+		m.ResetReviewedAt()
+		return nil
+	case returnrequest.FieldRejectReason:
+		m.ResetRejectReason()
+		return nil
+	case returnrequest.FieldVersion:
+		m.ResetVersion()
+		return nil
+	case returnrequest.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case returnrequest.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case returnrequest.FieldDeletedAt:
+		m.ResetDeletedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown ReturnRequest field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ReturnRequestMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ReturnRequestMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ReturnRequestMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ReturnRequestMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ReturnRequestMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ReturnRequestMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ReturnRequestMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown ReturnRequest unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ReturnRequestMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown ReturnRequest edge %s", name)
+}
+
+// ReturnRequestItemMutation represents an operation that mutates the ReturnRequestItem nodes in the graph.
+type ReturnRequestItemMutation struct {
+	config
+	op                     Op
+	typ                    string
+	id                     *int
+	return_request_id      *int
+	addreturn_request_id   *int
+	company_id             *int
+	addcompany_id          *int
+	department_id          *int
+	adddepartment_id       *int
+	source_type            *string
+	sales_order_id         *int
+	addsales_order_id      *int
+	sales_order_item_id    *int
+	addsales_order_item_id *int
+	customer_product_id    *int
+	addcustomer_product_id *int
+	product_id             *int
+	addproduct_id          *int
+	product_name           *string
+	spec                   *string
+	unit                   *string
+	quantity               *string
+	reason                 *string
+	photo_file_ids         *[]string
+	appendphoto_file_ids   []string
+	created_at             *time.Time
+	updated_at             *time.Time
+	deleted_at             *time.Time
+	clearedFields          map[string]struct{}
+	done                   bool
+	oldValue               func(context.Context) (*ReturnRequestItem, error)
+	predicates             []predicate.ReturnRequestItem
+}
+
+var _ ent.Mutation = (*ReturnRequestItemMutation)(nil)
+
+// returnrequestitemOption allows management of the mutation configuration using functional options.
+type returnrequestitemOption func(*ReturnRequestItemMutation)
+
+// newReturnRequestItemMutation creates new mutation for the ReturnRequestItem entity.
+func newReturnRequestItemMutation(c config, op Op, opts ...returnrequestitemOption) *ReturnRequestItemMutation {
+	m := &ReturnRequestItemMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeReturnRequestItem,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withReturnRequestItemID sets the ID field of the mutation.
+func withReturnRequestItemID(id int) returnrequestitemOption {
+	return func(m *ReturnRequestItemMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ReturnRequestItem
+		)
+		m.oldValue = func(ctx context.Context) (*ReturnRequestItem, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ReturnRequestItem.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withReturnRequestItem sets the old ReturnRequestItem of the mutation.
+func withReturnRequestItem(node *ReturnRequestItem) returnrequestitemOption {
+	return func(m *ReturnRequestItemMutation) {
+		m.oldValue = func(context.Context) (*ReturnRequestItem, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ReturnRequestItemMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ReturnRequestItemMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ReturnRequestItemMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ReturnRequestItemMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ReturnRequestItem.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetReturnRequestID sets the "return_request_id" field.
+func (m *ReturnRequestItemMutation) SetReturnRequestID(i int) {
+	m.return_request_id = &i
+	m.addreturn_request_id = nil
+}
+
+// ReturnRequestID returns the value of the "return_request_id" field in the mutation.
+func (m *ReturnRequestItemMutation) ReturnRequestID() (r int, exists bool) {
+	v := m.return_request_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReturnRequestID returns the old "return_request_id" field's value of the ReturnRequestItem entity.
+// If the ReturnRequestItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestItemMutation) OldReturnRequestID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReturnRequestID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReturnRequestID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReturnRequestID: %w", err)
+	}
+	return oldValue.ReturnRequestID, nil
+}
+
+// AddReturnRequestID adds i to the "return_request_id" field.
+func (m *ReturnRequestItemMutation) AddReturnRequestID(i int) {
+	if m.addreturn_request_id != nil {
+		*m.addreturn_request_id += i
+	} else {
+		m.addreturn_request_id = &i
+	}
+}
+
+// AddedReturnRequestID returns the value that was added to the "return_request_id" field in this mutation.
+func (m *ReturnRequestItemMutation) AddedReturnRequestID() (r int, exists bool) {
+	v := m.addreturn_request_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetReturnRequestID resets all changes to the "return_request_id" field.
+func (m *ReturnRequestItemMutation) ResetReturnRequestID() {
+	m.return_request_id = nil
+	m.addreturn_request_id = nil
+}
+
+// SetCompanyID sets the "company_id" field.
+func (m *ReturnRequestItemMutation) SetCompanyID(i int) {
+	m.company_id = &i
+	m.addcompany_id = nil
+}
+
+// CompanyID returns the value of the "company_id" field in the mutation.
+func (m *ReturnRequestItemMutation) CompanyID() (r int, exists bool) {
+	v := m.company_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCompanyID returns the old "company_id" field's value of the ReturnRequestItem entity.
+// If the ReturnRequestItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestItemMutation) OldCompanyID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCompanyID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCompanyID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCompanyID: %w", err)
+	}
+	return oldValue.CompanyID, nil
+}
+
+// AddCompanyID adds i to the "company_id" field.
+func (m *ReturnRequestItemMutation) AddCompanyID(i int) {
+	if m.addcompany_id != nil {
+		*m.addcompany_id += i
+	} else {
+		m.addcompany_id = &i
+	}
+}
+
+// AddedCompanyID returns the value that was added to the "company_id" field in this mutation.
+func (m *ReturnRequestItemMutation) AddedCompanyID() (r int, exists bool) {
+	v := m.addcompany_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCompanyID resets all changes to the "company_id" field.
+func (m *ReturnRequestItemMutation) ResetCompanyID() {
+	m.company_id = nil
+	m.addcompany_id = nil
+}
+
+// SetDepartmentID sets the "department_id" field.
+func (m *ReturnRequestItemMutation) SetDepartmentID(i int) {
+	m.department_id = &i
+	m.adddepartment_id = nil
+}
+
+// DepartmentID returns the value of the "department_id" field in the mutation.
+func (m *ReturnRequestItemMutation) DepartmentID() (r int, exists bool) {
+	v := m.department_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDepartmentID returns the old "department_id" field's value of the ReturnRequestItem entity.
+// If the ReturnRequestItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestItemMutation) OldDepartmentID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDepartmentID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDepartmentID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDepartmentID: %w", err)
+	}
+	return oldValue.DepartmentID, nil
+}
+
+// AddDepartmentID adds i to the "department_id" field.
+func (m *ReturnRequestItemMutation) AddDepartmentID(i int) {
+	if m.adddepartment_id != nil {
+		*m.adddepartment_id += i
+	} else {
+		m.adddepartment_id = &i
+	}
+}
+
+// AddedDepartmentID returns the value that was added to the "department_id" field in this mutation.
+func (m *ReturnRequestItemMutation) AddedDepartmentID() (r int, exists bool) {
+	v := m.adddepartment_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetDepartmentID resets all changes to the "department_id" field.
+func (m *ReturnRequestItemMutation) ResetDepartmentID() {
+	m.department_id = nil
+	m.adddepartment_id = nil
+}
+
+// SetSourceType sets the "source_type" field.
+func (m *ReturnRequestItemMutation) SetSourceType(s string) {
+	m.source_type = &s
+}
+
+// SourceType returns the value of the "source_type" field in the mutation.
+func (m *ReturnRequestItemMutation) SourceType() (r string, exists bool) {
+	v := m.source_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSourceType returns the old "source_type" field's value of the ReturnRequestItem entity.
+// If the ReturnRequestItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestItemMutation) OldSourceType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSourceType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSourceType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSourceType: %w", err)
+	}
+	return oldValue.SourceType, nil
+}
+
+// ResetSourceType resets all changes to the "source_type" field.
+func (m *ReturnRequestItemMutation) ResetSourceType() {
+	m.source_type = nil
+}
+
+// SetSalesOrderID sets the "sales_order_id" field.
+func (m *ReturnRequestItemMutation) SetSalesOrderID(i int) {
+	m.sales_order_id = &i
+	m.addsales_order_id = nil
+}
+
+// SalesOrderID returns the value of the "sales_order_id" field in the mutation.
+func (m *ReturnRequestItemMutation) SalesOrderID() (r int, exists bool) {
+	v := m.sales_order_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSalesOrderID returns the old "sales_order_id" field's value of the ReturnRequestItem entity.
+// If the ReturnRequestItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestItemMutation) OldSalesOrderID(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSalesOrderID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSalesOrderID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSalesOrderID: %w", err)
+	}
+	return oldValue.SalesOrderID, nil
+}
+
+// AddSalesOrderID adds i to the "sales_order_id" field.
+func (m *ReturnRequestItemMutation) AddSalesOrderID(i int) {
+	if m.addsales_order_id != nil {
+		*m.addsales_order_id += i
+	} else {
+		m.addsales_order_id = &i
+	}
+}
+
+// AddedSalesOrderID returns the value that was added to the "sales_order_id" field in this mutation.
+func (m *ReturnRequestItemMutation) AddedSalesOrderID() (r int, exists bool) {
+	v := m.addsales_order_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearSalesOrderID clears the value of the "sales_order_id" field.
+func (m *ReturnRequestItemMutation) ClearSalesOrderID() {
+	m.sales_order_id = nil
+	m.addsales_order_id = nil
+	m.clearedFields[returnrequestitem.FieldSalesOrderID] = struct{}{}
+}
+
+// SalesOrderIDCleared returns if the "sales_order_id" field was cleared in this mutation.
+func (m *ReturnRequestItemMutation) SalesOrderIDCleared() bool {
+	_, ok := m.clearedFields[returnrequestitem.FieldSalesOrderID]
+	return ok
+}
+
+// ResetSalesOrderID resets all changes to the "sales_order_id" field.
+func (m *ReturnRequestItemMutation) ResetSalesOrderID() {
+	m.sales_order_id = nil
+	m.addsales_order_id = nil
+	delete(m.clearedFields, returnrequestitem.FieldSalesOrderID)
+}
+
+// SetSalesOrderItemID sets the "sales_order_item_id" field.
+func (m *ReturnRequestItemMutation) SetSalesOrderItemID(i int) {
+	m.sales_order_item_id = &i
+	m.addsales_order_item_id = nil
+}
+
+// SalesOrderItemID returns the value of the "sales_order_item_id" field in the mutation.
+func (m *ReturnRequestItemMutation) SalesOrderItemID() (r int, exists bool) {
+	v := m.sales_order_item_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSalesOrderItemID returns the old "sales_order_item_id" field's value of the ReturnRequestItem entity.
+// If the ReturnRequestItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestItemMutation) OldSalesOrderItemID(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSalesOrderItemID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSalesOrderItemID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSalesOrderItemID: %w", err)
+	}
+	return oldValue.SalesOrderItemID, nil
+}
+
+// AddSalesOrderItemID adds i to the "sales_order_item_id" field.
+func (m *ReturnRequestItemMutation) AddSalesOrderItemID(i int) {
+	if m.addsales_order_item_id != nil {
+		*m.addsales_order_item_id += i
+	} else {
+		m.addsales_order_item_id = &i
+	}
+}
+
+// AddedSalesOrderItemID returns the value that was added to the "sales_order_item_id" field in this mutation.
+func (m *ReturnRequestItemMutation) AddedSalesOrderItemID() (r int, exists bool) {
+	v := m.addsales_order_item_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearSalesOrderItemID clears the value of the "sales_order_item_id" field.
+func (m *ReturnRequestItemMutation) ClearSalesOrderItemID() {
+	m.sales_order_item_id = nil
+	m.addsales_order_item_id = nil
+	m.clearedFields[returnrequestitem.FieldSalesOrderItemID] = struct{}{}
+}
+
+// SalesOrderItemIDCleared returns if the "sales_order_item_id" field was cleared in this mutation.
+func (m *ReturnRequestItemMutation) SalesOrderItemIDCleared() bool {
+	_, ok := m.clearedFields[returnrequestitem.FieldSalesOrderItemID]
+	return ok
+}
+
+// ResetSalesOrderItemID resets all changes to the "sales_order_item_id" field.
+func (m *ReturnRequestItemMutation) ResetSalesOrderItemID() {
+	m.sales_order_item_id = nil
+	m.addsales_order_item_id = nil
+	delete(m.clearedFields, returnrequestitem.FieldSalesOrderItemID)
+}
+
+// SetCustomerProductID sets the "customer_product_id" field.
+func (m *ReturnRequestItemMutation) SetCustomerProductID(i int) {
+	m.customer_product_id = &i
+	m.addcustomer_product_id = nil
+}
+
+// CustomerProductID returns the value of the "customer_product_id" field in the mutation.
+func (m *ReturnRequestItemMutation) CustomerProductID() (r int, exists bool) {
+	v := m.customer_product_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCustomerProductID returns the old "customer_product_id" field's value of the ReturnRequestItem entity.
+// If the ReturnRequestItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestItemMutation) OldCustomerProductID(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCustomerProductID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCustomerProductID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCustomerProductID: %w", err)
+	}
+	return oldValue.CustomerProductID, nil
+}
+
+// AddCustomerProductID adds i to the "customer_product_id" field.
+func (m *ReturnRequestItemMutation) AddCustomerProductID(i int) {
+	if m.addcustomer_product_id != nil {
+		*m.addcustomer_product_id += i
+	} else {
+		m.addcustomer_product_id = &i
+	}
+}
+
+// AddedCustomerProductID returns the value that was added to the "customer_product_id" field in this mutation.
+func (m *ReturnRequestItemMutation) AddedCustomerProductID() (r int, exists bool) {
+	v := m.addcustomer_product_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearCustomerProductID clears the value of the "customer_product_id" field.
+func (m *ReturnRequestItemMutation) ClearCustomerProductID() {
+	m.customer_product_id = nil
+	m.addcustomer_product_id = nil
+	m.clearedFields[returnrequestitem.FieldCustomerProductID] = struct{}{}
+}
+
+// CustomerProductIDCleared returns if the "customer_product_id" field was cleared in this mutation.
+func (m *ReturnRequestItemMutation) CustomerProductIDCleared() bool {
+	_, ok := m.clearedFields[returnrequestitem.FieldCustomerProductID]
+	return ok
+}
+
+// ResetCustomerProductID resets all changes to the "customer_product_id" field.
+func (m *ReturnRequestItemMutation) ResetCustomerProductID() {
+	m.customer_product_id = nil
+	m.addcustomer_product_id = nil
+	delete(m.clearedFields, returnrequestitem.FieldCustomerProductID)
+}
+
+// SetProductID sets the "product_id" field.
+func (m *ReturnRequestItemMutation) SetProductID(i int) {
+	m.product_id = &i
+	m.addproduct_id = nil
+}
+
+// ProductID returns the value of the "product_id" field in the mutation.
+func (m *ReturnRequestItemMutation) ProductID() (r int, exists bool) {
+	v := m.product_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProductID returns the old "product_id" field's value of the ReturnRequestItem entity.
+// If the ReturnRequestItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestItemMutation) OldProductID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProductID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProductID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProductID: %w", err)
+	}
+	return oldValue.ProductID, nil
+}
+
+// AddProductID adds i to the "product_id" field.
+func (m *ReturnRequestItemMutation) AddProductID(i int) {
+	if m.addproduct_id != nil {
+		*m.addproduct_id += i
+	} else {
+		m.addproduct_id = &i
+	}
+}
+
+// AddedProductID returns the value that was added to the "product_id" field in this mutation.
+func (m *ReturnRequestItemMutation) AddedProductID() (r int, exists bool) {
+	v := m.addproduct_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetProductID resets all changes to the "product_id" field.
+func (m *ReturnRequestItemMutation) ResetProductID() {
+	m.product_id = nil
+	m.addproduct_id = nil
+}
+
+// SetProductName sets the "product_name" field.
+func (m *ReturnRequestItemMutation) SetProductName(s string) {
+	m.product_name = &s
+}
+
+// ProductName returns the value of the "product_name" field in the mutation.
+func (m *ReturnRequestItemMutation) ProductName() (r string, exists bool) {
+	v := m.product_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProductName returns the old "product_name" field's value of the ReturnRequestItem entity.
+// If the ReturnRequestItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestItemMutation) OldProductName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProductName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProductName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProductName: %w", err)
+	}
+	return oldValue.ProductName, nil
+}
+
+// ResetProductName resets all changes to the "product_name" field.
+func (m *ReturnRequestItemMutation) ResetProductName() {
+	m.product_name = nil
+}
+
+// SetSpec sets the "spec" field.
+func (m *ReturnRequestItemMutation) SetSpec(s string) {
+	m.spec = &s
+}
+
+// Spec returns the value of the "spec" field in the mutation.
+func (m *ReturnRequestItemMutation) Spec() (r string, exists bool) {
+	v := m.spec
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSpec returns the old "spec" field's value of the ReturnRequestItem entity.
+// If the ReturnRequestItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestItemMutation) OldSpec(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSpec is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSpec requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSpec: %w", err)
+	}
+	return oldValue.Spec, nil
+}
+
+// ClearSpec clears the value of the "spec" field.
+func (m *ReturnRequestItemMutation) ClearSpec() {
+	m.spec = nil
+	m.clearedFields[returnrequestitem.FieldSpec] = struct{}{}
+}
+
+// SpecCleared returns if the "spec" field was cleared in this mutation.
+func (m *ReturnRequestItemMutation) SpecCleared() bool {
+	_, ok := m.clearedFields[returnrequestitem.FieldSpec]
+	return ok
+}
+
+// ResetSpec resets all changes to the "spec" field.
+func (m *ReturnRequestItemMutation) ResetSpec() {
+	m.spec = nil
+	delete(m.clearedFields, returnrequestitem.FieldSpec)
+}
+
+// SetUnit sets the "unit" field.
+func (m *ReturnRequestItemMutation) SetUnit(s string) {
+	m.unit = &s
+}
+
+// Unit returns the value of the "unit" field in the mutation.
+func (m *ReturnRequestItemMutation) Unit() (r string, exists bool) {
+	v := m.unit
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUnit returns the old "unit" field's value of the ReturnRequestItem entity.
+// If the ReturnRequestItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestItemMutation) OldUnit(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUnit is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUnit requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUnit: %w", err)
+	}
+	return oldValue.Unit, nil
+}
+
+// ResetUnit resets all changes to the "unit" field.
+func (m *ReturnRequestItemMutation) ResetUnit() {
+	m.unit = nil
+}
+
+// SetQuantity sets the "quantity" field.
+func (m *ReturnRequestItemMutation) SetQuantity(s string) {
+	m.quantity = &s
+}
+
+// Quantity returns the value of the "quantity" field in the mutation.
+func (m *ReturnRequestItemMutation) Quantity() (r string, exists bool) {
+	v := m.quantity
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldQuantity returns the old "quantity" field's value of the ReturnRequestItem entity.
+// If the ReturnRequestItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestItemMutation) OldQuantity(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldQuantity is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldQuantity requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldQuantity: %w", err)
+	}
+	return oldValue.Quantity, nil
+}
+
+// ResetQuantity resets all changes to the "quantity" field.
+func (m *ReturnRequestItemMutation) ResetQuantity() {
+	m.quantity = nil
+}
+
+// SetReason sets the "reason" field.
+func (m *ReturnRequestItemMutation) SetReason(s string) {
+	m.reason = &s
+}
+
+// Reason returns the value of the "reason" field in the mutation.
+func (m *ReturnRequestItemMutation) Reason() (r string, exists bool) {
+	v := m.reason
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReason returns the old "reason" field's value of the ReturnRequestItem entity.
+// If the ReturnRequestItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestItemMutation) OldReason(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReason is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReason requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReason: %w", err)
+	}
+	return oldValue.Reason, nil
+}
+
+// ResetReason resets all changes to the "reason" field.
+func (m *ReturnRequestItemMutation) ResetReason() {
+	m.reason = nil
+}
+
+// SetPhotoFileIds sets the "photo_file_ids" field.
+func (m *ReturnRequestItemMutation) SetPhotoFileIds(s []string) {
+	m.photo_file_ids = &s
+	m.appendphoto_file_ids = nil
+}
+
+// PhotoFileIds returns the value of the "photo_file_ids" field in the mutation.
+func (m *ReturnRequestItemMutation) PhotoFileIds() (r []string, exists bool) {
+	v := m.photo_file_ids
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPhotoFileIds returns the old "photo_file_ids" field's value of the ReturnRequestItem entity.
+// If the ReturnRequestItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestItemMutation) OldPhotoFileIds(ctx context.Context) (v []string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPhotoFileIds is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPhotoFileIds requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPhotoFileIds: %w", err)
+	}
+	return oldValue.PhotoFileIds, nil
+}
+
+// AppendPhotoFileIds adds s to the "photo_file_ids" field.
+func (m *ReturnRequestItemMutation) AppendPhotoFileIds(s []string) {
+	m.appendphoto_file_ids = append(m.appendphoto_file_ids, s...)
+}
+
+// AppendedPhotoFileIds returns the list of values that were appended to the "photo_file_ids" field in this mutation.
+func (m *ReturnRequestItemMutation) AppendedPhotoFileIds() ([]string, bool) {
+	if len(m.appendphoto_file_ids) == 0 {
+		return nil, false
+	}
+	return m.appendphoto_file_ids, true
+}
+
+// ClearPhotoFileIds clears the value of the "photo_file_ids" field.
+func (m *ReturnRequestItemMutation) ClearPhotoFileIds() {
+	m.photo_file_ids = nil
+	m.appendphoto_file_ids = nil
+	m.clearedFields[returnrequestitem.FieldPhotoFileIds] = struct{}{}
+}
+
+// PhotoFileIdsCleared returns if the "photo_file_ids" field was cleared in this mutation.
+func (m *ReturnRequestItemMutation) PhotoFileIdsCleared() bool {
+	_, ok := m.clearedFields[returnrequestitem.FieldPhotoFileIds]
+	return ok
+}
+
+// ResetPhotoFileIds resets all changes to the "photo_file_ids" field.
+func (m *ReturnRequestItemMutation) ResetPhotoFileIds() {
+	m.photo_file_ids = nil
+	m.appendphoto_file_ids = nil
+	delete(m.clearedFields, returnrequestitem.FieldPhotoFileIds)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *ReturnRequestItemMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *ReturnRequestItemMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the ReturnRequestItem entity.
+// If the ReturnRequestItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestItemMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *ReturnRequestItemMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *ReturnRequestItemMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *ReturnRequestItemMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the ReturnRequestItem entity.
+// If the ReturnRequestItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestItemMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *ReturnRequestItemMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (m *ReturnRequestItemMutation) SetDeletedAt(t time.Time) {
+	m.deleted_at = &t
+}
+
+// DeletedAt returns the value of the "deleted_at" field in the mutation.
+func (m *ReturnRequestItemMutation) DeletedAt() (r time.Time, exists bool) {
+	v := m.deleted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeletedAt returns the old "deleted_at" field's value of the ReturnRequestItem entity.
+// If the ReturnRequestItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReturnRequestItemMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
+	}
+	return oldValue.DeletedAt, nil
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (m *ReturnRequestItemMutation) ClearDeletedAt() {
+	m.deleted_at = nil
+	m.clearedFields[returnrequestitem.FieldDeletedAt] = struct{}{}
+}
+
+// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
+func (m *ReturnRequestItemMutation) DeletedAtCleared() bool {
+	_, ok := m.clearedFields[returnrequestitem.FieldDeletedAt]
+	return ok
+}
+
+// ResetDeletedAt resets all changes to the "deleted_at" field.
+func (m *ReturnRequestItemMutation) ResetDeletedAt() {
+	m.deleted_at = nil
+	delete(m.clearedFields, returnrequestitem.FieldDeletedAt)
+}
+
+// Where appends a list predicates to the ReturnRequestItemMutation builder.
+func (m *ReturnRequestItemMutation) Where(ps ...predicate.ReturnRequestItem) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ReturnRequestItemMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ReturnRequestItemMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ReturnRequestItem, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ReturnRequestItemMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ReturnRequestItemMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ReturnRequestItem).
+func (m *ReturnRequestItemMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ReturnRequestItemMutation) Fields() []string {
+	fields := make([]string, 0, 17)
+	if m.return_request_id != nil {
+		fields = append(fields, returnrequestitem.FieldReturnRequestID)
+	}
+	if m.company_id != nil {
+		fields = append(fields, returnrequestitem.FieldCompanyID)
+	}
+	if m.department_id != nil {
+		fields = append(fields, returnrequestitem.FieldDepartmentID)
+	}
+	if m.source_type != nil {
+		fields = append(fields, returnrequestitem.FieldSourceType)
+	}
+	if m.sales_order_id != nil {
+		fields = append(fields, returnrequestitem.FieldSalesOrderID)
+	}
+	if m.sales_order_item_id != nil {
+		fields = append(fields, returnrequestitem.FieldSalesOrderItemID)
+	}
+	if m.customer_product_id != nil {
+		fields = append(fields, returnrequestitem.FieldCustomerProductID)
+	}
+	if m.product_id != nil {
+		fields = append(fields, returnrequestitem.FieldProductID)
+	}
+	if m.product_name != nil {
+		fields = append(fields, returnrequestitem.FieldProductName)
+	}
+	if m.spec != nil {
+		fields = append(fields, returnrequestitem.FieldSpec)
+	}
+	if m.unit != nil {
+		fields = append(fields, returnrequestitem.FieldUnit)
+	}
+	if m.quantity != nil {
+		fields = append(fields, returnrequestitem.FieldQuantity)
+	}
+	if m.reason != nil {
+		fields = append(fields, returnrequestitem.FieldReason)
+	}
+	if m.photo_file_ids != nil {
+		fields = append(fields, returnrequestitem.FieldPhotoFileIds)
+	}
+	if m.created_at != nil {
+		fields = append(fields, returnrequestitem.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, returnrequestitem.FieldUpdatedAt)
+	}
+	if m.deleted_at != nil {
+		fields = append(fields, returnrequestitem.FieldDeletedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ReturnRequestItemMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case returnrequestitem.FieldReturnRequestID:
+		return m.ReturnRequestID()
+	case returnrequestitem.FieldCompanyID:
+		return m.CompanyID()
+	case returnrequestitem.FieldDepartmentID:
+		return m.DepartmentID()
+	case returnrequestitem.FieldSourceType:
+		return m.SourceType()
+	case returnrequestitem.FieldSalesOrderID:
+		return m.SalesOrderID()
+	case returnrequestitem.FieldSalesOrderItemID:
+		return m.SalesOrderItemID()
+	case returnrequestitem.FieldCustomerProductID:
+		return m.CustomerProductID()
+	case returnrequestitem.FieldProductID:
+		return m.ProductID()
+	case returnrequestitem.FieldProductName:
+		return m.ProductName()
+	case returnrequestitem.FieldSpec:
+		return m.Spec()
+	case returnrequestitem.FieldUnit:
+		return m.Unit()
+	case returnrequestitem.FieldQuantity:
+		return m.Quantity()
+	case returnrequestitem.FieldReason:
+		return m.Reason()
+	case returnrequestitem.FieldPhotoFileIds:
+		return m.PhotoFileIds()
+	case returnrequestitem.FieldCreatedAt:
+		return m.CreatedAt()
+	case returnrequestitem.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case returnrequestitem.FieldDeletedAt:
+		return m.DeletedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ReturnRequestItemMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case returnrequestitem.FieldReturnRequestID:
+		return m.OldReturnRequestID(ctx)
+	case returnrequestitem.FieldCompanyID:
+		return m.OldCompanyID(ctx)
+	case returnrequestitem.FieldDepartmentID:
+		return m.OldDepartmentID(ctx)
+	case returnrequestitem.FieldSourceType:
+		return m.OldSourceType(ctx)
+	case returnrequestitem.FieldSalesOrderID:
+		return m.OldSalesOrderID(ctx)
+	case returnrequestitem.FieldSalesOrderItemID:
+		return m.OldSalesOrderItemID(ctx)
+	case returnrequestitem.FieldCustomerProductID:
+		return m.OldCustomerProductID(ctx)
+	case returnrequestitem.FieldProductID:
+		return m.OldProductID(ctx)
+	case returnrequestitem.FieldProductName:
+		return m.OldProductName(ctx)
+	case returnrequestitem.FieldSpec:
+		return m.OldSpec(ctx)
+	case returnrequestitem.FieldUnit:
+		return m.OldUnit(ctx)
+	case returnrequestitem.FieldQuantity:
+		return m.OldQuantity(ctx)
+	case returnrequestitem.FieldReason:
+		return m.OldReason(ctx)
+	case returnrequestitem.FieldPhotoFileIds:
+		return m.OldPhotoFileIds(ctx)
+	case returnrequestitem.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case returnrequestitem.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case returnrequestitem.FieldDeletedAt:
+		return m.OldDeletedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown ReturnRequestItem field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ReturnRequestItemMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case returnrequestitem.FieldReturnRequestID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReturnRequestID(v)
+		return nil
+	case returnrequestitem.FieldCompanyID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCompanyID(v)
+		return nil
+	case returnrequestitem.FieldDepartmentID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDepartmentID(v)
+		return nil
+	case returnrequestitem.FieldSourceType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSourceType(v)
+		return nil
+	case returnrequestitem.FieldSalesOrderID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSalesOrderID(v)
+		return nil
+	case returnrequestitem.FieldSalesOrderItemID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSalesOrderItemID(v)
+		return nil
+	case returnrequestitem.FieldCustomerProductID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCustomerProductID(v)
+		return nil
+	case returnrequestitem.FieldProductID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProductID(v)
+		return nil
+	case returnrequestitem.FieldProductName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProductName(v)
+		return nil
+	case returnrequestitem.FieldSpec:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSpec(v)
+		return nil
+	case returnrequestitem.FieldUnit:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUnit(v)
+		return nil
+	case returnrequestitem.FieldQuantity:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetQuantity(v)
+		return nil
+	case returnrequestitem.FieldReason:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReason(v)
+		return nil
+	case returnrequestitem.FieldPhotoFileIds:
+		v, ok := value.([]string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPhotoFileIds(v)
+		return nil
+	case returnrequestitem.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case returnrequestitem.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case returnrequestitem.FieldDeletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeletedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ReturnRequestItem field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ReturnRequestItemMutation) AddedFields() []string {
+	var fields []string
+	if m.addreturn_request_id != nil {
+		fields = append(fields, returnrequestitem.FieldReturnRequestID)
+	}
+	if m.addcompany_id != nil {
+		fields = append(fields, returnrequestitem.FieldCompanyID)
+	}
+	if m.adddepartment_id != nil {
+		fields = append(fields, returnrequestitem.FieldDepartmentID)
+	}
+	if m.addsales_order_id != nil {
+		fields = append(fields, returnrequestitem.FieldSalesOrderID)
+	}
+	if m.addsales_order_item_id != nil {
+		fields = append(fields, returnrequestitem.FieldSalesOrderItemID)
+	}
+	if m.addcustomer_product_id != nil {
+		fields = append(fields, returnrequestitem.FieldCustomerProductID)
+	}
+	if m.addproduct_id != nil {
+		fields = append(fields, returnrequestitem.FieldProductID)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ReturnRequestItemMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case returnrequestitem.FieldReturnRequestID:
+		return m.AddedReturnRequestID()
+	case returnrequestitem.FieldCompanyID:
+		return m.AddedCompanyID()
+	case returnrequestitem.FieldDepartmentID:
+		return m.AddedDepartmentID()
+	case returnrequestitem.FieldSalesOrderID:
+		return m.AddedSalesOrderID()
+	case returnrequestitem.FieldSalesOrderItemID:
+		return m.AddedSalesOrderItemID()
+	case returnrequestitem.FieldCustomerProductID:
+		return m.AddedCustomerProductID()
+	case returnrequestitem.FieldProductID:
+		return m.AddedProductID()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ReturnRequestItemMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case returnrequestitem.FieldReturnRequestID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddReturnRequestID(v)
+		return nil
+	case returnrequestitem.FieldCompanyID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCompanyID(v)
+		return nil
+	case returnrequestitem.FieldDepartmentID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddDepartmentID(v)
+		return nil
+	case returnrequestitem.FieldSalesOrderID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddSalesOrderID(v)
+		return nil
+	case returnrequestitem.FieldSalesOrderItemID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddSalesOrderItemID(v)
+		return nil
+	case returnrequestitem.FieldCustomerProductID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCustomerProductID(v)
+		return nil
+	case returnrequestitem.FieldProductID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddProductID(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ReturnRequestItem numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ReturnRequestItemMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(returnrequestitem.FieldSalesOrderID) {
+		fields = append(fields, returnrequestitem.FieldSalesOrderID)
+	}
+	if m.FieldCleared(returnrequestitem.FieldSalesOrderItemID) {
+		fields = append(fields, returnrequestitem.FieldSalesOrderItemID)
+	}
+	if m.FieldCleared(returnrequestitem.FieldCustomerProductID) {
+		fields = append(fields, returnrequestitem.FieldCustomerProductID)
+	}
+	if m.FieldCleared(returnrequestitem.FieldSpec) {
+		fields = append(fields, returnrequestitem.FieldSpec)
+	}
+	if m.FieldCleared(returnrequestitem.FieldPhotoFileIds) {
+		fields = append(fields, returnrequestitem.FieldPhotoFileIds)
+	}
+	if m.FieldCleared(returnrequestitem.FieldDeletedAt) {
+		fields = append(fields, returnrequestitem.FieldDeletedAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ReturnRequestItemMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ReturnRequestItemMutation) ClearField(name string) error {
+	switch name {
+	case returnrequestitem.FieldSalesOrderID:
+		m.ClearSalesOrderID()
+		return nil
+	case returnrequestitem.FieldSalesOrderItemID:
+		m.ClearSalesOrderItemID()
+		return nil
+	case returnrequestitem.FieldCustomerProductID:
+		m.ClearCustomerProductID()
+		return nil
+	case returnrequestitem.FieldSpec:
+		m.ClearSpec()
+		return nil
+	case returnrequestitem.FieldPhotoFileIds:
+		m.ClearPhotoFileIds()
+		return nil
+	case returnrequestitem.FieldDeletedAt:
+		m.ClearDeletedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown ReturnRequestItem nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ReturnRequestItemMutation) ResetField(name string) error {
+	switch name {
+	case returnrequestitem.FieldReturnRequestID:
+		m.ResetReturnRequestID()
+		return nil
+	case returnrequestitem.FieldCompanyID:
+		m.ResetCompanyID()
+		return nil
+	case returnrequestitem.FieldDepartmentID:
+		m.ResetDepartmentID()
+		return nil
+	case returnrequestitem.FieldSourceType:
+		m.ResetSourceType()
+		return nil
+	case returnrequestitem.FieldSalesOrderID:
+		m.ResetSalesOrderID()
+		return nil
+	case returnrequestitem.FieldSalesOrderItemID:
+		m.ResetSalesOrderItemID()
+		return nil
+	case returnrequestitem.FieldCustomerProductID:
+		m.ResetCustomerProductID()
+		return nil
+	case returnrequestitem.FieldProductID:
+		m.ResetProductID()
+		return nil
+	case returnrequestitem.FieldProductName:
+		m.ResetProductName()
+		return nil
+	case returnrequestitem.FieldSpec:
+		m.ResetSpec()
+		return nil
+	case returnrequestitem.FieldUnit:
+		m.ResetUnit()
+		return nil
+	case returnrequestitem.FieldQuantity:
+		m.ResetQuantity()
+		return nil
+	case returnrequestitem.FieldReason:
+		m.ResetReason()
+		return nil
+	case returnrequestitem.FieldPhotoFileIds:
+		m.ResetPhotoFileIds()
+		return nil
+	case returnrequestitem.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case returnrequestitem.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case returnrequestitem.FieldDeletedAt:
+		m.ResetDeletedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown ReturnRequestItem field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ReturnRequestItemMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ReturnRequestItemMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ReturnRequestItemMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ReturnRequestItemMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ReturnRequestItemMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ReturnRequestItemMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ReturnRequestItemMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown ReturnRequestItem unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ReturnRequestItemMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown ReturnRequestItem edge %s", name)
 }
 
 // RoleMutation represents an operation that mutates the Role nodes in the graph.

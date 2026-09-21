@@ -60,6 +60,12 @@ type ProductProcessingSpec func(*sql.Selector)
 // ProductUnit is the predicate function for productunit builders.
 type ProductUnit func(*sql.Selector)
 
+// ReturnRequest is the predicate function for returnrequest builders.
+type ReturnRequest func(*sql.Selector)
+
+// ReturnRequestItem is the predicate function for returnrequestitem builders.
+type ReturnRequestItem func(*sql.Selector)
+
 // Role is the predicate function for role builders.
 type Role func(*sql.Selector)
 

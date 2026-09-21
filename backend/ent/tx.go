@@ -48,6 +48,10 @@ type Tx struct {
 	ProductProcessingSpec *ProductProcessingSpecClient
 	// ProductUnit is the client for interacting with the ProductUnit builders.
 	ProductUnit *ProductUnitClient
+	// ReturnRequest is the client for interacting with the ReturnRequest builders.
+	ReturnRequest *ReturnRequestClient
+	// ReturnRequestItem is the client for interacting with the ReturnRequestItem builders.
+	ReturnRequestItem *ReturnRequestItemClient
 	// Role is the client for interacting with the Role builders.
 	Role *RoleClient
 	// RolePermission is the client for interacting with the RolePermission builders.
@@ -213,6 +217,8 @@ func (tx *Tx) init() {
 	tx.ProductCategory = NewProductCategoryClient(tx.config)
 	tx.ProductProcessingSpec = NewProductProcessingSpecClient(tx.config)
 	tx.ProductUnit = NewProductUnitClient(tx.config)
+	tx.ReturnRequest = NewReturnRequestClient(tx.config)
+	tx.ReturnRequestItem = NewReturnRequestItemClient(tx.config)
 	tx.Role = NewRoleClient(tx.config)
 	tx.RolePermission = NewRolePermissionClient(tx.config)
 	tx.Route = NewRouteClient(tx.config)

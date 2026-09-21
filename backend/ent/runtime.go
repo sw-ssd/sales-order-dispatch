@@ -23,6 +23,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/productcategory"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productprocessingspec"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productunit"
+	"github.com/salesorder/sales-order-1.0/backend/ent/returnrequest"
+	"github.com/salesorder/sales-order-1.0/backend/ent/returnrequestitem"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/ent/rolepermission"
 	"github.com/salesorder/sales-order-1.0/backend/ent/route"
@@ -410,6 +412,60 @@ func init() {
 	productunit.DefaultUpdatedAt = productunitDescUpdatedAt.Default.(func() time.Time)
 	// productunit.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	productunit.UpdateDefaultUpdatedAt = productunitDescUpdatedAt.UpdateDefault.(func() time.Time)
+	returnrequestFields := schema.ReturnRequest{}.Fields()
+	_ = returnrequestFields
+	// returnrequestDescStatus is the schema descriptor for status field.
+	returnrequestDescStatus := returnrequestFields[4].Descriptor()
+	// returnrequest.DefaultStatus holds the default value on creation for the status field.
+	returnrequest.DefaultStatus = returnrequestDescStatus.Default.(string)
+	// returnrequest.StatusValidator is a validator for the "status" field. It is called by the builders before save.
+	returnrequest.StatusValidator = returnrequestDescStatus.Validators[0].(func(string) error)
+	// returnrequestDescVersion is the schema descriptor for version field.
+	returnrequestDescVersion := returnrequestFields[9].Descriptor()
+	// returnrequest.DefaultVersion holds the default value on creation for the version field.
+	returnrequest.DefaultVersion = returnrequestDescVersion.Default.(int)
+	// returnrequestDescCreatedAt is the schema descriptor for created_at field.
+	returnrequestDescCreatedAt := returnrequestFields[10].Descriptor()
+	// returnrequest.DefaultCreatedAt holds the default value on creation for the created_at field.
+	returnrequest.DefaultCreatedAt = returnrequestDescCreatedAt.Default.(func() time.Time)
+	// returnrequestDescUpdatedAt is the schema descriptor for updated_at field.
+	returnrequestDescUpdatedAt := returnrequestFields[11].Descriptor()
+	// returnrequest.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	returnrequest.DefaultUpdatedAt = returnrequestDescUpdatedAt.Default.(func() time.Time)
+	// returnrequest.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	returnrequest.UpdateDefaultUpdatedAt = returnrequestDescUpdatedAt.UpdateDefault.(func() time.Time)
+	returnrequestitemFields := schema.ReturnRequestItem{}.Fields()
+	_ = returnrequestitemFields
+	// returnrequestitemDescSourceType is the schema descriptor for source_type field.
+	returnrequestitemDescSourceType := returnrequestitemFields[3].Descriptor()
+	// returnrequestitem.SourceTypeValidator is a validator for the "source_type" field. It is called by the builders before save.
+	returnrequestitem.SourceTypeValidator = returnrequestitemDescSourceType.Validators[0].(func(string) error)
+	// returnrequestitemDescProductName is the schema descriptor for product_name field.
+	returnrequestitemDescProductName := returnrequestitemFields[8].Descriptor()
+	// returnrequestitem.ProductNameValidator is a validator for the "product_name" field. It is called by the builders before save.
+	returnrequestitem.ProductNameValidator = returnrequestitemDescProductName.Validators[0].(func(string) error)
+	// returnrequestitemDescUnit is the schema descriptor for unit field.
+	returnrequestitemDescUnit := returnrequestitemFields[10].Descriptor()
+	// returnrequestitem.UnitValidator is a validator for the "unit" field. It is called by the builders before save.
+	returnrequestitem.UnitValidator = returnrequestitemDescUnit.Validators[0].(func(string) error)
+	// returnrequestitemDescQuantity is the schema descriptor for quantity field.
+	returnrequestitemDescQuantity := returnrequestitemFields[11].Descriptor()
+	// returnrequestitem.QuantityValidator is a validator for the "quantity" field. It is called by the builders before save.
+	returnrequestitem.QuantityValidator = returnrequestitemDescQuantity.Validators[0].(func(string) error)
+	// returnrequestitemDescReason is the schema descriptor for reason field.
+	returnrequestitemDescReason := returnrequestitemFields[12].Descriptor()
+	// returnrequestitem.ReasonValidator is a validator for the "reason" field. It is called by the builders before save.
+	returnrequestitem.ReasonValidator = returnrequestitemDescReason.Validators[0].(func(string) error)
+	// returnrequestitemDescCreatedAt is the schema descriptor for created_at field.
+	returnrequestitemDescCreatedAt := returnrequestitemFields[14].Descriptor()
+	// returnrequestitem.DefaultCreatedAt holds the default value on creation for the created_at field.
+	returnrequestitem.DefaultCreatedAt = returnrequestitemDescCreatedAt.Default.(func() time.Time)
+	// returnrequestitemDescUpdatedAt is the schema descriptor for updated_at field.
+	returnrequestitemDescUpdatedAt := returnrequestitemFields[15].Descriptor()
+	// returnrequestitem.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	returnrequestitem.DefaultUpdatedAt = returnrequestitemDescUpdatedAt.Default.(func() time.Time)
+	// returnrequestitem.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	returnrequestitem.UpdateDefaultUpdatedAt = returnrequestitemDescUpdatedAt.UpdateDefault.(func() time.Time)
 	roleFields := schema.Role{}.Fields()
 	_ = roleFields
 	// roleDescCode is the schema descriptor for code field.

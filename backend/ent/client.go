@@ -33,6 +33,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/productcategory"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productprocessingspec"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productunit"
+	"github.com/salesorder/sales-order-1.0/backend/ent/returnrequest"
+	"github.com/salesorder/sales-order-1.0/backend/ent/returnrequestitem"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/ent/rolepermission"
 	"github.com/salesorder/sales-order-1.0/backend/ent/route"
@@ -84,6 +86,10 @@ type Client struct {
 	ProductProcessingSpec *ProductProcessingSpecClient
 	// ProductUnit is the client for interacting with the ProductUnit builders.
 	ProductUnit *ProductUnitClient
+	// ReturnRequest is the client for interacting with the ReturnRequest builders.
+	ReturnRequest *ReturnRequestClient
+	// ReturnRequestItem is the client for interacting with the ReturnRequestItem builders.
+	ReturnRequestItem *ReturnRequestItemClient
 	// Role is the client for interacting with the Role builders.
 	Role *RoleClient
 	// RolePermission is the client for interacting with the RolePermission builders.
@@ -129,6 +135,8 @@ func (c *Client) init() {
 	c.ProductCategory = NewProductCategoryClient(c.config)
 	c.ProductProcessingSpec = NewProductProcessingSpecClient(c.config)
 	c.ProductUnit = NewProductUnitClient(c.config)
+	c.ReturnRequest = NewReturnRequestClient(c.config)
+	c.ReturnRequestItem = NewReturnRequestItemClient(c.config)
 	c.Role = NewRoleClient(c.config)
 	c.RolePermission = NewRolePermissionClient(c.config)
 	c.Route = NewRouteClient(c.config)
@@ -247,6 +255,8 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ProductCategory:       NewProductCategoryClient(cfg),
 		ProductProcessingSpec: NewProductProcessingSpecClient(cfg),
 		ProductUnit:           NewProductUnitClient(cfg),
+		ReturnRequest:         NewReturnRequestClient(cfg),
+		ReturnRequestItem:     NewReturnRequestItemClient(cfg),
 		Role:                  NewRoleClient(cfg),
 		RolePermission:        NewRolePermissionClient(cfg),
 		Route:                 NewRouteClient(cfg),
@@ -292,6 +302,8 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ProductCategory:       NewProductCategoryClient(cfg),
 		ProductProcessingSpec: NewProductProcessingSpecClient(cfg),
 		ProductUnit:           NewProductUnitClient(cfg),
+		ReturnRequest:         NewReturnRequestClient(cfg),
+		ReturnRequestItem:     NewReturnRequestItemClient(cfg),
 		Role:                  NewRoleClient(cfg),
 		RolePermission:        NewRolePermissionClient(cfg),
 		Route:                 NewRouteClient(cfg),
@@ -332,9 +344,9 @@ func (c *Client) Use(hooks ...Hook) {
 		c.AuditLog, c.Company, c.Customer, c.CustomerAddress, c.CustomerContact,
 		c.CustomerCounter, c.CustomerProduct, c.Department, c.FileAsset, c.Metadict,
 		c.OrderCounter, c.PrintLog, c.PrintPreview, c.ProcessingSpec, c.Product,
-		c.ProductCategory, c.ProductProcessingSpec, c.ProductUnit, c.Role,
-		c.RolePermission, c.Route, c.SalesOrder, c.SalesOrderEvent, c.SalesOrderItem,
-		c.User, c.Warehouse,
+		c.ProductCategory, c.ProductProcessingSpec, c.ProductUnit, c.ReturnRequest,
+		c.ReturnRequestItem, c.Role, c.RolePermission, c.Route, c.SalesOrder,
+		c.SalesOrderEvent, c.SalesOrderItem, c.User, c.Warehouse,
 	} {
 		n.Use(hooks...)
 	}
@@ -347,9 +359,9 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.AuditLog, c.Company, c.Customer, c.CustomerAddress, c.CustomerContact,
 		c.CustomerCounter, c.CustomerProduct, c.Department, c.FileAsset, c.Metadict,
 		c.OrderCounter, c.PrintLog, c.PrintPreview, c.ProcessingSpec, c.Product,
-		c.ProductCategory, c.ProductProcessingSpec, c.ProductUnit, c.Role,
-		c.RolePermission, c.Route, c.SalesOrder, c.SalesOrderEvent, c.SalesOrderItem,
-		c.User, c.Warehouse,
+		c.ProductCategory, c.ProductProcessingSpec, c.ProductUnit, c.ReturnRequest,
+		c.ReturnRequestItem, c.Role, c.RolePermission, c.Route, c.SalesOrder,
+		c.SalesOrderEvent, c.SalesOrderItem, c.User, c.Warehouse,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -394,6 +406,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.ProductProcessingSpec.mutate(ctx, m)
 	case *ProductUnitMutation:
 		return c.ProductUnit.mutate(ctx, m)
+	case *ReturnRequestMutation:
+		return c.ReturnRequest.mutate(ctx, m)
+	case *ReturnRequestItemMutation:
+		return c.ReturnRequestItem.mutate(ctx, m)
 	case *RoleMutation:
 		return c.Role.mutate(ctx, m)
 	case *RolePermissionMutation:
@@ -2873,6 +2889,272 @@ func (c *ProductUnitClient) mutate(ctx context.Context, m *ProductUnitMutation) 
 	}
 }
 
+// ReturnRequestClient is a client for the ReturnRequest schema.
+type ReturnRequestClient struct {
+	config
+}
+
+// NewReturnRequestClient returns a client for the ReturnRequest from the given config.
+func NewReturnRequestClient(c config) *ReturnRequestClient {
+	return &ReturnRequestClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `returnrequest.Hooks(f(g(h())))`.
+func (c *ReturnRequestClient) Use(hooks ...Hook) {
+	c.hooks.ReturnRequest = append(c.hooks.ReturnRequest, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `returnrequest.Intercept(f(g(h())))`.
+func (c *ReturnRequestClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ReturnRequest = append(c.inters.ReturnRequest, interceptors...)
+}
+
+// Create returns a builder for creating a ReturnRequest entity.
+func (c *ReturnRequestClient) Create() *ReturnRequestCreate {
+	mutation := newReturnRequestMutation(c.config, OpCreate)
+	return &ReturnRequestCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ReturnRequest entities.
+func (c *ReturnRequestClient) CreateBulk(builders ...*ReturnRequestCreate) *ReturnRequestCreateBulk {
+	return &ReturnRequestCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ReturnRequestClient) MapCreateBulk(slice any, setFunc func(*ReturnRequestCreate, int)) *ReturnRequestCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ReturnRequestCreateBulk{err: fmt.Errorf("calling to ReturnRequestClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ReturnRequestCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ReturnRequestCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ReturnRequest.
+func (c *ReturnRequestClient) Update() *ReturnRequestUpdate {
+	mutation := newReturnRequestMutation(c.config, OpUpdate)
+	return &ReturnRequestUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ReturnRequestClient) UpdateOne(_m *ReturnRequest) *ReturnRequestUpdateOne {
+	mutation := newReturnRequestMutation(c.config, OpUpdateOne, withReturnRequest(_m))
+	return &ReturnRequestUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ReturnRequestClient) UpdateOneID(id int) *ReturnRequestUpdateOne {
+	mutation := newReturnRequestMutation(c.config, OpUpdateOne, withReturnRequestID(id))
+	return &ReturnRequestUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ReturnRequest.
+func (c *ReturnRequestClient) Delete() *ReturnRequestDelete {
+	mutation := newReturnRequestMutation(c.config, OpDelete)
+	return &ReturnRequestDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ReturnRequestClient) DeleteOne(_m *ReturnRequest) *ReturnRequestDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ReturnRequestClient) DeleteOneID(id int) *ReturnRequestDeleteOne {
+	builder := c.Delete().Where(returnrequest.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ReturnRequestDeleteOne{builder}
+}
+
+// Query returns a query builder for ReturnRequest.
+func (c *ReturnRequestClient) Query() *ReturnRequestQuery {
+	return &ReturnRequestQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeReturnRequest},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ReturnRequest entity by its id.
+func (c *ReturnRequestClient) Get(ctx context.Context, id int) (*ReturnRequest, error) {
+	return c.Query().Where(returnrequest.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ReturnRequestClient) GetX(ctx context.Context, id int) *ReturnRequest {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ReturnRequestClient) Hooks() []Hook {
+	return c.hooks.ReturnRequest
+}
+
+// Interceptors returns the client interceptors.
+func (c *ReturnRequestClient) Interceptors() []Interceptor {
+	return c.inters.ReturnRequest
+}
+
+func (c *ReturnRequestClient) mutate(ctx context.Context, m *ReturnRequestMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ReturnRequestCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ReturnRequestUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ReturnRequestUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ReturnRequestDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ReturnRequest mutation op: %q", m.Op())
+	}
+}
+
+// ReturnRequestItemClient is a client for the ReturnRequestItem schema.
+type ReturnRequestItemClient struct {
+	config
+}
+
+// NewReturnRequestItemClient returns a client for the ReturnRequestItem from the given config.
+func NewReturnRequestItemClient(c config) *ReturnRequestItemClient {
+	return &ReturnRequestItemClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `returnrequestitem.Hooks(f(g(h())))`.
+func (c *ReturnRequestItemClient) Use(hooks ...Hook) {
+	c.hooks.ReturnRequestItem = append(c.hooks.ReturnRequestItem, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `returnrequestitem.Intercept(f(g(h())))`.
+func (c *ReturnRequestItemClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ReturnRequestItem = append(c.inters.ReturnRequestItem, interceptors...)
+}
+
+// Create returns a builder for creating a ReturnRequestItem entity.
+func (c *ReturnRequestItemClient) Create() *ReturnRequestItemCreate {
+	mutation := newReturnRequestItemMutation(c.config, OpCreate)
+	return &ReturnRequestItemCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ReturnRequestItem entities.
+func (c *ReturnRequestItemClient) CreateBulk(builders ...*ReturnRequestItemCreate) *ReturnRequestItemCreateBulk {
+	return &ReturnRequestItemCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ReturnRequestItemClient) MapCreateBulk(slice any, setFunc func(*ReturnRequestItemCreate, int)) *ReturnRequestItemCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ReturnRequestItemCreateBulk{err: fmt.Errorf("calling to ReturnRequestItemClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ReturnRequestItemCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ReturnRequestItemCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ReturnRequestItem.
+func (c *ReturnRequestItemClient) Update() *ReturnRequestItemUpdate {
+	mutation := newReturnRequestItemMutation(c.config, OpUpdate)
+	return &ReturnRequestItemUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ReturnRequestItemClient) UpdateOne(_m *ReturnRequestItem) *ReturnRequestItemUpdateOne {
+	mutation := newReturnRequestItemMutation(c.config, OpUpdateOne, withReturnRequestItem(_m))
+	return &ReturnRequestItemUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ReturnRequestItemClient) UpdateOneID(id int) *ReturnRequestItemUpdateOne {
+	mutation := newReturnRequestItemMutation(c.config, OpUpdateOne, withReturnRequestItemID(id))
+	return &ReturnRequestItemUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ReturnRequestItem.
+func (c *ReturnRequestItemClient) Delete() *ReturnRequestItemDelete {
+	mutation := newReturnRequestItemMutation(c.config, OpDelete)
+	return &ReturnRequestItemDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ReturnRequestItemClient) DeleteOne(_m *ReturnRequestItem) *ReturnRequestItemDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ReturnRequestItemClient) DeleteOneID(id int) *ReturnRequestItemDeleteOne {
+	builder := c.Delete().Where(returnrequestitem.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ReturnRequestItemDeleteOne{builder}
+}
+
+// Query returns a query builder for ReturnRequestItem.
+func (c *ReturnRequestItemClient) Query() *ReturnRequestItemQuery {
+	return &ReturnRequestItemQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeReturnRequestItem},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ReturnRequestItem entity by its id.
+func (c *ReturnRequestItemClient) Get(ctx context.Context, id int) (*ReturnRequestItem, error) {
+	return c.Query().Where(returnrequestitem.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ReturnRequestItemClient) GetX(ctx context.Context, id int) *ReturnRequestItem {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ReturnRequestItemClient) Hooks() []Hook {
+	return c.hooks.ReturnRequestItem
+}
+
+// Interceptors returns the client interceptors.
+func (c *ReturnRequestItemClient) Interceptors() []Interceptor {
+	return c.inters.ReturnRequestItem
+}
+
+func (c *ReturnRequestItemClient) mutate(ctx context.Context, m *ReturnRequestItemMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ReturnRequestItemCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ReturnRequestItemUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ReturnRequestItemUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ReturnRequestItemDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ReturnRequestItem mutation op: %q", m.Op())
+	}
+}
+
 // RoleClient is a client for the Role schema.
 type RoleClient struct {
 	config
@@ -3991,14 +4273,14 @@ type (
 		AuditLog, Company, Customer, CustomerAddress, CustomerContact, CustomerCounter,
 		CustomerProduct, Department, FileAsset, Metadict, OrderCounter, PrintLog,
 		PrintPreview, ProcessingSpec, Product, ProductCategory, ProductProcessingSpec,
-		ProductUnit, Role, RolePermission, Route, SalesOrder, SalesOrderEvent,
-		SalesOrderItem, User, Warehouse []ent.Hook
+		ProductUnit, ReturnRequest, ReturnRequestItem, Role, RolePermission, Route,
+		SalesOrder, SalesOrderEvent, SalesOrderItem, User, Warehouse []ent.Hook
 	}
 	inters struct {
 		AuditLog, Company, Customer, CustomerAddress, CustomerContact, CustomerCounter,
 		CustomerProduct, Department, FileAsset, Metadict, OrderCounter, PrintLog,
 		PrintPreview, ProcessingSpec, Product, ProductCategory, ProductProcessingSpec,
-		ProductUnit, Role, RolePermission, Route, SalesOrder, SalesOrderEvent,
-		SalesOrderItem, User, Warehouse []ent.Interceptor
+		ProductUnit, ReturnRequest, ReturnRequestItem, Role, RolePermission, Route,
+		SalesOrder, SalesOrderEvent, SalesOrderItem, User, Warehouse []ent.Interceptor
 	}
 )

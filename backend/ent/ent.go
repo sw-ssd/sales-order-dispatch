@@ -30,6 +30,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/productcategory"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productprocessingspec"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productunit"
+	"github.com/salesorder/sales-order-1.0/backend/ent/returnrequest"
+	"github.com/salesorder/sales-order-1.0/backend/ent/returnrequestitem"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/ent/rolepermission"
 	"github.com/salesorder/sales-order-1.0/backend/ent/route"
@@ -116,6 +118,8 @@ func checkColumn(t, c string) error {
 			productcategory.Table:       productcategory.ValidColumn,
 			productprocessingspec.Table: productprocessingspec.ValidColumn,
 			productunit.Table:           productunit.ValidColumn,
+			returnrequest.Table:         returnrequest.ValidColumn,
+			returnrequestitem.Table:     returnrequestitem.ValidColumn,
 			role.Table:                  role.ValidColumn,
 			rolepermission.Table:        rolepermission.ValidColumn,
 			route.Table:                 route.ValidColumn,
