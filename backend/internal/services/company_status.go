@@ -39,18 +39,19 @@ func SetCompanyStatus(ctx context.Context, db *ent.Client, companyID int,
 	if err != nil {
 		return err // InvalidArgument:稽核必須有可歸屬的觸發者,不接受無來源的 actor
 	}
-	if strings.TrimSpace(reason) == "" {
-		// 尚無專碼(新增專碼屬 errcode 註冊範疇),故回一般 error:原因文字原樣可見。
-		return errors.New("狀態變更必須提供原因")
-	}
-
 	cur, err := dbtenant.Client(ctx, db).Company.Query().
 		Where(company.ID(companyID), company.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return toConnectError(err)
 	}
+	// 未結項 #1:同值 no-op 排在 reason 檢查之前 —— 「無需動作」不該被原因阻擋。
+	// no-op 不寫稽核、無副作用，故不需要原因；真正的狀態變更仍由下一段的 reason 檢查把關。
 	if cur.Status == status {
 		return nil
+	}
+	if strings.TrimSpace(reason) == "" {
+		// 尚無專碼(新增專碼屬 errcode 註冊範疇),故回一般 error:原因文字原樣可見。
+		return errors.New("狀態變更必須提供原因")
 	}
 
 	// 條件更新:「已軟刪除的公司不得改狀態」是敘述式條件的一部分,不只是前置查詢 ——

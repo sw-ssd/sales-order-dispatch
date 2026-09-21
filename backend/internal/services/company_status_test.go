@@ -123,6 +123,27 @@ func TestSetCompanyStatusRequiresTenantTx(t *testing.T) {
 	}
 }
 
+// 未結項 #1:reason 檢查排在同值 no-op 之前 —— 同值呼叫（例：排程重跑已達標的公司）
+// 若沒帶原因會被拒絕，而「無需動作」本來不該被原因阻擋（no-op 不寫稽核、無副作用）。
+func TestSetCompanyStatusNoopSkipsReasonCheck(t *testing.T) {
+	db := newCounterTestDB(t)
+	bg := context.Background()
+	co := db.Company.Create().SetName("C").SetIdentifier("SETST-5").
+		SetStatus(company.StatusSuspended).SaveX(bg)
+
+	ctx, tx := statusTxCtx(t, db)
+	// 已是 suspended，再設 suspended 且不帶原因 → 應為 no-op 成功（不寫稽核）。
+	if err := SetCompanyStatus(ctx, db, co.ID, company.StatusSuspended, "   ", statusActor); err != nil {
+		t.Fatalf("同值 no-op 不應被原因阻擋，got %v", err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatalf("commit: %v", err)
+	}
+	if n := db.AuditLog.Query().CountX(bg); n != 0 {
+		t.Fatalf("no-op 不得寫稽核，got %d 筆", n)
+	}
+}
+
 // TestSetCompanyStatusRequiresReason:Global Constraints「寫入必附原因」——空字串(含全空白)
 // 即拒絕,且不留任何痕跡(狀態未動、無稽核)。
 func TestSetCompanyStatusRequiresReason(t *testing.T) {
