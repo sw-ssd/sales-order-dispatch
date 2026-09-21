@@ -16,11 +16,11 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
 )
 
-// seedOrderCompany 建公司+部門+操作者+客戶,回 coID/deptID/custID/actorID。
+// seedOrderCompany 建公司+部門+操作者+客戶+商品單位,回 coID/deptID/custID/actorID/prodID。
 // actor 必須是真實 users 列(audit_logs.user_id FK);來源字典由 00011 seed。
-func seedOrderCompany(t *testing.T, ctx context.Context, db *ent.Client) (int, int, int, int) {
+func seedOrderCompany(t *testing.T, ctx context.Context, db *ent.Client) (int, int, int, int, int) {
 	t.Helper()
-	var coID, deptID, custID, actorID int
+	var coID, deptID, custID, actorID, prodID int
 	seedTx(t, db, func(tx *ent.Tx) error {
 		co, err := tx.Company.Create().SetName("訂單公司").SetIdentifier("O-" + t.Name()).
 			SetStatus("active").Save(ctx)
@@ -42,11 +42,20 @@ func seedOrderCompany(t *testing.T, ctx context.Context, db *ent.Client) (int, i
 		if err != nil {
 			return err
 		}
+		prod, err := tx.Product.Create().SetCompanyID(co.ID).SetDepartmentID(d.ID).
+			SetCode("P1").SetName("蘋果").Save(ctx)
+		if err != nil {
+			return err
+		}
+		if _, err := tx.ProductUnit.Create().SetProductID(prod.ID).
+			SetUnitCode("斤").SetConversionRate("1").SetIsBase(true).Save(ctx); err != nil {
+			return err
+		}
 		// order_source W 由 migration 00011 seed(系統級固定);fixture 不重建。
-		coID, deptID, custID, actorID = co.ID, d.ID, cust.ID, op.ID
+		coID, deptID, custID, actorID, prodID = co.ID, d.ID, cust.ID, op.ID, prod.ID
 		return nil
 	})
-	return coID, deptID, custID, actorID
+	return coID, deptID, custID, actorID, prodID
 }
 
 // TestIntegrationSalesOrderCRUD 建單→查單→編輯→取消→軟刪除,經服務層 + 真 PG + RLS 定義。
@@ -56,7 +65,7 @@ func TestIntegrationSalesOrderCRUD(t *testing.T) {
 	migrateBusinessUp(t, dsn)
 	_, db := openPGEntClientFromGoose(t, dsn)
 	ctx := context.Background()
-	coID, deptID, custID, actorID := seedOrderCompany(t, ctx, db)
+	coID, deptID, custID, actorID, prodID := seedOrderCompany(t, ctx, db)
 	svc := NewSalesOrderService(db)
 
 	newReqCtx := func() (context.Context, func()) {
@@ -82,7 +91,7 @@ func TestIntegrationSalesOrderCRUD(t *testing.T) {
 	created, err := svc.CreateOrder(cctx, connect.NewRequest(&salesorderv1.CreateOrderRequest{
 		CustomerId: uItoa(custID), Source: "W",
 		Items: []*salesorderv1.OrderItemInput{
-			{DisplayName: "蘋果", Qty: "10", Unit: "斤"},
+			{ProductId: uItoa(prodID), DisplayName: "蘋果", Qty: "10", Unit: "斤"},
 		},
 	}))
 	if err != nil {
@@ -113,7 +122,7 @@ func TestIntegrationSalesOrderCRUD(t *testing.T) {
 	uctx, ufin := newReqCtx()
 	upd, err := svc.UpdateOrder(uctx, connect.NewRequest(&salesorderv1.UpdateOrderRequest{
 		Id: oid, Version: 1, Note: "改備註",
-		Items: []*salesorderv1.OrderItemInput{{DisplayName: "蘋果", Qty: "20", Unit: "斤"}},
+		Items: []*salesorderv1.OrderItemInput{{ProductId: uItoa(prodID), DisplayName: "蘋果", Qty: "20", Unit: "斤"}},
 	}))
 	if err != nil {
 		ufin()
@@ -167,7 +176,7 @@ func TestIntegrationSalesOrderCRUD(t *testing.T) {
 	c2ctx, c2fin := newReqCtx()
 	created2, err := svc.CreateOrder(c2ctx, connect.NewRequest(&salesorderv1.CreateOrderRequest{
 		CustomerId: uItoa(custID), Source: "W",
-		Items: []*salesorderv1.OrderItemInput{{DisplayName: "梨", Qty: "5", Unit: "顆"}},
+		Items: []*salesorderv1.OrderItemInput{{ProductId: uItoa(prodID), DisplayName: "蘋果", Qty: "5", Unit: "斤"}},
 	}))
 	if err != nil {
 		c2fin()

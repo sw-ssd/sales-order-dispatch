@@ -146,7 +146,7 @@ func (s *SalesOrderService) GetOrder(ctx context.Context, req *connect.Request[s
 }
 
 // CreateOrder 建立訂單(最小可用):驗客戶可見 → 驗來源 → 取號 → 建單+明細 → 寫 create 事件,同一交易。
-// 組裝邏輯(換算/別名/守衛/順延)為 Task 5;本版明細 qty/unit 直寫,base_qty = qty。
+// 組裝邏輯(4.2):客戶守衛 → 明細驗證(含換算) → 順延 → 取號,同一交易。
 func (s *SalesOrderService) CreateOrder(ctx context.Context, req *connect.Request[salesorderv1.CreateOrderRequest]) (*connect.Response[salesorderv1.CreateOrderResponse], error) {
 	id, err := requireAuth(ctx)
 	if err != nil {
@@ -161,7 +161,9 @@ func (s *SalesOrderService) CreateOrder(ctx context.Context, req *connect.Reques
 		return nil, errcode.SysInternal.Error(nil)
 	}
 	db := tx.Client()
-	custID, err := parseID(req.Msg.GetCustomerId())
+	isCustomer := isCustomerIdentity(id.Roles)
+	// 客戶守衛(4.2.3):客戶帳號強制為自己;守衛在取號之前,不消耗序號。
+	custID, err := orderCustomerGuard(req.Msg.GetCustomerId(), id.CustomerID, isCustomer)
 	if err != nil {
 		return nil, err
 	}
@@ -195,6 +197,12 @@ func (s *SalesOrderService) CreateOrder(ctx context.Context, req *connect.Reques
 		if err != nil {
 			return nil, errcode.SysInvalidArgument.Error(map[string]string{"field": "expected_delivery_date"})
 		}
+		// 偏好送貨日順延(4.2.5):回應值即順延後日期(單一事實來源)。
+		if days, derr := customerPreferredDays(ctx, db, cid, custID); derr != nil {
+			return nil, derr
+		} else {
+			t = adjustDeliveryDate(days, t)
+		}
 		build = build.SetExpectedDeliveryDate(t)
 	}
 	if n := strings.TrimSpace(req.Msg.GetNote()); n != "" {
@@ -212,33 +220,19 @@ func (s *SalesOrderService) CreateOrder(ctx context.Context, req *connect.Reques
 		return nil, toConnectError(err)
 	}
 	for i, item := range req.Msg.GetItems() {
-		qty := strings.TrimSpace(item.GetQty())
-		if qty == "" {
-			return nil, errcode.SysInvalidArgument.Error(map[string]string{"field": "items.qty"})
-		}
-		unit := strings.TrimSpace(item.GetUnit())
-		if unit == "" {
-			return nil, errcode.SysInvalidArgument.Error(map[string]string{"field": "items.unit"})
-		}
-		display := strings.TrimSpace(item.GetDisplayName())
-		if display == "" {
-			display = strings.TrimSpace(item.GetManualName())
-		}
-		if display == "" {
-			return nil, errcode.SysInvalidArgument.Error(map[string]string{"field": "items.display_name"})
+		pid, display, baseQty, err := validateOrderItem(ctx, db, cid, isCustomer, item)
+		if err != nil {
+			return nil, err
 		}
 		ib := db.SalesOrderItem.Create().
 			SetSalesOrderID(o.ID).SetCompanyID(cid).
-			SetDisplayName(display).SetQty(qty).SetUnit(unit).SetBaseQty(qty).
-			SetSortOrder(i)
+			SetDisplayName(display).
+			SetQty(strings.TrimSpace(item.GetQty())).SetUnit(strings.TrimSpace(item.GetUnit())).
+			SetBaseQty(baseQty).SetSortOrder(i)
 		if did != nil {
 			ib = ib.SetDepartmentID(*did)
 		}
-		if p := strings.TrimSpace(item.GetProductId()); p != "" {
-			pid, err := parseID(p)
-			if err != nil {
-				return nil, err
-			}
+		if pid != 0 {
 			ib = ib.SetProductID(pid)
 		}
 		if _, err := ib.Save(ctx); err != nil {
@@ -297,6 +291,11 @@ func (s *SalesOrderService) UpdateOrder(ctx context.Context, req *connect.Reques
 		if err != nil {
 			return nil, errcode.SysInvalidArgument.Error(map[string]string{"field": "expected_delivery_date"})
 		}
+		if days, derr := customerPreferredDays(ctx, db, cid, o.CustomerID); derr != nil {
+			return nil, derr
+		} else {
+			t = adjustDeliveryDate(days, t)
+		}
 		upd = upd.SetExpectedDeliveryDate(t)
 		changedDate = true
 	}
@@ -318,28 +317,21 @@ func (s *SalesOrderService) UpdateOrder(ctx context.Context, req *connect.Reques
 			SetDeletedAt(time.Now().UTC()).Save(ctx); err != nil {
 			return nil, toConnectError(err)
 		}
+		isCustomer := isCustomerIdentity(id.Roles)
 		for i, item := range items {
-			qty := strings.TrimSpace(item.GetQty())
-			unit := strings.TrimSpace(item.GetUnit())
-			display := strings.TrimSpace(item.GetDisplayName())
-			if display == "" {
-				display = strings.TrimSpace(item.GetManualName())
-			}
-			if qty == "" || unit == "" || display == "" {
-				return nil, errcode.SysInvalidArgument.Error(map[string]string{"field": "items"})
+			pid, display, baseQty, err := validateOrderItem(ctx, db, cid, isCustomer, item)
+			if err != nil {
+				return nil, err
 			}
 			ib := db.SalesOrderItem.Create().
 				SetSalesOrderID(oid).SetCompanyID(cid).
-				SetDisplayName(display).SetQty(qty).SetUnit(unit).SetBaseQty(qty).
-				SetSortOrder(i)
+				SetDisplayName(display).
+				SetQty(strings.TrimSpace(item.GetQty())).SetUnit(strings.TrimSpace(item.GetUnit())).
+				SetBaseQty(baseQty).SetSortOrder(i)
 			if did != nil {
 				ib = ib.SetDepartmentID(*did)
 			}
-			if p := strings.TrimSpace(item.GetProductId()); p != "" {
-				pid, err := parseID(p)
-				if err != nil {
-					return nil, err
-				}
+			if pid != 0 {
 				ib = ib.SetProductID(pid)
 			}
 			if _, err := ib.Save(ctx); err != nil {
