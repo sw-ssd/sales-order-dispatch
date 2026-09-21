@@ -23,7 +23,7 @@ var businessTables = map[string]bool{
 	"processing_specs": true, "product_categories": true, "products": true,
 	"product_units": true, "product_processing_specs": true,
 	"sales_orders": true, "sales_order_items": true, "sales_order_events": true,
-	"order_counters": true, "customer_products": true,
+	"order_counters": true, "customer_products": true, "file_assets": true,
 }
 
 // TestIntegrationAppRolePrivileges 驗證業務角色是非 owner、且對業務表有 DML 權限：
