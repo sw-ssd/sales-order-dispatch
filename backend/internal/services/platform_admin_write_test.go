@@ -667,11 +667,10 @@ func TestChangePlanSamePlanIsNoOpWithoutAudit(t *testing.T) {
 	}
 }
 
-// TestCreateSubscriptionRPCValidatesTrialEndsAt 驗 RPC 這一層的兩個參數決定:
-// trial_ends_at 必須是 RFC3339(只填日期會被擋 —— 那會被解析成「當天 00:00」而看起來像過期),
-// 以及成功的回應要帶得出 console 需要的東西(訂閱 id／狀態／方案／週期／席位／第一期)。
-// 未結項 #36:開通時傳入不存在的 company_id → FK 23503 被收成 SYS-9000。
-// console 只能選既有租戶故僅自製客戶端可達，但 5xx 等於告訴呼叫端「重試」，而重試永遠不會成功。
+// TestCreateSubscriptionRejectsUnknownCompany 驗開通先驗公司存在（未結項 #36）：
+// 不存在的 company_id 不得走到 INSERT 才被 FK 23503 擋下 —— FK 走 toConnectError 的
+// default 分支，對外是 SYS-9000（5xx＝「重試」），但重試永遠不會成功。故以 GetTenant
+// 先驗，錯了回 SYS-4002。console 只能選既有租戶，故僅自製客戶端可達。
 func TestCreateSubscriptionRejectsUnknownCompany(t *testing.T) {
 	svc, st, cache, _ := newWriteHarness(0)
 	st.tenant = nil
@@ -691,6 +690,9 @@ func TestCreateSubscriptionRejectsUnknownCompany(t *testing.T) {
 	}
 }
 
+// TestCreateSubscriptionRPCValidatesTrialEndsAt 驗 RPC 這一層的兩個參數決定:
+// trial_ends_at 必須是 RFC3339(只填日期會被擋 —— 那會被解析成「當天 00:00」而看起來像過期),
+// 以及成功的回應要帶得出 console 需要的東西(訂閱 id／狀態／方案／週期／席位／第一期)。
 func TestCreateSubscriptionRPCValidatesTrialEndsAt(t *testing.T) {
 	svc, st, cache, _ := newWriteHarness(0)
 	ctx := withOperator(context.Background())
