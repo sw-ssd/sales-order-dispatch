@@ -80,14 +80,18 @@ ALTER TABLE sales_order_events
     ADD CONSTRAINT sales_order_events_order_fk   FOREIGN KEY (sales_order_id) REFERENCES sales_orders(id) ON DELETE CASCADE,
     ADD CONSTRAINT sales_order_events_company_fk FOREIGN KEY (company_id)     REFERENCES companies(id);
 
+-- id bigserial 主鍵(對齊 ent 隱含 id;customer_counters 的 00021 教訓:複合主鍵無 id 欄
+-- 會讓 ent 在真 PG 上 `column "id" does not exist`)。「每公司每來源一列」改由唯一索引表達。
 CREATE TABLE IF NOT EXISTS order_counters (
+    id         bigserial PRIMARY KEY,
     company_id bigint NOT NULL,
     source     text NOT NULL,
     next_seq   integer NOT NULL DEFAULT 1,
     version    integer NOT NULL DEFAULT 0,
-    updated_at timestamptz NOT NULL DEFAULT now(),
-    PRIMARY KEY (company_id, source)
+    updated_at timestamptz NOT NULL DEFAULT now()
 );
+CREATE UNIQUE INDEX IF NOT EXISTS order_counters_company_source_key
+    ON order_counters (company_id, source);
 -- +goose StatementEnd
 
 -- RLS:訂單三表 + counters 依 data_scope + company/department 隔離(僅定義不 ENABLE)。

@@ -1,0 +1,180 @@
+syntax = "proto3";
+
+package salesorder.v1;
+option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1";
+
+import "salesorder/v1/common.proto";
+
+// 銷售訂單(05 計畫 Task 4, D10/D12/D13)。
+// order_no 由系統取號(來源碼+6 位自增),建立後不可改。
+// 不含任何金額欄位(D12,硬性邊界)。
+
+// SalesOrder:訂單主檔。
+message SalesOrder {
+  string id = 1;
+  string company_id = 2;
+  string department_id = 3;          // 可空
+  string order_no = 4;               // 系統取號,建立後不可改
+  string customer_id = 5;
+  string source = 6;                 // 訂單來源碼(metadicts order_source,如 W/A),建立後不可改
+  string status = 7;                 // pending/processing/completed/cancelled/voided
+  string expected_delivery_date = 8; // 可空(RFC3339 date)
+  string sales_rep_id = 9;           // 可空
+  string note = 10;                  // 可空
+  string dispatched_at = 11;         // 可空(RFC3339,派車域寫入)
+  string dispatched_by = 12;         // 可空
+  string route_id = 13;              // 可空(取消派車保留看板位置)
+  int32 delivery_sequence = 14;      // 看板順序(0 = 未排)
+  int32 version = 15;                // 樂觀鎖
+  string created_at = 16;            // RFC3339
+  string updated_at = 17;            // RFC3339
+  string deleted_at = 18;            // RFC3339(可空;include_deleted 時回傳)
+}
+
+// SalesOrderItem:訂單明細(不含金額)。
+message SalesOrderItem {
+  string id = 1;
+  string product_id = 2;             // 可空(手打品名無關聯)
+  string display_name = 3;           // 名稱快照
+  string qty = 4;                    // 十進位文字
+  string unit = 5;                   // 選用單位
+  string base_qty = 6;               // 十進位文字,換算基本單位後數量
+  string processing_spec_id = 7;     // 可空
+  string special_cut_note = 8;       // 可空
+  string warehouse_id = 9;           // 可空
+  int32 sort_order = 10;
+}
+
+// SalesOrderEvent:訂單異動事件(僅追加)。
+message SalesOrderEvent {
+  string id = 1;
+  string event_type = 2;             // create/edit/dispatch/dispatch_cancel/cancel/complete/void
+  string actor_id = 3;
+  string reason = 4;                 // 可空(dispatch_cancel/void 必填語意)
+  string payload = 5;                // JSON(可空,異動摘要)
+  string created_at = 6;             // RFC3339
+}
+
+// SalesOrderService:銷售訂單管理。
+service SalesOrderService {
+  // ListOrders:分頁查詢(預設排除軟刪除;status/customer_id/source/keyword 篩選)。
+  rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
+  // GetOrder:以 id 取單筆(含明細)。
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+  // CreateOrder:建立訂單(最小可用:客戶+來源+明細;取號+建單同交易)。
+  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+  // UpdateOrder:僅 pending 可編輯(攜帶 version 樂觀鎖)。
+  rpc UpdateOrder(UpdateOrderRequest) returns (UpdateOrderResponse);
+  // CancelOrder:僅 pending 可取消。
+  rpc CancelOrder(CancelOrderRequest) returns (CancelOrderResponse);
+  // CompleteOrder:僅 processing 可完成。
+  rpc CompleteOrder(CompleteOrderRequest) returns (CompleteOrderResponse);
+  // VoidOrder:僅 completed 可作廢(dept_admin 以上 + 原因)。
+  rpc VoidOrder(VoidOrderRequest) returns (VoidOrderResponse);
+  // DeleteOrder:軟刪除(僅 pending/cancelled)。
+  rpc DeleteOrder(DeleteOrderRequest) returns (DeleteOrderResponse);
+  // ListOrderEvents:異動軌跡查詢(升序)。
+  rpc ListOrderEvents(ListOrderEventsRequest) returns (ListOrderEventsResponse);
+}
+
+message ListOrdersRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  string status = 3;                 // 可空
+  string customer_id = 4;            // 可空
+  string source = 5;                 // 可空
+  string keyword = 6;                // 模糊比對 order_no/note
+  bool include_deleted = 7;
+}
+
+message ListOrdersResponse {
+  repeated SalesOrder orders = 1;
+  int32 total = 2;
+}
+
+message GetOrderRequest {
+  string id = 1;
+}
+
+message GetOrderResponse {
+  SalesOrder order = 1;
+  repeated SalesOrderItem items = 2;
+}
+
+message OrderItemInput {
+  string product_id = 1;             // 可空(手打品名)
+  string manual_name = 2;            // 可空(手打品名,業務限定)
+  string display_name = 3;
+  string qty = 4;
+  string unit = 5;
+  string processing_spec_id = 6;     // 可空
+  string special_cut_note = 7;       // 可空
+  string warehouse_id = 8;           // 可空
+}
+
+message CreateOrderRequest {
+  string customer_id = 1;
+  string source = 2;
+  string expected_delivery_date = 3; // 可空(RFC3339 date)
+  string note = 4;                   // 可空
+  string sales_rep_id = 5;           // 可空
+  repeated OrderItemInput items = 6;
+}
+
+message CreateOrderResponse {
+  SalesOrder order = 1;
+}
+
+message UpdateOrderRequest {
+  string id = 1;
+  int32 version = 2;
+  string expected_delivery_date = 3; // 可空(帶即改,不帶不動)
+  string note = 4;                   // 可空(帶即改,不帶不動)
+  repeated OrderItemInput items = 5; // 空即不動明細,非空即整單替換
+}
+
+message UpdateOrderResponse {
+  SalesOrder order = 1;
+}
+
+message CancelOrderRequest {
+  string id = 1;
+}
+
+message CancelOrderResponse {
+  SalesOrder order = 1;
+}
+
+message CompleteOrderRequest {
+  string id = 1;
+}
+
+message CompleteOrderResponse {
+  SalesOrder order = 1;
+}
+
+message VoidOrderRequest {
+  string id = 1;
+  string reason = 2;
+}
+
+message VoidOrderResponse {
+  SalesOrder order = 1;
+}
+
+message DeleteOrderRequest {
+  string id = 1;
+}
+
+message DeleteOrderResponse {}
+
+message ListOrderEventsRequest {
+  string sales_order_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}
+
+message ListOrderEventsResponse {
+  repeated SalesOrderEvent events = 1;
+  int32 total = 2;
+}
