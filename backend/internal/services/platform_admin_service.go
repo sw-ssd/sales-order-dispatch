@@ -868,6 +868,12 @@ func (s *PlatformAdminService) UpsertPlanPrice(ctx context.Context,
 	if err != nil {
 		return nil, errcode.SysInvalidArgument.Error(map[string]string{"field": "seat_price"})
 	}
+	// 未結項 #37:base 與 seat 同為 0 會開出 0 元期別（開通只擋「沒有價目」，不擋 0）。
+	// 免費方案若是刻意設計，應以 plan.status 或專屬旗標表達，而非一個 0 元價目 ——
+	// 0 元期別在帳面上與「漏記金額」不可區分。單邊為 0（例：免基價、按席收費）仍合法。
+	if baseCents == 0 && seatCents == 0 {
+		return nil, errcode.SysInvalidArgument.Error(map[string]string{"field": "base_price"})
+	}
 	in := platformstore.PlanPriceInput{
 		PlanCode:     planCode,
 		BillingCycle: cycle,

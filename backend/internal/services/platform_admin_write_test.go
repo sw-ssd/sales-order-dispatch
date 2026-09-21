@@ -1031,6 +1031,14 @@ func TestPlatformWriteRejectsInvalidArguments(t *testing.T) {
 				PlanCode: "std", BillingCycle: "monthly", SeatPrice: "1.00", Reason: "調價"}))
 			return err
 		},
+		"價目 base 與 seat 同為 0": func(svc *PlatformAdminService) error {
+			// 未結項 #37:0+0 會開出 0 元期別（開通只擋「沒有價目」，不擋 0）。
+			// 免費方案若是刻意設計，應以 plan.status 或專屬旗標表達，而非一個 0 元價目。
+			_, err := svc.UpsertPlanPrice(ctx, connect.NewRequest(&platformv1.UpsertPlanPriceRequest{
+				PlanCode: "std", BillingCycle: "monthly", BasePrice: "0", SeatPrice: "0",
+				Reason: "調價"}))
+			return err
+		},
 		"設定值非數字": func(svc *PlatformAdminService) error {
 			_, err := svc.UpdateBillingSettings(ctx, connect.NewRequest(&platformv1.UpdateBillingSettingsRequest{
 				Settings: []*platformv1.BillingSetting{{Key: "grace_days", Value: "abc"}}, Reason: "調整"}))
