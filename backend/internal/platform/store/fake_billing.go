@@ -326,6 +326,10 @@ func (f *FakeBilling) MarkPeriodPaidTx(_ context.Context, _ *sql.Tx, id int64, p
 	p := &f.periods[i]
 	// 00029 的 periods_provider_ref_unique(部分唯一索引):同一 provider ＋ 交易號只能入帳一期。
 	// 少了這一條,T4 的「同一筆交易號不得重複入帳」會在假實作上假綠。
+	// 未結項 #8:錯誤形狀與真 store 不同 —— 真 store 靠 UPDATE 的 0 列分流
+	// (狀態／交易號不合即 0 列,再查狀態決定三種錯誤),假實作用預檢＋格式化字串。
+	// 呼叫端(billing.RecordPayment)只認 errors.Is(err, sql.ErrNoRows)＝「不存在」,
+	// 其餘一律收斂,故形狀差異不影響行為;真 PG 的 23505 形狀由整合測試覆蓋。
 	if externalRef != "" && p.ExternalRef != externalRef {
 		for j := range f.periods {
 			if j != i && f.periods[j].ExternalRef == externalRef && f.periods[j].PaymentProvider == provider {
