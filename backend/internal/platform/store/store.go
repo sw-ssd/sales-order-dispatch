@@ -171,7 +171,9 @@ type BillingStore interface {
 	// 判定層才分得出「已取消」與「從未訂閱」(F-8;取法與平台投影同源)。
 	OpenSubscriptionTx(ctx context.Context, tx *sql.Tx, companyID int) (*Subscription, error)
 	// SetSubscriptionStatusTx 更新訂閱狀態與寬限期(cancelled 時一併記下 cancelled_at)。
-	SetSubscriptionStatusTx(ctx context.Context, tx *sql.Tx, subID int64, status string, graceUntil *time.Time) error
+	// CAS 語意(未結項 #12)：expectedStatus 非空時只在「現狀＝預期」才寫，0 列回
+	// store.ErrStatusChanged（呼叫端跳過、不發事件）；不帶時維持舊語意（0 列＝不存在）。
+	SetSubscriptionStatusTx(ctx context.Context, tx *sql.Tx, subID int64, status string, graceUntil *time.Time, expectedStatus ...string) error
 	// OpenPeriodTx 建立一期(status=open);unique(subscription_id, period_no) 使其可重跑:
 	// 已存在即回既有期別,不新增也不覆寫。
 	OpenPeriodTx(ctx context.Context, tx *sql.Tx, in OpenPeriodInput) (*Period, error)

@@ -168,7 +168,11 @@ func (b *Billing) ExpireTrials(ctx context.Context, now time.Time, graceDays int
 			if !canTransition(sub.Status, "past_due") {
 				continue
 			}
-			if err := b.st.SetSubscriptionStatusTx(ctx, tx, sub.ID, "past_due", &grace); err != nil {
+			// 未結項 #12：CAS —— 以查詢當下讀到的狀態為預期（見 MarkPastDue 的說明）。
+			if err := b.st.SetSubscriptionStatusTx(ctx, tx, sub.ID, "past_due", &grace, sub.Status); err != nil {
+				if errors.Is(err, store.ErrStatusChanged) {
+					continue
+				}
 				return errcode.SysInternal.Wrap(err)
 			}
 			if err := b.emit(ctx, tx, sub.ID, "subscription.trial_ended", map[string]any{
@@ -221,7 +225,13 @@ func (b *Billing) MarkPastDue(ctx context.Context, now time.Time, graceDays int)
 			if cur == nil || cur.Status != "open" {
 				continue
 			}
-			if err := b.st.SetSubscriptionStatusTx(ctx, tx, sub.ID, "past_due", &grace); err != nil {
+			// 未結項 #12：CAS —— 以查詢當下讀到的狀態為預期。同交易內查詢與寫入之間
+			// 若有別的寫入者把狀態改走，本次寫入 0 列（ErrStatusChanged）→ 跳過、
+			// 不發事件、不計數，而不是把別人的狀態蓋掉。
+			if err := b.st.SetSubscriptionStatusTx(ctx, tx, sub.ID, "past_due", &grace, sub.Status); err != nil {
+				if errors.Is(err, store.ErrStatusChanged) {
+					continue
+				}
 				return errcode.SysInternal.Wrap(err)
 			}
 			if err := b.emit(ctx, tx, sub.ID, "subscription.past_due", map[string]any{
@@ -262,7 +272,11 @@ func (b *Billing) SuspendOverdue(ctx context.Context, now time.Time) (int, error
 			}
 			// 寬限期在此清空：停用後不該再留著一個已過期的寬限日，
 			// 否則下一次掃描與 console 顯示都會說「還在寬限中」。
-			if err := b.st.SetSubscriptionStatusTx(ctx, tx, sub.ID, "suspended", nil); err != nil {
+			// 未結項 #12：CAS —— 以查詢當下讀到的狀態為預期（見 MarkPastDue 的說明）。
+			if err := b.st.SetSubscriptionStatusTx(ctx, tx, sub.ID, "suspended", nil, sub.Status); err != nil {
+				if errors.Is(err, store.ErrStatusChanged) {
+					continue
+				}
 				return errcode.SysInternal.Wrap(err)
 			}
 			if err := b.emit(ctx, tx, sub.ID, "subscription.suspended", map[string]any{

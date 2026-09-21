@@ -97,17 +97,26 @@ func (s *Store) OpenSubscriptionTx(ctx context.Context, tx *sql.Tx, companyID in
 // 0 列被改到卻回 nil,呼叫端會在同一交易內照樣 commit 事件與稽核,留下「稽核說 suspended、
 // DB 仍是 active」的帳實不符;與 MarkPeriodPaidTx 同一個形狀)。
 //
-// cancelled_at 只在「轉為 cancelled」時蓋上當下時間:由非 cancelled 轉過來、或該欄仍是 NULL
-// (狀態被直接改成 cancelled 而沒留下時間的列,由這裡自癒)才寫;重複取消／排程重跑不得推進它 ——
-// 它記的是取消發生的時間點,被重跑推進去就不再是事實。
+// 未結項 #12：CAS 語意 —— 更新是「預期狀態 → 目標狀態」的條件式寫入。同一趟排程內
+// 查詢與寫入之間若有別的寫入者把狀態改走，本次寫入必須 0 列（呼叫端跳過、不發事件），
+// 而不是把別人的狀態蓋掉。expectedStatus 為空字串時不加狀態條件（呼叫端已在交易內
+// 持有行鎖、或語意本來就是「無條件帶回」—— 見 RecordPayment 的 active 復原）。
+// 0 列時回 store.ErrStatusChanged（與 ErrNoRows 區分：前者是「列在但狀態已走」，
+// 後者是「列不在」；呼叫端對前者跳過、對後者報錯）。
 func (s *Store) SetSubscriptionStatusTx(ctx context.Context, tx *sql.Tx, subID int64,
-	status string, graceUntil *time.Time) error {
-	res, err := tx.ExecContext(ctx, `
+	status string, graceUntil *time.Time, expectedStatus ...string) error {
+	query := `
 		UPDATE platform.subscriptions
 		   SET status = $2, grace_until = $3, updated_at = now(),
 		       cancelled_at = CASE WHEN $2 = 'cancelled' AND (status <> 'cancelled' OR cancelled_at IS NULL)
 		                           THEN now() ELSE cancelled_at END
-		 WHERE id = $1`, subID, status, graceUntil)
+		 WHERE id = $1`
+	args := []any{subID, status, graceUntil}
+	if len(expectedStatus) > 0 && expectedStatus[0] != "" {
+		query += ` AND status = $4`
+		args = append(args, expectedStatus[0])
+	}
+	res, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -116,6 +125,9 @@ func (s *Store) SetSubscriptionStatusTx(ctx context.Context, tx *sql.Tx, subID i
 		return err
 	}
 	if n == 0 {
+		if len(expectedStatus) > 0 && expectedStatus[0] != "" {
+			return fmt.Errorf("訂閱 %d 狀態已變更(預期 %q): %w", subID, expectedStatus[0], store.ErrStatusChanged)
+		}
 		return fmt.Errorf("訂閱 %d 不存在: %w", subID, sql.ErrNoRows)
 	}
 	return nil

@@ -225,12 +225,16 @@ func betterSubscription(a, b Subscription) bool {
 }
 
 // SetSubscriptionStatusTx 更新訂閱狀態與寬限期(未取消時寬限期為 nil，代表清空)。
-func (f *FakeBilling) SetSubscriptionStatusTx(_ context.Context, _ *sql.Tx, subID int64, status string, graceUntil *time.Time) error {
+// CAS 語意與真 store 同：expectedStatus 非空且現狀不符時回 ErrStatusChanged（不改狀態）。
+func (f *FakeBilling) SetSubscriptionStatusTx(_ context.Context, _ *sql.Tx, subID int64, status string, graceUntil *time.Time, expectedStatus ...string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	i := f.subIndex(subID)
 	if i < 0 {
 		return fmt.Errorf("訂閱 %d 不存在: %w", subID, sql.ErrNoRows)
+	}
+	if len(expectedStatus) > 0 && expectedStatus[0] != "" && f.subs[i].Status != expectedStatus[0] {
+		return fmt.Errorf("訂閱 %d 狀態已變更(預期 %q): %w", subID, expectedStatus[0], ErrStatusChanged)
 	}
 	f.subs[i].Status = status
 	f.subs[i].GraceUntil = clonePtr(graceUntil)

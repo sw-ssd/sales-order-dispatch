@@ -597,8 +597,30 @@ func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 	}); !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("對不存在的訂閱改狀態應回 sql.ErrNoRows，got %v", err)
 	}
-
-	// ⑦ 排程的三個查詢：集合邊界比對（集合錯一邊就會漏收或誤凍結）。
+	// 未結項 #12（RED）：CAS —— 預期狀態不符時 0 列，必須回 ErrStatusChanged
+	// （不是 ErrNoRows），且不得改動狀態。否則併發寫入者的狀態會被靜默蓋掉。
+	if err := st.WithTx(ctx, func(tx *sql.Tx) error {
+		return st.SetSubscriptionStatusTx(ctx, tx, subID, "suspended", nil, "past_due")
+	}); !errors.Is(err, store.ErrStatusChanged) {
+		t.Fatalf("預期狀態不符應回 ErrStatusChanged，got %v", err)
+	}
+	if got := openSub(t, db, st, 42); got.Status != "active" {
+		t.Fatalf("CAS 未命中不得改動狀態，got %q", got.Status)
+	}
+	// 對照組：預期相符時照常寫入（CAS 不是一律拒絕）。
+	if err := st.WithTx(ctx, func(tx *sql.Tx) error {
+		return st.SetSubscriptionStatusTx(ctx, tx, subID, "suspended", nil, "active")
+	}); err != nil {
+		t.Fatalf("預期相符應寫入，got %v", err)
+	}
+	if got := openSub(t, db, st, 42); got.Status != "suspended" {
+		t.Fatalf("CAS 命中應寫入，got %q", got.Status)
+	}
+	if err := st.WithTx(ctx, func(tx *sql.Tx) error {
+		return st.SetSubscriptionStatusTx(ctx, tx, subID, "active", nil)
+	}); err != nil {
+		t.Fatalf("SetSubscriptionStatusTx(復原): %v", err)
+	}
 	// 50 逾期未付、51 期末未到、52 寬限已過、53 寬限未到、54 past_due 無寬限期、
 	// 55 已取消且期末已過（未發過 expired）、56 已取消但期末未到、57 試用中年繳。
 	seedSub := func(company int, status, billingCycle string, graceUntil *time.Time) int64 {

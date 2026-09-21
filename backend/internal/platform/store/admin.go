@@ -29,6 +29,11 @@ var ErrConflict = errors.New("平台資料已存在")
 // 資料不存在。呼叫端(服務層)據此回 PLAT-3003 並附上可行動的原因,而不是含糊的「查無此人」。
 var ErrLastAdmin = errors.New("不得停用最後一位 admin")
 
+// ErrStatusChanged 表示 CAS 更新的 0 列是「列在、但狀態已被別的寫入者改走」
+// （未結項 #12）—— 不是「列不在」（那是 sql.ErrNoRows）。呼叫端對前者跳過
+// （不發事件、不計數），對後者報錯。
+var ErrStatusChanged = errors.New("訂閱狀態已被其他寫入者變更")
+
 // TenantRow 為租戶列表／詳情的一列(companies × platform.subscriptions × plans 的投影)。
 //
 // 欄位橫跨業務表與平台表:spec §6.4 明訂平台方的跨租戶視圖走「admin 連線 ＋ 投影查詢」,
