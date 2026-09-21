@@ -77,8 +77,10 @@ type Store interface {
 	Setting(ctx context.Context, key string) (string, error)
 	// ActiveOrTrialingSubscriptions 回仍在服務中的訂閱(逐租戶產生下一期)。
 	ActiveOrTrialingSubscriptions(ctx context.Context) ([]store.Subscription, error)
-	// PeriodsByStatus 取指定狀態的期別(待收款清單與對帳用)。
-	PeriodsByStatus(ctx context.Context, status string) ([]store.Period, error)
+	// OverdueReceivablePeriods 回待收款期別：open 且期末已過，且**排除 G5 平台自營公司**
+	// (console 的 ListReceivables 用 `identifier <> 'platform'` 排除，兩處的「租戶」
+	// 定義必須一致)。now 由呼叫端給（補跑時的「過期」跟著呼叫端走，不跟 DB 時鐘）。
+	OverdueReceivablePeriods(ctx context.Context, now time.Time) ([]store.Period, error)
 }
 
 // Locker 為單飛鎖:同一時間只允許一趟排程處理(k8s CronJob 與手動補跑會重疊)。
@@ -255,18 +257,14 @@ func runOnceGuarded(ctx context.Context, deps Deps, now time.Time, p Params) (s 
 		return s, dispatchErr
 	}
 
-	// 待收款清單(spec §5.4):已過期未付的 open 期別。這裡**不另寫查詢** —— 用既有的期別清單
-	// (console 的 overdue 投影用的是同一個謂詞),日期比較在呼叫端做,故補跑時的「過期」判定
-	// 跟著呼叫端的 now 走,而不是資料庫的時鐘。
-	open, err := deps.Store.PeriodsByStatus(ctx, "open")
+	// 待收款清單(spec §5.4):已過期未付的 open 期別，且排除 G5 平台自營公司
+	// (console 的 ListReceivables 用同一謂詞，兩處的「租戶」定義必須一致)。
+	// 過期判定用呼叫端的 now（補跑跟著呼叫端走，不跟 DB 時鐘）。
+	overdue, err := deps.Store.OverdueReceivablePeriods(ctx, now)
 	if err != nil {
 		return s, fmt.Errorf("列出待收款期別: %w", err)
 	}
-	for _, per := range open {
-		if per.PeriodEnd.Before(now) {
-			s.Receivables++
-		}
-	}
+	s.Receivables = len(overdue)
 	return s, periodErr
 }
 

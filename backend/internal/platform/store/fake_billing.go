@@ -56,6 +56,10 @@ type FakeBilling struct {
 	// plans 為 code → 方案 id(**只註冊 active 的方案**):PlanIDByCodeTx 對已歸檔者視同不存在,
 	// 而「歸檔」是 SQL 的 WHERE 條件,假實作不需要另一份狀態 —— 不註冊就是不存在。
 	plans map[string]int64
+	// platformCompanies 為平台自營公司的公司 id 集合（G5）：OverdueReceivablePeriods
+	// 排除它們（真 store 在 SQL 內 JOIN companies 以 identifier='platform' 排除；
+	// 假實作沒有 companies 表，故由 PutPlatformCompany 標記）。
+	platformCompanies map[int]bool
 }
 
 // priceKey 為價目的鍵(方案 × 計費週期);SQL 端另有 effective_from 的生效順序,假實作只保留
@@ -77,10 +81,11 @@ var _ BillingStore = (*FakeBilling)(nil)
 
 func NewFakeBilling() *FakeBilling {
 	return &FakeBilling{
-		dispatched: map[int64]bool{},
-		prices:     map[priceKey]Price{},
-		settings:   map[string]string{},
-		plans:      map[string]int64{},
+		dispatched:        map[int64]bool{},
+		prices:            map[priceKey]Price{},
+		settings:          map[string]string{},
+		plans:             map[string]int64{},
+		platformCompanies: map[int]bool{},
 	}
 }
 
@@ -402,6 +407,40 @@ func (f *FakeBilling) PeriodsByStatus(_ context.Context, status string) ([]Perio
 	return out, nil
 }
 
+// OverdueReceivablePeriods 回待收款期別:open 且期末已過，且排除平台自營公司。
+// 假實作沒有 companies 表，故平台自營公司由 PutPlatformCompany 標記
+// （真 store 在 SQL 內 JOIN companies 以 identifier='platform' 排除）。
+func (f *FakeBilling) OverdueReceivablePeriods(_ context.Context, now time.Time) ([]Period, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	subCompany := map[int64]int{}
+	for i := range f.subs {
+		subCompany[f.subs[i].ID] = f.subs[i].CompanyID
+	}
+	var out []Period
+	for i := range f.periods {
+		p := f.periods[i]
+		if p.Status != "open" || !p.PeriodEnd.Before(now) {
+			continue
+		}
+		if f.platformCompanies[subCompany[p.SubscriptionID]] {
+			continue
+		}
+		out = append(out, clonePeriod(p))
+	}
+	return out, nil
+}
+
+// PutPlatformCompany 標記某公司為平台自營公司（G5）：OverdueReceivablePeriods 排除它。
+func (f *FakeBilling) PutPlatformCompany(companyID int) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.platformCompanies == nil {
+		f.platformCompanies = map[int]bool{}
+	}
+	f.platformCompanies[companyID] = true
+}
+
 // ActiveSubscriptionsWithDueOpenPeriod:active 且最新一期**仍是 open** 且已過期末
 // (SQL 的 `cur.status = 'open' AND cur.period_end < now`);已付款／已作廢的期別不算逾期(C-1)。
 func (f *FakeBilling) ActiveSubscriptionsWithDueOpenPeriod(_ context.Context, _ *sql.Tx, now time.Time) ([]Subscription, error) {
@@ -634,18 +673,22 @@ type fakeBillingState struct {
 	prices                               map[priceKey]Price
 	audits                               []AuditRecord
 	settings                             map[string]string
+	platformCompanies                    map[int]bool
 }
 
+// snapshot 呼叫端必須已持有 f.mu（WithTx 在 Lock 期間呼叫）：snapshot 內部不再加鎖，
+// 否則外層 Lock＋內層 Lock 在同一 goroutine 自死鎖（sync.Mutex 不可重入）。
 func (f *FakeBilling) snapshot() fakeBillingState {
 	s := fakeBillingState{
 		nextSubID: f.nextSubID, nextPeriodID: f.nextPeriodID, nextEventID: f.nextEventID,
-		subs:       make([]Subscription, len(f.subs)),
-		periods:    make([]Period, len(f.periods)),
-		events:     make([]Event, len(f.events)),
-		dispatched: make(map[int64]bool, len(f.dispatched)),
-		prices:     make(map[priceKey]Price, len(f.prices)),
-		audits:     make([]AuditRecord, len(f.audits)),
-		settings:   make(map[string]string, len(f.settings)),
+		subs:              make([]Subscription, len(f.subs)),
+		periods:           make([]Period, len(f.periods)),
+		events:            make([]Event, len(f.events)),
+		dispatched:        make(map[int64]bool, len(f.dispatched)),
+		prices:            make(map[priceKey]Price, len(f.prices)),
+		audits:            make([]AuditRecord, len(f.audits)),
+		settings:          make(map[string]string, len(f.settings)),
+		platformCompanies: make(map[int]bool, len(f.platformCompanies)),
 	}
 	for i, x := range f.subs {
 		s.subs[i] = cloneSubscription(x)
@@ -671,6 +714,9 @@ func (f *FakeBilling) snapshot() fakeBillingState {
 	for k, v := range f.settings {
 		s.settings[k] = v
 	}
+	for k, v := range f.platformCompanies {
+		s.platformCompanies[k] = v
+	}
 	return s
 }
 
@@ -678,6 +724,7 @@ func (f *FakeBilling) restore(s fakeBillingState) {
 	f.nextSubID, f.nextPeriodID, f.nextEventID = s.nextSubID, s.nextPeriodID, s.nextEventID
 	f.subs, f.periods, f.events = s.subs, s.periods, s.events
 	f.dispatched, f.prices, f.audits, f.settings = s.dispatched, s.prices, s.audits, s.settings
+	f.platformCompanies = s.platformCompanies
 }
 
 // clonePeriod 深拷貝一期(PaidAt 是指標:PG 每次掃描都是新配置,假實作也不得共用)。

@@ -327,6 +327,37 @@ func (s *Store) PeriodsByStatus(ctx context.Context, status string) ([]store.Per
 	return out, rows.Err()
 }
 
+// OverdueReceivablePeriods 回待收款期別：open 且期末已過，且排除 G5 平台自營公司
+// （console 的 ListReceivables 用 `companies.identifier <> 'platform'` 排除，兩處的
+// 「租戶」定義必須一致 —— 見 admin_writes.go 的 receivablesJoins）。
+// now 由呼叫端給（補跑跟著呼叫端走，不跟 DB 時鐘）。
+func (s *Store) OverdueReceivablePeriods(ctx context.Context, now time.Time) ([]store.Period, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT per.id, per.subscription_id, per.period_no, per.period_start, per.period_end, per.plan_id,
+			(per.unit_price*100)::bigint, (per.seat_price*100)::bigint, per.seat_count,
+			(per.amount*100)::bigint, per.currency, per.status, per.paid_at, COALESCE(per.invoice_no,''),
+			per.payment_provider, COALESCE(per.external_ref,''), per.note
+		  FROM platform.subscription_periods per
+		  JOIN platform.subscriptions s ON s.id = per.subscription_id
+		  JOIN companies c ON c.id = s.company_id
+		 WHERE per.status = 'open' AND per.period_end < $1
+		   AND c.identifier <> 'platform'
+		 ORDER BY per.subscription_id, per.period_no`, now)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var out []store.Period
+	for rows.Next() {
+		p, err := scanPeriod(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *p)
+	}
+	return out, rows.Err()
+}
+
 // ActiveSubscriptionsWithDueOpenPeriod 回 active 且**最新一期仍是 open** 且已過期末者(排程轉 past_due)。
 //
 // 最新一期的狀態必須是 open:已付款(催收後補繳)或已作廢的期別,期末過了也**不算逾期** ——

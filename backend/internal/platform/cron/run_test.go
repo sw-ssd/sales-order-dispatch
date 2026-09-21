@@ -221,8 +221,8 @@ func (g *gateStore) ActiveOrTrialingSubscriptions(ctx context.Context) ([]store.
 	return g.inner.ActiveOrTrialingSubscriptions(ctx)
 }
 
-func (g *gateStore) PeriodsByStatus(ctx context.Context, status string) ([]store.Period, error) {
-	return g.inner.PeriodsByStatus(ctx, status)
+func (g *gateStore) OverdueReceivablePeriods(ctx context.Context, now time.Time) ([]store.Period, error) {
+	return g.inner.OverdueReceivablePeriods(ctx, now)
 }
 
 // 未結項 #14:服務中卻沒有 open 期別的租戶，排程每一趟都靜默跳過。最新一期已 paid 且下一期
@@ -637,6 +637,34 @@ func (b stubBilling) ExpireCancelled(context.Context, time.Time) (int, error) {
 func (b stubBilling) EnsureNextPeriod(context.Context, int, time.Time, int) (bool, error) {
 	b.call("EnsureNextPeriod")
 	return false, nil
+}
+
+// 未結項 #18:排程的待收款含 G5 平台自營公司，而 console 的 ListReceivables 已排除它。
+// 平台對自己開出的期別不是應收帳款 —— 兩處的「租戶」定義必須一致，否則排程摘要與
+// console 待收款頁長期對不上（operator 會以為有一筆收不到的錢）。
+func TestRunOnceReceivablesExcludesPlatformCompany(t *testing.T) {
+	now := at(2026, time.October, 1, 3)
+	p := cron.Params{GraceDays: 7, LeadDays: 14, EventBatch: 100}
+	ctx := context.Background()
+
+	f := store.NewFakeBilling()
+	f.PutSetting("system_actor_user_id", "7")
+	f.PutPlanPrice(1, "monthly", store.Price{BaseCents: 150000, SeatCents: 15000, Currency: "TWD"})
+	// 42:一般租戶，逾期未付 → 待收款 1 筆。
+	seedSub(f, 42, "active", "monthly", nil, now.Add(-time.Hour))
+	// 9001:平台自營公司（由 PutPlatformCompany 標記，真 store 在 SQL 內排除）。
+	// 即使有逾期未付的期別，也不得計入待收款（console 的 ListReceivables 用同一謂詞排除它）。
+	f.PutPlatformCompany(9001)
+	seedSub(f, 9001, "active", "monthly", nil, now.Add(-time.Hour))
+
+	deps, _, _, _ := newDeps(f)
+	s, err := cron.RunOnce(ctx, deps, now, p)
+	if err != nil {
+		t.Fatalf("RunOnce: %v", err)
+	}
+	if s.Receivables != 1 {
+		t.Fatalf("待收款應排除平台自營公司，got %d", s.Receivables)
+	}
 }
 
 // panicLocker:取鎖本身就 panic(測試 recover 是否涵蓋 TryLock 那一段)。

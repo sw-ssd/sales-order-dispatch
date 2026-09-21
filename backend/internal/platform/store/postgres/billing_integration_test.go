@@ -756,6 +756,54 @@ func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 	if open[subID] {
 		t.Fatalf("42 已付款的那一期不得留在 open 清單，got %v", open)
 	}
+	// OverdueReceivablePeriods：open 且期末已過，且排除 G5 平台自營公司
+	// （與 console 的 ListReceivables 同一謂詞 `identifier <> 'platform'`）。
+	// 用真實 companies 列驗 JOIN：60 是一般租戶（identifier 非 platform），
+	// 'platform' 是自營公司 —— 期別同樣逾期未付，只有前者算待收款。
+	var platformCompanyID, normalCompanyID int64
+	if err := db.QueryRowContext(ctx,
+		`INSERT INTO companies (name, identifier, status) VALUES ('一般租戶','OVERDUE-60','active') RETURNING id`).Scan(&normalCompanyID); err != nil {
+		t.Fatalf("一般租戶公司: %v", err)
+	}
+	if err := db.QueryRowContext(ctx,
+		`INSERT INTO companies (name, identifier, status) VALUES ('平台自營','platform','active') RETURNING id`).Scan(&platformCompanyID); err != nil {
+		t.Fatalf("平台自營公司: %v", err)
+	}
+	var normalSubID, platformSubID int64
+	if err := db.QueryRowContext(ctx, `
+		INSERT INTO platform.subscriptions (company_id, plan_id, status, seat_count, billing_cycle)
+		VALUES ($1,$2,'active',1,'monthly') RETURNING id`, normalCompanyID, planID).Scan(&normalSubID); err != nil {
+		t.Fatalf("一般租戶訂閱: %v", err)
+	}
+	if err := db.QueryRowContext(ctx, `
+		INSERT INTO platform.subscriptions (company_id, plan_id, status, seat_count, billing_cycle)
+		VALUES ($1,$2,'active',1,'monthly') RETURNING id`, platformCompanyID, planID).Scan(&platformSubID); err != nil {
+		t.Fatalf("自營公司訂閱: %v", err)
+	}
+	for _, id := range []int64{normalSubID, platformSubID} {
+		if _, err := db.ExecContext(ctx, `
+			INSERT INTO platform.subscription_periods
+				(subscription_id, period_no, period_start, period_end, plan_id,
+				 unit_price, seat_price, seat_count, amount, status)
+			VALUES ($1,1,$2,$3,$4,1500.00,150.00,1,1650.00,'open')`,
+			id, now.Add(-48*time.Hour), now.Add(-24*time.Hour), planID); err != nil {
+			t.Fatalf("逾期期別(sub %d): %v", id, err)
+		}
+	}
+	overdue, err := st.OverdueReceivablePeriods(ctx, now)
+	if err != nil {
+		t.Fatalf("OverdueReceivablePeriods: %v", err)
+	}
+	found := map[int64]bool{}
+	for _, p := range overdue {
+		found[p.SubscriptionID] = true
+	}
+	if !found[normalSubID] {
+		t.Fatalf("一般租戶的逾期期別必須是待收款，got %d 筆", len(overdue))
+	}
+	if found[platformSubID] {
+		t.Fatalf("平台自營公司的期別不得是待收款（與 ListReceivables 一致）")
+	}
 	price := withTx(t, db, func(tx *sql.Tx) (store.Price, error) {
 		return st.CurrentPriceTx(ctx, tx, planID, "monthly")
 	})
