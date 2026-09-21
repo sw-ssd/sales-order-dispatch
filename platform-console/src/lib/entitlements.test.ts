@@ -162,4 +162,33 @@ describe("projectTenantEntitlements", () => {
     expect(printing?.ambiguous).toBe(false);
     expect(printing?.overrideCount).toBe(0);
   });
+
+  it("恰一筆未逾期的例外：ambiguous=false，且投影值＝該筆覆寫後的結果", async () => {
+    // 未結項 #29：真實部署中同功能至多一筆未撤銷例外（tenant_overrides_active_unique），
+    // 「恰一筆」才是常態路徑 —— 必須斷言它不示警、且值真的被覆寫（否則常態路徑無覆蓋）。
+    const { projectTenantEntitlements: project } = await import("./entitlements");
+    const rows = project({
+      features,
+      entitlements: planEntitlements,
+      overrides: [
+        {
+          featureCode: "limit.seats",
+          enabledSet: false,
+          enabled: false,
+          limitSet: true,
+          limitValue: 40n,
+          reason: "唯一承諾",
+          owner: "b@example.com",
+          expiresAt: "",
+        },
+      ],
+      now,
+    });
+    const seats = rows.find((r) => r.featureCode === "limit.seats");
+    expect(seats?.ambiguous).toBe(false);
+    expect(seats?.overrideCount).toBe(1);
+    expect(seats?.limitSet).toBe(true);
+    expect(seats?.limitValue).toBe(40n);
+    expect(seats?.override?.reason).toBe("唯一承諾");
+  });
 });
