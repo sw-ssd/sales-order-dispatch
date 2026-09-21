@@ -649,6 +649,11 @@ func (s *PlatformAdminService) CancelSubscription(ctx context.Context,
 
 // billingSettingKeys 為可由介面調整的營運參數,順序即 console 的顯示順序。
 //
+// 上界 0..365 的三處一致(見 validatedSettings／cron.LoadParams／billing.maxTrialDays)：
+// trial_days 若被改成 366 以上，console 預填 min(days,365)（見 TenantDetailPage），
+// 而開通按 TrialEnds 絕對時間判定（> now+365 天即拒）。營運參數的上界因此只是「第一道閘」，
+// 不是試用的真正上限 —— 真正的上限永遠是 maxTrialDays。
+//
 // system_actor_user_id 刻意**不在此**(它由 seed 決定、是稽核主體而非營運參數):開放編輯它等於
 // 讓 console 能改掉「排程與 consumer 的稽核主體」,那是權限提升的路徑。
 var billingSettingKeys = []struct{ key, description string }{
