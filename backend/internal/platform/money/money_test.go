@@ -73,6 +73,24 @@ func TestPeriodAmount(t *testing.T) {
 	}
 }
 
+// 未結項 #6：mulCheck 的 MinInt64×-1 破口與 YearlyFromMonthly 的兩條飽和路徑無回歸測試。
+// 溢位路徑今日由注釋守護 —— 注釋會漂移，測試不會。
+func TestMulCheckRejectsMinInt64TimesNegOne(t *testing.T) {
+	if _, err := money.PeriodAmount(0, math.MinInt64, -1); err == nil {
+		t.Fatal("MinInt64 × -1 必須報溢位（r/b 驗證對此唯一破口無效，不得默默回繞）")
+	}
+}
+
+func TestYearlyFromMonthlySaturatesOnOverflow(t *testing.T) {
+	if got := money.YearlyFromMonthly(math.MaxInt64, 0); got != math.MaxInt64 {
+		t.Fatalf("月費 × 12 溢位應飽和 MaxInt64，got %d", got)
+	}
+	// 第二乘數溢位時回無折扣年費（不得回繞成負數）。
+	if got := money.YearlyFromMonthly(math.MaxInt64/12, 1); got != (math.MaxInt64/12)*12 {
+		t.Fatalf("折扣乘數溢位應回無折扣年費，got %d", got)
+	}
+}
+
 // 年繳 = 月費 × 12 × (1 - 折扣基點/10000)，四捨五入到分。
 func TestYearlyFromMonthly(t *testing.T) {
 	if got := money.YearlyFromMonthly(150000, 1000); got != 1620000 { // 1500×12×0.9
