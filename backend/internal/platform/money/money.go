@@ -117,7 +117,13 @@ func YearlyFromMonthly(monthlyCents int64, discountBps int) int64 {
 	if err != nil {
 		return yearly
 	}
-	return (num + 5000) / 10000
+	// 未結項 #6 續：`num+5000` 在 num 貼齊 MaxInt64 時回繞成負數 —— 以商餘數進位，
+	// 不先加 5000。num ≤ MaxInt64 故 q ≤ MaxInt64/10000，q+1 恆不溢位。
+	q, r := num/10000, num%10000
+	if r >= 5000 {
+		return q + 1
+	}
+	return q
 }
 
 func addCheck(a, b int64) (int64, error) {

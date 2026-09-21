@@ -91,6 +91,15 @@ func TestYearlyFromMonthlySaturatesOnOverflow(t *testing.T) {
 	}
 }
 
+// 未結項 #6 續：四捨五入的 `num+5000` 亦須溢位安全 —— num 貼齊 MaxInt64 時加 5000
+// 回繞成負數（RED：修前回 -922337203685477；正確值應為 922337203685478）。
+func TestYearlyFromMonthlyRoundingOverflow(t *testing.T) {
+	// yearly = 9223372036854775800（= 77123654064275×12），bps=34 → num 貼齊上限 7 內。
+	if got := money.YearlyFromMonthly(77123654064275, 34); got != 922337203685478 {
+		t.Fatalf("貼齊上限的四捨五入應進位不回繞，got %d", got)
+	}
+}
+
 // 年繳 = 月費 × 12 × (1 - 折扣基點/10000)，四捨五入到分。
 func TestYearlyFromMonthly(t *testing.T) {
 	if got := money.YearlyFromMonthly(150000, 1000); got != 1620000 { // 1500×12×0.9
