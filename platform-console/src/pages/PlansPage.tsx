@@ -22,6 +22,7 @@ import { describeError } from "../lib/errors";
  *    `effective_from` 最新者；既有期別的金額在開立時已快照 → 只影響之後新開的期別，不回溯改帳。
  * 2. **權益（配額與功能開關）＝立即生效**：`SetPlanEntitlement` 提交後會 `invalidateAll`，
  *    該方案所有租戶的判定立刻改變；租戶層級的例外（override）仍優先於方案。
+ *    （若快取失效失敗，最長一個 TTL 才收斂 —— 後端失效失敗只記 log，不讓已提交的寫入回錯誤。）
  *
  * 金額前端只做**格式檢查**（後端 `money.ParseCents` 才是真偽的決定者：負數、超過兩位小數、
  * 非數字都回 SYS-1001）。`reason` 必填同樣由後端擋，這裡先擋只是少跑一趟。
@@ -329,6 +330,7 @@ export default function PlansPage() {
             <p class="text-sm text-muted-foreground">
               金額：下一期生效——調價新增一列價格史，已開立的期別金額已有快照，不會被回溯改帳。
               權益：立即生效——配額與功能開關立刻改變該方案所有租戶的判定（租戶層級的例外優先於方案）。
+              若快取失效失敗，最長一個 TTL 才收斂。
             </p>
 
             <For each={data.plans}>

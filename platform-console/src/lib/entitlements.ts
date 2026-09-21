@@ -11,7 +11,9 @@
  * 而 console 拿到的清單是 `Admin.GetTenant` 的 `ORDER BY feature_code`，且 proto 的 `TenantOverride`
  * **沒有 created_at**（不為此加欄位）。前端因此不可能重建判定順序 —— 這種情況一律標示
  * `ambiguous`，由畫面說「最終以後端判定為準」，**不靜默挑一筆當答案**。
- * 情境真實：撤銷是單向的，同一功能的承諾會有第二筆（見 TenantDetailPage 的文案）。
+ * 防禦性標示：`tenant_overrides_active_unique`（`WHERE revoked_at IS NULL`）保證同功能至多
+ * 一筆未撤銷例外，故真實部署中此分支不可達 —— 但若該約束被放寬或資料繞過約束寫入，
+ * 畫面仍不會靜默給出錯誤答案。
  *
  * 與後端一致的兩條語意（少一條就會顯示錯的值）：
  * 1. `limit_set=false` 對**例外**是「不覆寫限額」，對**方案權益**是「不限額」——proto 的註解如此定義。
