@@ -41,7 +41,8 @@ const (
 
 // Postgres 回傳一台**全新空** PostgreSQL(名為 salesorder)的連線字串:優先沿用
 // INTEGRATION_TEST_DSN,未設定時起 postgres:16 容器並於測試結束終止。
-// 容器模式下每次呼叫都是獨立 server/資料庫;容器執行環境不可用 → skip。
+// 容器模式下**每次呼叫起各自的獨立容器**(無共用／重用：見 startContainer)，
+// 故兩次 Postgres() 呼叫自然互不干擾；容器執行環境不可用 → skip。
 //
 // 注意:覆寫模式回傳的是**同一個** INTEGRATION_TEST_DSN,不保證每次呼叫都是全新庫;
 // 需要 per-test 隔離的測試(假設缺表/缺版號/索引不存在…)必須自行先呼叫 RequiresContainer。
@@ -57,9 +58,10 @@ func Postgres(t *testing.T) string {
 	return startContainer(t, postgresDB)
 }
 
-// RequiresContainer 宣告本測試需要 per-test 隔離(自己的容器、自己的全新空庫):覆寫模式
+// RequiresContainer 宣告本測試需要 per-test 隔離(全新空庫):覆寫模式
 // (INTEGRATION_TEST_DSN)回傳的是同一個既有的庫,無法保證 → skip(附可行動訊息)。
-// 容器模式(未設該變數)下不做任何事 —— 隔離來自 Postgres/PostgresNamed 起的容器。
+// 容器模式(未設該變數)下不做任何事 —— 隔離來自每次 Postgres()/PostgresNamed() 呼叫
+// 各自起的獨立容器（見 startContainer：無跨測試共用／重用機制）。
 func RequiresContainer(t *testing.T) {
 	t.Helper()
 	if os.Getenv(dsnEnv) != "" {
