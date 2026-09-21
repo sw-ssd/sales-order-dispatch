@@ -63,6 +63,9 @@ type Subscription struct {
 	BillingCycle string // monthly | yearly
 	TrialEnds    *time.Time
 	GraceUntil   *time.Time
+	// CancelledAt 為取消發生的時間點（真 store 由 SetSubscriptionStatusTx 的 CASE 寫入；
+	// fake 同步建模：重複取消不得推進。只由測試讀取，生產判定不依賴它）。
+	CancelledAt *time.Time
 }
 
 // CreateSubscriptionInput 為建立訂閱(開通)所需的欄位。第一期不在此 —— 期別是呼叫端在

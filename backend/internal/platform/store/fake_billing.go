@@ -238,6 +238,11 @@ func (f *FakeBilling) SetSubscriptionStatusTx(_ context.Context, _ *sql.Tx, subI
 	}
 	f.subs[i].Status = status
 	f.subs[i].GraceUntil = clonePtr(graceUntil)
+	// 與真 store 的 cancelled_at CASE 同語意：首次取消記時間，重複取消不推進。
+	if status == "cancelled" && f.subs[i].CancelledAt == nil {
+		now := time.Now()
+		f.subs[i].CancelledAt = &now
+	}
 	return nil
 }
 

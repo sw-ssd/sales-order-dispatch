@@ -18,6 +18,32 @@ import (
 
 // 現行訂閱的取法必須與 SQL 同序:優先未取消,只有全是 cancelled 時才取它;完全沒有列回
 // (nil, nil) —— 少了這一條,T4/T5 的「已取消」案例會在單元測試裡假綠。
+// 未結項 #8 殘部：fake 的 CancelledAt 與真 store 的 CASE 同語意 —— 首次取消記時間，
+// 重複取消不推進（取消時間是事實，不得被重跑改寫）。
+func TestFakeBillingCancelledAtNotAdvancedOnRepeat(t *testing.T) {
+	ctx := context.Background()
+	f := store.NewFakeBilling()
+	id := f.PutSubscription(store.Subscription{CompanyID: 7, PlanCode: "std", Status: "active"})
+	if err := f.SetSubscriptionStatusTx(ctx, nil, id, "cancelled", nil); err != nil {
+		t.Fatalf("首次取消: %v", err)
+	}
+	first, err := f.OpenSubscriptionTx(ctx, nil, 7)
+	if err != nil || first == nil || first.CancelledAt == nil {
+		t.Fatalf("首次取消必須記下時間，got %+v err=%v", first, err)
+	}
+	stamp := *first.CancelledAt
+	if err := f.SetSubscriptionStatusTx(ctx, nil, id, "cancelled", nil); err != nil {
+		t.Fatalf("重複取消不得報錯: %v", err)
+	}
+	second, err := f.OpenSubscriptionTx(ctx, nil, 7)
+	if err != nil || second == nil || second.CancelledAt == nil {
+		t.Fatalf("重複取消後仍應有時間，got %+v err=%v", second, err)
+	}
+	if !second.CancelledAt.Equal(stamp) {
+		t.Fatalf("重複取消不得推進取消時間：%s → %s", stamp, *second.CancelledAt)
+	}
+}
+
 func TestFakeBillingOpenSubscriptionPrefersUncancelled(t *testing.T) {
 	ctx := context.Background()
 	f := store.NewFakeBilling()

@@ -134,5 +134,6 @@ func cloneOverrides(in []Override) []Override {
 func cloneSubscription(s Subscription) Subscription {
 	s.TrialEnds = clonePtr(s.TrialEnds)
 	s.GraceUntil = clonePtr(s.GraceUntil)
+	s.CancelledAt = clonePtr(s.CancelledAt)
 	return s
 }
