@@ -18,11 +18,12 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
 )
 
-// fakeCache 記錄失效呼叫；scanKeys 模擬「掃得到哪些鍵」。
+// fakeCache 記錄失效呼叫；scanKeys 模擬「掃得到哪些鍵」；failKeys 模擬特定鍵刪除失敗。
 type fakeCache struct {
 	deleted  []string
 	scanKeys []string
 	scanErr  error
+	failKeys map[string]error
 	// getErr／setErr 模擬 Valkey 故障（連不上、權限、逾時）。
 	getErr error
 	setErr error
@@ -36,8 +37,10 @@ func (c *fakeCache) Get(context.Context, string) ([]byte, bool, error) {
 }
 
 func (c *fakeCache) Set(context.Context, string, []byte, time.Duration) error { return c.setErr }
-
 func (c *fakeCache) Delete(_ context.Context, key string) error {
+	if err, ok := c.failKeys[key]; ok {
+		return err
+	}
 	c.deleted = append(c.deleted, key)
 	return nil
 }
@@ -123,6 +126,34 @@ func TestInvalidateAllScanFailureIsReported(t *testing.T) {
 	c := &fakeCache{scanErr: errors.New("模擬 Valkey 故障")}
 	if err := entitlements.InvalidateAll(context.Background(), c); err == nil {
 		t.Fatal("掃描失敗必須回錯誤")
+	}
+}
+
+// ⑤b 未結項 #20：部分鍵刪除失敗不得 early-return —— 否則第一個壞鍵後面的租戶永遠不清掉，
+// 且呼叫端在 log 裡只看到第一個鍵、誤以為只壞了一個。
+// RED:目前第一個 DEL 失敗即 return，第二鍵 ent:2 未被嘗試。
+func TestInvalidateAllContinuesPastDeleteFailure(t *testing.T) {
+	c := &fakeCache{
+		scanKeys: []string{"ent:1", "ent:2"},
+		failKeys: map[string]error{"ent:1": errors.New("模擬單鍵刪除失敗")},
+	}
+	err := entitlements.InvalidateAll(context.Background(), c)
+	if err == nil {
+		t.Fatal("部分刪除失敗必須回錯誤")
+	}
+	// 第二鍵必須仍被嘗試（fakeCache 只記錄成功的刪除，故 ent:2 必須出現在 deleted）。
+	found := false
+	for _, d := range c.deleted {
+		if d == "ent:2" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("第一鍵失敗後仍須嘗試後續鍵，deleted=%v", c.deleted)
+	}
+	if !strings.Contains(err.Error(), "ent:1") {
+		t.Fatalf("錯誤必須指出是哪個鍵失敗，got %v", err)
 	}
 }
 

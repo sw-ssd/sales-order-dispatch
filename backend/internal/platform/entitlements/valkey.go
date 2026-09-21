@@ -138,10 +138,13 @@ func InvalidateAll(ctx context.Context, c Cache) error {
 	if err != nil {
 		return fmt.Errorf("掃描權益快取鍵: %w", err)
 	}
+	var errs []error
 	for _, k := range keys {
 		if err := c.Delete(ctx, k); err != nil {
-			return fmt.Errorf("失效權益快取(%s): %w", k, err)
+			// 未結項 #20:部分鍵失敗不得 early-return —— 用 errors.Join 收斂全部失敗，
+			// 後續租戶的鍵仍須嘗試；呼叫端 log 一行即見全部壞鍵。
+			errs = append(errs, fmt.Errorf("失效權益快取(%s): %w", k, err))
 		}
 	}
-	return nil
+	return errors.Join(errs...)
 }
