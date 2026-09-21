@@ -679,9 +679,17 @@ func TestIntegrationPlatformAdminWrite(t *testing.T) {
 			t.Fatalf("停用應即時生效,got %q", status)
 		}
 		// 收尾:把 ops-a 還原成 active(後續子測試的語意是「他就是那位 operator」)。
+		// 未結項 #24：ghost 不做物理刪除 —— 它已被 ③ 改為 active 又停用了 ops-a，
+		// 期間的 operator.disable 稽核 FK 指著它（audit_logs_operator_id_fkey），
+		// 物理刪除會撞 23503。改回 disabled：與 ② 剛 seed 進來時的形狀一致，
+		// 後續子測試照樣把它當「不存在的第二位」看待（斷言皆用差值）。
 		if _, err := rig.admin.ExecContext(t.Context(),
 			`UPDATE platform.operators SET status = 'active' WHERE id = $1`, rig.seed.operatorID); err != nil {
 			t.Fatalf("還原 ops-a: %v", err)
+		}
+		if _, err := rig.admin.ExecContext(t.Context(),
+			`UPDATE platform.operators SET status = 'disabled' WHERE id = $1`, ghostAdminID); err != nil {
+			t.Fatalf("還原 ghost admin: %v", err)
 		}
 	})
 
