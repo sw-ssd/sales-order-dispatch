@@ -35,6 +35,22 @@ describe("describeError(PLAT-3002)", () => {
     expect(text).toContain(REF_REASON);
   });
 
+  // 未結項 #30：kind 鍵優先 —— 有 kind 無 reason 時照樣分流（回退路徑由上兩測覆蓋）。
+  it("kind 鍵優先分流：無 reason 時 kind 照樣給出對應指引", () => {
+    const amount = describeError(
+      connectErrorWithInfo("PLAT-3002", { details: { kind: "amount_mismatch" } }),
+    );
+    const ref = describeError(
+      connectErrorWithInfo("PLAT-3002", { details: { kind: "ref_mismatch" } }),
+    );
+    const cross = describeError(
+      connectErrorWithInfo("PLAT-3002", { details: { kind: "cross_period" } }),
+    );
+    expect(amount).toMatch(/留空/);
+    expect(ref).toMatch(/沿用原交易號/);
+    expect(cross).toMatch(/重新整理/);
+  });
+
   it("兩種語意給出不同的行動指引，且都不叫人放棄", () => {
     const amount = describeError(
       connectErrorWithInfo("PLAT-3002", { details: { reason: AMOUNT_REASON } }),

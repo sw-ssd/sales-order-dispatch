@@ -384,6 +384,10 @@ func TestRecordPaymentMismatchedAmountIsConflict(t *testing.T) {
 	if details := errorInfoOf(t, err).GetDetails(); details["reason"] == "" {
 		t.Fatalf("收款衝突必須說出原因，got %v", details)
 	}
+	// 未結項 #30：結構化 kind 鍵 —— console 優先走 kind，不再只靠 reason 關鍵詞。
+	if details := errorInfoOf(t, err).GetDetails(); details["kind"] != "amount_mismatch" {
+		t.Fatalf("金額不符應帶 kind=amount_mismatch，got %v", details)
+	}
 	if p := readPeriod(t, f, 5, 1); p.Status != "open" {
 		t.Fatalf("衝突後期別不得變動，got %+v", p)
 	}

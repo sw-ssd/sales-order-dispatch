@@ -156,6 +156,10 @@ func (b *Billing) RecordPayment(ctx context.Context, in RecordPaymentInput) (*st
 			// 這是收款衝突，必須讓人看到；靜默 no-op 會讓第二筆匯入在帳面上消失。
 			if in.ExternalRef != period.ExternalRef {
 				return errcode.PlatformPaymentConflict.Error(map[string]string{
+					// 未結項 #30：結構化 kind 鍵 —— console 原依 reason 中文關鍵詞
+					// （「已付款」／「不符」）分流兩種語意，脆弱。新舊並存：
+					// 有 kind 走 kind，無 kind 回退關鍵詞（舊版 console 相容）。
+					"kind": "ref_mismatch",
 					"reason": fmt.Sprintf("期別 %d 已付款（交易號 %q），本次交易號 %q 不同；"+
 						"請確認是否重複收款，或改用人工對帳處理溢收",
 						period.PeriodNo, period.ExternalRef, in.ExternalRef),
@@ -166,6 +170,7 @@ func (b *Billing) RecordPayment(ctx context.Context, in RecordPaymentInput) (*st
 			// 與收款主路徑的 G4 語意一致，故只在「填了且不符」時衝突。
 			if in.AmountCents != 0 && in.AmountCents != period.AmountCents {
 				return errcode.PlatformPaymentConflict.Error(map[string]string{
+					"kind": "amount_mismatch",
 					"reason": fmt.Sprintf("期別 %d 已付款 %s，本次重送金額 %s 不符；"+
 						"請確認是否重複收款，或改用人工對帳處理差異",
 						period.PeriodNo, money.FormatCents(period.AmountCents),
@@ -199,6 +204,7 @@ func (b *Billing) RecordPayment(ctx context.Context, in RecordPaymentInput) (*st
 		// 金額驗證（G4）：未填 → 採期別快照；填了但與快照不符 → 拒絕，且說出差異。
 		if in.AmountCents != 0 && in.AmountCents != period.AmountCents {
 			return errcode.PlatformPaymentConflict.Error(map[string]string{
+				"kind": "amount_mismatch",
 				"reason": fmt.Sprintf("輸入金額 %s 與期別金額 %s 不符（不支援部分付款；差異請記於備註）",
 					money.FormatCents(in.AmountCents), money.FormatCents(period.AmountCents)),
 			})
@@ -211,7 +217,7 @@ func (b *Billing) RecordPayment(ctx context.Context, in RecordPaymentInput) (*st
 			if errors.Is(err, sql.ErrNoRows) {
 				return errcode.SysNotFound.Wrap(err)
 			}
-			return errcode.PlatformPaymentConflict.Wrap(err)
+			return errcode.PlatformPaymentConflict.Wrap(err, map[string]string{"kind": "cross_period"})
 		}
 
 		// 入帳成功 → 回傳的期別必須是**新狀態**：period 是 MarkPeriodPaidTx 之前讀出來的列，

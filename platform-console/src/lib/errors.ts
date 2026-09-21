@@ -47,26 +47,31 @@ function actionHint(info: { code: string; details: { [key: string]: string } }):
       : "請改用具備該權限的 operator 帳號";
   }
   if (info.code === ERR_PLATFORM_PAYMENT_CONFLICT) {
-    return paymentConflictHint(info.details["reason"] ?? "");
+    return paymentConflictHint(info.details);
   }
   return "";
 }
 
 /**
- * PLAT-3002 由 `billing.RecordPayment` 產生，**同一個碼承載兩種語意**：
- * ① 輸入金額與期別快照金額不符；② 期別已付款但交易號不同（重複收款／溢收）。
- * 後端沒有可判別的結構化欄位，語意只落在 `details.reason` 這段文字裡，故以其中的關鍵詞分流
- * （「已付款」／「不符」皆出自 billing 的訊息本體；都不符時退回通用說法）。
+ * PLAT-3002 由 `billing.RecordPayment` 產生，**同一個碼承載三種語意**：
+ * `amount_mismatch`（金額不符）、`ref_mismatch`（已付款但交易號不同）、
+ * `cross_period`（同一交易號已入帳另一期）。
+ * 未結項 #30：優先走結構化 `details.kind`；無 kind 時（舊版後端／唯一鍵衝突無 reason）
+ * 回退中文關鍵詞分流（「已付款」／「不符」皆出自 billing 的訊息本體；都不符時通用說法）。
  *
- * 兩者**都不是「不可重試」**：後端刻意不把這個碼當成不可重試的依據（見平台服務層
+ * 三者**都不是「不可重試」**：後端刻意不把這個碼當成不可重試的依據（見平台服務層
  * `platformWriteError` 的註解——它涵蓋的失敗比「重複收款」更廣），所以指引一律給
  * 「先確認什麼、再怎麼送」，而不是叫 operator 放棄。
  */
-function paymentConflictHint(reason: string): string {
-  if (reason.includes("已付款")) {
+function paymentConflictHint(details: { [key: string]: string }): string {
+  const kind = details["kind"] ?? "";
+  if (kind === "ref_mismatch" || (kind === "" && (details["reason"] ?? "").includes("已付款"))) {
     return "期別已付款但交易號不同：請先確認是否重複收款；若是同一筆，沿用原交易號重送（相同交易號視為重送，不會重複入帳），溢收則改用人工對帳";
   }
-  if (reason.includes("不符")) {
+  if (
+    kind === "amount_mismatch" ||
+    (kind === "" && (details["reason"] ?? "").includes("不符"))
+  ) {
     return "金額與期別金額不符：不支援部分付款，請留空金額以採用期別快照，或依期別金額輸入（差額請記於備註）";
   }
   return "可能是同一交易號已入帳另一期，或期別狀態已變更：請重新整理確認期別狀態後再送出";
