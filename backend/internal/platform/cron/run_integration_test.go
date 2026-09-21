@@ -64,6 +64,14 @@ func TestIntegrationRunOnceOverdueFreesTenant(t *testing.T) {
 	seedCronPeriod(t, ctx, adminDB, planID, subA, now.Add(-time.Hour))
 	subB := seedCronSubscription(t, ctx, adminDB, planID, companyB, "active")
 	seedCronPeriod(t, ctx, adminDB, planID, subB, now.AddDate(0, 0, 10))
+	// C:trialing 但沒有到期日（未結項 #40）—— ExpireTrials 刻意不碰，摘要必須計 1。
+	// 用直接 INSERT（開通路徑要求 trial_ends_at，造不出這種列；這正是它只剩手工列的原因）。
+	companyC, _ := seedCronTenant(t, ctx, adminDB, "T7-STUCKTRIAL")
+	if _, err := adminDB.ExecContext(ctx, `
+		INSERT INTO platform.subscriptions (company_id, plan_id, status, seat_count, billing_cycle)
+		VALUES ($1, $2, 'trialing', 2, 'monthly')`, companyC, planID); err != nil {
+		t.Fatalf("stuck trial 訂閱: %v", err)
+	}
 
 	// 營運參數與系統 actor 一律走 platform.settings(seed 在正式環境負責;這裡逐鍵寫入,
 	// 故同時驗到 LoadParams 的鍵名與真設定表一致)。
@@ -182,6 +190,9 @@ func TestIntegrationRunOnceOverdueFreesTenant(t *testing.T) {
 	}
 	if first.Receivables != 1 {
 		t.Fatalf("待收款應只有 A 的過期未付期別,got %d", first.Receivables)
+	}
+	if first.StuckTrialing != 1 {
+		t.Fatalf("無到期日的試用(C)應被計入摘要，got %d", first.StuckTrialing)
 	}
 	if status := cronCompanyStatus(t, ctx, adminDB, companyA); status != "active" {
 		t.Fatalf("逾期(past_due)仍在寬限期內,不得凍結,got %q", status)

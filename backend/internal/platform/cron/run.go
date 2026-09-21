@@ -81,6 +81,9 @@ type Store interface {
 	// (console 的 ListReceivables 用 `identifier <> 'platform'` 排除，兩處的「租戶」
 	// 定義必須一致)。now 由呼叫端給（補跑時的「過期」跟著呼叫端走，不跟 DB 時鐘）。
 	OverdueReceivablePeriods(ctx context.Context, now time.Time) ([]store.Period, error)
+	// TrialingSubscriptionsWithoutTrialEnd 回 trialing 但沒有到期日的訂閱（未結項 #40）：
+	// ExpireTrials 刻意不碰它們，只計數進摘要 StuckTrialing，不做任何轉移。
+	TrialingSubscriptionsWithoutTrialEnd(ctx context.Context) ([]store.Subscription, error)
 }
 
 // Locker 為單飛鎖:同一時間只允許一趟排程處理(k8s CronJob 與手動補跑會重疊)。
@@ -170,6 +173,11 @@ type Summary struct {
 	// 下一期開不出來(價目缺失／週期非法)的訂閱，會永遠停在 active —— 既不被催收(只掃 open)、
 	// 也不再被開帳(逐租戶失敗只記進 log)。這個數字是 operator 唯一能從摘要看見它的地方。
 	Unbilled int `json:"unbilled"`
+	// StuckTrialing 為「試用中但沒有到期日」的訂閱數(未結項 #40):ExpireTrials 的謂詞
+	// 刻意只認 `trial_ends_at IS NOT NULL`（不讓排程猜），故這種列永遠停在 trialing
+	// （可用、不催收、不凍結）。寫入路徑已擋（開通要求未來日期），只剩繞過開通的手工列
+	// 與歷史殘留 —— 這個數字是 operator 唯一能從摘要看見它的地方。
+	StuckTrialing int `json:"stuck_trialing"`
 }
 
 // RunOnce 執行一趟完整排程:**試用到期 → 逾期 → 凍結(停用欠費、取消到期) → 產生期別 → 派送事件**。
@@ -210,6 +218,14 @@ func runOnceGuarded(ctx context.Context, deps Deps, now time.Time, p Params) (s 
 
 	if s.TrialsExpired, err = deps.Billing.ExpireTrials(ctx, now, p.GraceDays); err != nil {
 		return s, fmt.Errorf("試用到期: %w", err)
+	}
+	// 未結項 #40:trialing 但沒有到期日的訂閱永遠停在試用（ExpireTrials 刻意不碰）。
+	// 只計數、不轉移 —— 這個數字是 operator 唯一能從摘要看見它的地方。
+	// 失敗不中止整趟（可觀測性查詢壞了不該擋住帳務掃描；錯誤仍往外傳，由呼叫端決定）。
+	if stuck, serr := deps.Store.TrialingSubscriptionsWithoutTrialEnd(ctx); serr != nil {
+		return s, fmt.Errorf("列出無到期日試用: %w", serr)
+	} else {
+		s.StuckTrialing = len(stuck)
 	}
 	if s.PastDue, err = deps.Billing.MarkPastDue(ctx, now, p.GraceDays); err != nil {
 		return s, fmt.Errorf("標記逾期: %w", err)

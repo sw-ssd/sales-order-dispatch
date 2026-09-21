@@ -403,6 +403,31 @@ func (s *Store) TrialingSubscriptionsExpiredTrial(ctx context.Context, tx *sql.T
 		 WHERE status = 'trialing' AND trial_ends_at IS NOT NULL AND trial_ends_at < $1`, now)
 }
 
+// TrialingSubscriptionsWithoutTrialEnd 回 trialing 但沒有到期日的訂閱（未結項 #40）。
+// 唯讀的可觀測性查詢：ExpireTrials 刻意不碰它們，這裡只列出來給排程摘要計數。
+// WHERE 條件是 ExpireTrials 謂詞的精確補集（status='trialing' AND trial_ends_at IS NULL），
+// 兩者聯集＝全部 trialing，不重不漏。
+func (s *Store) TrialingSubscriptionsWithoutTrialEnd(ctx context.Context) ([]store.Subscription, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, company_id, status, plan_id, seat_count, billing_cycle
+		  FROM platform.subscriptions
+		 WHERE status = 'trialing' AND trial_ends_at IS NULL`)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var out []store.Subscription
+	for rows.Next() {
+		var sub store.Subscription
+		if err := rows.Scan(&sub.ID, &sub.CompanyID, &sub.Status,
+			&sub.PlanID, &sub.SeatCount, &sub.BillingCycle); err != nil {
+			return nil, err
+		}
+		out = append(out, sub)
+	}
+	return out, rows.Err()
+}
+
 // CancelledSubscriptionsPastPeriodEnd 回 cancelled 且最新一期已過期末者(G7)。
 // EXISTS 排除「已發過 subscription.expired」者 → 排程可重跑且不重複發事件。
 func (s *Store) CancelledSubscriptionsPastPeriodEnd(ctx context.Context, tx *sql.Tx, now time.Time) ([]store.Subscription, error) {

@@ -1027,6 +1027,12 @@ func TestExpireTrialsOnlyTouchesTrialingWithTrialEnd(t *testing.T) {
 			t.Fatalf("公司 %d 的狀態不得被動到，got %q", companyID, sub.Status)
 		}
 	}
+	// 未結項 #40 的補集關係：ExpireTrials 不碰 45，但可觀測性查詢必須看見它
+	// （兩者聯集＝全部 trialing，不重不漏）。
+	stuck, err := f.TrialingSubscriptionsWithoutTrialEnd(context.Background())
+	if err != nil || len(stuck) != 1 || stuck[0].CompanyID != 45 {
+		t.Fatalf("無到期日的試用應只有 45，got %+v err=%v", stuck, err)
+	}
 	if len(f.Events()) != 0 {
 		t.Fatalf("不得發任何事件，got %v", eventTypes(f))
 	}

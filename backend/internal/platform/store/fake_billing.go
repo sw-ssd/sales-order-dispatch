@@ -475,6 +475,16 @@ func (f *FakeBilling) TrialingSubscriptionsExpiredTrial(_ context.Context, _ *sq
 	}), nil
 }
 
+// TrialingSubscriptionsWithoutTrialEnd:trialing 但沒有到期日（未結項 #40）。
+// ExpireTrials 刻意不碰它們，故它們永遠停在 trialing —— 這裡只列出來，不轉移。
+func (f *FakeBilling) TrialingSubscriptionsWithoutTrialEnd(_ context.Context) ([]Subscription, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.filterSubs(func(s Subscription) bool {
+		return s.Status == "trialing" && s.TrialEnds == nil
+	}), nil
+}
+
 // CancelledSubscriptionsPastPeriodEnd:cancelled 且最新一期已過期末,**且**尚未發過
 // subscription.expired(排程可重跑而不重複發事件)。
 func (f *FakeBilling) CancelledSubscriptionsPastPeriodEnd(_ context.Context, _ *sql.Tx, now time.Time) ([]Subscription, error) {

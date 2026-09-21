@@ -225,6 +225,10 @@ func (g *gateStore) OverdueReceivablePeriods(ctx context.Context, now time.Time)
 	return g.inner.OverdueReceivablePeriods(ctx, now)
 }
 
+func (g *gateStore) TrialingSubscriptionsWithoutTrialEnd(ctx context.Context) ([]store.Subscription, error) {
+	return g.inner.TrialingSubscriptionsWithoutTrialEnd(ctx)
+}
+
 // 未結項 #14:服務中卻沒有 open 期別的租戶，排程每一趟都靜默跳過。最新一期已 paid 且下一期
 // 又開不出來(價目缺失)的訂閱，會永遠停在 active —— 既不被催收(只掃 open)，也不再被開帳
 // (逐租戶失敗只記進 log)。這筆狀態必須從 cron 摘要看得見，否則 operator 的帳務視圖與
@@ -290,6 +294,48 @@ func seedTrialingSub(f *store.FakeBilling, companyID int, trialEnds, end time.Ti
 // 進入提前窗 → 開下一期;事件在同一趟內被認領(含凍結)。第二趟不得產生任何第二個副作用。
 //
 // 待收款清單是**狀態**不是動作,故第二趟不歸零 —— 這一條同時釘住「receivables 不是本趟處理數」。
+// 未結項 #40:trialing 但沒有到期日的訂閱永遠停在試用（ExpireTrials 刻意不碰：
+// 不讓排程猜）。這種列可用、不催收、不凍結 —— 摘要必須有一欄讓 operator 看見它，
+// 否則它與「正常試用中」在可觀測性上不可區分。
+func TestRunOnceCountsStuckTrialing(t *testing.T) {
+	now := at(2026, time.October, 1, 3)
+	p := cron.Params{GraceDays: 7, LeadDays: 14, EventBatch: 100}
+	ctx := context.Background()
+
+	f := store.NewFakeBilling()
+	f.PutSetting("system_actor_user_id", "7")
+	f.PutPlanPrice(1, "monthly", store.Price{BaseCents: 150000, SeatCents: 15000, Currency: "TWD"})
+	// 42:有到期日且已過期的試用 → 轉 past_due（StuckTrialing 不得含它）。
+	trialEnds := now.Add(-time.Hour)
+	seedTrialingSub(f, 42, trialEnds, now.AddDate(0, 0, 10))
+	// 43:trialing 但沒有到期日 → 永遠停在試用，摘要必須計 1。
+	id := f.PutSubscription(store.Subscription{CompanyID: 43, Status: "trialing",
+		PlanID: 1, SeatCount: 3, BillingCycle: "monthly"})
+	f.PutPeriod(store.Period{SubscriptionID: id, PeriodNo: 1, Status: "open",
+		PeriodStart: now.AddDate(0, -1, 0), PeriodEnd: now.AddDate(0, 0, 10),
+		PlanID: 1, SeatCount: 3, AmountCents: 195000, Currency: "TWD"})
+
+	deps, _, _, _ := newDeps(f)
+	s, err := cron.RunOnce(ctx, deps, now, p)
+	if err != nil {
+		t.Fatalf("RunOnce: %v", err)
+	}
+	if s.TrialsExpired != 1 {
+		t.Fatalf("有到期日的試用應轉走，got %d", s.TrialsExpired)
+	}
+	if s.StuckTrialing != 1 {
+		t.Fatalf("無到期日的試用應被計入摘要，got %d", s.StuckTrialing)
+	}
+	// 重跑：轉走的不再轉，但卡住的仍在 —— 狀態欄位不得歸零。
+	second, err := cron.RunOnce(ctx, deps, now, p)
+	if err != nil {
+		t.Fatalf("第二趟: %v", err)
+	}
+	if second.StuckTrialing != 1 {
+		t.Fatalf("卡住的試用仍在，重跑不得歸零，got %d", second.StuckTrialing)
+	}
+}
+
 func TestRunOnceIsIdempotent(t *testing.T) {
 	now := at(2026, time.October, 1, 3)
 	p := cron.Params{GraceDays: 7, LeadDays: 14, EventBatch: 100}
@@ -502,7 +548,7 @@ func TestRunGuardedSecondOverlappingRunDoesNothing(t *testing.T) {
 func TestRunGuardedRecoversPanic(t *testing.T) {
 	lock := &fakeLocker{}
 	// 逾期 2 筆之後在停用那一步 panic:兩筆已完成的是已落地的帳務事實,摘要不得被清成零。
-	deps := cron.Deps{Billing: stubBilling{pastDue: 2, panicOn: "SuspendOverdue"}, Lock: lock}
+	deps := cron.Deps{Billing: stubBilling{pastDue: 2, panicOn: "SuspendOverdue"}, Store: store.NewFakeBilling(), Lock: lock}
 
 	got, err := cron.RunGuarded(context.Background(), deps, at(2026, time.October, 1, 3),
 		cron.Params{GraceDays: 7, LeadDays: 14, EventBatch: 100})
@@ -534,7 +580,7 @@ func TestRunGuardedRecoversPanicInLock(t *testing.T) {
 // 收場 —— 對外看起來就是排程靜默停擺。故 RunGuarded 以 context.WithoutCancel 解鎖,這裡釘住它。
 func TestRunGuardedReleasesLockWhenContextExpires(t *testing.T) {
 	lock := &fakeLocker{}
-	deps := cron.Deps{Billing: stubBilling{waitForCtx: true}, Lock: lock}
+	deps := cron.Deps{Billing: stubBilling{waitForCtx: true}, Store: store.NewFakeBilling(), Lock: lock}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
 	defer cancel()
 
@@ -637,6 +683,12 @@ func (b stubBilling) ExpireCancelled(context.Context, time.Time) (int, error) {
 func (b stubBilling) EnsureNextPeriod(context.Context, int, time.Time, int) (bool, error) {
 	b.call("EnsureNextPeriod")
 	return false, nil
+}
+
+// stubBilling 的 Store 接口已新增 TrialingSubscriptionsWithoutTrialEnd：
+// stub 沒有 store，回空集合（不影響 panic／順序路徑的斷言）。
+func (b stubBilling) TrialingSubscriptionsWithoutTrialEnd(context.Context) ([]store.Subscription, error) {
+	return nil, nil
 }
 
 // 未結項 #18:排程的待收款含 G5 平台自營公司，而 console 的 ListReceivables 已排除它。

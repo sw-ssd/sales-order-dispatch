@@ -212,6 +212,10 @@ type BillingStore interface {
 	// TrialingSubscriptionsExpiredTrial 回 trialing 且試用已到期者(轉 past_due;`trial_ends_at`
 	// 是判定層唯一讀得到的到期依據,見 ExpireTrials)。
 	TrialingSubscriptionsExpiredTrial(ctx context.Context, tx *sql.Tx, now time.Time) ([]Subscription, error)
+	// TrialingSubscriptionsWithoutTrialEnd 回 trialing 但沒有到期日的訂閱(未結項 #40):
+	// ExpireTrials 刻意不碰它們（不讓排程猜），故它們永遠停在 trialing。這是唯讀的
+	// 可觀測性查詢（排程摘要 StuckTrialing 用），不做任何轉移。
+	TrialingSubscriptionsWithoutTrialEnd(ctx context.Context) ([]Subscription, error)
 	// CancelledSubscriptionsPastPeriodEnd 回 cancelled 且最新期別已過期末、且尚未發過
 	// subscription.expired 者(G7):排程可重跑而不重複發事件。
 	CancelledSubscriptionsPastPeriodEnd(ctx context.Context, tx *sql.Tx, now time.Time) ([]Subscription, error)
