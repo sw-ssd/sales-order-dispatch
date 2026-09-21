@@ -162,6 +162,29 @@ describe("TenantDetailPage", () => {
     expect(within(projection).getAllByRole("row")).toHaveLength(3);
   });
 
+  it("例外在頁面開著時到期：tick 後改判為已過期（未結項 #26，now 隨時間前進）", async () => {
+    // RED：舊寫法 now 只在元件建立時取一次 —— 前進系統時鐘後例外仍算生效。
+    // 例外 30 秒後到期：首屏 1 個「已過期」（舊夾具），tick（60s 間隔）後變 2 個。
+    const soonExpiry = new Date(Date.now() + 30_000).toISOString().replace(/\.\d{3}Z$/, "Z");
+    getTenant.mockResolvedValue({
+      tenant,
+      overrides: [
+        { ...activeOverride, expiresAt: soonExpiry },
+        expiredOverride,
+      ],
+    });
+    vi.useFakeTimers();
+    try {
+      renderAt();
+      await ready();
+      expect(screen.getAllByText("已過期")).toHaveLength(1);
+      await vi.advanceTimersByTimeAsync(61_000);
+      await waitFor(() => expect(screen.getAllByText("已過期")).toHaveLength(2));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("同一功能有兩筆未逾期的例外：標示多筆、不挑一筆當答案", async () => {
     getTenant.mockResolvedValue({
       tenant,

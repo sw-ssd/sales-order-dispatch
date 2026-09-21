@@ -1,6 +1,6 @@
 import { createMutation, createQuery, useQueryClient } from "@tanstack/solid-query";
 import { useParams } from "@tanstack/solid-router";
-import { createEffect, createSignal, For, Show } from "solid-js";
+import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
 import { Badge } from "@ui/badge";
 import { Button } from "@ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@ui/card";
@@ -493,7 +493,14 @@ export default function TenantDetailPage() {
     void queryClient.invalidateQueries({ queryKey: ["plans"] });
   };
 
-  const now = new Date();
+  // 未結項 #26：now 必須隨時間前進 —— 元件建立時取一次的話，頁面開著時到期的例外
+  // 仍算生效（isExpired 用舊時間比對）。每分鐘 tick 一次即可：例外到期是分鐘級事件，
+  // 秒級 tick 只是無謂重渲染；onCleanup 清 timer（否則切頁後仍在跑）。
+  const [now, setNow] = createSignal(new Date());
+  createEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000);
+    onCleanup(() => clearInterval(timer));
+  });
 
   return (
     <PageShell title="租戶詳情" description={`公司識別碼 ${companyId()}`}>
@@ -563,7 +570,7 @@ export default function TenantDetailPage() {
                           <TableCell>{o.owner}</TableCell>
                           <TableCell>
                             {o.expiresAt ? (
-                              <Show when={isExpired(o.expiresAt, now)} fallback={o.expiresAt}>
+                              <Show when={isExpired(o.expiresAt, now())} fallback={o.expiresAt}>
                                 <Badge variant="secondary">已過期</Badge>
                               </Show>
                             ) : (
@@ -601,7 +608,7 @@ export default function TenantDetailPage() {
                     features: m.features,
                     entitlements: m.entitlements,
                     overrides: data.overrides,
-                    now,
+                    now: now(),
                   });
 
                   return (
