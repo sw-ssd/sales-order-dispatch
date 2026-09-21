@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
+	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/money"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
@@ -263,6 +264,18 @@ func (b *Billing) RecordPayment(ctx context.Context, in RecordPaymentInput) (*st
 		})
 		if err != nil {
 			return errcode.SysInternal.Wrap(err)
+		}
+		// 未結項 #4：after 映像帶 `_trace_id`（RecordPayment 直寫 RecordAuditTx，
+		// 不經 audit helper，故在此同樣戳記）。
+		if tid := requestid.From(ctx); tid != "" {
+			var m map[string]any
+			if err := json.Unmarshal(after, &m); err != nil {
+				return errcode.SysInternal.Wrap(err)
+			}
+			m["_trace_id"] = tid
+			if after, err = json.Marshal(m); err != nil {
+				return errcode.SysInternal.Wrap(err)
+			}
 		}
 		if err := b.st.RecordAuditTx(ctx, tx, in.ActorOperatorID, "record_payment",
 			"subscription", strconv.FormatInt(sub.ID, 10), in.Reason, nil, after); err != nil {

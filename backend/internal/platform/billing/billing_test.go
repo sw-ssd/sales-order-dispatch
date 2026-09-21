@@ -22,6 +22,7 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/billing"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
 	commonv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
@@ -302,6 +303,32 @@ func TestRecordPaymentRequiresActor(t *testing.T) {
 	}
 	if audits := f.Audits(); len(audits) != 0 {
 		t.Fatalf("拒絕不得寫稽核，got %+v", audits)
+	}
+}
+
+// 未結項 #4：billing 兩條稽核路徑（RecordPayment 直寫、訂閱寫入經 audit helper）
+// 都把 ctx 的 trace_id 戳進 after 映像。
+func TestBillingAuditStampsTraceID(t *testing.T) {
+	f := store.NewFakeBilling()
+	f.PutSubscription(store.Subscription{ID: 5, CompanyID: 42, Status: "active"})
+	f.PutPeriod(store.Period{ID: 9, SubscriptionID: 5, PeriodNo: 1, Status: "open", AmountCents: amountCents})
+	ctx := requestid.With(context.Background(), "trace-billing-1")
+	if _, err := billing.NewBilling(f).RecordPayment(ctx, billing.RecordPaymentInput{
+		CompanyID: 42, PaidAt: time.Now(), Provider: "manual",
+		ActorOperatorID: 7, Reason: "匯款入帳",
+	}); err != nil {
+		t.Fatalf("RecordPayment: %v", err)
+	}
+	audits := f.Audits()
+	if len(audits) != 1 {
+		t.Fatalf("應恰寫一筆稽核，got %d", len(audits))
+	}
+	var m map[string]any
+	if err := json.Unmarshal(audits[0].After, &m); err != nil {
+		t.Fatalf("after 應為合法 JSON: %v", err)
+	}
+	if m["_trace_id"] != "trace-billing-1" {
+		t.Fatalf("after 應帶 trace，got %v", m)
 	}
 }
 

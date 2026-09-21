@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
+	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/money"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
 )
@@ -426,6 +427,16 @@ func (b *Billing) audit(ctx context.Context, tx *sql.Tx, operatorID int64, actio
 	rawAfter, err := json.Marshal(after)
 	if err != nil {
 		return errcode.SysInternal.Wrap(err)
+	}
+	// 未結項 #4：after 映像帶 `_trace_id`（與 writeTx／audit.Record 同一落點、同一鍵名）。
+	if tid := requestid.From(ctx); tid != "" {
+		afterWithTrace := map[string]any{"_trace_id": tid}
+		for k, v := range after {
+			afterWithTrace[k] = v
+		}
+		if rawAfter, err = json.Marshal(afterWithTrace); err != nil {
+			return errcode.SysInternal.Wrap(err)
+		}
 	}
 	if err := b.st.RecordAuditTx(ctx, tx, operatorID, action, "subscription",
 		strconv.FormatInt(subID, 10), reason, rawBefore, rawAfter); err != nil {
