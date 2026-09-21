@@ -169,6 +169,10 @@ func SeedPlatform(ctx context.Context, db *sql.DB, client *ent.Client, cfg confi
 
 // seedPlatformCatalog 建立 features、方案、價目、方案權益與首位 operator（全部走 platform schema）。
 func seedPlatformCatalog(ctx context.Context, db *sql.DB, cfg config.Platform, prices map[string]planPrice) error {
+	// 未結項 #5(Plan B)：目錄三表（features／plans／plan_entitlements）重跑是 DO UPDATE ——
+	// 營運若在 console 改了方案權益（今日 console 無此能力），重跑 seed 會蓋回去。
+	// 價目與 settings 已是「只補缺」（NOT EXISTS／DO NOTHING）；console 開放營運編輯
+	// 方案權益那天，這三處改成「只補缺」—— 改之前先看③的覆寫語意斷言（改完它先紅）。
 	for _, f := range platformFeatures {
 		if _, err := db.ExecContext(ctx, `
 			INSERT INTO platform.features (code, type, unit, description)
