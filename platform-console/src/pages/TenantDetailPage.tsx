@@ -79,7 +79,12 @@ function SetOverrideForm(props: { companyId: string; onClose: () => void; onDone
       // 負的上限在判定層等於「任何用量都超額」＝把功能永久關掉；不限額請用「不指定上限」。
       return "上限不得為負：請填不小於 0 的整數（負的上限在判定上等於任何用量都超額；不限額請不要勾「指定上限」）。";
     }
-    if (expiresAt().trim() !== "" && Number.isNaN(new Date(expiresAt().trim()).getTime())) {
+    // 未結項 #26 後半：只填日期（2027/01/01）在 JS 是合法日期，但後端用 time.Parse(time.RFC3339)
+    // 會擋 —— 訊息卻說「格式須為 RFC3339」，而檢查用的是寬鬆的 new Date。與開通表單同一個
+    // RFC3339 形狀檢查（見 CreateSubscriptionForm 的 validate），放行註定失敗的輸入就是白跑一趟。
+    const OVERRIDE_RFC3339 =
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+    if (expiresAt().trim() !== "" && !OVERRIDE_RFC3339.test(expiresAt().trim())) {
       return "到期日請填 RFC3339（例：2027-01-01T00:00:00Z），或留空表示不過期（只填日期後端會擋）。";
     }
     return undefined;

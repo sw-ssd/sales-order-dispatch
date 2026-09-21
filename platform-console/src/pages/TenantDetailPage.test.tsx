@@ -427,6 +427,22 @@ describe("TenantDetailPage", () => {
     await waitFor(() => expect(getTenant).toHaveBeenCalledTimes(2));
   });
 
+  it("新增例外：只填日期的到期日也在送出前擋下（未結項 #26 後半，後端 RFC3339 會拒）", async () => {
+    // RED：舊檢查用寬鬆的 new Date —— "2027/01/01" 在 JS 合法，前端放行、後端拒，白跑一趟。
+    renderAt();
+    await ready();
+    fireEvent.click(screen.getByRole("button", { name: "新增例外" }));
+    fireEvent.input(await screen.findByLabelText(/功能代碼/), { target: { value: "limit.seats" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: "指定上限" }));
+    fireEvent.input(await screen.findByLabelText(/上限值/), { target: { value: "50" } });
+    fireEvent.input(screen.getByLabelText(/負責人/), { target: { value: "ops@example.com" } });
+    fireEvent.input(screen.getByLabelText(/到期日/), { target: { value: "2027/01/01" } });
+    fireEvent.input(screen.getByLabelText(/原因/), { target: { value: "測試" } });
+    fireEvent.click(screen.getByRole("button", { name: "建立例外" }));
+    await waitFor(() => expect(screen.getByText(/RFC3339/)).toBeTruthy());
+    expect(setTenantOverride).not.toHaveBeenCalled();
+  });
+
   it("開通表單預設月繳，可改年繳（週期決定第一期長度與取用的價目）", async () => {
     getTenant.mockResolvedValue({
       tenant: { ...tenant, planCode: "", planName: "", subscriptionStatus: "cancelled" },
