@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+package salesorder.v1;
+option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1";
+
+import "salesorder/v1/common.proto";
+
+// ReturnService:退貨申請與審核(06 計畫 Task 4.7.2–4.7.4, D25)。
+// 發起僅客戶子帳號(主帳號一律拒絕);審核僅主責業務/dept_admin 以上;
+// 全程不修改原訂單(僅參照)。
+service ReturnService {
+  // CreateReturnRequest:發起退貨(子帳號;雙來源並存;同交易寫申請+明細+稽核)。
+  rpc CreateReturnRequest(CreateReturnRequestRequest) returns (CreateReturnRequestResponse);
+  // ListReturnRequests:申請列表(客戶 self 限自己客戶;staff 依範圍;分頁 per_page ≤ 100)。
+  rpc ListReturnRequests(ListReturnRequestsRequest) returns (ListReturnRequestsResponse);
+  // GetReturnRequest:單筆含品項明細(照片轉下載 URL)。
+  rpc GetReturnRequest(GetReturnRequestRequest) returns (GetReturnRequestResponse);
+}
+
+// ReturnItemInput:單品項輸入。
+message ReturnItemInput {
+  string source_type = 1;          // order_item/customer_product
+  string sales_order_item_id = 2;  // 可空(order_item 時必填)
+  string customer_product_id = 3;  // 可空(customer_product 時必填)
+  string quantity = 4;             // 十進位字串,正數
+  string reason = 5;               // 品項退貨原因
+  repeated string photo_file_ids = 6; // 可空(≤5 張)
+}
+
+// CreateReturnRequestRequest:發起退貨請求。
+message CreateReturnRequestRequest {
+  repeated ReturnItemInput items = 1;
+  string remark = 2; // 可空
+}
+
+// CreateReturnRequestResponse:發起結果。
+message CreateReturnRequestResponse {
+  string id = 1;
+  string status = 2; // 必為 pending
+}
+
+// ListReturnRequestsRequest:列表請求。
+message ListReturnRequestsRequest {
+  string status = 1;    // 可空(pending/approved/rejected)
+  int32 page = 2;       // 1-based,預設 1
+  int32 page_size = 3;  // 預設 20,上限 100
+}
+
+// ReturnRequestEntry:列表單筆。
+message ReturnRequestEntry {
+  string id = 1;
+  string customer_id = 2;
+  string status = 3;
+  string remark = 4;
+  string created_at = 5; // RFC3339
+}
+
+// ListReturnRequestsResponse:列表結果。
+message ListReturnRequestsResponse {
+  repeated ReturnRequestEntry entries = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  int32 total = 4;
+}
+
+// ReturnRequestItemView:明細單筆(含快照與照片 URL)。
+message ReturnRequestItemView {
+  string id = 1;
+  string source_type = 2;
+  string product_name = 3;
+  string spec = 4;
+  string unit = 5;
+  string quantity = 6;
+  string reason = 7;
+  repeated string photo_urls = 8;
+}
+
+// GetReturnRequestRequest:單筆請求。
+message GetReturnRequestRequest {
+  string id = 1;
+}
+
+// GetReturnRequestResponse:單筆結果。
+message GetReturnRequestResponse {
+  string id = 1;
+  string customer_id = 2;
+  string status = 3;
+  string remark = 4;
+  string reject_reason = 5;
+  string created_at = 6;
+  repeated ReturnRequestItemView items = 7;
+}

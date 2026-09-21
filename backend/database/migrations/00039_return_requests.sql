@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS return_request_items (
     unit                 text NOT NULL,
     quantity             text NOT NULL,
     reason               text NOT NULL,
-    photo_file_ids       text[] NOT NULL DEFAULT '{}',
+    photo_file_ids       jsonb NOT NULL DEFAULT '[]',
     created_at           timestamptz NOT NULL DEFAULT now(),
     updated_at           timestamptz NOT NULL DEFAULT now(),
     deleted_at           timestamptz
