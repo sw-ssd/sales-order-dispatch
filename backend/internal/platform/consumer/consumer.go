@@ -140,7 +140,7 @@ func (c *Consumer) WithCache(cache entitlements.Cache) *Consumer {
 // 復原(含 G7 的期末停用)**永遠不會被處理**,而症狀只有「排程回錯誤」。
 //
 // 失敗的那筆維持 dispatched_at IS NULL:不認領(不吞掉副作用)、下趟重試,且不阻塞後續。
-// 回傳的錯誤是「本趟沒做成的事」的集合,不是「本趟壞了」——done 仍為已完成數。
+// 回傳的錯誤是「本趟沒做成的事」的集合,不是「本趟壞了」——claimedN 仍為已認領數。
 func (c *Consumer) DispatchOnce(ctx context.Context, limit int) (int, error) {
 	events, err := c.events.UndispatchedEvents(ctx, limit)
 	if err != nil {
@@ -152,7 +152,9 @@ func (c *Consumer) DispatchOnce(ctx context.Context, limit int) (int, error) {
 	var actor authz.Identity
 	var actorErr error
 	var errs []error
-	done := 0
+	// 未結項 #15:叫 claimed 不叫 done —— 回傳的是「本趟認領數」不是「成功派送筆數」
+	// （未對應型別只認領、被搶先的不算）。叫 done 會讓讀者誤當副作用發生次數。
+	claimedN := 0
 	// actorFailed 記住本趟是否已記錄過 actor 失敗：同一趟內平台設定不會自己變好，
 	// 後續同根因的失敗不再 append（否則 errors.Join 訊息 O(N) 膨脹，僅 log 噪音）。
 	// 不用 errors.Is 比對 errs[0]：actorErr 經 Wrap 後每次 fmt 都不同字串，
@@ -187,11 +189,11 @@ func (c *Consumer) DispatchOnce(ctx context.Context, limit int) (int, error) {
 			continue
 		}
 		if claimed {
-			done++
+			claimedN++
 		}
 	}
 	// errors.Join 對空集合回 nil:全數成功時仍是乾淨的 nil。
-	return done, errors.Join(errs...)
+	return claimedN, errors.Join(errs...)
 }
 
 // dispatch 在同一交易內認領事件,並(對應型別時)變更公司狀態。回傳本筆是否由這趟認領。
