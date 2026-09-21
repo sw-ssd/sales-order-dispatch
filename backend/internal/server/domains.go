@@ -19,6 +19,7 @@ import (
 	authzopenfga "github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	domainauth "github.com/salesorder/sales-order-1.0/backend/internal/domain/auth"
+	"github.com/salesorder/sales-order-1.0/backend/internal/domain/fileassets"
 	"github.com/salesorder/sales-order-1.0/backend/internal/handlers"
 	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/billing"
@@ -125,6 +126,8 @@ func (s *Server) mountAuth() {
 	services.RegisterProductService(apiMux, entClient, entSvc) // 04 Task 3.3 商品主檔
 	services.RegisterCustomerProductService(apiMux, entClient) // CustomerProductService(04 Task 3.5)
 	services.RegisterSalesOrderService(apiMux, entClient)      // SalesOrderService(05 Task 4)
+	// 04 Task 3.6 檔案資產(REST:上傳/下載/軟刪除,掛同一 apiMux,與 Connect 路徑不衝突)。
+	fileassets.NewHandler(entClient, s.cfg.Storage.StorageRoot).RegisterRoutes(apiMux)
 	// T10/T10b 租戶端權益投影：租戶後台／App 的「我的方案與用量」。掛在 /api/v1 之下（租戶
 	// session ＋ RLS），**不是** /platform/ —— 那裡是 operator cookie 與平台工具的路徑範圍。
 	services.RegisterTenantEntitlementService(apiMux, entClient, entSvc)

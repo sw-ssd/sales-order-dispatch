@@ -23,6 +23,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/customercounter"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customerproduct"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
+	"github.com/salesorder/sales-order-1.0/backend/ent/fileasset"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/ordercounter"
 	"github.com/salesorder/sales-order-1.0/backend/ent/processingspec"
@@ -61,6 +62,8 @@ type Client struct {
 	CustomerProduct *CustomerProductClient
 	// Department is the client for interacting with the Department builders.
 	Department *DepartmentClient
+	// FileAsset is the client for interacting with the FileAsset builders.
+	FileAsset *FileAssetClient
 	// Metadict is the client for interacting with the Metadict builders.
 	Metadict *MetadictClient
 	// OrderCounter is the client for interacting with the OrderCounter builders.
@@ -110,6 +113,7 @@ func (c *Client) init() {
 	c.CustomerCounter = NewCustomerCounterClient(c.config)
 	c.CustomerProduct = NewCustomerProductClient(c.config)
 	c.Department = NewDepartmentClient(c.config)
+	c.FileAsset = NewFileAssetClient(c.config)
 	c.Metadict = NewMetadictClient(c.config)
 	c.OrderCounter = NewOrderCounterClient(c.config)
 	c.ProcessingSpec = NewProcessingSpecClient(c.config)
@@ -225,6 +229,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		CustomerCounter:       NewCustomerCounterClient(cfg),
 		CustomerProduct:       NewCustomerProductClient(cfg),
 		Department:            NewDepartmentClient(cfg),
+		FileAsset:             NewFileAssetClient(cfg),
 		Metadict:              NewMetadictClient(cfg),
 		OrderCounter:          NewOrderCounterClient(cfg),
 		ProcessingSpec:        NewProcessingSpecClient(cfg),
@@ -267,6 +272,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		CustomerCounter:       NewCustomerCounterClient(cfg),
 		CustomerProduct:       NewCustomerProductClient(cfg),
 		Department:            NewDepartmentClient(cfg),
+		FileAsset:             NewFileAssetClient(cfg),
 		Metadict:              NewMetadictClient(cfg),
 		OrderCounter:          NewOrderCounterClient(cfg),
 		ProcessingSpec:        NewProcessingSpecClient(cfg),
@@ -312,10 +318,10 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.AuditLog, c.Company, c.Customer, c.CustomerAddress, c.CustomerContact,
-		c.CustomerCounter, c.CustomerProduct, c.Department, c.Metadict, c.OrderCounter,
-		c.ProcessingSpec, c.Product, c.ProductCategory, c.ProductProcessingSpec,
-		c.ProductUnit, c.Role, c.RolePermission, c.Route, c.SalesOrder,
-		c.SalesOrderEvent, c.SalesOrderItem, c.User, c.Warehouse,
+		c.CustomerCounter, c.CustomerProduct, c.Department, c.FileAsset, c.Metadict,
+		c.OrderCounter, c.ProcessingSpec, c.Product, c.ProductCategory,
+		c.ProductProcessingSpec, c.ProductUnit, c.Role, c.RolePermission, c.Route,
+		c.SalesOrder, c.SalesOrderEvent, c.SalesOrderItem, c.User, c.Warehouse,
 	} {
 		n.Use(hooks...)
 	}
@@ -326,10 +332,10 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.AuditLog, c.Company, c.Customer, c.CustomerAddress, c.CustomerContact,
-		c.CustomerCounter, c.CustomerProduct, c.Department, c.Metadict, c.OrderCounter,
-		c.ProcessingSpec, c.Product, c.ProductCategory, c.ProductProcessingSpec,
-		c.ProductUnit, c.Role, c.RolePermission, c.Route, c.SalesOrder,
-		c.SalesOrderEvent, c.SalesOrderItem, c.User, c.Warehouse,
+		c.CustomerCounter, c.CustomerProduct, c.Department, c.FileAsset, c.Metadict,
+		c.OrderCounter, c.ProcessingSpec, c.Product, c.ProductCategory,
+		c.ProductProcessingSpec, c.ProductUnit, c.Role, c.RolePermission, c.Route,
+		c.SalesOrder, c.SalesOrderEvent, c.SalesOrderItem, c.User, c.Warehouse,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -354,6 +360,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.CustomerProduct.mutate(ctx, m)
 	case *DepartmentMutation:
 		return c.Department.mutate(ctx, m)
+	case *FileAssetMutation:
+		return c.FileAsset.mutate(ctx, m)
 	case *MetadictMutation:
 		return c.Metadict.mutate(ctx, m)
 	case *OrderCounterMutation:
@@ -1514,6 +1522,139 @@ func (c *DepartmentClient) mutate(ctx context.Context, m *DepartmentMutation) (V
 		return (&DepartmentDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Department mutation op: %q", m.Op())
+	}
+}
+
+// FileAssetClient is a client for the FileAsset schema.
+type FileAssetClient struct {
+	config
+}
+
+// NewFileAssetClient returns a client for the FileAsset from the given config.
+func NewFileAssetClient(c config) *FileAssetClient {
+	return &FileAssetClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `fileasset.Hooks(f(g(h())))`.
+func (c *FileAssetClient) Use(hooks ...Hook) {
+	c.hooks.FileAsset = append(c.hooks.FileAsset, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `fileasset.Intercept(f(g(h())))`.
+func (c *FileAssetClient) Intercept(interceptors ...Interceptor) {
+	c.inters.FileAsset = append(c.inters.FileAsset, interceptors...)
+}
+
+// Create returns a builder for creating a FileAsset entity.
+func (c *FileAssetClient) Create() *FileAssetCreate {
+	mutation := newFileAssetMutation(c.config, OpCreate)
+	return &FileAssetCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of FileAsset entities.
+func (c *FileAssetClient) CreateBulk(builders ...*FileAssetCreate) *FileAssetCreateBulk {
+	return &FileAssetCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *FileAssetClient) MapCreateBulk(slice any, setFunc func(*FileAssetCreate, int)) *FileAssetCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &FileAssetCreateBulk{err: fmt.Errorf("calling to FileAssetClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*FileAssetCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &FileAssetCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for FileAsset.
+func (c *FileAssetClient) Update() *FileAssetUpdate {
+	mutation := newFileAssetMutation(c.config, OpUpdate)
+	return &FileAssetUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *FileAssetClient) UpdateOne(_m *FileAsset) *FileAssetUpdateOne {
+	mutation := newFileAssetMutation(c.config, OpUpdateOne, withFileAsset(_m))
+	return &FileAssetUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *FileAssetClient) UpdateOneID(id int) *FileAssetUpdateOne {
+	mutation := newFileAssetMutation(c.config, OpUpdateOne, withFileAssetID(id))
+	return &FileAssetUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for FileAsset.
+func (c *FileAssetClient) Delete() *FileAssetDelete {
+	mutation := newFileAssetMutation(c.config, OpDelete)
+	return &FileAssetDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *FileAssetClient) DeleteOne(_m *FileAsset) *FileAssetDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *FileAssetClient) DeleteOneID(id int) *FileAssetDeleteOne {
+	builder := c.Delete().Where(fileasset.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &FileAssetDeleteOne{builder}
+}
+
+// Query returns a query builder for FileAsset.
+func (c *FileAssetClient) Query() *FileAssetQuery {
+	return &FileAssetQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeFileAsset},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a FileAsset entity by its id.
+func (c *FileAssetClient) Get(ctx context.Context, id int) (*FileAsset, error) {
+	return c.Query().Where(fileasset.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *FileAssetClient) GetX(ctx context.Context, id int) *FileAsset {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *FileAssetClient) Hooks() []Hook {
+	return c.hooks.FileAsset
+}
+
+// Interceptors returns the client interceptors.
+func (c *FileAssetClient) Interceptors() []Interceptor {
+	return c.inters.FileAsset
+}
+
+func (c *FileAssetClient) mutate(ctx context.Context, m *FileAssetMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&FileAssetCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&FileAssetUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&FileAssetUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&FileAssetDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown FileAsset mutation op: %q", m.Op())
 	}
 }
 
@@ -3564,15 +3705,16 @@ func (c *WarehouseClient) mutate(ctx context.Context, m *WarehouseMutation) (Val
 type (
 	hooks struct {
 		AuditLog, Company, Customer, CustomerAddress, CustomerContact, CustomerCounter,
-		CustomerProduct, Department, Metadict, OrderCounter, ProcessingSpec, Product,
-		ProductCategory, ProductProcessingSpec, ProductUnit, Role, RolePermission,
-		Route, SalesOrder, SalesOrderEvent, SalesOrderItem, User, Warehouse []ent.Hook
+		CustomerProduct, Department, FileAsset, Metadict, OrderCounter, ProcessingSpec,
+		Product, ProductCategory, ProductProcessingSpec, ProductUnit, Role,
+		RolePermission, Route, SalesOrder, SalesOrderEvent, SalesOrderItem, User,
+		Warehouse []ent.Hook
 	}
 	inters struct {
 		AuditLog, Company, Customer, CustomerAddress, CustomerContact, CustomerCounter,
-		CustomerProduct, Department, Metadict, OrderCounter, ProcessingSpec, Product,
-		ProductCategory, ProductProcessingSpec, ProductUnit, Role, RolePermission,
-		Route, SalesOrder, SalesOrderEvent, SalesOrderItem, User,
+		CustomerProduct, Department, FileAsset, Metadict, OrderCounter, ProcessingSpec,
+		Product, ProductCategory, ProductProcessingSpec, ProductUnit, Role,
+		RolePermission, Route, SalesOrder, SalesOrderEvent, SalesOrderItem, User,
 		Warehouse []ent.Interceptor
 	}
 )

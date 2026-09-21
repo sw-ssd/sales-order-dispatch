@@ -30,6 +30,9 @@ type CustomerProduct func(*sql.Selector)
 // Department is the predicate function for department builders.
 type Department func(*sql.Selector)
 
+// FileAsset is the predicate function for fileasset builders.
+type FileAsset func(*sql.Selector)
+
 // Metadict is the predicate function for metadict builders.
 type Metadict func(*sql.Selector)
 

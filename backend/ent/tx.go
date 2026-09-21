@@ -28,6 +28,8 @@ type Tx struct {
 	CustomerProduct *CustomerProductClient
 	// Department is the client for interacting with the Department builders.
 	Department *DepartmentClient
+	// FileAsset is the client for interacting with the FileAsset builders.
+	FileAsset *FileAssetClient
 	// Metadict is the client for interacting with the Metadict builders.
 	Metadict *MetadictClient
 	// OrderCounter is the client for interacting with the OrderCounter builders.
@@ -197,6 +199,7 @@ func (tx *Tx) init() {
 	tx.CustomerCounter = NewCustomerCounterClient(tx.config)
 	tx.CustomerProduct = NewCustomerProductClient(tx.config)
 	tx.Department = NewDepartmentClient(tx.config)
+	tx.FileAsset = NewFileAssetClient(tx.config)
 	tx.Metadict = NewMetadictClient(tx.config)
 	tx.OrderCounter = NewOrderCounterClient(tx.config)
 	tx.ProcessingSpec = NewProcessingSpecClient(tx.config)

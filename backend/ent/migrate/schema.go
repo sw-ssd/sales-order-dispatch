@@ -240,6 +240,36 @@ var (
 			},
 		},
 	}
+	// FileAssetsColumns holds the columns for the "file_assets" table.
+	FileAssetsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "company_id", Type: field.TypeInt},
+		{Name: "department_id", Type: field.TypeInt, Nullable: true},
+		{Name: "owner_type", Type: field.TypeString},
+		{Name: "owner_id", Type: field.TypeInt},
+		{Name: "filename", Type: field.TypeString},
+		{Name: "original_filename", Type: field.TypeString},
+		{Name: "mime_type", Type: field.TypeString},
+		{Name: "size_bytes", Type: field.TypeInt},
+		{Name: "storage_path", Type: field.TypeString},
+		{Name: "url", Type: field.TypeString},
+		{Name: "created_by", Type: field.TypeInt, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+	}
+	// FileAssetsTable holds the schema information for the "file_assets" table.
+	FileAssetsTable = &schema.Table{
+		Name:       "file_assets",
+		Columns:    FileAssetsColumns,
+		PrimaryKey: []*schema.Column{FileAssetsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "fileasset_company_id_owner_type_owner_id",
+				Unique:  false,
+				Columns: []*schema.Column{FileAssetsColumns[1], FileAssetsColumns[3], FileAssetsColumns[4]},
+			},
+		},
+	}
 	// MetadictsColumns holds the columns for the "metadicts" table.
 	MetadictsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -683,6 +713,7 @@ var (
 		CustomerCountersTable,
 		CustomerProductsTable,
 		DepartmentsTable,
+		FileAssetsTable,
 		MetadictsTable,
 		OrderCountersTable,
 		ProcessingSpecsTable,

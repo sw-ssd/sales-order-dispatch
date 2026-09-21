@@ -105,6 +105,18 @@ func (f DepartmentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DepartmentMutation", m)
 }
 
+// The FileAssetFunc type is an adapter to allow the use of ordinary
+// function as FileAsset mutator.
+type FileAssetFunc func(context.Context, *ent.FileAssetMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f FileAssetFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.FileAssetMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.FileAssetMutation", m)
+}
+
 // The MetadictFunc type is an adapter to allow the use of ordinary
 // function as Metadict mutator.
 type MetadictFunc func(context.Context, *ent.MetadictMutation) (ent.Value, error)

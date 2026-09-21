@@ -13,6 +13,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/customercounter"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customerproduct"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
+	"github.com/salesorder/sales-order-1.0/backend/ent/fileasset"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/ordercounter"
 	"github.com/salesorder/sales-order-1.0/backend/ent/processingspec"
@@ -169,6 +170,36 @@ func init() {
 	departmentDescName := departmentFields[0].Descriptor()
 	// department.NameValidator is a validator for the "name" field. It is called by the builders before save.
 	department.NameValidator = departmentDescName.Validators[0].(func(string) error)
+	fileassetFields := schema.FileAsset{}.Fields()
+	_ = fileassetFields
+	// fileassetDescOwnerType is the schema descriptor for owner_type field.
+	fileassetDescOwnerType := fileassetFields[2].Descriptor()
+	// fileasset.OwnerTypeValidator is a validator for the "owner_type" field. It is called by the builders before save.
+	fileasset.OwnerTypeValidator = fileassetDescOwnerType.Validators[0].(func(string) error)
+	// fileassetDescFilename is the schema descriptor for filename field.
+	fileassetDescFilename := fileassetFields[4].Descriptor()
+	// fileasset.FilenameValidator is a validator for the "filename" field. It is called by the builders before save.
+	fileasset.FilenameValidator = fileassetDescFilename.Validators[0].(func(string) error)
+	// fileassetDescOriginalFilename is the schema descriptor for original_filename field.
+	fileassetDescOriginalFilename := fileassetFields[5].Descriptor()
+	// fileasset.OriginalFilenameValidator is a validator for the "original_filename" field. It is called by the builders before save.
+	fileasset.OriginalFilenameValidator = fileassetDescOriginalFilename.Validators[0].(func(string) error)
+	// fileassetDescMimeType is the schema descriptor for mime_type field.
+	fileassetDescMimeType := fileassetFields[6].Descriptor()
+	// fileasset.MimeTypeValidator is a validator for the "mime_type" field. It is called by the builders before save.
+	fileasset.MimeTypeValidator = fileassetDescMimeType.Validators[0].(func(string) error)
+	// fileassetDescStoragePath is the schema descriptor for storage_path field.
+	fileassetDescStoragePath := fileassetFields[8].Descriptor()
+	// fileasset.StoragePathValidator is a validator for the "storage_path" field. It is called by the builders before save.
+	fileasset.StoragePathValidator = fileassetDescStoragePath.Validators[0].(func(string) error)
+	// fileassetDescURL is the schema descriptor for url field.
+	fileassetDescURL := fileassetFields[9].Descriptor()
+	// fileasset.URLValidator is a validator for the "url" field. It is called by the builders before save.
+	fileasset.URLValidator = fileassetDescURL.Validators[0].(func(string) error)
+	// fileassetDescCreatedAt is the schema descriptor for created_at field.
+	fileassetDescCreatedAt := fileassetFields[11].Descriptor()
+	// fileasset.DefaultCreatedAt holds the default value on creation for the created_at field.
+	fileasset.DefaultCreatedAt = fileassetDescCreatedAt.Default.(func() time.Time)
 	metadictFields := schema.Metadict{}.Fields()
 	_ = metadictFields
 	// metadictDescType is the schema descriptor for type field.
