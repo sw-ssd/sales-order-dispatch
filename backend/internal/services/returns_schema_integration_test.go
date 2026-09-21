@@ -56,22 +56,29 @@ func TestIntegrationReturnRequestsSchemaUpDown(t *testing.T) {
 		}
 	}
 
-	// down-to 38 只回滾 00039:兩表消失;重上冪等。
+	// down-to 39 只回滾 00040(ENABLE 解除),00039 的表留著;重上冪等。
 	ctx := context.Background()
 	if err := goose.SetDialect("postgres"); err != nil {
 		t.Fatalf("dialect: %v", err)
 	}
 	goose.SetTableName("goose_db_version")
-	if err := goose.RunContext(ctx, "down-to", db, "../../database/migrations", "38"); err != nil {
-		t.Fatalf("down-to 38: %v", err)
+	if err := goose.RunContext(ctx, "down-to", db, "../../database/migrations", "39"); err != nil {
+		t.Fatalf("down-to 39: %v", err)
 	}
 	for _, tbl := range []string{"return_requests", "return_request_items"} {
 		var exists bool
 		if err := db.QueryRow(`SELECT to_regclass($1) IS NOT NULL`, "public."+tbl).Scan(&exists); err != nil {
 			t.Fatalf("查表存在: %v", err)
 		}
-		if exists {
-			t.Fatalf("Down 後 %s 應消失", tbl)
+		if !exists {
+			t.Fatalf("down-to 39 不得帶走 00039 的表 %s", tbl)
+		}
+		var enabled bool
+		if err := db.QueryRow(`SELECT relrowsecurity FROM pg_class WHERE relname = $1`, tbl).Scan(&enabled); err != nil {
+			t.Fatalf("查 RLS 狀態 %s: %v", tbl, err)
+		}
+		if enabled {
+			t.Fatalf("down-to 39 後 %s 的 RLS 應已 DISABLE", tbl)
 		}
 	}
 	if err := goose.RunContext(ctx, "up", db, "../../database/migrations"); err != nil {
