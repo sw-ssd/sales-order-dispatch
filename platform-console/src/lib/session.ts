@@ -36,10 +36,15 @@ export async function ensureSession(): Promise<boolean> {
     probeAt = Date.now();
     probe = platform.listTenants({ page: 1, pageSize: 1 }).then(
       () => {
+        // 未結項 #25 前半：logout 不取消已在飛行的探針 —— 其 .then 回來必須檢查 loggedOut，
+        // 否則「登出 → 飛行探針成功」會把狀態翻回 authenticated（守衛仍 fail-closed、
+        // 後端仍擋，但使用者會被閃回主控台再看到 401 文案）。
+        if (loggedOut) return false;
         setStatus("authenticated");
         return true;
       },
       () => {
+        if (loggedOut) return false;
         setStatus("anonymous");
         return false;
       },

@@ -86,4 +86,15 @@ describe("logout", () => {
       now.mockRestore();
     }
   });
+
+  it("登出時已有飛行中的探針：其成功回來不得把狀態翻回 authenticated", async () => {
+    // 未結項 #25 前半：logout 不取消已在飛行的探針 —— 其 .then 回來會 setStatus("authenticated")。
+    const { promise, resolve } = Promise.withResolvers<{ tenants: never[] }>();
+    listTenants.mockReturnValue(promise);
+    const inFlight = ensureSession();
+    logout();
+    resolve({ tenants: [] });
+    await expect(inFlight).resolves.toBe(false);
+    expect(sessionStatus()).toBe("anonymous");
+  });
 });
