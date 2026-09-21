@@ -158,6 +158,17 @@ func (b *Billing) RecordPayment(ctx context.Context, in RecordPaymentInput) (*st
 						period.PeriodNo, period.ExternalRef, in.ExternalRef),
 				})
 			}
+			// 未結項 #10:同交易號但金額不同也不是重送 —— webhook 重送帶著錯誤金額重試時，
+			// no-op 直接回成功會讓這筆差異在帳面上永遠消失。金額 0 ＝「未填，採快照」，
+			// 與收款主路徑的 G4 語意一致，故只在「填了且不符」時衝突。
+			if in.AmountCents != 0 && in.AmountCents != period.AmountCents {
+				return errcode.PlatformPaymentConflict.Error(map[string]string{
+					"reason": fmt.Sprintf("期別 %d 已付款 %s，本次重送金額 %s 不符；"+
+						"請確認是否重複收款，或改用人工對帳處理差異",
+						period.PeriodNo, money.FormatCents(period.AmountCents),
+						money.FormatCents(in.AmountCents)),
+				})
+			}
 			// 交易號相同才是重送：不重寫事件與稽核，但**備註可以補寫** —— note 是短收／溢收的
 			// 唯一落點（G8），而 store 對已經 paid 的列只寫 note（其餘憑據由 `status='open'` 的
 			// CASE 保留原值）。少了這一段，console 對已入帳期別補記差異會「回成功但什麼都沒寫」。

@@ -524,6 +524,37 @@ func TestRecordPaymentRejectsVoidPeriod(t *testing.T) {
 
 // 重送（同期別、同交易號）是 no-op（G3）：金流 webhook 重送靠這條，不得再寫一次事件與稽核，
 // 也不得動已落地的憑據。
+// 未結項 #10:no-op 分支不比對金額 —— 同交易號、金額不同的第二筆匯款會被靜默吸收。
+// webhook 重送帶著錯誤金額重試時，no-op 直接回成功，帳面上永遠看不到這筆差異。
+func TestRecordPaymentReplayComparesAmount(t *testing.T) {
+	f := store.NewFakeBilling()
+	f.PutSubscription(store.Subscription{ID: 5, CompanyID: 42, Status: "active"})
+	f.PutPeriod(store.Period{ID: 9, SubscriptionID: 5, PeriodNo: 1, Status: "open", AmountCents: amountCents})
+	b := billing.NewBilling(f)
+	paidAt := time.Date(2026, 9, 21, 10, 30, 0, 0, time.UTC)
+	in := billing.RecordPaymentInput{
+		CompanyID: 42, PaidAt: paidAt, Provider: "manual", ExternalRef: "BANK-12345",
+		ActorOperatorID: 7, Reason: "匯款入帳",
+	}
+	if _, err := b.RecordPayment(context.Background(), in); err != nil {
+		t.Fatalf("第一次收款: %v", err)
+	}
+	// 同交易號、金額不同 → 必須是收款衝突(PLAT-3002)，不得靜默 no-op。
+	in.AmountCents = amountCents - 5000
+	_, err := b.RecordPayment(context.Background(), in)
+	if err == nil {
+		t.Fatal("同交易號但金額不同的重送不得靜默成功")
+	}
+	if got := errorCodeOf(t, err); got != "PLAT-3002" {
+		t.Fatalf("必須是收款衝突 PLAT-3002,got %q (%v)", got, err)
+	}
+	if got := len(f.Events()); got != 1 {
+		t.Fatalf("衝突不得再寫事件，got %d 筆", got)
+	}
+	if got := len(f.Audits()); got != 1 {
+		t.Fatalf("衝突不得再寫稽核，got %d 筆", got)
+	}
+}
 func TestRecordPaymentReplayIsNoop(t *testing.T) {
 	f := store.NewFakeBilling()
 	f.PutSubscription(store.Subscription{ID: 5, CompanyID: 42, Status: "suspended"})
