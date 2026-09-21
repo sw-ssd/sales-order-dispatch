@@ -243,7 +243,7 @@ type BillingStore interface {
 	// 不得新增生產呼叫端：第二個認領入口即第二份併發語意。
 	MarkEventDispatchedTx(ctx context.Context, tx *sql.Tx, id int64) error
 	// RecordAuditTx 寫入平台稽核(S9:actor 為 operator_id,不 FK 租戶 users)。
-	// reason 必填:空字串即拒絕 —— 動到錢與權限的操作必須留下「為什麼」。
+	// reason 必填:空字串與全空白即拒絕 —— 動到錢與權限的操作必須留下「為什麼」。
 	RecordAuditTx(ctx context.Context, tx *sql.Tx, operatorID int64, action, targetType, targetID, reason string, before, after []byte) error
 	// WithTx 開一個交易並把 *sql.Tx 交給 fn;fn 回錯誤即回滾,否則提交。
 	WithTx(ctx context.Context, fn func(*sql.Tx) error) error
