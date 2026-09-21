@@ -214,6 +214,18 @@ func TestChangePlanRejectsUnknownOrArchivedPlan(t *testing.T) {
 	}
 }
 
+// 未結項 #22（RED）：無訂閱＋未知方案時，存在檢查應優先於參數檢查 ——
+// 「這家公司沒有合約」是比「方案代碼打錯」更根本的事實。舊順序先查方案，回 SYS-4002
+// 的 plan_code；新順序先驗訂閱，回 PLAT-3001 的「無合約」。
+func TestChangePlanPrefersMissingSubscriptionOverUnknownPlan(t *testing.T) {
+	f := subscriptionFixture()
+	_, err := billing.NewBilling(f).ChangePlan(context.Background(),
+		billing.ChangePlanInput{CompanyID: 9999, PlanCode: "archived", ActorOperatorID: 7, Reason: "換方案"})
+	if errorCodeOf(t, err) != "PLAT-3001" {
+		t.Fatalf("無訂閱＋未知方案應優先回 PLAT-3001（無合約），got %v", err)
+	}
+}
+
 // TestChangePlanSamePlanIsNoOp 驗「與現行方案相同」不寫稽核：一筆 before 與 after 一模一樣的
 // 稽核會讓「誰真的改了方案」需要逐筆比對才看得出來。
 func TestChangePlanSamePlanIsNoOp(t *testing.T) {

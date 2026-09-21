@@ -256,6 +256,14 @@ func (b *Billing) ChangePlan(ctx context.Context, in ChangePlanInput) (time.Time
 	}
 	var effectiveFrom time.Time
 	err := b.st.WithTx(ctx, func(tx *sql.Tx) error {
+		// 未結項 #22：存在檢查優先於參數檢查 —— 「這家公司沒有合約」比
+		// 「方案代碼打錯」更根本（與 CreateSubscription 的 trial_ends_at 解析後
+		// 才驗公司存在同一立場：參數錯誤 SYS-1001 優先於存在 SYS-4002 的反例
+		// 在此不適用 —— 這裡兩個都是「存在」類錯誤，根本的先報）。
+		sub, err := serviceableSubscription(ctx, b.st, tx, in.CompanyID)
+		if err != nil {
+			return err
+		}
 		planID, err := b.st.PlanIDByCodeTx(ctx, tx, planCode)
 		if errors.Is(err, sql.ErrNoRows) {
 			// 「不存在」與「已歸檔」同一個碼(SYS-4002):對 operator 而言都是「這個方案不能指派」,
@@ -264,10 +272,6 @@ func (b *Billing) ChangePlan(ctx context.Context, in ChangePlanInput) (time.Time
 		}
 		if err != nil {
 			return errcode.SysInternal.Wrap(err)
-		}
-		sub, err := serviceableSubscription(ctx, b.st, tx, in.CompanyID)
-		if err != nil {
-			return err
 		}
 		from, err := b.serviceUntil(ctx, tx, sub, b.now())
 		if err != nil {
