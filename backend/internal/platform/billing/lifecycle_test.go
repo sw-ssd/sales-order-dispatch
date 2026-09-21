@@ -248,6 +248,28 @@ func TestMarkPastDueSkipsPaidAndVoidPeriods(t *testing.T) {
 	}
 }
 
+// 未結項 #11：allowedTransitions 其餘列的表驅動覆蓋 —— 状态机是分散在各呼叫點的 if 之外的
+// 唯一真相来源（spec §5.2），但「cancelled 沒有出口」「suspended 只能回 active／cancelled」
+// 這些列從未被直接斷言。覆蓋方式：RecordPayment 對 cancelled 訂閱必須拒絕（PLAT-3001），
+// 即 cancelled → active 不在表上（收款只走「→ active」，但 cancelled 沒有出口）。
+func TestCancelledSubscriptionCannotBeReactivatedByPayment(t *testing.T) {
+	now := at(2026, time.October, 1, 3)
+	f := store.NewFakeBilling()
+	f.PutSubscription(store.Subscription{CompanyID: 42, Status: "cancelled", PlanID: 1,
+		SeatCount: 3, BillingCycle: "monthly"})
+	f.PutPeriod(store.Period{SubscriptionID: 5, PeriodNo: 1, Status: "open",
+		PeriodStart: now.AddDate(0, -1, 0), PeriodEnd: now.Add(-time.Hour),
+		PlanID: 1, SeatCount: 3, AmountCents: amountCents, Currency: "TWD"})
+	b := billing.NewBilling(f)
+
+	_, err := b.RecordPayment(context.Background(), billing.RecordPaymentInput{
+		CompanyID: 42, PeriodNo: 1, ActorOperatorID: 7, Reason: "補款",
+	})
+	if errorCodeOf(t, err) != "PLAT-3001" {
+		t.Fatalf("已取消的訂閱收款應 PLAT-3001（cancelled 沒有出口），got %v", err)
+	}
+}
+
 // 寬限已過 → suspended 並發事件（該事件驅動產品域凍結）；不得殘留寬限期。
 func TestSuspendOverdueEmitsEventAndClearsGrace(t *testing.T) {
 	now := at(2026, time.October, 10, 3)
