@@ -4,6 +4,7 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -61,6 +62,10 @@ type Server struct {
 	// operatorAuth 為平台工具認證(mountPlatformAuth 建立)。T9 的 PlatformAdminService 以
 	// operatorAuth.Interceptor() 擋下非 operator;nil = 平台工具未設定,該 RPC 不掛載。
 	operatorAuth *operatorauth.Service
+	// platformAdminDB 為平台 admin 連線池（未結項 #9(Plan B)：此前 mountEntitlements 與
+	// mountPlatformAuth 各自 OpenSQL，同一個行程兩個池）。由 InitDomains 一次建立、
+	// 兩處共用；nil = 尚未建立（測試直呼 mountXxx 時各開各的，與舊行為一致）。
+	platformAdminDB *sql.DB
 }
 
 // rpcAuth 為受保護 RPC path 的 OpenFGA 對映(resource, action)。

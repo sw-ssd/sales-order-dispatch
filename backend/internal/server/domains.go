@@ -4,6 +4,7 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"log"
 	"net/http"
 	"time"
@@ -44,6 +45,22 @@ const entitlementCacheTTL = 60 * time.Second
 func (s *Server) InitDomains() {
 	s.mountAuth()
 	s.mountPlatformAuth()
+}
+
+// platformAdminDBOf 回共用的平台 admin 池：InitDomains 已建即共用，否則自開。
+// 未結項 #9(Plan B)：此前 mountEntitlements 與 mountPlatformAuth 各自 OpenSQL，
+// 同一個行程兩個池。收斂點在「取用時」而非 InitDomains —— mountAuth 在無 Valkey／
+// 無 ent 時會提前 return（開發降級），InitDomains 先開池會讓 TestVersionEndpoint
+// 這類無 DB 測試 Fatal（實測）。共用由呼叫端傳池：先到的開，後到的用。
+func (s *Server) platformAdminDBOf() *sql.DB {
+	if s.platformAdminDB == nil {
+		db, err := database.OpenSQL(s.cfg.Database.AdminDSN())
+		if err != nil {
+			log.Fatalf("platform: admin 連線不可用,拒絕以無守衛狀態啟動(守衛缺席＝配額形同虛設): %v", err)
+		}
+		s.platformAdminDB = db
+	}
+	return s.platformAdminDB
 }
 
 // mountAuth 組裝 auth domain：ent client + Valkey client → token/鎖定/一次性 store →
@@ -138,10 +155,7 @@ func (s *Server) mountAuth() {
 // 連線不可用即拒絕啟動（比照 mountOpenFGA 的立場）：靜默降級成 Unlimited() 等於關掉全部配額，
 // 而業務服務的建構子已強制每個呼叫端表態，不提供「未掛守衛」的 production 退路。
 func (s *Server) mountEntitlements(db *ent.Client) *entitlements.Service {
-	adminDB, err := database.OpenSQL(s.cfg.Database.AdminDSN())
-	if err != nil {
-		log.Fatalf("platform: admin 連線不可用,拒絕以無守衛狀態啟動(守衛缺席＝配額形同虛設): %v", err)
-	}
+	adminDB := s.platformAdminDBOf()
 	// 快取：**跨行程共用的 Valkey**（排程與 consumer 也是寫入來源，只有共用同一顆快取，
 	// 它們的失效才會對 API 生效）；Valkey 不可用時退回行程內記憶體 —— 快取是加速器，
 	// 不是啟動前提，沒有它配額判定照常運作（只是各行程各記一份、跨行程失效不生效）。
@@ -184,11 +198,8 @@ func (s *Server) mountPlatformAuth() {
 	if !s.cfg.Platform.Configured() {
 		return
 	}
-	adminDB, err := database.OpenSQL(s.cfg.Database.AdminDSN())
-	if err != nil {
-		// 平台工具是唯一能停租戶／改訂閱的入口：認證層帶著壞連線啟動＝登入必爆，不如當場停。
-		log.Fatalf("platform: admin 連線不可用,無法掛載平台工具認證: %v", err)
-	}
+	// 共用 mountEntitlements 建立的池（先到先開、後到共用，未結項 #9）。
+	adminDB := s.platformAdminDBOf()
 	opAuth := operatorauth.New(operatorauth.Config{
 		Secret:        s.cfg.Platform.OperatorJWTSecret,
 		CookieDomain:  s.cfg.Platform.CookieDomain,
