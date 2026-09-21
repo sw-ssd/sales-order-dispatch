@@ -39,7 +39,9 @@ func TestSnapshot(t *testing.T) {
 			},
 		},
 		{
-			name: "無訂閱：狀態 none，所有 feature 都是 disabled 且用量 0（fail-closed）",
+			// 未結項 #33：無訂閱列＝尚未開通計費 → 用量列必須為空（與「方案不含」形狀區分）。
+			// 修前逐 feature 列 enabled=false，前端分不出「未開通」與「方案不含」。
+			name: "無訂閱：狀態 none，用量列為空（尚未開通計費≠方案不含）",
 			f: func() *store.Fake {
 				f := store.NewFake()
 				f.PutFeature(seatsDef)
@@ -48,10 +50,7 @@ func TestSnapshot(t *testing.T) {
 				return f
 			}(),
 			wantMeta: entitlements.Snapshot{Status: "none"},
-			want: []entitlements.FeatureUsage{
-				{FeatureCode: entitlements.FeaturePrinting},
-				{FeatureCode: seats},
-			},
+			want:     nil,
 		},
 	}
 
