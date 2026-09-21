@@ -161,6 +161,8 @@ func (b *Billing) CreateSubscription(ctx context.Context, in CreateSubscriptionI
 		// 事件的 payload 必須自帶足以動手的欄位(reason 亦在其中):consumer 不得為了補一個欄位
 		// 再查一次 DB。`subscription.created` 目前沒有對應的產品域動作(consumer 只認
 		// suspended／expired／reactivated)→ 會被認領而無副作用,安全。
+		// 未結項 #38:事件流的價值只剩審計 —— 日後要在產品域對開通做事時,
+		// 於 consumer 的 `actions` 明列語意(不得在 billing 側另起第二個 consumer)。
 		if err := b.emit(ctx, tx, subID, "subscription.created", map[string]any{
 			"company_id":      in.CompanyID,
 			"subscription_id": subID,
