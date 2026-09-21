@@ -23,6 +23,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/customercounter"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
+	"github.com/salesorder/sales-order-1.0/backend/ent/ordercounter"
 	"github.com/salesorder/sales-order-1.0/backend/ent/processingspec"
 	"github.com/salesorder/sales-order-1.0/backend/ent/product"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productcategory"
@@ -59,6 +60,8 @@ type Client struct {
 	Department *DepartmentClient
 	// Metadict is the client for interacting with the Metadict builders.
 	Metadict *MetadictClient
+	// OrderCounter is the client for interacting with the OrderCounter builders.
+	OrderCounter *OrderCounterClient
 	// ProcessingSpec is the client for interacting with the ProcessingSpec builders.
 	ProcessingSpec *ProcessingSpecClient
 	// Product is the client for interacting with the Product builders.
@@ -104,6 +107,7 @@ func (c *Client) init() {
 	c.CustomerCounter = NewCustomerCounterClient(c.config)
 	c.Department = NewDepartmentClient(c.config)
 	c.Metadict = NewMetadictClient(c.config)
+	c.OrderCounter = NewOrderCounterClient(c.config)
 	c.ProcessingSpec = NewProcessingSpecClient(c.config)
 	c.Product = NewProductClient(c.config)
 	c.ProductCategory = NewProductCategoryClient(c.config)
@@ -217,6 +221,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		CustomerCounter:       NewCustomerCounterClient(cfg),
 		Department:            NewDepartmentClient(cfg),
 		Metadict:              NewMetadictClient(cfg),
+		OrderCounter:          NewOrderCounterClient(cfg),
 		ProcessingSpec:        NewProcessingSpecClient(cfg),
 		Product:               NewProductClient(cfg),
 		ProductCategory:       NewProductCategoryClient(cfg),
@@ -257,6 +262,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		CustomerCounter:       NewCustomerCounterClient(cfg),
 		Department:            NewDepartmentClient(cfg),
 		Metadict:              NewMetadictClient(cfg),
+		OrderCounter:          NewOrderCounterClient(cfg),
 		ProcessingSpec:        NewProcessingSpecClient(cfg),
 		Product:               NewProductClient(cfg),
 		ProductCategory:       NewProductCategoryClient(cfg),
@@ -300,8 +306,8 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.AuditLog, c.Company, c.Customer, c.CustomerAddress, c.CustomerContact,
-		c.CustomerCounter, c.Department, c.Metadict, c.ProcessingSpec, c.Product,
-		c.ProductCategory, c.ProductProcessingSpec, c.ProductUnit, c.Role,
+		c.CustomerCounter, c.Department, c.Metadict, c.OrderCounter, c.ProcessingSpec,
+		c.Product, c.ProductCategory, c.ProductProcessingSpec, c.ProductUnit, c.Role,
 		c.RolePermission, c.Route, c.SalesOrder, c.SalesOrderEvent, c.SalesOrderItem,
 		c.User, c.Warehouse,
 	} {
@@ -314,8 +320,8 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.AuditLog, c.Company, c.Customer, c.CustomerAddress, c.CustomerContact,
-		c.CustomerCounter, c.Department, c.Metadict, c.ProcessingSpec, c.Product,
-		c.ProductCategory, c.ProductProcessingSpec, c.ProductUnit, c.Role,
+		c.CustomerCounter, c.Department, c.Metadict, c.OrderCounter, c.ProcessingSpec,
+		c.Product, c.ProductCategory, c.ProductProcessingSpec, c.ProductUnit, c.Role,
 		c.RolePermission, c.Route, c.SalesOrder, c.SalesOrderEvent, c.SalesOrderItem,
 		c.User, c.Warehouse,
 	} {
@@ -342,6 +348,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Department.mutate(ctx, m)
 	case *MetadictMutation:
 		return c.Metadict.mutate(ctx, m)
+	case *OrderCounterMutation:
+		return c.OrderCounter.mutate(ctx, m)
 	case *ProcessingSpecMutation:
 		return c.ProcessingSpec.mutate(ctx, m)
 	case *ProductMutation:
@@ -1498,6 +1506,139 @@ func (c *MetadictClient) mutate(ctx context.Context, m *MetadictMutation) (Value
 		return (&MetadictDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Metadict mutation op: %q", m.Op())
+	}
+}
+
+// OrderCounterClient is a client for the OrderCounter schema.
+type OrderCounterClient struct {
+	config
+}
+
+// NewOrderCounterClient returns a client for the OrderCounter from the given config.
+func NewOrderCounterClient(c config) *OrderCounterClient {
+	return &OrderCounterClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `ordercounter.Hooks(f(g(h())))`.
+func (c *OrderCounterClient) Use(hooks ...Hook) {
+	c.hooks.OrderCounter = append(c.hooks.OrderCounter, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `ordercounter.Intercept(f(g(h())))`.
+func (c *OrderCounterClient) Intercept(interceptors ...Interceptor) {
+	c.inters.OrderCounter = append(c.inters.OrderCounter, interceptors...)
+}
+
+// Create returns a builder for creating a OrderCounter entity.
+func (c *OrderCounterClient) Create() *OrderCounterCreate {
+	mutation := newOrderCounterMutation(c.config, OpCreate)
+	return &OrderCounterCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of OrderCounter entities.
+func (c *OrderCounterClient) CreateBulk(builders ...*OrderCounterCreate) *OrderCounterCreateBulk {
+	return &OrderCounterCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *OrderCounterClient) MapCreateBulk(slice any, setFunc func(*OrderCounterCreate, int)) *OrderCounterCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &OrderCounterCreateBulk{err: fmt.Errorf("calling to OrderCounterClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*OrderCounterCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &OrderCounterCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for OrderCounter.
+func (c *OrderCounterClient) Update() *OrderCounterUpdate {
+	mutation := newOrderCounterMutation(c.config, OpUpdate)
+	return &OrderCounterUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *OrderCounterClient) UpdateOne(_m *OrderCounter) *OrderCounterUpdateOne {
+	mutation := newOrderCounterMutation(c.config, OpUpdateOne, withOrderCounter(_m))
+	return &OrderCounterUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *OrderCounterClient) UpdateOneID(id int) *OrderCounterUpdateOne {
+	mutation := newOrderCounterMutation(c.config, OpUpdateOne, withOrderCounterID(id))
+	return &OrderCounterUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for OrderCounter.
+func (c *OrderCounterClient) Delete() *OrderCounterDelete {
+	mutation := newOrderCounterMutation(c.config, OpDelete)
+	return &OrderCounterDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *OrderCounterClient) DeleteOne(_m *OrderCounter) *OrderCounterDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *OrderCounterClient) DeleteOneID(id int) *OrderCounterDeleteOne {
+	builder := c.Delete().Where(ordercounter.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &OrderCounterDeleteOne{builder}
+}
+
+// Query returns a query builder for OrderCounter.
+func (c *OrderCounterClient) Query() *OrderCounterQuery {
+	return &OrderCounterQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeOrderCounter},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a OrderCounter entity by its id.
+func (c *OrderCounterClient) Get(ctx context.Context, id int) (*OrderCounter, error) {
+	return c.Query().Where(ordercounter.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *OrderCounterClient) GetX(ctx context.Context, id int) *OrderCounter {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *OrderCounterClient) Hooks() []Hook {
+	return c.hooks.OrderCounter
+}
+
+// Interceptors returns the client interceptors.
+func (c *OrderCounterClient) Interceptors() []Interceptor {
+	return c.inters.OrderCounter
+}
+
+func (c *OrderCounterClient) mutate(ctx context.Context, m *OrderCounterMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&OrderCounterCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&OrderCounterUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&OrderCounterUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&OrderCounterDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown OrderCounter mutation op: %q", m.Op())
 	}
 }
 
@@ -3282,13 +3423,13 @@ func (c *WarehouseClient) mutate(ctx context.Context, m *WarehouseMutation) (Val
 type (
 	hooks struct {
 		AuditLog, Company, Customer, CustomerAddress, CustomerContact, CustomerCounter,
-		Department, Metadict, ProcessingSpec, Product, ProductCategory,
+		Department, Metadict, OrderCounter, ProcessingSpec, Product, ProductCategory,
 		ProductProcessingSpec, ProductUnit, Role, RolePermission, Route, SalesOrder,
 		SalesOrderEvent, SalesOrderItem, User, Warehouse []ent.Hook
 	}
 	inters struct {
 		AuditLog, Company, Customer, CustomerAddress, CustomerContact, CustomerCounter,
-		Department, Metadict, ProcessingSpec, Product, ProductCategory,
+		Department, Metadict, OrderCounter, ProcessingSpec, Product, ProductCategory,
 		ProductProcessingSpec, ProductUnit, Role, RolePermission, Route, SalesOrder,
 		SalesOrderEvent, SalesOrderItem, User, Warehouse []ent.Interceptor
 	}

@@ -30,6 +30,9 @@ type Department func(*sql.Selector)
 // Metadict is the predicate function for metadict builders.
 type Metadict func(*sql.Selector)
 
+// OrderCounter is the predicate function for ordercounter builders.
+type OrderCounter func(*sql.Selector)
+
 // ProcessingSpec is the predicate function for processingspec builders.
 type ProcessingSpec func(*sql.Selector)
 

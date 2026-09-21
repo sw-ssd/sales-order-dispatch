@@ -28,6 +28,8 @@ type Tx struct {
 	Department *DepartmentClient
 	// Metadict is the client for interacting with the Metadict builders.
 	Metadict *MetadictClient
+	// OrderCounter is the client for interacting with the OrderCounter builders.
+	OrderCounter *OrderCounterClient
 	// ProcessingSpec is the client for interacting with the ProcessingSpec builders.
 	ProcessingSpec *ProcessingSpecClient
 	// Product is the client for interacting with the Product builders.
@@ -193,6 +195,7 @@ func (tx *Tx) init() {
 	tx.CustomerCounter = NewCustomerCounterClient(tx.config)
 	tx.Department = NewDepartmentClient(tx.config)
 	tx.Metadict = NewMetadictClient(tx.config)
+	tx.OrderCounter = NewOrderCounterClient(tx.config)
 	tx.ProcessingSpec = NewProcessingSpecClient(tx.config)
 	tx.Product = NewProductClient(tx.config)
 	tx.ProductCategory = NewProductCategoryClient(tx.config)

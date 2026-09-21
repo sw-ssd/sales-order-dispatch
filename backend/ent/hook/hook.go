@@ -105,6 +105,18 @@ func (f MetadictFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, er
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.MetadictMutation", m)
 }
 
+// The OrderCounterFunc type is an adapter to allow the use of ordinary
+// function as OrderCounter mutator.
+type OrderCounterFunc func(context.Context, *ent.OrderCounterMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f OrderCounterFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.OrderCounterMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.OrderCounterMutation", m)
+}
+
 // The ProcessingSpecFunc type is an adapter to allow the use of ordinary
 // function as ProcessingSpec mutator.
 type ProcessingSpecFunc func(context.Context, *ent.ProcessingSpecMutation) (ent.Value, error)

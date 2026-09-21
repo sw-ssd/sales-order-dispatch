@@ -13,6 +13,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/customercounter"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
+	"github.com/salesorder/sales-order-1.0/backend/ent/ordercounter"
 	"github.com/salesorder/sales-order-1.0/backend/ent/processingspec"
 	"github.com/salesorder/sales-order-1.0/backend/ent/product"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productcategory"
@@ -175,6 +176,26 @@ func init() {
 	metadict.DefaultUpdatedAt = metadictDescUpdatedAt.Default.(func() time.Time)
 	// metadict.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	metadict.UpdateDefaultUpdatedAt = metadictDescUpdatedAt.UpdateDefault.(func() time.Time)
+	ordercounterFields := schema.OrderCounter{}.Fields()
+	_ = ordercounterFields
+	// ordercounterDescSource is the schema descriptor for source field.
+	ordercounterDescSource := ordercounterFields[1].Descriptor()
+	// ordercounter.SourceValidator is a validator for the "source" field. It is called by the builders before save.
+	ordercounter.SourceValidator = ordercounterDescSource.Validators[0].(func(string) error)
+	// ordercounterDescNextSeq is the schema descriptor for next_seq field.
+	ordercounterDescNextSeq := ordercounterFields[2].Descriptor()
+	// ordercounter.DefaultNextSeq holds the default value on creation for the next_seq field.
+	ordercounter.DefaultNextSeq = ordercounterDescNextSeq.Default.(int)
+	// ordercounterDescVersion is the schema descriptor for version field.
+	ordercounterDescVersion := ordercounterFields[3].Descriptor()
+	// ordercounter.DefaultVersion holds the default value on creation for the version field.
+	ordercounter.DefaultVersion = ordercounterDescVersion.Default.(int)
+	// ordercounterDescUpdatedAt is the schema descriptor for updated_at field.
+	ordercounterDescUpdatedAt := ordercounterFields[4].Descriptor()
+	// ordercounter.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	ordercounter.DefaultUpdatedAt = ordercounterDescUpdatedAt.Default.(func() time.Time)
+	// ordercounter.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	ordercounter.UpdateDefaultUpdatedAt = ordercounterDescUpdatedAt.UpdateDefault.(func() time.Time)
 	processingspecFields := schema.ProcessingSpec{}.Fields()
 	_ = processingspecFields
 	// processingspecDescCode is the schema descriptor for code field.

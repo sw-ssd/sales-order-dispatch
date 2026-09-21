@@ -231,6 +231,28 @@ var (
 			},
 		},
 	}
+	// OrderCountersColumns holds the columns for the "order_counters" table.
+	OrderCountersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "company_id", Type: field.TypeInt},
+		{Name: "source", Type: field.TypeString},
+		{Name: "next_seq", Type: field.TypeInt, Default: 1},
+		{Name: "version", Type: field.TypeInt, Default: 0},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// OrderCountersTable holds the schema information for the "order_counters" table.
+	OrderCountersTable = &schema.Table{
+		Name:       "order_counters",
+		Columns:    OrderCountersColumns,
+		PrimaryKey: []*schema.Column{OrderCountersColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "ordercounter_company_id_source",
+				Unique:  true,
+				Columns: []*schema.Column{OrderCountersColumns[1], OrderCountersColumns[2]},
+			},
+		},
+	}
 	// ProcessingSpecsColumns holds the columns for the "processing_specs" table.
 	ProcessingSpecsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -626,6 +648,7 @@ var (
 		CustomerCountersTable,
 		DepartmentsTable,
 		MetadictsTable,
+		OrderCountersTable,
 		ProcessingSpecsTable,
 		ProductsTable,
 		ProductCategoriesTable,
