@@ -160,7 +160,7 @@ type Counter interface {
 | 額度不足（`CheckLimit` 已達上限） | `PLAT-5001` `PlatformLimitExceeded` → `failed_precondition`（details：`feature`／`used`／`limit`） |
 | 方案／override 未含該功能（`Allows` 為 false） | `PLAT-5002` `PlatformFeatureNotInPlan` → `failed_precondition`（details：`feature`） |
 | 訂閱狀態不允許此操作（`suspended`／`cancelled`，非權限問題） | `PLAT-3001` `PlatformSubscriptionInactive` → `failed_precondition` |
-| 收款衝突（金額與期別快照不符、期別已付款的衝突分支） | `PLAT-3002` `PlatformPaymentConflict` → `failed_precondition`（details：`reason`） |
+| 收款衝突（金額與期別快照不符、期別已付款的衝突分支） | `PLAT-3002` `PlatformPaymentConflict` → `failed_precondition`（details：`kind`＋`reason`；未結項 #30 已落地） |
 | 操作者治理不變式被違反（停用自己／最後一位 admin） | `PLAT-3003` `PlatformOperatorGovernance` → `failed_precondition`（details：`reason`；Plan C 新增，見 §2.4 待辦） |
 | `trialing` | 允許使用；投影帶 `trial_ends_at` 供 UI 提醒 |
 | 平台層身分（`super` / `developer`，`data_scope=all`） | **略過 entitlement 判斷**（平台方不受租戶合約限制）；寫死在守衛入口並有測試 |
@@ -173,7 +173,9 @@ type Counter interface {
 >
 > 實際落點有三種來源：①輸入金額與期別快照不符（`billing.go:185`）②期別已付款但交易號不同（`billing.go:153`）③`MarkPeriodPaidTx` 的殘餘錯誤一律被 `Wrap` 成它（`billing.go:198`）——**第三種包含基礎設施失敗**（死鎖、序化失敗、連線中斷）。後端只能用 `details.reason` 的中文關鍵詞分辨前兩者；第三種的 `reason` 為空。
 >
-> **因此：`PLAT-3002` 一律視為「可能有衝突、需要人看」，但不得據此判定「不可重試」。** 前端的行動指引在無法分辨時退回通用說法（console 現況即是：兩種已知語意給不同指引、其餘給通用指引，**永不呈現「不可重試」**）。要結構化分流得在 `ErrorInfo.details` 加專屬鍵（例 `details.conflict`），那會動 proto，列為後續項。
+> **因此：`PLAT-3002` 一律視為「可能有衝突、需要人看」，但不得據此判定「不可重試」。** 前端的行動指引在無法分辨時退回通用說法（console 現況即是：兩種已知語意給不同指引、其餘給通用指引，**永不呈現「不可重試」**）。
+>
+> **更正（2026-09-22 補記，未結項 #30 已落地）：結構化分流鍵為 `details.kind`**（`amount_mismatch`／`ref_mismatch`／`cross_period`；`ErrorInfo.details` 是 `map<string,string>`，不動 proto）。console 優先走 kind、無 kind 回退中文關鍵詞（舊版後端相容）。第三種來源（`MarkPeriodPaidTx` 殘餘錯誤）帶 `kind=cross_period`，但仍含基礎設施失敗 —— 「不得據此放棄重試」繼續有效。
 
 **已知不一致（未解，歸屬 auth／spec 擁有者，Plan D 不單方面改）**：
 
