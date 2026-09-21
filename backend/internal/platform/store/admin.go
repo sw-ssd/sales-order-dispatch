@@ -47,6 +47,9 @@ type TenantRow struct {
 	SeatCount        int32
 	CurrentPeriodEnd *time.Time // nil = 尚無期別(proto 的空字串)
 	Overdue          bool       // 有已過期未付的期別(待收款清單的定義)
+	// 未結項 #27：試用到期／寬限期（nil = 無；trialing 才有前者、past_due 才有後者）。
+	TrialEndsAt *time.Time
+	GraceUntil  *time.Time
 }
 
 // TenantOverrideRow 為 platform.tenant_overrides 的一列。已撤銷(revoked_at)者不回傳;

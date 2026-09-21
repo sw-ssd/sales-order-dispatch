@@ -117,6 +117,10 @@ func TestIntegrationPlatformAdmin(t *testing.T) {
 		if none.GetCurrentPeriodEnd() != "" || none.GetOverdue() {
 			t.Fatalf("未訂閱租戶不得有到期日／逾期: %v", none)
 		}
+		// 未結項 #27：無訂閱即無 trial_ends_at／grace_until（LATERAL 無列 → 兩欄 NULL）。
+		if none.GetTrialEndsAt() != "" || none.GetGraceUntil() != "" {
+			t.Fatalf("未訂閱租戶不得有試用到期／寬限期: %v", none)
+		}
 
 		// 已取消的租戶:合約仍在(期末終止、資料不刪除),console 必須看得見它 ——
 		// 投影成 status=none 會讓營運找不到那份合約,status=cancelled 的篩選也永遠 0 筆。

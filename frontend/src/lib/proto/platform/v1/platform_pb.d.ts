@@ -61,6 +61,20 @@ export declare type TenantSummary = Message<"platform.v1.TenantSummary"> & {
    * @generated from field: bool overdue = 8;
    */
   overdue: boolean;
+
+  /**
+   * RFC3339,可空（試用中才有；未結項 #27）
+   *
+   * @generated from field: string trial_ends_at = 10;
+   */
+  trialEndsAt: string;
+
+  /**
+   * RFC3339,可空（past_due 才有；未結項 #27）
+   *
+   * @generated from field: string grace_until = 11;
+   */
+  graceUntil: string;
 };
 
 /**

@@ -304,6 +304,8 @@ func tenantToProto(r TenantRow) *platformv1.TenantSummary {
 		SeatCount:          r.SeatCount,
 		CurrentPeriodEnd:   formatTime(r.CurrentPeriodEnd),
 		Overdue:            r.Overdue,
+		TrialEndsAt:        formatTime(r.TrialEndsAt),
+		GraceUntil:         formatTime(r.GraceUntil),
 	}
 }
 

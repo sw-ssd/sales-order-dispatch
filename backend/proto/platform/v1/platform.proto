@@ -16,6 +16,8 @@ message TenantSummary {
   int32  seat_count = 6;
   string current_period_end = 7;   // RFC3339,可空
   bool   overdue = 8;              // 有未付期別
+  string trial_ends_at = 10;       // RFC3339,可空（試用中才有；未結項 #27）
+  string grace_until = 11;         // RFC3339,可空（past_due 才有；未結項 #27）
 }
 
 // PlatformPagination:平台查詢統一分頁結果。

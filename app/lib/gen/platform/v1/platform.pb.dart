@@ -29,6 +29,8 @@ class TenantSummary extends $pb.GeneratedMessage {
     $core.int? seatCount,
     $core.String? currentPeriodEnd,
     $core.bool? overdue,
+    $core.String? trialEndsAt,
+    $core.String? graceUntil,
   }) {
     final result = TenantSummary._();
     if (companyId != null) result.companyId = companyId;
@@ -40,6 +42,8 @@ class TenantSummary extends $pb.GeneratedMessage {
     if (seatCount != null) result.seatCount = seatCount;
     if (currentPeriodEnd != null) result.currentPeriodEnd = currentPeriodEnd;
     if (overdue != null) result.overdue = overdue;
+    if (trialEndsAt != null) result.trialEndsAt = trialEndsAt;
+    if (graceUntil != null) result.graceUntil = graceUntil;
     return result;
   }
 
@@ -64,6 +68,8 @@ class TenantSummary extends $pb.GeneratedMessage {
     ..aI(6, _omitFieldNames ? '' : 'seatCount')
     ..aOS(7, _omitFieldNames ? '' : 'currentPeriodEnd')
     ..aOB(8, _omitFieldNames ? '' : 'overdue')
+    ..aOS(10, _omitFieldNames ? '' : 'trialEndsAt')
+    ..aOS(11, _omitFieldNames ? '' : 'graceUntil')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -159,6 +165,24 @@ class TenantSummary extends $pb.GeneratedMessage {
   $core.bool hasOverdue() => $_has(7);
   @$pb.TagNumber(8)
   void clearOverdue() => $_clearField(8);
+
+  @$pb.TagNumber(10)
+  $core.String get trialEndsAt => $_getSZ(8);
+  @$pb.TagNumber(10)
+  set trialEndsAt($core.String value) => $_setString(8, value);
+  @$pb.TagNumber(10)
+  $core.bool hasTrialEndsAt() => $_has(8);
+  @$pb.TagNumber(10)
+  void clearTrialEndsAt() => $_clearField(10);
+
+  @$pb.TagNumber(11)
+  $core.String get graceUntil => $_getSZ(9);
+  @$pb.TagNumber(11)
+  set graceUntil($core.String value) => $_setString(9, value);
+  @$pb.TagNumber(11)
+  $core.bool hasGraceUntil() => $_has(9);
+  @$pb.TagNumber(11)
+  void clearGraceUntil() => $_clearField(11);
 }
 
 /// PlatformPagination:平台查詢統一分頁結果。

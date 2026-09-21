@@ -45,7 +45,7 @@ func NewAdmin(db *sql.DB) *Admin { return &Admin{db: db} }
 //   - overdue 為「已過期未付的 open 期別」(spec §5.4 的待收款定義)。本查詢只看 platform 表,
 //     不碰業務表的帳務欄位。
 const tenantCols = `SELECT c.id, c.name, COALESCE(p.code, ''), COALESCE(p.name, ''),
-	       COALESCE(s.status, 'none'), COALESCE(s.seat_count, 0),
+	       COALESCE(s.status, 'none'), COALESCE(s.seat_count, 0), s.trial_ends_at, s.grace_until,
 	       (SELECT pp.period_end
 	          FROM platform.subscription_periods pp
 	         WHERE pp.subscription_id = s.id AND pp.period_start <= now()
@@ -56,7 +56,7 @@ const tenantCols = `SELECT c.id, c.name, COALESCE(p.code, ''), COALESCE(p.name, 
 const tenantJoins = `
 	  FROM companies c
 	  LEFT JOIN LATERAL (
-	        SELECT s.status, s.seat_count, s.plan_id, s.id
+	        SELECT s.status, s.seat_count, s.plan_id, s.id, s.trial_ends_at, s.grace_until
 	          FROM platform.subscriptions s
 	         WHERE s.company_id = c.id
 	         ORDER BY (s.status = 'cancelled'), s.started_at DESC, s.id DESC
@@ -396,15 +396,26 @@ func scanTenant(sc rowScanner) (store.TenantRow, error) {
 		id        int64
 		row       store.TenantRow
 		periodEnd sql.NullTime
+		trialEnds sql.NullTime
+		grace     sql.NullTime
 	)
 	if err := sc.Scan(&id, &row.CompanyName, &row.PlanCode, &row.PlanName, &row.Status,
-		&row.SeatCount, &periodEnd, &row.Overdue); err != nil {
+		&row.SeatCount, &trialEnds, &grace, &periodEnd, &row.Overdue); err != nil {
 		return store.TenantRow{}, err
 	}
 	row.CompanyID = strconv.FormatInt(id, 10)
 	if periodEnd.Valid {
 		v := periodEnd.Time
 		row.CurrentPeriodEnd = &v
+	}
+	// 未結項 #27：LATERAL 無列時（無訂閱）s.* 全 NULL → 兩欄皆 nil（proto 空字串）。
+	if trialEnds.Valid {
+		v := trialEnds.Time
+		row.TrialEndsAt = &v
+	}
+	if grace.Valid {
+		v := grace.Time
+		row.GraceUntil = &v
 	}
 	return row, nil
 }

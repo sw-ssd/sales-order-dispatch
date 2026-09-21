@@ -32,6 +32,8 @@ type TenantSummary struct {
 	SeatCount          int32                  `protobuf:"varint,6,opt,name=seat_count,json=seatCount,proto3" json:"seat_count,omitempty"`
 	CurrentPeriodEnd   string                 `protobuf:"bytes,7,opt,name=current_period_end,json=currentPeriodEnd,proto3" json:"current_period_end,omitempty"` // RFC3339,可空
 	Overdue            bool                   `protobuf:"varint,8,opt,name=overdue,proto3" json:"overdue,omitempty"`                                            // 有未付期別
+	TrialEndsAt        string                 `protobuf:"bytes,10,opt,name=trial_ends_at,json=trialEndsAt,proto3" json:"trial_ends_at,omitempty"`               // RFC3339,可空（試用中才有；未結項 #27）
+	GraceUntil         string                 `protobuf:"bytes,11,opt,name=grace_until,json=graceUntil,proto3" json:"grace_until,omitempty"`                    // RFC3339,可空（past_due 才有；未結項 #27）
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -120,6 +122,20 @@ func (x *TenantSummary) GetOverdue() bool {
 		return x.Overdue
 	}
 	return false
+}
+
+func (x *TenantSummary) GetTrialEndsAt() string {
+	if x != nil {
+		return x.TrialEndsAt
+	}
+	return ""
+}
+
+func (x *TenantSummary) GetGraceUntil() string {
+	if x != nil {
+		return x.GraceUntil
+	}
+	return ""
 }
 
 // PlatformPagination:平台查詢統一分頁結果。
@@ -3214,7 +3230,7 @@ var File_platform_v1_platform_proto protoreflect.FileDescriptor
 
 const file_platform_v1_platform_proto_rawDesc = "" +
 	"\n" +
-	"\x1aplatform/v1/platform.proto\x12\vplatform.v1\"\xa3\x02\n" +
+	"\x1aplatform/v1/platform.proto\x12\vplatform.v1\"\xe8\x02\n" +
 	"\rTenantSummary\x12\x1d\n" +
 	"\n" +
 	"company_id\x18\x01 \x01(\tR\tcompanyId\x12!\n" +
@@ -3225,7 +3241,11 @@ const file_platform_v1_platform_proto_rawDesc = "" +
 	"\n" +
 	"seat_count\x18\x06 \x01(\x05R\tseatCount\x12,\n" +
 	"\x12current_period_end\x18\a \x01(\tR\x10currentPeriodEnd\x12\x18\n" +
-	"\aoverdue\x18\b \x01(\bR\aoverdue\"[\n" +
+	"\aoverdue\x18\b \x01(\bR\aoverdue\x12\"\n" +
+	"\rtrial_ends_at\x18\n" +
+	" \x01(\tR\vtrialEndsAt\x12\x1f\n" +
+	"\vgrace_until\x18\v \x01(\tR\n" +
+	"graceUntil\"[\n" +
 	"\x12PlatformPagination\x12\x12\n" +
 	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x14\n" +

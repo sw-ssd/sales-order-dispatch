@@ -39,6 +39,8 @@ const TenantSummary$json = {
       '10': 'currentPeriodEnd'
     },
     {'1': 'overdue', '3': 8, '4': 1, '5': 8, '10': 'overdue'},
+    {'1': 'trial_ends_at', '3': 10, '4': 1, '5': 9, '10': 'trialEndsAt'},
+    {'1': 'grace_until', '3': 11, '4': 1, '5': 9, '10': 'graceUntil'},
   ],
 };
 
@@ -49,7 +51,8 @@ final $typed_data.Uint8List tenantSummaryDescriptor = $convert.base64Decode(
     'GwoJcGxhbl9uYW1lGAQgASgJUghwbGFuTmFtZRIvChNzdWJzY3JpcHRpb25fc3RhdHVzGAUgAS'
     'gJUhJzdWJzY3JpcHRpb25TdGF0dXMSHQoKc2VhdF9jb3VudBgGIAEoBVIJc2VhdENvdW50EiwK'
     'EmN1cnJlbnRfcGVyaW9kX2VuZBgHIAEoCVIQY3VycmVudFBlcmlvZEVuZBIYCgdvdmVyZHVlGA'
-    'ggASgIUgdvdmVyZHVl');
+    'ggASgIUgdvdmVyZHVlEiIKDXRyaWFsX2VuZHNfYXQYCiABKAlSC3RyaWFsRW5kc0F0Eh8KC2dy'
+    'YWNlX3VudGlsGAsgASgJUgpncmFjZVVudGls');
 
 @$core.Deprecated('Use platformPaginationDescriptor instead')
 const PlatformPagination$json = {
