@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package products.v1;
+option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/proto/products/v1;productsv1";
+
+import "salesorder/v1/common.proto";
+
+// PrintService:列印與預覽(09 計畫 Task 5.5.2–5.5.4)。
+// Preview 不限訂單狀態、不寫 print_logs;Print 要求範圍內訂單全 processing;
+// 重印沿用 Print(有既有記錄即重印分支,必填 reprint_reason)。
+service PrintService {
+  // Preview:預覽(任何狀態可印,寫 print_previews,不觸碰 print_logs)。
+  rpc Preview(PreviewRequest) returns (PreviewResponse);
+  // Print:正式列印(範圍內全 processing;首印/重印推導,見 5.5.3–5.5.4)。
+  rpc Print(PrintRequest) returns (PrintResponse);
+  // ListLogs:列印記錄查詢(部門範圍,分頁 per_page ≤ 100)。
+  rpc ListLogs(ListLogsRequest) returns (ListLogsResponse);
+}
+
+// PreviewRequest:預覽請求。
+message PreviewRequest {
+  string document_type = 1; // dispatch_summary/delivery_note/picking_list/processing_list
+  string route_id = 2;
+  string target_date = 3;   // YYYY-MM-DD
+  string customer_id = 4;   // 可空(對點單單印一店)
+  string warehouse_id = 5;  // 可空(揀貨單單印一倉)
+}
+
+// PreviewResponse:預覽結果。
+message PreviewResponse {
+  string preview_id = 1;
+  string file_asset_id = 2;
+  string download_url = 3;
+}
+
+// PrintRequest:正式列印請求。
+message PrintRequest {
+  string document_type = 1;
+  string route_id = 2;
+  string target_date = 3;   // YYYY-MM-DD
+  string customer_id = 4;   // 可空
+  string warehouse_id = 5;  // 可空
+  string reprint_reason = 6; // 可空(重印時必填)
+}
+
+// PrintResponse:正式列印結果。
+message PrintResponse {
+  string print_log_id = 1;
+  string file_asset_id = 2;
+  string download_url = 3;
+  bool is_reprint = 4;
+}
+
+// ListLogsRequest:列印記錄查詢。
+message ListLogsRequest {
+  string date_from = 1;     // 可空(YYYY-MM-DD)
+  string date_to = 2;       // 可空(YYYY-MM-DD)
+  string document_type = 3; // 可空
+  string route_id = 4;      // 可空
+  int32 page = 5;           // 1-based,預設 1
+  int32 page_size = 6;      // 預設 20,上限 100
+}
+
+// LogEntry:單筆列印記錄。
+message LogEntry {
+  string id = 1;
+  string document_type = 2;
+  string route_id = 3;
+  string target_date = 4;    // YYYY-MM-DD
+  string printed_by = 5;
+  string printed_at = 6;     // RFC3339
+  bool is_reprint = 7;
+  string reprint_reason = 8; // 可空
+  string download_url = 9;
+}
+
+// ListLogsResponse:列印記錄列表。
+message ListLogsResponse {
+  repeated LogEntry entries = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  int32 total = 4;
+}

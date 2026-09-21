@@ -26,6 +26,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
 	postgresstore "github.com/salesorder/sales-order-1.0/backend/internal/platform/store/postgres"
+	"github.com/salesorder/sales-order-1.0/backend/internal/print"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/internal/services"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/cache"
@@ -113,12 +114,13 @@ func (s *Server) mountAuth() {
 	// AbilityService(T9/D30):CASL 規則下發給前端 @casl/ability 初始化。
 	abilityPath, abilityHandler := salesorderv1connect.NewAbilityServiceHandler(domainauth.NewAbilityHandler(entClient, domainauth.Config{DeveloperAccountEnabled: s.cfg.API.DeveloperAccountEnabled}), connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(entClient)))
 	apiMux.Handle(abilityPath, abilityHandler)
-	services.RegisterCompanyServices(apiMux, entClient, entSvc)                          // CompanyService/DepartmentService(T20)
-	services.RegisterUserServices(apiMux, entClient, entSvc)                             // UserService(02 Task 3)
-	services.RegisterMetadictServices(apiMux, entClient)                                 // MetadictService(03 Task 2)
-	services.RegisterAuditServices(apiMux, entClient)                                    // AuditService(03 Task 6, A4)
-	services.RegisterCustomerServices(apiMux, entClient, s.cfg.Auth.FrontendURL, entSvc) // CustomerService(04 Task 1-2 + D22 帳號交付 URL)
-	services.SetQRSecret(s.cfg.Auth.JWTSecret)                                           // QR 簽章密鑰(JWT 複用;04 Task 3.8.1)
+	services.RegisterCompanyServices(apiMux, entClient, entSvc)                                   // CompanyService/DepartmentService(T20)
+	services.RegisterUserServices(apiMux, entClient, entSvc)                                      // UserService(02 Task 3)
+	services.RegisterMetadictServices(apiMux, entClient)                                          // MetadictService(03 Task 2)
+	services.RegisterAuditServices(apiMux, entClient)                                             // AuditService(03 Task 6, A4)
+	services.RegisterCustomerServices(apiMux, entClient, s.cfg.Auth.FrontendURL, entSvc)          // CustomerService(04 Task 1-2 + D22 帳號交付 URL)
+	services.SetQRSecret(s.cfg.Auth.JWTSecret)                                                    // QR 簽章密鑰(JWT 複用;04 Task 3.8.1)
+	services.SetPrintPipeline(print.NewClient(s.cfg.API.GotenbergURL), s.cfg.Storage.StorageRoot) // PDF 產線(09 Task 5.4)
 	// 04 Task 3.4 部門級主檔(Warehouse/Route/ProcessingSpec/ProductCategory)。
 	services.RegisterWarehouseService(apiMux, entClient)
 	services.RegisterRouteService(apiMux, entClient)
@@ -127,6 +129,7 @@ func (s *Server) mountAuth() {
 	services.RegisterProductService(apiMux, entClient, entSvc) // 04 Task 3.3 商品主檔
 	services.RegisterCustomerProductService(apiMux, entClient) // CustomerProductService(04 Task 3.5)
 	services.RegisterSalesOrderService(apiMux, entClient)      // SalesOrderService(05 Task 4)
+	services.RegisterPrintService(apiMux, entClient)           // PrintService(09 Task 5.5.2-5.5.4)
 	// 04 Task 3.6 檔案資產(REST:上傳/下載/軟刪除,掛同一 apiMux,與 Connect 路徑不衝突)。
 	fileassets.NewHandler(entClient, s.cfg.Storage.StorageRoot).RegisterRoutes(apiMux)
 	// T10/T10b 租戶端權益投影：租戶後台／App 的「我的方案與用量」。掛在 /api/v1 之下（租戶

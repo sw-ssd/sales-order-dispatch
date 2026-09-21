@@ -62,16 +62,24 @@ func TestIntegrationPrintRecordsSchemaUpDown(t *testing.T) {
 		t.Fatalf("dialect: %v", err)
 	}
 	goose.SetTableName("goose_db_version")
-	if err := goose.RunContext(ctx, "down-to", db, "../../database/migrations", "36"); err != nil {
-		t.Fatalf("down-to 36: %v", err)
+	if err := goose.RunContext(ctx, "down-to", db, "../../database/migrations", "37"); err != nil {
+		t.Fatalf("down-to 37: %v", err)
 	}
+	// down-to 37 只回滾 00038(ENABLE 解除),00037 的表留著:斷言 RLS 已 DISABLE 且表仍在。
 	for _, tbl := range []string{"print_logs", "print_previews"} {
 		var exists bool
 		if err := db.QueryRow(`SELECT to_regclass($1) IS NOT NULL`, "public."+tbl).Scan(&exists); err != nil {
 			t.Fatalf("查表存在: %v", err)
 		}
-		if exists {
-			t.Fatalf("Down 後 %s 應消失", tbl)
+		if !exists {
+			t.Fatalf("down-to 37 不得帶走 00037 的表 %s", tbl)
+		}
+		var enabled bool
+		if err := db.QueryRow(`SELECT relrowsecurity FROM pg_class WHERE relname = $1`, tbl).Scan(&enabled); err != nil {
+			t.Fatalf("查 RLS 狀態 %s: %v", tbl, err)
+		}
+		if enabled {
+			t.Fatalf("down-to 37 後 %s 的 RLS 應已 DISABLE", tbl)
 		}
 	}
 	if err := goose.RunContext(ctx, "up", db, "../../database/migrations"); err != nil {
