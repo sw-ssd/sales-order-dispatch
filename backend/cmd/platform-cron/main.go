@@ -68,6 +68,9 @@ func main() {
 	// 沒有快取＝不失效（該租戶最長 TTL 內仍讀舊權益），TTL 是那條路的保底。
 	var entCache entitlements.Cache
 	valkeyClient := cache.NewClient(cfg.Cache.ValkeyAddr)
+	// 未結項 #20：行程結束即關 client —— 不關會漏一個閒置 TCP 連線直到行程被回收。
+	// 短命 CronJob 每次一條，累積即 Valkey 端的 CLIENT LIST 噪音。
+	defer func() { _ = valkeyClient.Close() }()
 	if pingErr := cache.Ping(context.Background(), valkeyClient); pingErr != nil {
 		log.Printf("platform-cron: Valkey 不可用(%v) → 訂閱狀態異動不做權益快取失效（最長 TTL 內仍讀舊權益）",
 			pingErr)
