@@ -133,8 +133,12 @@ func TestIntegrationBillingMigrationSettings(t *testing.T) {
 
 	// 回滾：00030 的 down 只帶走 settings，00029 的其他表必須留著；回滾後重新 up 要能再建回
 	//（回滾鏈可重複：migrate down 不得只把版本列往回寫而把物件留在庫上）。
-	if err := goose.RunContext(ctx, "down", db, platformMigrationsDir); err != nil {
-		t.Fatalf("goose down(00030): %v", err)
+	// down-to 29（29 保留、30＋ 回滾）：goose 的 down-to 語意是「回滾到該版本」，
+	// 不是「回滾該版本」—— 要執行 00030 的 Down 必須停在 29。00031＋ 的訂單／清單表
+	// 在本測試的庫上游（up 跑全量目錄），故一併被帶走；本測試只斷言 00030/00029 的語意，
+	// 不斷言訂單表去留（訂單表的 Down 由 sales_order_schema_test 覆蓋）。
+	if err := goose.RunContext(ctx, "down-to", db, platformMigrationsDir, "29"); err != nil {
+		t.Fatalf("goose down-to 29: %v", err)
 	}
 	var settings, subscriptions sql.NullString
 	if err := db.QueryRowContext(ctx, `
