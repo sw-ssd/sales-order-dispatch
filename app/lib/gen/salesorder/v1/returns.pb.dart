@@ -887,6 +887,400 @@ class GetReturnRequestResponse extends $pb.GeneratedMessage {
   $pb.PbList<ReturnRequestItemView> get items => $_getList(6);
 }
 
+/// ReviewReturnRequestRequest:審核請求。
+class ReviewReturnRequestRequest extends $pb.GeneratedMessage {
+  factory ReviewReturnRequestRequest({
+    $core.String? id,
+    $core.String? decision,
+    $core.String? rejectReason,
+    $core.String? expectedVersion,
+  }) {
+    final result = ReviewReturnRequestRequest._();
+    if (id != null) result.id = id;
+    if (decision != null) result.decision = decision;
+    if (rejectReason != null) result.rejectReason = rejectReason;
+    if (expectedVersion != null) result.expectedVersion = expectedVersion;
+    return result;
+  }
+
+  ReviewReturnRequestRequest._();
+
+  factory ReviewReturnRequestRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ReviewReturnRequestRequest()..mergeFromBuffer(data, registry);
+  factory ReviewReturnRequestRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ReviewReturnRequestRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ReviewReturnRequestRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: ReviewReturnRequestRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'decision')
+    ..aOS(3, _omitFieldNames ? '' : 'rejectReason')
+    ..aOS(4, _omitFieldNames ? '' : 'expectedVersion')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReviewReturnRequestRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReviewReturnRequestRequest copyWith(
+          void Function(ReviewReturnRequestRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as ReviewReturnRequestRequest))
+          as ReviewReturnRequestRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ReviewReturnRequestRequest() / ReviewReturnRequestRequest.new instead')
+  static ReviewReturnRequestRequest create() => ReviewReturnRequestRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      ReviewReturnRequestRequest._();
+  @$core.override
+  ReviewReturnRequestRequest createEmptyInstance() =>
+      ReviewReturnRequestRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ReviewReturnRequestRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ReviewReturnRequestRequest>(
+          ReviewReturnRequestRequest.$_createMessage);
+  static ReviewReturnRequestRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get decision => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set decision($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasDecision() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearDecision() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get rejectReason => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set rejectReason($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasRejectReason() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearRejectReason() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get expectedVersion => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set expectedVersion($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasExpectedVersion() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearExpectedVersion() => $_clearField(4);
+}
+
+/// ReviewReturnRequestResponse:審核結果。
+class ReviewReturnRequestResponse extends $pb.GeneratedMessage {
+  factory ReviewReturnRequestResponse({
+    $core.String? id,
+    $core.String? status,
+    $core.String? reviewedAt,
+  }) {
+    final result = ReviewReturnRequestResponse._();
+    if (id != null) result.id = id;
+    if (status != null) result.status = status;
+    if (reviewedAt != null) result.reviewedAt = reviewedAt;
+    return result;
+  }
+
+  ReviewReturnRequestResponse._();
+
+  factory ReviewReturnRequestResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ReviewReturnRequestResponse()..mergeFromBuffer(data, registry);
+  factory ReviewReturnRequestResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ReviewReturnRequestResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ReviewReturnRequestResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: ReviewReturnRequestResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'status')
+    ..aOS(3, _omitFieldNames ? '' : 'reviewedAt')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReviewReturnRequestResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ReviewReturnRequestResponse copyWith(
+          void Function(ReviewReturnRequestResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as ReviewReturnRequestResponse))
+          as ReviewReturnRequestResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ReviewReturnRequestResponse() / ReviewReturnRequestResponse.new instead')
+  static ReviewReturnRequestResponse create() =>
+      ReviewReturnRequestResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      ReviewReturnRequestResponse._();
+  @$core.override
+  ReviewReturnRequestResponse createEmptyInstance() =>
+      ReviewReturnRequestResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ReviewReturnRequestResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ReviewReturnRequestResponse>(
+          ReviewReturnRequestResponse.$_createMessage);
+  static ReviewReturnRequestResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get status => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set status($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasStatus() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearStatus() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get reviewedAt => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set reviewedAt($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasReviewedAt() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearReviewedAt() => $_clearField(3);
+}
+
+/// GetReturnCertificateRequest:證明請求。
+class GetReturnCertificateRequest extends $pb.GeneratedMessage {
+  factory GetReturnCertificateRequest({
+    $core.String? id,
+  }) {
+    final result = GetReturnCertificateRequest._();
+    if (id != null) result.id = id;
+    return result;
+  }
+
+  GetReturnCertificateRequest._();
+
+  factory GetReturnCertificateRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetReturnCertificateRequest()..mergeFromBuffer(data, registry);
+  factory GetReturnCertificateRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetReturnCertificateRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetReturnCertificateRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: GetReturnCertificateRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetReturnCertificateRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetReturnCertificateRequest copyWith(
+          void Function(GetReturnCertificateRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as GetReturnCertificateRequest))
+          as GetReturnCertificateRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetReturnCertificateRequest() / GetReturnCertificateRequest.new instead')
+  static GetReturnCertificateRequest create() =>
+      GetReturnCertificateRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      GetReturnCertificateRequest._();
+  @$core.override
+  GetReturnCertificateRequest createEmptyInstance() =>
+      GetReturnCertificateRequest._();
+  @$core.pragma('dart2js:noInline')
+  static GetReturnCertificateRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetReturnCertificateRequest>(
+          GetReturnCertificateRequest.$_createMessage);
+  static GetReturnCertificateRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+}
+
+/// GetReturnCertificateResponse:證明內容(快照)。
+class GetReturnCertificateResponse extends $pb.GeneratedMessage {
+  factory GetReturnCertificateResponse({
+    $core.String? id,
+    $core.String? customerCode,
+    $core.String? customerName,
+    $core.String? createdAt,
+    $core.String? status,
+    $core.String? reviewerName,
+    $core.String? reviewedAt,
+    $core.Iterable<ReturnRequestItemView>? items,
+  }) {
+    final result = GetReturnCertificateResponse._();
+    if (id != null) result.id = id;
+    if (customerCode != null) result.customerCode = customerCode;
+    if (customerName != null) result.customerName = customerName;
+    if (createdAt != null) result.createdAt = createdAt;
+    if (status != null) result.status = status;
+    if (reviewerName != null) result.reviewerName = reviewerName;
+    if (reviewedAt != null) result.reviewedAt = reviewedAt;
+    if (items != null) result.items.addAll(items);
+    return result;
+  }
+
+  GetReturnCertificateResponse._();
+
+  factory GetReturnCertificateResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetReturnCertificateResponse()..mergeFromBuffer(data, registry);
+  factory GetReturnCertificateResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      GetReturnCertificateResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'GetReturnCertificateResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: GetReturnCertificateResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'customerCode')
+    ..aOS(3, _omitFieldNames ? '' : 'customerName')
+    ..aOS(4, _omitFieldNames ? '' : 'createdAt')
+    ..aOS(5, _omitFieldNames ? '' : 'status')
+    ..aOS(6, _omitFieldNames ? '' : 'reviewerName')
+    ..aOS(7, _omitFieldNames ? '' : 'reviewedAt')
+    ..pPM<ReturnRequestItemView>(8, _omitFieldNames ? '' : 'items',
+        subBuilder: ReturnRequestItemView.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetReturnCertificateResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  GetReturnCertificateResponse copyWith(
+          void Function(GetReturnCertificateResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as GetReturnCertificateResponse))
+          as GetReturnCertificateResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use GetReturnCertificateResponse() / GetReturnCertificateResponse.new instead')
+  static GetReturnCertificateResponse create() =>
+      GetReturnCertificateResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      GetReturnCertificateResponse._();
+  @$core.override
+  GetReturnCertificateResponse createEmptyInstance() =>
+      GetReturnCertificateResponse._();
+  @$core.pragma('dart2js:noInline')
+  static GetReturnCertificateResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<GetReturnCertificateResponse>(
+          GetReturnCertificateResponse.$_createMessage);
+  static GetReturnCertificateResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get customerCode => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set customerCode($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasCustomerCode() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearCustomerCode() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get customerName => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set customerName($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasCustomerName() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearCustomerName() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get createdAt => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set createdAt($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasCreatedAt() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearCreatedAt() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get status => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set status($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasStatus() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearStatus() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get reviewerName => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set reviewerName($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasReviewerName() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearReviewerName() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get reviewedAt => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set reviewedAt($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasReviewedAt() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearReviewedAt() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $pb.PbList<ReturnRequestItemView> get items => $_getList(7);
+}
+
 /// ReturnService:退貨申請與審核(06 計畫 Task 4.7.2–4.7.4, D25)。
 /// 發起僅客戶子帳號(主帳號一律拒絕);審核僅主責業務/dept_admin 以上;
 /// 全程不修改原訂單(僅參照)。
@@ -912,6 +1306,18 @@ class ReturnServiceApi {
           $pb.ClientContext? ctx, GetReturnRequestRequest request) =>
       _client.invoke<GetReturnRequestResponse>(ctx, 'ReturnService',
           'GetReturnRequest', request, GetReturnRequestResponse());
+
+  /// ReviewReturnRequest:審核(approved/rejected + 樂觀鎖;同交易寫稽核;不碰原訂單)。
+  $async.Future<ReviewReturnRequestResponse> reviewReturnRequest(
+          $pb.ClientContext? ctx, ReviewReturnRequestRequest request) =>
+      _client.invoke<ReviewReturnRequestResponse>(ctx, 'ReturnService',
+          'ReviewReturnRequest', request, ReviewReturnRequestResponse());
+
+  /// GetReturnCertificate:退貨證明(僅 approved;快照內容;唯讀不寫稽核)。
+  $async.Future<GetReturnCertificateResponse> getReturnCertificate(
+          $pb.ClientContext? ctx, GetReturnCertificateRequest request) =>
+      _client.invoke<GetReturnCertificateResponse>(ctx, 'ReturnService',
+          'GetReturnCertificate', request, GetReturnCertificateResponse());
 }
 
 const $core.bool _omitFieldNames =

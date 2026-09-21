@@ -42,6 +42,12 @@ const (
 	// ReturnServiceGetReturnRequestProcedure is the fully-qualified name of the ReturnService's
 	// GetReturnRequest RPC.
 	ReturnServiceGetReturnRequestProcedure = "/salesorder.v1.ReturnService/GetReturnRequest"
+	// ReturnServiceReviewReturnRequestProcedure is the fully-qualified name of the ReturnService's
+	// ReviewReturnRequest RPC.
+	ReturnServiceReviewReturnRequestProcedure = "/salesorder.v1.ReturnService/ReviewReturnRequest"
+	// ReturnServiceGetReturnCertificateProcedure is the fully-qualified name of the ReturnService's
+	// GetReturnCertificate RPC.
+	ReturnServiceGetReturnCertificateProcedure = "/salesorder.v1.ReturnService/GetReturnCertificate"
 )
 
 // ReturnServiceClient is a client for the salesorder.v1.ReturnService service.
@@ -52,6 +58,10 @@ type ReturnServiceClient interface {
 	ListReturnRequests(context.Context, *connect.Request[v1.ListReturnRequestsRequest]) (*connect.Response[v1.ListReturnRequestsResponse], error)
 	// GetReturnRequest:單筆含品項明細(照片轉下載 URL)。
 	GetReturnRequest(context.Context, *connect.Request[v1.GetReturnRequestRequest]) (*connect.Response[v1.GetReturnRequestResponse], error)
+	// ReviewReturnRequest:審核(approved/rejected + 樂觀鎖;同交易寫稽核;不碰原訂單)。
+	ReviewReturnRequest(context.Context, *connect.Request[v1.ReviewReturnRequestRequest]) (*connect.Response[v1.ReviewReturnRequestResponse], error)
+	// GetReturnCertificate:退貨證明(僅 approved;快照內容;唯讀不寫稽核)。
+	GetReturnCertificate(context.Context, *connect.Request[v1.GetReturnCertificateRequest]) (*connect.Response[v1.GetReturnCertificateResponse], error)
 }
 
 // NewReturnServiceClient constructs a client for the salesorder.v1.ReturnService service. By
@@ -83,14 +93,28 @@ func NewReturnServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(returnServiceMethods.ByName("GetReturnRequest")),
 			connect.WithClientOptions(opts...),
 		),
+		reviewReturnRequest: connect.NewClient[v1.ReviewReturnRequestRequest, v1.ReviewReturnRequestResponse](
+			httpClient,
+			baseURL+ReturnServiceReviewReturnRequestProcedure,
+			connect.WithSchema(returnServiceMethods.ByName("ReviewReturnRequest")),
+			connect.WithClientOptions(opts...),
+		),
+		getReturnCertificate: connect.NewClient[v1.GetReturnCertificateRequest, v1.GetReturnCertificateResponse](
+			httpClient,
+			baseURL+ReturnServiceGetReturnCertificateProcedure,
+			connect.WithSchema(returnServiceMethods.ByName("GetReturnCertificate")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // returnServiceClient implements ReturnServiceClient.
 type returnServiceClient struct {
-	createReturnRequest *connect.Client[v1.CreateReturnRequestRequest, v1.CreateReturnRequestResponse]
-	listReturnRequests  *connect.Client[v1.ListReturnRequestsRequest, v1.ListReturnRequestsResponse]
-	getReturnRequest    *connect.Client[v1.GetReturnRequestRequest, v1.GetReturnRequestResponse]
+	createReturnRequest  *connect.Client[v1.CreateReturnRequestRequest, v1.CreateReturnRequestResponse]
+	listReturnRequests   *connect.Client[v1.ListReturnRequestsRequest, v1.ListReturnRequestsResponse]
+	getReturnRequest     *connect.Client[v1.GetReturnRequestRequest, v1.GetReturnRequestResponse]
+	reviewReturnRequest  *connect.Client[v1.ReviewReturnRequestRequest, v1.ReviewReturnRequestResponse]
+	getReturnCertificate *connect.Client[v1.GetReturnCertificateRequest, v1.GetReturnCertificateResponse]
 }
 
 // CreateReturnRequest calls salesorder.v1.ReturnService.CreateReturnRequest.
@@ -108,6 +132,16 @@ func (c *returnServiceClient) GetReturnRequest(ctx context.Context, req *connect
 	return c.getReturnRequest.CallUnary(ctx, req)
 }
 
+// ReviewReturnRequest calls salesorder.v1.ReturnService.ReviewReturnRequest.
+func (c *returnServiceClient) ReviewReturnRequest(ctx context.Context, req *connect.Request[v1.ReviewReturnRequestRequest]) (*connect.Response[v1.ReviewReturnRequestResponse], error) {
+	return c.reviewReturnRequest.CallUnary(ctx, req)
+}
+
+// GetReturnCertificate calls salesorder.v1.ReturnService.GetReturnCertificate.
+func (c *returnServiceClient) GetReturnCertificate(ctx context.Context, req *connect.Request[v1.GetReturnCertificateRequest]) (*connect.Response[v1.GetReturnCertificateResponse], error) {
+	return c.getReturnCertificate.CallUnary(ctx, req)
+}
+
 // ReturnServiceHandler is an implementation of the salesorder.v1.ReturnService service.
 type ReturnServiceHandler interface {
 	// CreateReturnRequest:發起退貨(子帳號;雙來源並存;同交易寫申請+明細+稽核)。
@@ -116,6 +150,10 @@ type ReturnServiceHandler interface {
 	ListReturnRequests(context.Context, *connect.Request[v1.ListReturnRequestsRequest]) (*connect.Response[v1.ListReturnRequestsResponse], error)
 	// GetReturnRequest:單筆含品項明細(照片轉下載 URL)。
 	GetReturnRequest(context.Context, *connect.Request[v1.GetReturnRequestRequest]) (*connect.Response[v1.GetReturnRequestResponse], error)
+	// ReviewReturnRequest:審核(approved/rejected + 樂觀鎖;同交易寫稽核;不碰原訂單)。
+	ReviewReturnRequest(context.Context, *connect.Request[v1.ReviewReturnRequestRequest]) (*connect.Response[v1.ReviewReturnRequestResponse], error)
+	// GetReturnCertificate:退貨證明(僅 approved;快照內容;唯讀不寫稽核)。
+	GetReturnCertificate(context.Context, *connect.Request[v1.GetReturnCertificateRequest]) (*connect.Response[v1.GetReturnCertificateResponse], error)
 }
 
 // NewReturnServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -143,6 +181,18 @@ func NewReturnServiceHandler(svc ReturnServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(returnServiceMethods.ByName("GetReturnRequest")),
 		connect.WithHandlerOptions(opts...),
 	)
+	returnServiceReviewReturnRequestHandler := connect.NewUnaryHandler(
+		ReturnServiceReviewReturnRequestProcedure,
+		svc.ReviewReturnRequest,
+		connect.WithSchema(returnServiceMethods.ByName("ReviewReturnRequest")),
+		connect.WithHandlerOptions(opts...),
+	)
+	returnServiceGetReturnCertificateHandler := connect.NewUnaryHandler(
+		ReturnServiceGetReturnCertificateProcedure,
+		svc.GetReturnCertificate,
+		connect.WithSchema(returnServiceMethods.ByName("GetReturnCertificate")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/salesorder.v1.ReturnService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ReturnServiceCreateReturnRequestProcedure:
@@ -151,6 +201,10 @@ func NewReturnServiceHandler(svc ReturnServiceHandler, opts ...connect.HandlerOp
 			returnServiceListReturnRequestsHandler.ServeHTTP(w, r)
 		case ReturnServiceGetReturnRequestProcedure:
 			returnServiceGetReturnRequestHandler.ServeHTTP(w, r)
+		case ReturnServiceReviewReturnRequestProcedure:
+			returnServiceReviewReturnRequestHandler.ServeHTTP(w, r)
+		case ReturnServiceGetReturnCertificateProcedure:
+			returnServiceGetReturnCertificateHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -170,4 +224,12 @@ func (UnimplementedReturnServiceHandler) ListReturnRequests(context.Context, *co
 
 func (UnimplementedReturnServiceHandler) GetReturnRequest(context.Context, *connect.Request[v1.GetReturnRequestRequest]) (*connect.Response[v1.GetReturnRequestResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("salesorder.v1.ReturnService.GetReturnRequest is not implemented"))
+}
+
+func (UnimplementedReturnServiceHandler) ReviewReturnRequest(context.Context, *connect.Request[v1.ReviewReturnRequestRequest]) (*connect.Response[v1.ReviewReturnRequestResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("salesorder.v1.ReturnService.ReviewReturnRequest is not implemented"))
+}
+
+func (UnimplementedReturnServiceHandler) GetReturnCertificate(context.Context, *connect.Request[v1.GetReturnCertificateRequest]) (*connect.Response[v1.GetReturnCertificateResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("salesorder.v1.ReturnService.GetReturnCertificate is not implemented"))
 }

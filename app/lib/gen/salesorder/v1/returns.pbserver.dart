@@ -27,6 +27,10 @@ abstract class ReturnServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.ListReturnRequestsRequest request);
   $async.Future<$0.GetReturnRequestResponse> getReturnRequest(
       $pb.ServerContext ctx, $0.GetReturnRequestRequest request);
+  $async.Future<$0.ReviewReturnRequestResponse> reviewReturnRequest(
+      $pb.ServerContext ctx, $0.ReviewReturnRequestRequest request);
+  $async.Future<$0.GetReturnCertificateResponse> getReturnCertificate(
+      $pb.ServerContext ctx, $0.GetReturnCertificateRequest request);
 
   $pb.GeneratedMessage createRequest($core.String methodName) {
     switch (methodName) {
@@ -36,6 +40,10 @@ abstract class ReturnServiceBase extends $pb.GeneratedService {
         return $0.ListReturnRequestsRequest();
       case 'GetReturnRequest':
         return $0.GetReturnRequestRequest();
+      case 'ReviewReturnRequest':
+        return $0.ReviewReturnRequestRequest();
+      case 'GetReturnCertificate':
+        return $0.GetReturnCertificateRequest();
       default:
         throw $core.ArgumentError('Unknown method: $methodName');
     }
@@ -51,6 +59,12 @@ abstract class ReturnServiceBase extends $pb.GeneratedService {
         return listReturnRequests(ctx, request as $0.ListReturnRequestsRequest);
       case 'GetReturnRequest':
         return getReturnRequest(ctx, request as $0.GetReturnRequestRequest);
+      case 'ReviewReturnRequest':
+        return reviewReturnRequest(
+            ctx, request as $0.ReviewReturnRequestRequest);
+      case 'GetReturnCertificate':
+        return getReturnCertificate(
+            ctx, request as $0.GetReturnCertificateRequest);
       default:
         throw $core.ArgumentError('Unknown method: $methodName');
     }

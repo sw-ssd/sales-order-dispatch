@@ -15,6 +15,10 @@ service ReturnService {
   rpc ListReturnRequests(ListReturnRequestsRequest) returns (ListReturnRequestsResponse);
   // GetReturnRequest:單筆含品項明細(照片轉下載 URL)。
   rpc GetReturnRequest(GetReturnRequestRequest) returns (GetReturnRequestResponse);
+  // ReviewReturnRequest:審核(approved/rejected + 樂觀鎖;同交易寫稽核;不碰原訂單)。
+  rpc ReviewReturnRequest(ReviewReturnRequestRequest) returns (ReviewReturnRequestResponse);
+  // GetReturnCertificate:退貨證明(僅 approved;快照內容;唯讀不寫稽核)。
+  rpc GetReturnCertificate(GetReturnCertificateRequest) returns (GetReturnCertificateResponse);
 }
 
 // ReturnItemInput:單品項輸入。
@@ -89,4 +93,36 @@ message GetReturnRequestResponse {
   string reject_reason = 5;
   string created_at = 6;
   repeated ReturnRequestItemView items = 7;
+}
+
+// ReviewReturnRequestRequest:審核請求。
+message ReviewReturnRequestRequest {
+  string id = 1;
+  string decision = 2;       // approved/rejected
+  string reject_reason = 3;  // 可空(rejected 時必填)
+  string expected_version = 4; // 樂觀鎖
+}
+
+// ReviewReturnRequestResponse:審核結果。
+message ReviewReturnRequestResponse {
+  string id = 1;
+  string status = 2;
+  string reviewed_at = 3; // RFC3339
+}
+
+// GetReturnCertificateRequest:證明請求。
+message GetReturnCertificateRequest {
+  string id = 1;
+}
+
+// GetReturnCertificateResponse:證明內容(快照)。
+message GetReturnCertificateResponse {
+  string id = 1;
+  string customer_code = 2;
+  string customer_name = 3;
+  string created_at = 4;  // 申請時間 RFC3339
+  string status = 5;
+  string reviewer_name = 6;
+  string reviewed_at = 7; // RFC3339
+  repeated ReturnRequestItemView items = 8;
 }

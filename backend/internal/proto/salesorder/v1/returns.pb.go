@@ -658,6 +658,282 @@ func (x *GetReturnRequestResponse) GetItems() []*ReturnRequestItemView {
 	return nil
 }
 
+// ReviewReturnRequestRequest:審核請求。
+type ReviewReturnRequestRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Decision        string                 `protobuf:"bytes,2,opt,name=decision,proto3" json:"decision,omitempty"`                                      // approved/rejected
+	RejectReason    string                 `protobuf:"bytes,3,opt,name=reject_reason,json=rejectReason,proto3" json:"reject_reason,omitempty"`          // 可空(rejected 時必填)
+	ExpectedVersion string                 `protobuf:"bytes,4,opt,name=expected_version,json=expectedVersion,proto3" json:"expected_version,omitempty"` // 樂觀鎖
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ReviewReturnRequestRequest) Reset() {
+	*x = ReviewReturnRequestRequest{}
+	mi := &file_salesorder_v1_returns_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReviewReturnRequestRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReviewReturnRequestRequest) ProtoMessage() {}
+
+func (x *ReviewReturnRequestRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_returns_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReviewReturnRequestRequest.ProtoReflect.Descriptor instead.
+func (*ReviewReturnRequestRequest) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_returns_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ReviewReturnRequestRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ReviewReturnRequestRequest) GetDecision() string {
+	if x != nil {
+		return x.Decision
+	}
+	return ""
+}
+
+func (x *ReviewReturnRequestRequest) GetRejectReason() string {
+	if x != nil {
+		return x.RejectReason
+	}
+	return ""
+}
+
+func (x *ReviewReturnRequestRequest) GetExpectedVersion() string {
+	if x != nil {
+		return x.ExpectedVersion
+	}
+	return ""
+}
+
+// ReviewReturnRequestResponse:審核結果。
+type ReviewReturnRequestResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Status        string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	ReviewedAt    string                 `protobuf:"bytes,3,opt,name=reviewed_at,json=reviewedAt,proto3" json:"reviewed_at,omitempty"` // RFC3339
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReviewReturnRequestResponse) Reset() {
+	*x = ReviewReturnRequestResponse{}
+	mi := &file_salesorder_v1_returns_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReviewReturnRequestResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReviewReturnRequestResponse) ProtoMessage() {}
+
+func (x *ReviewReturnRequestResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_returns_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReviewReturnRequestResponse.ProtoReflect.Descriptor instead.
+func (*ReviewReturnRequestResponse) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_returns_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ReviewReturnRequestResponse) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ReviewReturnRequestResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ReviewReturnRequestResponse) GetReviewedAt() string {
+	if x != nil {
+		return x.ReviewedAt
+	}
+	return ""
+}
+
+// GetReturnCertificateRequest:證明請求。
+type GetReturnCertificateRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetReturnCertificateRequest) Reset() {
+	*x = GetReturnCertificateRequest{}
+	mi := &file_salesorder_v1_returns_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetReturnCertificateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetReturnCertificateRequest) ProtoMessage() {}
+
+func (x *GetReturnCertificateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_returns_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetReturnCertificateRequest.ProtoReflect.Descriptor instead.
+func (*GetReturnCertificateRequest) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_returns_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *GetReturnCertificateRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+// GetReturnCertificateResponse:證明內容(快照)。
+type GetReturnCertificateResponse struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	Id            string                   `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	CustomerCode  string                   `protobuf:"bytes,2,opt,name=customer_code,json=customerCode,proto3" json:"customer_code,omitempty"`
+	CustomerName  string                   `protobuf:"bytes,3,opt,name=customer_name,json=customerName,proto3" json:"customer_name,omitempty"`
+	CreatedAt     string                   `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"` // 申請時間 RFC3339
+	Status        string                   `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	ReviewerName  string                   `protobuf:"bytes,6,opt,name=reviewer_name,json=reviewerName,proto3" json:"reviewer_name,omitempty"`
+	ReviewedAt    string                   `protobuf:"bytes,7,opt,name=reviewed_at,json=reviewedAt,proto3" json:"reviewed_at,omitempty"` // RFC3339
+	Items         []*ReturnRequestItemView `protobuf:"bytes,8,rep,name=items,proto3" json:"items,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetReturnCertificateResponse) Reset() {
+	*x = GetReturnCertificateResponse{}
+	mi := &file_salesorder_v1_returns_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetReturnCertificateResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetReturnCertificateResponse) ProtoMessage() {}
+
+func (x *GetReturnCertificateResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_returns_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetReturnCertificateResponse.ProtoReflect.Descriptor instead.
+func (*GetReturnCertificateResponse) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_returns_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *GetReturnCertificateResponse) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *GetReturnCertificateResponse) GetCustomerCode() string {
+	if x != nil {
+		return x.CustomerCode
+	}
+	return ""
+}
+
+func (x *GetReturnCertificateResponse) GetCustomerName() string {
+	if x != nil {
+		return x.CustomerName
+	}
+	return ""
+}
+
+func (x *GetReturnCertificateResponse) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+func (x *GetReturnCertificateResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *GetReturnCertificateResponse) GetReviewerName() string {
+	if x != nil {
+		return x.ReviewerName
+	}
+	return ""
+}
+
+func (x *GetReturnCertificateResponse) GetReviewedAt() string {
+	if x != nil {
+		return x.ReviewedAt
+	}
+	return ""
+}
+
+func (x *GetReturnCertificateResponse) GetItems() []*ReturnRequestItemView {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
 var File_salesorder_v1_returns_proto protoreflect.FileDescriptor
 
 const file_salesorder_v1_returns_proto_rawDesc = "" +
@@ -716,11 +992,36 @@ const file_salesorder_v1_returns_proto_rawDesc = "" +
 	"\rreject_reason\x18\x05 \x01(\tR\frejectReason\x12\x1d\n" +
 	"\n" +
 	"created_at\x18\x06 \x01(\tR\tcreatedAt\x12:\n" +
-	"\x05items\x18\a \x03(\v2$.salesorder.v1.ReturnRequestItemViewR\x05items2\xcd\x02\n" +
+	"\x05items\x18\a \x03(\v2$.salesorder.v1.ReturnRequestItemViewR\x05items\"\x98\x01\n" +
+	"\x1aReviewReturnRequestRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
+	"\bdecision\x18\x02 \x01(\tR\bdecision\x12#\n" +
+	"\rreject_reason\x18\x03 \x01(\tR\frejectReason\x12)\n" +
+	"\x10expected_version\x18\x04 \x01(\tR\x0fexpectedVersion\"f\n" +
+	"\x1bReviewReturnRequestResponse\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\x12\x1f\n" +
+	"\vreviewed_at\x18\x03 \x01(\tR\n" +
+	"reviewedAt\"-\n" +
+	"\x1bGetReturnCertificateRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\xb1\x02\n" +
+	"\x1cGetReturnCertificateResponse\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
+	"\rcustomer_code\x18\x02 \x01(\tR\fcustomerCode\x12#\n" +
+	"\rcustomer_name\x18\x03 \x01(\tR\fcustomerName\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x04 \x01(\tR\tcreatedAt\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\x12#\n" +
+	"\rreviewer_name\x18\x06 \x01(\tR\freviewerName\x12\x1f\n" +
+	"\vreviewed_at\x18\a \x01(\tR\n" +
+	"reviewedAt\x12:\n" +
+	"\x05items\x18\b \x03(\v2$.salesorder.v1.ReturnRequestItemViewR\x05items2\xac\x04\n" +
 	"\rReturnService\x12l\n" +
 	"\x13CreateReturnRequest\x12).salesorder.v1.CreateReturnRequestRequest\x1a*.salesorder.v1.CreateReturnRequestResponse\x12i\n" +
 	"\x12ListReturnRequests\x12(.salesorder.v1.ListReturnRequestsRequest\x1a).salesorder.v1.ListReturnRequestsResponse\x12c\n" +
-	"\x10GetReturnRequest\x12&.salesorder.v1.GetReturnRequestRequest\x1a'.salesorder.v1.GetReturnRequestResponseBYZWgithub.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1b\x06proto3"
+	"\x10GetReturnRequest\x12&.salesorder.v1.GetReturnRequestRequest\x1a'.salesorder.v1.GetReturnRequestResponse\x12l\n" +
+	"\x13ReviewReturnRequest\x12).salesorder.v1.ReviewReturnRequestRequest\x1a*.salesorder.v1.ReviewReturnRequestResponse\x12o\n" +
+	"\x14GetReturnCertificate\x12*.salesorder.v1.GetReturnCertificateRequest\x1a+.salesorder.v1.GetReturnCertificateResponseBYZWgithub.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1b\x06proto3"
 
 var (
 	file_salesorder_v1_returns_proto_rawDescOnce sync.Once
@@ -734,33 +1035,42 @@ func file_salesorder_v1_returns_proto_rawDescGZIP() []byte {
 	return file_salesorder_v1_returns_proto_rawDescData
 }
 
-var file_salesorder_v1_returns_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_salesorder_v1_returns_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_salesorder_v1_returns_proto_goTypes = []any{
-	(*ReturnItemInput)(nil),             // 0: salesorder.v1.ReturnItemInput
-	(*CreateReturnRequestRequest)(nil),  // 1: salesorder.v1.CreateReturnRequestRequest
-	(*CreateReturnRequestResponse)(nil), // 2: salesorder.v1.CreateReturnRequestResponse
-	(*ListReturnRequestsRequest)(nil),   // 3: salesorder.v1.ListReturnRequestsRequest
-	(*ReturnRequestEntry)(nil),          // 4: salesorder.v1.ReturnRequestEntry
-	(*ListReturnRequestsResponse)(nil),  // 5: salesorder.v1.ListReturnRequestsResponse
-	(*ReturnRequestItemView)(nil),       // 6: salesorder.v1.ReturnRequestItemView
-	(*GetReturnRequestRequest)(nil),     // 7: salesorder.v1.GetReturnRequestRequest
-	(*GetReturnRequestResponse)(nil),    // 8: salesorder.v1.GetReturnRequestResponse
+	(*ReturnItemInput)(nil),              // 0: salesorder.v1.ReturnItemInput
+	(*CreateReturnRequestRequest)(nil),   // 1: salesorder.v1.CreateReturnRequestRequest
+	(*CreateReturnRequestResponse)(nil),  // 2: salesorder.v1.CreateReturnRequestResponse
+	(*ListReturnRequestsRequest)(nil),    // 3: salesorder.v1.ListReturnRequestsRequest
+	(*ReturnRequestEntry)(nil),           // 4: salesorder.v1.ReturnRequestEntry
+	(*ListReturnRequestsResponse)(nil),   // 5: salesorder.v1.ListReturnRequestsResponse
+	(*ReturnRequestItemView)(nil),        // 6: salesorder.v1.ReturnRequestItemView
+	(*GetReturnRequestRequest)(nil),      // 7: salesorder.v1.GetReturnRequestRequest
+	(*GetReturnRequestResponse)(nil),     // 8: salesorder.v1.GetReturnRequestResponse
+	(*ReviewReturnRequestRequest)(nil),   // 9: salesorder.v1.ReviewReturnRequestRequest
+	(*ReviewReturnRequestResponse)(nil),  // 10: salesorder.v1.ReviewReturnRequestResponse
+	(*GetReturnCertificateRequest)(nil),  // 11: salesorder.v1.GetReturnCertificateRequest
+	(*GetReturnCertificateResponse)(nil), // 12: salesorder.v1.GetReturnCertificateResponse
 }
 var file_salesorder_v1_returns_proto_depIdxs = []int32{
-	0, // 0: salesorder.v1.CreateReturnRequestRequest.items:type_name -> salesorder.v1.ReturnItemInput
-	4, // 1: salesorder.v1.ListReturnRequestsResponse.entries:type_name -> salesorder.v1.ReturnRequestEntry
-	6, // 2: salesorder.v1.GetReturnRequestResponse.items:type_name -> salesorder.v1.ReturnRequestItemView
-	1, // 3: salesorder.v1.ReturnService.CreateReturnRequest:input_type -> salesorder.v1.CreateReturnRequestRequest
-	3, // 4: salesorder.v1.ReturnService.ListReturnRequests:input_type -> salesorder.v1.ListReturnRequestsRequest
-	7, // 5: salesorder.v1.ReturnService.GetReturnRequest:input_type -> salesorder.v1.GetReturnRequestRequest
-	2, // 6: salesorder.v1.ReturnService.CreateReturnRequest:output_type -> salesorder.v1.CreateReturnRequestResponse
-	5, // 7: salesorder.v1.ReturnService.ListReturnRequests:output_type -> salesorder.v1.ListReturnRequestsResponse
-	8, // 8: salesorder.v1.ReturnService.GetReturnRequest:output_type -> salesorder.v1.GetReturnRequestResponse
-	6, // [6:9] is the sub-list for method output_type
-	3, // [3:6] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	0,  // 0: salesorder.v1.CreateReturnRequestRequest.items:type_name -> salesorder.v1.ReturnItemInput
+	4,  // 1: salesorder.v1.ListReturnRequestsResponse.entries:type_name -> salesorder.v1.ReturnRequestEntry
+	6,  // 2: salesorder.v1.GetReturnRequestResponse.items:type_name -> salesorder.v1.ReturnRequestItemView
+	6,  // 3: salesorder.v1.GetReturnCertificateResponse.items:type_name -> salesorder.v1.ReturnRequestItemView
+	1,  // 4: salesorder.v1.ReturnService.CreateReturnRequest:input_type -> salesorder.v1.CreateReturnRequestRequest
+	3,  // 5: salesorder.v1.ReturnService.ListReturnRequests:input_type -> salesorder.v1.ListReturnRequestsRequest
+	7,  // 6: salesorder.v1.ReturnService.GetReturnRequest:input_type -> salesorder.v1.GetReturnRequestRequest
+	9,  // 7: salesorder.v1.ReturnService.ReviewReturnRequest:input_type -> salesorder.v1.ReviewReturnRequestRequest
+	11, // 8: salesorder.v1.ReturnService.GetReturnCertificate:input_type -> salesorder.v1.GetReturnCertificateRequest
+	2,  // 9: salesorder.v1.ReturnService.CreateReturnRequest:output_type -> salesorder.v1.CreateReturnRequestResponse
+	5,  // 10: salesorder.v1.ReturnService.ListReturnRequests:output_type -> salesorder.v1.ListReturnRequestsResponse
+	8,  // 11: salesorder.v1.ReturnService.GetReturnRequest:output_type -> salesorder.v1.GetReturnRequestResponse
+	10, // 12: salesorder.v1.ReturnService.ReviewReturnRequest:output_type -> salesorder.v1.ReviewReturnRequestResponse
+	12, // 13: salesorder.v1.ReturnService.GetReturnCertificate:output_type -> salesorder.v1.GetReturnCertificateResponse
+	9,  // [9:14] is the sub-list for method output_type
+	4,  // [4:9] is the sub-list for method input_type
+	4,  // [4:4] is the sub-list for extension type_name
+	4,  // [4:4] is the sub-list for extension extendee
+	0,  // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_salesorder_v1_returns_proto_init() }
@@ -775,7 +1085,7 @@ func file_salesorder_v1_returns_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_salesorder_v1_returns_proto_rawDesc), len(file_salesorder_v1_returns_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

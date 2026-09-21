@@ -342,6 +342,150 @@ export declare type GetReturnRequestResponse = Message<"salesorder.v1.GetReturnR
 export declare const GetReturnRequestResponseSchema: GenMessage<GetReturnRequestResponse>;
 
 /**
+ * ReviewReturnRequestRequest:審核請求。
+ *
+ * @generated from message salesorder.v1.ReviewReturnRequestRequest
+ */
+export declare type ReviewReturnRequestRequest = Message<"salesorder.v1.ReviewReturnRequestRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * approved/rejected
+   *
+   * @generated from field: string decision = 2;
+   */
+  decision: string;
+
+  /**
+   * 可空(rejected 時必填)
+   *
+   * @generated from field: string reject_reason = 3;
+   */
+  rejectReason: string;
+
+  /**
+   * 樂觀鎖
+   *
+   * @generated from field: string expected_version = 4;
+   */
+  expectedVersion: string;
+};
+
+/**
+ * Describes the message salesorder.v1.ReviewReturnRequestRequest.
+ * Use `create(ReviewReturnRequestRequestSchema)` to create a new message.
+ */
+export declare const ReviewReturnRequestRequestSchema: GenMessage<ReviewReturnRequestRequest>;
+
+/**
+ * ReviewReturnRequestResponse:審核結果。
+ *
+ * @generated from message salesorder.v1.ReviewReturnRequestResponse
+ */
+export declare type ReviewReturnRequestResponse = Message<"salesorder.v1.ReviewReturnRequestResponse"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string status = 2;
+   */
+  status: string;
+
+  /**
+   * RFC3339
+   *
+   * @generated from field: string reviewed_at = 3;
+   */
+  reviewedAt: string;
+};
+
+/**
+ * Describes the message salesorder.v1.ReviewReturnRequestResponse.
+ * Use `create(ReviewReturnRequestResponseSchema)` to create a new message.
+ */
+export declare const ReviewReturnRequestResponseSchema: GenMessage<ReviewReturnRequestResponse>;
+
+/**
+ * GetReturnCertificateRequest:證明請求。
+ *
+ * @generated from message salesorder.v1.GetReturnCertificateRequest
+ */
+export declare type GetReturnCertificateRequest = Message<"salesorder.v1.GetReturnCertificateRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message salesorder.v1.GetReturnCertificateRequest.
+ * Use `create(GetReturnCertificateRequestSchema)` to create a new message.
+ */
+export declare const GetReturnCertificateRequestSchema: GenMessage<GetReturnCertificateRequest>;
+
+/**
+ * GetReturnCertificateResponse:證明內容(快照)。
+ *
+ * @generated from message salesorder.v1.GetReturnCertificateResponse
+ */
+export declare type GetReturnCertificateResponse = Message<"salesorder.v1.GetReturnCertificateResponse"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string customer_code = 2;
+   */
+  customerCode: string;
+
+  /**
+   * @generated from field: string customer_name = 3;
+   */
+  customerName: string;
+
+  /**
+   * 申請時間 RFC3339
+   *
+   * @generated from field: string created_at = 4;
+   */
+  createdAt: string;
+
+  /**
+   * @generated from field: string status = 5;
+   */
+  status: string;
+
+  /**
+   * @generated from field: string reviewer_name = 6;
+   */
+  reviewerName: string;
+
+  /**
+   * RFC3339
+   *
+   * @generated from field: string reviewed_at = 7;
+   */
+  reviewedAt: string;
+
+  /**
+   * @generated from field: repeated salesorder.v1.ReturnRequestItemView items = 8;
+   */
+  items: ReturnRequestItemView[];
+};
+
+/**
+ * Describes the message salesorder.v1.GetReturnCertificateResponse.
+ * Use `create(GetReturnCertificateResponseSchema)` to create a new message.
+ */
+export declare const GetReturnCertificateResponseSchema: GenMessage<GetReturnCertificateResponse>;
+
+/**
  * ReturnService:退貨申請與審核(06 計畫 Task 4.7.2–4.7.4, D25)。
  * 發起僅客戶子帳號(主帳號一律拒絕);審核僅主責業務/dept_admin 以上;
  * 全程不修改原訂單(僅參照)。
@@ -378,6 +522,26 @@ export declare const ReturnService: GenService<{
     methodKind: "unary";
     input: typeof GetReturnRequestRequestSchema;
     output: typeof GetReturnRequestResponseSchema;
+  },
+  /**
+   * ReviewReturnRequest:審核(approved/rejected + 樂觀鎖;同交易寫稽核;不碰原訂單)。
+   *
+   * @generated from rpc salesorder.v1.ReturnService.ReviewReturnRequest
+   */
+  reviewReturnRequest: {
+    methodKind: "unary";
+    input: typeof ReviewReturnRequestRequestSchema;
+    output: typeof ReviewReturnRequestResponseSchema;
+  },
+  /**
+   * GetReturnCertificate:退貨證明(僅 approved;快照內容;唯讀不寫稽核)。
+   *
+   * @generated from rpc salesorder.v1.ReturnService.GetReturnCertificate
+   */
+  getReturnCertificate: {
+    methodKind: "unary";
+    input: typeof GetReturnCertificateRequestSchema;
+    output: typeof GetReturnCertificateResponseSchema;
   },
 }>;
 

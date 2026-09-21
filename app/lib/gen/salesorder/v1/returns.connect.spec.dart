@@ -36,4 +36,20 @@ abstract final class ReturnService {
     salesorderv1returns.GetReturnRequestRequest.new,
     salesorderv1returns.GetReturnRequestResponse.new,
   );
+
+  /// ReviewReturnRequest:審核(approved/rejected + 樂觀鎖;同交易寫稽核;不碰原訂單)。
+  static const reviewReturnRequest = connect.Spec(
+    '/$name/ReviewReturnRequest',
+    connect.StreamType.unary,
+    salesorderv1returns.ReviewReturnRequestRequest.new,
+    salesorderv1returns.ReviewReturnRequestResponse.new,
+  );
+
+  /// GetReturnCertificate:退貨證明(僅 approved;快照內容;唯讀不寫稽核)。
+  static const getReturnCertificate = connect.Spec(
+    '/$name/GetReturnCertificate',
+    connect.StreamType.unary,
+    salesorderv1returns.GetReturnCertificateRequest.new,
+    salesorderv1returns.GetReturnCertificateResponse.new,
+  );
 }

@@ -208,6 +208,84 @@ final $typed_data.Uint8List getReturnRequestResponseDescriptor = $convert.base64
     'VhdGVkX2F0GAYgASgJUgljcmVhdGVkQXQSOgoFaXRlbXMYByADKAsyJC5zYWxlc29yZGVyLnYx'
     'LlJldHVyblJlcXVlc3RJdGVtVmlld1IFaXRlbXM=');
 
+@$core.Deprecated('Use reviewReturnRequestRequestDescriptor instead')
+const ReviewReturnRequestRequest$json = {
+  '1': 'ReviewReturnRequestRequest',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'decision', '3': 2, '4': 1, '5': 9, '10': 'decision'},
+    {'1': 'reject_reason', '3': 3, '4': 1, '5': 9, '10': 'rejectReason'},
+    {'1': 'expected_version', '3': 4, '4': 1, '5': 9, '10': 'expectedVersion'},
+  ],
+};
+
+/// Descriptor for `ReviewReturnRequestRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List reviewReturnRequestRequestDescriptor =
+    $convert.base64Decode(
+        'ChpSZXZpZXdSZXR1cm5SZXF1ZXN0UmVxdWVzdBIOCgJpZBgBIAEoCVICaWQSGgoIZGVjaXNpb2'
+        '4YAiABKAlSCGRlY2lzaW9uEiMKDXJlamVjdF9yZWFzb24YAyABKAlSDHJlamVjdFJlYXNvbhIp'
+        'ChBleHBlY3RlZF92ZXJzaW9uGAQgASgJUg9leHBlY3RlZFZlcnNpb24=');
+
+@$core.Deprecated('Use reviewReturnRequestResponseDescriptor instead')
+const ReviewReturnRequestResponse$json = {
+  '1': 'ReviewReturnRequestResponse',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'status', '3': 2, '4': 1, '5': 9, '10': 'status'},
+    {'1': 'reviewed_at', '3': 3, '4': 1, '5': 9, '10': 'reviewedAt'},
+  ],
+};
+
+/// Descriptor for `ReviewReturnRequestResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List reviewReturnRequestResponseDescriptor =
+    $convert.base64Decode(
+        'ChtSZXZpZXdSZXR1cm5SZXF1ZXN0UmVzcG9uc2USDgoCaWQYASABKAlSAmlkEhYKBnN0YXR1cx'
+        'gCIAEoCVIGc3RhdHVzEh8KC3Jldmlld2VkX2F0GAMgASgJUgpyZXZpZXdlZEF0');
+
+@$core.Deprecated('Use getReturnCertificateRequestDescriptor instead')
+const GetReturnCertificateRequest$json = {
+  '1': 'GetReturnCertificateRequest',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+  ],
+};
+
+/// Descriptor for `GetReturnCertificateRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getReturnCertificateRequestDescriptor =
+    $convert.base64Decode(
+        'ChtHZXRSZXR1cm5DZXJ0aWZpY2F0ZVJlcXVlc3QSDgoCaWQYASABKAlSAmlk');
+
+@$core.Deprecated('Use getReturnCertificateResponseDescriptor instead')
+const GetReturnCertificateResponse$json = {
+  '1': 'GetReturnCertificateResponse',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'customer_code', '3': 2, '4': 1, '5': 9, '10': 'customerCode'},
+    {'1': 'customer_name', '3': 3, '4': 1, '5': 9, '10': 'customerName'},
+    {'1': 'created_at', '3': 4, '4': 1, '5': 9, '10': 'createdAt'},
+    {'1': 'status', '3': 5, '4': 1, '5': 9, '10': 'status'},
+    {'1': 'reviewer_name', '3': 6, '4': 1, '5': 9, '10': 'reviewerName'},
+    {'1': 'reviewed_at', '3': 7, '4': 1, '5': 9, '10': 'reviewedAt'},
+    {
+      '1': 'items',
+      '3': 8,
+      '4': 3,
+      '5': 11,
+      '6': '.salesorder.v1.ReturnRequestItemView',
+      '10': 'items'
+    },
+  ],
+};
+
+/// Descriptor for `GetReturnCertificateResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List getReturnCertificateResponseDescriptor = $convert.base64Decode(
+    'ChxHZXRSZXR1cm5DZXJ0aWZpY2F0ZVJlc3BvbnNlEg4KAmlkGAEgASgJUgJpZBIjCg1jdXN0b2'
+    '1lcl9jb2RlGAIgASgJUgxjdXN0b21lckNvZGUSIwoNY3VzdG9tZXJfbmFtZRgDIAEoCVIMY3Vz'
+    'dG9tZXJOYW1lEh0KCmNyZWF0ZWRfYXQYBCABKAlSCWNyZWF0ZWRBdBIWCgZzdGF0dXMYBSABKA'
+    'lSBnN0YXR1cxIjCg1yZXZpZXdlcl9uYW1lGAYgASgJUgxyZXZpZXdlck5hbWUSHwoLcmV2aWV3'
+    'ZWRfYXQYByABKAlSCnJldmlld2VkQXQSOgoFaXRlbXMYCCADKAsyJC5zYWxlc29yZGVyLnYxLl'
+    'JldHVyblJlcXVlc3RJdGVtVmlld1IFaXRlbXM=');
+
 const $core.Map<$core.String, $core.dynamic> ReturnServiceBase$json = {
   '1': 'ReturnService',
   '2': [
@@ -226,6 +304,16 @@ const $core.Map<$core.String, $core.dynamic> ReturnServiceBase$json = {
       '2': '.salesorder.v1.GetReturnRequestRequest',
       '3': '.salesorder.v1.GetReturnRequestResponse'
     },
+    {
+      '1': 'ReviewReturnRequest',
+      '2': '.salesorder.v1.ReviewReturnRequestRequest',
+      '3': '.salesorder.v1.ReviewReturnRequestResponse'
+    },
+    {
+      '1': 'GetReturnCertificate',
+      '2': '.salesorder.v1.GetReturnCertificateRequest',
+      '3': '.salesorder.v1.GetReturnCertificateResponse'
+    },
   ],
 };
 
@@ -242,6 +330,13 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.salesorder.v1.GetReturnRequestRequest': GetReturnRequestRequest$json,
   '.salesorder.v1.GetReturnRequestResponse': GetReturnRequestResponse$json,
   '.salesorder.v1.ReturnRequestItemView': ReturnRequestItemView$json,
+  '.salesorder.v1.ReviewReturnRequestRequest': ReviewReturnRequestRequest$json,
+  '.salesorder.v1.ReviewReturnRequestResponse':
+      ReviewReturnRequestResponse$json,
+  '.salesorder.v1.GetReturnCertificateRequest':
+      GetReturnCertificateRequest$json,
+  '.salesorder.v1.GetReturnCertificateResponse':
+      GetReturnCertificateResponse$json,
 };
 
 /// Descriptor for `ReturnService`. Decode as a `google.protobuf.ServiceDescriptorProto`.
@@ -251,4 +346,9 @@ final $typed_data.Uint8List returnServiceDescriptor = $convert.base64Decode(
     'ZXF1ZXN0UmVzcG9uc2USaQoSTGlzdFJldHVyblJlcXVlc3RzEiguc2FsZXNvcmRlci52MS5MaX'
     'N0UmV0dXJuUmVxdWVzdHNSZXF1ZXN0Gikuc2FsZXNvcmRlci52MS5MaXN0UmV0dXJuUmVxdWVz'
     'dHNSZXNwb25zZRJjChBHZXRSZXR1cm5SZXF1ZXN0EiYuc2FsZXNvcmRlci52MS5HZXRSZXR1cm'
-    '5SZXF1ZXN0UmVxdWVzdBonLnNhbGVzb3JkZXIudjEuR2V0UmV0dXJuUmVxdWVzdFJlc3BvbnNl');
+    '5SZXF1ZXN0UmVxdWVzdBonLnNhbGVzb3JkZXIudjEuR2V0UmV0dXJuUmVxdWVzdFJlc3BvbnNl'
+    'EmwKE1Jldmlld1JldHVyblJlcXVlc3QSKS5zYWxlc29yZGVyLnYxLlJldmlld1JldHVyblJlcX'
+    'Vlc3RSZXF1ZXN0Giouc2FsZXNvcmRlci52MS5SZXZpZXdSZXR1cm5SZXF1ZXN0UmVzcG9uc2US'
+    'bwoUR2V0UmV0dXJuQ2VydGlmaWNhdGUSKi5zYWxlc29yZGVyLnYxLkdldFJldHVybkNlcnRpZm'
+    'ljYXRlUmVxdWVzdBorLnNhbGVzb3JkZXIudjEuR2V0UmV0dXJuQ2VydGlmaWNhdGVSZXNwb25z'
+    'ZQ==');

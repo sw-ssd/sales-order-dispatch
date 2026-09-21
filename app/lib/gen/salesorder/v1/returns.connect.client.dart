@@ -64,4 +64,40 @@ extension type ReturnServiceClient (connect.Transport _transport) {
       onTrailer: onTrailer,
     );
   }
+
+  /// ReviewReturnRequest:審核(approved/rejected + 樂觀鎖;同交易寫稽核;不碰原訂單)。
+  Future<salesorderv1returns.ReviewReturnRequestResponse> reviewReturnRequest(
+    salesorderv1returns.ReviewReturnRequestRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.ReturnService.reviewReturnRequest,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// GetReturnCertificate:退貨證明(僅 approved;快照內容;唯讀不寫稽核)。
+  Future<salesorderv1returns.GetReturnCertificateResponse> getReturnCertificate(
+    salesorderv1returns.GetReturnCertificateRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.ReturnService.getReturnCertificate,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
 }
