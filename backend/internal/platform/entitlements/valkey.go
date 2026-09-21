@@ -16,8 +16,9 @@ import (
 // 只有三個行程共用同一顆 Valkey，其中一個刪掉的鍵才會對其他兩個立刻生效。行程內快取做不到這件事：
 // 排程停了某個租戶，API 那台的判定還是舊的，直到 TTL 到期為止。
 //
-// 失效語意：**寫入路徑顯式 Delete（見 Invalidate／InvalidateAll），TTL 僅為保底** ——
-// 正確性不依賴 TTL 到期，`ttl` 只是「萬一某條寫入路徑漏了失效」的收斂上限。
+// 失效語意：**寫入路徑顯式 Delete（見 Invalidate／InvalidateAll）；TTL 是最長收斂上界** ——
+// 未結項 #21:原措辭「正確性不依賴 TTL」略強於實情（cache-aside 競態：提交前 miss、
+// 提交後 Set 可把舊快照蓋過剛做的 Delete）。快取競態下最多一個 TTL 的舊讀，見 spec §4.4。
 type ValkeyCache struct{ client *redis.Client }
 
 // NewValkeyCache 建立 Valkey 權益快取。client 由呼叫端建立（連線設定屬組態，不屬判定層）。
