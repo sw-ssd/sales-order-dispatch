@@ -66,19 +66,18 @@ flowchart TB
 
 ---
 
-## 3. 現況實作對照（2026-09-20）
+## 3. 現況實作對照（2026-09-22）
 
 | 層 | 實際已實作 | 待辦 |
 |---|---|---|
-| backend | AuthService（登入/refresh/logout/註冊完成/ChangePassword/ResetCustomerPassword/QR proto）、AbilityService（OpenFGA proxy）、Company/Department（皆軟刪除）/RoleService、UserService（7 RPC＋範圍控制＋稽核）、MetadictService、AuditService.List、CustomerService（含地址/聯絡人）、ProductService（含單位換算）、部門級四主檔（Warehouse/Route/ProcessingSpec/ProductCategory）、OpenFGA 內嵌＋Provision、Casbin 執行層、RLS 語句（**僅定義未 ENABLE**）、JWT/session/token_version、audit.Recorder 同事務 | 訂單、退貨、通知、派車、列印、fleet；客戶專屬商品、檔案資產、QR 兌換 handler、Logo 上傳、RLS 接線、CASL→OpenFGA 收斂 |
+| backend | AuthService（登入/refresh/logout/註冊完成/ChangePassword/ResetCustomerPassword）、AbilityService（OpenFGA proxy）、Company/Department（皆軟刪除）/RoleService、UserService（7 RPC＋範圍控制＋稽核）、MetadictService、AuditService.List、CustomerService（含地址/聯絡人＋QR 簽章/`GetCustomerQRCode`）、ProductService（含單位換算）、部門級四主檔（Warehouse/Route/ProcessingSpec/ProductCategory）、CustomerProductService、SalesOrderService（CRUD＋狀態機 `TransitionOrder`＋取號＋事件軌跡）、PrintService（Preview/Print/ListLogs）、`domain/fileassets`（驗證＋儲存＋REST 上傳下載）、OpenFGA 內嵌＋Provision、Casbin 執行層、RLS 全站 28 表 `ENABLE`+`FORCE`（請求層租戶交易 `dbtenant`）、JWT/session/token_version、audit.Recorder 同事務、Gotenberg PDF 產線 | 退貨、通知、派車、fleet；Logo 上傳、CASL→OpenFGA 收斂 |
 | frontend | auth（Login 雙 tab/403/Google OIDC）、users（Company/Department/Roles＋PermissionMatrix＋分頁＋表頭排序）、ability 守衛（`hasPermission` 權限集合，`@casl/ability` 已移除）、UI 元件庫（Ark UI × Tailkit 語意 token，14 元件＋registry＋demo）、app shell/sidebar/深色模式、TanStack Table（manual）＋solid-query 資料層、TanStack Form＋valibot 表單 | 使用者管理頁、客戶/商品/主檔、訂單、退貨、派車看板、列印、通知/公告、稽核頁（皆待各 domain）；Pixso 9 個未建畫面 |
 | app | 骨架、雙 flavor、auth（身分選擇/登入/token/connectrpc transport）、auto_route 路由表 | solidart/disco/fquery/Sembast 佈線、core/config/errors、快取鏡像、業務畫面（客戶/訂單/退貨/QR） |
 
 ---
 
 ## 4. 功能列表（1.0 In Scope）
-
-> 標記：✅ 已實作（2026-09-20）・⬜ 規劃/未開始・🟡 部分（後端已落地、前端頁面待）。
+> 標記：✅ 已實作（2026-09-22）・⬜ 規劃/未開始・🟡 部分（後端已落地、前端頁面待）。
 
 ### 4.1 認證與授權（D5/D6）
 
@@ -111,19 +110,19 @@ flowchart TB
 | 地址簿/聯絡人 | 多筆地址/聯絡人 | Web/App/後端 | 🟡（後端已落地；Web/App 頁待） |
 | 商品主檔 | 商品 + 單位換算 + 分切規格 | Web/App/後端 | 🟡（後端三實體＋單位換算已落地；Web/App 頁待） |
 | 倉別/車次/分類 CRUD | 部門級實體表 | Web/後端 | 🟡（後端四主檔含 restore 已落地；Web 頁待） |
-| 客戶專屬商品 | 業務建立、別名機制 | Web/App/後端 | ⬜ |
-| 檔案資產 | FileStore 本地儲存白名單 | 後端 | ⬜ |
+| 客戶專屬商品 | 業務建立、別名機制 | Web/App/後端 | 🟡（後端已落地；Web/App 頁待） |
+| 檔案資產 | FileStore 本地儲存白名單＋REST 上傳下載 | 後端 | 🟡（後端已落地；Web 頁待） |
 
 ### 4.3 銷售訂單（D7/D12/D13/D26）
 
 | 功能 | 說明 | 適用端 | 狀態 |
 |------|------|------|:-:|
-| 訂單建立/CRUD | 訂單明細、狀態機、事件軌跡 | Web/App/後端 | ⬜ |
-| 樂觀鎖取號 | order_no 來源碼 + 6 位自增 | 後端 | ⬜ |
-| 訂單狀態機 | pending⇄processing→completed / cancelled / voided | 後端 | ⬜ |
-| 手打商品別名 | 綁定客戶的手打品名 | Web/App/後端 | ⬜ |
-| 客戶專屬清單守衛 | 下單從客戶專屬清單帶入 | Web/App/後端 | ⬜ |
-| 偏好送貨日 | preferred_delivery_days 順延（D26） | 後端 | ⬜ |
+| 訂單建立/CRUD | 訂單明細、狀態機、事件軌跡 | Web/App/後端 | 🟡（後端已落地；Web/App 頁待） |
+| 樂觀鎖取號 | order_no 來源碼 + 6 位自增 | 後端 | ✅ |
+| 訂單狀態機 | pending⇄processing→completed / cancelled / voided | 後端 | ✅ |
+| 手打商品別名 | 綁定客戶的手打品名 | Web/App/後端 | 🟡（後端已落地；Web/App 頁待） |
+| 客戶專屬清單守衛 | 下單從客戶專屬清單帶入 | Web/App/後端 | 🟡（後端已落地；Web/App 頁待） |
+| 偏好送貨日 | preferred_delivery_days 順延（D26） | 後端 | 🟡（欄位已落地；順延排程待） |
 | 不存金額 | 訂單/明細/商品無金額欄位（D12） | 全端 | — 規約 |
 
 ### 4.4 退貨（D25）
@@ -148,8 +147,8 @@ flowchart TB
 
 | 功能 | 說明 | 適用端 | 狀態 |
 |------|------|------|:-:|
-| 四種單據 PDF | 單車總表/對點單/揀貨單/加工單（Gotenberg、無金額） | Web/後端 | ⬜ |
-| Preview / Print / ListLogs | 列印與預覽 API、重印必填原因 | Web/後端 | ⬜ |
+| 四種單據 PDF | 單車總表/對點單/揀貨單/加工單（Gotenberg、無金額） | Web/後端 | 🟡（後端已落地；Web 頁待） |
+| Preview / Print / ListLogs | 列印與預覽 API、重印必填原因 | Web/後端 | 🟡（後端已落地；Web 頁待） |
 
 ### 4.7 通知與公告（D16/D23/D24）
 
@@ -196,21 +195,21 @@ flowchart TB
 | 角色權限 + PermissionMatrix | ✅ | ✅ | — |
 | 使用者管理 | ✅（API） | ⬜ | — |
 | 客戶 / 地址 / 商品 / 部門級主檔 | ✅（API） | ⬜ | ⬜ |
-| 客戶專屬商品 / 檔案資產 | ⬜ | ⬜ | ⬜ |
-| 銷售訂單 | ⬜ | ⬜ | ⬜ |
+| 客戶專屬商品 / 檔案資產 | ✅（API） | ⬜ | ⬜ |
+| 銷售訂單 | ✅（API） | ⬜ | ⬜ |
 | 退貨 | ⬜ | — | ⬜ |
 | 派車看板 | ⬜ | ⬜ | — |
-| 列印 | ⬜ | ⬜ | — |
+| 列印 | ✅（API） | ⬜ | — |
 | 通知 / 公告 | ⬜ | ⬜ | ⬜ |
 | 稽核 | ✅（查詢 API） | ⬜ | — |
-| **RLS 租戶隔離（資料層）** | ✅（18 表 `ENABLE`+`FORCE`、請求層租戶交易；2026-09-20） | — | — |
+| **RLS 租戶隔離（資料層）** | ✅（28 表 `ENABLE`+`FORCE`、請求層租戶交易；2026-09-22） | — | — |
 
 ---
 
 ## 6. 技術特色（1.0）
 
 - **Connect-RPC 唯一 API**：proto `v1` 產生三端型別（D4）
-- **雙重授權**：OpenFGA 內嵌（`OPENFGA_ENABLED=true` fail-fast；role_permissions→tuple 供給，tuple 同步於 DB commit 後執行）＋ Casbin 執行層 fallback ＋ PostgreSQL **RLS 資料範圍（18 張業務表已 `ENABLE`+`FORCE`，2026-09-20）**；請求層租戶交易（`dbtenant`：每 unary RPC 一交易、`SET LOCAL app.*` 套 scope、稽核同交易 D18）＋ 服務層 role+scope（D33）
+- **雙重授權**：OpenFGA 內嵌（`OPENFGA_ENABLED=true` fail-fast；role_permissions→tuple 供給，tuple 同步於 DB commit 後執行）＋ Casbin 執行層 fallback ＋ PostgreSQL **RLS 資料範圍（28 張業務表已 `ENABLE`+`FORCE`，2026-09-22；白名單探針 26 項 SELECT/INSERT 門檻）**；請求層租戶交易（`dbtenant`：每 unary RPC 一交易、`SET LOCAL app.*` 套 scope、稽核同交易 D18）＋ 服務層 role+scope（D33）
 - **認證雙軌**：Web 無證 session／App JWT+refresh＋token_version 撤銷（D5）
 - **樂觀鎖取號**：全部自增編號同事務取號（D7）
 - **不存金額**：訂單/明細/商品無金額（D12）
@@ -220,4 +219,4 @@ flowchart TB
 
 ---
 
-*最後更新：2026-09-20（backend 01–04 落地、frontend UI 四階段與表格/表單；同日 **SaaS 化 ① RLS 租戶隔離完成**：18 表 `ENABLE`+`FORCE`、請求層租戶交易、9 組 `app_rw` 探針）*
+*最後更新：2026-09-22（backend 01/02/03/04/05 後端/09 全數落地＋RLS 28 表；全整合綠 ok=30 fail=0；前端 UI 四階段與表格/表單既有）*
