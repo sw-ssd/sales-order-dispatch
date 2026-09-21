@@ -894,6 +894,40 @@ func TestDisableOperatorRejectsSelfAndLastAdmin(t *testing.T) {
 //   - 負的 limit_value 在判定層等於「任何用量都超額」→ 該租戶/該方案的功能被永久關掉,
 //     而 console 顯示「已設定限額」;
 //   - 兩處都要在寫入**之前**拒絕(否則會留下一筆已改壞的權益)。
+//
+// TestCancelSubscriptionTwiceIsNoOp 第二次取消已 cancelled 的訂閱是 no-op:成功、不再寫稽核、
+// cancelled_at 回空字串(而不是 0001-01-01 —— 零值 time.Time 的指標會繞過 nil 檢查)。
+func TestCancelSubscriptionTwiceIsNoOp(t *testing.T) {
+	svc, _, cache, book := newWriteHarness(0)
+	ctx := withOperator(context.Background())
+
+	first, err := svc.CancelSubscription(ctx, connect.NewRequest(&platformv1.CancelSubscriptionRequest{
+		CompanyId: "42", AtPeriodEnd: true, Reason: "解約"}))
+	if err != nil {
+		t.Fatalf("第一次取消: %v", err)
+	}
+	if first.Msg.GetCancelledAt() == "" {
+		t.Fatal("第一次取消必須回報取消時間")
+	}
+	audits := len(book.Audits())
+	cache.deleted = nil
+
+	second, err := svc.CancelSubscription(ctx, connect.NewRequest(&platformv1.CancelSubscriptionRequest{
+		CompanyId: "42", AtPeriodEnd: true, Reason: "重複解約"}))
+	if err != nil {
+		t.Fatalf("no-op 的第二次取消不得失敗: %v", err)
+	}
+	if got := second.Msg.GetCancelledAt(); got != "" {
+		t.Fatalf("no-op 的 cancelled_at 必須是空字串,got %q", got)
+	}
+	if got := len(book.Audits()); got != audits {
+		t.Fatalf("no-op 不得再寫稽核,got %d want %d", got, audits)
+	}
+	if resp := second.Msg.GetServiceUntil(); resp != first.Msg.GetServiceUntil() {
+		t.Fatalf("no-op 的服務到期時間不得改變: %q → %q", first.Msg.GetServiceUntil(), resp)
+	}
+}
+
 func TestWriteRPCsRejectNegativeLimit(t *testing.T) {
 	calls := map[string]func(svc *PlatformAdminService) error{
 		"SetTenantOverride": func(svc *PlatformAdminService) error {
@@ -976,6 +1010,12 @@ func TestPlatformWriteRejectsInvalidArguments(t *testing.T) {
 		"設定值非數字": func(svc *PlatformAdminService) error {
 			_, err := svc.UpdateBillingSettings(ctx, connect.NewRequest(&platformv1.UpdateBillingSettingsRequest{
 				Settings: []*platformv1.BillingSetting{{Key: "grace_days", Value: "abc"}}, Reason: "調整"}))
+			return err
+		},
+		"設定值超過排程上界": func(svc *PlatformAdminService) error {
+			// LoadParams 只接受 0..365:寫入端若放行 grace_days=1000,下一趟排程整趟失敗。
+			_, err := svc.UpdateBillingSettings(ctx, connect.NewRequest(&platformv1.UpdateBillingSettingsRequest{
+				Settings: []*platformv1.BillingSetting{{Key: "grace_days", Value: "1000"}}, Reason: "調整"}))
 			return err
 		},
 		"設定鍵不在允許清單": func(svc *PlatformAdminService) error {

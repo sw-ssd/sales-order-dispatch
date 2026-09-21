@@ -281,8 +281,13 @@ func platformPagination(page, pageSize, total int) *platformv1.PlatformPaginatio
 
 // formatTime 為可空的時間欄位:nil → 空字串(proto 的約定);有值一律 UTC 的 RFC3339 ——
 // 同一個時間不得因伺服器時區不同而長得不一樣。
+//
+// 零值(time.Time{}) 同樣回空字串:這是 billing 回傳 no-op 語意的載體。注意 billing.CancelSubscription
+// 的 no-op 分支回的是「**值型別的零值**」(Cancellation.CancelledAt,不可為 nil)—— 若這裡不擋 IsZero,
+// 呼叫端 formatTime(&cancelled.CancelledAt) 會把空指標檢查繞過去,把 0001-01-01 送上線路。
+// 其他欄位目前都傳「真的有時間的指標」(或 nil),故加上這一條不影響既有行為。
 func formatTime(t *time.Time) string {
-	if t == nil {
+	if t == nil || t.IsZero() {
 		return ""
 	}
 	return t.UTC().Format(time.RFC3339)
@@ -1149,10 +1154,11 @@ func billingSettings(all map[string]string) []*platformv1.BillingSetting {
 // map 的走訪順序(否則鎖的取得順序會在同一份資料上漂移)。
 type settingPair struct{ key, value string }
 
-// validatedSettings 驗證並正規化更新內容:鍵必須在允許清單內、值必須是非負整數。
+// validatedSettings 驗證並正規化更新內容:鍵必須在允許清單內、值必須是 0..365 的整數。
 //
-// 值是 text 欄位,故驗證只能在寫入前做:「-1 天的寬限期」與「abc 天」在 DB 都存得進去,
-// 而讀取端(cron 的 LoadParams)會把它當成設定錯誤讓整趟排程失敗。
+// 上界 365 與排程的 LoadParams 同值(cron/run.go:120:「0..365 天,不合理**一律錯誤**)。
+// 寫入端若只擋負數,營運存一個 grace_days=1000 會讓**之後每一趟排程**都在 LoadParams 失敗 ——
+// 相當於 console 上的一個數字把整個催收／凍結管線停掉,只能靠手工改 DB 救回。
 func validatedSettings(in []*platformv1.BillingSetting) (map[string]string, error) {
 	allowed := make(map[string]bool, len(billingSettingKeys))
 	for _, def := range billingSettingKeys {
@@ -1169,7 +1175,7 @@ func validatedSettings(in []*platformv1.BillingSetting) (map[string]string, erro
 		}
 		value := strings.TrimSpace(kv.GetValue())
 		n, err := strconv.Atoi(value)
-		if err != nil || n < 0 {
+		if err != nil || n < 0 || n > 365 {
 			return nil, errcode.SysInvalidArgument.Error(map[string]string{"field": "settings.value"})
 		}
 		out[key] = value

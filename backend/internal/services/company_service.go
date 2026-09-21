@@ -310,16 +310,22 @@ func (s *CompanyService) UpdateCompany(ctx context.Context, req *connect.Request
 		}
 	}
 
-	// 狀態改變時 build 沒有欄位可設(空更新),ent 仍會回讀現列 —— 回應因此帶得到新狀態,
-	// 不必為 status 這條路再補一次查詢。
-	updated, err := build.Save(ctx)
-	if err != nil {
-		return nil, toConnectError(err)
-	}
+	// 只有 status 變更時 build 沒有欄位可設 —— ent 的空更新會發出沒有 SET 欄位的 UPDATE,
+	// 依賴 codegen 的回讀屬於未保證的行為。狀態已由 SetCompanyStatus 寫入,這裡顯式重查。
+	var updated *ent.Company
 	if changed {
+		updated, err = build.Save(ctx)
+		if err != nil {
+			return nil, toConnectError(err)
+		}
 		act := authz.IdentityFrom(ctx)
 		actor, _ := parseID(act.UserID)
 		if err := recordAuditBA(ctx, tx, "company", "update", id, id, nil, actor, before, after); err != nil {
+			return nil, toConnectError(err)
+		}
+	} else {
+		updated, err = db.Company.Query().Where(company.ID(id)).Only(ctx)
+		if err != nil {
 			return nil, toConnectError(err)
 		}
 	}
