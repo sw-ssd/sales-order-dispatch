@@ -24,6 +24,9 @@ type CustomerContact func(*sql.Selector)
 // CustomerCounter is the predicate function for customercounter builders.
 type CustomerCounter func(*sql.Selector)
 
+// CustomerProduct is the predicate function for customerproduct builders.
+type CustomerProduct func(*sql.Selector)
+
 // Department is the predicate function for department builders.
 type Department func(*sql.Selector)
 

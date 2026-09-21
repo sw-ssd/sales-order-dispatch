@@ -77,3 +77,60 @@ abstract class ProductServiceBase extends $pb.GeneratedService {
   $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
       get $messageJson => ProductServiceBase$messageJson;
 }
+
+abstract class CustomerProductServiceBase extends $pb.GeneratedService {
+  $async.Future<$2.ListCustomerProductsResponse> listCustomerProducts(
+      $pb.ServerContext ctx, $2.ListCustomerProductsRequest request);
+  $async.Future<$2.AddCustomerProductResponse> addCustomerProduct(
+      $pb.ServerContext ctx, $2.AddCustomerProductRequest request);
+  $async.Future<$2.UpdateCustomerProductResponse> updateCustomerProduct(
+      $pb.ServerContext ctx, $2.UpdateCustomerProductRequest request);
+  $async.Future<$2.DeleteCustomerProductResponse> deleteCustomerProduct(
+      $pb.ServerContext ctx, $2.DeleteCustomerProductRequest request);
+  $async.Future<$2.EnsureCustomerProductResponse> ensureCustomerProduct(
+      $pb.ServerContext ctx, $2.EnsureCustomerProductRequest request);
+
+  $pb.GeneratedMessage createRequest($core.String methodName) {
+    switch (methodName) {
+      case 'ListCustomerProducts':
+        return $2.ListCustomerProductsRequest();
+      case 'AddCustomerProduct':
+        return $2.AddCustomerProductRequest();
+      case 'UpdateCustomerProduct':
+        return $2.UpdateCustomerProductRequest();
+      case 'DeleteCustomerProduct':
+        return $2.DeleteCustomerProductRequest();
+      case 'EnsureCustomerProduct':
+        return $2.EnsureCustomerProductRequest();
+      default:
+        throw $core.ArgumentError('Unknown method: $methodName');
+    }
+  }
+
+  $async.Future<$pb.GeneratedMessage> handleCall($pb.ServerContext ctx,
+      $core.String methodName, $pb.GeneratedMessage request) {
+    switch (methodName) {
+      case 'ListCustomerProducts':
+        return listCustomerProducts(
+            ctx, request as $2.ListCustomerProductsRequest);
+      case 'AddCustomerProduct':
+        return addCustomerProduct(ctx, request as $2.AddCustomerProductRequest);
+      case 'UpdateCustomerProduct':
+        return updateCustomerProduct(
+            ctx, request as $2.UpdateCustomerProductRequest);
+      case 'DeleteCustomerProduct':
+        return deleteCustomerProduct(
+            ctx, request as $2.DeleteCustomerProductRequest);
+      case 'EnsureCustomerProduct':
+        return ensureCustomerProduct(
+            ctx, request as $2.EnsureCustomerProductRequest);
+      default:
+        throw $core.ArgumentError('Unknown method: $methodName');
+    }
+  }
+
+  $core.Map<$core.String, $core.dynamic> get $json =>
+      CustomerProductServiceBase$json;
+  $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
+      get $messageJson => CustomerProductServiceBase$messageJson;
+}

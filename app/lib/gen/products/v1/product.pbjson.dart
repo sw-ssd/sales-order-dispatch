@@ -449,6 +449,211 @@ final $typed_data.Uint8List restoreProductResponseDescriptor =
         'ChZSZXN0b3JlUHJvZHVjdFJlc3BvbnNlEi4KB3Byb2R1Y3QYASABKAsyFC5wcm9kdWN0cy52MS'
         '5Qcm9kdWN0Ugdwcm9kdWN0');
 
+@$core.Deprecated('Use customerProductDescriptor instead')
+const CustomerProduct$json = {
+  '1': 'CustomerProduct',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'customer_id', '3': 2, '4': 1, '5': 9, '10': 'customerId'},
+    {'1': 'product_id', '3': 3, '4': 1, '5': 9, '10': 'productId'},
+    {'1': 'alias_name', '3': 4, '4': 1, '5': 9, '10': 'aliasName'},
+    {'1': 'default_qty', '3': 5, '4': 1, '5': 9, '10': 'defaultQty'},
+    {'1': 'cut_note', '3': 6, '4': 1, '5': 9, '10': 'cutNote'},
+    {'1': 'promo_tag_ids', '3': 7, '4': 3, '5': 3, '10': 'promoTagIds'},
+    {'1': 'created_at', '3': 8, '4': 1, '5': 9, '10': 'createdAt'},
+    {'1': 'updated_at', '3': 9, '4': 1, '5': 9, '10': 'updatedAt'},
+  ],
+};
+
+/// Descriptor for `CustomerProduct`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List customerProductDescriptor = $convert.base64Decode(
+    'Cg9DdXN0b21lclByb2R1Y3QSDgoCaWQYASABKAlSAmlkEh8KC2N1c3RvbWVyX2lkGAIgASgJUg'
+    'pjdXN0b21lcklkEh0KCnByb2R1Y3RfaWQYAyABKAlSCXByb2R1Y3RJZBIdCgphbGlhc19uYW1l'
+    'GAQgASgJUglhbGlhc05hbWUSHwoLZGVmYXVsdF9xdHkYBSABKAlSCmRlZmF1bHRRdHkSGQoIY3'
+    'V0X25vdGUYBiABKAlSB2N1dE5vdGUSIgoNcHJvbW9fdGFnX2lkcxgHIAMoA1ILcHJvbW9UYWdJ'
+    'ZHMSHQoKY3JlYXRlZF9hdBgIIAEoCVIJY3JlYXRlZEF0Eh0KCnVwZGF0ZWRfYXQYCSABKAlSCX'
+    'VwZGF0ZWRBdA==');
+
+@$core.Deprecated('Use listCustomerProductsRequestDescriptor instead')
+const ListCustomerProductsRequest$json = {
+  '1': 'ListCustomerProductsRequest',
+  '2': [
+    {'1': 'customer_id', '3': 1, '4': 1, '5': 9, '10': 'customerId'},
+    {'1': 'for_order', '3': 2, '4': 1, '5': 8, '10': 'forOrder'},
+    {'1': 'include_deleted', '3': 3, '4': 1, '5': 8, '10': 'includeDeleted'},
+  ],
+};
+
+/// Descriptor for `ListCustomerProductsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listCustomerProductsRequestDescriptor =
+    $convert.base64Decode(
+        'ChtMaXN0Q3VzdG9tZXJQcm9kdWN0c1JlcXVlc3QSHwoLY3VzdG9tZXJfaWQYASABKAlSCmN1c3'
+        'RvbWVySWQSGwoJZm9yX29yZGVyGAIgASgIUghmb3JPcmRlchInCg9pbmNsdWRlX2RlbGV0ZWQY'
+        'AyABKAhSDmluY2x1ZGVEZWxldGVk');
+
+@$core.Deprecated('Use listCustomerProductsResponseDescriptor instead')
+const ListCustomerProductsResponse$json = {
+  '1': 'ListCustomerProductsResponse',
+  '2': [
+    {
+      '1': 'products',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.products.v1.CustomerProduct',
+      '10': 'products'
+    },
+    {'1': 'total', '3': 2, '4': 1, '5': 5, '10': 'total'},
+  ],
+};
+
+/// Descriptor for `ListCustomerProductsResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listCustomerProductsResponseDescriptor =
+    $convert.base64Decode(
+        'ChxMaXN0Q3VzdG9tZXJQcm9kdWN0c1Jlc3BvbnNlEjgKCHByb2R1Y3RzGAEgAygLMhwucHJvZH'
+        'VjdHMudjEuQ3VzdG9tZXJQcm9kdWN0Ughwcm9kdWN0cxIUCgV0b3RhbBgCIAEoBVIFdG90YWw=');
+
+@$core.Deprecated('Use addCustomerProductRequestDescriptor instead')
+const AddCustomerProductRequest$json = {
+  '1': 'AddCustomerProductRequest',
+  '2': [
+    {'1': 'customer_id', '3': 1, '4': 1, '5': 9, '10': 'customerId'},
+    {'1': 'product_id', '3': 2, '4': 1, '5': 9, '10': 'productId'},
+    {'1': 'alias_name', '3': 3, '4': 1, '5': 9, '10': 'aliasName'},
+    {'1': 'default_qty', '3': 4, '4': 1, '5': 9, '10': 'defaultQty'},
+    {'1': 'cut_note', '3': 5, '4': 1, '5': 9, '10': 'cutNote'},
+  ],
+};
+
+/// Descriptor for `AddCustomerProductRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List addCustomerProductRequestDescriptor = $convert.base64Decode(
+    'ChlBZGRDdXN0b21lclByb2R1Y3RSZXF1ZXN0Eh8KC2N1c3RvbWVyX2lkGAEgASgJUgpjdXN0b2'
+    '1lcklkEh0KCnByb2R1Y3RfaWQYAiABKAlSCXByb2R1Y3RJZBIdCgphbGlhc19uYW1lGAMgASgJ'
+    'UglhbGlhc05hbWUSHwoLZGVmYXVsdF9xdHkYBCABKAlSCmRlZmF1bHRRdHkSGQoIY3V0X25vdG'
+    'UYBSABKAlSB2N1dE5vdGU=');
+
+@$core.Deprecated('Use addCustomerProductResponseDescriptor instead')
+const AddCustomerProductResponse$json = {
+  '1': 'AddCustomerProductResponse',
+  '2': [
+    {
+      '1': 'product',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.products.v1.CustomerProduct',
+      '10': 'product'
+    },
+  ],
+};
+
+/// Descriptor for `AddCustomerProductResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List addCustomerProductResponseDescriptor =
+    $convert.base64Decode(
+        'ChpBZGRDdXN0b21lclByb2R1Y3RSZXNwb25zZRI2Cgdwcm9kdWN0GAEgASgLMhwucHJvZHVjdH'
+        'MudjEuQ3VzdG9tZXJQcm9kdWN0Ugdwcm9kdWN0');
+
+@$core.Deprecated('Use updateCustomerProductRequestDescriptor instead')
+const UpdateCustomerProductRequest$json = {
+  '1': 'UpdateCustomerProductRequest',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'alias_name', '3': 2, '4': 1, '5': 9, '10': 'aliasName'},
+    {'1': 'default_qty', '3': 3, '4': 1, '5': 9, '10': 'defaultQty'},
+    {'1': 'cut_note', '3': 4, '4': 1, '5': 9, '10': 'cutNote'},
+  ],
+};
+
+/// Descriptor for `UpdateCustomerProductRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List updateCustomerProductRequestDescriptor =
+    $convert.base64Decode(
+        'ChxVcGRhdGVDdXN0b21lclByb2R1Y3RSZXF1ZXN0Eg4KAmlkGAEgASgJUgJpZBIdCgphbGlhc1'
+        '9uYW1lGAIgASgJUglhbGlhc05hbWUSHwoLZGVmYXVsdF9xdHkYAyABKAlSCmRlZmF1bHRRdHkS'
+        'GQoIY3V0X25vdGUYBCABKAlSB2N1dE5vdGU=');
+
+@$core.Deprecated('Use updateCustomerProductResponseDescriptor instead')
+const UpdateCustomerProductResponse$json = {
+  '1': 'UpdateCustomerProductResponse',
+  '2': [
+    {
+      '1': 'product',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.products.v1.CustomerProduct',
+      '10': 'product'
+    },
+  ],
+};
+
+/// Descriptor for `UpdateCustomerProductResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List updateCustomerProductResponseDescriptor =
+    $convert.base64Decode(
+        'Ch1VcGRhdGVDdXN0b21lclByb2R1Y3RSZXNwb25zZRI2Cgdwcm9kdWN0GAEgASgLMhwucHJvZH'
+        'VjdHMudjEuQ3VzdG9tZXJQcm9kdWN0Ugdwcm9kdWN0');
+
+@$core.Deprecated('Use deleteCustomerProductRequestDescriptor instead')
+const DeleteCustomerProductRequest$json = {
+  '1': 'DeleteCustomerProductRequest',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+  ],
+};
+
+/// Descriptor for `DeleteCustomerProductRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List deleteCustomerProductRequestDescriptor =
+    $convert.base64Decode(
+        'ChxEZWxldGVDdXN0b21lclByb2R1Y3RSZXF1ZXN0Eg4KAmlkGAEgASgJUgJpZA==');
+
+@$core.Deprecated('Use deleteCustomerProductResponseDescriptor instead')
+const DeleteCustomerProductResponse$json = {
+  '1': 'DeleteCustomerProductResponse',
+};
+
+/// Descriptor for `DeleteCustomerProductResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List deleteCustomerProductResponseDescriptor =
+    $convert.base64Decode('Ch1EZWxldGVDdXN0b21lclByb2R1Y3RSZXNwb25zZQ==');
+
+@$core.Deprecated('Use ensureCustomerProductRequestDescriptor instead')
+const EnsureCustomerProductRequest$json = {
+  '1': 'EnsureCustomerProductRequest',
+  '2': [
+    {'1': 'customer_id', '3': 1, '4': 1, '5': 9, '10': 'customerId'},
+    {'1': 'product_id', '3': 2, '4': 1, '5': 9, '10': 'productId'},
+    {'1': 'alias_name', '3': 3, '4': 1, '5': 9, '10': 'aliasName'},
+  ],
+};
+
+/// Descriptor for `EnsureCustomerProductRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List ensureCustomerProductRequestDescriptor =
+    $convert.base64Decode(
+        'ChxFbnN1cmVDdXN0b21lclByb2R1Y3RSZXF1ZXN0Eh8KC2N1c3RvbWVyX2lkGAEgASgJUgpjdX'
+        'N0b21lcklkEh0KCnByb2R1Y3RfaWQYAiABKAlSCXByb2R1Y3RJZBIdCgphbGlhc19uYW1lGAMg'
+        'ASgJUglhbGlhc05hbWU=');
+
+@$core.Deprecated('Use ensureCustomerProductResponseDescriptor instead')
+const EnsureCustomerProductResponse$json = {
+  '1': 'EnsureCustomerProductResponse',
+  '2': [
+    {
+      '1': 'product',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.products.v1.CustomerProduct',
+      '10': 'product'
+    },
+    {'1': 'created', '3': 2, '4': 1, '5': 8, '10': 'created'},
+  ],
+};
+
+/// Descriptor for `EnsureCustomerProductResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List ensureCustomerProductResponseDescriptor =
+    $convert.base64Decode(
+        'Ch1FbnN1cmVDdXN0b21lclByb2R1Y3RSZXNwb25zZRI2Cgdwcm9kdWN0GAEgASgLMhwucHJvZH'
+        'VjdHMudjEuQ3VzdG9tZXJQcm9kdWN0Ugdwcm9kdWN0EhgKB2NyZWF0ZWQYAiABKAhSB2NyZWF0'
+        'ZWQ=');
+
 const $core.Map<$core.String, $core.dynamic> ProductServiceBase$json = {
   '1': 'ProductService',
   '2': [
@@ -522,3 +727,71 @@ final $typed_data.Uint8List productServiceDescriptor = $convert.base64Decode(
     'RlbGV0ZVByb2R1Y3RSZXF1ZXN0GiIucHJvZHVjdHMudjEuRGVsZXRlUHJvZHVjdFJlc3BvbnNl'
     'ElkKDlJlc3RvcmVQcm9kdWN0EiIucHJvZHVjdHMudjEuUmVzdG9yZVByb2R1Y3RSZXF1ZXN0Gi'
     'MucHJvZHVjdHMudjEuUmVzdG9yZVByb2R1Y3RSZXNwb25zZQ==');
+
+const $core.Map<$core.String, $core.dynamic> CustomerProductServiceBase$json = {
+  '1': 'CustomerProductService',
+  '2': [
+    {
+      '1': 'ListCustomerProducts',
+      '2': '.products.v1.ListCustomerProductsRequest',
+      '3': '.products.v1.ListCustomerProductsResponse'
+    },
+    {
+      '1': 'AddCustomerProduct',
+      '2': '.products.v1.AddCustomerProductRequest',
+      '3': '.products.v1.AddCustomerProductResponse'
+    },
+    {
+      '1': 'UpdateCustomerProduct',
+      '2': '.products.v1.UpdateCustomerProductRequest',
+      '3': '.products.v1.UpdateCustomerProductResponse'
+    },
+    {
+      '1': 'DeleteCustomerProduct',
+      '2': '.products.v1.DeleteCustomerProductRequest',
+      '3': '.products.v1.DeleteCustomerProductResponse'
+    },
+    {
+      '1': 'EnsureCustomerProduct',
+      '2': '.products.v1.EnsureCustomerProductRequest',
+      '3': '.products.v1.EnsureCustomerProductResponse'
+    },
+  ],
+};
+
+@$core.Deprecated('Use customerProductServiceDescriptor instead')
+const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
+    CustomerProductServiceBase$messageJson = {
+  '.products.v1.ListCustomerProductsRequest': ListCustomerProductsRequest$json,
+  '.products.v1.ListCustomerProductsResponse':
+      ListCustomerProductsResponse$json,
+  '.products.v1.CustomerProduct': CustomerProduct$json,
+  '.products.v1.AddCustomerProductRequest': AddCustomerProductRequest$json,
+  '.products.v1.AddCustomerProductResponse': AddCustomerProductResponse$json,
+  '.products.v1.UpdateCustomerProductRequest':
+      UpdateCustomerProductRequest$json,
+  '.products.v1.UpdateCustomerProductResponse':
+      UpdateCustomerProductResponse$json,
+  '.products.v1.DeleteCustomerProductRequest':
+      DeleteCustomerProductRequest$json,
+  '.products.v1.DeleteCustomerProductResponse':
+      DeleteCustomerProductResponse$json,
+  '.products.v1.EnsureCustomerProductRequest':
+      EnsureCustomerProductRequest$json,
+  '.products.v1.EnsureCustomerProductResponse':
+      EnsureCustomerProductResponse$json,
+};
+
+/// Descriptor for `CustomerProductService`. Decode as a `google.protobuf.ServiceDescriptorProto`.
+final $typed_data.Uint8List customerProductServiceDescriptor = $convert.base64Decode(
+    'ChZDdXN0b21lclByb2R1Y3RTZXJ2aWNlEmsKFExpc3RDdXN0b21lclByb2R1Y3RzEigucHJvZH'
+    'VjdHMudjEuTGlzdEN1c3RvbWVyUHJvZHVjdHNSZXF1ZXN0GikucHJvZHVjdHMudjEuTGlzdEN1'
+    'c3RvbWVyUHJvZHVjdHNSZXNwb25zZRJlChJBZGRDdXN0b21lclByb2R1Y3QSJi5wcm9kdWN0cy'
+    '52MS5BZGRDdXN0b21lclByb2R1Y3RSZXF1ZXN0GicucHJvZHVjdHMudjEuQWRkQ3VzdG9tZXJQ'
+    'cm9kdWN0UmVzcG9uc2USbgoVVXBkYXRlQ3VzdG9tZXJQcm9kdWN0EikucHJvZHVjdHMudjEuVX'
+    'BkYXRlQ3VzdG9tZXJQcm9kdWN0UmVxdWVzdBoqLnByb2R1Y3RzLnYxLlVwZGF0ZUN1c3RvbWVy'
+    'UHJvZHVjdFJlc3BvbnNlEm4KFURlbGV0ZUN1c3RvbWVyUHJvZHVjdBIpLnByb2R1Y3RzLnYxLk'
+    'RlbGV0ZUN1c3RvbWVyUHJvZHVjdFJlcXVlc3QaKi5wcm9kdWN0cy52MS5EZWxldGVDdXN0b21l'
+    'clByb2R1Y3RSZXNwb25zZRJuChVFbnN1cmVDdXN0b21lclByb2R1Y3QSKS5wcm9kdWN0cy52MS'
+    '5FbnN1cmVDdXN0b21lclByb2R1Y3RSZXF1ZXN0GioucHJvZHVjdHMudjEuRW5zdXJlQ3VzdG9t'
+    'ZXJQcm9kdWN0UmVzcG9uc2U=');

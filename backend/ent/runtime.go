@@ -11,6 +11,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/customeraddress"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customercontact"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customercounter"
+	"github.com/salesorder/sales-order-1.0/backend/ent/customerproduct"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/ordercounter"
@@ -138,6 +139,30 @@ func init() {
 	customercounter.DefaultUpdatedAt = customercounterDescUpdatedAt.Default.(func() time.Time)
 	// customercounter.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	customercounter.UpdateDefaultUpdatedAt = customercounterDescUpdatedAt.UpdateDefault.(func() time.Time)
+	customerproductFields := schema.CustomerProduct{}.Fields()
+	_ = customerproductFields
+	// customerproductDescAliasName is the schema descriptor for alias_name field.
+	customerproductDescAliasName := customerproductFields[4].Descriptor()
+	// customerproduct.AliasNameValidator is a validator for the "alias_name" field. It is called by the builders before save.
+	customerproduct.AliasNameValidator = customerproductDescAliasName.Validators[0].(func(string) error)
+	// customerproductDescDefaultQty is the schema descriptor for default_qty field.
+	customerproductDescDefaultQty := customerproductFields[5].Descriptor()
+	// customerproduct.DefaultDefaultQty holds the default value on creation for the default_qty field.
+	customerproduct.DefaultDefaultQty = customerproductDescDefaultQty.Default.(string)
+	// customerproductDescPromoTagIds is the schema descriptor for promo_tag_ids field.
+	customerproductDescPromoTagIds := customerproductFields[7].Descriptor()
+	// customerproduct.DefaultPromoTagIds holds the default value on creation for the promo_tag_ids field.
+	customerproduct.DefaultPromoTagIds = customerproductDescPromoTagIds.Default.([]int)
+	// customerproductDescCreatedAt is the schema descriptor for created_at field.
+	customerproductDescCreatedAt := customerproductFields[10].Descriptor()
+	// customerproduct.DefaultCreatedAt holds the default value on creation for the created_at field.
+	customerproduct.DefaultCreatedAt = customerproductDescCreatedAt.Default.(func() time.Time)
+	// customerproductDescUpdatedAt is the schema descriptor for updated_at field.
+	customerproductDescUpdatedAt := customerproductFields[11].Descriptor()
+	// customerproduct.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	customerproduct.DefaultUpdatedAt = customerproductDescUpdatedAt.Default.(func() time.Time)
+	// customerproduct.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	customerproduct.UpdateDefaultUpdatedAt = customerproductDescUpdatedAt.UpdateDefault.(func() time.Time)
 	departmentFields := schema.Department{}.Fields()
 	_ = departmentFields
 	// departmentDescName is the schema descriptor for name field.

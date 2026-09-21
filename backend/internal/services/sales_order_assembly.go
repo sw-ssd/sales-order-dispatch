@@ -10,6 +10,7 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customer"
+	"github.com/salesorder/sales-order-1.0/backend/ent/customerproduct"
 	"github.com/salesorder/sales-order-1.0/backend/ent/product"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productunit"
 	domainproducts "github.com/salesorder/sales-order-1.0/backend/internal/domain/products"
@@ -147,6 +148,78 @@ func adjustDeliveryDate(preferredDays []bool, date time.Time) time.Time {
 		}
 	}
 	return date
+}
+
+// upsertCustomerAlias 同交易 upsert 別名(4.2.2):存在改 alias,不存在則建。
+// 唯一衝突(併發) → 重讀改更新;仍失敗整單回滾(呼叫端交易)。
+func upsertCustomerAlias(ctx context.Context, db *ent.Client, cid, custID, pid int, alias string) error {
+	if existing, err := db.CustomerProduct.Query().
+		Where(customerproduct.CustomerIDEQ(custID), customerproduct.ProductIDEQ(pid),
+			customerproduct.DeletedAtIsNil()).Only(ctx); err == nil {
+		_, err := db.CustomerProduct.UpdateOneID(existing.ID).SetAliasName(alias).Save(ctx)
+		return err
+	} else if !ent.IsNotFound(err) {
+		return toConnectError(err)
+	}
+	cust, err := db.Customer.Query().
+		Where(customer.ID(custID), customer.DeletedAtIsNil()).Only(ctx)
+	if err != nil {
+		return toConnectError(err)
+	}
+	build := db.CustomerProduct.Create().
+		SetCompanyID(cid).SetCustomerID(custID).SetProductID(pid).
+		SetAliasName(alias).SetDefaultQty("0")
+	if cust.DepartmentID != nil {
+		build = build.SetDepartmentID(*cust.DepartmentID)
+	}
+	if _, err := build.Save(ctx); err != nil {
+		if ent.IsConstraintError(err) {
+			if existing, rerr := db.CustomerProduct.Query().
+				Where(customerproduct.CustomerIDEQ(custID), customerproduct.ProductIDEQ(pid),
+					customerproduct.DeletedAtIsNil()).Only(ctx); rerr == nil {
+				_, err := db.CustomerProduct.UpdateOneID(existing.ID).SetAliasName(alias).Save(ctx)
+				return err
+			}
+		}
+		return toConnectError(err)
+	}
+	return nil
+}
+
+// ensureCustomerListEntry 選用總表商品自動加入清單(4.2.2):無記錄即建預設列(別名=商品名)。
+func ensureCustomerListEntry(ctx context.Context, db *ent.Client, cid, custID, pid int) error {
+	exists, err := db.CustomerProduct.Query().
+		Where(customerproduct.CustomerIDEQ(custID), customerproduct.ProductIDEQ(pid),
+			customerproduct.DeletedAtIsNil()).Exist(ctx)
+	if err != nil {
+		return toConnectError(err)
+	}
+	if exists {
+		return nil
+	}
+	prod, err := db.Product.Query().Where(product.ID(pid)).Only(ctx)
+	if err != nil {
+		return toConnectError(err)
+	}
+	cust, err := db.Customer.Query().
+		Where(customer.ID(custID), customer.DeletedAtIsNil()).Only(ctx)
+	if err != nil {
+		return toConnectError(err)
+	}
+	build := db.CustomerProduct.Create().
+		SetCompanyID(cid).SetCustomerID(custID).SetProductID(pid).
+		SetAliasName(prod.Name).SetDefaultQty("0")
+	if cust.DepartmentID != nil {
+		build = build.SetDepartmentID(*cust.DepartmentID)
+	}
+	if _, err := build.Save(ctx); err != nil {
+		// 併發已建 → 吸收(冪等)。
+		if ent.IsConstraintError(err) {
+			return nil
+		}
+		return toConnectError(err)
+	}
+	return nil
 }
 
 // customerPreferredDays 讀客戶偏好陣列(4.2.5):客戶不存在 → not_found。

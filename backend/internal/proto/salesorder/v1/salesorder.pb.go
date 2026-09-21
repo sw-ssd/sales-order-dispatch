@@ -654,6 +654,7 @@ type OrderItemInput struct {
 	ProcessingSpecId string                 `protobuf:"bytes,6,opt,name=processing_spec_id,json=processingSpecId,proto3" json:"processing_spec_id,omitempty"` // 可空
 	SpecialCutNote   string                 `protobuf:"bytes,7,opt,name=special_cut_note,json=specialCutNote,proto3" json:"special_cut_note,omitempty"`       // 可空
 	WarehouseId      string                 `protobuf:"bytes,8,opt,name=warehouse_id,json=warehouseId,proto3" json:"warehouse_id,omitempty"`                  // 可空
+	SaveAlias        bool                   `protobuf:"varint,9,opt,name=save_alias,json=saveAlias,proto3" json:"save_alias,omitempty"`                       // true 即同交易 upsert 客戶別名(4.2.2;需 product_id)
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -742,6 +743,13 @@ func (x *OrderItemInput) GetWarehouseId() string {
 		return x.WarehouseId
 	}
 	return ""
+}
+
+func (x *OrderItemInput) GetSaveAlias() bool {
+	if x != nil {
+		return x.SaveAlias
+	}
+	return false
 }
 
 type CreateOrderRequest struct {
@@ -1527,7 +1535,7 @@ const file_salesorder_v1_salesorder_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"x\n" +
 	"\x10GetOrderResponse\x12/\n" +
 	"\x05order\x18\x01 \x01(\v2\x19.salesorder.v1.SalesOrderR\x05order\x123\n" +
-	"\x05items\x18\x02 \x03(\v2\x1d.salesorder.v1.SalesOrderItemR\x05items\"\x94\x02\n" +
+	"\x05items\x18\x02 \x03(\v2\x1d.salesorder.v1.SalesOrderItemR\x05items\"\xb3\x02\n" +
 	"\x0eOrderItemInput\x12\x1d\n" +
 	"\n" +
 	"product_id\x18\x01 \x01(\tR\tproductId\x12\x1f\n" +
@@ -1538,7 +1546,9 @@ const file_salesorder_v1_salesorder_proto_rawDesc = "" +
 	"\x04unit\x18\x05 \x01(\tR\x04unit\x12,\n" +
 	"\x12processing_spec_id\x18\x06 \x01(\tR\x10processingSpecId\x12(\n" +
 	"\x10special_cut_note\x18\a \x01(\tR\x0especialCutNote\x12!\n" +
-	"\fwarehouse_id\x18\b \x01(\tR\vwarehouseId\"\xee\x01\n" +
+	"\fwarehouse_id\x18\b \x01(\tR\vwarehouseId\x12\x1d\n" +
+	"\n" +
+	"save_alias\x18\t \x01(\bR\tsaveAlias\"\xee\x01\n" +
 	"\x12CreateOrderRequest\x12\x1f\n" +
 	"\vcustomer_id\x18\x01 \x01(\tR\n" +
 	"customerId\x12\x16\n" +

@@ -110,6 +110,7 @@ message OrderItemInput {
   string processing_spec_id = 6;     // 可空
   string special_cut_note = 7;       // 可空
   string warehouse_id = 8;           // 可空
+  bool save_alias = 9;               // true 即同交易 upsert 客戶別名(4.2.2;需 product_id)
 }
 
 message CreateOrderRequest {

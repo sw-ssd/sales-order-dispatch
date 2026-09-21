@@ -96,3 +96,81 @@ message DeleteProductResponse {}
 
 message RestoreProductRequest { string id = 1; }
 message RestoreProductResponse { Product product = 1; }
+
+// CustomerProduct:客戶專屬商品清單(04 Task 3.5,不存單價)。
+message CustomerProduct {
+  string id = 1;
+  string customer_id = 2;
+  string product_id = 3;
+  string alias_name = 4;
+  string default_qty = 5;               // 十進位文字,0 = 保留不顯示
+  string cut_note = 6;                  // 可空
+  repeated int64 promo_tag_ids = 7;
+  string created_at = 8;                // RFC3339
+  string updated_at = 9;                // RFC3339
+}
+
+// CustomerProductService:客戶專屬清單(dept_admin/staff 限部門;客戶僅 for_order 語意由 List 旗標表達)。
+service CustomerProductService {
+  // ListCustomerProducts:查該客戶清單(for_order=true 排除 default_qty=0 與已刪)。
+  rpc ListCustomerProducts(ListCustomerProductsRequest) returns (ListCustomerProductsResponse);
+  // AddCustomerProduct:新增一筆(一客戶一商品;重複未刪 → already_exists)。
+  rpc AddCustomerProduct(AddCustomerProductRequest) returns (AddCustomerProductResponse);
+  // UpdateCustomerProduct:改 alias/default_qty/cut_note(不可改 customer/product)。
+  rpc UpdateCustomerProduct(UpdateCustomerProductRequest) returns (UpdateCustomerProductResponse);
+  // DeleteCustomerProduct:軟刪除 + 稽核。
+  rpc DeleteCustomerProduct(DeleteCustomerProductRequest) returns (DeleteCustomerProductResponse);
+  // EnsureCustomerProduct:下單手打確認儲存後呼叫(冪等:存在回既有 created=false;唯一衝突吸收)。
+  rpc EnsureCustomerProduct(EnsureCustomerProductRequest) returns (EnsureCustomerProductResponse);
+}
+
+message ListCustomerProductsRequest {
+  string customer_id = 1;
+  bool for_order = 2;                   // 下單用途:排除 default_qty=0
+  bool include_deleted = 3;
+}
+
+message ListCustomerProductsResponse {
+  repeated CustomerProduct products = 1;
+  int32 total = 2;
+}
+
+message AddCustomerProductRequest {
+  string customer_id = 1;
+  string product_id = 2;
+  string alias_name = 3;                // 可空(預設商品名)
+  string default_qty = 4;               // 可空(預設 0)
+  string cut_note = 5;                  // 可空
+}
+
+message AddCustomerProductResponse {
+  CustomerProduct product = 1;
+}
+
+message UpdateCustomerProductRequest {
+  string id = 1;
+  string alias_name = 2;                // 空即不動
+  string default_qty = 3;               // 空即不動
+  string cut_note = 4;                  // 空即不動
+}
+
+message UpdateCustomerProductResponse {
+  CustomerProduct product = 1;
+}
+
+message DeleteCustomerProductRequest {
+  string id = 1;
+}
+
+message DeleteCustomerProductResponse {}
+
+message EnsureCustomerProductRequest {
+  string customer_id = 1;
+  string product_id = 2;
+  string alias_name = 3;
+}
+
+message EnsureCustomerProductResponse {
+  CustomerProduct product = 1;
+  bool created = 2;
+}

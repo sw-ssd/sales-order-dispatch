@@ -469,6 +469,307 @@ export declare type RestoreProductResponse = Message<"products.v1.RestoreProduct
 export declare const RestoreProductResponseSchema: GenMessage<RestoreProductResponse>;
 
 /**
+ * CustomerProduct:客戶專屬商品清單(04 Task 3.5,不存單價)。
+ *
+ * @generated from message products.v1.CustomerProduct
+ */
+export declare type CustomerProduct = Message<"products.v1.CustomerProduct"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string customer_id = 2;
+   */
+  customerId: string;
+
+  /**
+   * @generated from field: string product_id = 3;
+   */
+  productId: string;
+
+  /**
+   * @generated from field: string alias_name = 4;
+   */
+  aliasName: string;
+
+  /**
+   * 十進位文字,0 = 保留不顯示
+   *
+   * @generated from field: string default_qty = 5;
+   */
+  defaultQty: string;
+
+  /**
+   * 可空
+   *
+   * @generated from field: string cut_note = 6;
+   */
+  cutNote: string;
+
+  /**
+   * @generated from field: repeated int64 promo_tag_ids = 7;
+   */
+  promoTagIds: bigint[];
+
+  /**
+   * RFC3339
+   *
+   * @generated from field: string created_at = 8;
+   */
+  createdAt: string;
+
+  /**
+   * RFC3339
+   *
+   * @generated from field: string updated_at = 9;
+   */
+  updatedAt: string;
+};
+
+/**
+ * Describes the message products.v1.CustomerProduct.
+ * Use `create(CustomerProductSchema)` to create a new message.
+ */
+export declare const CustomerProductSchema: GenMessage<CustomerProduct>;
+
+/**
+ * @generated from message products.v1.ListCustomerProductsRequest
+ */
+export declare type ListCustomerProductsRequest = Message<"products.v1.ListCustomerProductsRequest"> & {
+  /**
+   * @generated from field: string customer_id = 1;
+   */
+  customerId: string;
+
+  /**
+   * 下單用途:排除 default_qty=0
+   *
+   * @generated from field: bool for_order = 2;
+   */
+  forOrder: boolean;
+
+  /**
+   * @generated from field: bool include_deleted = 3;
+   */
+  includeDeleted: boolean;
+};
+
+/**
+ * Describes the message products.v1.ListCustomerProductsRequest.
+ * Use `create(ListCustomerProductsRequestSchema)` to create a new message.
+ */
+export declare const ListCustomerProductsRequestSchema: GenMessage<ListCustomerProductsRequest>;
+
+/**
+ * @generated from message products.v1.ListCustomerProductsResponse
+ */
+export declare type ListCustomerProductsResponse = Message<"products.v1.ListCustomerProductsResponse"> & {
+  /**
+   * @generated from field: repeated products.v1.CustomerProduct products = 1;
+   */
+  products: CustomerProduct[];
+
+  /**
+   * @generated from field: int32 total = 2;
+   */
+  total: number;
+};
+
+/**
+ * Describes the message products.v1.ListCustomerProductsResponse.
+ * Use `create(ListCustomerProductsResponseSchema)` to create a new message.
+ */
+export declare const ListCustomerProductsResponseSchema: GenMessage<ListCustomerProductsResponse>;
+
+/**
+ * @generated from message products.v1.AddCustomerProductRequest
+ */
+export declare type AddCustomerProductRequest = Message<"products.v1.AddCustomerProductRequest"> & {
+  /**
+   * @generated from field: string customer_id = 1;
+   */
+  customerId: string;
+
+  /**
+   * @generated from field: string product_id = 2;
+   */
+  productId: string;
+
+  /**
+   * 可空(預設商品名)
+   *
+   * @generated from field: string alias_name = 3;
+   */
+  aliasName: string;
+
+  /**
+   * 可空(預設 0)
+   *
+   * @generated from field: string default_qty = 4;
+   */
+  defaultQty: string;
+
+  /**
+   * 可空
+   *
+   * @generated from field: string cut_note = 5;
+   */
+  cutNote: string;
+};
+
+/**
+ * Describes the message products.v1.AddCustomerProductRequest.
+ * Use `create(AddCustomerProductRequestSchema)` to create a new message.
+ */
+export declare const AddCustomerProductRequestSchema: GenMessage<AddCustomerProductRequest>;
+
+/**
+ * @generated from message products.v1.AddCustomerProductResponse
+ */
+export declare type AddCustomerProductResponse = Message<"products.v1.AddCustomerProductResponse"> & {
+  /**
+   * @generated from field: products.v1.CustomerProduct product = 1;
+   */
+  product?: CustomerProduct | undefined;
+};
+
+/**
+ * Describes the message products.v1.AddCustomerProductResponse.
+ * Use `create(AddCustomerProductResponseSchema)` to create a new message.
+ */
+export declare const AddCustomerProductResponseSchema: GenMessage<AddCustomerProductResponse>;
+
+/**
+ * @generated from message products.v1.UpdateCustomerProductRequest
+ */
+export declare type UpdateCustomerProductRequest = Message<"products.v1.UpdateCustomerProductRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * 空即不動
+   *
+   * @generated from field: string alias_name = 2;
+   */
+  aliasName: string;
+
+  /**
+   * 空即不動
+   *
+   * @generated from field: string default_qty = 3;
+   */
+  defaultQty: string;
+
+  /**
+   * 空即不動
+   *
+   * @generated from field: string cut_note = 4;
+   */
+  cutNote: string;
+};
+
+/**
+ * Describes the message products.v1.UpdateCustomerProductRequest.
+ * Use `create(UpdateCustomerProductRequestSchema)` to create a new message.
+ */
+export declare const UpdateCustomerProductRequestSchema: GenMessage<UpdateCustomerProductRequest>;
+
+/**
+ * @generated from message products.v1.UpdateCustomerProductResponse
+ */
+export declare type UpdateCustomerProductResponse = Message<"products.v1.UpdateCustomerProductResponse"> & {
+  /**
+   * @generated from field: products.v1.CustomerProduct product = 1;
+   */
+  product?: CustomerProduct | undefined;
+};
+
+/**
+ * Describes the message products.v1.UpdateCustomerProductResponse.
+ * Use `create(UpdateCustomerProductResponseSchema)` to create a new message.
+ */
+export declare const UpdateCustomerProductResponseSchema: GenMessage<UpdateCustomerProductResponse>;
+
+/**
+ * @generated from message products.v1.DeleteCustomerProductRequest
+ */
+export declare type DeleteCustomerProductRequest = Message<"products.v1.DeleteCustomerProductRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * Describes the message products.v1.DeleteCustomerProductRequest.
+ * Use `create(DeleteCustomerProductRequestSchema)` to create a new message.
+ */
+export declare const DeleteCustomerProductRequestSchema: GenMessage<DeleteCustomerProductRequest>;
+
+/**
+ * @generated from message products.v1.DeleteCustomerProductResponse
+ */
+export declare type DeleteCustomerProductResponse = Message<"products.v1.DeleteCustomerProductResponse"> & {
+};
+
+/**
+ * Describes the message products.v1.DeleteCustomerProductResponse.
+ * Use `create(DeleteCustomerProductResponseSchema)` to create a new message.
+ */
+export declare const DeleteCustomerProductResponseSchema: GenMessage<DeleteCustomerProductResponse>;
+
+/**
+ * @generated from message products.v1.EnsureCustomerProductRequest
+ */
+export declare type EnsureCustomerProductRequest = Message<"products.v1.EnsureCustomerProductRequest"> & {
+  /**
+   * @generated from field: string customer_id = 1;
+   */
+  customerId: string;
+
+  /**
+   * @generated from field: string product_id = 2;
+   */
+  productId: string;
+
+  /**
+   * @generated from field: string alias_name = 3;
+   */
+  aliasName: string;
+};
+
+/**
+ * Describes the message products.v1.EnsureCustomerProductRequest.
+ * Use `create(EnsureCustomerProductRequestSchema)` to create a new message.
+ */
+export declare const EnsureCustomerProductRequestSchema: GenMessage<EnsureCustomerProductRequest>;
+
+/**
+ * @generated from message products.v1.EnsureCustomerProductResponse
+ */
+export declare type EnsureCustomerProductResponse = Message<"products.v1.EnsureCustomerProductResponse"> & {
+  /**
+   * @generated from field: products.v1.CustomerProduct product = 1;
+   */
+  product?: CustomerProduct | undefined;
+
+  /**
+   * @generated from field: bool created = 2;
+   */
+  created: boolean;
+};
+
+/**
+ * Describes the message products.v1.EnsureCustomerProductResponse.
+ * Use `create(EnsureCustomerProductResponseSchema)` to create a new message.
+ */
+export declare const EnsureCustomerProductResponseSchema: GenMessage<EnsureCustomerProductResponse>;
+
+/**
  * @generated from service products.v1.ProductService
  */
 export declare const ProductService: GenService<{
@@ -519,6 +820,64 @@ export declare const ProductService: GenService<{
     methodKind: "unary";
     input: typeof RestoreProductRequestSchema;
     output: typeof RestoreProductResponseSchema;
+  },
+}>;
+
+/**
+ * CustomerProductService:客戶專屬清單(dept_admin/staff 限部門;客戶僅 for_order 語意由 List 旗標表達)。
+ *
+ * @generated from service products.v1.CustomerProductService
+ */
+export declare const CustomerProductService: GenService<{
+  /**
+   * ListCustomerProducts:查該客戶清單(for_order=true 排除 default_qty=0 與已刪)。
+   *
+   * @generated from rpc products.v1.CustomerProductService.ListCustomerProducts
+   */
+  listCustomerProducts: {
+    methodKind: "unary";
+    input: typeof ListCustomerProductsRequestSchema;
+    output: typeof ListCustomerProductsResponseSchema;
+  },
+  /**
+   * AddCustomerProduct:新增一筆(一客戶一商品;重複未刪 → already_exists)。
+   *
+   * @generated from rpc products.v1.CustomerProductService.AddCustomerProduct
+   */
+  addCustomerProduct: {
+    methodKind: "unary";
+    input: typeof AddCustomerProductRequestSchema;
+    output: typeof AddCustomerProductResponseSchema;
+  },
+  /**
+   * UpdateCustomerProduct:改 alias/default_qty/cut_note(不可改 customer/product)。
+   *
+   * @generated from rpc products.v1.CustomerProductService.UpdateCustomerProduct
+   */
+  updateCustomerProduct: {
+    methodKind: "unary";
+    input: typeof UpdateCustomerProductRequestSchema;
+    output: typeof UpdateCustomerProductResponseSchema;
+  },
+  /**
+   * DeleteCustomerProduct:軟刪除 + 稽核。
+   *
+   * @generated from rpc products.v1.CustomerProductService.DeleteCustomerProduct
+   */
+  deleteCustomerProduct: {
+    methodKind: "unary";
+    input: typeof DeleteCustomerProductRequestSchema;
+    output: typeof DeleteCustomerProductResponseSchema;
+  },
+  /**
+   * EnsureCustomerProduct:下單手打確認儲存後呼叫(冪等:存在回既有 created=false;唯一衝突吸收)。
+   *
+   * @generated from rpc products.v1.CustomerProductService.EnsureCustomerProduct
+   */
+  ensureCustomerProduct: {
+    methodKind: "unary";
+    input: typeof EnsureCustomerProductRequestSchema;
+    output: typeof EnsureCustomerProductResponseSchema;
   },
 }>;
 

@@ -889,6 +889,7 @@ class OrderItemInput extends $pb.GeneratedMessage {
     $core.String? processingSpecId,
     $core.String? specialCutNote,
     $core.String? warehouseId,
+    $core.bool? saveAlias,
   }) {
     final result = OrderItemInput._();
     if (productId != null) result.productId = productId;
@@ -899,6 +900,7 @@ class OrderItemInput extends $pb.GeneratedMessage {
     if (processingSpecId != null) result.processingSpecId = processingSpecId;
     if (specialCutNote != null) result.specialCutNote = specialCutNote;
     if (warehouseId != null) result.warehouseId = warehouseId;
+    if (saveAlias != null) result.saveAlias = saveAlias;
     return result;
   }
 
@@ -923,6 +925,7 @@ class OrderItemInput extends $pb.GeneratedMessage {
     ..aOS(6, _omitFieldNames ? '' : 'processingSpecId')
     ..aOS(7, _omitFieldNames ? '' : 'specialCutNote')
     ..aOS(8, _omitFieldNames ? '' : 'warehouseId')
+    ..aOB(9, _omitFieldNames ? '' : 'saveAlias')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1018,6 +1021,15 @@ class OrderItemInput extends $pb.GeneratedMessage {
   $core.bool hasWarehouseId() => $_has(7);
   @$pb.TagNumber(8)
   void clearWarehouseId() => $_clearField(8);
+
+  @$pb.TagNumber(9)
+  $core.bool get saveAlias => $_getBF(8);
+  @$pb.TagNumber(9)
+  set saveAlias($core.bool value) => $_setBool(8, value);
+  @$pb.TagNumber(9)
+  $core.bool hasSaveAlias() => $_has(8);
+  @$pb.TagNumber(9)
+  void clearSaveAlias() => $_clearField(9);
 }
 
 class CreateOrderRequest extends $pb.GeneratedMessage {

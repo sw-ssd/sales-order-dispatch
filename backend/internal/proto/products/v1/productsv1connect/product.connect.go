@@ -23,6 +23,8 @@ const _ = connect.IsAtLeastVersion1_13_0
 const (
 	// ProductServiceName is the fully-qualified name of the ProductService service.
 	ProductServiceName = "products.v1.ProductService"
+	// CustomerProductServiceName is the fully-qualified name of the CustomerProductService service.
+	CustomerProductServiceName = "products.v1.CustomerProductService"
 )
 
 // These constants are the fully-qualified names of the RPCs defined in this package. They're
@@ -51,6 +53,21 @@ const (
 	// ProductServiceRestoreProductProcedure is the fully-qualified name of the ProductService's
 	// RestoreProduct RPC.
 	ProductServiceRestoreProductProcedure = "/products.v1.ProductService/RestoreProduct"
+	// CustomerProductServiceListCustomerProductsProcedure is the fully-qualified name of the
+	// CustomerProductService's ListCustomerProducts RPC.
+	CustomerProductServiceListCustomerProductsProcedure = "/products.v1.CustomerProductService/ListCustomerProducts"
+	// CustomerProductServiceAddCustomerProductProcedure is the fully-qualified name of the
+	// CustomerProductService's AddCustomerProduct RPC.
+	CustomerProductServiceAddCustomerProductProcedure = "/products.v1.CustomerProductService/AddCustomerProduct"
+	// CustomerProductServiceUpdateCustomerProductProcedure is the fully-qualified name of the
+	// CustomerProductService's UpdateCustomerProduct RPC.
+	CustomerProductServiceUpdateCustomerProductProcedure = "/products.v1.CustomerProductService/UpdateCustomerProduct"
+	// CustomerProductServiceDeleteCustomerProductProcedure is the fully-qualified name of the
+	// CustomerProductService's DeleteCustomerProduct RPC.
+	CustomerProductServiceDeleteCustomerProductProcedure = "/products.v1.CustomerProductService/DeleteCustomerProduct"
+	// CustomerProductServiceEnsureCustomerProductProcedure is the fully-qualified name of the
+	// CustomerProductService's EnsureCustomerProduct RPC.
+	CustomerProductServiceEnsureCustomerProductProcedure = "/products.v1.CustomerProductService/EnsureCustomerProduct"
 )
 
 // ProductServiceClient is a client for the products.v1.ProductService service.
@@ -251,4 +268,189 @@ func (UnimplementedProductServiceHandler) DeleteProduct(context.Context, *connec
 
 func (UnimplementedProductServiceHandler) RestoreProduct(context.Context, *connect.Request[v1.RestoreProductRequest]) (*connect.Response[v1.RestoreProductResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("products.v1.ProductService.RestoreProduct is not implemented"))
+}
+
+// CustomerProductServiceClient is a client for the products.v1.CustomerProductService service.
+type CustomerProductServiceClient interface {
+	// ListCustomerProducts:查該客戶清單(for_order=true 排除 default_qty=0 與已刪)。
+	ListCustomerProducts(context.Context, *connect.Request[v1.ListCustomerProductsRequest]) (*connect.Response[v1.ListCustomerProductsResponse], error)
+	// AddCustomerProduct:新增一筆(一客戶一商品;重複未刪 → already_exists)。
+	AddCustomerProduct(context.Context, *connect.Request[v1.AddCustomerProductRequest]) (*connect.Response[v1.AddCustomerProductResponse], error)
+	// UpdateCustomerProduct:改 alias/default_qty/cut_note(不可改 customer/product)。
+	UpdateCustomerProduct(context.Context, *connect.Request[v1.UpdateCustomerProductRequest]) (*connect.Response[v1.UpdateCustomerProductResponse], error)
+	// DeleteCustomerProduct:軟刪除 + 稽核。
+	DeleteCustomerProduct(context.Context, *connect.Request[v1.DeleteCustomerProductRequest]) (*connect.Response[v1.DeleteCustomerProductResponse], error)
+	// EnsureCustomerProduct:下單手打確認儲存後呼叫(冪等:存在回既有 created=false;唯一衝突吸收)。
+	EnsureCustomerProduct(context.Context, *connect.Request[v1.EnsureCustomerProductRequest]) (*connect.Response[v1.EnsureCustomerProductResponse], error)
+}
+
+// NewCustomerProductServiceClient constructs a client for the products.v1.CustomerProductService
+// service. By default, it uses the Connect protocol with the binary Protobuf Codec, asks for
+// gzipped responses, and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply
+// the connect.WithGRPC() or connect.WithGRPCWeb() options.
+//
+// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
+// http://api.acme.com or https://acme.com/grpc).
+func NewCustomerProductServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) CustomerProductServiceClient {
+	baseURL = strings.TrimRight(baseURL, "/")
+	customerProductServiceMethods := v1.File_products_v1_product_proto.Services().ByName("CustomerProductService").Methods()
+	return &customerProductServiceClient{
+		listCustomerProducts: connect.NewClient[v1.ListCustomerProductsRequest, v1.ListCustomerProductsResponse](
+			httpClient,
+			baseURL+CustomerProductServiceListCustomerProductsProcedure,
+			connect.WithSchema(customerProductServiceMethods.ByName("ListCustomerProducts")),
+			connect.WithClientOptions(opts...),
+		),
+		addCustomerProduct: connect.NewClient[v1.AddCustomerProductRequest, v1.AddCustomerProductResponse](
+			httpClient,
+			baseURL+CustomerProductServiceAddCustomerProductProcedure,
+			connect.WithSchema(customerProductServiceMethods.ByName("AddCustomerProduct")),
+			connect.WithClientOptions(opts...),
+		),
+		updateCustomerProduct: connect.NewClient[v1.UpdateCustomerProductRequest, v1.UpdateCustomerProductResponse](
+			httpClient,
+			baseURL+CustomerProductServiceUpdateCustomerProductProcedure,
+			connect.WithSchema(customerProductServiceMethods.ByName("UpdateCustomerProduct")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteCustomerProduct: connect.NewClient[v1.DeleteCustomerProductRequest, v1.DeleteCustomerProductResponse](
+			httpClient,
+			baseURL+CustomerProductServiceDeleteCustomerProductProcedure,
+			connect.WithSchema(customerProductServiceMethods.ByName("DeleteCustomerProduct")),
+			connect.WithClientOptions(opts...),
+		),
+		ensureCustomerProduct: connect.NewClient[v1.EnsureCustomerProductRequest, v1.EnsureCustomerProductResponse](
+			httpClient,
+			baseURL+CustomerProductServiceEnsureCustomerProductProcedure,
+			connect.WithSchema(customerProductServiceMethods.ByName("EnsureCustomerProduct")),
+			connect.WithClientOptions(opts...),
+		),
+	}
+}
+
+// customerProductServiceClient implements CustomerProductServiceClient.
+type customerProductServiceClient struct {
+	listCustomerProducts  *connect.Client[v1.ListCustomerProductsRequest, v1.ListCustomerProductsResponse]
+	addCustomerProduct    *connect.Client[v1.AddCustomerProductRequest, v1.AddCustomerProductResponse]
+	updateCustomerProduct *connect.Client[v1.UpdateCustomerProductRequest, v1.UpdateCustomerProductResponse]
+	deleteCustomerProduct *connect.Client[v1.DeleteCustomerProductRequest, v1.DeleteCustomerProductResponse]
+	ensureCustomerProduct *connect.Client[v1.EnsureCustomerProductRequest, v1.EnsureCustomerProductResponse]
+}
+
+// ListCustomerProducts calls products.v1.CustomerProductService.ListCustomerProducts.
+func (c *customerProductServiceClient) ListCustomerProducts(ctx context.Context, req *connect.Request[v1.ListCustomerProductsRequest]) (*connect.Response[v1.ListCustomerProductsResponse], error) {
+	return c.listCustomerProducts.CallUnary(ctx, req)
+}
+
+// AddCustomerProduct calls products.v1.CustomerProductService.AddCustomerProduct.
+func (c *customerProductServiceClient) AddCustomerProduct(ctx context.Context, req *connect.Request[v1.AddCustomerProductRequest]) (*connect.Response[v1.AddCustomerProductResponse], error) {
+	return c.addCustomerProduct.CallUnary(ctx, req)
+}
+
+// UpdateCustomerProduct calls products.v1.CustomerProductService.UpdateCustomerProduct.
+func (c *customerProductServiceClient) UpdateCustomerProduct(ctx context.Context, req *connect.Request[v1.UpdateCustomerProductRequest]) (*connect.Response[v1.UpdateCustomerProductResponse], error) {
+	return c.updateCustomerProduct.CallUnary(ctx, req)
+}
+
+// DeleteCustomerProduct calls products.v1.CustomerProductService.DeleteCustomerProduct.
+func (c *customerProductServiceClient) DeleteCustomerProduct(ctx context.Context, req *connect.Request[v1.DeleteCustomerProductRequest]) (*connect.Response[v1.DeleteCustomerProductResponse], error) {
+	return c.deleteCustomerProduct.CallUnary(ctx, req)
+}
+
+// EnsureCustomerProduct calls products.v1.CustomerProductService.EnsureCustomerProduct.
+func (c *customerProductServiceClient) EnsureCustomerProduct(ctx context.Context, req *connect.Request[v1.EnsureCustomerProductRequest]) (*connect.Response[v1.EnsureCustomerProductResponse], error) {
+	return c.ensureCustomerProduct.CallUnary(ctx, req)
+}
+
+// CustomerProductServiceHandler is an implementation of the products.v1.CustomerProductService
+// service.
+type CustomerProductServiceHandler interface {
+	// ListCustomerProducts:查該客戶清單(for_order=true 排除 default_qty=0 與已刪)。
+	ListCustomerProducts(context.Context, *connect.Request[v1.ListCustomerProductsRequest]) (*connect.Response[v1.ListCustomerProductsResponse], error)
+	// AddCustomerProduct:新增一筆(一客戶一商品;重複未刪 → already_exists)。
+	AddCustomerProduct(context.Context, *connect.Request[v1.AddCustomerProductRequest]) (*connect.Response[v1.AddCustomerProductResponse], error)
+	// UpdateCustomerProduct:改 alias/default_qty/cut_note(不可改 customer/product)。
+	UpdateCustomerProduct(context.Context, *connect.Request[v1.UpdateCustomerProductRequest]) (*connect.Response[v1.UpdateCustomerProductResponse], error)
+	// DeleteCustomerProduct:軟刪除 + 稽核。
+	DeleteCustomerProduct(context.Context, *connect.Request[v1.DeleteCustomerProductRequest]) (*connect.Response[v1.DeleteCustomerProductResponse], error)
+	// EnsureCustomerProduct:下單手打確認儲存後呼叫(冪等:存在回既有 created=false;唯一衝突吸收)。
+	EnsureCustomerProduct(context.Context, *connect.Request[v1.EnsureCustomerProductRequest]) (*connect.Response[v1.EnsureCustomerProductResponse], error)
+}
+
+// NewCustomerProductServiceHandler builds an HTTP handler from the service implementation. It
+// returns the path on which to mount the handler and the handler itself.
+//
+// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
+// and JSON codecs. They also support gzip compression.
+func NewCustomerProductServiceHandler(svc CustomerProductServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	customerProductServiceMethods := v1.File_products_v1_product_proto.Services().ByName("CustomerProductService").Methods()
+	customerProductServiceListCustomerProductsHandler := connect.NewUnaryHandler(
+		CustomerProductServiceListCustomerProductsProcedure,
+		svc.ListCustomerProducts,
+		connect.WithSchema(customerProductServiceMethods.ByName("ListCustomerProducts")),
+		connect.WithHandlerOptions(opts...),
+	)
+	customerProductServiceAddCustomerProductHandler := connect.NewUnaryHandler(
+		CustomerProductServiceAddCustomerProductProcedure,
+		svc.AddCustomerProduct,
+		connect.WithSchema(customerProductServiceMethods.ByName("AddCustomerProduct")),
+		connect.WithHandlerOptions(opts...),
+	)
+	customerProductServiceUpdateCustomerProductHandler := connect.NewUnaryHandler(
+		CustomerProductServiceUpdateCustomerProductProcedure,
+		svc.UpdateCustomerProduct,
+		connect.WithSchema(customerProductServiceMethods.ByName("UpdateCustomerProduct")),
+		connect.WithHandlerOptions(opts...),
+	)
+	customerProductServiceDeleteCustomerProductHandler := connect.NewUnaryHandler(
+		CustomerProductServiceDeleteCustomerProductProcedure,
+		svc.DeleteCustomerProduct,
+		connect.WithSchema(customerProductServiceMethods.ByName("DeleteCustomerProduct")),
+		connect.WithHandlerOptions(opts...),
+	)
+	customerProductServiceEnsureCustomerProductHandler := connect.NewUnaryHandler(
+		CustomerProductServiceEnsureCustomerProductProcedure,
+		svc.EnsureCustomerProduct,
+		connect.WithSchema(customerProductServiceMethods.ByName("EnsureCustomerProduct")),
+		connect.WithHandlerOptions(opts...),
+	)
+	return "/products.v1.CustomerProductService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case CustomerProductServiceListCustomerProductsProcedure:
+			customerProductServiceListCustomerProductsHandler.ServeHTTP(w, r)
+		case CustomerProductServiceAddCustomerProductProcedure:
+			customerProductServiceAddCustomerProductHandler.ServeHTTP(w, r)
+		case CustomerProductServiceUpdateCustomerProductProcedure:
+			customerProductServiceUpdateCustomerProductHandler.ServeHTTP(w, r)
+		case CustomerProductServiceDeleteCustomerProductProcedure:
+			customerProductServiceDeleteCustomerProductHandler.ServeHTTP(w, r)
+		case CustomerProductServiceEnsureCustomerProductProcedure:
+			customerProductServiceEnsureCustomerProductHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
+}
+
+// UnimplementedCustomerProductServiceHandler returns CodeUnimplemented from all methods.
+type UnimplementedCustomerProductServiceHandler struct{}
+
+func (UnimplementedCustomerProductServiceHandler) ListCustomerProducts(context.Context, *connect.Request[v1.ListCustomerProductsRequest]) (*connect.Response[v1.ListCustomerProductsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("products.v1.CustomerProductService.ListCustomerProducts is not implemented"))
+}
+
+func (UnimplementedCustomerProductServiceHandler) AddCustomerProduct(context.Context, *connect.Request[v1.AddCustomerProductRequest]) (*connect.Response[v1.AddCustomerProductResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("products.v1.CustomerProductService.AddCustomerProduct is not implemented"))
+}
+
+func (UnimplementedCustomerProductServiceHandler) UpdateCustomerProduct(context.Context, *connect.Request[v1.UpdateCustomerProductRequest]) (*connect.Response[v1.UpdateCustomerProductResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("products.v1.CustomerProductService.UpdateCustomerProduct is not implemented"))
+}
+
+func (UnimplementedCustomerProductServiceHandler) DeleteCustomerProduct(context.Context, *connect.Request[v1.DeleteCustomerProductRequest]) (*connect.Response[v1.DeleteCustomerProductResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("products.v1.CustomerProductService.DeleteCustomerProduct is not implemented"))
+}
+
+func (UnimplementedCustomerProductServiceHandler) EnsureCustomerProduct(context.Context, *connect.Request[v1.EnsureCustomerProductRequest]) (*connect.Response[v1.EnsureCustomerProductResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("products.v1.CustomerProductService.EnsureCustomerProduct is not implemented"))
 }

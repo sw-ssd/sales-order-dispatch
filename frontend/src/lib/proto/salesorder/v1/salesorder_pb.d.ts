@@ -438,6 +438,13 @@ export declare type OrderItemInput = Message<"salesorder.v1.OrderItemInput"> & {
    * @generated from field: string warehouse_id = 8;
    */
   warehouseId: string;
+
+  /**
+   * true 即同交易 upsert 客戶別名(4.2.2;需 product_id)
+   *
+   * @generated from field: bool save_alias = 9;
+   */
+  saveAlias: boolean;
 };
 
 /**

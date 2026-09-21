@@ -184,6 +184,41 @@ var (
 		Columns:    CustomerCountersColumns,
 		PrimaryKey: []*schema.Column{CustomerCountersColumns[0]},
 	}
+	// CustomerProductsColumns holds the columns for the "customer_products" table.
+	CustomerProductsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "company_id", Type: field.TypeInt},
+		{Name: "department_id", Type: field.TypeInt, Nullable: true},
+		{Name: "customer_id", Type: field.TypeInt},
+		{Name: "product_id", Type: field.TypeInt},
+		{Name: "alias_name", Type: field.TypeString},
+		{Name: "default_qty", Type: field.TypeString, Default: "0"},
+		{Name: "cut_note", Type: field.TypeString, Nullable: true},
+		{Name: "promo_tag_ids", Type: field.TypeJSON},
+		{Name: "created_by", Type: field.TypeInt, Nullable: true},
+		{Name: "updated_by", Type: field.TypeInt, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+	}
+	// CustomerProductsTable holds the schema information for the "customer_products" table.
+	CustomerProductsTable = &schema.Table{
+		Name:       "customer_products",
+		Columns:    CustomerProductsColumns,
+		PrimaryKey: []*schema.Column{CustomerProductsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "customerproduct_customer_id_product_id",
+				Unique:  false,
+				Columns: []*schema.Column{CustomerProductsColumns[3], CustomerProductsColumns[4]},
+			},
+			{
+				Name:    "customerproduct_company_id_customer_id",
+				Unique:  false,
+				Columns: []*schema.Column{CustomerProductsColumns[1], CustomerProductsColumns[3]},
+			},
+		},
+	}
 	// DepartmentsColumns holds the columns for the "departments" table.
 	DepartmentsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -646,6 +681,7 @@ var (
 		CustomerAddressesTable,
 		CustomerContactsTable,
 		CustomerCountersTable,
+		CustomerProductsTable,
 		DepartmentsTable,
 		MetadictsTable,
 		OrderCountersTable,

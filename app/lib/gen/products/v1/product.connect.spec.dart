@@ -52,3 +52,48 @@ abstract final class ProductService {
     productsv1product.RestoreProductResponse.new,
   );
 }
+/// CustomerProductService:客戶專屬清單(dept_admin/staff 限部門;客戶僅 for_order 語意由 List 旗標表達)。
+abstract final class CustomerProductService {
+  /// Fully-qualified name of the CustomerProductService service.
+  static const name = 'products.v1.CustomerProductService';
+
+  /// ListCustomerProducts:查該客戶清單(for_order=true 排除 default_qty=0 與已刪)。
+  static const listCustomerProducts = connect.Spec(
+    '/$name/ListCustomerProducts',
+    connect.StreamType.unary,
+    productsv1product.ListCustomerProductsRequest.new,
+    productsv1product.ListCustomerProductsResponse.new,
+  );
+
+  /// AddCustomerProduct:新增一筆(一客戶一商品;重複未刪 → already_exists)。
+  static const addCustomerProduct = connect.Spec(
+    '/$name/AddCustomerProduct',
+    connect.StreamType.unary,
+    productsv1product.AddCustomerProductRequest.new,
+    productsv1product.AddCustomerProductResponse.new,
+  );
+
+  /// UpdateCustomerProduct:改 alias/default_qty/cut_note(不可改 customer/product)。
+  static const updateCustomerProduct = connect.Spec(
+    '/$name/UpdateCustomerProduct',
+    connect.StreamType.unary,
+    productsv1product.UpdateCustomerProductRequest.new,
+    productsv1product.UpdateCustomerProductResponse.new,
+  );
+
+  /// DeleteCustomerProduct:軟刪除 + 稽核。
+  static const deleteCustomerProduct = connect.Spec(
+    '/$name/DeleteCustomerProduct',
+    connect.StreamType.unary,
+    productsv1product.DeleteCustomerProductRequest.new,
+    productsv1product.DeleteCustomerProductResponse.new,
+  );
+
+  /// EnsureCustomerProduct:下單手打確認儲存後呼叫(冪等:存在回既有 created=false;唯一衝突吸收)。
+  static const ensureCustomerProduct = connect.Spec(
+    '/$name/EnsureCustomerProduct',
+    connect.StreamType.unary,
+    productsv1product.EnsureCustomerProductRequest.new,
+    productsv1product.EnsureCustomerProductResponse.new,
+  );
+}

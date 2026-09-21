@@ -219,6 +219,7 @@ const OrderItemInput$json = {
     },
     {'1': 'special_cut_note', '3': 7, '4': 1, '5': 9, '10': 'specialCutNote'},
     {'1': 'warehouse_id', '3': 8, '4': 1, '5': 9, '10': 'warehouseId'},
+    {'1': 'save_alias', '3': 9, '4': 1, '5': 8, '10': 'saveAlias'},
   ],
 };
 
@@ -228,7 +229,8 @@ final $typed_data.Uint8List orderItemInputDescriptor = $convert.base64Decode(
     'FsX25hbWUYAiABKAlSCm1hbnVhbE5hbWUSIQoMZGlzcGxheV9uYW1lGAMgASgJUgtkaXNwbGF5'
     'TmFtZRIQCgNxdHkYBCABKAlSA3F0eRISCgR1bml0GAUgASgJUgR1bml0EiwKEnByb2Nlc3Npbm'
     'dfc3BlY19pZBgGIAEoCVIQcHJvY2Vzc2luZ1NwZWNJZBIoChBzcGVjaWFsX2N1dF9ub3RlGAcg'
-    'ASgJUg5zcGVjaWFsQ3V0Tm90ZRIhCgx3YXJlaG91c2VfaWQYCCABKAlSC3dhcmVob3VzZUlk');
+    'ASgJUg5zcGVjaWFsQ3V0Tm90ZRIhCgx3YXJlaG91c2VfaWQYCCABKAlSC3dhcmVob3VzZUlkEh'
+    '0KCnNhdmVfYWxpYXMYCSABKAhSCXNhdmVBbGlhcw==');
 
 @$core.Deprecated('Use createOrderRequestDescriptor instead')
 const CreateOrderRequest$json = {

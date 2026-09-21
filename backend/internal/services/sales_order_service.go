@@ -238,6 +238,19 @@ func (s *SalesOrderService) CreateOrder(ctx context.Context, req *connect.Reques
 		if _, err := ib.Save(ctx); err != nil {
 			return nil, toConnectError(err)
 		}
+		// 別名 upsert(4.2.2):save_alias 且帶 product_id → 同交易 upsert;存在改別名,
+		// 不存在則建(預設值帶本次 qty 語意由清單端承接)。唯一衝突不擋單。
+		if item.GetSaveAlias() && pid != 0 {
+			if err := upsertCustomerAlias(ctx, db, cid, custID, pid, display); err != nil {
+				return nil, err
+			}
+		}
+		// 選用總表商品自動加入清單(4.2.2):無此商品記錄即建預設列(別名=商品名)。
+		if pid != 0 {
+			if err := ensureCustomerListEntry(ctx, db, cid, custID, pid); err != nil {
+				return nil, err
+			}
+		}
 	}
 	if _, err := db.SalesOrderEvent.Create().
 		SetSalesOrderID(o.ID).SetCompanyID(cid).

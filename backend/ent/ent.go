@@ -18,6 +18,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/customeraddress"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customercontact"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customercounter"
+	"github.com/salesorder/sales-order-1.0/backend/ent/customerproduct"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/ordercounter"
@@ -100,6 +101,7 @@ func checkColumn(t, c string) error {
 			customeraddress.Table:       customeraddress.ValidColumn,
 			customercontact.Table:       customercontact.ValidColumn,
 			customercounter.Table:       customercounter.ValidColumn,
+			customerproduct.Table:       customerproduct.ValidColumn,
 			department.Table:            department.ValidColumn,
 			metadict.Table:              metadict.ValidColumn,
 			ordercounter.Table:          ordercounter.ValidColumn,
