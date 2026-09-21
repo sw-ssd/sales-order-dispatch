@@ -27,6 +27,12 @@ func NewEntitlementCounter(db *ent.Client) entitlements.Counter {
 //   - 席位 = 未停用的帳號數（users 無軟刪除欄位，停用即 status='inactive' → 釋放席位）；
 //   - 其餘 = 該公司未軟刪除的列數（軟刪除不佔額度）。
 //
+// 未結項 #1(Plan B)：席位口徑含客戶帳號 —— CreateCustomer 建兩列 users（主帳＋子帳，
+// customer_service.go），而席位計數含所有非 inactive 帳號（is_customer 未排除）。
+// 該路徑只受 LimitCustomers 守衛 → 已達席位上限仍可藉「建客戶」超額佔席位。
+// 選項：(a) 席位只算非客戶帳號（is_customer=false，需改 spec §3.2＋此處；建議）；
+// (b) CreateCustomer 同時掛 LimitSeats 守衛。改之前不得動此計數（牽一髮：守衛入口三處）。
+//
 // 可見範圍（關鍵）：配額是**公司層**的（spec §3.2 的 WHERE company_id=?），但 RLS 會把可見範圍
 // 縮到請求 scope。故依 auth.RLSFrom(ctx).DataScope 分流：
 //
