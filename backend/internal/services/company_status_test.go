@@ -15,6 +15,10 @@ import (
 )
 
 // statusActor 為測試用的觸發者(平台排程觸發時的形狀:系統 actor,仍落租戶稽核)。
+// 未結項 #5:UserID="1" 在 sqlite 無對應 users 列 —— 與既有 enttest 慣例一致：
+// PG 以 00010 的 audit_logs_user_id_fkey 約束（users(id)），sqlite 的 enttest schema
+// 不建該 FK（ent schema 以純欄位記錄、不建 edge），故此處不斷言 FK。
+// 生產的系統 actor 由 seed 寫入（G5）；PG 層的 FK 由整合測試把關。
 var statusActor = authz.Identity{UserID: "1", Role: "super", Roles: []string{"super"}}
 
 // statusTxCtx 開一條租戶交易並注入 ctx。
