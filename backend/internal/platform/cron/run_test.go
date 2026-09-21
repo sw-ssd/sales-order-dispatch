@@ -176,12 +176,11 @@ func (l *fakeLocker) TryLock(context.Context) (func(context.Context) error, bool
 	return func(ctx context.Context) error {
 		l.mu.Lock()
 		defer l.mu.Unlock()
-		// 解鎖需要一個**還活著**的 ctx(真實作的解鎖就是一次 SQL):ctx 已死就解不開。
-		// RunGuarded 因此必須以 context.WithoutCancel 呼叫 release —— 這個假物件是該行為的守門人
-		// (真實作在解鎖失敗時會丟棄連線,連帶也會放掉鎖,故真 PG 分不出這兩條路)。
-		if err := ctx.Err(); err != nil {
-			return err
-		}
+		// 未結項 #19：假物件不得比真實作更嚴 —— 真實作的解鎖是一次 SQL（QueryRowContext），
+		// 呼叫端 RunGuarded 永遠以 context.WithoutCancel 包過才傳進來，故 ctx.Err() 在此
+		// 恆為 nil；舊的 ctx.Err() 閘門測的是「呼叫端沒包 WithoutCancel」，而那條路生產
+		// 根本走不到（且真實作遇到死 ctx 會直接讓 SQL 失敗、丟棄連線放鎖，不會回 ctx.Err()）。
+		// 守門對象改為「解鎖被呼叫且鎖被放掉」本身。
 		l.held = false
 		l.releases++
 		return nil
