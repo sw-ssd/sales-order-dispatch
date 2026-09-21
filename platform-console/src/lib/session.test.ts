@@ -54,6 +54,31 @@ describe("ensureSession（session 探針）", () => {
       now.mockRestore();
     }
   });
+
+  it("舊探針晚回不得覆寫新探針的狀態（TTL 替換競態）", async () => {
+    // 未結項 #25 中段：TTL 一過就同步替換 probe —— 舊探針晚回會覆寫新探針已寫的狀態。
+    const first = Promise.withResolvers<{ tenants: never[] }>();
+    const second = Promise.withResolvers<{ tenants: never[] }>();
+    const now = vi.spyOn(Date, "now");
+    try {
+      now.mockReturnValue(0);
+      listTenants.mockReturnValueOnce(first.promise);
+      const p1 = ensureSession();
+      now.mockReturnValue(PROBE_TTL_MS + 1);
+      listTenants.mockReturnValueOnce(second.promise);
+      const p2 = ensureSession();
+      // 新探針先失敗 → anonymous；舊探針後成功 → 不得翻回 authenticated。
+      second.reject(new ConnectError("後端不可用", Code.Unavailable));
+      await expect(p2).resolves.toBe(false);
+      expect(sessionStatus()).toBe("anonymous");
+      first.resolve({ tenants: [] });
+      await expect(p1).resolves.toBe(false);
+      expect(sessionStatus()).toBe("anonymous");
+      expect(listTenants).toHaveBeenCalledTimes(2);
+    } finally {
+      now.mockRestore();
+    }
+  });
 });
 
 describe("logout", () => {

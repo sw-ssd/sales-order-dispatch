@@ -21,6 +21,10 @@ export const PROBE_TTL_MS = 30_000;
 let probe: Promise<boolean> | undefined;
 let probeAt = 0;
 let loggedOut = false;
+// 未結項 #25 中段：探針世代計數 —— TTL 一過就同步替換 probe，舊探針晚回會覆寫新探針已寫的狀態。
+// 回呼只在「自己仍是最新一代」時寫狀態、回真值；過期世代的結果直接丟棄（呼叫端拿到 false
+// ＝「這個結果已不可信」，fail-closed 方向）。
+let probeGen = 0;
 
 /**
  * 單一探針：以最小的平台查詢（1 筆租戶）問後端「這個 cookie 還算數嗎」。
@@ -34,17 +38,18 @@ export async function ensureSession(): Promise<boolean> {
   if (loggedOut) return false;
   if (!probe || Date.now() - probeAt >= PROBE_TTL_MS) {
     probeAt = Date.now();
+    const gen = ++probeGen;
     probe = platform.listTenants({ page: 1, pageSize: 1 }).then(
       () => {
         // 未結項 #25 前半：logout 不取消已在飛行的探針 —— 其 .then 回來必須檢查 loggedOut，
         // 否則「登出 → 飛行探針成功」會把狀態翻回 authenticated（守衛仍 fail-closed、
         // 後端仍擋，但使用者會被閃回主控台再看到 401 文案）。
-        if (loggedOut) return false;
+        if (loggedOut || gen !== probeGen) return false;
         setStatus("authenticated");
         return true;
       },
       () => {
-        if (loggedOut) return false;
+        if (loggedOut || gen !== probeGen) return false;
         setStatus("anonymous");
         return false;
       },
@@ -68,10 +73,12 @@ export function logout() {
   probe = Promise.resolve(false);
 }
 
-/** 測試用：清掉快取的探針結果（正式流程不需要）。 */
+/** 測試用：清掉快取的探針結果（正式流程不需要）。世代計數同步推進 —— 讓 reset 前
+ *  仍在飛行的探針變成過期世代，其回呼不再寫狀態（測試之間不互相污染）。 */
 export function resetSession() {
   loggedOut = false;
   probeAt = 0;
+  probeGen++;
   setStatus("unknown");
   probe = undefined;
 }
