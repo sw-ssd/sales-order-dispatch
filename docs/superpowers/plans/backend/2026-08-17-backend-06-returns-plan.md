@@ -2,7 +2,7 @@
 
 > **性質**：原為目標型執行計畫（含內嵌目標程式碼）。經 2026-09-18 盤點（codebase-memory 知識圖譜 + git）重建，為**反映現況的執行計畫**。
 >
-> **狀態基準**：2026-09-18 盤點。**本計畫對應領域（退貨）實際尚未實作**——ent/schema 無 return_requests、migrations 無對應、internal 無 returns 目錄。以下為保留的目標計畫架構，全數 ⬜ 未開始。
+> **狀態基準**：2026-09-22 實作對齊。後端已落地：兩表 schema（00039）＋`ReturnService` 5 RPC（Create／List／Get／Review／GetCertificate）＋00040 RLS ENABLE＋FORCE（含 self→customer_id 分支探針）；推播掛點留樁待 07（審核結果由 audit 保證可查）；Web/App 頁待。以下保留目標架構供追溯。
 >
 > **對應設計**：`docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（v1.0.34）、決策 `D16/D18/D23/D25`
 > **細部文件**：`docs/superpowers/plans/backend/detail/06-returns.md`、共通規則 `detail/00-index.md` §3
@@ -14,12 +14,12 @@
 
 | Task | 內容 | 狀態 |
 |---|---|---|
-| 1 | return_requests / return_request_items schema 與 RLS（細部 4.7.1） | ⬜ 未開始 |
-| 2 | 發起退貨 Create 與客戶自查 List/Get（細部 4.7.2） | ⬜ 未開始 |
-| 3 | 審核 API + 審核稽核與推播掛點（細部 4.7.3、4.7.5） | ⬜ 未開始 |
-| 4 | 退貨證明資料輸出（細部 4.7.4） | ⬜ 未開始 |
+| 1 | return_requests / return_request_items schema 與 RLS（細部 4.7.1） | ✅ 完成（00039＋00040，白名單 28） |
+| 2 | 發起退貨 Create 與客戶自查 List/Get（細部 4.7.2） | ✅ 完成（後端；Web/App 頁待） |
+| 3 | 審核 API + 審核稽核與推播掛點（細部 4.7.3、4.7.5） | ✅ 完成（後端＋稽核；推播留樁待 07） |
+| 4 | 退貨證明資料輸出（細部 4.7.4） | ✅ 完成（後端快照證明；App 畫面待） |
 
-**實作範圍**：0%（全部待辦）。
+**實作範圍**：後端 100%（推播待 07；Web/App 頁待）。
 
 ---
 
@@ -46,4 +46,4 @@
 
 ---
 
-*最後更新：2026-09-18（06-returns 現況對齊重建；領域未實作）*
+*最後更新：2026-09-22（06-returns 後端落地對齊；推播待 07、Web/App 頁待）*
