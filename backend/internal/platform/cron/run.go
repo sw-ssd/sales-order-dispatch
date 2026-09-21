@@ -15,6 +15,11 @@
 // 錯誤:回的是**給人看的**錯誤(fmt.Errorf ＋ %w,底層已帶 errcode 的錯誤原樣留在鏈上)——
 // cmd/platform-cron 把它直接印進 log,而 errcode 的對外訊息只留固定字串、cause 藏在
 // ErrorInfo.detail,panic 的 stack 會因此從 log 裡消失。
+//
+// 未結項 #19:一個永久壞資料的租戶會讓每趟以 exit 1 收場(派送其實成功) ——
+// DispatchOnce 單筆失敗不停整趟(記下繼續),但回傳的 errors.Join 仍讓 RunOnce 回錯。
+// 日後若告警噪音過大,考慮「降級成功」模式(部分完成回 0)：以 Summary 的計數為準，
+// 而不是以 err 是否為 nil 為準。
 package cron
 
 import (
