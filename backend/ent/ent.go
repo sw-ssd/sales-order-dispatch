@@ -23,6 +23,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/fileasset"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/ordercounter"
+	"github.com/salesorder/sales-order-1.0/backend/ent/printlog"
+	"github.com/salesorder/sales-order-1.0/backend/ent/printpreview"
 	"github.com/salesorder/sales-order-1.0/backend/ent/processingspec"
 	"github.com/salesorder/sales-order-1.0/backend/ent/product"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productcategory"
@@ -107,6 +109,8 @@ func checkColumn(t, c string) error {
 			fileasset.Table:             fileasset.ValidColumn,
 			metadict.Table:              metadict.ValidColumn,
 			ordercounter.Table:          ordercounter.ValidColumn,
+			printlog.Table:              printlog.ValidColumn,
+			printpreview.Table:          printpreview.ValidColumn,
 			processingspec.Table:        processingspec.ValidColumn,
 			product.Table:               product.ValidColumn,
 			productcategory.Table:       productcategory.ValidColumn,

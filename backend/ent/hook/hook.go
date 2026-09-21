@@ -141,6 +141,30 @@ func (f OrderCounterFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.OrderCounterMutation", m)
 }
 
+// The PrintLogFunc type is an adapter to allow the use of ordinary
+// function as PrintLog mutator.
+type PrintLogFunc func(context.Context, *ent.PrintLogMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PrintLogFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.PrintLogMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PrintLogMutation", m)
+}
+
+// The PrintPreviewFunc type is an adapter to allow the use of ordinary
+// function as PrintPreview mutator.
+type PrintPreviewFunc func(context.Context, *ent.PrintPreviewMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PrintPreviewFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.PrintPreviewMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PrintPreviewMutation", m)
+}
+
 // The ProcessingSpecFunc type is an adapter to allow the use of ordinary
 // function as ProcessingSpec mutator.
 type ProcessingSpecFunc func(context.Context, *ent.ProcessingSpecMutation) (ent.Value, error)

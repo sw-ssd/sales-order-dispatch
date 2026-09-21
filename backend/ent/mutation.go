@@ -23,6 +23,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/ordercounter"
 	"github.com/salesorder/sales-order-1.0/backend/ent/predicate"
+	"github.com/salesorder/sales-order-1.0/backend/ent/printlog"
+	"github.com/salesorder/sales-order-1.0/backend/ent/printpreview"
 	"github.com/salesorder/sales-order-1.0/backend/ent/processingspec"
 	"github.com/salesorder/sales-order-1.0/backend/ent/product"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productcategory"
@@ -58,6 +60,8 @@ const (
 	TypeFileAsset             = "FileAsset"
 	TypeMetadict              = "Metadict"
 	TypeOrderCounter          = "OrderCounter"
+	TypePrintLog              = "PrintLog"
+	TypePrintPreview          = "PrintPreview"
 	TypeProcessingSpec        = "ProcessingSpec"
 	TypeProduct               = "Product"
 	TypeProductCategory       = "ProductCategory"
@@ -11771,6 +11775,2311 @@ func (m *OrderCounterMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *OrderCounterMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown OrderCounter edge %s", name)
+}
+
+// PrintLogMutation represents an operation that mutates the PrintLog nodes in the graph.
+type PrintLogMutation struct {
+	config
+	op               Op
+	typ              string
+	id               *int
+	company_id       *int
+	addcompany_id    *int
+	department_id    *int
+	adddepartment_id *int
+	document_type    *string
+	route_id         *int
+	addroute_id      *int
+	customer_id      *int
+	addcustomer_id   *int
+	warehouse_id     *int
+	addwarehouse_id  *int
+	target_date      *time.Time
+	is_reprint       *bool
+	reprint_reason   *string
+	printed_by       *int
+	addprinted_by    *int
+	printed_at       *time.Time
+	file_asset_id    *int
+	addfile_asset_id *int
+	clearedFields    map[string]struct{}
+	done             bool
+	oldValue         func(context.Context) (*PrintLog, error)
+	predicates       []predicate.PrintLog
+}
+
+var _ ent.Mutation = (*PrintLogMutation)(nil)
+
+// printlogOption allows management of the mutation configuration using functional options.
+type printlogOption func(*PrintLogMutation)
+
+// newPrintLogMutation creates new mutation for the PrintLog entity.
+func newPrintLogMutation(c config, op Op, opts ...printlogOption) *PrintLogMutation {
+	m := &PrintLogMutation{
+		config:        c,
+		op:            op,
+		typ:           TypePrintLog,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withPrintLogID sets the ID field of the mutation.
+func withPrintLogID(id int) printlogOption {
+	return func(m *PrintLogMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *PrintLog
+		)
+		m.oldValue = func(ctx context.Context) (*PrintLog, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().PrintLog.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withPrintLog sets the old PrintLog of the mutation.
+func withPrintLog(node *PrintLog) printlogOption {
+	return func(m *PrintLogMutation) {
+		m.oldValue = func(context.Context) (*PrintLog, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m PrintLogMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m PrintLogMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *PrintLogMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *PrintLogMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().PrintLog.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCompanyID sets the "company_id" field.
+func (m *PrintLogMutation) SetCompanyID(i int) {
+	m.company_id = &i
+	m.addcompany_id = nil
+}
+
+// CompanyID returns the value of the "company_id" field in the mutation.
+func (m *PrintLogMutation) CompanyID() (r int, exists bool) {
+	v := m.company_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCompanyID returns the old "company_id" field's value of the PrintLog entity.
+// If the PrintLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PrintLogMutation) OldCompanyID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCompanyID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCompanyID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCompanyID: %w", err)
+	}
+	return oldValue.CompanyID, nil
+}
+
+// AddCompanyID adds i to the "company_id" field.
+func (m *PrintLogMutation) AddCompanyID(i int) {
+	if m.addcompany_id != nil {
+		*m.addcompany_id += i
+	} else {
+		m.addcompany_id = &i
+	}
+}
+
+// AddedCompanyID returns the value that was added to the "company_id" field in this mutation.
+func (m *PrintLogMutation) AddedCompanyID() (r int, exists bool) {
+	v := m.addcompany_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCompanyID resets all changes to the "company_id" field.
+func (m *PrintLogMutation) ResetCompanyID() {
+	m.company_id = nil
+	m.addcompany_id = nil
+}
+
+// SetDepartmentID sets the "department_id" field.
+func (m *PrintLogMutation) SetDepartmentID(i int) {
+	m.department_id = &i
+	m.adddepartment_id = nil
+}
+
+// DepartmentID returns the value of the "department_id" field in the mutation.
+func (m *PrintLogMutation) DepartmentID() (r int, exists bool) {
+	v := m.department_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDepartmentID returns the old "department_id" field's value of the PrintLog entity.
+// If the PrintLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PrintLogMutation) OldDepartmentID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDepartmentID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDepartmentID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDepartmentID: %w", err)
+	}
+	return oldValue.DepartmentID, nil
+}
+
+// AddDepartmentID adds i to the "department_id" field.
+func (m *PrintLogMutation) AddDepartmentID(i int) {
+	if m.adddepartment_id != nil {
+		*m.adddepartment_id += i
+	} else {
+		m.adddepartment_id = &i
+	}
+}
+
+// AddedDepartmentID returns the value that was added to the "department_id" field in this mutation.
+func (m *PrintLogMutation) AddedDepartmentID() (r int, exists bool) {
+	v := m.adddepartment_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetDepartmentID resets all changes to the "department_id" field.
+func (m *PrintLogMutation) ResetDepartmentID() {
+	m.department_id = nil
+	m.adddepartment_id = nil
+}
+
+// SetDocumentType sets the "document_type" field.
+func (m *PrintLogMutation) SetDocumentType(s string) {
+	m.document_type = &s
+}
+
+// DocumentType returns the value of the "document_type" field in the mutation.
+func (m *PrintLogMutation) DocumentType() (r string, exists bool) {
+	v := m.document_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDocumentType returns the old "document_type" field's value of the PrintLog entity.
+// If the PrintLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PrintLogMutation) OldDocumentType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDocumentType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDocumentType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDocumentType: %w", err)
+	}
+	return oldValue.DocumentType, nil
+}
+
+// ResetDocumentType resets all changes to the "document_type" field.
+func (m *PrintLogMutation) ResetDocumentType() {
+	m.document_type = nil
+}
+
+// SetRouteID sets the "route_id" field.
+func (m *PrintLogMutation) SetRouteID(i int) {
+	m.route_id = &i
+	m.addroute_id = nil
+}
+
+// RouteID returns the value of the "route_id" field in the mutation.
+func (m *PrintLogMutation) RouteID() (r int, exists bool) {
+	v := m.route_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRouteID returns the old "route_id" field's value of the PrintLog entity.
+// If the PrintLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PrintLogMutation) OldRouteID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRouteID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRouteID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRouteID: %w", err)
+	}
+	return oldValue.RouteID, nil
+}
+
+// AddRouteID adds i to the "route_id" field.
+func (m *PrintLogMutation) AddRouteID(i int) {
+	if m.addroute_id != nil {
+		*m.addroute_id += i
+	} else {
+		m.addroute_id = &i
+	}
+}
+
+// AddedRouteID returns the value that was added to the "route_id" field in this mutation.
+func (m *PrintLogMutation) AddedRouteID() (r int, exists bool) {
+	v := m.addroute_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetRouteID resets all changes to the "route_id" field.
+func (m *PrintLogMutation) ResetRouteID() {
+	m.route_id = nil
+	m.addroute_id = nil
+}
+
+// SetCustomerID sets the "customer_id" field.
+func (m *PrintLogMutation) SetCustomerID(i int) {
+	m.customer_id = &i
+	m.addcustomer_id = nil
+}
+
+// CustomerID returns the value of the "customer_id" field in the mutation.
+func (m *PrintLogMutation) CustomerID() (r int, exists bool) {
+	v := m.customer_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCustomerID returns the old "customer_id" field's value of the PrintLog entity.
+// If the PrintLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PrintLogMutation) OldCustomerID(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCustomerID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCustomerID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCustomerID: %w", err)
+	}
+	return oldValue.CustomerID, nil
+}
+
+// AddCustomerID adds i to the "customer_id" field.
+func (m *PrintLogMutation) AddCustomerID(i int) {
+	if m.addcustomer_id != nil {
+		*m.addcustomer_id += i
+	} else {
+		m.addcustomer_id = &i
+	}
+}
+
+// AddedCustomerID returns the value that was added to the "customer_id" field in this mutation.
+func (m *PrintLogMutation) AddedCustomerID() (r int, exists bool) {
+	v := m.addcustomer_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearCustomerID clears the value of the "customer_id" field.
+func (m *PrintLogMutation) ClearCustomerID() {
+	m.customer_id = nil
+	m.addcustomer_id = nil
+	m.clearedFields[printlog.FieldCustomerID] = struct{}{}
+}
+
+// CustomerIDCleared returns if the "customer_id" field was cleared in this mutation.
+func (m *PrintLogMutation) CustomerIDCleared() bool {
+	_, ok := m.clearedFields[printlog.FieldCustomerID]
+	return ok
+}
+
+// ResetCustomerID resets all changes to the "customer_id" field.
+func (m *PrintLogMutation) ResetCustomerID() {
+	m.customer_id = nil
+	m.addcustomer_id = nil
+	delete(m.clearedFields, printlog.FieldCustomerID)
+}
+
+// SetWarehouseID sets the "warehouse_id" field.
+func (m *PrintLogMutation) SetWarehouseID(i int) {
+	m.warehouse_id = &i
+	m.addwarehouse_id = nil
+}
+
+// WarehouseID returns the value of the "warehouse_id" field in the mutation.
+func (m *PrintLogMutation) WarehouseID() (r int, exists bool) {
+	v := m.warehouse_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWarehouseID returns the old "warehouse_id" field's value of the PrintLog entity.
+// If the PrintLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PrintLogMutation) OldWarehouseID(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWarehouseID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWarehouseID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWarehouseID: %w", err)
+	}
+	return oldValue.WarehouseID, nil
+}
+
+// AddWarehouseID adds i to the "warehouse_id" field.
+func (m *PrintLogMutation) AddWarehouseID(i int) {
+	if m.addwarehouse_id != nil {
+		*m.addwarehouse_id += i
+	} else {
+		m.addwarehouse_id = &i
+	}
+}
+
+// AddedWarehouseID returns the value that was added to the "warehouse_id" field in this mutation.
+func (m *PrintLogMutation) AddedWarehouseID() (r int, exists bool) {
+	v := m.addwarehouse_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearWarehouseID clears the value of the "warehouse_id" field.
+func (m *PrintLogMutation) ClearWarehouseID() {
+	m.warehouse_id = nil
+	m.addwarehouse_id = nil
+	m.clearedFields[printlog.FieldWarehouseID] = struct{}{}
+}
+
+// WarehouseIDCleared returns if the "warehouse_id" field was cleared in this mutation.
+func (m *PrintLogMutation) WarehouseIDCleared() bool {
+	_, ok := m.clearedFields[printlog.FieldWarehouseID]
+	return ok
+}
+
+// ResetWarehouseID resets all changes to the "warehouse_id" field.
+func (m *PrintLogMutation) ResetWarehouseID() {
+	m.warehouse_id = nil
+	m.addwarehouse_id = nil
+	delete(m.clearedFields, printlog.FieldWarehouseID)
+}
+
+// SetTargetDate sets the "target_date" field.
+func (m *PrintLogMutation) SetTargetDate(t time.Time) {
+	m.target_date = &t
+}
+
+// TargetDate returns the value of the "target_date" field in the mutation.
+func (m *PrintLogMutation) TargetDate() (r time.Time, exists bool) {
+	v := m.target_date
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTargetDate returns the old "target_date" field's value of the PrintLog entity.
+// If the PrintLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PrintLogMutation) OldTargetDate(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTargetDate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTargetDate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTargetDate: %w", err)
+	}
+	return oldValue.TargetDate, nil
+}
+
+// ResetTargetDate resets all changes to the "target_date" field.
+func (m *PrintLogMutation) ResetTargetDate() {
+	m.target_date = nil
+}
+
+// SetIsReprint sets the "is_reprint" field.
+func (m *PrintLogMutation) SetIsReprint(b bool) {
+	m.is_reprint = &b
+}
+
+// IsReprint returns the value of the "is_reprint" field in the mutation.
+func (m *PrintLogMutation) IsReprint() (r bool, exists bool) {
+	v := m.is_reprint
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsReprint returns the old "is_reprint" field's value of the PrintLog entity.
+// If the PrintLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PrintLogMutation) OldIsReprint(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsReprint is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsReprint requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsReprint: %w", err)
+	}
+	return oldValue.IsReprint, nil
+}
+
+// ResetIsReprint resets all changes to the "is_reprint" field.
+func (m *PrintLogMutation) ResetIsReprint() {
+	m.is_reprint = nil
+}
+
+// SetReprintReason sets the "reprint_reason" field.
+func (m *PrintLogMutation) SetReprintReason(s string) {
+	m.reprint_reason = &s
+}
+
+// ReprintReason returns the value of the "reprint_reason" field in the mutation.
+func (m *PrintLogMutation) ReprintReason() (r string, exists bool) {
+	v := m.reprint_reason
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReprintReason returns the old "reprint_reason" field's value of the PrintLog entity.
+// If the PrintLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PrintLogMutation) OldReprintReason(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReprintReason is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReprintReason requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReprintReason: %w", err)
+	}
+	return oldValue.ReprintReason, nil
+}
+
+// ClearReprintReason clears the value of the "reprint_reason" field.
+func (m *PrintLogMutation) ClearReprintReason() {
+	m.reprint_reason = nil
+	m.clearedFields[printlog.FieldReprintReason] = struct{}{}
+}
+
+// ReprintReasonCleared returns if the "reprint_reason" field was cleared in this mutation.
+func (m *PrintLogMutation) ReprintReasonCleared() bool {
+	_, ok := m.clearedFields[printlog.FieldReprintReason]
+	return ok
+}
+
+// ResetReprintReason resets all changes to the "reprint_reason" field.
+func (m *PrintLogMutation) ResetReprintReason() {
+	m.reprint_reason = nil
+	delete(m.clearedFields, printlog.FieldReprintReason)
+}
+
+// SetPrintedBy sets the "printed_by" field.
+func (m *PrintLogMutation) SetPrintedBy(i int) {
+	m.printed_by = &i
+	m.addprinted_by = nil
+}
+
+// PrintedBy returns the value of the "printed_by" field in the mutation.
+func (m *PrintLogMutation) PrintedBy() (r int, exists bool) {
+	v := m.printed_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPrintedBy returns the old "printed_by" field's value of the PrintLog entity.
+// If the PrintLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PrintLogMutation) OldPrintedBy(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPrintedBy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPrintedBy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPrintedBy: %w", err)
+	}
+	return oldValue.PrintedBy, nil
+}
+
+// AddPrintedBy adds i to the "printed_by" field.
+func (m *PrintLogMutation) AddPrintedBy(i int) {
+	if m.addprinted_by != nil {
+		*m.addprinted_by += i
+	} else {
+		m.addprinted_by = &i
+	}
+}
+
+// AddedPrintedBy returns the value that was added to the "printed_by" field in this mutation.
+func (m *PrintLogMutation) AddedPrintedBy() (r int, exists bool) {
+	v := m.addprinted_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetPrintedBy resets all changes to the "printed_by" field.
+func (m *PrintLogMutation) ResetPrintedBy() {
+	m.printed_by = nil
+	m.addprinted_by = nil
+}
+
+// SetPrintedAt sets the "printed_at" field.
+func (m *PrintLogMutation) SetPrintedAt(t time.Time) {
+	m.printed_at = &t
+}
+
+// PrintedAt returns the value of the "printed_at" field in the mutation.
+func (m *PrintLogMutation) PrintedAt() (r time.Time, exists bool) {
+	v := m.printed_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPrintedAt returns the old "printed_at" field's value of the PrintLog entity.
+// If the PrintLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PrintLogMutation) OldPrintedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPrintedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPrintedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPrintedAt: %w", err)
+	}
+	return oldValue.PrintedAt, nil
+}
+
+// ResetPrintedAt resets all changes to the "printed_at" field.
+func (m *PrintLogMutation) ResetPrintedAt() {
+	m.printed_at = nil
+}
+
+// SetFileAssetID sets the "file_asset_id" field.
+func (m *PrintLogMutation) SetFileAssetID(i int) {
+	m.file_asset_id = &i
+	m.addfile_asset_id = nil
+}
+
+// FileAssetID returns the value of the "file_asset_id" field in the mutation.
+func (m *PrintLogMutation) FileAssetID() (r int, exists bool) {
+	v := m.file_asset_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFileAssetID returns the old "file_asset_id" field's value of the PrintLog entity.
+// If the PrintLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PrintLogMutation) OldFileAssetID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFileAssetID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFileAssetID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFileAssetID: %w", err)
+	}
+	return oldValue.FileAssetID, nil
+}
+
+// AddFileAssetID adds i to the "file_asset_id" field.
+func (m *PrintLogMutation) AddFileAssetID(i int) {
+	if m.addfile_asset_id != nil {
+		*m.addfile_asset_id += i
+	} else {
+		m.addfile_asset_id = &i
+	}
+}
+
+// AddedFileAssetID returns the value that was added to the "file_asset_id" field in this mutation.
+func (m *PrintLogMutation) AddedFileAssetID() (r int, exists bool) {
+	v := m.addfile_asset_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetFileAssetID resets all changes to the "file_asset_id" field.
+func (m *PrintLogMutation) ResetFileAssetID() {
+	m.file_asset_id = nil
+	m.addfile_asset_id = nil
+}
+
+// Where appends a list predicates to the PrintLogMutation builder.
+func (m *PrintLogMutation) Where(ps ...predicate.PrintLog) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the PrintLogMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *PrintLogMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.PrintLog, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *PrintLogMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *PrintLogMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (PrintLog).
+func (m *PrintLogMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *PrintLogMutation) Fields() []string {
+	fields := make([]string, 0, 12)
+	if m.company_id != nil {
+		fields = append(fields, printlog.FieldCompanyID)
+	}
+	if m.department_id != nil {
+		fields = append(fields, printlog.FieldDepartmentID)
+	}
+	if m.document_type != nil {
+		fields = append(fields, printlog.FieldDocumentType)
+	}
+	if m.route_id != nil {
+		fields = append(fields, printlog.FieldRouteID)
+	}
+	if m.customer_id != nil {
+		fields = append(fields, printlog.FieldCustomerID)
+	}
+	if m.warehouse_id != nil {
+		fields = append(fields, printlog.FieldWarehouseID)
+	}
+	if m.target_date != nil {
+		fields = append(fields, printlog.FieldTargetDate)
+	}
+	if m.is_reprint != nil {
+		fields = append(fields, printlog.FieldIsReprint)
+	}
+	if m.reprint_reason != nil {
+		fields = append(fields, printlog.FieldReprintReason)
+	}
+	if m.printed_by != nil {
+		fields = append(fields, printlog.FieldPrintedBy)
+	}
+	if m.printed_at != nil {
+		fields = append(fields, printlog.FieldPrintedAt)
+	}
+	if m.file_asset_id != nil {
+		fields = append(fields, printlog.FieldFileAssetID)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *PrintLogMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case printlog.FieldCompanyID:
+		return m.CompanyID()
+	case printlog.FieldDepartmentID:
+		return m.DepartmentID()
+	case printlog.FieldDocumentType:
+		return m.DocumentType()
+	case printlog.FieldRouteID:
+		return m.RouteID()
+	case printlog.FieldCustomerID:
+		return m.CustomerID()
+	case printlog.FieldWarehouseID:
+		return m.WarehouseID()
+	case printlog.FieldTargetDate:
+		return m.TargetDate()
+	case printlog.FieldIsReprint:
+		return m.IsReprint()
+	case printlog.FieldReprintReason:
+		return m.ReprintReason()
+	case printlog.FieldPrintedBy:
+		return m.PrintedBy()
+	case printlog.FieldPrintedAt:
+		return m.PrintedAt()
+	case printlog.FieldFileAssetID:
+		return m.FileAssetID()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *PrintLogMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case printlog.FieldCompanyID:
+		return m.OldCompanyID(ctx)
+	case printlog.FieldDepartmentID:
+		return m.OldDepartmentID(ctx)
+	case printlog.FieldDocumentType:
+		return m.OldDocumentType(ctx)
+	case printlog.FieldRouteID:
+		return m.OldRouteID(ctx)
+	case printlog.FieldCustomerID:
+		return m.OldCustomerID(ctx)
+	case printlog.FieldWarehouseID:
+		return m.OldWarehouseID(ctx)
+	case printlog.FieldTargetDate:
+		return m.OldTargetDate(ctx)
+	case printlog.FieldIsReprint:
+		return m.OldIsReprint(ctx)
+	case printlog.FieldReprintReason:
+		return m.OldReprintReason(ctx)
+	case printlog.FieldPrintedBy:
+		return m.OldPrintedBy(ctx)
+	case printlog.FieldPrintedAt:
+		return m.OldPrintedAt(ctx)
+	case printlog.FieldFileAssetID:
+		return m.OldFileAssetID(ctx)
+	}
+	return nil, fmt.Errorf("unknown PrintLog field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *PrintLogMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case printlog.FieldCompanyID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCompanyID(v)
+		return nil
+	case printlog.FieldDepartmentID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDepartmentID(v)
+		return nil
+	case printlog.FieldDocumentType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDocumentType(v)
+		return nil
+	case printlog.FieldRouteID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRouteID(v)
+		return nil
+	case printlog.FieldCustomerID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCustomerID(v)
+		return nil
+	case printlog.FieldWarehouseID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWarehouseID(v)
+		return nil
+	case printlog.FieldTargetDate:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTargetDate(v)
+		return nil
+	case printlog.FieldIsReprint:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsReprint(v)
+		return nil
+	case printlog.FieldReprintReason:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReprintReason(v)
+		return nil
+	case printlog.FieldPrintedBy:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPrintedBy(v)
+		return nil
+	case printlog.FieldPrintedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPrintedAt(v)
+		return nil
+	case printlog.FieldFileAssetID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFileAssetID(v)
+		return nil
+	}
+	return fmt.Errorf("unknown PrintLog field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *PrintLogMutation) AddedFields() []string {
+	var fields []string
+	if m.addcompany_id != nil {
+		fields = append(fields, printlog.FieldCompanyID)
+	}
+	if m.adddepartment_id != nil {
+		fields = append(fields, printlog.FieldDepartmentID)
+	}
+	if m.addroute_id != nil {
+		fields = append(fields, printlog.FieldRouteID)
+	}
+	if m.addcustomer_id != nil {
+		fields = append(fields, printlog.FieldCustomerID)
+	}
+	if m.addwarehouse_id != nil {
+		fields = append(fields, printlog.FieldWarehouseID)
+	}
+	if m.addprinted_by != nil {
+		fields = append(fields, printlog.FieldPrintedBy)
+	}
+	if m.addfile_asset_id != nil {
+		fields = append(fields, printlog.FieldFileAssetID)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *PrintLogMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case printlog.FieldCompanyID:
+		return m.AddedCompanyID()
+	case printlog.FieldDepartmentID:
+		return m.AddedDepartmentID()
+	case printlog.FieldRouteID:
+		return m.AddedRouteID()
+	case printlog.FieldCustomerID:
+		return m.AddedCustomerID()
+	case printlog.FieldWarehouseID:
+		return m.AddedWarehouseID()
+	case printlog.FieldPrintedBy:
+		return m.AddedPrintedBy()
+	case printlog.FieldFileAssetID:
+		return m.AddedFileAssetID()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *PrintLogMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case printlog.FieldCompanyID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCompanyID(v)
+		return nil
+	case printlog.FieldDepartmentID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddDepartmentID(v)
+		return nil
+	case printlog.FieldRouteID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRouteID(v)
+		return nil
+	case printlog.FieldCustomerID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCustomerID(v)
+		return nil
+	case printlog.FieldWarehouseID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddWarehouseID(v)
+		return nil
+	case printlog.FieldPrintedBy:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPrintedBy(v)
+		return nil
+	case printlog.FieldFileAssetID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddFileAssetID(v)
+		return nil
+	}
+	return fmt.Errorf("unknown PrintLog numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *PrintLogMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(printlog.FieldCustomerID) {
+		fields = append(fields, printlog.FieldCustomerID)
+	}
+	if m.FieldCleared(printlog.FieldWarehouseID) {
+		fields = append(fields, printlog.FieldWarehouseID)
+	}
+	if m.FieldCleared(printlog.FieldReprintReason) {
+		fields = append(fields, printlog.FieldReprintReason)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *PrintLogMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *PrintLogMutation) ClearField(name string) error {
+	switch name {
+	case printlog.FieldCustomerID:
+		m.ClearCustomerID()
+		return nil
+	case printlog.FieldWarehouseID:
+		m.ClearWarehouseID()
+		return nil
+	case printlog.FieldReprintReason:
+		m.ClearReprintReason()
+		return nil
+	}
+	return fmt.Errorf("unknown PrintLog nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *PrintLogMutation) ResetField(name string) error {
+	switch name {
+	case printlog.FieldCompanyID:
+		m.ResetCompanyID()
+		return nil
+	case printlog.FieldDepartmentID:
+		m.ResetDepartmentID()
+		return nil
+	case printlog.FieldDocumentType:
+		m.ResetDocumentType()
+		return nil
+	case printlog.FieldRouteID:
+		m.ResetRouteID()
+		return nil
+	case printlog.FieldCustomerID:
+		m.ResetCustomerID()
+		return nil
+	case printlog.FieldWarehouseID:
+		m.ResetWarehouseID()
+		return nil
+	case printlog.FieldTargetDate:
+		m.ResetTargetDate()
+		return nil
+	case printlog.FieldIsReprint:
+		m.ResetIsReprint()
+		return nil
+	case printlog.FieldReprintReason:
+		m.ResetReprintReason()
+		return nil
+	case printlog.FieldPrintedBy:
+		m.ResetPrintedBy()
+		return nil
+	case printlog.FieldPrintedAt:
+		m.ResetPrintedAt()
+		return nil
+	case printlog.FieldFileAssetID:
+		m.ResetFileAssetID()
+		return nil
+	}
+	return fmt.Errorf("unknown PrintLog field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *PrintLogMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *PrintLogMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *PrintLogMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *PrintLogMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *PrintLogMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *PrintLogMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *PrintLogMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown PrintLog unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *PrintLogMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown PrintLog edge %s", name)
+}
+
+// PrintPreviewMutation represents an operation that mutates the PrintPreview nodes in the graph.
+type PrintPreviewMutation struct {
+	config
+	op               Op
+	typ              string
+	id               *int
+	company_id       *int
+	addcompany_id    *int
+	department_id    *int
+	adddepartment_id *int
+	document_type    *string
+	route_id         *int
+	addroute_id      *int
+	customer_id      *int
+	addcustomer_id   *int
+	warehouse_id     *int
+	addwarehouse_id  *int
+	target_date      *time.Time
+	previewed_by     *int
+	addpreviewed_by  *int
+	previewed_at     *time.Time
+	file_asset_id    *int
+	addfile_asset_id *int
+	clearedFields    map[string]struct{}
+	done             bool
+	oldValue         func(context.Context) (*PrintPreview, error)
+	predicates       []predicate.PrintPreview
+}
+
+var _ ent.Mutation = (*PrintPreviewMutation)(nil)
+
+// printpreviewOption allows management of the mutation configuration using functional options.
+type printpreviewOption func(*PrintPreviewMutation)
+
+// newPrintPreviewMutation creates new mutation for the PrintPreview entity.
+func newPrintPreviewMutation(c config, op Op, opts ...printpreviewOption) *PrintPreviewMutation {
+	m := &PrintPreviewMutation{
+		config:        c,
+		op:            op,
+		typ:           TypePrintPreview,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withPrintPreviewID sets the ID field of the mutation.
+func withPrintPreviewID(id int) printpreviewOption {
+	return func(m *PrintPreviewMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *PrintPreview
+		)
+		m.oldValue = func(ctx context.Context) (*PrintPreview, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().PrintPreview.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withPrintPreview sets the old PrintPreview of the mutation.
+func withPrintPreview(node *PrintPreview) printpreviewOption {
+	return func(m *PrintPreviewMutation) {
+		m.oldValue = func(context.Context) (*PrintPreview, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m PrintPreviewMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m PrintPreviewMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *PrintPreviewMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *PrintPreviewMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().PrintPreview.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCompanyID sets the "company_id" field.
+func (m *PrintPreviewMutation) SetCompanyID(i int) {
+	m.company_id = &i
+	m.addcompany_id = nil
+}
+
+// CompanyID returns the value of the "company_id" field in the mutation.
+func (m *PrintPreviewMutation) CompanyID() (r int, exists bool) {
+	v := m.company_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCompanyID returns the old "company_id" field's value of the PrintPreview entity.
+// If the PrintPreview object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PrintPreviewMutation) OldCompanyID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCompanyID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCompanyID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCompanyID: %w", err)
+	}
+	return oldValue.CompanyID, nil
+}
+
+// AddCompanyID adds i to the "company_id" field.
+func (m *PrintPreviewMutation) AddCompanyID(i int) {
+	if m.addcompany_id != nil {
+		*m.addcompany_id += i
+	} else {
+		m.addcompany_id = &i
+	}
+}
+
+// AddedCompanyID returns the value that was added to the "company_id" field in this mutation.
+func (m *PrintPreviewMutation) AddedCompanyID() (r int, exists bool) {
+	v := m.addcompany_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCompanyID resets all changes to the "company_id" field.
+func (m *PrintPreviewMutation) ResetCompanyID() {
+	m.company_id = nil
+	m.addcompany_id = nil
+}
+
+// SetDepartmentID sets the "department_id" field.
+func (m *PrintPreviewMutation) SetDepartmentID(i int) {
+	m.department_id = &i
+	m.adddepartment_id = nil
+}
+
+// DepartmentID returns the value of the "department_id" field in the mutation.
+func (m *PrintPreviewMutation) DepartmentID() (r int, exists bool) {
+	v := m.department_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDepartmentID returns the old "department_id" field's value of the PrintPreview entity.
+// If the PrintPreview object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PrintPreviewMutation) OldDepartmentID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDepartmentID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDepartmentID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDepartmentID: %w", err)
+	}
+	return oldValue.DepartmentID, nil
+}
+
+// AddDepartmentID adds i to the "department_id" field.
+func (m *PrintPreviewMutation) AddDepartmentID(i int) {
+	if m.adddepartment_id != nil {
+		*m.adddepartment_id += i
+	} else {
+		m.adddepartment_id = &i
+	}
+}
+
+// AddedDepartmentID returns the value that was added to the "department_id" field in this mutation.
+func (m *PrintPreviewMutation) AddedDepartmentID() (r int, exists bool) {
+	v := m.adddepartment_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetDepartmentID resets all changes to the "department_id" field.
+func (m *PrintPreviewMutation) ResetDepartmentID() {
+	m.department_id = nil
+	m.adddepartment_id = nil
+}
+
+// SetDocumentType sets the "document_type" field.
+func (m *PrintPreviewMutation) SetDocumentType(s string) {
+	m.document_type = &s
+}
+
+// DocumentType returns the value of the "document_type" field in the mutation.
+func (m *PrintPreviewMutation) DocumentType() (r string, exists bool) {
+	v := m.document_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDocumentType returns the old "document_type" field's value of the PrintPreview entity.
+// If the PrintPreview object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PrintPreviewMutation) OldDocumentType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDocumentType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDocumentType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDocumentType: %w", err)
+	}
+	return oldValue.DocumentType, nil
+}
+
+// ResetDocumentType resets all changes to the "document_type" field.
+func (m *PrintPreviewMutation) ResetDocumentType() {
+	m.document_type = nil
+}
+
+// SetRouteID sets the "route_id" field.
+func (m *PrintPreviewMutation) SetRouteID(i int) {
+	m.route_id = &i
+	m.addroute_id = nil
+}
+
+// RouteID returns the value of the "route_id" field in the mutation.
+func (m *PrintPreviewMutation) RouteID() (r int, exists bool) {
+	v := m.route_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRouteID returns the old "route_id" field's value of the PrintPreview entity.
+// If the PrintPreview object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PrintPreviewMutation) OldRouteID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRouteID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRouteID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRouteID: %w", err)
+	}
+	return oldValue.RouteID, nil
+}
+
+// AddRouteID adds i to the "route_id" field.
+func (m *PrintPreviewMutation) AddRouteID(i int) {
+	if m.addroute_id != nil {
+		*m.addroute_id += i
+	} else {
+		m.addroute_id = &i
+	}
+}
+
+// AddedRouteID returns the value that was added to the "route_id" field in this mutation.
+func (m *PrintPreviewMutation) AddedRouteID() (r int, exists bool) {
+	v := m.addroute_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetRouteID resets all changes to the "route_id" field.
+func (m *PrintPreviewMutation) ResetRouteID() {
+	m.route_id = nil
+	m.addroute_id = nil
+}
+
+// SetCustomerID sets the "customer_id" field.
+func (m *PrintPreviewMutation) SetCustomerID(i int) {
+	m.customer_id = &i
+	m.addcustomer_id = nil
+}
+
+// CustomerID returns the value of the "customer_id" field in the mutation.
+func (m *PrintPreviewMutation) CustomerID() (r int, exists bool) {
+	v := m.customer_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCustomerID returns the old "customer_id" field's value of the PrintPreview entity.
+// If the PrintPreview object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PrintPreviewMutation) OldCustomerID(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCustomerID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCustomerID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCustomerID: %w", err)
+	}
+	return oldValue.CustomerID, nil
+}
+
+// AddCustomerID adds i to the "customer_id" field.
+func (m *PrintPreviewMutation) AddCustomerID(i int) {
+	if m.addcustomer_id != nil {
+		*m.addcustomer_id += i
+	} else {
+		m.addcustomer_id = &i
+	}
+}
+
+// AddedCustomerID returns the value that was added to the "customer_id" field in this mutation.
+func (m *PrintPreviewMutation) AddedCustomerID() (r int, exists bool) {
+	v := m.addcustomer_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearCustomerID clears the value of the "customer_id" field.
+func (m *PrintPreviewMutation) ClearCustomerID() {
+	m.customer_id = nil
+	m.addcustomer_id = nil
+	m.clearedFields[printpreview.FieldCustomerID] = struct{}{}
+}
+
+// CustomerIDCleared returns if the "customer_id" field was cleared in this mutation.
+func (m *PrintPreviewMutation) CustomerIDCleared() bool {
+	_, ok := m.clearedFields[printpreview.FieldCustomerID]
+	return ok
+}
+
+// ResetCustomerID resets all changes to the "customer_id" field.
+func (m *PrintPreviewMutation) ResetCustomerID() {
+	m.customer_id = nil
+	m.addcustomer_id = nil
+	delete(m.clearedFields, printpreview.FieldCustomerID)
+}
+
+// SetWarehouseID sets the "warehouse_id" field.
+func (m *PrintPreviewMutation) SetWarehouseID(i int) {
+	m.warehouse_id = &i
+	m.addwarehouse_id = nil
+}
+
+// WarehouseID returns the value of the "warehouse_id" field in the mutation.
+func (m *PrintPreviewMutation) WarehouseID() (r int, exists bool) {
+	v := m.warehouse_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWarehouseID returns the old "warehouse_id" field's value of the PrintPreview entity.
+// If the PrintPreview object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PrintPreviewMutation) OldWarehouseID(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWarehouseID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWarehouseID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWarehouseID: %w", err)
+	}
+	return oldValue.WarehouseID, nil
+}
+
+// AddWarehouseID adds i to the "warehouse_id" field.
+func (m *PrintPreviewMutation) AddWarehouseID(i int) {
+	if m.addwarehouse_id != nil {
+		*m.addwarehouse_id += i
+	} else {
+		m.addwarehouse_id = &i
+	}
+}
+
+// AddedWarehouseID returns the value that was added to the "warehouse_id" field in this mutation.
+func (m *PrintPreviewMutation) AddedWarehouseID() (r int, exists bool) {
+	v := m.addwarehouse_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearWarehouseID clears the value of the "warehouse_id" field.
+func (m *PrintPreviewMutation) ClearWarehouseID() {
+	m.warehouse_id = nil
+	m.addwarehouse_id = nil
+	m.clearedFields[printpreview.FieldWarehouseID] = struct{}{}
+}
+
+// WarehouseIDCleared returns if the "warehouse_id" field was cleared in this mutation.
+func (m *PrintPreviewMutation) WarehouseIDCleared() bool {
+	_, ok := m.clearedFields[printpreview.FieldWarehouseID]
+	return ok
+}
+
+// ResetWarehouseID resets all changes to the "warehouse_id" field.
+func (m *PrintPreviewMutation) ResetWarehouseID() {
+	m.warehouse_id = nil
+	m.addwarehouse_id = nil
+	delete(m.clearedFields, printpreview.FieldWarehouseID)
+}
+
+// SetTargetDate sets the "target_date" field.
+func (m *PrintPreviewMutation) SetTargetDate(t time.Time) {
+	m.target_date = &t
+}
+
+// TargetDate returns the value of the "target_date" field in the mutation.
+func (m *PrintPreviewMutation) TargetDate() (r time.Time, exists bool) {
+	v := m.target_date
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTargetDate returns the old "target_date" field's value of the PrintPreview entity.
+// If the PrintPreview object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PrintPreviewMutation) OldTargetDate(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTargetDate is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTargetDate requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTargetDate: %w", err)
+	}
+	return oldValue.TargetDate, nil
+}
+
+// ResetTargetDate resets all changes to the "target_date" field.
+func (m *PrintPreviewMutation) ResetTargetDate() {
+	m.target_date = nil
+}
+
+// SetPreviewedBy sets the "previewed_by" field.
+func (m *PrintPreviewMutation) SetPreviewedBy(i int) {
+	m.previewed_by = &i
+	m.addpreviewed_by = nil
+}
+
+// PreviewedBy returns the value of the "previewed_by" field in the mutation.
+func (m *PrintPreviewMutation) PreviewedBy() (r int, exists bool) {
+	v := m.previewed_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPreviewedBy returns the old "previewed_by" field's value of the PrintPreview entity.
+// If the PrintPreview object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PrintPreviewMutation) OldPreviewedBy(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPreviewedBy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPreviewedBy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPreviewedBy: %w", err)
+	}
+	return oldValue.PreviewedBy, nil
+}
+
+// AddPreviewedBy adds i to the "previewed_by" field.
+func (m *PrintPreviewMutation) AddPreviewedBy(i int) {
+	if m.addpreviewed_by != nil {
+		*m.addpreviewed_by += i
+	} else {
+		m.addpreviewed_by = &i
+	}
+}
+
+// AddedPreviewedBy returns the value that was added to the "previewed_by" field in this mutation.
+func (m *PrintPreviewMutation) AddedPreviewedBy() (r int, exists bool) {
+	v := m.addpreviewed_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetPreviewedBy resets all changes to the "previewed_by" field.
+func (m *PrintPreviewMutation) ResetPreviewedBy() {
+	m.previewed_by = nil
+	m.addpreviewed_by = nil
+}
+
+// SetPreviewedAt sets the "previewed_at" field.
+func (m *PrintPreviewMutation) SetPreviewedAt(t time.Time) {
+	m.previewed_at = &t
+}
+
+// PreviewedAt returns the value of the "previewed_at" field in the mutation.
+func (m *PrintPreviewMutation) PreviewedAt() (r time.Time, exists bool) {
+	v := m.previewed_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPreviewedAt returns the old "previewed_at" field's value of the PrintPreview entity.
+// If the PrintPreview object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PrintPreviewMutation) OldPreviewedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPreviewedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPreviewedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPreviewedAt: %w", err)
+	}
+	return oldValue.PreviewedAt, nil
+}
+
+// ResetPreviewedAt resets all changes to the "previewed_at" field.
+func (m *PrintPreviewMutation) ResetPreviewedAt() {
+	m.previewed_at = nil
+}
+
+// SetFileAssetID sets the "file_asset_id" field.
+func (m *PrintPreviewMutation) SetFileAssetID(i int) {
+	m.file_asset_id = &i
+	m.addfile_asset_id = nil
+}
+
+// FileAssetID returns the value of the "file_asset_id" field in the mutation.
+func (m *PrintPreviewMutation) FileAssetID() (r int, exists bool) {
+	v := m.file_asset_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFileAssetID returns the old "file_asset_id" field's value of the PrintPreview entity.
+// If the PrintPreview object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PrintPreviewMutation) OldFileAssetID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFileAssetID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFileAssetID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFileAssetID: %w", err)
+	}
+	return oldValue.FileAssetID, nil
+}
+
+// AddFileAssetID adds i to the "file_asset_id" field.
+func (m *PrintPreviewMutation) AddFileAssetID(i int) {
+	if m.addfile_asset_id != nil {
+		*m.addfile_asset_id += i
+	} else {
+		m.addfile_asset_id = &i
+	}
+}
+
+// AddedFileAssetID returns the value that was added to the "file_asset_id" field in this mutation.
+func (m *PrintPreviewMutation) AddedFileAssetID() (r int, exists bool) {
+	v := m.addfile_asset_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetFileAssetID resets all changes to the "file_asset_id" field.
+func (m *PrintPreviewMutation) ResetFileAssetID() {
+	m.file_asset_id = nil
+	m.addfile_asset_id = nil
+}
+
+// Where appends a list predicates to the PrintPreviewMutation builder.
+func (m *PrintPreviewMutation) Where(ps ...predicate.PrintPreview) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the PrintPreviewMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *PrintPreviewMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.PrintPreview, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *PrintPreviewMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *PrintPreviewMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (PrintPreview).
+func (m *PrintPreviewMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *PrintPreviewMutation) Fields() []string {
+	fields := make([]string, 0, 10)
+	if m.company_id != nil {
+		fields = append(fields, printpreview.FieldCompanyID)
+	}
+	if m.department_id != nil {
+		fields = append(fields, printpreview.FieldDepartmentID)
+	}
+	if m.document_type != nil {
+		fields = append(fields, printpreview.FieldDocumentType)
+	}
+	if m.route_id != nil {
+		fields = append(fields, printpreview.FieldRouteID)
+	}
+	if m.customer_id != nil {
+		fields = append(fields, printpreview.FieldCustomerID)
+	}
+	if m.warehouse_id != nil {
+		fields = append(fields, printpreview.FieldWarehouseID)
+	}
+	if m.target_date != nil {
+		fields = append(fields, printpreview.FieldTargetDate)
+	}
+	if m.previewed_by != nil {
+		fields = append(fields, printpreview.FieldPreviewedBy)
+	}
+	if m.previewed_at != nil {
+		fields = append(fields, printpreview.FieldPreviewedAt)
+	}
+	if m.file_asset_id != nil {
+		fields = append(fields, printpreview.FieldFileAssetID)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *PrintPreviewMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case printpreview.FieldCompanyID:
+		return m.CompanyID()
+	case printpreview.FieldDepartmentID:
+		return m.DepartmentID()
+	case printpreview.FieldDocumentType:
+		return m.DocumentType()
+	case printpreview.FieldRouteID:
+		return m.RouteID()
+	case printpreview.FieldCustomerID:
+		return m.CustomerID()
+	case printpreview.FieldWarehouseID:
+		return m.WarehouseID()
+	case printpreview.FieldTargetDate:
+		return m.TargetDate()
+	case printpreview.FieldPreviewedBy:
+		return m.PreviewedBy()
+	case printpreview.FieldPreviewedAt:
+		return m.PreviewedAt()
+	case printpreview.FieldFileAssetID:
+		return m.FileAssetID()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *PrintPreviewMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case printpreview.FieldCompanyID:
+		return m.OldCompanyID(ctx)
+	case printpreview.FieldDepartmentID:
+		return m.OldDepartmentID(ctx)
+	case printpreview.FieldDocumentType:
+		return m.OldDocumentType(ctx)
+	case printpreview.FieldRouteID:
+		return m.OldRouteID(ctx)
+	case printpreview.FieldCustomerID:
+		return m.OldCustomerID(ctx)
+	case printpreview.FieldWarehouseID:
+		return m.OldWarehouseID(ctx)
+	case printpreview.FieldTargetDate:
+		return m.OldTargetDate(ctx)
+	case printpreview.FieldPreviewedBy:
+		return m.OldPreviewedBy(ctx)
+	case printpreview.FieldPreviewedAt:
+		return m.OldPreviewedAt(ctx)
+	case printpreview.FieldFileAssetID:
+		return m.OldFileAssetID(ctx)
+	}
+	return nil, fmt.Errorf("unknown PrintPreview field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *PrintPreviewMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case printpreview.FieldCompanyID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCompanyID(v)
+		return nil
+	case printpreview.FieldDepartmentID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDepartmentID(v)
+		return nil
+	case printpreview.FieldDocumentType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDocumentType(v)
+		return nil
+	case printpreview.FieldRouteID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRouteID(v)
+		return nil
+	case printpreview.FieldCustomerID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCustomerID(v)
+		return nil
+	case printpreview.FieldWarehouseID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWarehouseID(v)
+		return nil
+	case printpreview.FieldTargetDate:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTargetDate(v)
+		return nil
+	case printpreview.FieldPreviewedBy:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPreviewedBy(v)
+		return nil
+	case printpreview.FieldPreviewedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPreviewedAt(v)
+		return nil
+	case printpreview.FieldFileAssetID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFileAssetID(v)
+		return nil
+	}
+	return fmt.Errorf("unknown PrintPreview field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *PrintPreviewMutation) AddedFields() []string {
+	var fields []string
+	if m.addcompany_id != nil {
+		fields = append(fields, printpreview.FieldCompanyID)
+	}
+	if m.adddepartment_id != nil {
+		fields = append(fields, printpreview.FieldDepartmentID)
+	}
+	if m.addroute_id != nil {
+		fields = append(fields, printpreview.FieldRouteID)
+	}
+	if m.addcustomer_id != nil {
+		fields = append(fields, printpreview.FieldCustomerID)
+	}
+	if m.addwarehouse_id != nil {
+		fields = append(fields, printpreview.FieldWarehouseID)
+	}
+	if m.addpreviewed_by != nil {
+		fields = append(fields, printpreview.FieldPreviewedBy)
+	}
+	if m.addfile_asset_id != nil {
+		fields = append(fields, printpreview.FieldFileAssetID)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *PrintPreviewMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case printpreview.FieldCompanyID:
+		return m.AddedCompanyID()
+	case printpreview.FieldDepartmentID:
+		return m.AddedDepartmentID()
+	case printpreview.FieldRouteID:
+		return m.AddedRouteID()
+	case printpreview.FieldCustomerID:
+		return m.AddedCustomerID()
+	case printpreview.FieldWarehouseID:
+		return m.AddedWarehouseID()
+	case printpreview.FieldPreviewedBy:
+		return m.AddedPreviewedBy()
+	case printpreview.FieldFileAssetID:
+		return m.AddedFileAssetID()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *PrintPreviewMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case printpreview.FieldCompanyID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCompanyID(v)
+		return nil
+	case printpreview.FieldDepartmentID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddDepartmentID(v)
+		return nil
+	case printpreview.FieldRouteID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRouteID(v)
+		return nil
+	case printpreview.FieldCustomerID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCustomerID(v)
+		return nil
+	case printpreview.FieldWarehouseID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddWarehouseID(v)
+		return nil
+	case printpreview.FieldPreviewedBy:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPreviewedBy(v)
+		return nil
+	case printpreview.FieldFileAssetID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddFileAssetID(v)
+		return nil
+	}
+	return fmt.Errorf("unknown PrintPreview numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *PrintPreviewMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(printpreview.FieldCustomerID) {
+		fields = append(fields, printpreview.FieldCustomerID)
+	}
+	if m.FieldCleared(printpreview.FieldWarehouseID) {
+		fields = append(fields, printpreview.FieldWarehouseID)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *PrintPreviewMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *PrintPreviewMutation) ClearField(name string) error {
+	switch name {
+	case printpreview.FieldCustomerID:
+		m.ClearCustomerID()
+		return nil
+	case printpreview.FieldWarehouseID:
+		m.ClearWarehouseID()
+		return nil
+	}
+	return fmt.Errorf("unknown PrintPreview nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *PrintPreviewMutation) ResetField(name string) error {
+	switch name {
+	case printpreview.FieldCompanyID:
+		m.ResetCompanyID()
+		return nil
+	case printpreview.FieldDepartmentID:
+		m.ResetDepartmentID()
+		return nil
+	case printpreview.FieldDocumentType:
+		m.ResetDocumentType()
+		return nil
+	case printpreview.FieldRouteID:
+		m.ResetRouteID()
+		return nil
+	case printpreview.FieldCustomerID:
+		m.ResetCustomerID()
+		return nil
+	case printpreview.FieldWarehouseID:
+		m.ResetWarehouseID()
+		return nil
+	case printpreview.FieldTargetDate:
+		m.ResetTargetDate()
+		return nil
+	case printpreview.FieldPreviewedBy:
+		m.ResetPreviewedBy()
+		return nil
+	case printpreview.FieldPreviewedAt:
+		m.ResetPreviewedAt()
+		return nil
+	case printpreview.FieldFileAssetID:
+		m.ResetFileAssetID()
+		return nil
+	}
+	return fmt.Errorf("unknown PrintPreview field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *PrintPreviewMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *PrintPreviewMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *PrintPreviewMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *PrintPreviewMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *PrintPreviewMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *PrintPreviewMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *PrintPreviewMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown PrintPreview unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *PrintPreviewMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown PrintPreview edge %s", name)
 }
 
 // ProcessingSpecMutation represents an operation that mutates the ProcessingSpec nodes in the graph.

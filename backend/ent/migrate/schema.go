@@ -318,6 +318,67 @@ var (
 			},
 		},
 	}
+	// PrintLogsColumns holds the columns for the "print_logs" table.
+	PrintLogsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "company_id", Type: field.TypeInt},
+		{Name: "department_id", Type: field.TypeInt},
+		{Name: "document_type", Type: field.TypeString},
+		{Name: "route_id", Type: field.TypeInt},
+		{Name: "customer_id", Type: field.TypeInt, Nullable: true},
+		{Name: "warehouse_id", Type: field.TypeInt, Nullable: true},
+		{Name: "target_date", Type: field.TypeTime},
+		{Name: "is_reprint", Type: field.TypeBool, Default: false},
+		{Name: "reprint_reason", Type: field.TypeString, Nullable: true},
+		{Name: "printed_by", Type: field.TypeInt},
+		{Name: "printed_at", Type: field.TypeTime},
+		{Name: "file_asset_id", Type: field.TypeInt},
+	}
+	// PrintLogsTable holds the schema information for the "print_logs" table.
+	PrintLogsTable = &schema.Table{
+		Name:       "print_logs",
+		Columns:    PrintLogsColumns,
+		PrimaryKey: []*schema.Column{PrintLogsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "printlog_department_id_target_date_document_type",
+				Unique:  false,
+				Columns: []*schema.Column{PrintLogsColumns[2], PrintLogsColumns[7], PrintLogsColumns[3]},
+			},
+			{
+				Name:    "printlog_department_id_document_type_route_id_target_date",
+				Unique:  false,
+				Columns: []*schema.Column{PrintLogsColumns[2], PrintLogsColumns[3], PrintLogsColumns[4], PrintLogsColumns[7]},
+			},
+		},
+	}
+	// PrintPreviewsColumns holds the columns for the "print_previews" table.
+	PrintPreviewsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "company_id", Type: field.TypeInt},
+		{Name: "department_id", Type: field.TypeInt},
+		{Name: "document_type", Type: field.TypeString},
+		{Name: "route_id", Type: field.TypeInt},
+		{Name: "customer_id", Type: field.TypeInt, Nullable: true},
+		{Name: "warehouse_id", Type: field.TypeInt, Nullable: true},
+		{Name: "target_date", Type: field.TypeTime},
+		{Name: "previewed_by", Type: field.TypeInt},
+		{Name: "previewed_at", Type: field.TypeTime},
+		{Name: "file_asset_id", Type: field.TypeInt},
+	}
+	// PrintPreviewsTable holds the schema information for the "print_previews" table.
+	PrintPreviewsTable = &schema.Table{
+		Name:       "print_previews",
+		Columns:    PrintPreviewsColumns,
+		PrimaryKey: []*schema.Column{PrintPreviewsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "printpreview_department_id_target_date_document_type",
+				Unique:  false,
+				Columns: []*schema.Column{PrintPreviewsColumns[2], PrintPreviewsColumns[7], PrintPreviewsColumns[3]},
+			},
+		},
+	}
 	// ProcessingSpecsColumns holds the columns for the "processing_specs" table.
 	ProcessingSpecsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -716,6 +777,8 @@ var (
 		FileAssetsTable,
 		MetadictsTable,
 		OrderCountersTable,
+		PrintLogsTable,
+		PrintPreviewsTable,
 		ProcessingSpecsTable,
 		ProductsTable,
 		ProductCategoriesTable,

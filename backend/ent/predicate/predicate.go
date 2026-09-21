@@ -39,6 +39,12 @@ type Metadict func(*sql.Selector)
 // OrderCounter is the predicate function for ordercounter builders.
 type OrderCounter func(*sql.Selector)
 
+// PrintLog is the predicate function for printlog builders.
+type PrintLog func(*sql.Selector)
+
+// PrintPreview is the predicate function for printpreview builders.
+type PrintPreview func(*sql.Selector)
+
 // ProcessingSpec is the predicate function for processingspec builders.
 type ProcessingSpec func(*sql.Selector)
 

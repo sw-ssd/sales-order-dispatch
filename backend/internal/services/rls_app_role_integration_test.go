@@ -13,7 +13,8 @@ import (
 )
 
 // businessTables 為明確授權的業務表白名單（00022 的 18 張 ＋ 00031 的訂單四表 ＋
-// 00033 的 customer_products，共 23 張；各表授權由其 migration 明示列舉）。
+// 00033 的 customer_products ＋ 00035 的 file_assets ＋ 00037 的列印兩表，共 26 張；
+// 各表授權由其 migration 明示列舉）。
 // 授權必須恰好落在這些表，多一張即為權限外洩（如內嵌 OpenFGA 的授權表）。
 var businessTables = map[string]bool{
 	"companies": true, "departments": true, "users": true, "roles": true,
@@ -24,6 +25,7 @@ var businessTables = map[string]bool{
 	"product_units": true, "product_processing_specs": true,
 	"sales_orders": true, "sales_order_items": true, "sales_order_events": true,
 	"order_counters": true, "customer_products": true, "file_assets": true,
+	"print_logs": true, "print_previews": true,
 }
 
 // TestIntegrationAppRolePrivileges 驗證業務角色是非 owner、且對業務表有 DML 權限：
@@ -72,12 +74,12 @@ func TestIntegrationAppRolePrivileges(t *testing.T) {
 
 	// 逐表斷言授權量:業務表必須 DML 齊備（少了任一張,T3 之後的 RLS policy 會變成
 	// permission denied 而非可用的隔離）;非業務表必須**零**授權（授權外溢即最小權限破口）。
-	// sales_order_events 例外:僅追加(SELECT/INSERT),UPDATE/DELETE 刻意不授(見 00031)。
+	// 僅追加例外:記錄類表只授 SELECT/INSERT(見 00031/00037);UPDATE/DELETE 刻意不授。
 	// 以實際存在的 public 表列舉而非硬編清單 → 容器內缺 OpenFGA 的表時不會假綠。
 	granted := grantedTables(t, db)
 	for table := range businessTables {
 		want := 4
-		if table == "sales_order_events" {
+		if table == "sales_order_events" || table == "print_logs" || table == "print_previews" {
 			want = 2
 		}
 		if granted[table] != want {

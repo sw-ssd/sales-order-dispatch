@@ -26,6 +26,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/fileasset"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/ordercounter"
+	"github.com/salesorder/sales-order-1.0/backend/ent/printlog"
+	"github.com/salesorder/sales-order-1.0/backend/ent/printpreview"
 	"github.com/salesorder/sales-order-1.0/backend/ent/processingspec"
 	"github.com/salesorder/sales-order-1.0/backend/ent/product"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productcategory"
@@ -68,6 +70,10 @@ type Client struct {
 	Metadict *MetadictClient
 	// OrderCounter is the client for interacting with the OrderCounter builders.
 	OrderCounter *OrderCounterClient
+	// PrintLog is the client for interacting with the PrintLog builders.
+	PrintLog *PrintLogClient
+	// PrintPreview is the client for interacting with the PrintPreview builders.
+	PrintPreview *PrintPreviewClient
 	// ProcessingSpec is the client for interacting with the ProcessingSpec builders.
 	ProcessingSpec *ProcessingSpecClient
 	// Product is the client for interacting with the Product builders.
@@ -116,6 +122,8 @@ func (c *Client) init() {
 	c.FileAsset = NewFileAssetClient(c.config)
 	c.Metadict = NewMetadictClient(c.config)
 	c.OrderCounter = NewOrderCounterClient(c.config)
+	c.PrintLog = NewPrintLogClient(c.config)
+	c.PrintPreview = NewPrintPreviewClient(c.config)
 	c.ProcessingSpec = NewProcessingSpecClient(c.config)
 	c.Product = NewProductClient(c.config)
 	c.ProductCategory = NewProductCategoryClient(c.config)
@@ -232,6 +240,8 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		FileAsset:             NewFileAssetClient(cfg),
 		Metadict:              NewMetadictClient(cfg),
 		OrderCounter:          NewOrderCounterClient(cfg),
+		PrintLog:              NewPrintLogClient(cfg),
+		PrintPreview:          NewPrintPreviewClient(cfg),
 		ProcessingSpec:        NewProcessingSpecClient(cfg),
 		Product:               NewProductClient(cfg),
 		ProductCategory:       NewProductCategoryClient(cfg),
@@ -275,6 +285,8 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		FileAsset:             NewFileAssetClient(cfg),
 		Metadict:              NewMetadictClient(cfg),
 		OrderCounter:          NewOrderCounterClient(cfg),
+		PrintLog:              NewPrintLogClient(cfg),
+		PrintPreview:          NewPrintPreviewClient(cfg),
 		ProcessingSpec:        NewProcessingSpecClient(cfg),
 		Product:               NewProductClient(cfg),
 		ProductCategory:       NewProductCategoryClient(cfg),
@@ -319,9 +331,10 @@ func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.AuditLog, c.Company, c.Customer, c.CustomerAddress, c.CustomerContact,
 		c.CustomerCounter, c.CustomerProduct, c.Department, c.FileAsset, c.Metadict,
-		c.OrderCounter, c.ProcessingSpec, c.Product, c.ProductCategory,
-		c.ProductProcessingSpec, c.ProductUnit, c.Role, c.RolePermission, c.Route,
-		c.SalesOrder, c.SalesOrderEvent, c.SalesOrderItem, c.User, c.Warehouse,
+		c.OrderCounter, c.PrintLog, c.PrintPreview, c.ProcessingSpec, c.Product,
+		c.ProductCategory, c.ProductProcessingSpec, c.ProductUnit, c.Role,
+		c.RolePermission, c.Route, c.SalesOrder, c.SalesOrderEvent, c.SalesOrderItem,
+		c.User, c.Warehouse,
 	} {
 		n.Use(hooks...)
 	}
@@ -333,9 +346,10 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.AuditLog, c.Company, c.Customer, c.CustomerAddress, c.CustomerContact,
 		c.CustomerCounter, c.CustomerProduct, c.Department, c.FileAsset, c.Metadict,
-		c.OrderCounter, c.ProcessingSpec, c.Product, c.ProductCategory,
-		c.ProductProcessingSpec, c.ProductUnit, c.Role, c.RolePermission, c.Route,
-		c.SalesOrder, c.SalesOrderEvent, c.SalesOrderItem, c.User, c.Warehouse,
+		c.OrderCounter, c.PrintLog, c.PrintPreview, c.ProcessingSpec, c.Product,
+		c.ProductCategory, c.ProductProcessingSpec, c.ProductUnit, c.Role,
+		c.RolePermission, c.Route, c.SalesOrder, c.SalesOrderEvent, c.SalesOrderItem,
+		c.User, c.Warehouse,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -366,6 +380,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Metadict.mutate(ctx, m)
 	case *OrderCounterMutation:
 		return c.OrderCounter.mutate(ctx, m)
+	case *PrintLogMutation:
+		return c.PrintLog.mutate(ctx, m)
+	case *PrintPreviewMutation:
+		return c.PrintPreview.mutate(ctx, m)
 	case *ProcessingSpecMutation:
 		return c.ProcessingSpec.mutate(ctx, m)
 	case *ProductMutation:
@@ -1921,6 +1939,272 @@ func (c *OrderCounterClient) mutate(ctx context.Context, m *OrderCounterMutation
 		return (&OrderCounterDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown OrderCounter mutation op: %q", m.Op())
+	}
+}
+
+// PrintLogClient is a client for the PrintLog schema.
+type PrintLogClient struct {
+	config
+}
+
+// NewPrintLogClient returns a client for the PrintLog from the given config.
+func NewPrintLogClient(c config) *PrintLogClient {
+	return &PrintLogClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `printlog.Hooks(f(g(h())))`.
+func (c *PrintLogClient) Use(hooks ...Hook) {
+	c.hooks.PrintLog = append(c.hooks.PrintLog, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `printlog.Intercept(f(g(h())))`.
+func (c *PrintLogClient) Intercept(interceptors ...Interceptor) {
+	c.inters.PrintLog = append(c.inters.PrintLog, interceptors...)
+}
+
+// Create returns a builder for creating a PrintLog entity.
+func (c *PrintLogClient) Create() *PrintLogCreate {
+	mutation := newPrintLogMutation(c.config, OpCreate)
+	return &PrintLogCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of PrintLog entities.
+func (c *PrintLogClient) CreateBulk(builders ...*PrintLogCreate) *PrintLogCreateBulk {
+	return &PrintLogCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PrintLogClient) MapCreateBulk(slice any, setFunc func(*PrintLogCreate, int)) *PrintLogCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PrintLogCreateBulk{err: fmt.Errorf("calling to PrintLogClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*PrintLogCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &PrintLogCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for PrintLog.
+func (c *PrintLogClient) Update() *PrintLogUpdate {
+	mutation := newPrintLogMutation(c.config, OpUpdate)
+	return &PrintLogUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PrintLogClient) UpdateOne(_m *PrintLog) *PrintLogUpdateOne {
+	mutation := newPrintLogMutation(c.config, OpUpdateOne, withPrintLog(_m))
+	return &PrintLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PrintLogClient) UpdateOneID(id int) *PrintLogUpdateOne {
+	mutation := newPrintLogMutation(c.config, OpUpdateOne, withPrintLogID(id))
+	return &PrintLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for PrintLog.
+func (c *PrintLogClient) Delete() *PrintLogDelete {
+	mutation := newPrintLogMutation(c.config, OpDelete)
+	return &PrintLogDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PrintLogClient) DeleteOne(_m *PrintLog) *PrintLogDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PrintLogClient) DeleteOneID(id int) *PrintLogDeleteOne {
+	builder := c.Delete().Where(printlog.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PrintLogDeleteOne{builder}
+}
+
+// Query returns a query builder for PrintLog.
+func (c *PrintLogClient) Query() *PrintLogQuery {
+	return &PrintLogQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypePrintLog},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a PrintLog entity by its id.
+func (c *PrintLogClient) Get(ctx context.Context, id int) (*PrintLog, error) {
+	return c.Query().Where(printlog.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PrintLogClient) GetX(ctx context.Context, id int) *PrintLog {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *PrintLogClient) Hooks() []Hook {
+	return c.hooks.PrintLog
+}
+
+// Interceptors returns the client interceptors.
+func (c *PrintLogClient) Interceptors() []Interceptor {
+	return c.inters.PrintLog
+}
+
+func (c *PrintLogClient) mutate(ctx context.Context, m *PrintLogMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PrintLogCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&PrintLogUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&PrintLogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PrintLogDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown PrintLog mutation op: %q", m.Op())
+	}
+}
+
+// PrintPreviewClient is a client for the PrintPreview schema.
+type PrintPreviewClient struct {
+	config
+}
+
+// NewPrintPreviewClient returns a client for the PrintPreview from the given config.
+func NewPrintPreviewClient(c config) *PrintPreviewClient {
+	return &PrintPreviewClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `printpreview.Hooks(f(g(h())))`.
+func (c *PrintPreviewClient) Use(hooks ...Hook) {
+	c.hooks.PrintPreview = append(c.hooks.PrintPreview, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `printpreview.Intercept(f(g(h())))`.
+func (c *PrintPreviewClient) Intercept(interceptors ...Interceptor) {
+	c.inters.PrintPreview = append(c.inters.PrintPreview, interceptors...)
+}
+
+// Create returns a builder for creating a PrintPreview entity.
+func (c *PrintPreviewClient) Create() *PrintPreviewCreate {
+	mutation := newPrintPreviewMutation(c.config, OpCreate)
+	return &PrintPreviewCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of PrintPreview entities.
+func (c *PrintPreviewClient) CreateBulk(builders ...*PrintPreviewCreate) *PrintPreviewCreateBulk {
+	return &PrintPreviewCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PrintPreviewClient) MapCreateBulk(slice any, setFunc func(*PrintPreviewCreate, int)) *PrintPreviewCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PrintPreviewCreateBulk{err: fmt.Errorf("calling to PrintPreviewClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*PrintPreviewCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &PrintPreviewCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for PrintPreview.
+func (c *PrintPreviewClient) Update() *PrintPreviewUpdate {
+	mutation := newPrintPreviewMutation(c.config, OpUpdate)
+	return &PrintPreviewUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PrintPreviewClient) UpdateOne(_m *PrintPreview) *PrintPreviewUpdateOne {
+	mutation := newPrintPreviewMutation(c.config, OpUpdateOne, withPrintPreview(_m))
+	return &PrintPreviewUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PrintPreviewClient) UpdateOneID(id int) *PrintPreviewUpdateOne {
+	mutation := newPrintPreviewMutation(c.config, OpUpdateOne, withPrintPreviewID(id))
+	return &PrintPreviewUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for PrintPreview.
+func (c *PrintPreviewClient) Delete() *PrintPreviewDelete {
+	mutation := newPrintPreviewMutation(c.config, OpDelete)
+	return &PrintPreviewDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PrintPreviewClient) DeleteOne(_m *PrintPreview) *PrintPreviewDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PrintPreviewClient) DeleteOneID(id int) *PrintPreviewDeleteOne {
+	builder := c.Delete().Where(printpreview.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PrintPreviewDeleteOne{builder}
+}
+
+// Query returns a query builder for PrintPreview.
+func (c *PrintPreviewClient) Query() *PrintPreviewQuery {
+	return &PrintPreviewQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypePrintPreview},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a PrintPreview entity by its id.
+func (c *PrintPreviewClient) Get(ctx context.Context, id int) (*PrintPreview, error) {
+	return c.Query().Where(printpreview.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PrintPreviewClient) GetX(ctx context.Context, id int) *PrintPreview {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *PrintPreviewClient) Hooks() []Hook {
+	return c.hooks.PrintPreview
+}
+
+// Interceptors returns the client interceptors.
+func (c *PrintPreviewClient) Interceptors() []Interceptor {
+	return c.inters.PrintPreview
+}
+
+func (c *PrintPreviewClient) mutate(ctx context.Context, m *PrintPreviewMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PrintPreviewCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&PrintPreviewUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&PrintPreviewUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PrintPreviewDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown PrintPreview mutation op: %q", m.Op())
 	}
 }
 
@@ -3705,16 +3989,16 @@ func (c *WarehouseClient) mutate(ctx context.Context, m *WarehouseMutation) (Val
 type (
 	hooks struct {
 		AuditLog, Company, Customer, CustomerAddress, CustomerContact, CustomerCounter,
-		CustomerProduct, Department, FileAsset, Metadict, OrderCounter, ProcessingSpec,
-		Product, ProductCategory, ProductProcessingSpec, ProductUnit, Role,
-		RolePermission, Route, SalesOrder, SalesOrderEvent, SalesOrderItem, User,
-		Warehouse []ent.Hook
+		CustomerProduct, Department, FileAsset, Metadict, OrderCounter, PrintLog,
+		PrintPreview, ProcessingSpec, Product, ProductCategory, ProductProcessingSpec,
+		ProductUnit, Role, RolePermission, Route, SalesOrder, SalesOrderEvent,
+		SalesOrderItem, User, Warehouse []ent.Hook
 	}
 	inters struct {
 		AuditLog, Company, Customer, CustomerAddress, CustomerContact, CustomerCounter,
-		CustomerProduct, Department, FileAsset, Metadict, OrderCounter, ProcessingSpec,
-		Product, ProductCategory, ProductProcessingSpec, ProductUnit, Role,
-		RolePermission, Route, SalesOrder, SalesOrderEvent, SalesOrderItem, User,
-		Warehouse []ent.Interceptor
+		CustomerProduct, Department, FileAsset, Metadict, OrderCounter, PrintLog,
+		PrintPreview, ProcessingSpec, Product, ProductCategory, ProductProcessingSpec,
+		ProductUnit, Role, RolePermission, Route, SalesOrder, SalesOrderEvent,
+		SalesOrderItem, User, Warehouse []ent.Interceptor
 	}
 )

@@ -16,6 +16,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/fileasset"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/ordercounter"
+	"github.com/salesorder/sales-order-1.0/backend/ent/printlog"
+	"github.com/salesorder/sales-order-1.0/backend/ent/printpreview"
 	"github.com/salesorder/sales-order-1.0/backend/ent/processingspec"
 	"github.com/salesorder/sales-order-1.0/backend/ent/product"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productcategory"
@@ -252,6 +254,30 @@ func init() {
 	ordercounter.DefaultUpdatedAt = ordercounterDescUpdatedAt.Default.(func() time.Time)
 	// ordercounter.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	ordercounter.UpdateDefaultUpdatedAt = ordercounterDescUpdatedAt.UpdateDefault.(func() time.Time)
+	printlogFields := schema.PrintLog{}.Fields()
+	_ = printlogFields
+	// printlogDescDocumentType is the schema descriptor for document_type field.
+	printlogDescDocumentType := printlogFields[2].Descriptor()
+	// printlog.DocumentTypeValidator is a validator for the "document_type" field. It is called by the builders before save.
+	printlog.DocumentTypeValidator = printlogDescDocumentType.Validators[0].(func(string) error)
+	// printlogDescIsReprint is the schema descriptor for is_reprint field.
+	printlogDescIsReprint := printlogFields[7].Descriptor()
+	// printlog.DefaultIsReprint holds the default value on creation for the is_reprint field.
+	printlog.DefaultIsReprint = printlogDescIsReprint.Default.(bool)
+	// printlogDescPrintedAt is the schema descriptor for printed_at field.
+	printlogDescPrintedAt := printlogFields[10].Descriptor()
+	// printlog.DefaultPrintedAt holds the default value on creation for the printed_at field.
+	printlog.DefaultPrintedAt = printlogDescPrintedAt.Default.(func() time.Time)
+	printpreviewFields := schema.PrintPreview{}.Fields()
+	_ = printpreviewFields
+	// printpreviewDescDocumentType is the schema descriptor for document_type field.
+	printpreviewDescDocumentType := printpreviewFields[2].Descriptor()
+	// printpreview.DocumentTypeValidator is a validator for the "document_type" field. It is called by the builders before save.
+	printpreview.DocumentTypeValidator = printpreviewDescDocumentType.Validators[0].(func(string) error)
+	// printpreviewDescPreviewedAt is the schema descriptor for previewed_at field.
+	printpreviewDescPreviewedAt := printpreviewFields[8].Descriptor()
+	// printpreview.DefaultPreviewedAt holds the default value on creation for the previewed_at field.
+	printpreview.DefaultPreviewedAt = printpreviewDescPreviewedAt.Default.(func() time.Time)
 	processingspecFields := schema.ProcessingSpec{}.Fields()
 	_ = processingspecFields
 	// processingspecDescCode is the schema descriptor for code field.

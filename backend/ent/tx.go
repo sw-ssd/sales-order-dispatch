@@ -34,6 +34,10 @@ type Tx struct {
 	Metadict *MetadictClient
 	// OrderCounter is the client for interacting with the OrderCounter builders.
 	OrderCounter *OrderCounterClient
+	// PrintLog is the client for interacting with the PrintLog builders.
+	PrintLog *PrintLogClient
+	// PrintPreview is the client for interacting with the PrintPreview builders.
+	PrintPreview *PrintPreviewClient
 	// ProcessingSpec is the client for interacting with the ProcessingSpec builders.
 	ProcessingSpec *ProcessingSpecClient
 	// Product is the client for interacting with the Product builders.
@@ -202,6 +206,8 @@ func (tx *Tx) init() {
 	tx.FileAsset = NewFileAssetClient(tx.config)
 	tx.Metadict = NewMetadictClient(tx.config)
 	tx.OrderCounter = NewOrderCounterClient(tx.config)
+	tx.PrintLog = NewPrintLogClient(tx.config)
+	tx.PrintPreview = NewPrintPreviewClient(tx.config)
 	tx.ProcessingSpec = NewProcessingSpecClient(tx.config)
 	tx.Product = NewProductClient(tx.config)
 	tx.ProductCategory = NewProductCategoryClient(tx.config)
