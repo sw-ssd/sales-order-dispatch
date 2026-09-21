@@ -102,7 +102,7 @@
 | 1 | `reason` 檢查曾排在同值 no-op **之前** | **已修**（`09c3873`：`company_status.go` 先判 `cur.Status == status` 再驗原因，`TestSetCompanyStatusNoopSkipsReasonCheck` 為證） | 把 no-op 判斷提前，讓「無需動作」的變更不受 `reason` 阻擋 | `company_status` 後續維護（低） |
 | 2 | 「缺交易」案例曾只斷言 `err != nil` | **已修**（`2449bb1`：斷言 `connect.CodeInternal`，現 `company_status_test.go:116-124` 為證） | 斷言 `connect.CodeOf(err) == connect.CodeInternal`（同檔 :99-101 已示範） | final triage（測試強度） |
 | 3 | 兩種取 client 寫法曾並存 | **已修**（`159678f`：只用 `tx.Client()`，現 `company_status.go:45` 為證） | 綁一次變數 | final triage（風格） |
-| 4 | 一次請求含 name＋status 時稽核寫 **2 列**（原 1 列），且一般更新列不再含 status | 未動；T12 的稽核頁逐列顯示，未做「一次請求一列 diff」 | console 端自行合併（本 repo 稽核無 request id），或接受 2 列分別代表兩個語意事件 | `platform-console` 稽核頁（若營運要求） |
+| 4 | 一次請求含 name＋status 時稽核寫 **2 列**（原 1 列），且一般更新列不再含 status | **已修**（`e379a42`＋`47ae445`：平台稽核三條路徑（`writeTx`／`billing.audit`／`RecordPayment` 直寫）的 after 映像皆帶 `_trace_id` 並投影為 `entry.trace_id`；`bc7c8e7`：console 同 trace 續列標「同上筆請求」。租戶稽核本就有 `audit.Record` 的 `_trace_id` 落點） | console 端自行合併，或接受 2 列分別代表兩個語意事件 | `platform-console` 稽核頁（若營運要求） |
 | 5 | 測試 actor `UserID="1"` 在 sqlite 無對應 `users` 列 | 與既有 enttest 慣例一致（PG 才有 `00010` 的 FK） | — | final triage（測試） |
 | 6 | `money` 套件：`num+5000` 未檢查回繞；`FormatCents` 的 `uint64` 修正／`mulCheck` 的 `MinInt64×-1`／`YearlyFromMonthly` 飽和路徑**無回歸測試**；`ParseCents("1.")` 接受但 `".5"` 被拒；未以 `numeric(12,2)` 上限約束 | **部分已修**（`48221dc` 補 `mulCheck` 破口＋飽和路徑測試；`5b926f7` 修 `num+5000` 回繞為商餘數進位。殘：`ParseCents` 不對稱、`numeric(12,2)` 上限刻意留給 DB） | 依實際需求補測試或補上限約束 | `money` 後續維護（低） |
 | 7 | `BillingStore` 介面 doc 曾落後語意 | **已修**（`7c37e27`：`RecordAuditTx` 註解同步全空白語意；其餘四項語意經查皆已在位 —— `OpenSubscriptionTx` 不濾 cancelled、`MarkPeriodPaidTx` 三分流＋首次憑據、`PlanIDByCodeTx` 擋歸檔，見 `store.go:168-215`） | — | `store` 後續維護（文件） |
