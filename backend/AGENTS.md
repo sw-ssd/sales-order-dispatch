@@ -22,7 +22,8 @@
 - `internal/auth/`:JWT/refresh(旋轉採原子消耗,Lua/鎖,禁止先讀後刪)、session、token_version(DB 欄位為準)、OIDC。
 - `internal/authz/`:`authz` facade(`AccessibleFilter`/`Can`,開關 `CASL_ENFORCEMENT_ENABLED`)+ `authz/casl` 引擎(condition AST、evaluator、translate、FieldRegistry;與 @casl/ability golden 對賭,新增運算子必補 golden fixture)。
 - `ent/schema/`:ent schema;改動後 `go generate ./ent` 並新增 goose migration(`database/migrations/NNNNN_name.sql`,必含 Up/Down,加欄位用 `IF NOT EXISTS` 對齊既有先例)。
-- `internal/handlers/`:非 Connect 的純 HTTP handler(如 auth 回調)。
+- `internal/handlers/`:非 Connect 的純 HTTP handler(如 auth 回調;`Me`＝`GET /api/v1/me` 身分與公司品牌,前端唯一身分來源)。
+- REST 端點(`/api/v1` 下非 Connect 路徑)的錯誤回應一律經 `internal/resterr`(與 `server.writeConnectError` 同形:code/message/details＋trace_id),**不得**在 domain 內重寫 `writeErr`/`writeJSON`(`fileassets` 已委派為薄包裝)。
 
 ## 3. 授權與安全(不可妥協)
 
