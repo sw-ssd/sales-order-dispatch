@@ -75,6 +75,7 @@
 - `frontend/src/features/users/pages/DepartmentsPage.tsx`
 - `frontend/src/features/users/pages/RolesPage.tsx`（角色權限設置頁 + PermissionMatrix，git `0c51977`）
 - `frontend/src/features/users/pages/UsersPage.tsx`（使用者管理頁，git `8caae63`）
+- `frontend/src/features/customers/`（客戶主檔頁，git `206192a`：清單/排序/關鍵字/含已刪除/軟刪除/帳號交付，`/customers`＋`read,customer` 守衛＋sidebar 入口）
 - `frontend/src/features/users/components/PermissionMatrix.tsx`、`ListPagination.tsx`
 
 **說明**：公司、部門、角色權限設置頁已實作並接上後端 Company/Department/RoleService；使用者管理頁已落地（清單／新增／停用／指派，後端無 sort 參數故不開排序）。
@@ -117,7 +118,7 @@
 
 | 待辦 | 相依 |
 |---|---|
-| master-data 前端（客戶/商品/倉別…） | backend 04 ✅ 後端已落地 |
+| master-data 前端（客戶 ✅ 已落地；商品/地址簿/聯絡人/倉別待） | backend 04 ✅ 後端已落地 |
 | orders 前端 | backend 05 ✅ 後端已落地 |
 | dispatch 看板前端 | backend 08 ✅ 後端已落地 |
 | printing 前端 | backend 09 ✅ 後端已落地 |
@@ -125,4 +126,4 @@
 
 ---
 
-*最後更新：2026-09-22（使用者管理頁落地 16/17；各業務頁待建，後端 04/05/08/09 皆已就緒）*
+*最後更新：2026-09-22（使用者管理頁 17/17 打勾；客戶主檔頁落地 `206192a`；商品/地址簿/訂單/退貨/派車/列印/通知/稽核頁待建，後端皆已就緒）*
