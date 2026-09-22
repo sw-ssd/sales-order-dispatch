@@ -75,22 +75,29 @@ func TestIntegrationNotificationsSchemaUpDown(t *testing.T) {
 		}
 	}
 
-	// down-to 40 後四表消失;重上冪等。
+	// down-to 41 只回滾 00042(ENABLE 解除),00041 的表留著;重上冪等。
 	ctx := context.Background()
 	if err := goose.SetDialect("postgres"); err != nil {
 		t.Fatalf("dialect: %v", err)
 	}
 	goose.SetTableName("goose_db_version")
-	if err := goose.RunContext(ctx, "down-to", db, "../../database/migrations", "40"); err != nil {
-		t.Fatalf("down-to 40: %v", err)
+	if err := goose.RunContext(ctx, "down-to", db, "../../database/migrations", "41"); err != nil {
+		t.Fatalf("down-to 41: %v", err)
 	}
 	for _, tbl := range []string{"notification_templates", "notifications", "user_devices", "promo_tags"} {
 		var exists bool
 		if err := db.QueryRow(`SELECT to_regclass($1) IS NOT NULL`, "public."+tbl).Scan(&exists); err != nil {
 			t.Fatalf("查表存在: %v", err)
 		}
-		if exists {
-			t.Fatalf("Down 後 %s 應消失", tbl)
+		if !exists {
+			t.Fatalf("down-to 41 不得帶走 00041 的表 %s", tbl)
+		}
+		var enabled bool
+		if err := db.QueryRow(`SELECT relrowsecurity FROM pg_class WHERE relname = $1`, tbl).Scan(&enabled); err != nil {
+			t.Fatalf("查 RLS 狀態 %s: %v", tbl, err)
+		}
+		if enabled {
+			t.Fatalf("down-to 41 後 %s 的 RLS 應已 DISABLE", tbl)
 		}
 	}
 	if err := goose.RunContext(ctx, "up", db, "../../database/migrations"); err != nil {
