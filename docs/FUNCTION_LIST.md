@@ -71,7 +71,7 @@ flowchart TB
 | 層 | 實際已實作 | 待辦 |
 |---|---|---|
 | backend | AuthService（登入/refresh/logout/註冊完成/ChangePassword/ResetCustomerPassword）、AbilityService（OpenFGA proxy）、Company/Department（皆軟刪除）/RoleService、UserService（7 RPC＋範圍控制＋稽核）、MetadictService、AuditService.List、CustomerService（含地址/聯絡人＋QR 簽章/`GetCustomerQRCode`）、ProductService（含單位換算）、部門級四主檔（Warehouse/Route/ProcessingSpec/ProductCategory）、CustomerProductService、SalesOrderService（CRUD＋狀態機 `TransitionOrder`＋取號＋事件軌跡）、ReturnService（Create／List／Get／Review／GetCertificate）、PrintService（Preview/Print/ListLogs）、`domain/fileassets`（驗證＋儲存＋REST 上傳下載）、OpenFGA 內嵌＋Provision、Casbin 執行層、RLS 全站 28 表 `ENABLE`+`FORCE`（請求層租戶交易 `dbtenant`）、JWT/session/token_version、audit.Recorder 同事務、Gotenberg PDF 產線 | 通知、派車、fleet；Logo 上傳、CASL→OpenFGA 收斂 |
-| frontend | auth（Login 雙 tab/403/Google OIDC）、users（Company/Department/Roles/Users 四頁＋PermissionMatrix＋分頁＋表頭排序）、customers（清單/排序/關鍵字/含已刪除/軟刪除/帳號交付，`/customers`）、orders（清單/篩選/建單/編輯/詳情明細/事件軌跡/狀態轉移，`/orders`＋商品下拉）、products（清單/篩選/建單/編輯/單位換算/軟刪除，`/products`＋分類/倉別下拉）、dispatch（看板依日後端過濾＋車次欄 DnD 指派＋批次確認＋取消派車＋WatchBoard 訂閱，`/dispatch`）、masters（車次主檔清單/建立/編輯/停用/還原，`/masters/routes`）、ability 守衛（`hasPermission` 權限集合，`@casl/ability` 已移除）、UI 元件庫（Ark UI × Tailkit 語意 token，14 元件＋registry＋demo）、app shell/sidebar/深色模式、TanStack Table（manual）＋solid-query 資料層、TanStack Form＋valibot 表單 | 地址簿/聯絡人、倉別/分類/分切規格主檔、退貨、列印、通知/公告、稽核頁（後端 06/09 皆已落地）；Pixso 9 個未建畫面 |
+| frontend | auth（Login 雙 tab/403/Google OIDC）、users（Company/Department/Roles/Users 四頁＋PermissionMatrix＋分頁＋表頭排序）、customers（清單/排序/關鍵字/含已刪除/軟刪除/帳號交付，`/customers`）、orders（清單/篩選/建單/編輯/詳情明細/事件軌跡/狀態轉移，`/orders`＋商品下拉）、products（清單/篩選/建單/編輯/單位換算/軟刪除，`/products`＋分類/倉別下拉）、dispatch（看板依日後端過濾＋車次欄 DnD 指派＋批次確認＋取消派車＋WatchBoard 訂閱，`/dispatch`）、masters（車次主檔清單/建立/編輯/停用/還原，`/masters/routes`）、printing（四種單據預覽/正式列印/紀錄查詢＋重印原因，`/printing`）、ability 守衛（`hasPermission` 權限集合，`@casl/ability` 已移除）、UI 元件庫（Ark UI × Tailkit 語意 token，14 元件＋registry＋demo）、app shell/sidebar/深色模式、TanStack Table（manual）＋solid-query 資料層、TanStack Form＋valibot 表單 | 地址簿/聯絡人、倉別/分類/分切規格主檔、退貨、通知/公告、稽核頁（後端 06/09 皆已落地）；Pixso 9 個未建畫面 |
 | app | 骨架、雙 flavor、auth（身分選擇/登入/token/connectrpc transport）、auto_route 路由表 | solidart/disco/fquery/Sembast 佈線、core/config/errors、快取鏡像、業務畫面（客戶/訂單/退貨/QR） |
 
 ---
@@ -147,8 +147,8 @@ flowchart TB
 
 | 功能 | 說明 | 適用端 | 狀態 |
 |------|------|------|:-:|
-| 四種單據 PDF | 單車總表/對點單/揀貨單/加工單（Gotenberg、無金額） | Web/後端 | 🟡（後端已落地；Web 頁待） |
-| Preview / Print / ListLogs | 列印與預覽 API、重印必填原因 | Web/後端 | 🟡（後端已落地；Web 頁待） |
+| 四種單據 PDF | 單車總表/對點單/揀貨單/加工單（Gotenberg、無金額） | Web/後端 | ✅（Web `13c76f4`） |
+| Preview / Print / ListLogs | 列印與預覽 API、重印必填原因 | Web/後端 | ✅（Web `13c76f4`） |
 
 ### 4.7 通知與公告（D16/D23/D24）
 
@@ -199,7 +199,7 @@ flowchart TB
 | 銷售訂單 | ✅（API） | ✅（`6953b02`） | ⬜ |
 | 退貨 | ✅（API） | ⬜ | ⬜ |
 | 派車看板 | 🟡（4 RPC＋WatchBoard 串流已落地；跨 replica Valkey pub/sub 與輪詢降級待） | ✅（`e3ed769`） | — |
-| 列印 | ✅（API） | ⬜ | — |
+| 列印 | ✅（API） | ✅（`13c76f4`） | — |
 | 通知 / 公告 | 🟡（通知後端約 85%；公告待） | ⬜ | ⬜ |
 | 稽核 | ✅（查詢 API） | ⬜ | — |
 | **RLS 租戶隔離（資料層）** | ✅（32 表 `ENABLE`+`FORCE`、請求層租戶交易；2026-09-22） | — | — |
@@ -219,4 +219,4 @@ flowchart TB
 
 ---
 
-*最後更新：2026-09-22（backend 01–09 後端全數落地（07/08 部分：FCM 實裝＋跨 replica＋Web/App 頁待）＋RLS 32 表；全整合綠；前端使用者管理頁 `8caae63`＋客戶主檔頁 `206192a`＋訂單管理頁 `6953b02`＋商品總表頁 `61feab2`＋派車看板 `e3ed769` 落地（含 `ListOrders` 日期過濾前置）＋車次主檔 `e950b23`（看板欄位來源），UI 四階段與表格/表單既有）*
+*最後更新：2026-09-22（backend 01–09 後端全數落地（07/08 部分：FCM 實裝＋跨 replica＋Web/App 頁待）＋RLS 32 表；全整合綠；前端使用者管理頁 `8caae63`＋客戶主檔頁 `206192a`＋訂單管理頁 `6953b02`＋商品總表頁 `61feab2`＋派車看板 `e3ed769` 落地（含 `ListOrders` 日期過濾前置）＋車次主檔 `e950b23`（看板欄位來源）＋單據列印頁 `13c76f4`，UI 四階段與表格/表單既有）*
