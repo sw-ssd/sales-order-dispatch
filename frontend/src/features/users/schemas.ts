@@ -28,3 +28,19 @@ export const departmentSchema = v.object({
   name: v.pipe(v.string(), v.trim(), v.nonEmpty("請輸入部門名稱")),
   company: v.pipe(v.string(), v.nonEmpty("請選擇所屬公司")),
 });
+
+/**
+ * 使用者 modal 表單的欄位規則（新增用）。
+ *
+ * 只鏡射後端必填：`name`、`email`、`companyId`、`role` 必填（純空白視為未填）；
+ * `departmentId`、`phone`、`employeeNo` 選填。格式驗證只有後端知道，不新增。
+ */
+export const userSchema = v.object({
+  name: v.pipe(v.string(), v.trim(), v.nonEmpty("請輸入姓名")),
+  email: v.pipe(v.string(), v.trim(), v.nonEmpty("請輸入 email")),
+  company: v.pipe(v.string(), v.nonEmpty("請選擇所屬公司")),
+  department: v.string(),
+  role: v.pipe(v.string(), v.nonEmpty("請選擇角色")),
+  phone: v.string(),
+  employeeNo: v.string(),
+});

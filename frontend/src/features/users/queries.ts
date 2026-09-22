@@ -11,6 +11,10 @@ import {
   type ListCompaniesResponse,
 } from "~/lib/proto/salesorder/v1/company_pb";
 import { RoleService } from "~/lib/proto/salesorder/v1/role_pb";
+import {
+  UserService,
+  type ListUsersResponse,
+} from "~/lib/proto/salesorder/v1/user_pb";
 import { transport } from "~/lib/transport";
 
 /**
@@ -203,3 +207,44 @@ export const rolesQueryOptions = (params: RoleListParams) =>
         desc: params.desc,
       }),
   });
+
+/** 使用者服務 client：清單查詢與 modal 的建立／更新／停用／指派共用同一個實例。 */
+export const userClient = createClient(UserService, transport);
+
+/** 使用者清單查詢參數（全部參數都進 queryKey）。 */
+export interface UserListParams {
+  page: number;
+  pageSize: number;
+  companyId?: string;
+  departmentId?: string;
+  role?: string;
+  status?: string;
+}
+
+/** 使用者清單查詢選項；`createQuery(() => usersQueryOptions(params))`。 */
+export const usersQueryOptions = (params: UserListParams) =>
+  queryOptions({
+    queryKey: [
+      "users",
+      {
+        page: params.page,
+        pageSize: params.pageSize,
+        companyId: params.companyId,
+        departmentId: params.departmentId,
+        role: params.role,
+        status: params.status,
+      },
+    ],
+    placeholderData: (prev) => prev,
+    queryFn: () =>
+      userClient.listUsers({
+        page: params.page,
+        pageSize: params.pageSize,
+        companyId: params.companyId ?? "",
+        departmentId: params.departmentId ?? "",
+        role: params.role ?? "",
+        status: params.status ?? "",
+      }),
+  });
+
+export type { ListUsersResponse };
