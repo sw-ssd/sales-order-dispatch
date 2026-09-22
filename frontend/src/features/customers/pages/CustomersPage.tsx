@@ -43,6 +43,7 @@ import { PAGE_SIZE } from "../../users/queries";
 import { customerClient, customersQueryOptions } from "../queries";
 import { customerSchema } from "../schemas";
 import AddressBookDialog from "../components/AddressBookDialog";
+import CustomerProductsDialog from "../components/CustomerProductsDialog";
 
 /**
  * 客戶表格的 table 功能集：分頁 ＋ 排序（`manualSorting`，見下方 table）。
@@ -176,6 +177,13 @@ export default function CustomersPage() {
             >
               地址簿
             </button>
+            <button
+              type="button"
+              onClick={() => setProductsDialog(info.row.original)}
+              class="ml-3 font-medium text-primary hover:underline"
+            >
+              專屬商品
+            </button>
           </Show>
           <Show
             when={info.row.original.deletedAt}
@@ -268,6 +276,8 @@ export default function CustomersPage() {
   const [delivery, setDelivery] = createSignal<AccountDelivery | null>(null);
   // 地址簿/聯絡人對話框的目標客戶（null＝關閉）。
   const [book, setBook] = createSignal<Customer | null>(null);
+  // 專屬商品對話框的目標客戶（null＝關閉；同一個客戶頁一次只開一個對話框）。
+  const [productsDialog, setProductsDialog] = createSignal<Customer | null>(null);
   /**
    * 建立回應後、交付對話框開啟前的中轉（非渲染狀態）。
    *
@@ -591,6 +601,15 @@ export default function CustomersPage() {
         open={book() !== null}
         onOpenChange={(open) => {
           if (!open) setBook(null);
+        }}
+      />
+
+      {/* 專屬商品（04 Task 3.5）：同地址簿，從列上開、不與其他對話框同開。 */}
+      <CustomerProductsDialog
+        customer={productsDialog()}
+        open={productsDialog() !== null}
+        onOpenChange={(open) => {
+          if (!open) setProductsDialog(null);
         }}
       />
     </main>

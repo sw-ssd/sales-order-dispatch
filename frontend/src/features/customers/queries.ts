@@ -9,6 +9,10 @@ import {
   CustomerService,
   type ListCustomersResponse,
 } from "~/lib/proto/customers/v1/customer_pb";
+import {
+  CustomerProductService,
+  ProductService,
+} from "~/lib/proto/products/v1/product_pb";
 import { transport } from "~/lib/transport";
 
 /**
@@ -21,6 +25,15 @@ import { transport } from "~/lib/transport";
  * - 關鍵字在頁面是 signal「草稿」，**只在 submit 時**進 query key；頁碼唯一真相＝table 的 pagination state。
  */
 export const customerClient = createClient(CustomerService, transport);
+
+/**
+ * 專屬清單與產品挑選器的 client：兩者都在 `products.v1`（`CustomerProductService`
+ * 與 `ProductService` 同一份 `product.proto`）。本檔不跨 feature import `products/queries`
+ * —— 那會讓客戶頁的型別依賴商品頁的實作檔案（同 `metadictClient` 在兩個 feature 各自
+ * 一份的既有做法）。
+ */
+export const customerProductClient = createClient(CustomerProductService, transport);
+export const productClient = createClient(ProductService, transport);
 
 /** 客戶清單查詢參數（全部參數都進 queryKey）。 */
 export interface CustomerListParams {
@@ -127,4 +140,43 @@ export const contactsQueryOptions = (customerId: string) =>
     queryKey: ["customers", "contacts", { customerId }],
     placeholderData: (prev) => prev,
     queryFn: () => customerClient.listContacts({ customerId, includeDeleted: false }),
+  });
+
+/**
+ * 客戶專屬清單查詢選項（`CustomerProductsDialog` 用）。
+ *
+ * 樣板同上：key 掛 `["customers"]` 前綴 → 任何客戶層 mutation 一次失效就帶到這裡。
+ * **不帶 `forOrder`**：那支旗標是「下單用途，排除 default_qty=0」的語意（訂單入口用），
+ * 管理頁要看全部列 —— 否則管理員看不到自己剛設的 0 數量預設列，會以為新增沒生效。
+ */
+export const customerProductsQueryOptions = (customerId: string) =>
+  queryOptions({
+    queryKey: ["customers", "customerProducts", { customerId }],
+    placeholderData: (prev) => prev,
+    queryFn: () =>
+      customerProductClient.listCustomerProducts({
+        customerId,
+        forOrder: false,
+        includeDeleted: false,
+      }),
+  });
+
+/**
+ * 產品挑選器的清單查詢（只撈啟用中產品、上限 100）。
+ *
+ * 沒有「選擇全部產品」的負擔：這是一次性下拉，關鍵字只在 submit 進 key
+ * （同清單頁草稿慣例）。`total` 是 int64 → `Number()`。
+ */
+export const pickerProductsQueryOptions = (keyword: string) =>
+  queryOptions({
+    queryKey: ["customers", "pickerProducts", { keyword }],
+    placeholderData: (prev) => prev,
+    queryFn: () =>
+      productClient.listProducts({
+        page: 1,
+        pageSize: 100,
+        keyword,
+        categoryId: "",
+        includeDeleted: false,
+      }),
   });

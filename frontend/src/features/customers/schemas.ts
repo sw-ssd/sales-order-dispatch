@@ -42,3 +42,20 @@ export const contactSchema = v.object({
   ),
   phone: v.string(),
 });
+
+/**
+ * 專屬清單表單（新增／編輯共用）。
+ *
+ * `productId` 只在新增時可選（後端 `UpdateCustomerProduct` 不可改 customer/product
+ * —— 想換商品＝刪一列再加一列，保留原列的稽核軌跡）；`defaultQty` 是十進位文字、
+ * 空＝不設預設數量，格式權威在後端 `ParseQty`（這裡只攔最常見的形狀，省一次來回）。
+ */
+export const customerProductSchema = v.object({
+  productId: v.pipe(v.string(), v.nonEmpty("請選擇產品")),
+  aliasName: v.string(),
+  defaultQty: v.pipe(
+    v.string(),
+    v.regex(/^$|^\d+(\.\d+)?$/, "數量須為十進位數字（可小數）")
+  ),
+  cutNote: v.string(),
+});
