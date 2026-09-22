@@ -19,6 +19,7 @@ import OrdersPage from "~/features/orders/pages/OrdersPage";
 import ProductsPage from "~/features/products/pages/ProductsPage";
 import DispatchPage from "~/features/dispatch/pages/DispatchPage";
 import RoutesPage from "~/features/masters/pages/RoutesPage";
+import PrintPage from "~/features/printing/pages/PrintPage";
 import { requireAbility } from "~/lib/ability/guards";
 
 function HomePage() {
@@ -128,6 +129,21 @@ const routesRoute = createRoute({
 });
 
 /**
+ * 單據列印。
+ *
+ * 守衛用 `read, "print"`：`print` 是 ability 內建資源（`rolePolicy` 給
+ * company_admin/dept_admin/staff `{"*"}`），只有有列印權限的角色看得到這頁；
+ * 後端 `PrintService` 不在 `protectedRPC` 表內，寫入授權落在 handler 的
+ * `requireAuth`+`deptScope` 與 RLS（與 masters 同模式）。
+ */
+const printRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/printing",
+  component: PrintPage,
+  beforeLoad: requireAbility("read", "print"),
+});
+
+/**
  * 帳號／方案頁：租戶後台唯讀的權益卡片。
  *
  * 刻意的**沒有**能力守衛：`platform.*` 能力不得出現在租戶端（S11），而這張卡片誰看得到
@@ -164,6 +180,7 @@ const routeTree = rootRoute.addChildren([
   productsRoute,
   dispatchRoute,
   routesRoute,
+  printRoute,
   accountRoute,
   ...devRoutes,
 ]);

@@ -36,6 +36,7 @@ export type NavRoute =
   | "/orders"
   | "/products"
   | "/masters/routes"
+  | "/printing"
   | "/dispatch"
   | "/users/companies"
   | "/users/departments"
@@ -74,7 +75,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: "訂單管理", icon: ClipboardList, to: "/orders" },
       { label: "車次主檔", icon: Milestone, to: "/masters/routes" },
       { label: "派車規劃", icon: Route, to: "/dispatch" },
-      { label: "單據列印", icon: Printer },
+      { label: "單據列印", icon: Printer, to: "/printing" },
     ],
   },
   {
