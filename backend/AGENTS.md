@@ -23,7 +23,7 @@
 - `internal/authz/`:`authz` facade(`AccessibleFilter`/`Can`,開關 `CASL_ENFORCEMENT_ENABLED`)+ `authz/casl` 引擎(condition AST、evaluator、translate、FieldRegistry;與 @casl/ability golden 對賭,新增運算子必補 golden fixture)。
 - `ent/schema/`:ent schema;改動後 `go generate ./ent` 並新增 goose migration(`database/migrations/NNNNN_name.sql`,必含 Up/Down,加欄位用 `IF NOT EXISTS` 對齊既有先例)。
 - `internal/handlers/`:非 Connect 的純 HTTP handler(如 auth 回調;`Me`＝`GET /api/v1/me` 身分與公司品牌,前端唯一身分來源)。
-- REST 端點(`/api/v1` 下非 Connect 路徑)的錯誤回應一律經 `internal/resterr`(與 `server.writeConnectError` 同形:code/message/details＋trace_id),**不得**在 domain 內重寫 `writeErr`/`writeJSON`(`fileassets` 已委派為薄包裝)。
+- REST 端點(`/api/v1` 下非 Connect 路徑)的錯誤回應一律經 `internal/resterr`(與 `server.writeConnectError` 同形:code/message/details＋trace_id),**不得**在 domain 內重寫 `writeErr`/`writeJSON`(`fileassets` 已委派為薄包裝)。connect code → HTTP 狀態的對映表以 `resterr.status` 為**全站唯一一份**,`server.writeConnectError` 委派給它;新增 code 只改該處(2026-09-22 修:先前的第二份複本漏了 `NotFound`,同一錯誤走 REST 是 404、走 middleware 是 500)。
 
 ## 3. 授權與安全(不可妥協)
 
@@ -82,12 +82,12 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
 2. **刪除語意一旦改變(硬刪→軟刪),必須重掃「所有碰得到該實體的路徑」**:硬刪除的 FK 曾是**隱性的不變式保護**,軟刪後列還在、保護消失。實證漏點:`CreateUser` 沒有公司存在性檢查、`Login` 未檢查公司是否軟刪除(已刪公司的使用者仍能登入取得 token)、`UpdateDepartment` 會改到已刪部門、`DeleteCompany` 的「仍有部門」前置檢查會被軟刪部門永久擋住。
    - 軟刪除的識別碼唯一性要用 **partial unique index**(`WHERE deleted_at IS NULL`),並移除舊的表層 UNIQUE。
    - 「刪除前的前置檢查」與「掛載資料到該列」之間有競態:需**兩側對同一列取互斥鎖**(掛載端 `FOR SHARE`、刪除端先 `FOR UPDATE` 再條件式 `UPDATE`)。**單側鎖不足**:READ COMMITTED 只重評目標列,`NOT EXISTS` 子查詢仍用敘述開始的快照。方言判斷用 `sql.Selector.Dialect()`(sqlite 不支援 `FOR ...`,不可寫入鎖子句)。
-3. **RLS 已全站生效**(2026-09-20:`00024`–`00028` 對 18 張業務表 `ENABLE` + `FORCE`;policy 由 `00007`/`00011`/`00023` 定義、`00025` 正規化為 `NULLIF` 形式)。RLS 是跨公司隔離的**最後一道防線**,授權仍以服務層門檻為準(§9);未帶 scope 的查詢一律 fail-closed(0 列)。
+3. **RLS 已全站生效**(2026-09-20 起:`00024`–`00028` 先對 18 張業務表 `ENABLE` + `FORCE`,後續波次續增,`00032`/`00034`/`00036`/`00038`/`00040`/`00042` 已達 **32 張**;policy 由 `00007`/`00011`/`00023` 定義、`00025` 正規化為 `NULLIF` 形式)。RLS 是跨公司隔離的**最後一道防線**,授權仍以服務層門檻為準(§9);未帶 scope 的查詢一律 fail-closed(0 列)。
 4. **`toConnectError` 之類的全域錯誤映射**:不要把 DB 原始訊息(含 `SQLSTATE`/constraint 名)回給客戶端;約束類錯誤回 `FailedPrecondition` 並落 server log,`AlreadyExists` 僅用於真正的「已存在」語意(需在建立路徑自行前置判別)。映射的**碼**與規則見 §10。
 
 ## 9. RLS 與租戶交易（D36；2026-09-20 起全站生效）
 
-全站 18 張業務表已 `ENABLE` + `FORCE`（`00024`–`00028`）；policy 由 `00007`/`00011`/`00023` 定義、`00025` 正規化。請求層租戶交易（每個 unary RPC 一個交易、`SET LOCAL app.*` 由 driver 裝飾器在 `Tx(ctx)` 內套用）見 `internal/dbtenant`。以下每一條都是本計畫用實測換來的，違反其中任一條都會以「黑屏」或「靜默」的形式出錯。
+全站 **32 張**業務表已 `ENABLE` + `FORCE`（`00024`–`00028` 首批 18 張，`00032`／`00034`／`00036`／`00038`／`00040`／`00042` 續增；新增表依規範「policy 隨建表、ENABLE＋FORCE 另開一檔」）；policy 由 `00007`／`00011`／`00023` 定義、`00025` 正規化。請求層租戶交易（每個 unary RPC 一個交易、`SET LOCAL app.*` 由 driver 裝飾器在 `Tx(ctx)` 內套用）見 `internal/dbtenant`。以下每一條都是本計畫用實測換來的，違反其中任一條都會以「黑屏」或「靜默」的形式出錯。
 
 1. **PG 的 superuser 恆繞過 RLS（`FORCE` 亦然）** → 宣稱在驗 RLS 的測試**必須**以 `app_rw`（`00022` 的 `NOBYPASSRLS` 非 owner 角色）＋ `dbtenant.NewClient` 連線；以容器 superuser 連線的既有整合測試只能當 regression gate。
    為什麼：用 superuser 連線時，漏掛租戶交易的查詢照樣讀得到全部列 —— 測試全綠卻什麼都沒驗到（T5 實測）。
@@ -119,6 +119,10 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
     為什麼：policy 名稱與表名是內部資訊；且計畫的 Global Constraints 明定「錯誤一律經 `toConnectError` 映射，不得回傳 SQLSTATE 或 constraint 名」。
 14. **production 啟動會驗證業務連線不得繞過 RLS**：`Server.Init()` 的 `assertBusinessRoleNotSuperuser` 以業務 DSN 查 `SELECT rolsuper OR rolbypassrls FROM pg_roles WHERE rolname = current_user`，為真即拒絕啟動。
     為什麼：`DATABASE_URL` 的**預設值就是 superuser**（`config/database.go`），而 PG superuser 恆繞過 RLS（含 `FORCE`）——部署誤設時 00024–00028 的租戶邊界會**靜默消失**，所有端點與測試照常綠。本機請依 `README.md` 啟動步驟把 `DATABASE_URL` 指向 `app_rw`。
+15. **非 Connect 的 REST handler 沒有租戶交易攔截器，必須自行開交易，且「所有」查詢（含存在性檢查）都要在交易內**：Connect RPC 的交易由 `dbtenant` 的 interceptor 開；`/api/v1` 下的原生 REST 端點（`fileassets`、`handlers.Me`）不經 interceptor，`h.db.Tx(ctx)`＋`dbtenant.WithTenantTx` 得自己來（`fileassets` 共用 `(*Handler).tenantTx`）。
+    為什麼：**交易外的查詢不是報錯，是靜默回 0 列**——症狀是「上傳 201 且 DB 有列，下載卻 404」（下載查詢在交易外）與「`checkOwner` 判定 owner 不存在回 400」。這兩個缺陷在 superuser 連線的整合測試下**全綠通過**（見第 1 條），只有以 `app_rw` 驅動真 handler 才重現（2026-09-22 實測；守門探針 `internal/domain/fileassets/rls_rest_integration_test.go`）。
+16. **測試夾具注入身分時必須一併注入 RLS scope**：生產的 `authzMiddleware` 同時做 `authz.WithIdentity` 與 `auth.WithRLS(scope)`；只注入 identity 的測試會讓該交易**沒有 `SET LOCAL`**，所有查詢回 0 列（症狀與第 15 條相同，容易誤判成程式碼錯誤）。
+    為什麼：`dbtenant.rlsDriver.Tx(ctx)` 是從 ctx 讀 `auth.RLSFrom(ctx)` 才套 `SET LOCAL`；夾具漏了 scope 就等於在驗一個「無 scope 的交易」，2026-09-22 實測。
 
 ### 9.1 已知設計缺口：客戶 App 的「只讀自己」在 RLS 下沒有 `self` 分支（T10 結論）
 
