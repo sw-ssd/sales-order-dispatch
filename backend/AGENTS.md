@@ -87,10 +87,13 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
 
 ## 9. RLS 與租戶交易（D36；2026-09-20 起全站生效）
 
-全站 **32 張**業務表已 `ENABLE` + `FORCE`（`00024`–`00028` 首批 18 張，`00032`／`00034`／`00036`／`00038`／`00040`／`00042` 續增；新增表依規範「policy 隨建表、ENABLE＋FORCE 另開一檔」）；policy 由 `00007`／`00011`／`00023` 定義、`00025` 正規化。請求層租戶交易（每個 unary RPC 一個交易、`SET LOCAL app.*` 由 driver 裝飾器在 `Tx(ctx)` 內套用）見 `internal/dbtenant`。以下每一條都是本計畫用實測換來的，違反其中任一條都會以「黑屏」或「靜默」的形式出錯。
+全站 **32 張**業務表已 `ENABLE` + `FORCE`（`00024`–`00028` 首批 18 張，`00032`／`00034`／`00036`／`00038`／`00040`／`00042` 續增；新增表依規範「policy 隨建表、ENABLE＋FORCE 另開一檔」；`00043` 是 `order_counters_id_seq` 的授權補正，見第 1-1 條）；policy 由 `00007`／`00011`／`00023` 定義、`00025` 正規化。請求層租戶交易（每個 unary RPC 一個交易、`SET LOCAL app.*` 由 driver 裝飾器在 `Tx(ctx)` 內套用）見 `internal/dbtenant`。以下每一條都是本計畫用實測換來的，違反其中任一條都會以「黑屏」或「靜默」的形式出錯。
 
 1. **PG 的 superuser 恆繞過 RLS（`FORCE` 亦然）** → 宣稱在驗 RLS 的測試**必須**以 `app_rw`（`00022` 的 `NOBYPASSRLS` 非 owner 角色）＋ `dbtenant.NewClient` 連線；以容器 superuser 連線的既有整合測試只能當 regression gate。
    為什麼：用 superuser 連線時，漏掛租戶交易的查詢照樣讀得到全部列 —— 測試全綠卻什麼都沒驗到（T5 實測）。
+1-1. **新增可 INSERT 的業務表時，`bigserial`／identity 序列必須單獨 `GRANT USAGE, SELECT`** —— 表級 DML 與序列授權是**兩份清單**，只寫前者要到 runtime 才會炸。
+   實證：`00031` 給了 `sales_orders`／`sales_order_items`／`sales_order_events` 三條序列，漏掉 `order_counters_id_seq`；而 `CreateSalesOrder` 對每張訂單都會先 `ensureOrderCounter`，counter 列不存在時是 INSERT → `42501 permission denied for sequence`。**只有「該公司該來源的第一張訂單」會壞**（既有 counter 走 UPDATE，不需序列權限），所以日常流程與既有測試都不會自然浮現；由 `00043` 補上。
+   `TestIntegrationAppRolePrivileges` 會逐表斷言「有 INSERT 的表，其序列必須有 USAGE」（`assertSequenceUsageGranted`）——**表級授權的斷言測不到這一類漏授權**（它會全綠）。
 2. **`USING` 不得嚴於 `WITH CHECK`**：讀取面的收緊一律放服務層 ACL，DB 層只負責跨公司隔離；`USING` 可以比 `WITH CHECK` 寬（`core_metadicts_scope` 即如此：`USING` 允許讀系統預設列、`WITH CHECK` 不允許寫）。
    為什麼：ent 的 Create 一律 `INSERT … RETURNING id`（`sqlgraph` 的 `insert.Returning(c.ID.Column)`），而 PG 對 `RETURNING` 套的是 SELECT policy → `USING` 較嚴會讓「其實合法」的新列寫不進去。
 3. **policy 取值一律 `NULLIF(current_setting('app.current_*', true), '')`**。

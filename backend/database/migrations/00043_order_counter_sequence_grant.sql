@@ -1,0 +1,32 @@
+-- 補上 order_counters_id_seq 的 app_rw 授權（00031 的遺漏）。
+--
+-- 症狀：業務連線（app_rw，生產的 owner 同屬非 superuser）在**建立該公司該來源的第一筆
+-- order_counters 列**時失敗 —— `permission denied for sequence order_counters_id_seq`
+-- （SQLSTATE 42501）。order_counters.id 是 bigserial，INSERT 會取 nextval，而 00031 的
+-- 授權清單只給了 sales_orders／sales_order_items／sales_order_events 三條序列，
+-- 漏掉第四張表 order_counters 自己的序列。
+--
+-- 影響：`CreateSalesOrder` → `ensureOrderCounter` 是每張訂單的必經路徑（取號前置）；
+-- 該公司該來源第一次建單時 counter 列還不存在 → INSERT → 被拒 → 建單失敗。已有
+-- counter 列的公司不會踩到（UPDATE 不需序列權限），所以只有**新公司**或**新來源**會壞，
+-- 這種「只有部分租戶會中」的形狀在測試上不容易自然浮現。
+--
+-- 為何先前沒被抓到：`sales_order_numbering_test.go` 走 sqlite（enttest），sqlite 沒有
+-- 角色權限概念；而 PostgreSQL 的整合探針沒有涵蓋「以 app_rw 建 order_counters」這一步。
+-- 本檔同時在 cmd/seed 的示範資料整合探針（fake_seed_data_integration_test.go）留下
+-- 守門：它以 app_rw 執行完整的示範建單流程，涵蓋同一條 INSERT。
+--
+-- 為何獨立一支而不改 00031：00031 已在各環境套用（goose 版本表有紀錄），改它不會重跑；
+-- 授權修補一律以新檔前進（同 00032/00034/00036/00038/00040/00042 的收尾慣例）。
+--
+-- 冪等：GRANT 對已授權的序列為 no-op，可重複套用。
+-- +goose Up
+-- +goose StatementBegin
+GRANT USAGE, SELECT ON order_counters_id_seq TO app_rw;
+-- +goose StatementEnd
+
+-- +goose Down
+-- +goose StatementBegin
+-- 回到 00031 的狀態：只有三條序列有授權。REVOKE 對未授權者為 no-op。
+REVOKE USAGE, SELECT ON order_counters_id_seq FROM app_rw;
+-- +goose StatementEnd
