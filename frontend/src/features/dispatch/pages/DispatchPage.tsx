@@ -380,6 +380,30 @@ export default function DispatchPage() {
                     <div class="text-xs text-muted-foreground">
                       出貨日 {o.expectedDeliveryDate || "—"}
                     </div>
+                    {/*
+                      非拖曳指派路徑。HTML5 drag-and-drop 在觸控裝置（倉庫端的 iPad）與純鍵盤下
+                      完全不會觸發，只剩拖曳一條路時這兩種使用者根本無法派車 —— 下拉是同一顆
+                      assignTo 的另一個入口，語意等於「拖到該欄尾」（順位＝最大順位 +1）。
+                      一律顯示（不限定 pointer-coarse）：鍵盤使用者同樣沒有拖曳。
+                    */}
+                    <select
+                      class="mt-2 w-full cursor-pointer rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"
+                      aria-label={`指派 ${o.orderNo} 到車次`}
+                      onChange={(e) => {
+                        const routeId = e.currentTarget.value;
+                        if (!routeId) return;
+                        const maxSeq = (byRoute().get(routeId) ?? []).reduce(
+                          (m, x) => Math.max(m, x.deliverySequence),
+                          0
+                        );
+                        void assignTo(o, routeId, String(maxSeq + 1));
+                      }}
+                    >
+                      <option value="">指派到車次…</option>
+                      <For each={activeRoutes()}>
+                        {(r) => <option value={r.id}>{r.name}（{r.code}）</option>}
+                      </For>
+                    </select>
                   </div>
                 )}
               </For>

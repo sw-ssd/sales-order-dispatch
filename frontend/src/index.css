@@ -216,3 +216,34 @@
     color: var(--foreground);
   }
 }
+
+/**
+ * 觸控裝置的點擊目標放大。
+ *
+ * 表格內的列動作（`編輯`／`刪除`…）與可排序表頭是**行內文字按鈕**，視覺高度約 20px ——
+ * 滑鼠沒問題，但平板（派車規劃、單據列印在倉庫端常用 iPad）手指點擊容易誤觸。WCAG 2.5.8
+ * 的 AA 門檻是 24×24 CSS px。
+ *
+ * 只放大**可點區域**、不動視覺尺寸：`::after` 覆蓋層向外擴，所以表格列高與欄寬完全不變
+ * （若改用 padding，每一列都會被撐高，等於為了觸控改掉桌面版排版）。
+ *
+ * 只做**垂直**擴張：列高有空間，而水平方向相鄰按鈕間距僅 12px（`ml-3`），橫向再擴就會讓
+ * 相鄰目標互相重疊、反而更容易誤觸。垂直擴到 44px 後，最窄的按鈕（`刪除` 28px 寬）已高於
+ * AA 門檻。
+ *
+ * 限定 `pointer: coarse`：滑鼠環境的命中範圍維持原樣（覆蓋層在小目標上會蓋到鄰近內容，
+ * 滑鼠沒有誤觸問題，不需要這個交換）。
+ */
+@media (pointer: coarse) {
+  table thead button,
+  table tbody button {
+    position: relative;
+  }
+  table thead button::after,
+  table tbody button::after {
+    content: "";
+    position: absolute;
+    inset-block: -12px;
+    inset-inline: 0;
+  }
+}

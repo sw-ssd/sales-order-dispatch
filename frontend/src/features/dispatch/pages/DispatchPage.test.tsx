@@ -311,6 +311,37 @@ describe("DispatchPage", () => {
     await waitFor(() => expect(listOrdersSpy.mock.calls.length).toBeGreaterThan(1));
   });
 
+  it("非拖曳指派：未指派卡片的下拉選車次即指派到該欄尾", async () => {
+    // 觸控（倉庫 iPad）與純鍵盤都沒有 HTML5 拖放事件，下拉是唯一的派車入口；
+    // 這條釘住它送出的順位與拖到欄尾同一語意（該欄最大順位 +1）。
+    await renderPage();
+    const unassigned = screen.getByLabelText("未指派");
+    const picker = within(unassigned).getByLabelText("指派 W000001 到車次");
+    fireEvent.change(picker, { target: { value: "r-1" } });
+    await waitFor(() => expect(assignRouteSpy).toHaveBeenCalledOnce());
+    expect(assignRouteSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        salesOrderId: "1",
+        routeId: "r-1",
+        // 該欄已有順位 1（W000002）與 2（W000003）→ 新卡接在 3，與拖到欄尾同語意。
+        deliverySequence: "3",
+        version: "1",
+        expectedDeliveryDate: "2026-07-20",
+      })
+    );
+  });
+
+  it("非拖曳指派：未選車次（空值）不打 API", async () => {
+    await renderPage();
+    const picker = within(screen.getByLabelText("未指派")).getByLabelText("指派 W000001 到車次");
+    fireEvent.change(picker, { target: { value: "" } });
+    // 給事件迴圈機會跑（若誤觸發，這裡就會看到呼叫）。
+    const { promise, resolve } = Promise.withResolvers<void>();
+    setTimeout(resolve, 0);
+    await promise;
+    expect(assignRouteSpy).not.toHaveBeenCalled();
+  });
+
   it("無權限時顯示 banner", async () => {
     listOrdersSpy.mockRejectedValue(new ConnectError("denied", Code.PermissionDenied));
     mountPage();
