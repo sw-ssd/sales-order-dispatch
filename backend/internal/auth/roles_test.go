@@ -104,4 +104,12 @@ func TestBuiltinRolePermissionsContent(t *testing.T) {
 	if has("customer", "notification", "read") {
 		t.Error("customer 不應有 notification read(Web 端維持 403)")
 	}
+	// 稽核頁守衛：範圍與 AuditService.ListAuditLogs 一致 —— company_admin 可查、
+	// dept_admin/staff/customer 一律不可（後端 default 分支直接 PermissionDenied）。
+	if !has("company_admin", "audit_log", "read") {
+		t.Error("company_admin 缺少 audit_log read")
+	}
+	if has("dept_admin", "audit_log", "read") || has("staff", "audit_log", "read") {
+		t.Error("dept_admin/staff 不應有 audit_log read（後端拒絕非 company_admin 查詢）")
+	}
 }

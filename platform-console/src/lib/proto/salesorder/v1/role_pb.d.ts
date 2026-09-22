@@ -71,7 +71,7 @@ export declare const RoleSchema: GenMessage<Role>;
  */
 export declare type Permission = Message<"salesorder.v1.Permission"> & {
   /**
-   * 資源(sales_order / customer / product / user / company / department / role / print / dispatch / accounting / return_request / notification)
+   * 資源(sales_order / customer / product / user / company / department / role / print / dispatch / accounting / return_request / notification / audit_log)
    *
    * @generated from field: string resource = 1;
    */

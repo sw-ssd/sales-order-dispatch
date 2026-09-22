@@ -11,6 +11,7 @@ import {
   Package,
   Printer,
   Route,
+  ScrollText,
   ShieldCheck,
   Truck,
   Undo2,
@@ -46,6 +47,7 @@ export type NavRoute =
   | "/users/departments"
   | "/users/roles"
   | "/users/users"
+  | "/audit"
   | "/account";
 
 interface NavItem {
@@ -90,6 +92,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: "部門", icon: Network, to: "/users/departments" },
       { label: "角色權限", icon: ShieldCheck, to: "/users/roles" },
       { label: "使用者", icon: UserCog, to: "/users/users" },
+      { label: "稽核日誌", icon: ScrollText, to: "/audit" },
     ],
   },
   {

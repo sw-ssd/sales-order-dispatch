@@ -30,6 +30,9 @@ var rolePolicy = map[string]map[string][]string{
 		"dispatch":       {"*"},
 		"return_request": {"*"},
 		"notification":   {"*"},
+		// 稽核：只有 company_admin（＋ super/developer 萬用展開）可查 —— 與
+		// AuditService.ListAuditLogs 的範圍推導一致（dept_admin/staff 一律 PermissionDenied）。
+		"audit_log": {"read"},
 	},
 	"dept_admin": {
 		"department":     {"read"},
@@ -155,7 +158,7 @@ func actionAllowed(acts []string, act string) bool {
 var adminResources = []string{
 	"company", "department", "user", "role",
 	"sales_order", "customer", "product", "print", "dispatch", "accounting",
-	"return_request", "notification",
+	"return_request", "notification", "audit_log",
 }
 
 // PermissionSeed 描述單一 role_permissions 種子列( role code → resource → action )。

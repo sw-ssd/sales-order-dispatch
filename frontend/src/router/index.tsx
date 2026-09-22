@@ -22,6 +22,7 @@ import RoutesPage from "~/features/masters/pages/RoutesPage";
 import PrintPage from "~/features/printing/pages/PrintPage";
 import ReturnsPage from "~/features/returns/pages/ReturnsPage";
 import NotificationsPage from "~/features/notifications/pages/NotificationsPage";
+import AuditPage from "~/features/audit/pages/AuditPage";
 import { requireAbility } from "~/lib/ability/guards";
 
 function HomePage() {
@@ -149,6 +150,21 @@ const notificationsRoute = createRoute({
 });
 
 /**
+ * 稽核日誌（D18/D27）。
+ *
+ * 守衛用 `read, "audit_log"`，受眾刻意只有 company_admin：與
+ * `AuditService.ListAuditLogs` 的範圍推導一致（super/developer 萬用、company_admin
+ * 強制自己公司、其餘角色直接 PermissionDenied）—— 守衛寬了會讓 dept_admin/staff
+ * 看見入口卻每次查詢都 403，窄了則等於把後端的範圍判斷抄兩份。
+ */
+const auditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/audit",
+  component: AuditPage,
+  beforeLoad: requireAbility("read", "audit_log"),
+});
+
+/**
  * 車次主檔：派車看板的欄位來源。
  *
  * 守衛用 `read, dispatch` —— ability 只有 10 個資源（無 `route`/`master`），
@@ -213,6 +229,7 @@ const routeTree = rootRoute.addChildren([
   productsRoute,
   returnsRoute,
   notificationsRoute,
+  auditRoute,
   dispatchRoute,
   routesRoute,
   printRoute,
