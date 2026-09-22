@@ -5,7 +5,6 @@ package server
 import (
 	"context"
 	"database/sql"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -31,10 +30,10 @@ import (
 	authzopenfga "github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
-	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
 	salesorderv1connect "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/internal/resterr"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/cache"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/database"
 )
@@ -332,66 +331,16 @@ func (s *Server) authorizeRPC(ctx context.Context, rpc rpcAuth) error {
 	return nil
 }
 
-// connectErrBody 為 Connect 錯誤協定的 JSON 形狀（與 connect-go 的 wire 格式一致）：
-// {"code":"permission_denied","message":"…","details":[{"type":"…","value":"<base64>"}]}。
-// 既有欄位（code／message）刻意保留：只讀這兩欄的既有前端不受影響。
-type connectErrBody struct {
-	Code    string             `json:"code"`
-	Message string             `json:"message"`
-	Details []connectErrDetail `json:"details,omitempty"`
-}
-
-// connectErrDetail 對映 connect 的錯誤 detail（type 為去前綴的完整型別名，value 為 proto 值的
-// base64；與 connect-go 內部 wire 格式相同，只是該型別未匯出，故在此重建同樣的形狀）。
-type connectErrDetail struct {
-	Type  string `json:"type"`
-	Value string `json:"value"`
-}
-
 // writeConnectError 以 Connect 錯誤協定寫出錯誤回應(供 middleware 的閘門)。
 //
 // 為什麼要自己寫:這些閘門在 connect handler **之前**就拒絕請求,因此 requestid.Interceptor
 // 的「回應邊界補 trace_id」看不到它們 —— 客戶端只會拿到一個沒有碼、沒有 trace_id 的錯誤,
-// 客服無從追查。此處以 requestid.Ensure/Stamp 補上 trace_id(與 RPC 路徑同一份實作),
-// 並輸出與 connect 一致的 JSON 形狀(含 details),使客戶端能用同一套解析讀到錯誤碼。
+// 客服無從追查。
 //
-// HTTP 狀態碼仍由 httpStatusForCode 依 connect code 對映(unauthenticated→401、
-// permission_denied→403、invalid_argument→400、其餘→500)。
+// 實作委派 internal/resterr:錯誤協定(REST 端點與此處的 middleware 閘門)只有一份,
+// 兩邊的 HTTP 狀態對映也必須是同一張表 —— 否則同一個 NotFound 會出現 REST 404 / middleware 500。
 func writeConnectError(w http.ResponseWriter, r *http.Request, err error) {
-	ctx, _ := requestid.Ensure(r.Context(), r.URL.Path)
-	err = requestid.Stamp(ctx, err)
-
-	body := connectErrBody{Code: connect.CodeOf(err).String(), Message: err.Error()}
-	if ce, ok := err.(*connect.Error); ok {
-		// 與 connect 一致:message 只用 Message()(不含 "code: " 前綴),details 逐一帶出。
-		body.Message = ce.Message()
-		for _, d := range ce.Details() {
-			body.Details = append(body.Details, connectErrDetail{
-				Type:  d.Type(),
-				Value: base64.RawStdEncoding.EncodeToString(d.Bytes()),
-			})
-		}
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(httpStatusForCode(connect.CodeOf(err)))
-	_ = json.NewEncoder(w).Encode(body)
-}
-
-// httpStatusForCode 對映 Connect code → HTTP 狀態碼(供 middleware 錯誤回應)。
-func httpStatusForCode(c connect.Code) int {
-	switch c {
-	case connect.CodeUnauthenticated:
-		return http.StatusUnauthorized // 401
-	case connect.CodePermissionDenied:
-		return http.StatusForbidden // 403
-	case connect.CodeInvalidArgument:
-		return http.StatusBadRequest // 400
-	case connect.CodeInternal:
-		return http.StatusInternalServerError // 500
-	default:
-		return http.StatusInternalServerError
-	}
+	resterr.Write(w, r, err)
 }
 
 // errIdentityRejected 為「身分不成立」的內部哨兵(帳號不存在/非 active/tv 不符/developer 關閉):

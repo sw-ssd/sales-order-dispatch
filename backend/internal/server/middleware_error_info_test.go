@@ -109,7 +109,7 @@ func TestMiddlewareErrorBodyCarriesErrorInfo(t *testing.T) {
 		defer func() { _ = resp.Body.Close() }()
 		body := decodeMWErrBody(t, resp)
 		// 既有欄位不變：connect 碼仍為 failed_precondition（HTTP 5xx 是既有對映，
-		// failed_precondition 不在 httpStatusForCode 的表內；修正屬另一件事，見報告 deferred）。
+		// failed_precondition 不在 resterr.status 的表內；修正屬另一件事，見報告 deferred）。
 		if body.Code != "failed_precondition" {
 			t.Fatalf("connect 碼 = %q, want failed_precondition", body.Code)
 		}
