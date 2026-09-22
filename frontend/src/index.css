@@ -218,6 +218,50 @@
 }
 
 /**
+ * `@tailwindcss/forms` 在 base layer 對所有原生控件硬編碼 `background-color: #fff`，
+ * 且**沒有任何深色變體** —— 深色模式下 `<select>`／`<input type="date">` 因此是白底配
+ * `text-foreground`（近白字），選中的值直接看不見（淺色模式正常，所以只有深色會中）。
+ *
+ * `components/ui/input.tsx` 已處理過同一件事（以 `bg-card` 覆蓋），但那是**元件層**的修正：
+ * 直接用原生 `<select>`／`<input type="date">` 的呼叫點就繞過了它（37 個 select、7 個 date）。
+ * 這裡補上同樣的覆蓋，讓兩條路徑都成立，不必逐一改呼叫點。
+ *
+ * 為何放在 `@layer components` 而非 `base`：外掛的規則同樣在 base layer，且在本檔之後
+ * 輸出（實測：外掛的白底規則落在我們後面），同特異度下**後者勝** —— 放 base 會被蓋掉。
+ * `components` 是比 `base` 更後面的 layer，穩定勝出；而 `Input` 元件用的是 utilities
+ * （`bg-card`），layer 順序仍在 components 之後，所以元件路徑不受影響。
+ */
+@layer components {
+  select,
+  textarea,
+  input:where([type="date"], [type="datetime-local"], [type="month"], [type="time"], [type="week"], [type="search"], [type="tel"], [type="url"], [type="email"], [type="number"], [type="password"]) {
+    background-color: var(--card);
+    color: var(--foreground);
+    border-color: var(--border);
+  }
+  select::placeholder,
+  textarea::placeholder,
+  input::placeholder {
+    color: var(--muted-foreground);
+  }
+
+  /**
+   * 勾選框與圓鈕同一根因：外掛硬編碼未勾選的白底、`blue-600` 的勾選色與勾勾，且無深色變體。
+   * 深色下雖然還看得見（白框），但既與 token 不一致、勾選色也不是本專案的 primary。
+   * 這裡改回語意色；勾勾本身是外掛以 `background-image` 內嵌的白色 SVG，在白底 token 下仍可讀，
+   * 故只換底色與邊框，不動那張圖。
+   */
+  input:where([type="checkbox"], [type="radio"]) {
+    background-color: var(--card);
+    border-color: var(--border);
+  }
+  input:where([type="checkbox"], [type="radio"]):checked {
+    background-color: var(--primary);
+    border-color: var(--primary);
+  }
+}
+
+/**
  * 觸控裝置的點擊目標放大。
  *
  * 表格內的列動作（`編輯`／`刪除`…）與可排序表頭是**行內文字按鈕**，視覺高度約 20px ——
