@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package salesorder.v1;
+option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1";
+
+import "salesorder/v1/common.proto";
+
+// DeviceService:裝置 FCM token 註冊/註銷(07 計畫 Task 4.3.4)。
+service DeviceService {
+  // RegisterDevice:註冊裝置(冪等;換帳轉移歸屬)。
+  rpc RegisterDevice(RegisterDeviceRequest) returns (RegisterDeviceResponse);
+  // UnregisterDevice:註銷裝置(冪等;查無不報錯)。
+  rpc UnregisterDevice(UnregisterDeviceRequest) returns (UnregisterDeviceResponse);
+}
+
+// RegisterDeviceRequest:註冊請求。
+message RegisterDeviceRequest {
+  string platform = 1;    // ios/android/web
+  string fcm_token = 2;
+  string device_name = 3; // 可空
+}
+
+// RegisterDeviceResponse:註冊結果。
+message RegisterDeviceResponse {
+  string device_id = 1;
+}
+
+// UnregisterDeviceRequest:註銷請求。
+message UnregisterDeviceRequest {
+  string fcm_token = 1;
+}
+
+// UnregisterDeviceResponse:註銷結果。
+message UnregisterDeviceResponse {
+}
