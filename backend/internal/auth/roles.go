@@ -29,6 +29,7 @@ var rolePolicy = map[string]map[string][]string{
 		"print":          {"*"},
 		"dispatch":       {"*"},
 		"return_request": {"*"},
+		"notification":   {"*"},
 	},
 	"dept_admin": {
 		"department":     {"read"},
@@ -39,6 +40,7 @@ var rolePolicy = map[string]map[string][]string{
 		"print":          {"*"},
 		"dispatch":       {"*"},
 		"return_request": {"*"},
+		"notification":   {"*"},
 	},
 	"staff": {
 		"customer":    {"*"},
@@ -50,6 +52,9 @@ var rolePolicy = map[string]map[string][]string{
 		// 退貨:staff 可看、可審 —— 審核權再由服務層收斂到「該客戶主責業務」
 		// (return_review.go canReview);此處只給類別,不給個別客戶的判斷。
 		"return_request": {"read", "write"},
+		// 通知中心是**本人**的通知(NotificationService 只回 user_id = 自己的列),
+		// 權限資源只管「能不能開這頁」;read 讀清單、write 標記已讀。
+		"notification": {"read", "write"},
 	},
 	"customer": {
 		"sales_order": {"read"},
@@ -150,7 +155,7 @@ func actionAllowed(acts []string, act string) bool {
 var adminResources = []string{
 	"company", "department", "user", "role",
 	"sales_order", "customer", "product", "print", "dispatch", "accounting",
-	"return_request",
+	"return_request", "notification",
 }
 
 // PermissionSeed 描述單一 role_permissions 種子列( role code → resource → action )。

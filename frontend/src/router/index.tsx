@@ -21,6 +21,7 @@ import DispatchPage from "~/features/dispatch/pages/DispatchPage";
 import RoutesPage from "~/features/masters/pages/RoutesPage";
 import PrintPage from "~/features/printing/pages/PrintPage";
 import ReturnsPage from "~/features/returns/pages/ReturnsPage";
+import NotificationsPage from "~/features/notifications/pages/NotificationsPage";
 import { requireAbility } from "~/lib/ability/guards";
 
 function HomePage() {
@@ -133,6 +134,21 @@ const dispatchRoute = createRoute({
 });
 
 /**
+ * 通知中心：本人通知清單、未讀篩選與標記已讀（07，規格 §5.4）。
+ *
+ * 守衛用 `read, "notification"`：`notification` 與退貨資源同批進 `rolePolicy`
+ * （company_admin/dept_admin `*`、staff `read`+`write`；customer 刻意不給 —— 客戶通知走
+ * App，Web 端維持 403）。頁面資料是**本人**的（`NotificationService` 只回 `user_id` =
+ * 自己的列，他人通知在 MarkRead 也視同 not_found），故這道守衛只決定「誰看得到入口」。
+ */
+const notificationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/notifications",
+  component: NotificationsPage,
+  beforeLoad: requireAbility("read", "notification"),
+});
+
+/**
  * 車次主檔：派車看板的欄位來源。
  *
  * 守衛用 `read, dispatch` —— ability 只有 10 個資源（無 `route`/`master`），
@@ -196,6 +212,7 @@ const routeTree = rootRoute.addChildren([
   ordersRoute,
   productsRoute,
   returnsRoute,
+  notificationsRoute,
   dispatchRoute,
   routesRoute,
   printRoute,

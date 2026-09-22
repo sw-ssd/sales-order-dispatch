@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/solid-router";
 import type { LucideIcon } from "lucide-solid";
 import {
+  Bell,
   Building2,
   Milestone,
   ClipboardList,
@@ -36,6 +37,7 @@ export type NavRoute =
   | "/customers"
   | "/orders"
   | "/returns"
+  | "/notifications"
   | "/products"
   | "/masters/routes"
   | "/printing"
@@ -94,7 +96,10 @@ const NAV_SECTIONS: NavSection[] = [
     heading: "帳號",
     // 租戶後台的訂閱資訊收在這裡（spec §2.4 規則 2）：頁面上是唯讀的方案與用量卡片，
     // 需要提醒時由 shell 的 banner 提示。
-    items: [{ label: "帳號／方案", icon: CreditCard, to: "/account" }],
+    items: [
+      { label: "通知中心", icon: Bell, to: "/notifications" },
+      { label: "帳號／方案", icon: CreditCard, to: "/account" },
+    ],
   },
 ];
 

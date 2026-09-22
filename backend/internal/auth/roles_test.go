@@ -96,4 +96,12 @@ func TestBuiltinRolePermissionsContent(t *testing.T) {
 	if has("customer", "return_request", "read") {
 		t.Error("customer 不應有 return_request read(Web 端維持 403)")
 	}
+	// 通知中心(/notifications)同一批契約:員工可讀可標已讀,customer 不給(Web 403,
+	// 客戶通知走 App;NotificationService 本身只回 user_id = 本人的列)。
+	if !has("staff", "notification", "read") || !has("staff", "notification", "write") {
+		t.Error("staff 缺少 notification read/write(可讀清單、可標已讀)")
+	}
+	if has("customer", "notification", "read") {
+		t.Error("customer 不應有 notification read(Web 端維持 403)")
+	}
 }
