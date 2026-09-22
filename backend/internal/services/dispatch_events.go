@@ -26,18 +26,13 @@ type BoardEvent struct {
 	ExpectedDate     string `json:"expected_date,omitempty"`
 }
 
-// boardPublisher 為發佈器(預設空轉;server 組裝時注入 Valkey)。
-var boardPublisher BoardPublisher = noopPublisher{}
+// boardPublisher 為發佈器(預設程序內直投;server 組裝時可換 Valkey 跨 replica)。
+var boardPublisher BoardPublisher = localPublisher{}
 
 // BoardPublisher 為發佈介面(測試注入 fake)。
 type BoardPublisher interface {
 	Publish(ctx context.Context, deptID int, ev BoardEvent)
 }
-
-// noopPublisher 無 Valkey 時的空轉(單測/未組裝)。
-type noopPublisher struct{}
-
-func (noopPublisher) Publish(context.Context, int, BoardEvent) {}
 
 // valkeyPublisher 以 Valkey pub/sub 發佈(部門分 channel)。
 type valkeyPublisher struct {
@@ -64,6 +59,13 @@ func (p *valkeyPublisher) Publish(ctx context.Context, deptID int, ev BoardEvent
 	if err := p.client.Publish(ctx, boardChannel(deptID), b).Err(); err != nil {
 		log.Printf("dispatch: 看板事件發佈失敗(降級,mutation 不受影響): %v", err)
 	}
+}
+
+// localPublisher 將發佈直投程序內訂閱(同 replica 即時;跨 replica 待 Valkey 訂閱層)。
+type localPublisher struct{}
+
+func (localPublisher) Publish(_ context.Context, deptID int, ev BoardEvent) {
+	sharedHub.fanout(deptID, ev)
 }
 
 // SetBoardPublisher 設定發佈器(僅測試/server 組裝用)。

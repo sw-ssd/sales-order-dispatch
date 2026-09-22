@@ -105,8 +105,8 @@ func TestIntegrationDispatchAssign(t *testing.T) {
 	ctx := context.Background()
 	v := seedDispatchBoard(t, ctx, db)
 	fake := &fakeBoardPublisher{}
-	SetBoardPublisher(fake)
-	t.Cleanup(func() { SetBoardPublisher(noopPublisher{}) })
+	SetBoardPublisher(multiPublisher{fake, localPublisher{}})
+	t.Cleanup(func() { SetBoardPublisher(localPublisher{}) })
 	rpc := newDispatchServer(t, db, dispatchID(v))
 
 	// 拖第一筆至 seq 2:原 seq2,3 後移 → 序列應為 [_,2,3,4](首筆變 2,餘後移)。
@@ -170,8 +170,8 @@ func TestIntegrationDispatchConfirmCancel(t *testing.T) {
 	ctx := context.Background()
 	v := seedDispatchBoard(t, ctx, db)
 	fake := &fakeBoardPublisher{}
-	SetBoardPublisher(fake)
-	t.Cleanup(func() { SetBoardPublisher(noopPublisher{}) })
+	SetBoardPublisher(multiPublisher{fake, localPublisher{}})
+	t.Cleanup(func() { SetBoardPublisher(localPublisher{}) })
 	rpc := newDispatchServer(t, db, dispatchID(v))
 
 	// 批次確認:3 筆全 pending → 全成功。
@@ -268,4 +268,14 @@ func orderStatus(t *testing.T, ctx context.Context, db *ent.Client, oid int) str
 		return nil
 	})
 	return st
+}
+
+// multiPublisher 扇出多發佈器(測試:計次 + 直投 hub)。
+type multiPublisher struct {
+	a, b BoardPublisher
+}
+
+func (m multiPublisher) Publish(ctx context.Context, dept int, ev BoardEvent) {
+	m.a.Publish(ctx, dept, ev)
+	m.b.Publish(ctx, dept, ev)
 }

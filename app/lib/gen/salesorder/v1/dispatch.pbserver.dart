@@ -27,6 +27,8 @@ abstract class DispatchServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.ConfirmDispatchRequest request);
   $async.Future<$0.CancelDispatchResponse> cancelDispatch(
       $pb.ServerContext ctx, $0.CancelDispatchRequest request);
+  $async.Future<$0.BoardEvent> watchBoard(
+      $pb.ServerContext ctx, $0.WatchBoardRequest request);
 
   $pb.GeneratedMessage createRequest($core.String methodName) {
     switch (methodName) {
@@ -36,6 +38,8 @@ abstract class DispatchServiceBase extends $pb.GeneratedService {
         return $0.ConfirmDispatchRequest();
       case 'CancelDispatch':
         return $0.CancelDispatchRequest();
+      case 'WatchBoard':
+        return $0.WatchBoardRequest();
       default:
         throw $core.ArgumentError('Unknown method: $methodName');
     }
@@ -50,6 +54,8 @@ abstract class DispatchServiceBase extends $pb.GeneratedService {
         return confirmDispatch(ctx, request as $0.ConfirmDispatchRequest);
       case 'CancelDispatch':
         return cancelDispatch(ctx, request as $0.CancelDispatchRequest);
+      case 'WatchBoard':
+        return watchBoard(ctx, request as $0.WatchBoardRequest);
       default:
         throw $core.ArgumentError('Unknown method: $methodName');
     }

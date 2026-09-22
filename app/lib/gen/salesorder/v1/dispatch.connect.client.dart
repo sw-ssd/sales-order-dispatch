@@ -64,4 +64,22 @@ extension type DispatchServiceClient (connect.Transport _transport) {
       onTrailer: onTrailer,
     );
   }
+
+  /// WatchBoard:看板訂閱(server streaming;部門隔離;heartbeat 保活)。
+  Stream<salesorderv1dispatch.BoardEvent> watchBoard(
+    salesorderv1dispatch.WatchBoardRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).server(
+      specs.DispatchService.watchBoard,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
 }

@@ -42,6 +42,9 @@ const (
 	// DispatchServiceCancelDispatchProcedure is the fully-qualified name of the DispatchService's
 	// CancelDispatch RPC.
 	DispatchServiceCancelDispatchProcedure = "/salesorder.v1.DispatchService/CancelDispatch"
+	// DispatchServiceWatchBoardProcedure is the fully-qualified name of the DispatchService's
+	// WatchBoard RPC.
+	DispatchServiceWatchBoardProcedure = "/salesorder.v1.DispatchService/WatchBoard"
 )
 
 // DispatchServiceClient is a client for the salesorder.v1.DispatchService service.
@@ -52,6 +55,8 @@ type DispatchServiceClient interface {
 	ConfirmDispatch(context.Context, *connect.Request[v1.ConfirmDispatchRequest]) (*connect.Response[v1.ConfirmDispatchResponse], error)
 	// CancelDispatch:取消派車(僅 processing → pending;dept_admin 以上;重印警告)。
 	CancelDispatch(context.Context, *connect.Request[v1.CancelDispatchRequest]) (*connect.Response[v1.CancelDispatchResponse], error)
+	// WatchBoard:看板訂閱(server streaming;部門隔離;heartbeat 保活)。
+	WatchBoard(context.Context, *connect.Request[v1.WatchBoardRequest]) (*connect.ServerStreamForClient[v1.BoardEvent], error)
 }
 
 // NewDispatchServiceClient constructs a client for the salesorder.v1.DispatchService service. By
@@ -83,6 +88,12 @@ func NewDispatchServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(dispatchServiceMethods.ByName("CancelDispatch")),
 			connect.WithClientOptions(opts...),
 		),
+		watchBoard: connect.NewClient[v1.WatchBoardRequest, v1.BoardEvent](
+			httpClient,
+			baseURL+DispatchServiceWatchBoardProcedure,
+			connect.WithSchema(dispatchServiceMethods.ByName("WatchBoard")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -91,6 +102,7 @@ type dispatchServiceClient struct {
 	assignRoute     *connect.Client[v1.AssignRouteRequest, v1.AssignRouteResponse]
 	confirmDispatch *connect.Client[v1.ConfirmDispatchRequest, v1.ConfirmDispatchResponse]
 	cancelDispatch  *connect.Client[v1.CancelDispatchRequest, v1.CancelDispatchResponse]
+	watchBoard      *connect.Client[v1.WatchBoardRequest, v1.BoardEvent]
 }
 
 // AssignRoute calls salesorder.v1.DispatchService.AssignRoute.
@@ -108,6 +120,11 @@ func (c *dispatchServiceClient) CancelDispatch(ctx context.Context, req *connect
 	return c.cancelDispatch.CallUnary(ctx, req)
 }
 
+// WatchBoard calls salesorder.v1.DispatchService.WatchBoard.
+func (c *dispatchServiceClient) WatchBoard(ctx context.Context, req *connect.Request[v1.WatchBoardRequest]) (*connect.ServerStreamForClient[v1.BoardEvent], error) {
+	return c.watchBoard.CallServerStream(ctx, req)
+}
+
 // DispatchServiceHandler is an implementation of the salesorder.v1.DispatchService service.
 type DispatchServiceHandler interface {
 	// AssignRoute:指派車次與配送順位(僅 pending;version 樂觀鎖)。
@@ -116,6 +133,8 @@ type DispatchServiceHandler interface {
 	ConfirmDispatch(context.Context, *connect.Request[v1.ConfirmDispatchRequest]) (*connect.Response[v1.ConfirmDispatchResponse], error)
 	// CancelDispatch:取消派車(僅 processing → pending;dept_admin 以上;重印警告)。
 	CancelDispatch(context.Context, *connect.Request[v1.CancelDispatchRequest]) (*connect.Response[v1.CancelDispatchResponse], error)
+	// WatchBoard:看板訂閱(server streaming;部門隔離;heartbeat 保活)。
+	WatchBoard(context.Context, *connect.Request[v1.WatchBoardRequest], *connect.ServerStream[v1.BoardEvent]) error
 }
 
 // NewDispatchServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -143,6 +162,12 @@ func NewDispatchServiceHandler(svc DispatchServiceHandler, opts ...connect.Handl
 		connect.WithSchema(dispatchServiceMethods.ByName("CancelDispatch")),
 		connect.WithHandlerOptions(opts...),
 	)
+	dispatchServiceWatchBoardHandler := connect.NewServerStreamHandler(
+		DispatchServiceWatchBoardProcedure,
+		svc.WatchBoard,
+		connect.WithSchema(dispatchServiceMethods.ByName("WatchBoard")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/salesorder.v1.DispatchService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case DispatchServiceAssignRouteProcedure:
@@ -151,6 +176,8 @@ func NewDispatchServiceHandler(svc DispatchServiceHandler, opts ...connect.Handl
 			dispatchServiceConfirmDispatchHandler.ServeHTTP(w, r)
 		case DispatchServiceCancelDispatchProcedure:
 			dispatchServiceCancelDispatchHandler.ServeHTTP(w, r)
+		case DispatchServiceWatchBoardProcedure:
+			dispatchServiceWatchBoardHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -170,4 +197,8 @@ func (UnimplementedDispatchServiceHandler) ConfirmDispatch(context.Context, *con
 
 func (UnimplementedDispatchServiceHandler) CancelDispatch(context.Context, *connect.Request[v1.CancelDispatchRequest]) (*connect.Response[v1.CancelDispatchResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("salesorder.v1.DispatchService.CancelDispatch is not implemented"))
+}
+
+func (UnimplementedDispatchServiceHandler) WatchBoard(context.Context, *connect.Request[v1.WatchBoardRequest], *connect.ServerStream[v1.BoardEvent]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("salesorder.v1.DispatchService.WatchBoard is not implemented"))
 }

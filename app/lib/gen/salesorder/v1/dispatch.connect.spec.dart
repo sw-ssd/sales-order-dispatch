@@ -36,4 +36,12 @@ abstract final class DispatchService {
     salesorderv1dispatch.CancelDispatchRequest.new,
     salesorderv1dispatch.CancelDispatchResponse.new,
   );
+
+  /// WatchBoard:看板訂閱(server streaming;部門隔離;heartbeat 保活)。
+  static const watchBoard = connect.Spec(
+    '/$name/WatchBoard',
+    connect.StreamType.server,
+    salesorderv1dispatch.WatchBoardRequest.new,
+    salesorderv1dispatch.BoardEvent.new,
+  );
 }

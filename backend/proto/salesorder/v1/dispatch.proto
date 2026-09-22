@@ -15,6 +15,23 @@ service DispatchService {
   rpc ConfirmDispatch(ConfirmDispatchRequest) returns (ConfirmDispatchResponse);
   // CancelDispatch:取消派車(僅 processing → pending;dept_admin 以上;重印警告)。
   rpc CancelDispatch(CancelDispatchRequest) returns (CancelDispatchResponse);
+  // WatchBoard:看板訂閱(server streaming;部門隔離;heartbeat 保活)。
+  rpc WatchBoard(WatchBoardRequest) returns (stream BoardEvent);
+}
+
+// WatchBoardRequest:看板訂閱請求。
+message WatchBoardRequest {
+  string expected_delivery_date = 1; // 看板日期(YYYY-MM-DD,前端語意)
+}
+
+// BoardEvent:看板事件(僅失效提示;前端收到後全量重查)。
+message BoardEvent {
+  string type = 1;              // route_assign/dispatch/dispatch_cancel/heartbeat
+  string sales_order_id = 2;    // heartbeat 時為空
+  string route_id = 3;
+  string delivery_sequence = 4;
+  string version = 5;
+  string department_id = 6;
 }
 
 // AssignRouteRequest:指派請求。

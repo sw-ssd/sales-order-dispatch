@@ -123,6 +123,30 @@ func OnCustomerProductCreated(ctx context.Context, db *ent.Client, cid int, did 
 	return nil
 }
 
+// OnDispatchConfirmed 派車通知(每筆已派訂單推該客戶子帳號;fire-and-record)。
+func OnDispatchConfirmed(ctx context.Context, db *ent.Client, cid int, did *int, custID, orderID int, orderNo, routeName, date string) error {
+	subs, err := subAccountIDs(ctx, db, custID)
+	if err != nil {
+		return err
+	}
+	if len(subs) == 0 {
+		return nil
+	}
+	title, content, _ := RenderTemplate(ctx, db, cid, did, "dispatch", "in_app", "zh-Hant",
+		map[string]string{"order_no": orderNo, "route_name": routeName, "date": date})
+	if title == "" {
+		title = "訂單已派車 " + orderNo
+		content = routeName + " " + date
+	}
+	payload := map[string]any{"order_id": orderID}
+	for _, ch := range []string{"in_app", "fcm"} {
+		if err := queueNotifications(ctx, db, cid, did, subs, ch, title, content, payload, nil); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // OnReturnReviewed 退貨審核觸發(僅推發起帳號)。
 func OnReturnReviewed(ctx context.Context, db *ent.Client, cid int, did *int, creatorID int, decision, reason string, requestID int) error {
 	title, content, _ := RenderTemplate(ctx, db, cid, did, "return_reviewed", "in_app", "zh-Hant",

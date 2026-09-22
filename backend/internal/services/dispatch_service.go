@@ -213,13 +213,27 @@ func (s *DispatchService) ConfirmDispatch(ctx context.Context, req *connect.Requ
 		}
 		resp.Items = append(resp.Items, item)
 	}
-	// 派車通知:逐筆成功訂單於提交後發送(07 觸發;失敗僅標 failed)。
+	// 派車通知:逐筆成功訂單於同交易建 pending + 提交後發送(07 觸發 5.1.4;fire-and-record)。
+	routeName := ""
+	if r, err := db.Route.Query().Where(route.ID(rid)).Only(ctx); err == nil {
+		routeName = r.Name
+	}
 	for _, it := range resp.Items {
 		if !it.Success {
 			continue
 		}
 		oid, _ := parseID(it.GetSalesOrderId())
-		_ = oid
+		o, err := db.SalesOrder.Query().Where(salesorder.ID(oid)).Only(ctx)
+		if err != nil {
+			continue
+		}
+		date := ""
+		if o.ExpectedDeliveryDate != nil {
+			date = o.ExpectedDeliveryDate.Format("2006-01-02")
+		}
+		if err := OnDispatchConfirmed(ctx, db, cid, did, o.CustomerID, o.ID, o.OrderNo, routeName, date); err != nil {
+			continue // fire-and-record:通知失敗不影響批次結果
+		}
 	}
 	return connect.NewResponse(resp), nil
 }

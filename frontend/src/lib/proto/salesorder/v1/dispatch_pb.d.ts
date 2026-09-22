@@ -11,6 +11,73 @@ import type { Message } from "@bufbuild/protobuf";
 export declare const file_salesorder_v1_dispatch: GenFile;
 
 /**
+ * WatchBoardRequest:看板訂閱請求。
+ *
+ * @generated from message salesorder.v1.WatchBoardRequest
+ */
+export declare type WatchBoardRequest = Message<"salesorder.v1.WatchBoardRequest"> & {
+  /**
+   * 看板日期(YYYY-MM-DD,前端語意)
+   *
+   * @generated from field: string expected_delivery_date = 1;
+   */
+  expectedDeliveryDate: string;
+};
+
+/**
+ * Describes the message salesorder.v1.WatchBoardRequest.
+ * Use `create(WatchBoardRequestSchema)` to create a new message.
+ */
+export declare const WatchBoardRequestSchema: GenMessage<WatchBoardRequest>;
+
+/**
+ * BoardEvent:看板事件(僅失效提示;前端收到後全量重查)。
+ *
+ * @generated from message salesorder.v1.BoardEvent
+ */
+export declare type BoardEvent = Message<"salesorder.v1.BoardEvent"> & {
+  /**
+   * route_assign/dispatch/dispatch_cancel/heartbeat
+   *
+   * @generated from field: string type = 1;
+   */
+  type: string;
+
+  /**
+   * heartbeat 時為空
+   *
+   * @generated from field: string sales_order_id = 2;
+   */
+  salesOrderId: string;
+
+  /**
+   * @generated from field: string route_id = 3;
+   */
+  routeId: string;
+
+  /**
+   * @generated from field: string delivery_sequence = 4;
+   */
+  deliverySequence: string;
+
+  /**
+   * @generated from field: string version = 5;
+   */
+  version: string;
+
+  /**
+   * @generated from field: string department_id = 6;
+   */
+  departmentId: string;
+};
+
+/**
+ * Describes the message salesorder.v1.BoardEvent.
+ * Use `create(BoardEventSchema)` to create a new message.
+ */
+export declare const BoardEventSchema: GenMessage<BoardEvent>;
+
+/**
  * AssignRouteRequest:指派請求。
  *
  * @generated from message salesorder.v1.AssignRouteRequest
@@ -278,6 +345,16 @@ export declare const DispatchService: GenService<{
     methodKind: "unary";
     input: typeof CancelDispatchRequestSchema;
     output: typeof CancelDispatchResponseSchema;
+  },
+  /**
+   * WatchBoard:看板訂閱(server streaming;部門隔離;heartbeat 保活)。
+   *
+   * @generated from rpc salesorder.v1.DispatchService.WatchBoard
+   */
+  watchBoard: {
+    methodKind: "server_streaming";
+    input: typeof WatchBoardRequestSchema;
+    output: typeof BoardEventSchema;
   },
 }>;
 

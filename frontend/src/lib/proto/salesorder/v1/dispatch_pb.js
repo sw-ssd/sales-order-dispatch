@@ -9,56 +9,70 @@ import { file_salesorder_v1_common } from "./common_pb";
  * Describes the file salesorder/v1/dispatch.proto.
  */
 export const file_salesorder_v1_dispatch = /*@__PURE__*/
-  fileDesc("ChxzYWxlc29yZGVyL3YxL2Rpc3BhdGNoLnByb3RvEg1zYWxlc29yZGVyLnYxIooBChJBc3NpZ25Sb3V0ZVJlcXVlc3QSFgoOc2FsZXNfb3JkZXJfaWQYASABKAkSEAoIcm91dGVfaWQYAiABKAkSGQoRZGVsaXZlcnlfc2VxdWVuY2UYAyABKAkSDwoHdmVyc2lvbhgEIAEoCRIeChZleHBlY3RlZF9kZWxpdmVyeV9kYXRlGAUgASgJImsKE0Fzc2lnblJvdXRlUmVzcG9uc2USFgoOc2FsZXNfb3JkZXJfaWQYASABKAkSEAoIcm91dGVfaWQYAiABKAkSGQoRZGVsaXZlcnlfc2VxdWVuY2UYAyABKAkSDwoHdmVyc2lvbhgEIAEoCSJKChZDb25maXJtRGlzcGF0Y2hSZXF1ZXN0EhAKCHJvdXRlX2lkGAEgASgJEh4KFmV4cGVjdGVkX2RlbGl2ZXJ5X2RhdGUYAiABKAkiUgoSRGlzcGF0Y2hJdGVtUmVzdWx0EhYKDnNhbGVzX29yZGVyX2lkGAEgASgJEg8KB3N1Y2Nlc3MYAiABKAgSEwoLZmFpbF9yZWFzb24YAyABKAkiYgoXQ29uZmlybURpc3BhdGNoUmVzcG9uc2USMAoFaXRlbXMYASADKAsyIS5zYWxlc29yZGVyLnYxLkRpc3BhdGNoSXRlbVJlc3VsdBIVCg1zdWNjZXNzX2NvdW50GAIgASgFIlwKFUNhbmNlbERpc3BhdGNoUmVxdWVzdBIWCg5zYWxlc19vcmRlcl9pZBgBIAEoCRIOCgZyZWFzb24YAiABKAkSGwoTYWNrbm93bGVkZ2VfcmVwcmludBgDIAEoCCKGAQoWQ2FuY2VsRGlzcGF0Y2hSZXNwb25zZRIWCg5zYWxlc19vcmRlcl9pZBgBIAEoCRIOCgZzdGF0dXMYAiABKAkSEAoIcm91dGVfaWQYAyABKAkSGQoRZGVsaXZlcnlfc2VxdWVuY2UYBCABKAkSFwoPcmVwcmludF93YXJuaW5nGAUgASgIMqgCCg9EaXNwYXRjaFNlcnZpY2USVAoLQXNzaWduUm91dGUSIS5zYWxlc29yZGVyLnYxLkFzc2lnblJvdXRlUmVxdWVzdBoiLnNhbGVzb3JkZXIudjEuQXNzaWduUm91dGVSZXNwb25zZRJgCg9Db25maXJtRGlzcGF0Y2gSJS5zYWxlc29yZGVyLnYxLkNvbmZpcm1EaXNwYXRjaFJlcXVlc3QaJi5zYWxlc29yZGVyLnYxLkNvbmZpcm1EaXNwYXRjaFJlc3BvbnNlEl0KDkNhbmNlbERpc3BhdGNoEiQuc2FsZXNvcmRlci52MS5DYW5jZWxEaXNwYXRjaFJlcXVlc3QaJS5zYWxlc29yZGVyLnYxLkNhbmNlbERpc3BhdGNoUmVzcG9uc2VCWVpXZ2l0aHViLmNvbS9zYWxlc29yZGVyL3NhbGVzLW9yZGVyLTEuMC9iYWNrZW5kL2ludGVybmFsL3Byb3RvL3NhbGVzb3JkZXIvdjE7c2FsZXNvcmRlcnYxYgZwcm90bzM", [file_salesorder_v1_common]);
+  fileDesc("ChxzYWxlc29yZGVyL3YxL2Rpc3BhdGNoLnByb3RvEg1zYWxlc29yZGVyLnYxIjMKEVdhdGNoQm9hcmRSZXF1ZXN0Eh4KFmV4cGVjdGVkX2RlbGl2ZXJ5X2RhdGUYASABKAkihwEKCkJvYXJkRXZlbnQSDAoEdHlwZRgBIAEoCRIWCg5zYWxlc19vcmRlcl9pZBgCIAEoCRIQCghyb3V0ZV9pZBgDIAEoCRIZChFkZWxpdmVyeV9zZXF1ZW5jZRgEIAEoCRIPCgd2ZXJzaW9uGAUgASgJEhUKDWRlcGFydG1lbnRfaWQYBiABKAkiigEKEkFzc2lnblJvdXRlUmVxdWVzdBIWCg5zYWxlc19vcmRlcl9pZBgBIAEoCRIQCghyb3V0ZV9pZBgCIAEoCRIZChFkZWxpdmVyeV9zZXF1ZW5jZRgDIAEoCRIPCgd2ZXJzaW9uGAQgASgJEh4KFmV4cGVjdGVkX2RlbGl2ZXJ5X2RhdGUYBSABKAkiawoTQXNzaWduUm91dGVSZXNwb25zZRIWCg5zYWxlc19vcmRlcl9pZBgBIAEoCRIQCghyb3V0ZV9pZBgCIAEoCRIZChFkZWxpdmVyeV9zZXF1ZW5jZRgDIAEoCRIPCgd2ZXJzaW9uGAQgASgJIkoKFkNvbmZpcm1EaXNwYXRjaFJlcXVlc3QSEAoIcm91dGVfaWQYASABKAkSHgoWZXhwZWN0ZWRfZGVsaXZlcnlfZGF0ZRgCIAEoCSJSChJEaXNwYXRjaEl0ZW1SZXN1bHQSFgoOc2FsZXNfb3JkZXJfaWQYASABKAkSDwoHc3VjY2VzcxgCIAEoCBITCgtmYWlsX3JlYXNvbhgDIAEoCSJiChdDb25maXJtRGlzcGF0Y2hSZXNwb25zZRIwCgVpdGVtcxgBIAMoCzIhLnNhbGVzb3JkZXIudjEuRGlzcGF0Y2hJdGVtUmVzdWx0EhUKDXN1Y2Nlc3NfY291bnQYAiABKAUiXAoVQ2FuY2VsRGlzcGF0Y2hSZXF1ZXN0EhYKDnNhbGVzX29yZGVyX2lkGAEgASgJEg4KBnJlYXNvbhgCIAEoCRIbChNhY2tub3dsZWRnZV9yZXByaW50GAMgASgIIoYBChZDYW5jZWxEaXNwYXRjaFJlc3BvbnNlEhYKDnNhbGVzX29yZGVyX2lkGAEgASgJEg4KBnN0YXR1cxgCIAEoCRIQCghyb3V0ZV9pZBgDIAEoCRIZChFkZWxpdmVyeV9zZXF1ZW5jZRgEIAEoCRIXCg9yZXByaW50X3dhcm5pbmcYBSABKAgy9QIKD0Rpc3BhdGNoU2VydmljZRJUCgtBc3NpZ25Sb3V0ZRIhLnNhbGVzb3JkZXIudjEuQXNzaWduUm91dGVSZXF1ZXN0GiIuc2FsZXNvcmRlci52MS5Bc3NpZ25Sb3V0ZVJlc3BvbnNlEmAKD0NvbmZpcm1EaXNwYXRjaBIlLnNhbGVzb3JkZXIudjEuQ29uZmlybURpc3BhdGNoUmVxdWVzdBomLnNhbGVzb3JkZXIudjEuQ29uZmlybURpc3BhdGNoUmVzcG9uc2USXQoOQ2FuY2VsRGlzcGF0Y2gSJC5zYWxlc29yZGVyLnYxLkNhbmNlbERpc3BhdGNoUmVxdWVzdBolLnNhbGVzb3JkZXIudjEuQ2FuY2VsRGlzcGF0Y2hSZXNwb25zZRJLCgpXYXRjaEJvYXJkEiAuc2FsZXNvcmRlci52MS5XYXRjaEJvYXJkUmVxdWVzdBoZLnNhbGVzb3JkZXIudjEuQm9hcmRFdmVudDABQllaV2dpdGh1Yi5jb20vc2FsZXNvcmRlci9zYWxlcy1vcmRlci0xLjAvYmFja2VuZC9pbnRlcm5hbC9wcm90by9zYWxlc29yZGVyL3YxO3NhbGVzb3JkZXJ2MWIGcHJvdG8z", [file_salesorder_v1_common]);
+
+/**
+ * Describes the message salesorder.v1.WatchBoardRequest.
+ * Use `create(WatchBoardRequestSchema)` to create a new message.
+ */
+export const WatchBoardRequestSchema = /*@__PURE__*/
+  messageDesc(file_salesorder_v1_dispatch, 0);
+
+/**
+ * Describes the message salesorder.v1.BoardEvent.
+ * Use `create(BoardEventSchema)` to create a new message.
+ */
+export const BoardEventSchema = /*@__PURE__*/
+  messageDesc(file_salesorder_v1_dispatch, 1);
 
 /**
  * Describes the message salesorder.v1.AssignRouteRequest.
  * Use `create(AssignRouteRequestSchema)` to create a new message.
  */
 export const AssignRouteRequestSchema = /*@__PURE__*/
-  messageDesc(file_salesorder_v1_dispatch, 0);
+  messageDesc(file_salesorder_v1_dispatch, 2);
 
 /**
  * Describes the message salesorder.v1.AssignRouteResponse.
  * Use `create(AssignRouteResponseSchema)` to create a new message.
  */
 export const AssignRouteResponseSchema = /*@__PURE__*/
-  messageDesc(file_salesorder_v1_dispatch, 1);
+  messageDesc(file_salesorder_v1_dispatch, 3);
 
 /**
  * Describes the message salesorder.v1.ConfirmDispatchRequest.
  * Use `create(ConfirmDispatchRequestSchema)` to create a new message.
  */
 export const ConfirmDispatchRequestSchema = /*@__PURE__*/
-  messageDesc(file_salesorder_v1_dispatch, 2);
+  messageDesc(file_salesorder_v1_dispatch, 4);
 
 /**
  * Describes the message salesorder.v1.DispatchItemResult.
  * Use `create(DispatchItemResultSchema)` to create a new message.
  */
 export const DispatchItemResultSchema = /*@__PURE__*/
-  messageDesc(file_salesorder_v1_dispatch, 3);
+  messageDesc(file_salesorder_v1_dispatch, 5);
 
 /**
  * Describes the message salesorder.v1.ConfirmDispatchResponse.
  * Use `create(ConfirmDispatchResponseSchema)` to create a new message.
  */
 export const ConfirmDispatchResponseSchema = /*@__PURE__*/
-  messageDesc(file_salesorder_v1_dispatch, 4);
+  messageDesc(file_salesorder_v1_dispatch, 6);
 
 /**
  * Describes the message salesorder.v1.CancelDispatchRequest.
  * Use `create(CancelDispatchRequestSchema)` to create a new message.
  */
 export const CancelDispatchRequestSchema = /*@__PURE__*/
-  messageDesc(file_salesorder_v1_dispatch, 5);
+  messageDesc(file_salesorder_v1_dispatch, 7);
 
 /**
  * Describes the message salesorder.v1.CancelDispatchResponse.
  * Use `create(CancelDispatchResponseSchema)` to create a new message.
  */
 export const CancelDispatchResponseSchema = /*@__PURE__*/
-  messageDesc(file_salesorder_v1_dispatch, 6);
+  messageDesc(file_salesorder_v1_dispatch, 8);
 
 /**
  * DispatchService:派車 API(08 計畫 Task 5.1)。

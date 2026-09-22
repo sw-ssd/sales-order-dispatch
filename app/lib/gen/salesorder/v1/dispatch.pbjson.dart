@@ -15,6 +15,51 @@ import 'dart:convert' as $convert;
 import 'dart:core' as $core;
 import 'dart:typed_data' as $typed_data;
 
+@$core.Deprecated('Use watchBoardRequestDescriptor instead')
+const WatchBoardRequest$json = {
+  '1': 'WatchBoardRequest',
+  '2': [
+    {
+      '1': 'expected_delivery_date',
+      '3': 1,
+      '4': 1,
+      '5': 9,
+      '10': 'expectedDeliveryDate'
+    },
+  ],
+};
+
+/// Descriptor for `WatchBoardRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List watchBoardRequestDescriptor = $convert.base64Decode(
+    'ChFXYXRjaEJvYXJkUmVxdWVzdBI0ChZleHBlY3RlZF9kZWxpdmVyeV9kYXRlGAEgASgJUhRleH'
+    'BlY3RlZERlbGl2ZXJ5RGF0ZQ==');
+
+@$core.Deprecated('Use boardEventDescriptor instead')
+const BoardEvent$json = {
+  '1': 'BoardEvent',
+  '2': [
+    {'1': 'type', '3': 1, '4': 1, '5': 9, '10': 'type'},
+    {'1': 'sales_order_id', '3': 2, '4': 1, '5': 9, '10': 'salesOrderId'},
+    {'1': 'route_id', '3': 3, '4': 1, '5': 9, '10': 'routeId'},
+    {
+      '1': 'delivery_sequence',
+      '3': 4,
+      '4': 1,
+      '5': 9,
+      '10': 'deliverySequence'
+    },
+    {'1': 'version', '3': 5, '4': 1, '5': 9, '10': 'version'},
+    {'1': 'department_id', '3': 6, '4': 1, '5': 9, '10': 'departmentId'},
+  ],
+};
+
+/// Descriptor for `BoardEvent`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List boardEventDescriptor = $convert.base64Decode(
+    'CgpCb2FyZEV2ZW50EhIKBHR5cGUYASABKAlSBHR5cGUSJAoOc2FsZXNfb3JkZXJfaWQYAiABKA'
+    'lSDHNhbGVzT3JkZXJJZBIZCghyb3V0ZV9pZBgDIAEoCVIHcm91dGVJZBIrChFkZWxpdmVyeV9z'
+    'ZXF1ZW5jZRgEIAEoCVIQZGVsaXZlcnlTZXF1ZW5jZRIYCgd2ZXJzaW9uGAUgASgJUgd2ZXJzaW'
+    '9uEiMKDWRlcGFydG1lbnRfaWQYBiABKAlSDGRlcGFydG1lbnRJZA==');
+
 @$core.Deprecated('Use assignRouteRequestDescriptor instead')
 const AssignRouteRequest$json = {
   '1': 'AssignRouteRequest',
@@ -193,6 +238,12 @@ const $core.Map<$core.String, $core.dynamic> DispatchServiceBase$json = {
       '2': '.salesorder.v1.CancelDispatchRequest',
       '3': '.salesorder.v1.CancelDispatchResponse'
     },
+    {
+      '1': 'WatchBoard',
+      '2': '.salesorder.v1.WatchBoardRequest',
+      '3': '.salesorder.v1.BoardEvent',
+      '6': true
+    },
   ],
 };
 
@@ -206,6 +257,8 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.salesorder.v1.DispatchItemResult': DispatchItemResult$json,
   '.salesorder.v1.CancelDispatchRequest': CancelDispatchRequest$json,
   '.salesorder.v1.CancelDispatchResponse': CancelDispatchResponse$json,
+  '.salesorder.v1.WatchBoardRequest': WatchBoardRequest$json,
+  '.salesorder.v1.BoardEvent': BoardEvent$json,
 };
 
 /// Descriptor for `DispatchService`. Decode as a `google.protobuf.ServiceDescriptorProto`.
@@ -215,4 +268,5 @@ final $typed_data.Uint8List dispatchServiceDescriptor = $convert.base64Decode(
     'aXJtRGlzcGF0Y2gSJS5zYWxlc29yZGVyLnYxLkNvbmZpcm1EaXNwYXRjaFJlcXVlc3QaJi5zYW'
     'xlc29yZGVyLnYxLkNvbmZpcm1EaXNwYXRjaFJlc3BvbnNlEl0KDkNhbmNlbERpc3BhdGNoEiQu'
     'c2FsZXNvcmRlci52MS5DYW5jZWxEaXNwYXRjaFJlcXVlc3QaJS5zYWxlc29yZGVyLnYxLkNhbm'
-    'NlbERpc3BhdGNoUmVzcG9uc2U=');
+    'NlbERpc3BhdGNoUmVzcG9uc2USSwoKV2F0Y2hCb2FyZBIgLnNhbGVzb3JkZXIudjEuV2F0Y2hC'
+    'b2FyZFJlcXVlc3QaGS5zYWxlc29yZGVyLnYxLkJvYXJkRXZlbnQwAQ==');

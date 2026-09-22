@@ -17,6 +17,181 @@ import 'package:protobuf/protobuf.dart' as $pb;
 
 export 'package:protobuf/protobuf.dart' show GeneratedMessageGenericExtensions;
 
+/// WatchBoardRequest:看板訂閱請求。
+class WatchBoardRequest extends $pb.GeneratedMessage {
+  factory WatchBoardRequest({
+    $core.String? expectedDeliveryDate,
+  }) {
+    final result = WatchBoardRequest._();
+    if (expectedDeliveryDate != null)
+      result.expectedDeliveryDate = expectedDeliveryDate;
+    return result;
+  }
+
+  WatchBoardRequest._();
+
+  factory WatchBoardRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WatchBoardRequest()..mergeFromBuffer(data, registry);
+  factory WatchBoardRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      WatchBoardRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'WatchBoardRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: WatchBoardRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'expectedDeliveryDate')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WatchBoardRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  WatchBoardRequest copyWith(void Function(WatchBoardRequest) updates) =>
+      super.copyWith((message) => updates(message as WatchBoardRequest))
+          as WatchBoardRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use WatchBoardRequest() / WatchBoardRequest.new instead')
+  static WatchBoardRequest create() => WatchBoardRequest._();
+  static $pb.GeneratedMessage $_createMessage() => WatchBoardRequest._();
+  @$core.override
+  WatchBoardRequest createEmptyInstance() => WatchBoardRequest._();
+  @$core.pragma('dart2js:noInline')
+  static WatchBoardRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<WatchBoardRequest>(
+          WatchBoardRequest.$_createMessage);
+  static WatchBoardRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get expectedDeliveryDate => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set expectedDeliveryDate($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasExpectedDeliveryDate() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearExpectedDeliveryDate() => $_clearField(1);
+}
+
+/// BoardEvent:看板事件(僅失效提示;前端收到後全量重查)。
+class BoardEvent extends $pb.GeneratedMessage {
+  factory BoardEvent({
+    $core.String? type,
+    $core.String? salesOrderId,
+    $core.String? routeId,
+    $core.String? deliverySequence,
+    $core.String? version,
+    $core.String? departmentId,
+  }) {
+    final result = BoardEvent._();
+    if (type != null) result.type = type;
+    if (salesOrderId != null) result.salesOrderId = salesOrderId;
+    if (routeId != null) result.routeId = routeId;
+    if (deliverySequence != null) result.deliverySequence = deliverySequence;
+    if (version != null) result.version = version;
+    if (departmentId != null) result.departmentId = departmentId;
+    return result;
+  }
+
+  BoardEvent._();
+
+  factory BoardEvent.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      BoardEvent()..mergeFromBuffer(data, registry);
+  factory BoardEvent.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      BoardEvent()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'BoardEvent',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: BoardEvent.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'type')
+    ..aOS(2, _omitFieldNames ? '' : 'salesOrderId')
+    ..aOS(3, _omitFieldNames ? '' : 'routeId')
+    ..aOS(4, _omitFieldNames ? '' : 'deliverySequence')
+    ..aOS(5, _omitFieldNames ? '' : 'version')
+    ..aOS(6, _omitFieldNames ? '' : 'departmentId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  BoardEvent clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  BoardEvent copyWith(void Function(BoardEvent) updates) =>
+      super.copyWith((message) => updates(message as BoardEvent)) as BoardEvent;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use BoardEvent() / BoardEvent.new instead')
+  static BoardEvent create() => BoardEvent._();
+  static $pb.GeneratedMessage $_createMessage() => BoardEvent._();
+  @$core.override
+  BoardEvent createEmptyInstance() => BoardEvent._();
+  @$core.pragma('dart2js:noInline')
+  static BoardEvent getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<BoardEvent>(BoardEvent.$_createMessage);
+  static BoardEvent? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get type => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set type($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasType() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearType() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get salesOrderId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set salesOrderId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasSalesOrderId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearSalesOrderId() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get routeId => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set routeId($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasRouteId() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearRouteId() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get deliverySequence => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set deliverySequence($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasDeliverySequence() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearDeliverySequence() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get version => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set version($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasVersion() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearVersion() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get departmentId => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set departmentId($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasDepartmentId() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearDepartmentId() => $_clearField(6);
+}
+
 /// AssignRouteRequest:指派請求。
 class AssignRouteRequest extends $pb.GeneratedMessage {
   factory AssignRouteRequest({
@@ -659,6 +834,12 @@ class DispatchServiceApi {
           $pb.ClientContext? ctx, CancelDispatchRequest request) =>
       _client.invoke<CancelDispatchResponse>(ctx, 'DispatchService',
           'CancelDispatch', request, CancelDispatchResponse());
+
+  /// WatchBoard:看板訂閱(server streaming;部門隔離;heartbeat 保活)。
+  $async.Future<BoardEvent> watchBoard(
+          $pb.ClientContext? ctx, WatchBoardRequest request) =>
+      _client.invoke<BoardEvent>(
+          ctx, 'DispatchService', 'WatchBoard', request, BoardEvent());
 }
 
 const $core.bool _omitFieldNames =

@@ -21,6 +21,136 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// WatchBoardRequest:看板訂閱請求。
+type WatchBoardRequest struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	ExpectedDeliveryDate string                 `protobuf:"bytes,1,opt,name=expected_delivery_date,json=expectedDeliveryDate,proto3" json:"expected_delivery_date,omitempty"` // 看板日期(YYYY-MM-DD,前端語意)
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *WatchBoardRequest) Reset() {
+	*x = WatchBoardRequest{}
+	mi := &file_salesorder_v1_dispatch_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WatchBoardRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WatchBoardRequest) ProtoMessage() {}
+
+func (x *WatchBoardRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_dispatch_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WatchBoardRequest.ProtoReflect.Descriptor instead.
+func (*WatchBoardRequest) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_dispatch_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *WatchBoardRequest) GetExpectedDeliveryDate() string {
+	if x != nil {
+		return x.ExpectedDeliveryDate
+	}
+	return ""
+}
+
+// BoardEvent:看板事件(僅失效提示;前端收到後全量重查)。
+type BoardEvent struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Type             string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`                                       // route_assign/dispatch/dispatch_cancel/heartbeat
+	SalesOrderId     string                 `protobuf:"bytes,2,opt,name=sales_order_id,json=salesOrderId,proto3" json:"sales_order_id,omitempty"` // heartbeat 時為空
+	RouteId          string                 `protobuf:"bytes,3,opt,name=route_id,json=routeId,proto3" json:"route_id,omitempty"`
+	DeliverySequence string                 `protobuf:"bytes,4,opt,name=delivery_sequence,json=deliverySequence,proto3" json:"delivery_sequence,omitempty"`
+	Version          string                 `protobuf:"bytes,5,opt,name=version,proto3" json:"version,omitempty"`
+	DepartmentId     string                 `protobuf:"bytes,6,opt,name=department_id,json=departmentId,proto3" json:"department_id,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *BoardEvent) Reset() {
+	*x = BoardEvent{}
+	mi := &file_salesorder_v1_dispatch_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BoardEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BoardEvent) ProtoMessage() {}
+
+func (x *BoardEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_dispatch_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BoardEvent.ProtoReflect.Descriptor instead.
+func (*BoardEvent) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_dispatch_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *BoardEvent) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *BoardEvent) GetSalesOrderId() string {
+	if x != nil {
+		return x.SalesOrderId
+	}
+	return ""
+}
+
+func (x *BoardEvent) GetRouteId() string {
+	if x != nil {
+		return x.RouteId
+	}
+	return ""
+}
+
+func (x *BoardEvent) GetDeliverySequence() string {
+	if x != nil {
+		return x.DeliverySequence
+	}
+	return ""
+}
+
+func (x *BoardEvent) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *BoardEvent) GetDepartmentId() string {
+	if x != nil {
+		return x.DepartmentId
+	}
+	return ""
+}
+
 // AssignRouteRequest:指派請求。
 type AssignRouteRequest struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
@@ -35,7 +165,7 @@ type AssignRouteRequest struct {
 
 func (x *AssignRouteRequest) Reset() {
 	*x = AssignRouteRequest{}
-	mi := &file_salesorder_v1_dispatch_proto_msgTypes[0]
+	mi := &file_salesorder_v1_dispatch_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -47,7 +177,7 @@ func (x *AssignRouteRequest) String() string {
 func (*AssignRouteRequest) ProtoMessage() {}
 
 func (x *AssignRouteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_dispatch_proto_msgTypes[0]
+	mi := &file_salesorder_v1_dispatch_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -60,7 +190,7 @@ func (x *AssignRouteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AssignRouteRequest.ProtoReflect.Descriptor instead.
 func (*AssignRouteRequest) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_dispatch_proto_rawDescGZIP(), []int{0}
+	return file_salesorder_v1_dispatch_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *AssignRouteRequest) GetSalesOrderId() string {
@@ -111,7 +241,7 @@ type AssignRouteResponse struct {
 
 func (x *AssignRouteResponse) Reset() {
 	*x = AssignRouteResponse{}
-	mi := &file_salesorder_v1_dispatch_proto_msgTypes[1]
+	mi := &file_salesorder_v1_dispatch_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -123,7 +253,7 @@ func (x *AssignRouteResponse) String() string {
 func (*AssignRouteResponse) ProtoMessage() {}
 
 func (x *AssignRouteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_dispatch_proto_msgTypes[1]
+	mi := &file_salesorder_v1_dispatch_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -136,7 +266,7 @@ func (x *AssignRouteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AssignRouteResponse.ProtoReflect.Descriptor instead.
 func (*AssignRouteResponse) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_dispatch_proto_rawDescGZIP(), []int{1}
+	return file_salesorder_v1_dispatch_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *AssignRouteResponse) GetSalesOrderId() string {
@@ -178,7 +308,7 @@ type ConfirmDispatchRequest struct {
 
 func (x *ConfirmDispatchRequest) Reset() {
 	*x = ConfirmDispatchRequest{}
-	mi := &file_salesorder_v1_dispatch_proto_msgTypes[2]
+	mi := &file_salesorder_v1_dispatch_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -190,7 +320,7 @@ func (x *ConfirmDispatchRequest) String() string {
 func (*ConfirmDispatchRequest) ProtoMessage() {}
 
 func (x *ConfirmDispatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_dispatch_proto_msgTypes[2]
+	mi := &file_salesorder_v1_dispatch_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -203,7 +333,7 @@ func (x *ConfirmDispatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfirmDispatchRequest.ProtoReflect.Descriptor instead.
 func (*ConfirmDispatchRequest) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_dispatch_proto_rawDescGZIP(), []int{2}
+	return file_salesorder_v1_dispatch_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ConfirmDispatchRequest) GetRouteId() string {
@@ -232,7 +362,7 @@ type DispatchItemResult struct {
 
 func (x *DispatchItemResult) Reset() {
 	*x = DispatchItemResult{}
-	mi := &file_salesorder_v1_dispatch_proto_msgTypes[3]
+	mi := &file_salesorder_v1_dispatch_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -244,7 +374,7 @@ func (x *DispatchItemResult) String() string {
 func (*DispatchItemResult) ProtoMessage() {}
 
 func (x *DispatchItemResult) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_dispatch_proto_msgTypes[3]
+	mi := &file_salesorder_v1_dispatch_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -257,7 +387,7 @@ func (x *DispatchItemResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DispatchItemResult.ProtoReflect.Descriptor instead.
 func (*DispatchItemResult) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_dispatch_proto_rawDescGZIP(), []int{3}
+	return file_salesorder_v1_dispatch_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *DispatchItemResult) GetSalesOrderId() string {
@@ -292,7 +422,7 @@ type ConfirmDispatchResponse struct {
 
 func (x *ConfirmDispatchResponse) Reset() {
 	*x = ConfirmDispatchResponse{}
-	mi := &file_salesorder_v1_dispatch_proto_msgTypes[4]
+	mi := &file_salesorder_v1_dispatch_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -304,7 +434,7 @@ func (x *ConfirmDispatchResponse) String() string {
 func (*ConfirmDispatchResponse) ProtoMessage() {}
 
 func (x *ConfirmDispatchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_dispatch_proto_msgTypes[4]
+	mi := &file_salesorder_v1_dispatch_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -317,7 +447,7 @@ func (x *ConfirmDispatchResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfirmDispatchResponse.ProtoReflect.Descriptor instead.
 func (*ConfirmDispatchResponse) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_dispatch_proto_rawDescGZIP(), []int{4}
+	return file_salesorder_v1_dispatch_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ConfirmDispatchResponse) GetItems() []*DispatchItemResult {
@@ -346,7 +476,7 @@ type CancelDispatchRequest struct {
 
 func (x *CancelDispatchRequest) Reset() {
 	*x = CancelDispatchRequest{}
-	mi := &file_salesorder_v1_dispatch_proto_msgTypes[5]
+	mi := &file_salesorder_v1_dispatch_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -358,7 +488,7 @@ func (x *CancelDispatchRequest) String() string {
 func (*CancelDispatchRequest) ProtoMessage() {}
 
 func (x *CancelDispatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_dispatch_proto_msgTypes[5]
+	mi := &file_salesorder_v1_dispatch_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -371,7 +501,7 @@ func (x *CancelDispatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelDispatchRequest.ProtoReflect.Descriptor instead.
 func (*CancelDispatchRequest) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_dispatch_proto_rawDescGZIP(), []int{5}
+	return file_salesorder_v1_dispatch_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *CancelDispatchRequest) GetSalesOrderId() string {
@@ -409,7 +539,7 @@ type CancelDispatchResponse struct {
 
 func (x *CancelDispatchResponse) Reset() {
 	*x = CancelDispatchResponse{}
-	mi := &file_salesorder_v1_dispatch_proto_msgTypes[6]
+	mi := &file_salesorder_v1_dispatch_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -421,7 +551,7 @@ func (x *CancelDispatchResponse) String() string {
 func (*CancelDispatchResponse) ProtoMessage() {}
 
 func (x *CancelDispatchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_dispatch_proto_msgTypes[6]
+	mi := &file_salesorder_v1_dispatch_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -434,7 +564,7 @@ func (x *CancelDispatchResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelDispatchResponse.ProtoReflect.Descriptor instead.
 func (*CancelDispatchResponse) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_dispatch_proto_rawDescGZIP(), []int{6}
+	return file_salesorder_v1_dispatch_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *CancelDispatchResponse) GetSalesOrderId() string {
@@ -476,7 +606,17 @@ var File_salesorder_v1_dispatch_proto protoreflect.FileDescriptor
 
 const file_salesorder_v1_dispatch_proto_rawDesc = "" +
 	"\n" +
-	"\x1csalesorder/v1/dispatch.proto\x12\rsalesorder.v1\x1a\x1asalesorder/v1/common.proto\"\xd2\x01\n" +
+	"\x1csalesorder/v1/dispatch.proto\x12\rsalesorder.v1\x1a\x1asalesorder/v1/common.proto\"I\n" +
+	"\x11WatchBoardRequest\x124\n" +
+	"\x16expected_delivery_date\x18\x01 \x01(\tR\x14expectedDeliveryDate\"\xcd\x01\n" +
+	"\n" +
+	"BoardEvent\x12\x12\n" +
+	"\x04type\x18\x01 \x01(\tR\x04type\x12$\n" +
+	"\x0esales_order_id\x18\x02 \x01(\tR\fsalesOrderId\x12\x19\n" +
+	"\broute_id\x18\x03 \x01(\tR\arouteId\x12+\n" +
+	"\x11delivery_sequence\x18\x04 \x01(\tR\x10deliverySequence\x12\x18\n" +
+	"\aversion\x18\x05 \x01(\tR\aversion\x12#\n" +
+	"\rdepartment_id\x18\x06 \x01(\tR\fdepartmentId\"\xd2\x01\n" +
 	"\x12AssignRouteRequest\x12$\n" +
 	"\x0esales_order_id\x18\x01 \x01(\tR\fsalesOrderId\x12\x19\n" +
 	"\broute_id\x18\x02 \x01(\tR\arouteId\x12+\n" +
@@ -508,11 +648,13 @@ const file_salesorder_v1_dispatch_proto_rawDesc = "" +
 	"\x06status\x18\x02 \x01(\tR\x06status\x12\x19\n" +
 	"\broute_id\x18\x03 \x01(\tR\arouteId\x12+\n" +
 	"\x11delivery_sequence\x18\x04 \x01(\tR\x10deliverySequence\x12'\n" +
-	"\x0freprint_warning\x18\x05 \x01(\bR\x0ereprintWarning2\xa8\x02\n" +
+	"\x0freprint_warning\x18\x05 \x01(\bR\x0ereprintWarning2\xf5\x02\n" +
 	"\x0fDispatchService\x12T\n" +
 	"\vAssignRoute\x12!.salesorder.v1.AssignRouteRequest\x1a\".salesorder.v1.AssignRouteResponse\x12`\n" +
 	"\x0fConfirmDispatch\x12%.salesorder.v1.ConfirmDispatchRequest\x1a&.salesorder.v1.ConfirmDispatchResponse\x12]\n" +
-	"\x0eCancelDispatch\x12$.salesorder.v1.CancelDispatchRequest\x1a%.salesorder.v1.CancelDispatchResponseBYZWgithub.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1b\x06proto3"
+	"\x0eCancelDispatch\x12$.salesorder.v1.CancelDispatchRequest\x1a%.salesorder.v1.CancelDispatchResponse\x12K\n" +
+	"\n" +
+	"WatchBoard\x12 .salesorder.v1.WatchBoardRequest\x1a\x19.salesorder.v1.BoardEvent0\x01BYZWgithub.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1b\x06proto3"
 
 var (
 	file_salesorder_v1_dispatch_proto_rawDescOnce sync.Once
@@ -526,26 +668,30 @@ func file_salesorder_v1_dispatch_proto_rawDescGZIP() []byte {
 	return file_salesorder_v1_dispatch_proto_rawDescData
 }
 
-var file_salesorder_v1_dispatch_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_salesorder_v1_dispatch_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_salesorder_v1_dispatch_proto_goTypes = []any{
-	(*AssignRouteRequest)(nil),      // 0: salesorder.v1.AssignRouteRequest
-	(*AssignRouteResponse)(nil),     // 1: salesorder.v1.AssignRouteResponse
-	(*ConfirmDispatchRequest)(nil),  // 2: salesorder.v1.ConfirmDispatchRequest
-	(*DispatchItemResult)(nil),      // 3: salesorder.v1.DispatchItemResult
-	(*ConfirmDispatchResponse)(nil), // 4: salesorder.v1.ConfirmDispatchResponse
-	(*CancelDispatchRequest)(nil),   // 5: salesorder.v1.CancelDispatchRequest
-	(*CancelDispatchResponse)(nil),  // 6: salesorder.v1.CancelDispatchResponse
+	(*WatchBoardRequest)(nil),       // 0: salesorder.v1.WatchBoardRequest
+	(*BoardEvent)(nil),              // 1: salesorder.v1.BoardEvent
+	(*AssignRouteRequest)(nil),      // 2: salesorder.v1.AssignRouteRequest
+	(*AssignRouteResponse)(nil),     // 3: salesorder.v1.AssignRouteResponse
+	(*ConfirmDispatchRequest)(nil),  // 4: salesorder.v1.ConfirmDispatchRequest
+	(*DispatchItemResult)(nil),      // 5: salesorder.v1.DispatchItemResult
+	(*ConfirmDispatchResponse)(nil), // 6: salesorder.v1.ConfirmDispatchResponse
+	(*CancelDispatchRequest)(nil),   // 7: salesorder.v1.CancelDispatchRequest
+	(*CancelDispatchResponse)(nil),  // 8: salesorder.v1.CancelDispatchResponse
 }
 var file_salesorder_v1_dispatch_proto_depIdxs = []int32{
-	3, // 0: salesorder.v1.ConfirmDispatchResponse.items:type_name -> salesorder.v1.DispatchItemResult
-	0, // 1: salesorder.v1.DispatchService.AssignRoute:input_type -> salesorder.v1.AssignRouteRequest
-	2, // 2: salesorder.v1.DispatchService.ConfirmDispatch:input_type -> salesorder.v1.ConfirmDispatchRequest
-	5, // 3: salesorder.v1.DispatchService.CancelDispatch:input_type -> salesorder.v1.CancelDispatchRequest
-	1, // 4: salesorder.v1.DispatchService.AssignRoute:output_type -> salesorder.v1.AssignRouteResponse
-	4, // 5: salesorder.v1.DispatchService.ConfirmDispatch:output_type -> salesorder.v1.ConfirmDispatchResponse
-	6, // 6: salesorder.v1.DispatchService.CancelDispatch:output_type -> salesorder.v1.CancelDispatchResponse
-	4, // [4:7] is the sub-list for method output_type
-	1, // [1:4] is the sub-list for method input_type
+	5, // 0: salesorder.v1.ConfirmDispatchResponse.items:type_name -> salesorder.v1.DispatchItemResult
+	2, // 1: salesorder.v1.DispatchService.AssignRoute:input_type -> salesorder.v1.AssignRouteRequest
+	4, // 2: salesorder.v1.DispatchService.ConfirmDispatch:input_type -> salesorder.v1.ConfirmDispatchRequest
+	7, // 3: salesorder.v1.DispatchService.CancelDispatch:input_type -> salesorder.v1.CancelDispatchRequest
+	0, // 4: salesorder.v1.DispatchService.WatchBoard:input_type -> salesorder.v1.WatchBoardRequest
+	3, // 5: salesorder.v1.DispatchService.AssignRoute:output_type -> salesorder.v1.AssignRouteResponse
+	6, // 6: salesorder.v1.DispatchService.ConfirmDispatch:output_type -> salesorder.v1.ConfirmDispatchResponse
+	8, // 7: salesorder.v1.DispatchService.CancelDispatch:output_type -> salesorder.v1.CancelDispatchResponse
+	1, // 8: salesorder.v1.DispatchService.WatchBoard:output_type -> salesorder.v1.BoardEvent
+	5, // [5:9] is the sub-list for method output_type
+	1, // [1:5] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
@@ -563,7 +709,7 @@ func file_salesorder_v1_dispatch_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_salesorder_v1_dispatch_proto_rawDesc), len(file_salesorder_v1_dispatch_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
