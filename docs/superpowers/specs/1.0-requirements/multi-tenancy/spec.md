@@ -54,7 +54,7 @@
 
 ### Requirement: 公司識別與公開資訊管理
 
-系統 SHALL 提供公司識別欄位（`logo_url`、`primary_color`、`display_name`）與公開資訊欄位（`public_email`、`public_phone`、`public_address`、`terms_url`、`privacy_url` 等），供登入頁、Web 側邊欄頂部、App 首頁與關於我們頁面、單據表頭（PDF）依登入使用者所屬公司動態呈現。僅 `super` 與 `company_admin` SHALL 可編輯所屬公司的識別與公開資訊；僅 `super` SHALL 可上傳或更換 Logo 圖檔。
+系統 SHALL 提供公司識別欄位（`logo_url`、`primary_color`、`display_name`）與公開資訊欄位（`public_email`、`public_phone`、`public_address`、`terms_url`、`privacy_url` 等），供登入頁、Web 側邊欄頂部、App 首頁與關於我們頁面、單據表頭（PDF）依登入使用者所屬公司動態呈現。僅 `super` 與 `company_admin` SHALL 可編輯所屬公司的識別與公開資訊；其中 **`company_admin` SHALL 可上傳或更換所屬公司的 Logo 圖檔，`super` 不經此端點**（平台方不代管租戶資產）。
 
 #### Scenario: 依公司動態呈現識別資訊
 
@@ -71,7 +71,8 @@
 
 - **WHEN** `dept_admin` / `staff` 嘗試編輯公司識別或公開資訊
 - **THEN** 系統拒絕該操作
-- **AND** `company_admin` 嘗試上傳或更換 Logo 圖檔時，系統同樣拒絕（僅 `super` 可上傳 Logo）
+- **AND** `dept_admin` / `staff` / `super` 嘗試上傳或更換 Logo 圖檔時，系統同樣拒絕（僅 `company_admin` 可上傳所屬公司 Logo）
+- **AND** `company_admin` 對其他公司嘗試上傳 Logo 時，系統回報該公司不存在（不洩漏存在與否）
 
 ### Requirement: 客戶編號前綴維護
 

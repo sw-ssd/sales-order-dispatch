@@ -242,20 +242,21 @@ decisions: [D3, D4, D5, D6, D7, D8, D9, D10, D17, D18, D20, D21]
   - Update: `backend/internal/domain/files`(file_assets repository,若 Phase 3 檔案 domain 尚未建立,先於此建立最小寫入能力)
 - **介面**: REST `POST /api/v1/companies/{company_id}/logo`(multipart 上傳;REST 保留用於檔案上傳,D4)→ 回傳 file_asset_id 與 url。
 - **實作邏輯**:
-  1. 權限:僅 `super` 可上傳/更換 Logo(規格 3.1.1);`company_admin` 可編輯其他識別欄位但 Logo 上傳回 `permission_denied`。
+  1. 權限:`company_admin` 可上傳/更換**所屬公司**的 Logo(規格 3.1.1 修訂);`super`、`dept_admin`、`staff` 一律回 `permission_denied`(平台方不代管租戶資產);`company_admin` 對其他公司上傳回 `not_found`(不洩漏存在與否)。
   2. 白名單雙重檢查(D17):僅接受 jpeg / png / webp 且 ≤ 5 MB;先驗副檔名,再讀檔頭 magic bytes 驗證實際格式,兩者皆通過才落碟;任一不符回 `invalid_argument`。
   3. 檔案寫入本地儲存路徑後,開 DB 交易:建立 `file_assets` 記錄(`owner_type` = company、`owner_id` = company_id、`storage_path`、`url`、`mime_type`、`size_bytes`、`created_by`)+ 更新 `companies.logo_url` + 寫 `audit_logs`;交易失敗時清除已落碟檔案,避免孤兒檔。
   4. 舊 Logo 的 `file_assets` 記錄保留(歷史可查),`logo_url` 指向新檔;1.0 不主動清除舊檔。
   5. `company_id` 必須存在且未軟刪除,否則 `not_found`。
 - **錯誤處理**:
-  - 非 `super` 上傳 → `permission_denied`
+  - 非 `company_admin`(含 `super`)上傳 → `permission_denied`
   - 未認證 → `unauthenticated`
   - 格式不符、magic bytes 不符、超過 5 MB → `invalid_argument`
-  - company_id 不存在 → `not_found`
+  - company_id 不存在、非所屬公司、已軟刪 → `not_found`
 - **驗收**:
-  - [ ] `super` 上傳合法圖檔後 `companies.logo_url` 更新,`file_assets` 有對應記錄且可經 url 下載。
+  - [ ] `company_admin` 上傳合法圖檔後 `companies.logo_url` 更新,`file_assets` 有對應記錄且回傳的 url 可實際下載(200)。
   - [ ] 偽造副檔名(如 exe 改名 png)被 magic bytes 檢查擋下。
-  - [ ] `company_admin` 上傳 Logo 回 `permission_denied`。
+  - [ ] `super` / `dept_admin` / `staff` 上傳 Logo 回 `permission_denied`。
+  - [ ] `company_admin` 對**存在的他公司**與**不存在的公司**上傳皆回 `not_found`(同形,不洩漏存在與否)。
   - [ ] DB 交易失敗時不殘留孤兒檔案。
 
 ### 子功能 2.4.2: UpdateBranding / UpdatePublicInfo

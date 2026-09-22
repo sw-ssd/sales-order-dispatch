@@ -113,7 +113,7 @@ sales-order-1.0/
 - **公司識別標識**：Logo 圖檔 URL、主色碼（primary color）、公司簡稱/英文名稱。
 - **公開資訊**：公司電話、地址、Email、統一編號、營業時間、隱私權政策連結、服務條款連結等。
 - **顯示場景**：登入頁、Web 側邊欄頂部、App 首頁與關於我們頁面、單據表頭（PDF）。
-- 僅 `super` 與 `company_admin` 可編輯所屬公司識別與公開資訊；`super` 可上傳/更換 Logo 檔案。
+- 僅 `super` 與 `company_admin` 可編輯所屬公司識別與公開資訊；其中 `company_admin` 可上傳/更換所屬公司的 Logo 檔案（`super` 不經此端點——平台方不代管租戶資產，見 spec 3.1.1 修訂）。
 
 ### 3.2 角色定義
 
@@ -410,7 +410,7 @@ sales-order-1.0/
 |---|---|---|
 | Dashboard | 今日待出貨、待處理訂單數量、快速連結 | 全部 |
 | 公司管理 | CRUD 公司 | super |
-| 公司識別設定 | 上傳 Logo、設定主色、公開資訊 | super / company_admin |
+| 公司識別設定 | 上傳 Logo（**僅 `company_admin`**，見 3.1.1）、設定主色、公開資訊 | super / company_admin |
 | 部門管理 | CRUD 部門 | super |
 | 管理人員名單 | 使用者 CRUD、角色指派、停用、強制登出 | super / company_admin / dept_admin（依範圍） |
 | 角色權限設置 | 角色 CRUD（自訂角色）、功能權限（resource × action）編輯；內建角色與權限為預設值 | super / company_admin（限自己公司） |

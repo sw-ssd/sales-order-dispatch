@@ -15,7 +15,7 @@
 | 1 | Company schema 擴充 + CompanyService CRUD + 唯一性 + 停用連鎖 | ✅ 完成（2026-09-18, A2）| `internal/services/company_service.go`（CRUD + status 變更稽核 D18）＋ `server.go` identityFor/middleware 阻斷（2.1.3）|
 | 2 | 部門管理 API | ✅ 完成 | `company_service.go`（Department CRUD）、`ent/schema/department.go` |
 | 3 | 使用者 CRUD + 角色指派 + 停用 + ForceLogout | 🟡 部分 | `user_service.go`、`user.proto`；AssignRole/Deactivate/ForceLogout 含 D18 稽核 + tv+1；主帳號連鎖(D22)待 Phase 3 |
-| 4 | Logo/Branding/PublicInfo/公開發現端點 | 🟡 部分 | PublicInfo 欄位序列化已做；Logo 上傳已落地（2026-09-22：`fileassets.logo`＋`GET /me`＋Web 上傳/側邊欄顯示）；殘：UpdateBranding／公開發現端點 |
+| 4 | Logo/Branding/PublicInfo/公開發現端點 | 🟡 部分 | PublicInfo 欄位序列化已做；Logo 上傳已落地（2026-09-22：`fileassets.logo`＋`GET /me`＋Web 上傳/側邊欄顯示；權限為 **company_admin 限所屬公司**，spec 3.1.1 已同步修訂）；殘：UpdateBranding／公開發現端點 |
 | 5 | roles + role_permissions schema + RoleService CRUD | ✅ 完成 | `role_service.go`、migration `00003`、`role.proto` |
 | 6 | 功能權限矩陣 + GetAbility 表驅動 + RLS data_scope 注入 | 🟡 部分 | ability 表驅動已做；data_scope 注入待 |
 | 7 | Casbin policy 管理 API + 防鎖死 + ListGrouping | 🟡 部分 | 防鎖死/條件驗證已做；Casbin policy 管理 API 待 |
@@ -84,10 +84,10 @@
 - `company_service.go` — `PublicInfo` 欄位於 `companyToProto` 序列化（`structpb.NewStruct`）
 - `ent/schema/company.go` — `public_info`、`capabilities` 欄位
 
-**說明**：`public_info` / `capabilities` 欄位與序列化已就緒；**Logo 檔案上傳已落地（2026-09-22）**——`domain/fileassets/logo.go` REST `POST /api/v1/companies/{company_id}/logo`（僅 super、白名單副檔名＋magic bytes 三重驗證、檔記錄＋`companies.logo_url`＋稽核同交易、舊檔保留），`GET /api/v1/me` 回身分與公司品牌，Web 端 CompaniesPage 上傳對話框（僅 super 顯示）＋側邊欄 `BrandLogo` 顯示。**仍未含**：Branding（`UpdateBranding`）、公開發現端點（`/api/v1/companies/public/{identifier}`）。
+**說明**：`public_info` / `capabilities` 欄位與序列化已就緒；**Logo 檔案上傳已落地（2026-09-22）**——`domain/fileassets/logo.go` REST `POST /api/v1/companies/{company_id}/logo`（**company_admin 限所屬公司**、白名單副檔名＋magic bytes 三重驗證、檔記錄＋`companies.logo_url`＋稽核同交易、舊檔保留），`GET /api/v1/me` 回身分與公司品牌，Web 端 CompaniesPage 上傳對話框（company_admin 於本公司列顯示）＋側邊欄 `BrandLogo` 顯示。**仍未含**：Branding（`UpdateBranding`）、公開發現端點（`/api/v1/companies/public/{identifier}`）。
 
 - [x] **Step 1: PublicInfo/capabilities 欄位** — company schema + 序列化
-- [x] **Step 2: Logo 上傳** — FileStore（04 計畫）＋ `companies.logo_url` 更新（`fileassets.logo`；驗收見 04 計畫 Task 3.6 與 `logo_integration_test`：401/403/400/404/成功/軟刪六段）
+- [x] **Step 2: Logo 上傳** — FileStore（04 計畫）＋ `companies.logo_url` 更新（`fileassets.logo`；權限為 company_admin 限所屬公司，spec 3.1.1 已同步修訂；驗收見 04 計畫 Task 3.6 與 `logo_integration_test`：401／super 403／dept_admin 403／400／他公司與不存在皆 404／成功＋url 可下載／軟刪 404 八段）
 - [ ] **Step 3: 公開發現端點** — `/api/v1/companies/public/{identifier}`
 
 ---
