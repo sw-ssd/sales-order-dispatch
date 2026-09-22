@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@solidjs/testing-library";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type * as ConnectRpc from "@connectrpc/connect";
 import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
@@ -26,6 +26,9 @@ vi.mock("@connectrpc/connect", async (importOriginal) => ({
 }));
 
 import CompaniesPage from "./CompaniesPage";
+
+// 公司 Logo 上傳與 /me 身分查詢走原生 fetch（非 connect client），以全域替身攔截。
+const fetchMock = vi.fn();
 
 const EXISTING_COMPANY = {
   id: "c-1",
@@ -134,6 +137,28 @@ beforeEach(() => {
     companies: [EXISTING_COMPANY],
     pagination: { total: 1 },
   });
+
+  // /me（身分查詢，lib/me.ts）以全域 fetch 擋下：預設回 company_admin——上傳鈕不出現，
+  // 既有測試不被新 UI 打擾；Logo 上傳的 describe 在自己區塊內覆寫成 super。
+  fetchMock.mockReset();
+  fetchMock.mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      user_id: "5",
+      role: "company_admin",
+      company: { id: "c-1", name: "既有公司", logo_url: "" },
+    }),
+  });
+  vi.stubGlobal("fetch", fetchMock);
+
+  // jsdom 沒有 createObjectURL（只有真的挑選檔案的測試會走到）。
+  URL.createObjectURL ??= () => "blob:logo-preview";
+  URL.revokeObjectURL ??= () => {};
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe("<CompaniesPage> 公司 modal 表單", () => {
@@ -989,5 +1014,135 @@ describe("<CompaniesPage> 表頭排序（伺服器端）", () => {
     expect(sortedHeaderCells()).toHaveLength(0);
     expect(sortButton("名稱").textContent).not.toContain("▲");
     expect(sortButton("名稱").textContent).not.toContain("▼");
+  });
+});
+
+describe("<CompaniesPage> 公司 Logo 上傳", () => {
+  /** /me 回 super（上傳鈕入口）；其餘 fetch（/me 重查）也走同一實作。 */
+  function respondSuper() {
+    fetchMock.mockImplementation((url: unknown) => {
+      if (typeof url === "string" && /\/companies\/[^/]+\/logo$/.test(url)) {
+        return Promise.resolve({
+          ok: true,
+          status: 201,
+          json: async () => ({ id: 11, url: "/api/v1/files/new-logo/download" }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          user_id: "1",
+          role: "super",
+          company: { id: "c-1", name: "既有公司", logo_url: "" },
+        }),
+      });
+    });
+  }
+
+  it("入口顯示開關：super 看得到「上傳 Logo」", async () => {
+    respondSuper();
+    await renderPage();
+    await waitFor(() =>
+      expect(screen.getAllByRole("button", { name: "上傳 Logo" })).toHaveLength(1),
+    );
+  });
+
+  it("入口顯示開關：company_admin 看不到（顯示層隱藏；後端才是唯一決策者）", async () => {
+    // beforeEach 的預設 /me 就是 company_admin。
+    await renderPage();
+    await settle(); // 排空 /me 的微工作佇列——「看不到」必須在查詢 settled 之後斷言才有鑑別力
+    expect(screen.queryByRole("button", { name: "上傳 Logo" })).toBeNull();
+  });
+
+  it("上傳流程：選檔 → 預覽 → POST /companies/{id}/logo → 關閉對話框並失效清單", async () => {
+    respondSuper();
+    await renderPage();
+    const trigger = await waitFor(() => screen.getByRole("button", { name: "上傳 Logo" }));
+    fireEvent.click(trigger);
+    const dialog = await waitFor(() => screen.getByRole("dialog"));
+
+    const file = new File(["fake-png"], "logo.png", { type: "image/png" });
+    const input = within(dialog).getByLabelText(/圖檔/) as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [file] } });
+
+    // 預覽：object URL 的 img 出現後才可按上傳（未選檔時上傳鈕 disabled）。
+    await waitFor(() => expect(within(dialog).getByAltText("新 Logo 預覽")).toBeTruthy());
+
+    const uploadBtn = within(dialog).getByRole("button", { name: "上傳" }) as HTMLButtonElement;
+    expect(uploadBtn.disabled).toBe(false);
+    fireEvent.click(uploadBtn);
+
+    // 請求形狀：POST 到該公司的 logo 端點、body 是帶 file 的 FormData。
+    const call = await waitFor(() => {
+      const found = fetchMock.mock.calls.find(
+        (c) => typeof c[0] === "string" && /\/companies\/[^/]+\/logo$/.test(c[0]),
+      );
+      expect(found).toBeTruthy();
+      return found!;
+    });
+    expect(call[0]).toBe("/api/v1/companies/c-1/logo");
+    expect(call[1]?.method).toBe("POST");
+    expect(call[1]?.body).toBeInstanceOf(FormData);
+    expect((call[1]?.body as FormData).get("file")).toBeInstanceOf(File);
+
+    // 成功：對話框關閉，清單（companies）被失效重查。
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await waitFor(() => expect(listCompaniesSpy.mock.calls.length).toBeGreaterThan(1));
+  });
+
+  it("伺服器拒絕（403）：message 以 role=alert 顯示，對話框不關閉、不清單", async () => {
+    fetchMock.mockImplementation((url: unknown) => {
+      if (typeof url === "string" && /\/companies\/[^/]+\/logo$/.test(url)) {
+        return Promise.resolve({
+          ok: false,
+          status: 403,
+          json: async () => ({ code: "permission_denied", message: "缺少權限" }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        // 仍是 super：403 是「後端拒絕」的情境（前端顯示開關已放行）。
+        json: async () => ({
+          user_id: "5",
+          role: "super",
+          company: { id: "c-1", name: "既有公司", logo_url: "" },
+        }),
+      });
+    });
+    await renderPage();
+    const trigger = await waitFor(() => screen.getByRole("button", { name: "上傳 Logo" }));
+    fireEvent.click(trigger);
+    const dialog = await waitFor(() => screen.getByRole("dialog"));
+    const file = new File(["x"], "a.png", { type: "image/png" });
+    fireEvent.change(within(dialog).getByLabelText(/圖檔/), { target: { files: [file] } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "上傳" }));
+
+    const alert = await waitFor(() => screen.getByRole("alert"));
+    expect(alert.textContent).toContain("缺少權限");
+    expect(screen.getByRole("dialog")).toBeTruthy(); // 失敗不得關閉（錯誤要在上下文裡被看到）
+    expect(listCompaniesSpy).toHaveBeenCalledTimes(1); // 也不得失效重查
+  });
+
+  it("非白名單副檔名：本地拒絕（顯示訊息、不發任何 POST、上傳鈕維持 disabled）", async () => {
+    respondSuper();
+    await renderPage();
+    const trigger = await waitFor(() => screen.getByRole("button", { name: "上傳 Logo" }));
+    fireEvent.click(trigger);
+    const dialog = await waitFor(() => screen.getByRole("dialog"));
+    const file = new File(["MZ"], "evil.gif", { type: "image/gif" });
+    fireEvent.change(within(dialog).getByLabelText(/圖檔/), { target: { files: [file] } });
+
+    const alert = await waitFor(() => screen.getByRole("alert"));
+    expect(alert.textContent).toContain("僅接受 jpg");
+    expect(
+      (within(dialog).getByRole("button", { name: "上傳" }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    expect(
+      fetchMock.mock.calls.some(
+        (c) => typeof c[0] === "string" && /\/companies\/[^/]+\/logo$/.test(c[0]),
+      ),
+    ).toBe(false);
   });
 });

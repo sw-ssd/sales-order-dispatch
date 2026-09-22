@@ -36,6 +36,7 @@ import {
 } from "~/components/ui";
 import { batch, createEffect, createSignal, For, Show, type JSX } from "solid-js";
 import type { Company } from "~/lib/proto/salesorder/v1/company_pb";
+import { meQueryOptions } from "~/lib/me";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import { ListPagination } from "../components/ListPagination";
 import { ariaSort, createSortableHeaders } from "../components/SortableHeader";
@@ -198,6 +199,20 @@ export default function CompaniesPage() {
           >
             編輯
           </button>
+          {/* 顯示開關由 ["me"] 的 role 決定（Show 為獨立反應邊界：me 到達後不需重渲染整列）。 */}
+          <Show when={canUploadLogo()}>
+            <button
+              type="button"
+              onClick={() => {
+                setLogoTarget(info.row.original);
+                setLogoError(null);
+                setLogoOpen(true);
+              }}
+              class="ml-3 font-medium text-primary hover:underline"
+            >
+              上傳 Logo
+            </button>
+          </Show>
           <button
             type="button"
             onClick={() => remove(info.row.original)}
@@ -310,6 +325,80 @@ export default function CompaniesPage() {
   createEffect(() => {
     if (query.isFetching) setDeleteError(null);
   });
+
+  // Logo 上傳（規格 2.4.1：僅 super 可上傳/更換）。身分取自 `["me"]`——上傳鈕的**顯示**開關；
+  // 後端（fileassets logo handler）才是唯一決策者，company_admin 即使改出請求也會被 403 擋下。
+  const me = createQuery(() => meQueryOptions);
+  const canUploadLogo = () => me.data?.role === "super" || me.data?.role === "developer";
+
+  // 上傳對話框狀態：獨立於表單 dialog——這不是欄位表單，是檔案挑選 + 單一 POST。
+  const [logoOpen, setLogoOpen] = createSignal(false);
+  const [logoTarget, setLogoTarget] = createSignal<Company | null>(null);
+  const [logoFile, setLogoFile] = createSignal<File | null>(null);
+  // 預覽用的 object URL：不回收會佔記憶體到頁面卸載為止，故換檔與關閉都 revoke。
+  const [logoPreview, setLogoPreview] = createSignal<string | null>(null);
+  const [logoError, setLogoError] = createSignal<string | null>(null);
+  const [logoUploading, setLogoUploading] = createSignal(false);
+
+  /** 白名單與上限對齊後端 fileassets（副檔名先擋、magic bytes 由後端再驗）。 */
+  const LOGO_EXTS = [".jpg", ".jpeg", ".png", ".webp"];
+  const LOGO_MAX_BYTES = 5 * 1024 * 1024;
+
+  function closeLogoDialog() {
+    setLogoOpen(false);
+    const url = logoPreview();
+    if (url) URL.revokeObjectURL(url);
+    setLogoPreview(null);
+    setLogoFile(null);
+    setLogoError(null);
+    setLogoTarget(null);
+  }
+
+  function selectLogo(file: File | undefined) {
+    setLogoError(null);
+    if (!file) return;
+    const lower = file.name.toLowerCase();
+    if (!LOGO_EXTS.some((ext) => lower.endsWith(ext))) {
+      setLogoError("僅接受 jpg／png／webp 檔");
+      return;
+    }
+    if (file.size > LOGO_MAX_BYTES) {
+      setLogoError("檔案超過 5MB");
+      return;
+    }
+    const prev = logoPreview();
+    if (prev) URL.revokeObjectURL(prev);
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+  }
+
+  async function uploadLogo() {
+    const target = logoTarget();
+    const file = logoFile();
+    if (!target || !file || logoUploading()) return;
+    setLogoUploading(true);
+    setLogoError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/v1/companies/${target.id}/logo`, { method: "POST", body: fd });
+      if (!res.ok) {
+        // 錯誤協定與 Connect 同形（resterr）：message 是已渲染的繁中——權限錯誤直接照顯示，
+        // 不在前端改寫後端語意。
+        const body = (await res.json().catch(() => null)) as { message?: string } | null;
+        setLogoError(body?.message ?? "上傳失敗,請稍後再試");
+        return;
+      }
+      closeLogoDialog();
+      // 清單列的 logo_url 與側邊欄 /me 一起失效（兩份資料同一次變更）。
+      await client.invalidateQueries({ queryKey: ["companies"] });
+      await client.invalidateQueries({ queryKey: ["me"] });
+    } catch {
+      setLogoError("無法連線至伺服器,請確認後端服務已啟動");
+    } finally {
+      setLogoUploading(false);
+    }
+  }
 
   // 欄位值、欄位錯誤與提交狀態由 `createForm` 持有；驗證時機為 `onBlur` + `onSubmit`
   // （輸入過程不標紅），客戶端錯誤落在該欄下方。
@@ -637,6 +726,79 @@ export default function CompaniesPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Logo 上傳對話框（僅 super 顯示入口；關閉一律走 closeLogoDialog 以回收 object URL）。 */}
+      <Dialog
+        open={logoOpen()}
+        onOpenChange={(open) => {
+          if (!open) closeLogoDialog();
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>上傳 Logo</DialogTitle>
+            <DialogDescription>
+              更換「{logoTarget()?.name ?? ""}」的公司 Logo（jpg／png／webp，≤ 5MB）
+            </DialogDescription>
+          </DialogHeader>
+          <div class="space-y-3">
+            <Show when={logoTarget()?.logoUrl}>
+              {(url) => (
+                <div>
+                  <p class="text-sm text-muted-foreground">目前 Logo</p>
+                  <img
+                    src={url()}
+                    alt="目前 Logo"
+                    class="h-16 w-16 rounded border border-border object-contain"
+                  />
+                </div>
+              )}
+            </Show>
+            <Show when={logoPreview()}>
+              {(url) => (
+                <div>
+                  <p class="text-sm text-muted-foreground">預覽</p>
+                  <img
+                    src={url()}
+                    alt="新 Logo 預覽"
+                    class="h-16 w-16 rounded border border-border object-contain"
+                  />
+                </div>
+              )}
+            </Show>
+            <Field>
+              <FieldLabel for="company-logo-file">圖檔</FieldLabel>
+              <Input
+                id="company-logo-file"
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp"
+                onChange={(e) => selectLogo(e.currentTarget.files?.[0])}
+              />
+            </Field>
+            <Show when={logoError()}>
+              {(message) => (
+                <p
+                  class="rounded-lg bg-destructive/15 px-3 py-2 text-sm font-medium text-destructive"
+                  role="alert"
+                >
+                  {message()}
+                </p>
+              )}
+            </Show>
+          </div>
+          <DialogFooter>
+            <DialogClose class={buttonVariants({ variant: "outline" })}>取消</DialogClose>
+            <Button
+              type="button"
+              loading={logoUploading()}
+              disabled={!logoFile() || logoUploading()}
+              onClick={() => void uploadLogo()}
+            >
+              上傳
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </main>

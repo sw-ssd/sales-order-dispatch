@@ -15,7 +15,6 @@ import {
   ScrollText,
   ShieldCheck,
   Tags,
-  Truck,
   Undo2,
   UserCog,
   Users,
@@ -34,6 +33,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "~/components/ui";
+import BrandLogo from "./BrandLogo";
 
 /** 側邊欄可導向的路由：只列 router 實際註冊的路徑。 */
 export type NavRoute =
@@ -149,7 +149,7 @@ const Sidebar: Component<SidebarProps> = (props) => {
           to="/"
           class="group inline-flex items-center gap-2 overflow-hidden text-lg font-bold tracking-wide text-foreground"
         >
-          <Truck class="size-5 flex-none text-primary transition group-hover:scale-110" />
+          <BrandLogo />
           <span class="truncate group-data-[collapsible=icon]/sidebar:sr-only">
             多公司訂出貨系統
           </span>
