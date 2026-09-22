@@ -2,7 +2,7 @@
 
 > **性質**：原為目標型執行計畫（含內嵌目標程式碼）。經 2026-09-18 盤點（codebase-memory 知識圖譜 + git）重建，為**反映現況的執行計畫**。
 >
-> **狀態基準**：**2026-09-20 更新**（原 2026-09-18 盤點時本領域全未實作）。2026-09-18~19 已分批落地 3.1、3.2、3.3、3.4（**不含** 3.5 客戶專屬商品、3.6 檔案資產、3.8 QR）；下表為現況。
+> **狀態基準**：**2026-09-22 更新**（原 2026-09-18 盤點時本領域全未實作）。2026-09-18~22 已分批落地 3.1–3.6、3.8（含 3.5 客戶專屬商品後端＋Web、3.6 檔案資產後端、3.8 QR 後端）；下表為現況。
 >
 > **對應設計**：`docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（v1.0.34）、決策 `D7/D10/D12/D22`
 > **細部文件**：`docs/superpowers/plans/backend/detail/04-master-data.md`、共通規則 `detail/00-index.md` §3
@@ -20,11 +20,11 @@
 | 4 | 地址簿與聯絡人（細部 3.2.1–3.2.2） | ✅ 完成（2026-09-18；`customer_address_service.go`/`customer_contact_service.go`，00015）|
 | 5 | 商品三實體與單位換算（細部 3.3.1–3.3.3） | ✅ 完成（2026-09-19；`product_service.go`＋`domain/products/conversion.go`，00017）|
 | 6 | 倉別/車次/分切規格/分類 CRUD（細部 3.4.1–3.4.4） | ✅ 完成（2026-09-19；`masters.proto` 四 service 各 5 法＋restore，00016）|
-| 7 | 客戶專屬商品（細部 3.5.1–3.5.3） | ⬜ 未開始 |
-| 8 | 檔案資產（細部 3.6.1–3.6.3） | ⬜ 未開始（09-printing 的 FileStore 依賴此項）|
-| 9 | QR 簽章 token 與兌換端點（細部 3.8.1–3.8.2） | 🟡 部分（proto `AuthService.QRLogin` 已定；無 handler／簽章產生）|
+| 7 | 客戶專屬商品（細部 3.5.1–3.5.3） | ✅ 完成（2026-09-22；後端 `6bebf82`＋00033／00034、Web 對話框 `6192c13`）|
+| 8 | 檔案資產（細部 3.6.1–3.6.3） | 🟡 部分（後端 `1bb4c76`＋00035／00036 已落地、09-printing 已消費；Web 上傳頁與 02 Logo 消費面待）|
+| 9 | QR 簽章 token 與兌換端點（細部 3.8.1–3.8.2） | ✅ 完成（2026-09-22；`67ab31d` qrcode 簽章＋`QRLogin` 兌換＋`GetCustomerQRCode`；Web/App QR 畫面另案）|
 
-**實作範圍**：約 60%（Task 1–2、4–6 完成；3、9 部分；7、8 未開始）。殘項與後續見 `2026-09-19-backend-04-task34-dept-masters-plan.md` §已知缺口。
+**實作範圍**：約 90%（Task 1–2、4–7、9 完成；3、8 部分——殘：3.1.5 完整驗證與促銷連動（07-promo_tags）、Logo 上傳 Web 頁與消費面）。殘項與後續見 `2026-09-19-backend-04-task34-dept-masters-plan.md` §已知缺口。
 
 ---
 
@@ -37,7 +37,7 @@
 - `customer_products` 一客戶一商品一別名唯一；`default_qty = 0` 保留不顯示。
 - 所有主檔表帶 `company_id` / `department_id`，沿用 RLS 注入。
 
-## 待辦 Task 詳情
+## Task 詳情
 
 ### Task 1: customers schema 與 CRUD（細部 3.1.1–3.1.2）
 `customers` schema（公司/部門隸屬、送貨偏好）＋ CustomerService CRUD。
@@ -70,4 +70,4 @@ FileStore 本地儲存（白名單 + magic bytes）；跨 domain 共用（02 Log
 
 ---
 
-*最後更新：2026-09-20（3.1–3.4 已落地後對齊；殘項 3.5/3.6/3.8）*
+*最後更新：2026-09-22（3.5/3.6/3.8 落地後對齊；殘項 3.1.5 促銷連動、Logo 上傳 Web 頁與消費面）*
