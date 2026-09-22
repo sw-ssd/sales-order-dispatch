@@ -2,7 +2,7 @@
 
 > **性質**：原為目標型執行計畫（含內嵌目標程式碼）。經 2026-09-18 盤點（codebase-memory 知識圖譜 + git）重建，為**反映現況的執行計畫**。
 >
-> **狀態基準**：2026-09-18 盤點。**本計畫對應領域（通知/FCM）實際尚未實作**——ent/schema 無 notification 實體、internal 無 notifications 目錄、無 FCM 依賴（firebase）於目前 go.mod 實作、無 notification 相關 code。以下為保留的目標計畫架構，全數 ⬜ 未開始。
+> **狀態基準**：2026-09-22 實作對齊。後端已落地：四表 schema（00041）＋渲染＋通知中心（List／MarkRead／UnreadCount）＋DeviceService＋Sender／Failmark（FakeSender；FCM 實裝另案）＋三路觸發（下單／專屬／退貨審核）＋00042 RLS ENABLE＋FORCE；派車 adapter 待 08（`DispatchNotifier` 介面未定）；Web/App 頁待。以下保留目標架構供追溯。
 >
 > **對應設計**：`docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（v1.0.34）、決策 `D16/D23/D24`
 > **細部文件**：`docs/superpowers/plans/backend/detail/07-notifications.md`、共通規則 `detail/00-index.md` §3
@@ -14,14 +14,14 @@
 
 | Task | 內容 | 狀態 |
 |---|---|---|
-| 1 | notification_templates / notifications / user_devices schema + RLS（細部 4.3.1） | ⬜ 未開始 |
-| 2 | 範本渲染 + 通知記錄/已讀 API（細部 4.3.2–4.3.3） | ⬜ 未開始 |
-| 3 | DeviceService 註冊/註銷 + 失效 token 清理 + promo_tags（細部 4.3.4–4.3.5） | ⬜ 未開始 |
-| 4 | FCM client + 站內發送 + 失敗標記不重試（細部 4.4.1、4.4.2、4.4.5） | ⬜ 未開始 |
-| 5 | 通知路由 — 下單與專屬商品觸發（細部 4.4.3–4.4.4） | ⬜ 未開始 |
-| 6 | 派車通知 adapter（對接 08 `DispatchNotifier`） | ⬜ 未開始 |
+| 1 | notification_templates / notifications / user_devices schema + RLS（細部 4.3.1） | ✅ 完成（00041＋00042，白名單 32；另含 promo_tags 資料層） |
+| 2 | 範本渲染 + 通知記錄/已讀 API（細部 4.3.2–4.3.3） | ✅ 完成（後端；Web/App 頁待） |
+| 3 | DeviceService 註冊/註銷 + 失效 token 清理 + promo_tags（細部 4.3.4–4.3.5） | ✅ 完成（後端資料層＋裝置 API；CRUD/選群推播屬 Phase 7 Task 7.4） |
+| 4 | FCM client + 站內發送 + 失敗標記不重試（細部 4.4.1、4.4.2、4.4.5） | 🟡 部分（站內＋Failmark 已落地；FCM 實裝另案，Sender 介面已預留） |
+| 5 | 通知路由 — 下單與專屬商品觸發（細部 4.4.3–4.4.4） | ✅ 完成（另含退貨審核觸發） |
+| 6 | 派車通知 adapter（對接 08 `DispatchNotifier`） | ⬜ 未開始（待 08 介面） |
 
-**實作範圍**：0%（全部待辦）。
+**實作範圍**：後端約 85%（FCM 實裝＋派車 adapter＋Web/App 頁待）。
 
 ---
 
@@ -54,4 +54,4 @@ FCM Admin SDK client + 站內發送；提交後發送、失敗僅標 `failed` �
 
 ---
 
-*最後更新：2026-09-18（07-notifications 現況對齊重建；領域未實作）*
+*最後更新：2026-09-22（07-notifications 後端對齊；FCM 實裝＋派車 adapter 待）*

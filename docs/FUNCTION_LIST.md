@@ -200,16 +200,16 @@ flowchart TB
 | 退貨 | ✅（API） | ⬜ | ⬜ |
 | 派車看板 | ⬜ | ⬜ | — |
 | 列印 | ✅（API） | ⬜ | — |
-| 通知 / 公告 | ⬜ | ⬜ | ⬜ |
+| 通知 / 公告 | 🟡（通知後端約 85%；公告待） | ⬜ | ⬜ |
 | 稽核 | ✅（查詢 API） | ⬜ | — |
-| **RLS 租戶隔離（資料層）** | ✅（28 表 `ENABLE`+`FORCE`、請求層租戶交易；2026-09-22） | — | — |
+| **RLS 租戶隔離（資料層）** | ✅（32 表 `ENABLE`+`FORCE`、請求層租戶交易；2026-09-22） | — | — |
 
 ---
 
 ## 6. 技術特色（1.0）
 
 - **Connect-RPC 唯一 API**：proto `v1` 產生三端型別（D4）
-- **雙重授權**：OpenFGA 內嵌（`OPENFGA_ENABLED=true` fail-fast；role_permissions→tuple 供給，tuple 同步於 DB commit 後執行）＋ Casbin 執行層 fallback ＋ PostgreSQL **RLS 資料範圍（28 張業務表已 `ENABLE`+`FORCE`，2026-09-22；白名單探針 28 項；記錄類僅追加、業務實體 CRUD 全授）**；請求層租戶交易（`dbtenant`：每 unary RPC 一交易、`SET LOCAL app.*` 套 scope、稽核同交易 D18）＋ 服務層 role+scope（D33）
+- **雙重授權**：OpenFGA 內嵌（`OPENFGA_ENABLED=true` fail-fast；role_permissions→tuple 供給，tuple 同步於 DB commit 後執行）＋ Casbin 執行層 fallback ＋ PostgreSQL **RLS 資料範圍（32 張業務表已 `ENABLE`+`FORCE`，2026-09-22；白名單探針 32 項；記錄類僅追加、業務實體 CRUD 全授、通知範本/通知無 DELETE）**；請求層租戶交易（`dbtenant`：每 unary RPC 一交易、`SET LOCAL app.*` 套 scope、稽核同交易 D18）＋ 服務層 role+scope（D33） |
 - **認證雙軌**：Web 無證 session／App JWT+refresh＋token_version 撤銷（D5）
 - **樂觀鎖取號**：全部自增編號同事務取號（D7）
 - **不存金額**：訂單/明細/商品無金額（D12）
@@ -219,4 +219,4 @@ flowchart TB
 
 ---
 
-*最後更新：2026-09-22（backend 01/02/03/04/05/06 後端/09 全數落地＋RLS 28 表；全整合綠 ok=30 fail=0；前端 UI 四階段與表格/表單既有）*
+*最後更新：2026-09-22（backend 01/02/03/04/05/06/07 後端/09 全數落地＋RLS 32 表；全整合綠；前端 UI 四階段與表格/表單既有）*
