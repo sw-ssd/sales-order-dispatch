@@ -42,6 +42,7 @@ import { createSortableHeaders } from "../../users/components/SortableHeader";
 import { PAGE_SIZE } from "../../users/queries";
 import { customerClient, customersQueryOptions } from "../queries";
 import { customerSchema } from "../schemas";
+import AddressBookDialog from "../components/AddressBookDialog";
 
 /**
  * 客戶表格的 table 功能集：分頁 ＋ 排序（`manualSorting`，見下方 table）。
@@ -165,6 +166,17 @@ export default function CustomersPage() {
           >
             編輯
           </button>
+          <Show when={!info.row.original.deletedAt}>
+            {/* 地址簿/聯絡人是客戶的從屬資料：已刪除的客戶不給入口（後端 requireCustomer
+                也只認未刪除的客戶，放了只會是必定 404 的按鈕）。 */}
+            <button
+              type="button"
+              onClick={() => setBook(info.row.original)}
+              class="ml-3 font-medium text-primary hover:underline"
+            >
+              地址簿
+            </button>
+          </Show>
           <Show
             when={info.row.original.deletedAt}
             fallback={
@@ -254,6 +266,8 @@ export default function CustomersPage() {
   const [deleteError, setDeleteError] = createSignal<string | null>(null);
   // 建檔帳號交付（僅此一次；見 AccountDelivery 註解）。
   const [delivery, setDelivery] = createSignal<AccountDelivery | null>(null);
+  // 地址簿/聯絡人對話框的目標客戶（null＝關閉）。
+  const [book, setBook] = createSignal<Customer | null>(null);
   /**
    * 建立回應後、交付對話框開啟前的中轉（非渲染狀態）。
    *
@@ -569,6 +583,16 @@ export default function CustomersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 地址簿／聯絡人（04 3.2.1／3.2.2）：從列上開啟，與其他對話框不同時開
+          （同 OrdersPage「動作只掛在列上、詳情框唯讀」的慣例，避免對話框交接）。 */}
+      <AddressBookDialog
+        customer={book()}
+        open={book() !== null}
+        onOpenChange={(open) => {
+          if (!open) setBook(null);
+        }}
+      />
     </main>
   );
 }

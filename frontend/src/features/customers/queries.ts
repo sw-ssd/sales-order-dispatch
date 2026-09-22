@@ -106,3 +106,25 @@ export const customerDropdownQueryOptions = (params: CustomerDropdownParams) =>
   });
 
 export type { ListCustomersResponse };
+
+/**
+ * 地址簿／聯絡人清單查詢選項（`AddressBookDialog` 用）。
+ *
+ * 兩者的 `queryKey` 都掛在 `["customers", …]` 前綴下 → 任何客戶相關 mutation 之後
+ * 一句 `invalidateQueries({ queryKey: ["customers"] })` 就會一起重載（同 customers 慣例）。
+ * 兩支 RPC 都**不帶 `includeDeleted`**：軟刪除的地址/聯絡人在 3.2 是不可見的資料
+ * （只有 Restore 類 RPC 才會帶它），本頁不做「含已刪除」檢視。
+ */
+export const addressesQueryOptions = (customerId: string) =>
+  queryOptions({
+    queryKey: ["customers", "addresses", { customerId }],
+    placeholderData: (prev) => prev,
+    queryFn: () => customerClient.listAddresses({ customerId, includeDeleted: false }),
+  });
+
+export const contactsQueryOptions = (customerId: string) =>
+  queryOptions({
+    queryKey: ["customers", "contacts", { customerId }],
+    placeholderData: (prev) => prev,
+    queryFn: () => customerClient.listContacts({ customerId, includeDeleted: false }),
+  });
