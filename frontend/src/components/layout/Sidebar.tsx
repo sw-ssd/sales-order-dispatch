@@ -32,6 +32,7 @@ import {
 export type NavRoute =
   | "/"
   | "/customers"
+  | "/orders"
   | "/users/companies"
   | "/users/departments"
   | "/users/roles"
@@ -66,7 +67,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: "客戶總表", icon: Users, to: "/customers" },
       { label: "商品總表", icon: Package },
-      { label: "訂單管理", icon: ClipboardList },
+      { label: "訂單管理", icon: ClipboardList, to: "/orders" },
       { label: "派車規劃", icon: Route },
       { label: "單據列印", icon: Printer },
     ],

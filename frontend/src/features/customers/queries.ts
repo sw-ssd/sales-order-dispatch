@@ -1,5 +1,10 @@
 import { createClient } from "@connectrpc/connect";
-import { queryOptions } from "@tanstack/solid-query";
+import {
+  infiniteQueryOptions,
+  queryOptions,
+  type InfiniteData,
+  type QueryKey,
+} from "@tanstack/solid-query";
 import {
   CustomerService,
   type ListCustomersResponse,
@@ -53,6 +58,51 @@ export const customersQueryOptions = (params: CustomerListParams) =>
         sort: params.sort,
         desc: params.desc,
       }),
+  });
+
+/** 累積式客戶下拉（訂單頁「客戶」）每頁筆數：比清單的 20 筆大，減少「載入更多」次數。 */
+const CUSTOMER_DROPDOWN_PAGE_SIZE = 50;
+
+/** 客戶下拉查詢參數（全部參數都進 queryKey）。 */
+export interface CustomerDropdownParams {
+  keyword?: string;
+}
+
+/**
+ * 客戶下拉查詢選項（累積式）；`createInfiniteQuery(() => customerDropdownQueryOptions(params))`。
+ *
+ * `getNextPageParam` 以「已載入筆數 vs 總筆數」判斷是否還有下一頁；回 `undefined` 即
+ * `hasNextPage === false`。樣板 = `features/users/queries.ts` 的 `companyDropdownQueryOptions`。
+ */
+export const customerDropdownQueryOptions = (params: CustomerDropdownParams) =>
+  infiniteQueryOptions<
+    ListCustomersResponse,
+    Error,
+    InfiniteData<ListCustomersResponse>,
+    QueryKey,
+    number
+  >({
+    queryKey: [
+      "customers",
+      "options",
+      { pageSize: CUSTOMER_DROPDOWN_PAGE_SIZE, keyword: params.keyword },
+    ],
+    initialPageParam: 1,
+    placeholderData: (prev) => prev,
+    queryFn: ({ pageParam }) =>
+      customerClient.listCustomers({
+        page: pageParam,
+        pageSize: CUSTOMER_DROPDOWN_PAGE_SIZE,
+        keyword: params.keyword ?? "",
+        includeDeleted: false,
+        sort: "",
+        desc: false,
+      }),
+    getNextPageParam: (lastPage, allPages) =>
+      allPages.reduce((loaded, page) => loaded + page.customers.length, 0) <
+      Number(lastPage.pagination?.total ?? 0)
+        ? allPages.length + 1
+        : undefined,
   });
 
 export type { ListCustomersResponse };

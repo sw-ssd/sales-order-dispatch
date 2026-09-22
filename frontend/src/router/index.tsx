@@ -15,6 +15,7 @@ import DepartmentsPage from "~/features/users/pages/DepartmentsPage";
 import RolesPage from "~/features/users/pages/RolesPage";
 import UsersPage from "~/features/users/pages/UsersPage";
 import CustomersPage from "~/features/customers/pages/CustomersPage";
+import OrdersPage from "~/features/orders/pages/OrdersPage";
 import { requireAbility } from "~/lib/ability/guards";
 
 function HomePage() {
@@ -89,6 +90,13 @@ const customersRoute = createRoute({
   beforeLoad: requireAbility("read", "customer"),
 });
 
+const ordersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/orders",
+  component: OrdersPage,
+  beforeLoad: requireAbility("read", "sales_order"),
+});
+
 /**
  * 帳號／方案頁：租戶後台唯讀的權益卡片。
  *
@@ -122,6 +130,7 @@ const routeTree = rootRoute.addChildren([
   rolesRoute,
   usersRoute,
   customersRoute,
+  ordersRoute,
   accountRoute,
   ...devRoutes,
 ]);
