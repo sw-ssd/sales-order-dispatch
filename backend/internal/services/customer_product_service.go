@@ -157,6 +157,10 @@ func (s *CustomerProductService) AddCustomerProduct(ctx context.Context, req *co
 	if err != nil {
 		return nil, toConnectError(err)
 	}
+	// 通知觸發(4.4.4):推主責業務(無則 dept_admin);同交易建 pending + AfterCommit 發送。
+	if err := OnCustomerProductCreated(ctx, db, cid, did, custID, pid, cust.Name, alias); err != nil {
+		return nil, toConnectError(err)
+	}
 	return connect.NewResponse(&productsv1.AddCustomerProductResponse{Product: customerProductToProto(created)}), nil
 }
 

@@ -261,6 +261,11 @@ func (s *SalesOrderService) CreateOrder(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, toConnectError(err)
 	}
+	// 通知觸發(4.4.3):業務代客下單推子帳號;客戶自行下單不通知。
+	// 同交易建 pending + AfterCommit 發送;建檔失敗隨訂單回滾。
+	if err := OnOrderCreated(ctx, db, cid, did, custID, isCustomer, o.ID, orderNo, len(req.Msg.GetItems())); err != nil {
+		return nil, toConnectError(err)
+	}
 	return connect.NewResponse(&salesorderv1.CreateOrderResponse{Order: salesOrderToProto(created)}), nil
 }
 

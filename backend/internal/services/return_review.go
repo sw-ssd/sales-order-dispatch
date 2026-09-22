@@ -102,8 +102,10 @@ func (s *ReturnService) ReviewReturnRequest(ctx context.Context, req *connect.Re
 		return nil, toConnectError(err)
 	}
 	// 稽核 action 用 update(audit_logs.action 列舉無 review;decision 存 after.decision)。
-	// 推播掛點(07 未落地前僅留樁:交易提交後觸發 —— 目前無通知服務,故不註冊 AfterCommit;
-	// 07 落地時在此接 DispatchNotifier。刻意不靜默丟失:審核結果已由 audit 保證可查)。
+	// 通知觸發(4.7.5/D23):僅推發起帳號;同交易建 pending + AfterCommit 發送。
+	if err := OnReturnReviewed(ctx, db, cid, did, rr.CreatedByUserID, decision, reason, rr.ID); err != nil {
+		return nil, toConnectError(err)
+	}
 	return connect.NewResponse(&salesorderv1.ReviewReturnRequestResponse{
 		Id: strconv.Itoa(updated.ID), Status: decision,
 		ReviewedAt: now.Format(time.RFC3339),
