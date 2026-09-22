@@ -81,6 +81,22 @@ func isSuper(id authz.Identity) bool {
 	return id.Role == "super" || id.Role == "developer"
 }
 
+// tenantTx 開請求交易並把租戶 ctx 注入其中,回傳 tx 與租戶 ctx。呼叫端 defer tx.Rollback()
+// (提交後再 rollback 是 no-op),成功路徑才 Commit。
+//
+// 為什麼每一條 REST 路徑都必須經過這裡:file_assets / companies 等表在 00036 / 00028 之後是
+// ENABLE + FORCE ROW LEVEL SECURITY,而業務連線是 app_rw(非 superuser)——**沒有 SET LOCAL
+// app.* 的連線上任何查詢都只看到 0 列**。Connect RPC 由 dbtenant.Interceptor 開交易;REST 端點
+// 沒有 interceptor,漏開交易不會報錯,只會讓存在性檢查一律「查無」(download 404、checkOwner
+// 判定 owner 不存在),且在 superuser 連線的整合測試下完全看不出來。
+func (h *Handler) tenantTx(r *http.Request) (*ent.Tx, context.Context, error) {
+	tx, err := h.db.Tx(r.Context())
+	if err != nil {
+		return nil, nil, err
+	}
+	return tx, dbtenant.WithTenantTx(r.Context(), tx), nil
+}
+
 // upload 處理 multipart 上傳:需登入;owner 關聯驗證(存在+同租戶)。
 func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
 	id := authz.IdentityFrom(r.Context())
@@ -93,6 +109,8 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, r, err)
 		return
 	}
+	// 上限在讀取階段生效(同 logo:ParseMultipartForm 的參數只是記憶體門檻,超量會 spool 到暫存檔)。
+	r.Body = http.MaxBytesReader(w, r.Body, MaxPDFBytes+(1<<20))
 	if err := r.ParseMultipartForm(MaxPDFBytes + (1 << 20)); err != nil {
 		writeErr(w, r, errcode.SysInvalidArgument.Error(map[string]string{"field": "file"}))
 		return
@@ -114,14 +132,9 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
 	if declared == "" {
 		declared = mime.TypeByExtension(strings.ToLower(filepath.Ext(hdr.Filename)))
 	}
-	// owner 關聯驗證:存在且同租戶。
-	if err := h.checkOwner(r.Context(), cid, did, ownerType, ownerID); err != nil {
-		writeErr(w, r, err)
-		return
-	}
-	// 請求交易:DB 寫入與稽核同交易(比照 Connect 的 dbtenant.Interceptor;REST 無 interceptor,
-	// 此處手動開交易並注入 ctx;driver 裝飾器在 Tx(ctx) 內套用 RLS)。
-	tx, err := h.db.Tx(r.Context())
+	// 請求交易:owner 驗證、DB 寫入與稽核必須**同一條租戶交易**——owner 驗證在交易外查詢時,
+	// RLS 因無 app.* scope 而一律回 0 列(見 tenantTx 說明)。
+	tx, ctx, err := h.tenantTx(r)
 	if err != nil {
 		writeErr(w, r, errcode.SysInternal.Error(nil))
 		return
@@ -132,7 +145,11 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
 			_ = tx.Rollback()
 		}
 	}()
-	ctx := dbtenant.WithTenantTx(r.Context(), tx)
+	// owner 關聯驗證:存在且同租戶。
+	if err := h.checkOwner(ctx, tx.Client(), cid, did, ownerType, ownerID); err != nil {
+		writeErr(w, r, err)
+		return
+	}
 	saved, err := h.store.SaveUpload(ctx, id, cid, did, ownerType, ownerID, f, declared, hdr.Filename)
 	if err != nil {
 		writeErr(w, r, err)
@@ -150,10 +167,11 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
 }
 
 // checkOwner 驗 owner 存在且同租戶(公司/客戶/商品三類;其餘 owner_type 拒絕,避免孤兒關聯)。
-func (h *Handler) checkOwner(ctx context.Context, cid int, did *int, ownerType string, ownerID int) error {
+// db **必須是租戶交易內的 client**(RLS:交易外的查詢一律 0 列 → 誤判 owner 不存在)。
+func (h *Handler) checkOwner(ctx context.Context, db *ent.Client, cid int, did *int, ownerType string, ownerID int) error {
 	switch ownerType {
 	case "company":
-		ok, err := h.db.Company.Query().Where(company.ID(ownerID)).Exist(ctx)
+		ok, err := db.Company.Query().Where(company.ID(ownerID), company.DeletedAtIsNil()).Exist(ctx)
 		if err != nil {
 			return errcode.SysInternal.Wrap(err)
 		}
@@ -166,7 +184,7 @@ func (h *Handler) checkOwner(ctx context.Context, cid int, did *int, ownerType s
 		}
 		return nil
 	case "customer":
-		c, err := h.db.Customer.Query().
+		c, err := db.Customer.Query().
 			Where(customer.ID(ownerID), customer.DeletedAtIsNil()).Only(ctx)
 		if err != nil {
 			if ent.IsNotFound(err) {
@@ -179,7 +197,7 @@ func (h *Handler) checkOwner(ctx context.Context, cid int, did *int, ownerType s
 		}
 		return nil
 	case "product":
-		p, err := h.db.Product.Query().
+		p, err := db.Product.Query().
 			Where(product.ID(pidOf(ownerID)), product.DeletedAtIsNil()).Only(ctx)
 		if err != nil {
 			if ent.IsNotFound(err) {
@@ -211,12 +229,14 @@ func (h *Handler) download(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, r, err)
 		return
 	}
-	fid, err := parseActor(r.PathValue("id"))
+	// 查詢必須在租戶交易內(RLS:交易外一律 0 列 → 存在性檢查誤判為 404)。
+	tx, ctx, err := h.tenantTx(r)
 	if err != nil {
-		writeErr(w, r, notFound())
+		writeErr(w, r, errcode.SysInternal.Error(nil))
 		return
 	}
-	fa, err := scopeFileQuery(r.Context(), h.db, cid, did, fid)
+	fa, err := scopeFileQuery(ctx, tx.Client(), cid, did, r.PathValue("id"))
+	_ = tx.Rollback() // 唯讀:不 commit
 	if err != nil {
 		writeErr(w, r, notFound())
 		return
@@ -271,12 +291,7 @@ func (h *Handler) remove(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, r, err)
 		return
 	}
-	fid, err := parseActor(r.PathValue("id"))
-	if err != nil {
-		writeErr(w, r, notFound())
-		return
-	}
-	tx, err := h.db.Tx(r.Context())
+	tx, ctx, err := h.tenantTx(r)
 	if err != nil {
 		writeErr(w, r, errcode.SysInternal.Error(nil))
 		return
@@ -287,9 +302,8 @@ func (h *Handler) remove(w http.ResponseWriter, r *http.Request) {
 			_ = tx.Rollback()
 		}
 	}()
-	ctx := dbtenant.WithTenantTx(r.Context(), tx)
 	db := tx.Client()
-	fa, err := scopeFileQuery(ctx, db, cid, did, fid)
+	fa, err := scopeFileQuery(ctx, db, cid, did, r.PathValue("id"))
 	if err != nil {
 		writeErr(w, r, notFound())
 		return
@@ -312,9 +326,17 @@ func (h *Handler) remove(w http.ResponseWriter, r *http.Request) {
 }
 
 // scopeFileQuery 範圍內查檔(未刪);查無一律回 err(呼叫端轉 404,不洩漏存在性)。
-func scopeFileQuery(ctx context.Context, db *ent.Client, cid int, did *int, fid int) (*ent.FileAsset, error) {
-	q := db.FileAsset.Query().Where(fileasset.ID(fid), fileasset.DeletedAtIsNil(),
-		fileasset.CompanyIDEQ(cid))
+//
+// ref 為 {id} 路徑段:整數字串以 id 查,其餘視為系統檔名。**兩種形狀都必須支援** ——
+// file_assets.url 是 uuid 檔名(SaveUpload 與 print_helpers 都這樣寫),而列印 API 另以
+// 數字 id 組 download_url;呼叫端拿哪一種都必須服務得到,否則 DB 裡的 url 是指不到的。
+func scopeFileQuery(ctx context.Context, db *ent.Client, cid int, did *int, ref string) (*ent.FileAsset, error) {
+	q := db.FileAsset.Query().Where(fileasset.DeletedAtIsNil(), fileasset.CompanyIDEQ(cid))
+	if n, err := strconv.Atoi(ref); err == nil && n > 0 {
+		q = q.Where(fileasset.ID(n))
+	} else {
+		q = q.Where(fileasset.FilenameEQ(ref))
+	}
 	if did != nil {
 		q = q.Where(fileasset.Or(fileasset.DepartmentIDIsNil(), fileasset.DepartmentIDEQ(*did)))
 	}
