@@ -571,6 +571,7 @@ class ListOrdersRequest extends $pb.GeneratedMessage {
     $core.String? source,
     $core.String? keyword,
     $core.bool? includeDeleted,
+    $core.String? expectedDeliveryDate,
   }) {
     final result = ListOrdersRequest._();
     if (page != null) result.page = page;
@@ -580,6 +581,8 @@ class ListOrdersRequest extends $pb.GeneratedMessage {
     if (source != null) result.source = source;
     if (keyword != null) result.keyword = keyword;
     if (includeDeleted != null) result.includeDeleted = includeDeleted;
+    if (expectedDeliveryDate != null)
+      result.expectedDeliveryDate = expectedDeliveryDate;
     return result;
   }
 
@@ -603,6 +606,7 @@ class ListOrdersRequest extends $pb.GeneratedMessage {
     ..aOS(5, _omitFieldNames ? '' : 'source')
     ..aOS(6, _omitFieldNames ? '' : 'keyword')
     ..aOB(7, _omitFieldNames ? '' : 'includeDeleted')
+    ..aOS(8, _omitFieldNames ? '' : 'expectedDeliveryDate')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -689,6 +693,15 @@ class ListOrdersRequest extends $pb.GeneratedMessage {
   $core.bool hasIncludeDeleted() => $_has(6);
   @$pb.TagNumber(7)
   void clearIncludeDeleted() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.String get expectedDeliveryDate => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set expectedDeliveryDate($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasExpectedDeliveryDate() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearExpectedDeliveryDate() => $_clearField(8);
 }
 
 class ListOrdersResponse extends $pb.GeneratedMessage {

@@ -319,6 +319,13 @@ export declare type ListOrdersRequest = Message<"salesorder.v1.ListOrdersRequest
    * @generated from field: bool include_deleted = 7;
    */
   includeDeleted: boolean;
+
+  /**
+   * 可空(YYYY-MM-DD;派車看板依日篩選,見 dispatch spec)
+   *
+   * @generated from field: string expected_delivery_date = 8;
+   */
+  expectedDeliveryDate: string;
 };
 
 /**

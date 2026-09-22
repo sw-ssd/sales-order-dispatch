@@ -92,6 +92,15 @@ func (s *SalesOrderService) ListOrders(ctx context.Context, req *connect.Request
 			salesorder.NoteContainsFold(kw),
 		))
 	}
+	// 派車看板依日篩選(dispatch spec:看板僅顯示所選 expected_delivery_date 的訂單)。
+	// 與派車三 mutation 共用 parseBoardDate → 與 CreateOrder 的存值同為 UTC 午夜,精確 EQ 才不會 0 列。
+	if d := strings.TrimSpace(req.Msg.GetExpectedDeliveryDate()); d != "" {
+		day, err := parseBoardDate(d)
+		if err != nil {
+			return nil, err
+		}
+		q = q.Where(salesorder.ExpectedDeliveryDateEQ(day))
+	}
 	total, err := q.Clone().Count(ctx)
 	if err != nil {
 		return nil, toConnectError(err)

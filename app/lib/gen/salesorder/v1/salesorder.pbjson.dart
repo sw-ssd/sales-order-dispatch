@@ -129,6 +129,13 @@ const ListOrdersRequest$json = {
     {'1': 'source', '3': 5, '4': 1, '5': 9, '10': 'source'},
     {'1': 'keyword', '3': 6, '4': 1, '5': 9, '10': 'keyword'},
     {'1': 'include_deleted', '3': 7, '4': 1, '5': 8, '10': 'includeDeleted'},
+    {
+      '1': 'expected_delivery_date',
+      '3': 8,
+      '4': 1,
+      '5': 9,
+      '10': 'expectedDeliveryDate'
+    },
   ],
 };
 
@@ -137,7 +144,8 @@ final $typed_data.Uint8List listOrdersRequestDescriptor = $convert.base64Decode(
     'ChFMaXN0T3JkZXJzUmVxdWVzdBISCgRwYWdlGAEgASgFUgRwYWdlEhsKCXBhZ2Vfc2l6ZRgCIA'
     'EoBVIIcGFnZVNpemUSFgoGc3RhdHVzGAMgASgJUgZzdGF0dXMSHwoLY3VzdG9tZXJfaWQYBCAB'
     'KAlSCmN1c3RvbWVySWQSFgoGc291cmNlGAUgASgJUgZzb3VyY2USGAoHa2V5d29yZBgGIAEoCV'
-    'IHa2V5d29yZBInCg9pbmNsdWRlX2RlbGV0ZWQYByABKAhSDmluY2x1ZGVEZWxldGVk');
+    'IHa2V5d29yZBInCg9pbmNsdWRlX2RlbGV0ZWQYByABKAhSDmluY2x1ZGVEZWxldGVkEjQKFmV4'
+    'cGVjdGVkX2RlbGl2ZXJ5X2RhdGUYCCABKAlSFGV4cGVjdGVkRGVsaXZlcnlEYXRl');
 
 @$core.Deprecated('Use listOrdersResponseDescriptor instead')
 const ListOrdersResponse$json = {

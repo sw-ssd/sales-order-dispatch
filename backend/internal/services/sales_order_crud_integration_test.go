@@ -196,3 +196,98 @@ func TestIntegrationSalesOrderCRUD(t *testing.T) {
 	}
 	_ = salesorderevent.EventTypeEQ
 }
+
+// TestIntegrationListOrdersFiltersByDeliveryDate 派車看板依日篩選
+// (dispatch spec:看板僅顯示所選 expected_delivery_date 的訂單;日期為 YYYY-MM-DD、UTC 午夜精確比對)。
+func TestIntegrationListOrdersFiltersByDeliveryDate(t *testing.T) {
+	testsupport.RequiresContainer(t)
+	dsn := testsupport.Postgres(t)
+	migrateBusinessUp(t, dsn)
+	_, db := openPGEntClientFromGoose(t, dsn)
+	ctx := context.Background()
+	coID, deptID, custID, actorID, prodID := seedOrderCompany(t, ctx, db)
+	svc := NewSalesOrderService(db)
+
+	reqCtx := func() (context.Context, func()) {
+		tx, err := db.Tx(context.Background())
+		if err != nil {
+			t.Fatalf("開交易: %v", err)
+		}
+		id := authz.Identity{UserID: uItoa(actorID), CompanyID: uItoa(coID), DepartmentID: uItoa(deptID),
+			Role: "dept_admin", Roles: []string{"dept_admin", "staff"}}
+		c := authz.WithIdentity(context.Background(), id)
+		return dbtenant.WithTenantTx(c, tx), func() { _ = tx.Rollback() }
+	}
+	commit := func(c context.Context) {
+		tx, _ := dbtenant.TxFrom(c)
+		if err := tx.Commit(); err != nil {
+			t.Fatalf("提交: %v", err)
+		}
+	}
+
+	// 建兩筆不同預計出貨日的訂單。
+	byDate := map[string]string{}
+	for _, day := range []string{"2026-07-20", "2026-07-21"} {
+		c, fin := reqCtx()
+		res, err := svc.CreateOrder(c, connect.NewRequest(&salesorderv1.CreateOrderRequest{
+			CustomerId: uItoa(custID), Source: "W", ExpectedDeliveryDate: day,
+			Items: []*salesorderv1.OrderItemInput{
+				{ProductId: uItoa(prodID), DisplayName: "蘋果", Qty: "10", Unit: "斤"},
+			},
+		}))
+		if err != nil {
+			fin()
+			t.Fatalf("CreateOrder(%s): %v", day, err)
+		}
+		commit(c)
+		fin()
+		// 偏好送貨日陣列為空 → 不順延,回應日期即送入日期。
+		if got := res.Msg.GetOrder().GetExpectedDeliveryDate(); got != day {
+			t.Fatalf("建單後出貨日應為 %s,got %q", day, got)
+		}
+		byDate[day] = res.Msg.GetOrder().GetOrderNo()
+	}
+
+	list := func(date string) *salesorderv1.ListOrdersResponse {
+		c, fin := reqCtx()
+		defer fin()
+		res, err := svc.ListOrders(c, connect.NewRequest(&salesorderv1.ListOrdersRequest{
+			Page: 1, PageSize: 50, ExpectedDeliveryDate: date,
+		}))
+		if err != nil {
+			t.Fatalf("ListOrders(date=%q): %v", date, err)
+		}
+		return res.Msg
+	}
+
+	// 依日篩選:只回該日的 1 筆。
+	day1 := list("2026-07-20")
+	if day1.GetTotal() != 1 {
+		t.Fatalf("2026-07-20 應回 1 筆,got %d", day1.GetTotal())
+	}
+	if got := day1.GetOrders()[0].GetOrderNo(); got != byDate["2026-07-20"] {
+		t.Fatalf("回應應為 07-20 那筆 %q,got %q", byDate["2026-07-20"], got)
+	}
+	if got := day1.GetOrders()[0].GetExpectedDeliveryDate(); got != "2026-07-20" {
+		t.Fatalf("回應出貨日應為 2026-07-20,got %q", got)
+	}
+
+	// 第二日同理,證明清單沒有把兩日混回。
+	day2 := list("2026-07-21")
+	if day2.GetTotal() != 1 || day2.GetOrders()[0].GetOrderNo() != byDate["2026-07-21"] {
+		t.Fatalf("2026-07-21 應只回該日 1 筆,got total=%d order=%q",
+			day2.GetTotal(), day2.GetOrders()[0].GetOrderNo())
+	}
+
+	// 不帶日期 = 不加此條件 → 兩筆都在(證明代幣化 : 篩選是「加」上來的,不是預設開)。
+	all := list("")
+	if all.GetTotal() != 2 {
+		t.Fatalf("不帶日期應回 2 筆,got %d", all.GetTotal())
+	}
+
+	// 無該日訂單 → 0 筆(不是回錯,也不是忽略條件)。
+	empty := list("2026-07-22")
+	if empty.GetTotal() != 0 {
+		t.Fatalf("無訂單之日應回 0 筆,got %d", empty.GetTotal())
+	}
+}
