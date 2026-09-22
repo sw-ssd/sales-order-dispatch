@@ -71,7 +71,7 @@ flowchart TB
 | 層 | 實際已實作 | 待辦 |
 |---|---|---|
 | backend | AuthService（登入/refresh/logout/註冊完成/ChangePassword/ResetCustomerPassword）、AbilityService（OpenFGA proxy）、Company/Department（皆軟刪除）/RoleService、UserService（7 RPC＋範圍控制＋稽核）、MetadictService、AuditService.List、CustomerService（含地址/聯絡人＋QR 簽章/`GetCustomerQRCode`）、ProductService（含單位換算）、部門級四主檔（Warehouse/Route/ProcessingSpec/ProductCategory）、CustomerProductService、SalesOrderService（CRUD＋狀態機 `TransitionOrder`＋取號＋事件軌跡）、ReturnService（Create／List／Get／Review／GetCertificate）、PrintService（Preview/Print/ListLogs）、`domain/fileassets`（驗證＋儲存＋REST 上傳下載）、OpenFGA 內嵌＋Provision、Casbin 執行層、RLS 全站 28 表 `ENABLE`+`FORCE`（請求層租戶交易 `dbtenant`）、JWT/session/token_version、audit.Recorder 同事務、Gotenberg PDF 產線 | 通知、派車、fleet；Logo 上傳、CASL→OpenFGA 收斂 |
-| frontend | auth（Login 雙 tab/403/Google OIDC）、users（Company/Department/Roles/Users 四頁＋PermissionMatrix＋分頁＋表頭排序）、customers（清單/排序/關鍵字/含已刪除/軟刪除/帳號交付，`/customers`）、orders（清單/篩選/建單/編輯/詳情明細/事件軌跡/狀態轉移，`/orders`＋商品下拉）、products（清單/篩選/建單/編輯/單位換算/軟刪除，`/products`＋分類/倉別下拉）、dispatch（看板依日後端過濾＋車次欄 DnD 指派＋批次確認＋取消派車＋WatchBoard 訂閱，`/dispatch`）、masters（車次主檔清單/建立/編輯/停用/還原，`/masters/routes`）、printing（四種單據預覽/正式列印/紀錄查詢＋重印原因，`/printing`）、ability 守衛（`hasPermission` 權限集合，`@casl/ability` 已移除）、UI 元件庫（Ark UI × Tailkit 語意 token，14 元件＋registry＋demo）、app shell/sidebar/深色模式、TanStack Table（manual）＋solid-query 資料層、TanStack Form＋valibot 表單 | 地址簿/聯絡人、倉別/分類/分切規格主檔、退貨、通知/公告、稽核頁（後端 06/09 皆已落地）；Pixso 9 個未建畫面 |
+| frontend | auth（Login 雙 tab/403/Google OIDC）、users（Company/Department/Roles/Users 四頁＋PermissionMatrix＋分頁＋表頭排序）、customers（清單/排序/關鍵字/含已刪除/軟刪除/帳號交付，`/customers`）、orders（清單/篩選/建單/編輯/詳情明細/事件軌跡/狀態轉移，`/orders`＋商品下拉）、products（清單/篩選/建單/編輯/單位換算/軟刪除，`/products`＋分類/倉別下拉）、dispatch（看板依日後端過濾＋車次欄 DnD 指派＋批次確認＋取消派車＋WatchBoard 訂閱，`/dispatch`）、masters（車次主檔清單/建立/編輯/停用/還原，`/masters/routes`）、printing（四種單據預覽/正式列印/紀錄查詢＋重印原因，`/printing`）、returns（清單/狀態篩選/明細快照/核准駁回/退貨證明，`/returns`）、ability 守衛（`hasPermission` 權限集合，`@casl/ability` 已移除）、UI 元件庫（Ark UI × Tailkit 語意 token，14 元件＋registry＋demo）、app shell/sidebar/深色模式、TanStack Table（manual）＋solid-query 資料層、TanStack Form＋valibot 表單 | 地址簿/聯絡人、倉別/分類/分切規格主檔、通知/公告、稽核頁（通知 07 與稽核 API 後端已落地）；Pixso 剩餘未建畫面 |
 | app | 骨架、雙 flavor、auth（身分選擇/登入/token/connectrpc transport）、auto_route 路由表 | solidart/disco/fquery/Sembast 佈線、core/config/errors、快取鏡像、業務畫面（客戶/訂單/退貨/QR） |
 
 ---
@@ -129,10 +129,10 @@ flowchart TB
 
 | 功能 | 說明 | 適用端 | 狀態 |
 |------|------|------|:-:|
-| 退貨申請 | 客戶發起（歷史訂單/專屬並存） | App/後端 | ⬜ |
-| 業務審核 | approved/rejected、不修改原訂單 | Web/後端 | ⬜ |
-| 退貨證明 | GetCertificate 資料輸出 | 後端 | ⬜ |
-| 審核推播 | 通知發起帳號（D23） | 後端 | ⬜ |
+| 退貨申請 | 客戶發起（歷史訂單/專屬並存） | App/後端 | 🟡（後端 `CreateReturnRequest` 已落地；App 畫面待） |
+| 業務審核 | approved/rejected、不修改原訂單 | Web/後端 | ✅（後端 `ReviewReturnRequest` 樂觀鎖＋稽核；Web `549933c`） |
+| 退貨證明 | GetCertificate 資料輸出 | 後端 | ✅（唯讀快照，僅 approved 可出示） |
+| 審核推播 | 通知發起帳號（D23） | 後端 | 🟡（同交易建 pending＋提交後發送已接 07；FCM 發送仍為 Fake，實裝另案） |
 
 ### 4.5 派車看板（D13/D14）
 
@@ -197,7 +197,7 @@ flowchart TB
 | 客戶 / 地址 / 商品 / 部門級主檔 | ✅（API） | 🟡（客戶 `206192a`＋商品 `61feab2` Web 已落地；地址簿/部門級主檔待） | ⬜ |
 | 客戶專屬商品 / 檔案資產 | ✅（API） | ⬜ | ⬜ |
 | 銷售訂單 | ✅（API） | ✅（`6953b02`） | ⬜ |
-| 退貨 | ✅（API） | ⬜ | ⬜ |
+| 退貨 | ✅（API） | ✅（`549933c`） | ⬜ |
 | 派車看板 | 🟡（4 RPC＋WatchBoard 串流已落地；跨 replica Valkey pub/sub 與輪詢降級待） | ✅（`e3ed769`） | — |
 | 列印 | ✅（API） | ✅（`13c76f4`） | — |
 | 通知 / 公告 | 🟡（通知後端約 85%；公告待） | ⬜ | ⬜ |
