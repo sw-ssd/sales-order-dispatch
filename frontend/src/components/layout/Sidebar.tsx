@@ -11,6 +11,7 @@ import {
   Route,
   ShieldCheck,
   Truck,
+  UserCog,
   Users,
 } from "lucide-solid";
 import { For, Show, type Component } from "solid-js";
@@ -30,9 +31,11 @@ import {
 /** 側邊欄可導向的路由：只列 router 實際註冊的路徑。 */
 export type NavRoute =
   | "/"
+  | "/customers"
   | "/users/companies"
   | "/users/departments"
   | "/users/roles"
+  | "/users/users"
   | "/account";
 
 interface NavItem {
@@ -61,7 +64,7 @@ const NAV_SECTIONS: NavSection[] = [
   {
     heading: "營運",
     items: [
-      { label: "客戶總表", icon: Users },
+      { label: "客戶總表", icon: Users, to: "/customers" },
       { label: "商品總表", icon: Package },
       { label: "訂單管理", icon: ClipboardList },
       { label: "派車規劃", icon: Route },
@@ -74,6 +77,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: "公司", icon: Building2, to: "/users/companies" },
       { label: "部門", icon: Network, to: "/users/departments" },
       { label: "角色權限", icon: ShieldCheck, to: "/users/roles" },
+      { label: "使用者", icon: UserCog, to: "/users/users" },
     ],
   },
   {
