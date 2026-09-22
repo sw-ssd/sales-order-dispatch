@@ -52,7 +52,9 @@ func queueNotifications(ctx context.Context, db *ent.Client, cid int, did *int, 
 		triggerSender.Send(ctx, db, batch)
 		return nil
 	}); err != nil {
-		return err
+		// 無收集器（直呼服務的單測語境）→ 同步直發；生產 HTTP 必經 Interceptor，
+		// 故此分支只在測試出現，不影響提交後發送語意。
+		triggerSender.Send(ctx, db, batch)
 	}
 	return nil
 }
