@@ -37,6 +37,7 @@ import {
 import { batch, createEffect, createSignal, For, Show, type JSX } from "solid-js";
 import type { Company } from "~/lib/proto/salesorder/v1/company_pb";
 import { meQueryOptions } from "~/lib/me";
+import { API_BASE } from "~/lib/transport";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import { ListPagination } from "../components/ListPagination";
 import { ariaSort, createSortableHeaders } from "../components/SortableHeader";
@@ -199,8 +200,13 @@ export default function CompaniesPage() {
           >
             編輯
           </button>
-          {/* 顯示開關由 ["me"] 的 role 決定（Show 為獨立反應邊界：me 到達後不需重渲染整列）。 */}
-          <Show when={canUploadLogo()}>
+          {/* 顯示開關：company_admin 且該列是本家公司（後端 target != cid → 404 的同語意；
+              前端只做顯示，後端仍是唯一決策者）。Show 為獨立反應邊界，me 到達後不需重渲染整列。 */}
+          <Show
+            when={
+              me.data?.role === "company_admin" && me.data.company?.id === info.row.original.id
+            }
+          >
             <button
               type="button"
               onClick={() => {
@@ -326,10 +332,10 @@ export default function CompaniesPage() {
     if (query.isFetching) setDeleteError(null);
   });
 
-  // Logo 上傳（規格 2.4.1：僅 super 可上傳/更換）。身分取自 `["me"]`——上傳鈕的**顯示**開關；
-  // 後端（fileassets logo handler）才是唯一決策者，company_admin 即使改出請求也會被 403 擋下。
+  // Logo 上傳（規格 2.4.1／3.1.1：company_admin 上傳所屬公司 Logo）。身分取自 `["me"]`——
+  // 上傳鈕的**顯示**開關；後端（fileassets logo handler）才是唯一決策者，非 company_admin 或
+  // 他公司即使改出請求也會被 403／404 擋下。
   const me = createQuery(() => meQueryOptions);
-  const canUploadLogo = () => me.data?.role === "super" || me.data?.role === "developer";
 
   // 上傳對話框狀態：獨立於表單 dialog——這不是欄位表單，是檔案挑選 + 單一 POST。
   const [logoOpen, setLogoOpen] = createSignal(false);
@@ -381,7 +387,10 @@ export default function CompaniesPage() {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch(`/api/v1/companies/${target.id}/logo`, { method: "POST", body: fd });
+      const res = await fetch(`${API_BASE}/companies/${target.id}/logo`, {
+        method: "POST",
+        body: fd,
+      });
       if (!res.ok) {
         // 錯誤協定與 Connect 同形（resterr）：message 是已渲染的繁中——權限錯誤直接照顯示，
         // 不在前端改寫後端語意。

@@ -1,4 +1,5 @@
 import { queryOptions } from "@tanstack/solid-query";
+import { API_BASE } from "~/lib/transport";
 
 /** GET /api/v1/me 回應：session 身分與所屬公司品牌（後端 handlers.Me）。 */
 export interface Me {
@@ -17,7 +18,7 @@ export const meQueryOptions = queryOptions({
   queryKey: ["me"],
   staleTime: 60_000,
   queryFn: async (): Promise<Me | null> => {
-    const res = await fetch("/api/v1/me");
+    const res = await fetch(`${API_BASE}/me`);
     if (res.status === 401) return null;
     if (!res.ok) throw new Error(`me 查詢失敗: ${res.status}`);
     return (await res.json()) as Me;

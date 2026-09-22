@@ -138,15 +138,16 @@ beforeEach(() => {
     pagination: { total: 1 },
   });
 
-  // /me（身分查詢，lib/me.ts）以全域 fetch 擋下：預設回 company_admin——上傳鈕不出現，
-  // 既有測試不被新 UI 打擾；Logo 上傳的 describe 在自己區塊內覆寫成 super。
+  // /me（身分查詢，lib/me.ts）以全域 fetch 擋下：預設回 super——super 不是 Logo 上傳角色
+  // （見規格 3.1.1），上傳鈕不出現，既有測試不被新 UI 打擾；Logo 上傳的 describe
+  // 在自己區塊內覆寫成 company_admin。
   fetchMock.mockReset();
   fetchMock.mockResolvedValue({
     ok: true,
     status: 200,
     json: async () => ({
       user_id: "5",
-      role: "company_admin",
+      role: "super",
       company: { id: "c-1", name: "既有公司", logo_url: "" },
     }),
   });
@@ -1018,8 +1019,8 @@ describe("<CompaniesPage> 表頭排序（伺服器端）", () => {
 });
 
 describe("<CompaniesPage> 公司 Logo 上傳", () => {
-  /** /me 回 super（上傳鈕入口）；其餘 fetch（/me 重查）也走同一實作。 */
-  function respondSuper() {
+  /** /me 回 company_admin（上傳鈕入口）；其餘 fetch（/me 重查）也走同一實作。 */
+  function respondCompanyAdmin() {
     fetchMock.mockImplementation((url: unknown) => {
       if (typeof url === "string" && /\/companies\/[^/]+\/logo$/.test(url)) {
         return Promise.resolve({
@@ -1033,30 +1034,42 @@ describe("<CompaniesPage> 公司 Logo 上傳", () => {
         status: 200,
         json: async () => ({
           user_id: "1",
-          role: "super",
+          role: "company_admin",
           company: { id: "c-1", name: "既有公司", logo_url: "" },
         }),
       });
     });
   }
 
-  it("入口顯示開關：super 看得到「上傳 Logo」", async () => {
-    respondSuper();
+  it("入口顯示開關：company_admin 在自己公司那列看得到「上傳 Logo」", async () => {
+    respondCompanyAdmin();
     await renderPage();
     await waitFor(() =>
       expect(screen.getAllByRole("button", { name: "上傳 Logo" })).toHaveLength(1),
     );
   });
 
-  it("入口顯示開關：company_admin 看不到（顯示層隱藏；後端才是唯一決策者）", async () => {
-    // beforeEach 的預設 /me 就是 company_admin。
+  it("入口顯示開關：super 看不到（上傳權限為 company_admin 專屬，見規格 3.1.1）", async () => {
+    // beforeEach 的預設 /me 就是 super。
     await renderPage();
     await settle(); // 排空 /me 的微工作佇列——「看不到」必須在查詢 settled 之後斷言才有鑑別力
     expect(screen.queryByRole("button", { name: "上傳 Logo" })).toBeNull();
   });
 
+  it("入口顯示開關：company_admin 在他公司那一列看不到（後端 target != cid → 404 同語意）", async () => {
+    respondCompanyAdmin();
+    // 清單含另一家公司（super 視角或後端多回一列）：只有本家公司的列該有入口。
+    listCompaniesSpy.mockResolvedValue({
+      companies: [EXISTING_COMPANY, { ...EXISTING_COMPANY, id: "c-2", name: "他公司" }],
+      pagination: { total: 2 },
+    });
+    await renderPage();
+    await settle();
+    expect(screen.getAllByRole("button", { name: "上傳 Logo" })).toHaveLength(1);
+  });
+
   it("上傳流程：選檔 → 預覽 → POST /companies/{id}/logo → 關閉對話框並失效清單", async () => {
-    respondSuper();
+    respondCompanyAdmin();
     await renderPage();
     const trigger = await waitFor(() => screen.getByRole("button", { name: "上傳 Logo" }));
     fireEvent.click(trigger);
@@ -1103,10 +1116,11 @@ describe("<CompaniesPage> 公司 Logo 上傳", () => {
       return Promise.resolve({
         ok: true,
         status: 200,
-        // 仍是 super：403 是「後端拒絕」的情境（前端顯示開關已放行）。
+        // 仍是 company_admin：403 是「前端顯示開關已放行、後端仍拒絕」的情境
+        // （授權閘門／權限規則變更皆可能如此）。
         json: async () => ({
           user_id: "5",
-          role: "super",
+          role: "company_admin",
           company: { id: "c-1", name: "既有公司", logo_url: "" },
         }),
       });
@@ -1126,7 +1140,7 @@ describe("<CompaniesPage> 公司 Logo 上傳", () => {
   });
 
   it("非白名單副檔名：本地拒絕（顯示訊息、不發任何 POST、上傳鈕維持 disabled）", async () => {
-    respondSuper();
+    respondCompanyAdmin();
     await renderPage();
     const trigger = await waitFor(() => screen.getByRole("button", { name: "上傳 Logo" }));
     fireEvent.click(trigger);

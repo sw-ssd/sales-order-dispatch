@@ -70,4 +70,13 @@ describe("<BrandLogo>", () => {
     await meSettled(client);
     expect(document.querySelector("img")).toBeNull();
   });
+
+  it("Logo 圖檔載入失敗（onError）：退回預設圖示，不留破圖", async () => {
+    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => LOGO_ME });
+    mount();
+    await waitFor(() => expect(document.querySelector("img")).toBeTruthy());
+    document.querySelector("img")!.dispatchEvent(new Event("error"));
+    await waitFor(() => expect(document.querySelector("img")).toBeNull());
+    expect(document.querySelector("svg")).toBeTruthy(); // Truck fallback 接上
+  });
 });
