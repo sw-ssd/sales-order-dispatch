@@ -131,6 +131,7 @@ func (s *Server) mountAuth() {
 	services.RegisterSalesOrderService(apiMux, entClient)      // SalesOrderService(05 Task 4)
 	services.RegisterPrintService(apiMux, entClient)           // PrintService(09 Task 5.5.2-5.5.4)
 	services.RegisterReturnService(apiMux, entClient)          // ReturnService(06 Task 4.7.2-4.7.4)
+	services.RegisterNotificationService(apiMux, entClient)    // NotificationService(07 Task 4.3.3)
 	// 04 Task 3.6 檔案資產(REST:上傳/下載/軟刪除,掛同一 apiMux,與 Connect 路徑不衝突)。
 	fileassets.NewHandler(entClient, s.cfg.Storage.StorageRoot).RegisterRoutes(apiMux)
 	// T10/T10b 租戶端權益投影：租戶後台／App 的「我的方案與用量」。掛在 /api/v1 之下（租戶

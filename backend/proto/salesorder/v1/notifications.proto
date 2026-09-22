@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package salesorder.v1;
+option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1";
+
+import "salesorder/v1/common.proto";
+
+// NotificationService:通知中心(07 計畫 Task 4.3.3)。
+// 僅回傳當前使用者本人的通知;記錄不可刪除(規格 §5.4)。
+service NotificationService {
+  // ListNotifications:本人通知列表(分頁 per_page ≤ 100;unread_only 篩未讀)。
+  rpc ListNotifications(ListNotificationsRequest) returns (ListNotificationsResponse);
+  // MarkRead:標記已讀(僅本人;sent/pending → read;failed 不可轉;冪等)。
+  rpc MarkRead(MarkReadRequest) returns (MarkReadResponse);
+  // UnreadCount:未讀數(通知鈴角標輪詢)。
+  rpc UnreadCount(UnreadCountRequest) returns (UnreadCountResponse);
+}
+
+// NotificationView:通知單筆。
+message NotificationView {
+  string id = 1;
+  string channel = 2;
+  string title = 3;
+  string content = 4;
+  string payload = 5;    // JSON 字串
+  string status = 6;
+  string sent_at = 7;    // RFC3339(可空)
+  string read_at = 8;    // RFC3339(可空)
+  string created_at = 9; // RFC3339
+}
+
+// ListNotificationsRequest:列表請求。
+message ListNotificationsRequest {
+  bool unread_only = 1;
+  string channel = 2;  // 可空(fcm/in_app 過濾)
+  int32 page = 3;      // 1-based,預設 1
+  int32 page_size = 4; // 預設 20,上限 100
+}
+
+// ListNotificationsResponse:列表結果。
+message ListNotificationsResponse {
+  repeated NotificationView notifications = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  int32 total = 4;
+  int32 unread_count = 5;
+}
+
+// MarkReadRequest:已讀請求。
+message MarkReadRequest {
+  repeated string notification_ids = 1;
+}
+
+// MarkReadResponse:已讀結果。
+message MarkReadResponse {
+  int32 marked_count = 1;
+}
+
+// UnreadCountRequest:未讀數請求。
+message UnreadCountRequest {
+}
+
+// UnreadCountResponse:未讀數結果。
+message UnreadCountResponse {
+  int32 count = 1;
+}
