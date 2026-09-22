@@ -18,6 +18,7 @@ const RESOURCES = [
   "print",
   "dispatch",
   "accounting",
+  "return_request",
 ] as const;
 
 const ACTIONS = [
@@ -42,6 +43,7 @@ const RESOURCE_LABELS: Record<string, string> = {
   print: "列印",
   dispatch: "派車",
   accounting: "會計",
+  return_request: "退貨",
 };
 
 const ACTION_LABELS: Record<string, string> = {

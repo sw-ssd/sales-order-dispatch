@@ -21,7 +21,7 @@ message Role {
 
 // Permission:單一功能權限(resource × action;CASL ability 規則來源,對齊 role_permissions 表)。
 message Permission {
-  string resource = 1;    // 資源(sales_order / customer / product / user / company / department / role / print / dispatch / accounting)
+  string resource = 1;    // 資源(sales_order / customer / product / user / company / department / role / print / dispatch / accounting / return_request)
   string action = 2;      // create | read | update | delete | manage | print | dispatch | *
   google.protobuf.Struct conditions = 3; // CASL 條件(無條件為 null)
   bool inverted = 4;      // cannot 規則

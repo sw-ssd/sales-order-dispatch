@@ -110,7 +110,7 @@ func (x *Role) GetIsActive() bool {
 // Permission:單一功能權限(resource × action;CASL ability 規則來源,對齊 role_permissions 表)。
 type Permission struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Resource      string                 `protobuf:"bytes,1,opt,name=resource,proto3" json:"resource,omitempty"`                     // 資源(sales_order / customer / product / user / company / department / role / print / dispatch / accounting)
+	Resource      string                 `protobuf:"bytes,1,opt,name=resource,proto3" json:"resource,omitempty"`                     // 資源(sales_order / customer / product / user / company / department / role / print / dispatch / accounting / return_request)
 	Action        string                 `protobuf:"bytes,2,opt,name=action,proto3" json:"action,omitempty"`                         // create | read | update | delete | manage | print | dispatch | *
 	Conditions    *structpb.Struct       `protobuf:"bytes,3,opt,name=conditions,proto3" json:"conditions,omitempty"`                 // CASL 條件(無條件為 null)
 	Inverted      bool                   `protobuf:"varint,4,opt,name=inverted,proto3" json:"inverted,omitempty"`                    // cannot 規則

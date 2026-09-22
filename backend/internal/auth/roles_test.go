@@ -84,4 +84,16 @@ func TestBuiltinRolePermissionsContent(t *testing.T) {
 	if !has("customer", "sales_order", "read") || !has("customer", "product", "read") {
 		t.Error("customer 缺少 sales_order/product read")
 	}
+	// 退貨頁守衛(requireAbility("read","return_request"))的受眾契約:
+	// 員工看得到清單、staff 另有 write 才能審(canReview 再收斂到該客戶主責業務);
+	// customer 刻意不給 —— 客戶自助走 App,Web 端維持 403 指引(D25)。
+	if !has("staff", "return_request", "read") || !has("staff", "return_request", "write") {
+		t.Error("staff 缺少 return_request read/write(可看可審)")
+	}
+	if !has("dept_admin", "return_request", "read") || !has("company_admin", "return_request", "read") {
+		t.Error("dept_admin/company_admin 缺少 return_request read")
+	}
+	if has("customer", "return_request", "read") {
+		t.Error("customer 不應有 return_request read(Web 端維持 403)")
+	}
 }

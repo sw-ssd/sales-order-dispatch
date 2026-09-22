@@ -95,6 +95,15 @@ func TestIntegrationReturnReview(t *testing.T) {
 	if rv.Msg.GetStatus() != "approved" {
 		t.Fatalf("審後應為 approved,got %q", rv.Msg.GetStatus())
 	}
+	// 審後讀取須回填新版本:客戶端下一次審核的 expected_version 只能來自這裡
+	// (拿不到就只能猜常數,版本一旦非 0 即永久審不了)。
+	got, err := rpcRep.GetReturnRequest(ctx, connect.NewRequest(&salesorderv1.GetReturnRequestRequest{Id: rid}))
+	if err != nil {
+		t.Fatalf("審後 Get: %v", err)
+	}
+	if got.Msg.GetVersion() != "1" {
+		t.Fatalf("審後 Get version 應為 1,got %q", got.Msg.GetVersion())
+	}
 	// 重審 → 拒絕(非 pending)。
 	if _, err := rpcRep.ReviewReturnRequest(ctx, connect.NewRequest(&salesorderv1.ReviewReturnRequestRequest{
 		Id: rid, Decision: "rejected", RejectReason: "太晚", ExpectedVersion: "1",

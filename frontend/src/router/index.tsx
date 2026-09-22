@@ -20,6 +20,7 @@ import ProductsPage from "~/features/products/pages/ProductsPage";
 import DispatchPage from "~/features/dispatch/pages/DispatchPage";
 import RoutesPage from "~/features/masters/pages/RoutesPage";
 import PrintPage from "~/features/printing/pages/PrintPage";
+import ReturnsPage from "~/features/returns/pages/ReturnsPage";
 import { requireAbility } from "~/lib/ability/guards";
 
 function HomePage() {
@@ -108,6 +109,22 @@ const productsRoute = createRoute({
   beforeLoad: requireAbility("read", "product"),
 });
 
+/**
+ * 退貨管理：申請清單／明細審核／退貨證明（06，D25）。
+ *
+ * 守衛用 `read, "return_request"`：`return_request` 與本頁同批進 `rolePolicy`
+ * （company_admin/dept_admin `*`、staff `read`+`write`；customer 刻意不給 —— 客戶自助走
+ * App，Web 端維持 403 指引）。`ReturnService` 不在 `protectedRPC` 表內，實際授權落在
+ * handler：`deptScope`（清單/明細/證明）、`canReview`（staff 收斂到該客戶主責業務）與 RLS。
+ * **發起申請只有客戶子帳號能做**（`returnCustomerScope` 拒絕員工與主帳號），故本頁不提供建單。
+ */
+const returnsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/returns",
+  component: ReturnsPage,
+  beforeLoad: requireAbility("read", "return_request"),
+});
+
 const dispatchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/dispatch",
@@ -178,6 +195,7 @@ const routeTree = rootRoute.addChildren([
   customersRoute,
   ordersRoute,
   productsRoute,
+  returnsRoute,
   dispatchRoute,
   routesRoute,
   printRoute,

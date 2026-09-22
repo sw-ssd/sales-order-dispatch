@@ -181,6 +181,10 @@ func TestIntegrationReturnCreateListGet(t *testing.T) {
 	if gt.Msg.GetItems()[0].GetProductName() != "蘋果" {
 		t.Fatalf("快照品名應為 蘋果,got %q", gt.Msg.GetItems()[0].GetProductName())
 	}
+	// 樂觀鎖版本須由讀取端帶回(新申請 version=0;審核必帶 expected_version)。
+	if gt.Msg.GetVersion() != "0" {
+		t.Fatalf("新申請 version 應為 0,got %q", gt.Msg.GetVersion())
+	}
 	// 主帳號 Create → permission_denied。
 	rpcPri := newReturnServer(t, db, subIdentity(v, v.primary))
 	if _, err := rpcPri.CreateReturnRequest(ctx, connect.NewRequest(&salesorderv1.CreateReturnRequestRequest{

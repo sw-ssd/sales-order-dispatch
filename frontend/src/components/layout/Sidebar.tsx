@@ -12,6 +12,7 @@ import {
   Route,
   ShieldCheck,
   Truck,
+  Undo2,
   UserCog,
   Users,
 } from "lucide-solid";
@@ -34,6 +35,7 @@ export type NavRoute =
   | "/"
   | "/customers"
   | "/orders"
+  | "/returns"
   | "/products"
   | "/masters/routes"
   | "/printing"
@@ -73,6 +75,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: "客戶總表", icon: Users, to: "/customers" },
       { label: "商品總表", icon: Package, to: "/products" },
       { label: "訂單管理", icon: ClipboardList, to: "/orders" },
+      { label: "退貨管理", icon: Undo2, to: "/returns" },
       { label: "車次主檔", icon: Milestone, to: "/masters/routes" },
       { label: "派車規劃", icon: Route, to: "/dispatch" },
       { label: "單據列印", icon: Printer, to: "/printing" },

@@ -769,6 +769,7 @@ class GetReturnRequestResponse extends $pb.GeneratedMessage {
     $core.String? rejectReason,
     $core.String? createdAt,
     $core.Iterable<ReturnRequestItemView>? items,
+    $core.String? version,
   }) {
     final result = GetReturnRequestResponse._();
     if (id != null) result.id = id;
@@ -778,6 +779,7 @@ class GetReturnRequestResponse extends $pb.GeneratedMessage {
     if (rejectReason != null) result.rejectReason = rejectReason;
     if (createdAt != null) result.createdAt = createdAt;
     if (items != null) result.items.addAll(items);
+    if (version != null) result.version = version;
     return result;
   }
 
@@ -802,6 +804,7 @@ class GetReturnRequestResponse extends $pb.GeneratedMessage {
     ..aOS(6, _omitFieldNames ? '' : 'createdAt')
     ..pPM<ReturnRequestItemView>(7, _omitFieldNames ? '' : 'items',
         subBuilder: ReturnRequestItemView.$_createMessage)
+    ..aOS(8, _omitFieldNames ? '' : 'version')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -885,6 +888,18 @@ class GetReturnRequestResponse extends $pb.GeneratedMessage {
 
   @$pb.TagNumber(7)
   $pb.PbList<ReturnRequestItemView> get items => $_getList(6);
+
+  /// version:樂觀鎖版本(字串型別與 expected_version 同族,讀取後原樣回填即可)。
+  /// 審核必帶 expected_version,而版本只由後端遞增 —— 若讀取端拿不到它,客戶端只能猜常數,
+  /// 一旦版本不再是 0 就再也審不了(且無從得知新值)。
+  @$pb.TagNumber(8)
+  $core.String get version => $_getSZ(7);
+  @$pb.TagNumber(8)
+  set version($core.String value) => $_setString(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasVersion() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearVersion() => $_clearField(8);
 }
 
 /// ReviewReturnRequestRequest:審核請求。

@@ -361,6 +361,8 @@ func (s *ReturnService) GetReturnRequest(ctx context.Context, req *connect.Reque
 		Id: strconv.Itoa(rr.ID), CustomerId: strconv.Itoa(rr.CustomerID),
 		Status: rr.Status, Remark: rr.Remark, RejectReason: rr.RejectReason,
 		CreatedAt: rr.CreatedAt.Format(time.RFC3339),
+		// 樂觀鎖:ReviewReturnRequest 必帶 expected_version,讀取端須能拿到當前版本。
+		Version: strconv.Itoa(rr.Version),
 	}
 	for _, it := range items {
 		v := &salesorderv1.ReturnRequestItemView{

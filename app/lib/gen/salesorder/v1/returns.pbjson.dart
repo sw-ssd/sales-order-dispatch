@@ -197,6 +197,7 @@ const GetReturnRequestResponse$json = {
       '6': '.salesorder.v1.ReturnRequestItemView',
       '10': 'items'
     },
+    {'1': 'version', '3': 8, '4': 1, '5': 9, '10': 'version'},
   ],
 };
 
@@ -206,7 +207,8 @@ final $typed_data.Uint8List getReturnRequestResponseDescriptor = $convert.base64
     'lkGAIgASgJUgpjdXN0b21lcklkEhYKBnN0YXR1cxgDIAEoCVIGc3RhdHVzEhYKBnJlbWFyaxgE'
     'IAEoCVIGcmVtYXJrEiMKDXJlamVjdF9yZWFzb24YBSABKAlSDHJlamVjdFJlYXNvbhIdCgpjcm'
     'VhdGVkX2F0GAYgASgJUgljcmVhdGVkQXQSOgoFaXRlbXMYByADKAsyJC5zYWxlc29yZGVyLnYx'
-    'LlJldHVyblJlcXVlc3RJdGVtVmlld1IFaXRlbXM=');
+    'LlJldHVyblJlcXVlc3RJdGVtVmlld1IFaXRlbXMSGAoHdmVyc2lvbhgIIAEoCVIHdmVyc2lvbg'
+    '==');
 
 @$core.Deprecated('Use reviewReturnRequestRequestDescriptor instead')
 const ReviewReturnRequestRequest$json = {

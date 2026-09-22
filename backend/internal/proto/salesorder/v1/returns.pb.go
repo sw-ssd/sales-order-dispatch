@@ -567,14 +567,18 @@ func (x *GetReturnRequestRequest) GetId() string {
 
 // GetReturnRequestResponse:單筆結果。
 type GetReturnRequestResponse struct {
-	state         protoimpl.MessageState   `protogen:"open.v1"`
-	Id            string                   `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	CustomerId    string                   `protobuf:"bytes,2,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
-	Status        string                   `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
-	Remark        string                   `protobuf:"bytes,4,opt,name=remark,proto3" json:"remark,omitempty"`
-	RejectReason  string                   `protobuf:"bytes,5,opt,name=reject_reason,json=rejectReason,proto3" json:"reject_reason,omitempty"`
-	CreatedAt     string                   `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	Items         []*ReturnRequestItemView `protobuf:"bytes,7,rep,name=items,proto3" json:"items,omitempty"`
+	state        protoimpl.MessageState   `protogen:"open.v1"`
+	Id           string                   `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	CustomerId   string                   `protobuf:"bytes,2,opt,name=customer_id,json=customerId,proto3" json:"customer_id,omitempty"`
+	Status       string                   `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	Remark       string                   `protobuf:"bytes,4,opt,name=remark,proto3" json:"remark,omitempty"`
+	RejectReason string                   `protobuf:"bytes,5,opt,name=reject_reason,json=rejectReason,proto3" json:"reject_reason,omitempty"`
+	CreatedAt    string                   `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Items        []*ReturnRequestItemView `protobuf:"bytes,7,rep,name=items,proto3" json:"items,omitempty"`
+	// version:樂觀鎖版本(字串型別與 expected_version 同族,讀取後原樣回填即可)。
+	// 審核必帶 expected_version,而版本只由後端遞增 —— 若讀取端拿不到它,客戶端只能猜常數,
+	// 一旦版本不再是 0 就再也審不了(且無從得知新值)。
+	Version       string `protobuf:"bytes,8,opt,name=version,proto3" json:"version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -656,6 +660,13 @@ func (x *GetReturnRequestResponse) GetItems() []*ReturnRequestItemView {
 		return x.Items
 	}
 	return nil
+}
+
+func (x *GetReturnRequestResponse) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
 }
 
 // ReviewReturnRequestRequest:審核請求。
@@ -982,7 +993,7 @@ const file_salesorder_v1_returns_proto_rawDesc = "" +
 	"\n" +
 	"photo_urls\x18\b \x03(\tR\tphotoUrls\")\n" +
 	"\x17GetReturnRequestRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"\xfb\x01\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"\x95\x02\n" +
 	"\x18GetReturnRequestResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vcustomer_id\x18\x02 \x01(\tR\n" +
@@ -992,7 +1003,8 @@ const file_salesorder_v1_returns_proto_rawDesc = "" +
 	"\rreject_reason\x18\x05 \x01(\tR\frejectReason\x12\x1d\n" +
 	"\n" +
 	"created_at\x18\x06 \x01(\tR\tcreatedAt\x12:\n" +
-	"\x05items\x18\a \x03(\v2$.salesorder.v1.ReturnRequestItemViewR\x05items\"\x98\x01\n" +
+	"\x05items\x18\a \x03(\v2$.salesorder.v1.ReturnRequestItemViewR\x05items\x12\x18\n" +
+	"\aversion\x18\b \x01(\tR\aversion\"\x98\x01\n" +
 	"\x1aReviewReturnRequestRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\bdecision\x18\x02 \x01(\tR\bdecision\x12#\n" +

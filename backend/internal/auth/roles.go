@@ -19,24 +19,26 @@ var rolePolicy = map[string]map[string][]string{
 	"super":     {"*": {"*"}},
 	"developer": {"*": {"*"}},
 	"company_admin": {
-		"company":     {"read", "update"},
-		"department":  {"*"},
-		"user":        {"*"},
-		"role":        {"*"},
-		"sales_order": {"*"},
-		"customer":    {"*"},
-		"product":     {"*"},
-		"print":       {"*"},
-		"dispatch":    {"*"},
+		"company":        {"read", "update"},
+		"department":     {"*"},
+		"user":           {"*"},
+		"role":           {"*"},
+		"sales_order":    {"*"},
+		"customer":       {"*"},
+		"product":        {"*"},
+		"print":          {"*"},
+		"dispatch":       {"*"},
+		"return_request": {"*"},
 	},
 	"dept_admin": {
-		"department":  {"read"},
-		"user":        {"read"},
-		"customer":    {"*"},
-		"product":     {"*"},
-		"sales_order": {"*"},
-		"print":       {"*"},
-		"dispatch":    {"*"},
+		"department":     {"read"},
+		"user":           {"read"},
+		"customer":       {"*"},
+		"product":        {"*"},
+		"sales_order":    {"*"},
+		"print":          {"*"},
+		"dispatch":       {"*"},
+		"return_request": {"*"},
 	},
 	"staff": {
 		"customer":    {"*"},
@@ -45,6 +47,9 @@ var rolePolicy = map[string]map[string][]string{
 		"print":       {"*"},
 		"dispatch":    {"read"},
 		"accounting":  {"read"},
+		// 退貨:staff 可看、可審 —— 審核權再由服務層收斂到「該客戶主責業務」
+		// (return_review.go canReview);此處只給類別,不給個別客戶的判斷。
+		"return_request": {"read", "write"},
 	},
 	"customer": {
 		"sales_order": {"read"},
@@ -145,6 +150,7 @@ func actionAllowed(acts []string, act string) bool {
 var adminResources = []string{
 	"company", "department", "user", "role",
 	"sales_order", "customer", "product", "print", "dispatch", "accounting",
+	"return_request",
 }
 
 // PermissionSeed 描述單一 role_permissions 種子列( role code → resource → action )。
