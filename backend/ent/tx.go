@@ -32,6 +32,10 @@ type Tx struct {
 	FileAsset *FileAssetClient
 	// Metadict is the client for interacting with the Metadict builders.
 	Metadict *MetadictClient
+	// Notification is the client for interacting with the Notification builders.
+	Notification *NotificationClient
+	// NotificationTemplate is the client for interacting with the NotificationTemplate builders.
+	NotificationTemplate *NotificationTemplateClient
 	// OrderCounter is the client for interacting with the OrderCounter builders.
 	OrderCounter *OrderCounterClient
 	// PrintLog is the client for interacting with the PrintLog builders.
@@ -48,6 +52,8 @@ type Tx struct {
 	ProductProcessingSpec *ProductProcessingSpecClient
 	// ProductUnit is the client for interacting with the ProductUnit builders.
 	ProductUnit *ProductUnitClient
+	// PromoTag is the client for interacting with the PromoTag builders.
+	PromoTag *PromoTagClient
 	// ReturnRequest is the client for interacting with the ReturnRequest builders.
 	ReturnRequest *ReturnRequestClient
 	// ReturnRequestItem is the client for interacting with the ReturnRequestItem builders.
@@ -66,6 +72,8 @@ type Tx struct {
 	SalesOrderItem *SalesOrderItemClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
+	// UserDevice is the client for interacting with the UserDevice builders.
+	UserDevice *UserDeviceClient
 	// Warehouse is the client for interacting with the Warehouse builders.
 	Warehouse *WarehouseClient
 
@@ -209,6 +217,8 @@ func (tx *Tx) init() {
 	tx.Department = NewDepartmentClient(tx.config)
 	tx.FileAsset = NewFileAssetClient(tx.config)
 	tx.Metadict = NewMetadictClient(tx.config)
+	tx.Notification = NewNotificationClient(tx.config)
+	tx.NotificationTemplate = NewNotificationTemplateClient(tx.config)
 	tx.OrderCounter = NewOrderCounterClient(tx.config)
 	tx.PrintLog = NewPrintLogClient(tx.config)
 	tx.PrintPreview = NewPrintPreviewClient(tx.config)
@@ -217,6 +227,7 @@ func (tx *Tx) init() {
 	tx.ProductCategory = NewProductCategoryClient(tx.config)
 	tx.ProductProcessingSpec = NewProductProcessingSpecClient(tx.config)
 	tx.ProductUnit = NewProductUnitClient(tx.config)
+	tx.PromoTag = NewPromoTagClient(tx.config)
 	tx.ReturnRequest = NewReturnRequestClient(tx.config)
 	tx.ReturnRequestItem = NewReturnRequestItemClient(tx.config)
 	tx.Role = NewRoleClient(tx.config)
@@ -226,6 +237,7 @@ func (tx *Tx) init() {
 	tx.SalesOrderEvent = NewSalesOrderEventClient(tx.config)
 	tx.SalesOrderItem = NewSalesOrderItemClient(tx.config)
 	tx.User = NewUserClient(tx.config)
+	tx.UserDevice = NewUserDeviceClient(tx.config)
 	tx.Warehouse = NewWarehouseClient(tx.config)
 }
 

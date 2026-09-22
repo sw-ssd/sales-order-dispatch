@@ -25,6 +25,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/fileasset"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
+	"github.com/salesorder/sales-order-1.0/backend/ent/notification"
+	"github.com/salesorder/sales-order-1.0/backend/ent/notificationtemplate"
 	"github.com/salesorder/sales-order-1.0/backend/ent/ordercounter"
 	"github.com/salesorder/sales-order-1.0/backend/ent/printlog"
 	"github.com/salesorder/sales-order-1.0/backend/ent/printpreview"
@@ -33,6 +35,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/productcategory"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productprocessingspec"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productunit"
+	"github.com/salesorder/sales-order-1.0/backend/ent/promotag"
 	"github.com/salesorder/sales-order-1.0/backend/ent/returnrequest"
 	"github.com/salesorder/sales-order-1.0/backend/ent/returnrequestitem"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
@@ -42,6 +45,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/salesorderevent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/salesorderitem"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
+	"github.com/salesorder/sales-order-1.0/backend/ent/userdevice"
 	"github.com/salesorder/sales-order-1.0/backend/ent/warehouse"
 )
 
@@ -70,6 +74,10 @@ type Client struct {
 	FileAsset *FileAssetClient
 	// Metadict is the client for interacting with the Metadict builders.
 	Metadict *MetadictClient
+	// Notification is the client for interacting with the Notification builders.
+	Notification *NotificationClient
+	// NotificationTemplate is the client for interacting with the NotificationTemplate builders.
+	NotificationTemplate *NotificationTemplateClient
 	// OrderCounter is the client for interacting with the OrderCounter builders.
 	OrderCounter *OrderCounterClient
 	// PrintLog is the client for interacting with the PrintLog builders.
@@ -86,6 +94,8 @@ type Client struct {
 	ProductProcessingSpec *ProductProcessingSpecClient
 	// ProductUnit is the client for interacting with the ProductUnit builders.
 	ProductUnit *ProductUnitClient
+	// PromoTag is the client for interacting with the PromoTag builders.
+	PromoTag *PromoTagClient
 	// ReturnRequest is the client for interacting with the ReturnRequest builders.
 	ReturnRequest *ReturnRequestClient
 	// ReturnRequestItem is the client for interacting with the ReturnRequestItem builders.
@@ -104,6 +114,8 @@ type Client struct {
 	SalesOrderItem *SalesOrderItemClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
+	// UserDevice is the client for interacting with the UserDevice builders.
+	UserDevice *UserDeviceClient
 	// Warehouse is the client for interacting with the Warehouse builders.
 	Warehouse *WarehouseClient
 }
@@ -127,6 +139,8 @@ func (c *Client) init() {
 	c.Department = NewDepartmentClient(c.config)
 	c.FileAsset = NewFileAssetClient(c.config)
 	c.Metadict = NewMetadictClient(c.config)
+	c.Notification = NewNotificationClient(c.config)
+	c.NotificationTemplate = NewNotificationTemplateClient(c.config)
 	c.OrderCounter = NewOrderCounterClient(c.config)
 	c.PrintLog = NewPrintLogClient(c.config)
 	c.PrintPreview = NewPrintPreviewClient(c.config)
@@ -135,6 +149,7 @@ func (c *Client) init() {
 	c.ProductCategory = NewProductCategoryClient(c.config)
 	c.ProductProcessingSpec = NewProductProcessingSpecClient(c.config)
 	c.ProductUnit = NewProductUnitClient(c.config)
+	c.PromoTag = NewPromoTagClient(c.config)
 	c.ReturnRequest = NewReturnRequestClient(c.config)
 	c.ReturnRequestItem = NewReturnRequestItemClient(c.config)
 	c.Role = NewRoleClient(c.config)
@@ -144,6 +159,7 @@ func (c *Client) init() {
 	c.SalesOrderEvent = NewSalesOrderEventClient(c.config)
 	c.SalesOrderItem = NewSalesOrderItemClient(c.config)
 	c.User = NewUserClient(c.config)
+	c.UserDevice = NewUserDeviceClient(c.config)
 	c.Warehouse = NewWarehouseClient(c.config)
 }
 
@@ -247,6 +263,8 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		Department:            NewDepartmentClient(cfg),
 		FileAsset:             NewFileAssetClient(cfg),
 		Metadict:              NewMetadictClient(cfg),
+		Notification:          NewNotificationClient(cfg),
+		NotificationTemplate:  NewNotificationTemplateClient(cfg),
 		OrderCounter:          NewOrderCounterClient(cfg),
 		PrintLog:              NewPrintLogClient(cfg),
 		PrintPreview:          NewPrintPreviewClient(cfg),
@@ -255,6 +273,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ProductCategory:       NewProductCategoryClient(cfg),
 		ProductProcessingSpec: NewProductProcessingSpecClient(cfg),
 		ProductUnit:           NewProductUnitClient(cfg),
+		PromoTag:              NewPromoTagClient(cfg),
 		ReturnRequest:         NewReturnRequestClient(cfg),
 		ReturnRequestItem:     NewReturnRequestItemClient(cfg),
 		Role:                  NewRoleClient(cfg),
@@ -264,6 +283,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		SalesOrderEvent:       NewSalesOrderEventClient(cfg),
 		SalesOrderItem:        NewSalesOrderItemClient(cfg),
 		User:                  NewUserClient(cfg),
+		UserDevice:            NewUserDeviceClient(cfg),
 		Warehouse:             NewWarehouseClient(cfg),
 	}, nil
 }
@@ -294,6 +314,8 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		Department:            NewDepartmentClient(cfg),
 		FileAsset:             NewFileAssetClient(cfg),
 		Metadict:              NewMetadictClient(cfg),
+		Notification:          NewNotificationClient(cfg),
+		NotificationTemplate:  NewNotificationTemplateClient(cfg),
 		OrderCounter:          NewOrderCounterClient(cfg),
 		PrintLog:              NewPrintLogClient(cfg),
 		PrintPreview:          NewPrintPreviewClient(cfg),
@@ -302,6 +324,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ProductCategory:       NewProductCategoryClient(cfg),
 		ProductProcessingSpec: NewProductProcessingSpecClient(cfg),
 		ProductUnit:           NewProductUnitClient(cfg),
+		PromoTag:              NewPromoTagClient(cfg),
 		ReturnRequest:         NewReturnRequestClient(cfg),
 		ReturnRequestItem:     NewReturnRequestItemClient(cfg),
 		Role:                  NewRoleClient(cfg),
@@ -311,6 +334,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		SalesOrderEvent:       NewSalesOrderEventClient(cfg),
 		SalesOrderItem:        NewSalesOrderItemClient(cfg),
 		User:                  NewUserClient(cfg),
+		UserDevice:            NewUserDeviceClient(cfg),
 		Warehouse:             NewWarehouseClient(cfg),
 	}, nil
 }
@@ -343,10 +367,11 @@ func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.AuditLog, c.Company, c.Customer, c.CustomerAddress, c.CustomerContact,
 		c.CustomerCounter, c.CustomerProduct, c.Department, c.FileAsset, c.Metadict,
-		c.OrderCounter, c.PrintLog, c.PrintPreview, c.ProcessingSpec, c.Product,
-		c.ProductCategory, c.ProductProcessingSpec, c.ProductUnit, c.ReturnRequest,
+		c.Notification, c.NotificationTemplate, c.OrderCounter, c.PrintLog,
+		c.PrintPreview, c.ProcessingSpec, c.Product, c.ProductCategory,
+		c.ProductProcessingSpec, c.ProductUnit, c.PromoTag, c.ReturnRequest,
 		c.ReturnRequestItem, c.Role, c.RolePermission, c.Route, c.SalesOrder,
-		c.SalesOrderEvent, c.SalesOrderItem, c.User, c.Warehouse,
+		c.SalesOrderEvent, c.SalesOrderItem, c.User, c.UserDevice, c.Warehouse,
 	} {
 		n.Use(hooks...)
 	}
@@ -358,10 +383,11 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.AuditLog, c.Company, c.Customer, c.CustomerAddress, c.CustomerContact,
 		c.CustomerCounter, c.CustomerProduct, c.Department, c.FileAsset, c.Metadict,
-		c.OrderCounter, c.PrintLog, c.PrintPreview, c.ProcessingSpec, c.Product,
-		c.ProductCategory, c.ProductProcessingSpec, c.ProductUnit, c.ReturnRequest,
+		c.Notification, c.NotificationTemplate, c.OrderCounter, c.PrintLog,
+		c.PrintPreview, c.ProcessingSpec, c.Product, c.ProductCategory,
+		c.ProductProcessingSpec, c.ProductUnit, c.PromoTag, c.ReturnRequest,
 		c.ReturnRequestItem, c.Role, c.RolePermission, c.Route, c.SalesOrder,
-		c.SalesOrderEvent, c.SalesOrderItem, c.User, c.Warehouse,
+		c.SalesOrderEvent, c.SalesOrderItem, c.User, c.UserDevice, c.Warehouse,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -390,6 +416,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.FileAsset.mutate(ctx, m)
 	case *MetadictMutation:
 		return c.Metadict.mutate(ctx, m)
+	case *NotificationMutation:
+		return c.Notification.mutate(ctx, m)
+	case *NotificationTemplateMutation:
+		return c.NotificationTemplate.mutate(ctx, m)
 	case *OrderCounterMutation:
 		return c.OrderCounter.mutate(ctx, m)
 	case *PrintLogMutation:
@@ -406,6 +436,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.ProductProcessingSpec.mutate(ctx, m)
 	case *ProductUnitMutation:
 		return c.ProductUnit.mutate(ctx, m)
+	case *PromoTagMutation:
+		return c.PromoTag.mutate(ctx, m)
 	case *ReturnRequestMutation:
 		return c.ReturnRequest.mutate(ctx, m)
 	case *ReturnRequestItemMutation:
@@ -424,6 +456,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.SalesOrderItem.mutate(ctx, m)
 	case *UserMutation:
 		return c.User.mutate(ctx, m)
+	case *UserDeviceMutation:
+		return c.UserDevice.mutate(ctx, m)
 	case *WarehouseMutation:
 		return c.Warehouse.mutate(ctx, m)
 	default:
@@ -1825,6 +1859,272 @@ func (c *MetadictClient) mutate(ctx context.Context, m *MetadictMutation) (Value
 	}
 }
 
+// NotificationClient is a client for the Notification schema.
+type NotificationClient struct {
+	config
+}
+
+// NewNotificationClient returns a client for the Notification from the given config.
+func NewNotificationClient(c config) *NotificationClient {
+	return &NotificationClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `notification.Hooks(f(g(h())))`.
+func (c *NotificationClient) Use(hooks ...Hook) {
+	c.hooks.Notification = append(c.hooks.Notification, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `notification.Intercept(f(g(h())))`.
+func (c *NotificationClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Notification = append(c.inters.Notification, interceptors...)
+}
+
+// Create returns a builder for creating a Notification entity.
+func (c *NotificationClient) Create() *NotificationCreate {
+	mutation := newNotificationMutation(c.config, OpCreate)
+	return &NotificationCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Notification entities.
+func (c *NotificationClient) CreateBulk(builders ...*NotificationCreate) *NotificationCreateBulk {
+	return &NotificationCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *NotificationClient) MapCreateBulk(slice any, setFunc func(*NotificationCreate, int)) *NotificationCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &NotificationCreateBulk{err: fmt.Errorf("calling to NotificationClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*NotificationCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &NotificationCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Notification.
+func (c *NotificationClient) Update() *NotificationUpdate {
+	mutation := newNotificationMutation(c.config, OpUpdate)
+	return &NotificationUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *NotificationClient) UpdateOne(_m *Notification) *NotificationUpdateOne {
+	mutation := newNotificationMutation(c.config, OpUpdateOne, withNotification(_m))
+	return &NotificationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *NotificationClient) UpdateOneID(id int) *NotificationUpdateOne {
+	mutation := newNotificationMutation(c.config, OpUpdateOne, withNotificationID(id))
+	return &NotificationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Notification.
+func (c *NotificationClient) Delete() *NotificationDelete {
+	mutation := newNotificationMutation(c.config, OpDelete)
+	return &NotificationDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *NotificationClient) DeleteOne(_m *Notification) *NotificationDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *NotificationClient) DeleteOneID(id int) *NotificationDeleteOne {
+	builder := c.Delete().Where(notification.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &NotificationDeleteOne{builder}
+}
+
+// Query returns a query builder for Notification.
+func (c *NotificationClient) Query() *NotificationQuery {
+	return &NotificationQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeNotification},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Notification entity by its id.
+func (c *NotificationClient) Get(ctx context.Context, id int) (*Notification, error) {
+	return c.Query().Where(notification.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *NotificationClient) GetX(ctx context.Context, id int) *Notification {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *NotificationClient) Hooks() []Hook {
+	return c.hooks.Notification
+}
+
+// Interceptors returns the client interceptors.
+func (c *NotificationClient) Interceptors() []Interceptor {
+	return c.inters.Notification
+}
+
+func (c *NotificationClient) mutate(ctx context.Context, m *NotificationMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&NotificationCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&NotificationUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&NotificationUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&NotificationDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Notification mutation op: %q", m.Op())
+	}
+}
+
+// NotificationTemplateClient is a client for the NotificationTemplate schema.
+type NotificationTemplateClient struct {
+	config
+}
+
+// NewNotificationTemplateClient returns a client for the NotificationTemplate from the given config.
+func NewNotificationTemplateClient(c config) *NotificationTemplateClient {
+	return &NotificationTemplateClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `notificationtemplate.Hooks(f(g(h())))`.
+func (c *NotificationTemplateClient) Use(hooks ...Hook) {
+	c.hooks.NotificationTemplate = append(c.hooks.NotificationTemplate, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `notificationtemplate.Intercept(f(g(h())))`.
+func (c *NotificationTemplateClient) Intercept(interceptors ...Interceptor) {
+	c.inters.NotificationTemplate = append(c.inters.NotificationTemplate, interceptors...)
+}
+
+// Create returns a builder for creating a NotificationTemplate entity.
+func (c *NotificationTemplateClient) Create() *NotificationTemplateCreate {
+	mutation := newNotificationTemplateMutation(c.config, OpCreate)
+	return &NotificationTemplateCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of NotificationTemplate entities.
+func (c *NotificationTemplateClient) CreateBulk(builders ...*NotificationTemplateCreate) *NotificationTemplateCreateBulk {
+	return &NotificationTemplateCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *NotificationTemplateClient) MapCreateBulk(slice any, setFunc func(*NotificationTemplateCreate, int)) *NotificationTemplateCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &NotificationTemplateCreateBulk{err: fmt.Errorf("calling to NotificationTemplateClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*NotificationTemplateCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &NotificationTemplateCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for NotificationTemplate.
+func (c *NotificationTemplateClient) Update() *NotificationTemplateUpdate {
+	mutation := newNotificationTemplateMutation(c.config, OpUpdate)
+	return &NotificationTemplateUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *NotificationTemplateClient) UpdateOne(_m *NotificationTemplate) *NotificationTemplateUpdateOne {
+	mutation := newNotificationTemplateMutation(c.config, OpUpdateOne, withNotificationTemplate(_m))
+	return &NotificationTemplateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *NotificationTemplateClient) UpdateOneID(id int) *NotificationTemplateUpdateOne {
+	mutation := newNotificationTemplateMutation(c.config, OpUpdateOne, withNotificationTemplateID(id))
+	return &NotificationTemplateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for NotificationTemplate.
+func (c *NotificationTemplateClient) Delete() *NotificationTemplateDelete {
+	mutation := newNotificationTemplateMutation(c.config, OpDelete)
+	return &NotificationTemplateDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *NotificationTemplateClient) DeleteOne(_m *NotificationTemplate) *NotificationTemplateDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *NotificationTemplateClient) DeleteOneID(id int) *NotificationTemplateDeleteOne {
+	builder := c.Delete().Where(notificationtemplate.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &NotificationTemplateDeleteOne{builder}
+}
+
+// Query returns a query builder for NotificationTemplate.
+func (c *NotificationTemplateClient) Query() *NotificationTemplateQuery {
+	return &NotificationTemplateQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeNotificationTemplate},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a NotificationTemplate entity by its id.
+func (c *NotificationTemplateClient) Get(ctx context.Context, id int) (*NotificationTemplate, error) {
+	return c.Query().Where(notificationtemplate.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *NotificationTemplateClient) GetX(ctx context.Context, id int) *NotificationTemplate {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *NotificationTemplateClient) Hooks() []Hook {
+	return c.hooks.NotificationTemplate
+}
+
+// Interceptors returns the client interceptors.
+func (c *NotificationTemplateClient) Interceptors() []Interceptor {
+	return c.inters.NotificationTemplate
+}
+
+func (c *NotificationTemplateClient) mutate(ctx context.Context, m *NotificationTemplateMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&NotificationTemplateCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&NotificationTemplateUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&NotificationTemplateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&NotificationTemplateDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown NotificationTemplate mutation op: %q", m.Op())
+	}
+}
+
 // OrderCounterClient is a client for the OrderCounter schema.
 type OrderCounterClient struct {
 	config
@@ -2886,6 +3186,139 @@ func (c *ProductUnitClient) mutate(ctx context.Context, m *ProductUnitMutation) 
 		return (&ProductUnitDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown ProductUnit mutation op: %q", m.Op())
+	}
+}
+
+// PromoTagClient is a client for the PromoTag schema.
+type PromoTagClient struct {
+	config
+}
+
+// NewPromoTagClient returns a client for the PromoTag from the given config.
+func NewPromoTagClient(c config) *PromoTagClient {
+	return &PromoTagClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `promotag.Hooks(f(g(h())))`.
+func (c *PromoTagClient) Use(hooks ...Hook) {
+	c.hooks.PromoTag = append(c.hooks.PromoTag, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `promotag.Intercept(f(g(h())))`.
+func (c *PromoTagClient) Intercept(interceptors ...Interceptor) {
+	c.inters.PromoTag = append(c.inters.PromoTag, interceptors...)
+}
+
+// Create returns a builder for creating a PromoTag entity.
+func (c *PromoTagClient) Create() *PromoTagCreate {
+	mutation := newPromoTagMutation(c.config, OpCreate)
+	return &PromoTagCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of PromoTag entities.
+func (c *PromoTagClient) CreateBulk(builders ...*PromoTagCreate) *PromoTagCreateBulk {
+	return &PromoTagCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PromoTagClient) MapCreateBulk(slice any, setFunc func(*PromoTagCreate, int)) *PromoTagCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PromoTagCreateBulk{err: fmt.Errorf("calling to PromoTagClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*PromoTagCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &PromoTagCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for PromoTag.
+func (c *PromoTagClient) Update() *PromoTagUpdate {
+	mutation := newPromoTagMutation(c.config, OpUpdate)
+	return &PromoTagUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PromoTagClient) UpdateOne(_m *PromoTag) *PromoTagUpdateOne {
+	mutation := newPromoTagMutation(c.config, OpUpdateOne, withPromoTag(_m))
+	return &PromoTagUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PromoTagClient) UpdateOneID(id int) *PromoTagUpdateOne {
+	mutation := newPromoTagMutation(c.config, OpUpdateOne, withPromoTagID(id))
+	return &PromoTagUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for PromoTag.
+func (c *PromoTagClient) Delete() *PromoTagDelete {
+	mutation := newPromoTagMutation(c.config, OpDelete)
+	return &PromoTagDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PromoTagClient) DeleteOne(_m *PromoTag) *PromoTagDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PromoTagClient) DeleteOneID(id int) *PromoTagDeleteOne {
+	builder := c.Delete().Where(promotag.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PromoTagDeleteOne{builder}
+}
+
+// Query returns a query builder for PromoTag.
+func (c *PromoTagClient) Query() *PromoTagQuery {
+	return &PromoTagQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypePromoTag},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a PromoTag entity by its id.
+func (c *PromoTagClient) Get(ctx context.Context, id int) (*PromoTag, error) {
+	return c.Query().Where(promotag.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PromoTagClient) GetX(ctx context.Context, id int) *PromoTag {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *PromoTagClient) Hooks() []Hook {
+	return c.hooks.PromoTag
+}
+
+// Interceptors returns the client interceptors.
+func (c *PromoTagClient) Interceptors() []Interceptor {
+	return c.inters.PromoTag
+}
+
+func (c *PromoTagClient) mutate(ctx context.Context, m *PromoTagMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PromoTagCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&PromoTagUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&PromoTagUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PromoTagDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown PromoTag mutation op: %q", m.Op())
 	}
 }
 
@@ -4134,6 +4567,139 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 	}
 }
 
+// UserDeviceClient is a client for the UserDevice schema.
+type UserDeviceClient struct {
+	config
+}
+
+// NewUserDeviceClient returns a client for the UserDevice from the given config.
+func NewUserDeviceClient(c config) *UserDeviceClient {
+	return &UserDeviceClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `userdevice.Hooks(f(g(h())))`.
+func (c *UserDeviceClient) Use(hooks ...Hook) {
+	c.hooks.UserDevice = append(c.hooks.UserDevice, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `userdevice.Intercept(f(g(h())))`.
+func (c *UserDeviceClient) Intercept(interceptors ...Interceptor) {
+	c.inters.UserDevice = append(c.inters.UserDevice, interceptors...)
+}
+
+// Create returns a builder for creating a UserDevice entity.
+func (c *UserDeviceClient) Create() *UserDeviceCreate {
+	mutation := newUserDeviceMutation(c.config, OpCreate)
+	return &UserDeviceCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of UserDevice entities.
+func (c *UserDeviceClient) CreateBulk(builders ...*UserDeviceCreate) *UserDeviceCreateBulk {
+	return &UserDeviceCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *UserDeviceClient) MapCreateBulk(slice any, setFunc func(*UserDeviceCreate, int)) *UserDeviceCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &UserDeviceCreateBulk{err: fmt.Errorf("calling to UserDeviceClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*UserDeviceCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &UserDeviceCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for UserDevice.
+func (c *UserDeviceClient) Update() *UserDeviceUpdate {
+	mutation := newUserDeviceMutation(c.config, OpUpdate)
+	return &UserDeviceUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *UserDeviceClient) UpdateOne(_m *UserDevice) *UserDeviceUpdateOne {
+	mutation := newUserDeviceMutation(c.config, OpUpdateOne, withUserDevice(_m))
+	return &UserDeviceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *UserDeviceClient) UpdateOneID(id int) *UserDeviceUpdateOne {
+	mutation := newUserDeviceMutation(c.config, OpUpdateOne, withUserDeviceID(id))
+	return &UserDeviceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for UserDevice.
+func (c *UserDeviceClient) Delete() *UserDeviceDelete {
+	mutation := newUserDeviceMutation(c.config, OpDelete)
+	return &UserDeviceDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *UserDeviceClient) DeleteOne(_m *UserDevice) *UserDeviceDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *UserDeviceClient) DeleteOneID(id int) *UserDeviceDeleteOne {
+	builder := c.Delete().Where(userdevice.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &UserDeviceDeleteOne{builder}
+}
+
+// Query returns a query builder for UserDevice.
+func (c *UserDeviceClient) Query() *UserDeviceQuery {
+	return &UserDeviceQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeUserDevice},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a UserDevice entity by its id.
+func (c *UserDeviceClient) Get(ctx context.Context, id int) (*UserDevice, error) {
+	return c.Query().Where(userdevice.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *UserDeviceClient) GetX(ctx context.Context, id int) *UserDevice {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *UserDeviceClient) Hooks() []Hook {
+	return c.hooks.UserDevice
+}
+
+// Interceptors returns the client interceptors.
+func (c *UserDeviceClient) Interceptors() []Interceptor {
+	return c.inters.UserDevice
+}
+
+func (c *UserDeviceClient) mutate(ctx context.Context, m *UserDeviceMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&UserDeviceCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&UserDeviceUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&UserDeviceUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&UserDeviceDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown UserDevice mutation op: %q", m.Op())
+	}
+}
+
 // WarehouseClient is a client for the Warehouse schema.
 type WarehouseClient struct {
 	config
@@ -4271,16 +4837,18 @@ func (c *WarehouseClient) mutate(ctx context.Context, m *WarehouseMutation) (Val
 type (
 	hooks struct {
 		AuditLog, Company, Customer, CustomerAddress, CustomerContact, CustomerCounter,
-		CustomerProduct, Department, FileAsset, Metadict, OrderCounter, PrintLog,
-		PrintPreview, ProcessingSpec, Product, ProductCategory, ProductProcessingSpec,
-		ProductUnit, ReturnRequest, ReturnRequestItem, Role, RolePermission, Route,
-		SalesOrder, SalesOrderEvent, SalesOrderItem, User, Warehouse []ent.Hook
+		CustomerProduct, Department, FileAsset, Metadict, Notification,
+		NotificationTemplate, OrderCounter, PrintLog, PrintPreview, ProcessingSpec,
+		Product, ProductCategory, ProductProcessingSpec, ProductUnit, PromoTag,
+		ReturnRequest, ReturnRequestItem, Role, RolePermission, Route, SalesOrder,
+		SalesOrderEvent, SalesOrderItem, User, UserDevice, Warehouse []ent.Hook
 	}
 	inters struct {
 		AuditLog, Company, Customer, CustomerAddress, CustomerContact, CustomerCounter,
-		CustomerProduct, Department, FileAsset, Metadict, OrderCounter, PrintLog,
-		PrintPreview, ProcessingSpec, Product, ProductCategory, ProductProcessingSpec,
-		ProductUnit, ReturnRequest, ReturnRequestItem, Role, RolePermission, Route,
-		SalesOrder, SalesOrderEvent, SalesOrderItem, User, Warehouse []ent.Interceptor
+		CustomerProduct, Department, FileAsset, Metadict, Notification,
+		NotificationTemplate, OrderCounter, PrintLog, PrintPreview, ProcessingSpec,
+		Product, ProductCategory, ProductProcessingSpec, ProductUnit, PromoTag,
+		ReturnRequest, ReturnRequestItem, Role, RolePermission, Route, SalesOrder,
+		SalesOrderEvent, SalesOrderItem, User, UserDevice, Warehouse []ent.Interceptor
 	}
 )

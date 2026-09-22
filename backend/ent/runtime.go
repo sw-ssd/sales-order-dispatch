@@ -15,6 +15,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/fileasset"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
+	"github.com/salesorder/sales-order-1.0/backend/ent/notification"
+	"github.com/salesorder/sales-order-1.0/backend/ent/notificationtemplate"
 	"github.com/salesorder/sales-order-1.0/backend/ent/ordercounter"
 	"github.com/salesorder/sales-order-1.0/backend/ent/printlog"
 	"github.com/salesorder/sales-order-1.0/backend/ent/printpreview"
@@ -23,6 +25,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/productcategory"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productprocessingspec"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productunit"
+	"github.com/salesorder/sales-order-1.0/backend/ent/promotag"
 	"github.com/salesorder/sales-order-1.0/backend/ent/returnrequest"
 	"github.com/salesorder/sales-order-1.0/backend/ent/returnrequestitem"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
@@ -33,6 +36,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/salesorderitem"
 	"github.com/salesorder/sales-order-1.0/backend/ent/schema"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
+	"github.com/salesorder/sales-order-1.0/backend/ent/userdevice"
 	"github.com/salesorder/sales-order-1.0/backend/ent/warehouse"
 )
 
@@ -236,6 +240,68 @@ func init() {
 	metadict.DefaultUpdatedAt = metadictDescUpdatedAt.Default.(func() time.Time)
 	// metadict.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	metadict.UpdateDefaultUpdatedAt = metadictDescUpdatedAt.UpdateDefault.(func() time.Time)
+	notificationFields := schema.Notification{}.Fields()
+	_ = notificationFields
+	// notificationDescChannel is the schema descriptor for channel field.
+	notificationDescChannel := notificationFields[4].Descriptor()
+	// notification.ChannelValidator is a validator for the "channel" field. It is called by the builders before save.
+	notification.ChannelValidator = notificationDescChannel.Validators[0].(func(string) error)
+	// notificationDescTitle is the schema descriptor for title field.
+	notificationDescTitle := notificationFields[5].Descriptor()
+	// notification.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	notification.TitleValidator = notificationDescTitle.Validators[0].(func(string) error)
+	// notificationDescContent is the schema descriptor for content field.
+	notificationDescContent := notificationFields[6].Descriptor()
+	// notification.ContentValidator is a validator for the "content" field. It is called by the builders before save.
+	notification.ContentValidator = notificationDescContent.Validators[0].(func(string) error)
+	// notificationDescStatus is the schema descriptor for status field.
+	notificationDescStatus := notificationFields[8].Descriptor()
+	// notification.DefaultStatus holds the default value on creation for the status field.
+	notification.DefaultStatus = notificationDescStatus.Default.(string)
+	// notification.StatusValidator is a validator for the "status" field. It is called by the builders before save.
+	notification.StatusValidator = notificationDescStatus.Validators[0].(func(string) error)
+	// notificationDescCreatedAt is the schema descriptor for created_at field.
+	notificationDescCreatedAt := notificationFields[12].Descriptor()
+	// notification.DefaultCreatedAt holds the default value on creation for the created_at field.
+	notification.DefaultCreatedAt = notificationDescCreatedAt.Default.(func() time.Time)
+	notificationtemplateFields := schema.NotificationTemplate{}.Fields()
+	_ = notificationtemplateFields
+	// notificationtemplateDescCode is the schema descriptor for code field.
+	notificationtemplateDescCode := notificationtemplateFields[2].Descriptor()
+	// notificationtemplate.CodeValidator is a validator for the "code" field. It is called by the builders before save.
+	notificationtemplate.CodeValidator = notificationtemplateDescCode.Validators[0].(func(string) error)
+	// notificationtemplateDescName is the schema descriptor for name field.
+	notificationtemplateDescName := notificationtemplateFields[3].Descriptor()
+	// notificationtemplate.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	notificationtemplate.NameValidator = notificationtemplateDescName.Validators[0].(func(string) error)
+	// notificationtemplateDescChannel is the schema descriptor for channel field.
+	notificationtemplateDescChannel := notificationtemplateFields[4].Descriptor()
+	// notificationtemplate.ChannelValidator is a validator for the "channel" field. It is called by the builders before save.
+	notificationtemplate.ChannelValidator = notificationtemplateDescChannel.Validators[0].(func(string) error)
+	// notificationtemplateDescBody is the schema descriptor for body field.
+	notificationtemplateDescBody := notificationtemplateFields[6].Descriptor()
+	// notificationtemplate.BodyValidator is a validator for the "body" field. It is called by the builders before save.
+	notificationtemplate.BodyValidator = notificationtemplateDescBody.Validators[0].(func(string) error)
+	// notificationtemplateDescLocale is the schema descriptor for locale field.
+	notificationtemplateDescLocale := notificationtemplateFields[7].Descriptor()
+	// notificationtemplate.DefaultLocale holds the default value on creation for the locale field.
+	notificationtemplate.DefaultLocale = notificationtemplateDescLocale.Default.(string)
+	// notificationtemplate.LocaleValidator is a validator for the "locale" field. It is called by the builders before save.
+	notificationtemplate.LocaleValidator = notificationtemplateDescLocale.Validators[0].(func(string) error)
+	// notificationtemplateDescIsActive is the schema descriptor for is_active field.
+	notificationtemplateDescIsActive := notificationtemplateFields[8].Descriptor()
+	// notificationtemplate.DefaultIsActive holds the default value on creation for the is_active field.
+	notificationtemplate.DefaultIsActive = notificationtemplateDescIsActive.Default.(bool)
+	// notificationtemplateDescCreatedAt is the schema descriptor for created_at field.
+	notificationtemplateDescCreatedAt := notificationtemplateFields[9].Descriptor()
+	// notificationtemplate.DefaultCreatedAt holds the default value on creation for the created_at field.
+	notificationtemplate.DefaultCreatedAt = notificationtemplateDescCreatedAt.Default.(func() time.Time)
+	// notificationtemplateDescUpdatedAt is the schema descriptor for updated_at field.
+	notificationtemplateDescUpdatedAt := notificationtemplateFields[10].Descriptor()
+	// notificationtemplate.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	notificationtemplate.DefaultUpdatedAt = notificationtemplateDescUpdatedAt.Default.(func() time.Time)
+	// notificationtemplate.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	notificationtemplate.UpdateDefaultUpdatedAt = notificationtemplateDescUpdatedAt.UpdateDefault.(func() time.Time)
 	ordercounterFields := schema.OrderCounter{}.Fields()
 	_ = ordercounterFields
 	// ordercounterDescSource is the schema descriptor for source field.
@@ -412,6 +478,30 @@ func init() {
 	productunit.DefaultUpdatedAt = productunitDescUpdatedAt.Default.(func() time.Time)
 	// productunit.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	productunit.UpdateDefaultUpdatedAt = productunitDescUpdatedAt.UpdateDefault.(func() time.Time)
+	promotagFields := schema.PromoTag{}.Fields()
+	_ = promotagFields
+	// promotagDescCode is the schema descriptor for code field.
+	promotagDescCode := promotagFields[2].Descriptor()
+	// promotag.CodeValidator is a validator for the "code" field. It is called by the builders before save.
+	promotag.CodeValidator = promotagDescCode.Validators[0].(func(string) error)
+	// promotagDescName is the schema descriptor for name field.
+	promotagDescName := promotagFields[3].Descriptor()
+	// promotag.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	promotag.NameValidator = promotagDescName.Validators[0].(func(string) error)
+	// promotagDescIsActive is the schema descriptor for is_active field.
+	promotagDescIsActive := promotagFields[4].Descriptor()
+	// promotag.DefaultIsActive holds the default value on creation for the is_active field.
+	promotag.DefaultIsActive = promotagDescIsActive.Default.(bool)
+	// promotagDescCreatedAt is the schema descriptor for created_at field.
+	promotagDescCreatedAt := promotagFields[5].Descriptor()
+	// promotag.DefaultCreatedAt holds the default value on creation for the created_at field.
+	promotag.DefaultCreatedAt = promotagDescCreatedAt.Default.(func() time.Time)
+	// promotagDescUpdatedAt is the schema descriptor for updated_at field.
+	promotagDescUpdatedAt := promotagFields[6].Descriptor()
+	// promotag.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	promotag.DefaultUpdatedAt = promotagDescUpdatedAt.Default.(func() time.Time)
+	// promotag.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	promotag.UpdateDefaultUpdatedAt = promotagDescUpdatedAt.UpdateDefault.(func() time.Time)
 	returnrequestFields := schema.ReturnRequest{}.Fields()
 	_ = returnrequestFields
 	// returnrequestDescStatus is the schema descriptor for status field.
@@ -640,6 +730,26 @@ func init() {
 	userDescMustChangePassword := userFields[13].Descriptor()
 	// user.DefaultMustChangePassword holds the default value on creation for the must_change_password field.
 	user.DefaultMustChangePassword = userDescMustChangePassword.Default.(bool)
+	userdeviceFields := schema.UserDevice{}.Fields()
+	_ = userdeviceFields
+	// userdeviceDescPlatform is the schema descriptor for platform field.
+	userdeviceDescPlatform := userdeviceFields[2].Descriptor()
+	// userdevice.PlatformValidator is a validator for the "platform" field. It is called by the builders before save.
+	userdevice.PlatformValidator = userdeviceDescPlatform.Validators[0].(func(string) error)
+	// userdeviceDescFcmToken is the schema descriptor for fcm_token field.
+	userdeviceDescFcmToken := userdeviceFields[3].Descriptor()
+	// userdevice.FcmTokenValidator is a validator for the "fcm_token" field. It is called by the builders before save.
+	userdevice.FcmTokenValidator = userdeviceDescFcmToken.Validators[0].(func(string) error)
+	// userdeviceDescCreatedAt is the schema descriptor for created_at field.
+	userdeviceDescCreatedAt := userdeviceFields[6].Descriptor()
+	// userdevice.DefaultCreatedAt holds the default value on creation for the created_at field.
+	userdevice.DefaultCreatedAt = userdeviceDescCreatedAt.Default.(func() time.Time)
+	// userdeviceDescUpdatedAt is the schema descriptor for updated_at field.
+	userdeviceDescUpdatedAt := userdeviceFields[7].Descriptor()
+	// userdevice.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	userdevice.DefaultUpdatedAt = userdeviceDescUpdatedAt.Default.(func() time.Time)
+	// userdevice.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	userdevice.UpdateDefaultUpdatedAt = userdeviceDescUpdatedAt.UpdateDefault.(func() time.Time)
 	warehouseFields := schema.Warehouse{}.Fields()
 	_ = warehouseFields
 	// warehouseDescCode is the schema descriptor for code field.

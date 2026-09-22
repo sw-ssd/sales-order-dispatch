@@ -36,6 +36,12 @@ type FileAsset func(*sql.Selector)
 // Metadict is the predicate function for metadict builders.
 type Metadict func(*sql.Selector)
 
+// Notification is the predicate function for notification builders.
+type Notification func(*sql.Selector)
+
+// NotificationTemplate is the predicate function for notificationtemplate builders.
+type NotificationTemplate func(*sql.Selector)
+
 // OrderCounter is the predicate function for ordercounter builders.
 type OrderCounter func(*sql.Selector)
 
@@ -59,6 +65,9 @@ type ProductProcessingSpec func(*sql.Selector)
 
 // ProductUnit is the predicate function for productunit builders.
 type ProductUnit func(*sql.Selector)
+
+// PromoTag is the predicate function for promotag builders.
+type PromoTag func(*sql.Selector)
 
 // ReturnRequest is the predicate function for returnrequest builders.
 type ReturnRequest func(*sql.Selector)
@@ -86,6 +95,9 @@ type SalesOrderItem func(*sql.Selector)
 
 // User is the predicate function for user builders.
 type User func(*sql.Selector)
+
+// UserDevice is the predicate function for userdevice builders.
+type UserDevice func(*sql.Selector)
 
 // Warehouse is the predicate function for warehouse builders.
 type Warehouse func(*sql.Selector)

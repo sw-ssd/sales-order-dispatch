@@ -22,6 +22,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/fileasset"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
+	"github.com/salesorder/sales-order-1.0/backend/ent/notification"
+	"github.com/salesorder/sales-order-1.0/backend/ent/notificationtemplate"
 	"github.com/salesorder/sales-order-1.0/backend/ent/ordercounter"
 	"github.com/salesorder/sales-order-1.0/backend/ent/printlog"
 	"github.com/salesorder/sales-order-1.0/backend/ent/printpreview"
@@ -30,6 +32,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/productcategory"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productprocessingspec"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productunit"
+	"github.com/salesorder/sales-order-1.0/backend/ent/promotag"
 	"github.com/salesorder/sales-order-1.0/backend/ent/returnrequest"
 	"github.com/salesorder/sales-order-1.0/backend/ent/returnrequestitem"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
@@ -39,6 +42,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/salesorderevent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/salesorderitem"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
+	"github.com/salesorder/sales-order-1.0/backend/ent/userdevice"
 	"github.com/salesorder/sales-order-1.0/backend/ent/warehouse"
 )
 
@@ -110,6 +114,8 @@ func checkColumn(t, c string) error {
 			department.Table:            department.ValidColumn,
 			fileasset.Table:             fileasset.ValidColumn,
 			metadict.Table:              metadict.ValidColumn,
+			notification.Table:          notification.ValidColumn,
+			notificationtemplate.Table:  notificationtemplate.ValidColumn,
 			ordercounter.Table:          ordercounter.ValidColumn,
 			printlog.Table:              printlog.ValidColumn,
 			printpreview.Table:          printpreview.ValidColumn,
@@ -118,6 +124,7 @@ func checkColumn(t, c string) error {
 			productcategory.Table:       productcategory.ValidColumn,
 			productprocessingspec.Table: productprocessingspec.ValidColumn,
 			productunit.Table:           productunit.ValidColumn,
+			promotag.Table:              promotag.ValidColumn,
 			returnrequest.Table:         returnrequest.ValidColumn,
 			returnrequestitem.Table:     returnrequestitem.ValidColumn,
 			role.Table:                  role.ValidColumn,
@@ -127,6 +134,7 @@ func checkColumn(t, c string) error {
 			salesorderevent.Table:       salesorderevent.ValidColumn,
 			salesorderitem.Table:        salesorderitem.ValidColumn,
 			user.Table:                  user.ValidColumn,
+			userdevice.Table:            userdevice.ValidColumn,
 			warehouse.Table:             warehouse.ValidColumn,
 		})
 	})

@@ -296,6 +296,65 @@ var (
 			},
 		},
 	}
+	// NotificationsColumns holds the columns for the "notifications" table.
+	NotificationsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "company_id", Type: field.TypeInt},
+		{Name: "department_id", Type: field.TypeInt},
+		{Name: "user_id", Type: field.TypeInt},
+		{Name: "template_id", Type: field.TypeInt, Nullable: true},
+		{Name: "channel", Type: field.TypeString},
+		{Name: "title", Type: field.TypeString},
+		{Name: "content", Type: field.TypeString},
+		{Name: "payload", Type: field.TypeJSON, Nullable: true},
+		{Name: "status", Type: field.TypeString, Default: "pending"},
+		{Name: "failure_reason", Type: field.TypeString, Nullable: true},
+		{Name: "sent_at", Type: field.TypeTime, Nullable: true},
+		{Name: "read_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// NotificationsTable holds the schema information for the "notifications" table.
+	NotificationsTable = &schema.Table{
+		Name:       "notifications",
+		Columns:    NotificationsColumns,
+		PrimaryKey: []*schema.Column{NotificationsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "notification_user_id_status_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{NotificationsColumns[3], NotificationsColumns[9], NotificationsColumns[13]},
+			},
+		},
+	}
+	// NotificationTemplatesColumns holds the columns for the "notification_templates" table.
+	NotificationTemplatesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "company_id", Type: field.TypeInt},
+		{Name: "department_id", Type: field.TypeInt, Nullable: true},
+		{Name: "code", Type: field.TypeString},
+		{Name: "name", Type: field.TypeString},
+		{Name: "channel", Type: field.TypeString},
+		{Name: "subject", Type: field.TypeString, Nullable: true},
+		{Name: "body", Type: field.TypeString},
+		{Name: "locale", Type: field.TypeString, Default: "zh-Hant"},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+	}
+	// NotificationTemplatesTable holds the schema information for the "notification_templates" table.
+	NotificationTemplatesTable = &schema.Table{
+		Name:       "notification_templates",
+		Columns:    NotificationTemplatesColumns,
+		PrimaryKey: []*schema.Column{NotificationTemplatesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "notificationtemplate_company_id_department_id_code_channel_locale",
+				Unique:  true,
+				Columns: []*schema.Column{NotificationTemplatesColumns[1], NotificationTemplatesColumns[2], NotificationTemplatesColumns[3], NotificationTemplatesColumns[5], NotificationTemplatesColumns[8]},
+			},
+		},
+	}
 	// OrderCountersColumns holds the columns for the "order_counters" table.
 	OrderCountersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -514,6 +573,31 @@ var (
 				Name:    "productunit_product_id_unit_code",
 				Unique:  true,
 				Columns: []*schema.Column{ProductUnitsColumns[1], ProductUnitsColumns[2]},
+			},
+		},
+	}
+	// PromoTagsColumns holds the columns for the "promo_tags" table.
+	PromoTagsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "company_id", Type: field.TypeInt},
+		{Name: "department_id", Type: field.TypeInt},
+		{Name: "code", Type: field.TypeString},
+		{Name: "name", Type: field.TypeString},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+	}
+	// PromoTagsTable holds the schema information for the "promo_tags" table.
+	PromoTagsTable = &schema.Table{
+		Name:       "promo_tags",
+		Columns:    PromoTagsColumns,
+		PrimaryKey: []*schema.Column{PromoTagsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "promotag_company_id_department_id_code",
+				Unique:  true,
+				Columns: []*schema.Column{PromoTagsColumns[1], PromoTagsColumns[2], PromoTagsColumns[3]},
 			},
 		},
 	}
@@ -805,6 +889,37 @@ var (
 			},
 		},
 	}
+	// UserDevicesColumns holds the columns for the "user_devices" table.
+	UserDevicesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "user_id", Type: field.TypeInt},
+		{Name: "company_id", Type: field.TypeInt},
+		{Name: "platform", Type: field.TypeString},
+		{Name: "fcm_token", Type: field.TypeString},
+		{Name: "device_name", Type: field.TypeString, Nullable: true},
+		{Name: "last_seen_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+	}
+	// UserDevicesTable holds the schema information for the "user_devices" table.
+	UserDevicesTable = &schema.Table{
+		Name:       "user_devices",
+		Columns:    UserDevicesColumns,
+		PrimaryKey: []*schema.Column{UserDevicesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "userdevice_fcm_token",
+				Unique:  true,
+				Columns: []*schema.Column{UserDevicesColumns[4]},
+			},
+			{
+				Name:    "userdevice_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{UserDevicesColumns[1]},
+			},
+		},
+	}
 	// WarehousesColumns holds the columns for the "warehouses" table.
 	WarehousesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -845,6 +960,8 @@ var (
 		DepartmentsTable,
 		FileAssetsTable,
 		MetadictsTable,
+		NotificationsTable,
+		NotificationTemplatesTable,
 		OrderCountersTable,
 		PrintLogsTable,
 		PrintPreviewsTable,
@@ -853,6 +970,7 @@ var (
 		ProductCategoriesTable,
 		ProductProcessingSpecsTable,
 		ProductUnitsTable,
+		PromoTagsTable,
 		ReturnRequestsTable,
 		ReturnRequestItemsTable,
 		RolesTable,
@@ -862,6 +980,7 @@ var (
 		SalesOrderEventsTable,
 		SalesOrderItemsTable,
 		UsersTable,
+		UserDevicesTable,
 		WarehousesTable,
 	}
 )
