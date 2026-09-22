@@ -1,5 +1,6 @@
 // 公司 Logo 上傳端點(04 計畫 Task 8 / 細部 2.4.1):POST /api/v1/companies/{company_id}/logo。
-// 權限僅 super(spec 3.1.1;company_admin 回 permission_denied);存取面複用 FileStore:
+// 權限為 company_admin 且限所屬公司(spec 3.1.1 修訂;super/dept_admin/staff 回 permission_denied);
+// 存取面複用 FileStore:
 // 白名單三重驗證 → 落盤 → 同交易建 file_assets(含檔稽核) → 更新 companies.logo_url → 主檔稽核。
 package fileassets
 
@@ -14,15 +15,15 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
 )
 
-// logo 上傳/更換公司 Logo(細部 2.4.1)。契約:
-//   - 權限先於存在性:非 super 恆為 permission_denied(403),不洩漏他公司存在與否;
-//   - 目標須為自己公司,不存在/他公司/已軟刪統一 not_found(404,阻探測)。
-//     跨公司上傳需另設 RLS 範圍(SET LOCAL 指向目標公司),1.0 不做,與 checkOwner 的
-//     company 分支(ownerID 必須等於自己 cid)同語意;
+// logo 上傳/更換公司 Logo(細部 2.4.1,權限修訂:見 spec 3.1.1)。契約:
+//   - 上傳者為 company_admin,且**只能上傳自己公司**;super 不經此端點(權限為 company_admin
+//     專屬,與 company_admin 可編輯所屬公司識別同語意)。權限先於存在性:非 company_admin
+//     恆為 permission_denied(403),不洩漏公司存在與否;
+//   - 目標不存在/他公司/已軟刪統一 not_found(404,阻探測);他公司由 target != cid 擋下,
+//     與 checkOwner 的 company 分支(ownerID 必須等於自己 cid)同語意;
 //   - 同交易:檔記錄 + logo_url + 主檔稽核同成功同失敗(D18);落盤在交易外先行,
 //     DB 失敗由 SaveUpload 刪孤兒檔。
 func (h *Handler) logo(w http.ResponseWriter, r *http.Request) {
@@ -41,7 +42,7 @@ func (h *Handler) logo(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, r, err)
 		return
 	}
-	if !isSuper(id) {
+	if id.Role != "company_admin" {
 		writeErr(w, r, errcode.SysPermissionDenied.Error(nil))
 		return
 	}
@@ -49,6 +50,9 @@ func (h *Handler) logo(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, r, notFound())
 		return
 	}
+	// 上限在**讀取階段**就生效:ParseMultipartForm 的參數是記憶體門檻,超量會 spool 到
+	// 暫存檔(白名單要等 SaveUpload 的 LimitReader 才擋),故先截斷 body。
+	r.Body = http.MaxBytesReader(w, r.Body, MaxImageBytes+(1<<20))
 	if err := r.ParseMultipartForm(MaxImageBytes + (1 << 20)); err != nil {
 		writeErr(w, r, errcode.SysInvalidArgument.Error(map[string]string{"field": "file"}))
 		return
@@ -73,7 +77,7 @@ func (h *Handler) logo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 請求交易:同 upload,REST 無 interceptor,手動開交易注入 ctx(RLS 由驅動裝飾器套用)。
-	tx, err := h.db.Tx(r.Context())
+	tx, ctx, err := h.tenantTx(r)
 	if err != nil {
 		writeErr(w, r, errcode.SysInternal.Error(nil))
 		return
@@ -84,7 +88,6 @@ func (h *Handler) logo(w http.ResponseWriter, r *http.Request) {
 			_ = tx.Rollback()
 		}
 	}()
-	ctx := dbtenant.WithTenantTx(r.Context(), tx)
 	db := tx.Client()
 
 	// 目標公司須存在且未軟刪除(範圍已鎖自己公司,不可見即不存在)。

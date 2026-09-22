@@ -14,7 +14,8 @@ import (
 )
 
 // Me 為 GET /api/v1/me:回傳目前 session 身分與所屬公司的品牌識別(規格 §8.1 Web 側邊欄
-// Logo 顯示;上傳鈕的 super 顯示開關也取自這裡的 role——前端只做顯示,後端仍是唯一決策者)。
+// Logo 顯示;上傳鈕的顯示開關(company_admin 且為本公司)也取自這裡的 role——前端只做顯示,
+// 後端仍是唯一決策者)。
 // REST(D4)——不經 Connect interceptor,故自行檢查身分、並經 resterr 寫出錯誤協定。
 // 公司以**身分**的 company_id 定錨(請求沒有任何可指定公司的參數),跨公司讀取構造不出來;
 // 查無與已軟刪同形回 company=null(不區分,前端一律降級為預設圖示)。
