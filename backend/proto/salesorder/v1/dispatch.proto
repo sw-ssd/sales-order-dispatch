@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package salesorder.v1;
+option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1";
+
+import "salesorder/v1/common.proto";
+
+// DispatchService:派車 API(08 計畫 Task 5.1)。
+// AssignRoute 走看板拖放(樂觀鎖);Confirm 批次轉 processing(逐筆交易);
+// CancelDispatch 退回 pending(保留看板位置);WatchBoard 串流另案(5.2)。
+service DispatchService {
+  // AssignRoute:指派車次與配送順位(僅 pending;version 樂觀鎖)。
+  rpc AssignRoute(AssignRouteRequest) returns (AssignRouteResponse);
+  // ConfirmDispatch:車次批次確認(逐筆 pending → processing;部分失敗語義)。
+  rpc ConfirmDispatch(ConfirmDispatchRequest) returns (ConfirmDispatchResponse);
+  // CancelDispatch:取消派車(僅 processing → pending;dept_admin 以上;重印警告)。
+  rpc CancelDispatch(CancelDispatchRequest) returns (CancelDispatchResponse);
+}
+
+// AssignRouteRequest:指派請求。
+message AssignRouteRequest {
+  string sales_order_id = 1;
+  string route_id = 2;              // 可空(拖回未指派)
+  string delivery_sequence = 3;     // 可空(route 清空時忽略)
+  string version = 4;               // 樂觀鎖(必填)
+  string expected_delivery_date = 5; // 看板日期(YYYY-MM-DD,順位重排範圍)
+}
+
+// AssignRouteResponse:指派結果。
+message AssignRouteResponse {
+  string sales_order_id = 1;
+  string route_id = 2;
+  string delivery_sequence = 3;
+  string version = 4;
+}
+
+// ConfirmDispatchRequest:批次確認請求。
+message ConfirmDispatchRequest {
+  string route_id = 1;
+  string expected_delivery_date = 2; // YYYY-MM-DD
+}
+
+// DispatchItemResult:逐筆結果。
+message DispatchItemResult {
+  string sales_order_id = 1;
+  bool success = 2;
+  string fail_reason = 3; // 可空
+}
+
+// ConfirmDispatchResponse:批次結果。
+message ConfirmDispatchResponse {
+  repeated DispatchItemResult items = 1;
+  int32 success_count = 2;
+}
+
+// CancelDispatchRequest:取消派車請求。
+message CancelDispatchRequest {
+  string sales_order_id = 1;
+  string reason = 2;              // 必填
+  bool acknowledge_reprint = 3;   // 已列印車次確認旗
+}
+
+// CancelDispatchResponse:取消結果。
+message CancelDispatchResponse {
+  string sales_order_id = 1;
+  string status = 2;
+  string route_id = 3;            // 保留值
+  string delivery_sequence = 4;   // 保留值
+  bool reprint_warning = 5;
+}
