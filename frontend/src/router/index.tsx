@@ -18,6 +18,7 @@ import CustomersPage from "~/features/customers/pages/CustomersPage";
 import OrdersPage from "~/features/orders/pages/OrdersPage";
 import ProductsPage from "~/features/products/pages/ProductsPage";
 import DispatchPage from "~/features/dispatch/pages/DispatchPage";
+import RoutesPage from "~/features/masters/pages/RoutesPage";
 import { requireAbility } from "~/lib/ability/guards";
 
 function HomePage() {
@@ -114,6 +115,19 @@ const dispatchRoute = createRoute({
 });
 
 /**
+ * 車次主檔：派車看板的欄位來源。
+ *
+ * 守衛用 `read, dispatch` —— ability 只有 10 個資源（無 `route`/`master`），
+ * 軍種介面屬派車域，故與看板同受眾；寫入授權落在 handler 的 `deptScope` 與 RLS。
+ */
+const routesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/masters/routes",
+  component: RoutesPage,
+  beforeLoad: requireAbility("read", "dispatch"),
+});
+
+/**
  * 帳號／方案頁：租戶後台唯讀的權益卡片。
  *
  * 刻意的**沒有**能力守衛：`platform.*` 能力不得出現在租戶端（S11），而這張卡片誰看得到
@@ -149,6 +163,7 @@ const routeTree = rootRoute.addChildren([
   ordersRoute,
   productsRoute,
   dispatchRoute,
+  routesRoute,
   accountRoute,
   ...devRoutes,
 ]);

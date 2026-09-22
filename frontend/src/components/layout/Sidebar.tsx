@@ -2,6 +2,7 @@ import { Link } from "@tanstack/solid-router";
 import type { LucideIcon } from "lucide-solid";
 import {
   Building2,
+  Milestone,
   ClipboardList,
   CreditCard,
   Home,
@@ -34,6 +35,7 @@ export type NavRoute =
   | "/customers"
   | "/orders"
   | "/products"
+  | "/masters/routes"
   | "/dispatch"
   | "/users/companies"
   | "/users/departments"
@@ -70,6 +72,7 @@ const NAV_SECTIONS: NavSection[] = [
       { label: "客戶總表", icon: Users, to: "/customers" },
       { label: "商品總表", icon: Package, to: "/products" },
       { label: "訂單管理", icon: ClipboardList, to: "/orders" },
+      { label: "車次主檔", icon: Milestone, to: "/masters/routes" },
       { label: "派車規劃", icon: Route, to: "/dispatch" },
       { label: "單據列印", icon: Printer },
     ],
