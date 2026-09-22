@@ -5,8 +5,6 @@ package fileassets
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"mime"
 	"net/http"
 	"os"
@@ -25,7 +23,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
-	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
+	"github.com/salesorder/sales-order-1.0/backend/internal/resterr"
 )
 
 // Handler 為檔案端點依賴(Store + ent client)。
@@ -39,12 +37,13 @@ func NewHandler(db *ent.Client, root string) *Handler {
 	return &Handler{store: NewStore(db, root), db: db}
 }
 
-// RegisterRoutes 掛上傳、下載與軟刪除路由(呼叫端在 /api/v1 下掛載,此處用相對路徑)。
-// apiMux 為標準 ServeMux(Connect handler 同器):REST 三條用方法+路徑模板掛載(Go 1.22+)。
+// RegisterRoutes 掛上傳、下載、軟刪除與公司 Logo 路由(呼叫端在 /api/v1 下掛載,此處用相對路徑)。
+// apiMux 為標準 ServeMux(Connect handler 同器):REST 四條用方法+路徑模板掛載(Go 1.22+)。
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /files", h.upload)
 	mux.HandleFunc("GET /files/{id}/download", h.download)
 	mux.HandleFunc("DELETE /files/{id}", h.remove)
+	mux.HandleFunc("POST /companies/{company_id}/logo", h.logo)
 }
 
 // scopeOf 依身分推導範圍(super/company_admin → 公司層;dept_admin/staff → 本部門;
@@ -322,51 +321,14 @@ func scopeFileQuery(ctx context.Context, db *ent.Client, cid int, did *int, fid 
 	return q.Only(ctx)
 }
 
-// writeJSON 寫 JSON 回應。
+// writeJSON/writeErr 委派 resterr:REST 錯誤協定的**單一來源**(server.writeConnectError 是
+// Connect RPC 的同形實作)。檔名慣例保留,呼叫點不必知道實作落在哪個套件。
 func writeJSON(w http.ResponseWriter, code int, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	_ = json.NewEncoder(w).Encode(v)
+	resterr.JSON(w, code, v)
 }
 
-// writeErr 以 Connect 錯誤協定寫出(與 server.writeConnectError 同形:
-// code/message/details + trace_id 由 requestid.Stamp 補)。
 func writeErr(w http.ResponseWriter, r *http.Request, err error) {
-	ctx, _ := requestid.Ensure(r.Context(), r.URL.Path)
-	err = requestid.Stamp(ctx, err)
-	body := map[string]any{"code": connect.CodeOf(err).String(), "message": err.Error()}
-	if ce, ok := err.(*connect.Error); ok {
-		body["message"] = ce.Message()
-		var details []map[string]string
-		for _, d := range ce.Details() {
-			details = append(details, map[string]string{
-				"type":  d.Type(),
-				"value": base64.RawStdEncoding.EncodeToString(d.Bytes()),
-			})
-		}
-		if details != nil {
-			body["details"] = details
-		}
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(httpStatusFor(err))
-	_ = json.NewEncoder(w).Encode(body)
-}
-
-// httpStatusFor 對映 Connect code → HTTP 狀態(與 server.httpStatusForCode 同表)。
-func httpStatusFor(err error) int {
-	switch connect.CodeOf(err) {
-	case connect.CodeUnauthenticated:
-		return http.StatusUnauthorized
-	case connect.CodePermissionDenied:
-		return http.StatusForbidden
-	case connect.CodeInvalidArgument:
-		return http.StatusBadRequest
-	case connect.CodeNotFound:
-		return http.StatusNotFound
-	default:
-		return http.StatusInternalServerError
-	}
+	resterr.Write(w, r, err)
 }
 
 // notFound 統一 404(存在性隱藏)。

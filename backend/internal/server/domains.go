@@ -136,6 +136,8 @@ func (s *Server) mountAuth() {
 	services.RegisterDispatchService(apiMux, entClient)        // DispatchService(08 Task 5.1)
 	// 04 Task 3.6 檔案資產(REST:上傳/下載/軟刪除,掛同一 apiMux,與 Connect 路徑不衝突)。
 	fileassets.NewHandler(entClient, s.cfg.Storage.StorageRoot).RegisterRoutes(apiMux)
+	// GET /me:session 身分 + 所屬公司品牌(Web 側邊欄 Logo,規格 §8.1);REST 同一 apiMux。
+	apiMux.HandleFunc("GET /me", h.Me)
 	// T10/T10b 租戶端權益投影：租戶後台／App 的「我的方案與用量」。掛在 /api/v1 之下（租戶
 	// session ＋ RLS），**不是** /platform/ —— 那裡是 operator cookie 與平台工具的路徑範圍。
 	services.RegisterTenantEntitlementService(apiMux, entClient, entSvc)
