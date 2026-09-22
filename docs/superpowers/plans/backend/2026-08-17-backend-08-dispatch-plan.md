@@ -2,7 +2,7 @@
 
 > **性質**：原為目標型執行計畫（含內嵌目標程式碼）。經 2026-09-18 盤點（codebase-memory 知識圖譜 + git）重建，為**反映現況的執行計畫**。
 >
-> **狀態基準**：2026-09-18 盤點。**本計畫對應領域（派車/看板串流）實際尚未實作**——ent/schema 無車次/派車實體、internal 無 dispatch/salesorders 目錄、無 Valkey pub/sub 訂閱、無 WatchBoard stream。以下為保留的目標計畫架構，全數 ⬜ 未開始。
+> **狀態基準**：2026-09-22 實作對齊。後端已落地：`DispatchService` 4 RPC（Assign／Confirm／Cancel／WatchBoard）＋派車通知（07 觸發）＋提交後發佈（程序內直投；跨 replica Valkey 訂閱層另案）；Web 看板頁＋輪詢降級待。以下保留目標架構供追溯。
 >
 > **對應設計**：`docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（v1.0.34）、決策 `D13/D14`
 > **細部文件**：`docs/superpowers/plans/backend/detail/08-dispatch.md`、共通規則 `detail/00-index.md` §3
@@ -14,13 +14,13 @@
 
 | Task | 內容 | 狀態 |
 |---|---|---|
-| 1 | AssignRoute 樂觀鎖與順位重排（細部 5.1.1） | ⬜ 未開始 |
-| 2 | 車次批次 Confirm（細部 5.1.2） | ⬜ 未開始 |
-| 3 | CancelDispatch 與派車通知觸發（細部 5.1.3–5.1.4） | ⬜ 未開始 |
-| 4 | WatchBoard proto 與串流 handler（細部 5.2.1） | ⬜ 未開始 |
-| 5 | Valkey pub/sub 跨 replica 與 heartbeat（細部 5.2.2–5.2.3） | ⬜ 未開始 |
+| 1 | AssignRoute 樂觀鎖與順位重排（細部 5.1.1） | ✅ 完成（後端；Web 拖放頁待） |
+| 2 | 車次批次 Confirm（細部 5.1.2） | ✅ 完成（後端逐筆交易＋部分失敗） |
+| 3 | CancelDispatch 與派車通知觸發（細部 5.1.3–5.1.4） | ✅ 完成（後端＋重印警告＋通知） |
+| 4 | WatchBoard proto 與串流 handler（細部 5.2.1） | ✅ 完成（後端串流＋部門隔離） |
+| 5 | Valkey pub/sub 跨 replica 與 heartbeat（細部 5.2.2–5.2.3） | 🟡 部分（heartbeat 已落地；跨 replica 訂閱層另案，發佈器介面已預留） |
 
-**實作範圍**：0%（全部待辦）。
+**實作範圍**：後端約 90%（跨 replica 轉發＋Web 頁待）。
 
 ---
 
@@ -49,4 +49,4 @@ Valkey pub/sub 跨 replica 轉發 + 25 秒 heartbeat；降級 30 秒輪詢。
 
 ---
 
-*最後更新：2026-09-18（08-dispatch 現況對齊重建；領域未實作）*
+*最後更新：2026-09-22（08-dispatch 後端對齊；跨 replica＋Web 頁待）*
