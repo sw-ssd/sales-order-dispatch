@@ -11,12 +11,15 @@ import {
   Package,
   Printer,
   Route,
+  Scissors,
   ScrollText,
   ShieldCheck,
+  Tags,
   Truck,
   Undo2,
   UserCog,
   Users,
+  Warehouse,
 } from "lucide-solid";
 import { For, Show, type Component } from "solid-js";
 import { Dynamic } from "solid-js/web";
@@ -41,6 +44,9 @@ export type NavRoute =
   | "/notifications"
   | "/products"
   | "/masters/routes"
+  | "/masters/warehouses"
+  | "/masters/categories"
+  | "/masters/processing-specs"
   | "/printing"
   | "/dispatch"
   | "/users/companies"
@@ -81,6 +87,9 @@ const NAV_SECTIONS: NavSection[] = [
       { label: "訂單管理", icon: ClipboardList, to: "/orders" },
       { label: "退貨管理", icon: Undo2, to: "/returns" },
       { label: "車次主檔", icon: Milestone, to: "/masters/routes" },
+      { label: "倉別主檔", icon: Warehouse, to: "/masters/warehouses" },
+      { label: "商品分類", icon: Tags, to: "/masters/categories" },
+      { label: "分切規格", icon: Scissors, to: "/masters/processing-specs" },
       { label: "派車規劃", icon: Route, to: "/dispatch" },
       { label: "單據列印", icon: Printer, to: "/printing" },
     ],

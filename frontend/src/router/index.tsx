@@ -19,6 +19,9 @@ import OrdersPage from "~/features/orders/pages/OrdersPage";
 import ProductsPage from "~/features/products/pages/ProductsPage";
 import DispatchPage from "~/features/dispatch/pages/DispatchPage";
 import RoutesPage from "~/features/masters/pages/RoutesPage";
+import WarehousesPage from "~/features/masters/pages/WarehousesPage";
+import ProductCategoriesPage from "~/features/masters/pages/ProductCategoriesPage";
+import ProcessingSpecsPage from "~/features/masters/pages/ProcessingSpecsPage";
 import PrintPage from "~/features/printing/pages/PrintPage";
 import ReturnsPage from "~/features/returns/pages/ReturnsPage";
 import NotificationsPage from "~/features/notifications/pages/NotificationsPage";
@@ -178,6 +181,45 @@ const routesRoute = createRoute({
 });
 
 /**
+ * 倉別主檔（04 Task 3.4）。
+ *
+ * 守衛與車次同為 `read, dispatch`：ability 沒有 `warehouse`/`master` 資源，而倉別正是
+ * 揀貨單（picking_list）與派車域的欄位來源 —— 能開看板的人就能看它的來源主檔。
+ * 寫入授權落在 handler 的 `requireAuth`＋`deptScope` 與 RLS。
+ */
+const warehousesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/masters/warehouses",
+  component: WarehousesPage,
+  beforeLoad: requireAbility("read", "dispatch"),
+});
+
+/**
+ * 商品分類主檔（04 Task 3.4）。
+ *
+ * 守衛用 `read, product`（不是 dispatch）：分類屬**商品域**，而 staff 對 `product` 是
+ * `*`、對 `dispatch` 只有 `read` —— 掛錯資源會讓有商品權限的 staff 打不開這頁。
+ */
+const categoriesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/masters/categories",
+  component: ProductCategoriesPage,
+  beforeLoad: requireAbility("read", "product"),
+});
+
+/**
+ * 分切規格主檔（04 Task 3.4；規格欄位供 05 訂單明細與 09 加工單）。
+ *
+ * 守衛同分類：規格是**商品域**資料（`read, product`），理由見 `categoriesRoute`。
+ */
+const processingSpecsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/masters/processing-specs",
+  component: ProcessingSpecsPage,
+  beforeLoad: requireAbility("read", "product"),
+});
+
+/**
  * 單據列印。
  *
  * 守衛用 `read, "print"`：`print` 是 ability 內建資源（`rolePolicy` 給
@@ -232,6 +274,9 @@ const routeTree = rootRoute.addChildren([
   auditRoute,
   dispatchRoute,
   routesRoute,
+  warehousesRoute,
+  categoriesRoute,
+  processingSpecsRoute,
   printRoute,
   accountRoute,
   ...devRoutes,
