@@ -55,5 +55,18 @@ func main() {
 		log.Fatalf("seed 平台域: %v", err)
 	}
 	log.Println("seed: 平台域已確保（7 features／3 方案與價目／首位 operator 依 env／平台自營公司與系統使用者，冪等）")
+
+	// 示範資料（僅 development／staging；production 直接返回）。用途是讓本機各頁面與
+	// Pixso 設計稿有真實樣貌的資料，**不是**生產種子 —— 與上面兩段（roles／platform）
+	// 的差別就在這裡：那兩段生產要跑，這段不要。
+	// 同樣走 SystemScopeTx：全部是 ENABLE+FORCE RLS 的業務表，且 seed 不帶請求身分。
+	if err := dbtenant.SystemScopeTx(ctx, client, func(tx *ent.Tx) error {
+		return SeedFakeData(ctx, tx.Client(), cfg.API.Env)
+	}); err != nil {
+		log.Fatalf("seed 示範資料: %v", err)
+	}
+	if cfg.API.Env != "production" {
+		log.Println("seed: 示範資料已確保（FAKE-DEMO 租戶，僅非 production，冪等）")
+	}
 	log.Println("seed: 完成")
 }
