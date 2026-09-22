@@ -74,15 +74,16 @@
 - `frontend/src/features/users/pages/CompaniesPage.tsx`
 - `frontend/src/features/users/pages/DepartmentsPage.tsx`
 - `frontend/src/features/users/pages/RolesPage.tsx`（角色權限設置頁 + PermissionMatrix，git `0c51977`）
+- `frontend/src/features/users/pages/UsersPage.tsx`（使用者管理頁，git `8caae63`）
 - `frontend/src/features/users/components/PermissionMatrix.tsx`、`ListPagination.tsx`
 
-**說明**：公司、部門、角色權限設置頁已實作並接上後端 Company/Department/RoleService。**未含**完整使用者管理頁（UserService 後端未實作，見 backend 02 Task 3）。
+**說明**：公司、部門、角色權限設置頁已實作並接上後端 Company/Department/RoleService；使用者管理頁已落地（清單／新增／停用／指派，後端無 sort 參數故不開排序）。
 
 - [x] **CompaniesPage** — 公司 CRUD 頁
 - [x] **DepartmentsPage** — 部門 CRUD 頁
 - [x] **RolesPage + PermissionMatrix** — 角色權限設置（T19）
 - [x] **ListPagination** — 分頁元件
-- [ ] **使用者管理頁** — 依後端 UserService（backend 02 Task 3）落地後補
+- [x] **使用者管理頁** — 清單／新增／停用／指派（16/17 打勾；剩餘為各業務頁）
 
 ### 4. UI 基礎 + hooks + network（地基）
 
@@ -116,13 +117,12 @@
 
 | 待辦 | 相依 |
 |---|---|
-| 使用者管理頁（UserService） | backend 02 Task 3 |
-| master-data 前端（客戶/商品/倉別…） | backend 04 |
-| orders 前端 | backend 05 |
-| dispatch 看板前端 | backend 08 |
-| printing 前端 | backend 09 |
+| master-data 前端（客戶/商品/倉別…） | backend 04 ✅ 後端已落地 |
+| orders 前端 | backend 05 ✅ 後端已落地 |
+| dispatch 看板前端 | backend 08 ✅ 後端已落地 |
+| printing 前端 | backend 09 ✅ 後端已落地 |
 | CASL → OpenFGA 遷移（UI 權限來源） | D32 定奪 |
 
 ---
 
-*最後更新：2026-09-18（frontend 現況對齊計畫，新增）*
+*最後更新：2026-09-22（使用者管理頁落地 16/17；各業務頁待建，後端 04/05/08/09 皆已就緒）*

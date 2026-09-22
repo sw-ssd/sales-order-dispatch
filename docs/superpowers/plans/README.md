@@ -55,7 +55,7 @@ graph TD
 | 09-printing | `backend/2026-08-17-backend-09-printing-plan.md` | 列印與 PDF | ✅ 完成（2026-09-22） | Tasks 1–4 全數落地：`internal/print`（view model＋四模板＋Gotenberg client＋PDF 產線）、printlog／printpreview schema（00037）、Preview／Print／ListLogs RPC、00038 RLS ENABLE＋FORCE、全整合綠 ok=30 fail=0 |
 | fleet-execution（D32） | `backend/detail/10-fleet-execution.md` | Fleetbase 物流執行層 | ⬜ 未開始 | 細部文件；授權 OpenFGA/RLS 待定 |
 | app-flutter-stack | `app/2026-08-04-app-flutter-stack.md` | App 技術棧與認證基礎（D29） | 🟡 部分 | Task 1（骨架）✅、Task 5/6/7（token/auth transport/router）部分；core/config、QueryCache、Sembast 鏡像、fquery 慣例、根佈線未落地 |
-| frontend-auth-users | `frontend/2026-09-18-frontend-auth-users-plan.md` | Web 中台 auth/users/ability | 🟡 部分 | 15/17 打勾：登入雙 tab、403、Google OIDC、公司/部門/角色三頁＋PermissionMatrix＋分頁、`requireAbility` 路由守衛已完成；待辦為使用者管理頁與各業務頁（相依 04/05/08/09） |
+| frontend-auth-users | `frontend/2026-09-18-frontend-auth-users-plan.md` | Web 中台 auth/users/ability | 🟡 部分 | 16/17 打勾：登入雙 tab、403、Google OIDC、公司/部門/角色/使用者四頁＋PermissionMatrix＋分頁、`requireAbility` 路由守衛已完成；待辦為各業務頁（後端 04/05/08/09 皆已落地） |
 | frontend-openfga | `frontend/2026-09-18-openfga-authz-frontend-plan.md` | CASL → 權限集合遷移 | ✅ 完成 | F1–F4 全落地：`permissions.ts`（Set 查詢）、`service.ts` 載入權限集合、`Can`/`guards` 改用 `hasPermission`、`@casl/ability` 已自依賴移除 |
 | frontend-ui-library（Phase 1） | `frontend/2026-09-19-frontend-ui-library-phase1-plan.md` | UI 元件庫化 | ✅ 完成 | barrel＋`registry.json`＋每元件 `.md`＋dev-only `/ui` demo；Field/ScrollArea/Pagination 改 Ark（對外 API 不變、刪死碼 `label.tsx`）；sidebar 多部件；深色模式三態＋anti-FOUC；AppShell 換用新 sidebar/splitter |
 | frontend-forms（Phase 2） | `frontend/2026-09-19-frontend-forms-tanstack-phase2-plan.md` | 表單 | ✅ 完成 | 登入／公司／部門三表單改 TanStack Form ＋ valibot 欄位級驗證 |

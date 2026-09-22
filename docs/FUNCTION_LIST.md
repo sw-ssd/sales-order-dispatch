@@ -102,7 +102,7 @@ flowchart TB
 |------|------|------|:-:|
 | Company CRUD | 公司主檔 + customer_code_prefix 唯一 | Web/後端 | ✅ backend + Web |
 | Department CRUD | 部門 CRUD | Web/後端 | ✅ backend + Web |
-| 使用者管理 | UserService CRUD、角色指派、停用連鎖 | Web/後端 | 🟡（後端 7 RPC 已落地；Web 頁待） |
+| 使用者管理 | UserService CRUD、角色指派、停用連鎖 | Web/後端 | ✅（後端 7 RPC＋Web 頁） |
 | Logo/Branding/PublicInfo | 公開資訊 + Logo 上傳 | 後端 | 🟡（PublicInfo；Logo 待） |
 | roles + role_permissions | 7 角色 + 權限表（CASL 三欄） | 後端/Web | ✅ |
 | 角色權限設置 | PermissionMatrix | Web | ✅ |
@@ -193,7 +193,7 @@ flowchart TB
 | 登入 / 認證 | ✅ | ✅ | ✅ |
 | 公司 / 部門 CRUD | ✅ | ✅ | — |
 | 角色權限 + PermissionMatrix | ✅ | ✅ | — |
-| 使用者管理 | ✅（API） | ⬜ | — |
+| 使用者管理 | ✅（API） | ✅ | — |
 | 客戶 / 地址 / 商品 / 部門級主檔 | ✅（API） | ⬜ | ⬜ |
 | 客戶專屬商品 / 檔案資產 | ✅（API） | ⬜ | ⬜ |
 | 銷售訂單 | ✅（API） | ⬜ | ⬜ |
