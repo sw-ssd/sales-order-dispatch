@@ -2,7 +2,7 @@
 
 > 本文件整合所有先前規劃文件（原 `openspec/` 工作流已於 2026-08-03 停用並移除，內容遷移至 `docs/superpowers/specs/`），是後續**新增需求**與**開始實作**的單一入口。
 > 整合日期：2026-08-03；**現況對齊更新：2026-09-22**（計畫狀態以 `docs/superpowers/plans/README.md` 為準；功能層對照見 `docs/FUNCTION_LIST.md` §3）
-> 核心狀態：**monorepo；backend 01 auth、02 tenancy/users、03 metadicts/audit、04 master-data（含客戶專屬商品/檔案資產/QR 兌換）、05 sales-orders（後端 API＋狀態機＋取號）、09 printing 全數落地；06 returns（後端＋Web 退貨頁 `549933c`）、07 notifications 後端亦已落地（07 約 85%，FCM 為 Fake sender）＋Web 通知中心 `b193544`、08 dispatch 後端約 90%＋Web 看板已落地；fleet 未開工；frontend UI 四階段完成並落地 10 頁（使用者/客戶/訂單/商品/退貨/通知中心/稽核/派車看板/車次主檔/單據列印）、app 僅骨架；未部署**
+> 核心狀態：**monorepo；backend 01 auth、02 tenancy/users、03 metadicts/audit、04 master-data（含客戶專屬商品/檔案資產/QR 兌換）、05 sales-orders（後端 API＋狀態機＋取號）、09 printing 全數落地；06 returns（後端＋Web 退貨頁 `549933c`）、07 notifications 後端亦已落地（07 約 85%，FCM 為 Fake sender）＋Web 通知中心 `b193544`、08 dispatch 後端約 90%＋Web 看板已落地；fleet 未開工；frontend UI 四階段完成並落地 13 頁（使用者/客戶/訂單/商品/退貨/通知中心/稽核/派車看板/車次/倉別/分類/分切規格/單據列印）、app 僅骨架；未部署**
 > 版本凍結：規格書 **v1.0.34** 已凍結為實作基準（2026-08-03 起；需求變更須升版）
 
 ---
@@ -156,4 +156,4 @@
 
 ---
 
-*最後更新：2026-09-22（核心狀態行對齊 06/07/08 與 10 個 Web 頁）*
+*最後更新：2026-09-22（核心狀態行對齊 06/07/08 與 13 個 Web 頁）*
