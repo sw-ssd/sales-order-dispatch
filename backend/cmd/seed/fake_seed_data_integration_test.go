@@ -24,6 +24,8 @@ package main
 import (
 	"context"
 	"database/sql"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -47,12 +49,14 @@ func TestIntegrationSeedFakeData(t *testing.T) {
 	ctx := t.Context()
 
 	// 平台自營公司由 SeedPlatform 建立;先建好才能驗「示範資料不寫進它」。
+	// 列印紀錄的 PDF 會實際落在此目錄下，故整支測試共用同一個根。
+	storageRoot := t.TempDir()
 	platformID := insertCompany(t, admin, "平台營運", platformCompanyIdentifier)
 	platformUsersBefore := seedCount(t, admin,
 		`SELECT count(*) FROM users WHERE company_users = `+strconv.Itoa(platformID))
 
 	t.Run("production 不寫任何示範資料", func(t *testing.T) {
-		if err := runFake(ctx, owner, "production"); err != nil {
+		if err := runFake(ctx, owner, "production", storageRoot); err != nil {
 			t.Fatalf("production 應靜默略過, got %v", err)
 		}
 		if n := seedCount(t, admin,
@@ -62,7 +66,7 @@ func TestIntegrationSeedFakeData(t *testing.T) {
 	})
 
 	t.Run("development 建立示範租戶且可重跑", func(t *testing.T) {
-		if err := runFake(ctx, owner, "development"); err != nil {
+		if err := runFake(ctx, owner, "development", storageRoot); err != nil {
 			t.Fatalf("示範資料 seed 失敗: %v", err)
 		}
 		coID := seedCount(t, admin,
@@ -93,6 +97,28 @@ func TestIntegrationSeedFakeData(t *testing.T) {
 			}
 		}
 
+		// 列印紀錄的 file_assets 必須**真的有檔案落在 storageRoot**：下載端點是
+		// 「查列 → 開 storage_path 的檔」，只建列會讓列印頁每條連結都 404
+		// （先前版本正是如此）。表級斷言抓不到，故在此逐筆驗證。
+		paths := seedStrings(t, admin,
+			`SELECT fa.storage_path FROM file_assets fa
+			   JOIN print_logs pl ON pl.file_asset_id = fa.id
+			  WHERE pl.company_id = `+co)
+		if len(paths) == 0 {
+			t.Fatal("列印紀錄應有對應的 file_assets 列")
+		}
+		for _, p := range paths {
+			abs := filepath.Join(storageRoot, filepath.FromSlash(p))
+			st, err := os.Stat(abs)
+			if err != nil {
+				t.Errorf("file_assets.storage_path 應有實際檔案 %s: %v", p, err)
+				continue
+			}
+			if st.Size() == 0 {
+				t.Errorf("示範列印檔 %s 不得為空", p)
+			}
+		}
+
 		// 訂單編號必須是真實格式(來源碼 + 6 位補零),不是自創的示範格式。
 		nos := seedStrings(t, admin,
 			`SELECT order_no FROM sales_orders WHERE company_id = `+co+` ORDER BY order_no`)
@@ -120,7 +146,7 @@ func TestIntegrationSeedFakeData(t *testing.T) {
 		}
 
 		// 冪等:再跑一次不得改變任何列數與公司 id。
-		if err := runFake(ctx, owner, "development"); err != nil {
+		if err := runFake(ctx, owner, "development", storageRoot); err != nil {
 			t.Fatalf("第二次 seed 必須成功(冪等): %v", err)
 		}
 		if got := seedCount(t, admin,
@@ -184,9 +210,10 @@ func TestIntegrationAppRoleCanCreateFirstOrder(t *testing.T) {
 }
 
 // runFake 在系統範圍交易內執行示範 seeder(與 cmd/seed/main.go 同一條路徑)。
-func runFake(ctx context.Context, client *ent.Client, env string) error {
+// storageRoot 由呼叫端提供，測試才能事後檢查落檔結果（見 seedPrintLogs 的檔案斷言）。
+func runFake(ctx context.Context, client *ent.Client, env, storageRoot string) error {
 	return dbtenant.SystemScopeTx(ctx, client, func(tx *ent.Tx) error {
-		return SeedFakeData(ctx, tx.Client(), env)
+		return SeedFakeData(ctx, tx.Client(), env, storageRoot)
 	})
 }
 

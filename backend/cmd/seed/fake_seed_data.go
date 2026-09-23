@@ -15,8 +15,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
@@ -55,8 +58,11 @@ const fakeUserEmail = "fake-admin@example.test"
 // SeedFakeData 建立示範租戶與其業務資料（公司／部門／使用者／主檔／訂單／退貨／列印／通知）。
 // 回傳 false 表示環境不允許（production），由呼叫端決定是否提示。
 //
+// `storageRoot` 是檔案儲存根目錄（`config.Storage.StorageRoot`）：列印紀錄的 file_assets 列
+// 必須有對應的 PDF 檔在磁碟上，否則頁面的「下載」連結會 404（只剩資料庫列，見 seedPrintLogs）。
+//
 // 只建立**設計稿需要看到的狀態**，不追求業務完整性（例如不做庫存、不跑 OpenFGA provisioning）。
-func SeedFakeData(ctx context.Context, client *ent.Client, env string) error {
+func SeedFakeData(ctx context.Context, client *ent.Client, env, storageRoot string) error {
 	if env == "production" {
 		return nil
 	}
@@ -64,7 +70,7 @@ func SeedFakeData(ctx context.Context, client *ent.Client, env string) error {
 	if err := assertNotPlatformScope(ctx, client); err != nil {
 		return err
 	}
-	return seedFakeTenant(ctx, client)
+	return seedFakeTenant(ctx, client, storageRoot)
 }
 
 // assertNotPlatformScope 確認連線目前不在平台自營公司的範圍內。
@@ -87,7 +93,7 @@ func assertNotPlatformScope(ctx context.Context, client *ent.Client) error {
 }
 
 // seedFakeTenant 是 seeder 主體。所有寫入都帶明確的 company_id／department_id。
-func seedFakeTenant(ctx context.Context, client *ent.Client) error {
+func seedFakeTenant(ctx context.Context, client *ent.Client, storageRoot string) error {
 	// 先清掉上一輪的示範列（子表先刪，避開 FK）。範圍嚴格限定在示範公司內。
 	if err := clearFakeData(ctx, client); err != nil {
 		return err
@@ -99,7 +105,7 @@ func seedFakeTenant(ctx context.Context, client *ent.Client) error {
 	}
 
 	for _, co := range companies {
-		if err := seedFakeCompany(ctx, client, co.id, co.identifier, co.withData); err != nil {
+		if err := seedFakeCompany(ctx, client, co.id, co.identifier, co.withData, storageRoot); err != nil {
 			return fmt.Errorf("示範公司 %s: %w", co.identifier, err)
 		}
 	}
@@ -272,7 +278,7 @@ func fakeCompanyIDs(ctx context.Context, client *ent.Client) ([]int, error) {
 }
 
 // seedFakeCompany 建立單一示範公司的資料。noData 為 true 時只建立部門（公司頁多列用）。
-func seedFakeCompany(ctx context.Context, client *ent.Client, cid int, identifier string, withData bool) error {
+func seedFakeCompany(ctx context.Context, client *ent.Client, cid int, identifier string, withData bool, storageRoot string) error {
 	deptID, err := ensureDepartment(ctx, client, cid, "總公司")
 	if err != nil {
 		return err
@@ -325,7 +331,7 @@ func seedFakeCompany(ctx context.Context, client *ent.Client, cid int, identifie
 	if err := seedNotifications(ctx, client, cid, deptID, userID); err != nil {
 		return err
 	}
-	if err := seedPrintLogs(ctx, client, cid, deptID, userID, routes); err != nil {
+	if err := seedPrintLogs(ctx, client, cid, deptID, userID, routes, storageRoot); err != nil {
 		return err
 	}
 	return seedAuditLogs(ctx, client, cid, deptID, userID)
@@ -874,9 +880,11 @@ func seedNotifications(ctx context.Context, client *ent.Client, cid, did, actor 
 
 // seedPrintLogs 建立列印紀錄（4 種單據類型 + 1 筆補印）與其 PDF 檔案的 file_assets 列。
 //
-// file_assets 是 NOT NULL FK，故必須先建檔列 —— 先前手寫 SQL 漏了這一步而失敗。
-// 這裡只建**資料庫列**，不落地真實 PDF 檔（示範資料不需要可下載的檔案）。
-func seedPrintLogs(ctx context.Context, client *ent.Client, cid, did, actor int, routes []int) error {
+// file_assets 是 NOT NULL FK，故必須先建檔列。**同時把檔案寫到磁碟**：下載端點是
+// 「查 DB 列 → 開 storage_path 的檔」，只建列會讓列印頁每一條「下載」都 404
+// （先前版本只建列,實測 6 筆全部 404）。PDF 內容用最小合法文件即可 —— 示範資料要的是
+// 「點得開」，不是可讀的報表。
+func seedPrintLogs(ctx context.Context, client *ent.Client, cid, did, actor int, routes []int, storageRoot string) error {
 	if len(routes) == 0 {
 		return nil
 	}
@@ -895,15 +903,25 @@ func seedPrintLogs(ctx context.Context, client *ent.Client, cid, did, actor int,
 		{"picking_list", 1, 1, false, "", 27 * time.Hour},
 		{"dispatch_summary", 1, 1, true, "客戶要求重新列印", 50 * time.Hour},
 	}
+	pdf := minimalPDF()
 	for i, s := range specs {
-		filename := fmt.Sprintf("print-%d.pdf", i+1)
+		// 檔名與路徑比照 FileStore 的慣例（`<company>/<yyyy>/<mm>`），但用可讀的固定名，
+		// 讓示範資料在磁碟上一眼可辨。
+		rel := fmt.Sprintf("%d/%s/%s", cid, time.Now().Format("2006/01"), fmt.Sprintf("print-%d.pdf", i+1))
+		abs := filepath.Join(storageRoot, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(abs), 0o755); err != nil {
+			return fmt.Errorf("建立示範列印檔目錄: %w", err)
+		}
+		if err := os.WriteFile(abs, pdf, 0o644); err != nil {
+			return fmt.Errorf("寫入示範列印檔: %w", err)
+		}
 		fa, err := client.FileAsset.Create().
 			SetCompanyID(cid).SetDepartmentID(did).
 			SetOwnerType("print").SetOwnerID(i + 1).
-			SetFilename(filename).SetOriginalFilename(filename).
-			SetMimeType("application/pdf").SetSizeBytes(20480).
-			SetStoragePath(fmt.Sprintf("%d/2026/09/%s", cid, filename)).
-			SetURL(fmt.Sprintf("/api/v1/files/%s/download", filename)).
+			SetFilename(filepath.Base(rel)).SetOriginalFilename(fmt.Sprintf("示範單據-%d.pdf", i+1)).
+			SetMimeType("application/pdf").SetSizeBytes(len(pdf)).
+			SetStoragePath(rel).
+			SetURL("/api/v1/files/" + filepath.Base(rel) + "/download").
 			SetCreatedBy(actor).
 			Save(ctx)
 		if err != nil {
@@ -929,6 +947,35 @@ func seedPrintLogs(ctx context.Context, client *ent.Client, cid, did, actor int,
 		}
 	}
 	return nil
+}
+
+// minimalPDF 回一份最小可開啟的 PDF（單頁、標題「示範單據」）。
+//
+// 不用套件：示範資料只需要「下載得到一個 Content-Type: application/pdf 的檔案」，
+// 為此引入 PDF 產生器不划算。xref 位移以實際長度計算，確保檔案結構合法。
+func minimalPDF() []byte {
+	content := "BT /F1 24 Tf 72 720 Td (Demo Document) Tj ET"
+	objects := []string{
+		"<< /Type /Catalog /Pages 2 0 R >>",
+		"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+		fmt.Sprintf("<< /Length %d >>\nstream\n%s\nendstream", len(content), content),
+		"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+	}
+	var b bytes.Buffer
+	b.WriteString("%PDF-1.4\n")
+	offsets := make([]int, len(objects)+1)
+	for i, o := range objects {
+		offsets[i+1] = b.Len()
+		fmt.Fprintf(&b, "%d 0 obj\n%s\nendobj\n", i+1, o)
+	}
+	xref := b.Len()
+	fmt.Fprintf(&b, "xref\n0 %d\n0000000000 65535 f \n", len(objects)+1)
+	for i := 1; i <= len(objects); i++ {
+		fmt.Fprintf(&b, "%010d 00000 n \n", offsets[i])
+	}
+	fmt.Fprintf(&b, "trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n", len(objects)+1, xref)
+	return b.Bytes()
 }
 
 // seedAuditLogs 建立稽核日誌（動作值域受 audit_logs_action_check 約束：create/update/delete/
