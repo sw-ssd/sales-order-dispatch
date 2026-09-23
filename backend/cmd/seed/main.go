@@ -61,7 +61,10 @@ func main() {
 	// 的差別就在這裡：那兩段生產要跑，這段不要。
 	// 同樣走 SystemScopeTx：全部是 ENABLE+FORCE RLS 的業務表，且 seed 不帶請求身分。
 	if err := dbtenant.SystemScopeTx(ctx, client, func(tx *ent.Tx) error {
-		return SeedFakeData(ctx, tx.Client(), cfg.API.Env, cfg.Storage.StorageRoot)
+		return SeedFakeData(ctx, tx.Client(), fakeSeedOpts{
+			Env:         cfg.API.Env,
+			StorageRoot: cfg.Storage.StorageRoot,
+		})
 	}); err != nil {
 		log.Fatalf("seed 示範資料: %v", err)
 	}

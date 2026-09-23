@@ -55,22 +55,31 @@ const fakeCompanyIdentifier2 = "FAKE-DEMO-2"
 // fakeUserEmail 示範公司的管理者帳號，作為各示範列的 created_by／sales_rep 等操作者。
 const fakeUserEmail = "fake-admin@example.test"
 
-// SeedFakeData 建立示範租戶與其業務資料（公司／部門／使用者／主檔／訂單／退貨／列印／通知）。
-// 回傳 false 表示環境不允許（production），由呼叫端決定是否提示。
+// fakeSeedOpts 是示範 seeder 的輸入（Config in → struct out）。
 //
-// `storageRoot` 是檔案儲存根目錄（`config.Storage.StorageRoot`）：列印紀錄的 file_assets 列
-// 必須有對應的 PDF 檔在磁碟上，否則頁面的「下載」連結會 404（只剩資料庫列，見 seedPrintLogs）。
+// 為何不直接收兩個 string：`env` 是 **production 閘門**、`storageRoot` 是落檔目錄，兩個相鄰的
+// 同型別參數寫反時編譯器不會講話 —— `env=="/tmp/..."` 使閘門失效（示範資料寫進生產），
+// 且檔案會落到相對路徑 `./development`。具名欄位讓寫反成為編譯錯誤。
+type fakeSeedOpts struct {
+	// Env 為 `config.API.Env`；等於 "production" 時整支 no-op。
+	Env string
+	// StorageRoot 為 `config.Storage.StorageRoot`，列印紀錄的 PDF 落檔根目錄。
+	StorageRoot string
+}
+
+// SeedFakeData 建立示範租戶與其業務資料（公司／部門／使用者／主檔／訂單／退貨／列印／通知）。
 //
 // 只建立**設計稿需要看到的狀態**，不追求業務完整性（例如不做庫存、不跑 OpenFGA provisioning）。
-func SeedFakeData(ctx context.Context, client *ent.Client, env, storageRoot string) error {
-	if env == "production" {
+// `opts.StorageRoot` 底下的 PDF 必須真的存在，否則列印頁的「下載」連結會 404（見 seedPrintLogs）。
+func SeedFakeData(ctx context.Context, client *ent.Client, opts fakeSeedOpts) error {
+	if opts.Env == "production" {
 		return nil
 	}
 	// 平台自營公司是系統自己的租戶，示範資料不得汙染它（firstCompanyID 有同款防護）。
 	if err := assertNotPlatformScope(ctx, client); err != nil {
 		return err
 	}
-	return seedFakeTenant(ctx, client, storageRoot)
+	return seedFakeTenant(ctx, client, opts.StorageRoot)
 }
 
 // assertNotPlatformScope 確認連線目前不在平台自營公司的範圍內。

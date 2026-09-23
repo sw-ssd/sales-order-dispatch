@@ -213,7 +213,7 @@ func TestIntegrationAppRoleCanCreateFirstOrder(t *testing.T) {
 // storageRoot 由呼叫端提供，測試才能事後檢查落檔結果（見 seedPrintLogs 的檔案斷言）。
 func runFake(ctx context.Context, client *ent.Client, env, storageRoot string) error {
 	return dbtenant.SystemScopeTx(ctx, client, func(tx *ent.Tx) error {
-		return SeedFakeData(ctx, tx.Client(), env, storageRoot)
+		return SeedFakeData(ctx, tx.Client(), fakeSeedOpts{Env: env, StorageRoot: storageRoot})
 	})
 }
 
