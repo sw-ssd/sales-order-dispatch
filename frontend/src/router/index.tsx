@@ -27,16 +27,7 @@ import ReturnsPage from "~/features/returns/pages/ReturnsPage";
 import NotificationsPage from "~/features/notifications/pages/NotificationsPage";
 import AuditPage from "~/features/audit/pages/AuditPage";
 import { requireAbility } from "~/lib/ability/guards";
-
-function HomePage() {
-  // 內距由 shell 統一提供（`AppShell` 是唯一內距所有者），頁面層不再自帶。
-  return (
-    <main>
-      <h1 class="text-2xl font-bold">多公司訂出貨系統</h1>
-      <p class="mt-2 text-muted-foreground">首頁佔位（Wave 1 骨架）</p>
-    </main>
-  );
-}
+import DashboardPage from "~/features/dashboard/pages/DashboardPage";
 
 // TanStack Router 程式化路由樹;root route component 承載 App 佈局,Outlet 渲染子路由。
 const rootRoute = createRootRoute({
@@ -50,7 +41,7 @@ const rootRoute = createRootRoute({
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
-  component: HomePage,
+  component: DashboardPage,
 });
 
 const loginRoute = createRoute({
