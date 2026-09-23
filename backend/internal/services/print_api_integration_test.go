@@ -6,6 +6,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -104,9 +105,10 @@ func TestIntegrationPrintPreviewAndPrint(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Preview: %v", err)
 	}
-	if prev.Msg.GetDownloadUrl() == "" {
-		t.Fatal("預覽應回下載 URL")
-	}
+	// 回應的 URL 必須**等於 file_assets.url**，不是另一個自行拼出來的字串：
+	// 兩者曾經分歧（回應 /files/<id>/download、DB /files/<uuid>.pdf/download），
+	// 下載路由兩種都吃，所以只斷言「非空」抓不到。
+	assertDownloadURLMatchesStored(t, ctx, db, prev.Msg.GetDownloadUrl(), prev.Msg.GetFileAssetId())
 	if n := countPrintLogs(t, ctx, db); n != 0 {
 		t.Fatalf("預覽不得寫 print_logs,got %d", n)
 	}
@@ -149,6 +151,28 @@ func TestIntegrationPrintPreviewAndPrint(t *testing.T) {
 	}
 	if logs.Msg.GetTotal() < 2 {
 		t.Fatalf("ListLogs 應至少 2 筆,got %d", logs.Msg.GetTotal())
+	}
+}
+
+// assertDownloadURLMatchesStored 斷言回應的 download_url 與 file_assets.url 逐字相同。
+//
+// 為什麼不是「非空」就夠：回應與 DB 曾各自拼字串（回應用整數 id、DB 用系統檔名），
+// 下載路由兩種形狀都接受，所以兩者分歧時仍然「有值、也下載得到」，只有比對才抓得到分歧。
+func assertDownloadURLMatchesStored(t *testing.T, ctx context.Context, db *ent.Client, gotURL, gotFileAssetID string) {
+	t.Helper()
+	faid, err := strconv.Atoi(gotFileAssetID)
+	if err != nil {
+		t.Fatalf("file_asset_id 應為整數字串,got %q", gotFileAssetID)
+	}
+	fa, err := db.FileAsset.Get(ctx, faid)
+	if err != nil {
+		t.Fatalf("讀 file_asset %d: %v", faid, err)
+	}
+	if gotURL != fa.URL {
+		t.Fatalf("回應 download_url 應等於 file_assets.url\n  回應: %s\n  DB  : %s", gotURL, fa.URL)
+	}
+	if gotURL == "" {
+		t.Fatal("download_url 不得為空")
 	}
 }
 

@@ -129,7 +129,7 @@ func (s *PrintService) Preview(ctx context.Context, req *connect.Request[product
 	}()
 	actor, _ := parseID(id.UserID)
 	meta := printFileMeta(cid, did, "print_preview", 0, out, actor, in)
-	faid, err := createFileAsset(ctx, db, meta)
+	faid, faURL, err := createFileAsset(ctx, db, meta)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -152,7 +152,7 @@ func (s *PrintService) Preview(ctx context.Context, req *connect.Request[product
 	committed = true
 	return connect.NewResponse(&productsv1.PreviewResponse{
 		PreviewId: strconv.Itoa(pv.ID), FileAssetId: strconv.Itoa(faid),
-		DownloadUrl: "/api/v1/files/" + strconv.Itoa(faid) + "/download",
+		DownloadUrl: faURL,
 	}), nil
 }
 
@@ -222,7 +222,7 @@ func (s *PrintService) Print(ctx context.Context, req *connect.Request[productsv
 		}
 	}()
 	actor, _ := parseID(id.UserID)
-	faid, err := createFileAsset(ctx, db, printFileMeta(cid, did, "print_log", 0, out, actor, in))
+	faid, faURL, err := createFileAsset(ctx, db, printFileMeta(cid, did, "print_log", 0, out, actor, in))
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -255,7 +255,7 @@ func (s *PrintService) Print(ctx context.Context, req *connect.Request[productsv
 	committed = true
 	return connect.NewResponse(&productsv1.PrintResponse{
 		PrintLogId: strconv.Itoa(pl.ID), FileAssetId: strconv.Itoa(faid),
-		DownloadUrl: "/api/v1/files/" + strconv.Itoa(faid) + "/download",
+		DownloadUrl: faURL,
 		IsReprint:   isReprint,
 	}), nil
 }

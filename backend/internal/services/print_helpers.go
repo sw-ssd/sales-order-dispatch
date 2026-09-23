@@ -61,7 +61,11 @@ func printFileMeta(cid int, did *int, owner string, oid int, out *print.Produced
 }
 
 // createFileAsset 在請求交易內建 file_assets 元資料(PDF 已落檔;DB 失敗由呼叫端補償刪檔)。
-func createFileAsset(ctx context.Context, db *ent.Client, m printFileInput) (int, error) {
+//
+// 回傳**已存的 URL**(`saved.URL`,由 `fileassets` 與 `SaveUpload` 共用的格式產生)而非讓呼叫端
+// 自行拼字串:先前 Preview/Print 各自內聯 `/api/v1/files/<id>/download`,與 `SaveUpload` 寫入的
+// 檔名形式(見 `fileassets`)並存兩套形狀 —— 下載路由兩種都接受,但產生端不該有兩個。
+func createFileAsset(ctx context.Context, db *ent.Client, m printFileInput) (id int, url string, err error) {
 	b := db.FileAsset.Create().
 		SetCompanyID(m.cid).SetOwnerType(m.owner).SetOwnerID(m.in.RouteID).
 		SetFilename(filepath.Base(m.out.RelPath)).SetOriginalFilename(printDownloadName(m.in)).
@@ -76,9 +80,9 @@ func createFileAsset(ctx context.Context, db *ent.Client, m printFileInput) (int
 	}
 	saved, err := b.Save(ctx)
 	if err != nil {
-		return 0, err
+		return 0, "", err
 	}
-	return saved.ID, nil
+	return saved.ID, saved.URL, nil
 }
 
 // printFileURL 取 file_asset 下載 URL(記錄查無回空,不擋列表)。
@@ -94,5 +98,3 @@ func printFileURL(ctx context.Context, db *ent.Client, faid int) (string, error)
 func printDownloadName(in print.AssembleInput) string {
 	return string(in.Type) + "_" + in.TargetDate.Format("2006-01-02") + ".pdf"
 }
-
-// printFileURL 取 file_asset 下載 URL 上已內聯 fileasset.IDEQ(見 printFileURL)。
