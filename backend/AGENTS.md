@@ -255,3 +255,40 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
     - 兩個產生檔不手改：`src/lib/proto/**`（`task proto:gen`）與 `src/lib/errcode.ts`（`go generate ./internal/errcode`），CI 各有冪等閘門（`.github/workflows/ci.yml` 的兩個「up to date」步驟已把路徑列入）。顯示錯誤一律依 `ErrorInfo`（碼 ＋ 已渲染訊息），`src/lib/errcode.ts` 只當碼表投影補位。
     為什麼：平台 RPC 跨租戶讀寫，是全系統權限最高的一條路徑；共用路由或守衛會讓「租戶身分」與「operator 身分」在同一條路徑上混用（§11-9）。
 
+## 12. Go 風格指南（go-style-guide）
+
+權威來源是 `.omp/skills/go-style-guide/`：`SKILL.md` 為目錄，`references/` 分 11 個主題（`INTERFACES`／`ERRORS`／`LOGGING`／`CONFIG`／`CONCURRENCY`／`TESTING`／`DOCUMENTATION`／`LAYOUT`／`BENCHMARKS`／`REVIEW-CHECKLIST`）。與 §5 的 go-modern-guidelines 是**兩把尺**：§5 管「語言層」（版本特性、API 取捨），本節管「工程層」（契約、可重用性、可維護性）。載入規則同 §5 —— 新碼從指南、舊碼不主動回刷；只讀本節提到的 reference，不要整份載入（`SKILL.md` 明文「載入到的主題才讀」）。
+
+本節不重述指南內容，只記三件事：**哪些地方本專案覆寫了它**（否則 agent 會把有意的設計當違規改掉）、**哪些地方它覆寫了本專案的舊習慣**、**目前還沒收斂的**。
+
+### 12.1 本專案覆寫指南（刻意偏離，不要「修復」）
+
+1. **Config 形狀**：指南要 `New(cfg Config) (*T, error)` ＋ 建構期套預設；本專案改用 `config/*.go` 逐檔 envconfig struct 的 `default:` tag（D31），service 一律 `New(db *ent.Client) *T`、錯誤集中在 `internal/server/domains.go` 的組裝與 `server.Init()` 的 fail-fast。
+   為什麼：手寫預設會與 envconfig 的 `default:` 出現兩份真相；而 DI 已經把「啟動期必失敗」的檢查收在 `Init()`（`server.go:132-190` 一串 `connect` 前拒絕啟動）。
+2. **建構子回介面有三處是有意的**：`entitlements.NewValkeyCache`、`dispatch_events.NewValkeyPublisher`、`auth.NewGoogleOAuthExchanger`。
+   為什麼：同檔各有多實作（MemoryCache／localPublisher／fakes），且 `valkey.go:30-31` 明文「回介面是為了不讓呼叫端拿到 client 自行拼 key」——改回 struct 反而開放內政。指南自己把這三種列為「Returning interfaces is correct」。
+3. **`_ = tx.Rollback()`／`_ = os.Remove()`／`_ = kv.Delete()`／`_ = json.Encode` 是刻意的 best-effort**，不是死賦值（`internal/auth/token.go:273`、`fileassets/storage.go:100`、`dbtenant` 等）。
+   為什麼：它們是補償或降級路徑且都有註解；刪掉會變成「忽略了錯誤卻看起來像處理過」。要改的是**活變數被 `_ =` 殘骸**（見 12.2-3），兩者判斷分界是「那個值在該函式還有沒有用」。
+4. **benchmark 不適用**：全 repo 0 個 `func Benchmark`。本服務是 DB-bound 的 HTTP/RPC，沒有 CPU hot path。
+5. **`cmd/*` 的 `package main` 不需套件註解**；`main.go` 必須只做 wiring —— 本專案已符合（`cmd/server/main.go` 共 21 行，組裝唯一來源是 `domains.go:InitDomains`）。
+
+### 12.2 指南在此落地的硬規則（2026-09-23 全面查核，已修正）
+
+1. **sentinel 一律 `errors.Is`，禁止字串比對**。實際案例：`qrcode.ClaimOnce` 的「已使用」曾以 `strings.Contains(err.Error(), "已使用")` 判別（`internal/handlers/auth_qr.go:77`），訊息一被改寫就會把**重複兌換誤判成 KV 不可用**，而降級路徑會放行已用掉的 token。現已在 `internal/domain/customers/qrcode` 匯出 `ErrTokenUsed`，handler 改用 `errors.Is`，並由 `TestClaimOnceUsesSentinel` 釘住（把 sentinel 換成改寫訊息的探針實測會紅）。
+   為什麼：domain 套件匯出一個 sentinel 是**收窄**呼叫端的判別方式，不是擴張契約——原先的字串比對才是把內部措辭當成對外契約。
+2. **錯誤一律 `%w`，不用 `%v`／`%s`**（實案例 `services/product_service.go:99`）。`errcode` 的 `Message()` 另有硬規則（§10-7：cause 文字不進對外訊息），兩者不衝突。
+3. **活變數不得留 `_ =` 殘骸**。2026-09-23 已清 6 處：`customer_product_service.go:154/:236/:276`、`dispatch_service.go:189`、`dispatch_watch.go:86`、`device_service.go:160`、`print/service.go:293`、`auth_qr.go:129`。其中 `EnsureCustomerProduct` 的查詢**本身是必要的存在性守衛**，只有變數綁定多餘 → 改成 `if _, err := …; err != nil`。
+   另有兩處「註解與事實不符」一併修掉：`device_service.go` 的 `PurgeInvalidTokens` doc 聲稱「逐筆寫稽核」但函式內沒有任何稽核呼叫；`dispatch_service.go` 的 `shared := time.Now().UTC()` 從未被使用。
+4. **exported 識別碼補 godoc**：`platform/store`（`Store`／`New`／`NewFake`／`NewFakeBilling`）、`internal/audit.Record`、`authz/casl.NewFieldRegistry` 與其 receiver 方法。
+   刻意**不**補的：`auth/stores.go` 的 16 個 `KVStore` 實作、`dbtenant` 的 `Exec/Query/Close/Dialect`、`consumer` 的 driver 轉呼叫 —— 三者都是逐字轉呼叫，godoc 只會複述介面上已有的契約（指南自己說註解不該重述顯而易見的機制）。
+5. **表格化測試與靜默全綠禁止**（§4 已有本專案的更嚴版本）：skip 必須附可行動訊息，且要能區分「容器環境不可用」與「設定壞掉」——後者 `t.Fatalf`（樣板 `internal/testsupport/postgres.go:129-145`）。
+
+### 12.3 已知未收斂（下一輪的工作項，不要順手改）
+
+1. **43 處可重用套件直接打全域 `log.Printf`／`log.Fatalf`**（18 個檔，`grep` 可覆現；全 repo **0 處 `log/slog`、0 處 logger 注入**）。指南的 `LOGGING.md` 要求「package 回傳、app 記錄；例外情境必須注入且可選」，本專案目前不相符。稽核分類（**不是全部都有問題**）：
+   - **真 runtime 例外、可接受**：`server/domains.go` 的 6 處 `log.Fatalf`（composition root，啟動即失敗無 caller 可回報）、`dbtenant.go:133/140/146`（interceptor 已把錯誤 return 給 caller，log 只為保留 SQLSTATE）、`services/company_service.go:674/678/682`（`toConnectError` 的遮蔽策略——根因不落 log 就無從追查）、`dispatch_events.go:56/60` 與 `user_service.go:540`（都在 `AfterCommit` 內，無 caller 可回報且明示不影響本次寫入）、`errcode/code.go:157/194`（error path 上的二次失敗）、`obs/requestid:52`（它就是 trace 邊界本身）、`platform/consumer` 與 `cron/run.go:321`（事件循環／單趟 CLI，必須繼續）。
+   - **該注入**：`server/domains.go` 的 8 處 dev 降級略過掛載、`platform_admin_service.go:1219/1236/1239` 與 `billing/lifecycle.go:85`（已回復的次要失敗／資料完整性告警）、`notification_sender.go:78/98`（**每筆通知一行，屬 hot-path logging**）、`notification_render.go:95`（`RenderTemplate` 是純計算函式，卻在純函式內直接 log）、`handlers/me.go:33/46` 與 `auth_qr.go:81`（REST 邊界，錯誤已 return）。
+   收敛建議：引入一個 `*slog.Logger`（經 `domains.go` 組裝注入，nil 即 `io.Discard`），**只**改「該注入」那一類；「真 runtime 例外」那一類維持現狀但換成注入後的 logger。43→0 不是目標，把 hot-path 與純函式兩類清掉才是。
+2. **`AuthDeps.Cfg *config.Config` 全域下傳**（`internal/handlers/auth_handler.go:51`，業務 handler 直接讀 `Cfg.Auth.*` 於 `:325/:362/:500/:525/:675`）。
+   為什麼還在：收斂成窄 struct 會動到 handlers 的依賴契約與 6 個測試建構點。建議另開工作項改為 `AuthHandlerConfig{JWTSecret, …}`。
+
