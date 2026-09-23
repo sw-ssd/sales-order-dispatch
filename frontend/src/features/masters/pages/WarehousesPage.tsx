@@ -38,6 +38,7 @@ import { appFormOptions, fieldValidators, firstMessage } from "../../form-helper
 import { ListPagination } from "../../users/components/ListPagination";
 import { WAREHOUSES_PAGE_SIZE, warehousesQueryOptions, warehouseClient } from "../queries";
 import { warehouseSchema } from "../schemas";
+import { queryData } from "~/lib/query-data";
 
 /**
  * 倉別表格的 table 功能集：**只有分頁**。
@@ -177,13 +178,13 @@ export default function WarehousesPage() {
     })
   );
 
-  const total = () => Number(query.data?.pagination?.total ?? 0);
+  const total = () => Number(queryData(query, (d) => d?.pagination?.total) ?? 0);
 
   const table = createTable({
     features: WAREHOUSE_TABLE_FEATURES,
     columns,
     get data() {
-      return query.data?.warehouses ?? NO_WAREHOUSES;
+      return queryData(query, (d) => d?.warehouses) ?? NO_WAREHOUSES;
     },
     get rowCount() {
       return total();
@@ -371,7 +372,7 @@ export default function WarehousesPage() {
           </TableHeader>
           <TableBody>
             <Show
-              when={query.data?.warehouses?.length}
+              when={queryData(query, (d) => d?.warehouses?.length)}
               fallback={
                 <TableRow>
                   <TableCell colSpan={5}>

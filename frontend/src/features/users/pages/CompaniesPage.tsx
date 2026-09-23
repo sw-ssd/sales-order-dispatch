@@ -43,6 +43,7 @@ import { ListPagination } from "../components/ListPagination";
 import { ariaSort, createSortableHeaders } from "../components/SortableHeader";
 import { companiesQueryOptions, companyClient, PAGE_SIZE } from "../queries";
 import { companySchema } from "../schemas";
+import { queryData } from "~/lib/query-data";
 
 /**
  * 新增模式的欄位預設值。`form.reset(values)` 會把傳入的 values **整份取代** `defaultValues`
@@ -203,9 +204,11 @@ export default function CompaniesPage() {
           {/* 顯示開關：company_admin 且該列是本家公司（後端 target != cid → 404 的同語意；
               前端只做顯示，後端仍是唯一決策者）。Show 為獨立反應邊界，me 到達後不需重渲染整列。 */}
           <Show
-            when={
-              me.data?.role === "company_admin" && me.data.company?.id === info.row.original.id
-            }
+            when={queryData(
+              me,
+              (d) =>
+                d?.role === "company_admin" && d?.company?.id === info.row.original.id,
+            )}
           >
             <button
               type="button"
@@ -247,7 +250,7 @@ export default function CompaniesPage() {
     })
   );
 
-  const total = () => Number(query.data?.pagination?.total ?? 0);
+  const total = () => Number(queryData(query, (d) => d?.pagination?.total) ?? 0);
 
   /**
    * table 實例。分頁一律手動（`manualPagination: true`）：
@@ -265,7 +268,7 @@ export default function CompaniesPage() {
     features: COMPANY_TABLE_FEATURES,
     columns,
     get data() {
-      return query.data?.companies ?? NO_COMPANIES;
+      return queryData(query, (d) => d?.companies) ?? NO_COMPANIES;
     },
     get rowCount() {
       return total();
@@ -593,7 +596,7 @@ export default function CompaniesPage() {
               會把它當成空清單，與 `placeholderData` 「不閃空」的意圖相反。
             */}
             <Show
-              when={!query.isPending && !query.isError && (query.data?.companies.length ?? 0) === 0}
+              when={!query.isPending && !query.isError && (queryData(query, (d) => d?.companies.length) ?? 0) === 0}
             >
               <TableRow class="hover:bg-transparent">
                 <TableCell

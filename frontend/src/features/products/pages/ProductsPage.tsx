@@ -13,7 +13,7 @@ import {
   tableFeatures,
   type PaginationState,
 } from "@tanstack/solid-table";
-import { batch, createEffect, createMemo, createSignal, For, Show, type JSX } from "solid-js";
+import { batch, createEffect, createMemo, createSignal, For, Index, Show, type JSX } from "solid-js";
 import type { ProductCategory } from "~/lib/proto/masters/v1/master_pb";
 import type { Product } from "~/lib/proto/products/v1/product_pb";
 import {
@@ -41,6 +41,7 @@ import {
 } from "~/components/ui";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import { ListPagination } from "../../users/components/ListPagination";
+import { queryData } from "~/lib/query-data";
 import {
   PRODUCT_PAGE_SIZE,
   categoryDropdownQueryOptions,
@@ -147,7 +148,7 @@ export default function ProductsPage() {
   /** 分類 id → 名稱（清單顯示與表單選項共用同一份資料）。 */
   const categoryNameById = createMemo(() => {
     const map = new Map<string, string>();
-    for (const page of categories.data?.pages ?? []) {
+    for (const page of queryData(categories, (d) => d?.pages) ?? []) {
       for (const c of page.productCategories) map.set(c.id, c.name);
     }
     return map;
@@ -239,13 +240,13 @@ export default function ProductsPage() {
     })
   );
 
-  const total = () => Number(query.data?.pagination?.total ?? 0);
+  const total = () => Number(queryData(query, (d) => d?.pagination?.total) ?? 0);
 
   const table = createTable({
     features: PRODUCT_TABLE_FEATURES,
     columns,
     get data() {
-      return query.data?.products ?? NO_PRODUCTS;
+      return queryData(query, (d) => d?.products) ?? NO_PRODUCTS;
     },
     get rowCount() {
       return total();
@@ -476,7 +477,7 @@ export default function ProductsPage() {
               onChange={(e) => setCategoryDraft(e.currentTarget.value)}
             >
               <option value="">全部分類</option>
-              <For each={(categories.data?.pages ?? []).flatMap((p) => p.productCategories)}>
+              <For each={(queryData(categories, (d) => d?.pages) ?? []).flatMap((p) => p.productCategories)}>
                 {(c: ProductCategory) => <option value={c.id}>{c.name}</option>}
               </For>
             </select>
@@ -510,7 +511,7 @@ export default function ProductsPage() {
           </TableHeader>
           <TableBody>
             <Show
-              when={query.data?.products?.length}
+              when={queryData(query, (d) => d?.products?.length)}
               fallback={
                 <TableRow>
                   <TableCell colSpan={7}>
@@ -606,7 +607,7 @@ export default function ProductsPage() {
                       onChange={(e) => field().handleChange(e.currentTarget.value)}
                     >
                       <option value="">無</option>
-                      <For each={(categories.data?.pages ?? []).flatMap((p) => p.productCategories)}>
+                      <For each={(queryData(categories, (d) => d?.pages) ?? []).flatMap((p) => p.productCategories)}>
                         {(c: ProductCategory) => <option value={c.id}>{c.name}</option>}
                       </For>
                     </select>
@@ -637,7 +638,7 @@ export default function ProductsPage() {
                       onChange={(e) => field().handleChange(e.currentTarget.value)}
                     >
                       <option value="">無</option>
-                      <For each={(warehouses.data?.pages ?? []).flatMap((p) => p.warehouses)}>
+                      <For each={(queryData(warehouses, (d) => d?.pages) ?? []).flatMap((p) => p.warehouses)}>
                         {(w) => <option value={w.id}>{w.name}</option>}
                       </For>
                     </select>
@@ -655,7 +656,7 @@ export default function ProductsPage() {
                       onChange={(e) => field().handleChange(e.currentTarget.value)}
                     >
                       <option value="">無</option>
-                      <For each={(warehouses.data?.pages ?? []).flatMap((p) => p.warehouses)}>
+                      <For each={(queryData(warehouses, (d) => d?.pages) ?? []).flatMap((p) => p.warehouses)}>
                         {(w) => <option value={w.id}>{w.name}</option>}
                       </For>
                     </select>
@@ -697,53 +698,53 @@ export default function ProductsPage() {
                 )}
               </Show>
 
-              <For each={units()}>
+              <Index each={units()}>
                 {(row, index) => (
                   <div class="grid gap-3 rounded-lg border border-border p-3 sm:grid-cols-6">
                     <Field class="sm:col-span-2">
-                      <FieldLabel for={`unit-code-${index()}`}>單位代碼 *</FieldLabel>
+                      <FieldLabel for={`unit-code-${index}`}>單位代碼 *</FieldLabel>
                       <select
-                        id={`unit-code-${index()}`}
-                        value={row.unitCode}
-                        onChange={(e) => patchUnit(index(), { unitCode: e.currentTarget.value })}
+                        id={`unit-code-${index}`}
+                        value={row().unitCode}
+                        onChange={(e) => patchUnit(index, { unitCode: e.currentTarget.value })}
                       >
                         <option value="">請選擇</option>
-                        <For each={unitOptions.data?.options ?? []}>
+                        <For each={queryData(unitOptions, (d) => d?.options) ?? []}>
                           {(o) => <option value={o.code}>{o.displayName}</option>}
                         </For>
                       </select>
                     </Field>
 
                     <Field class="sm:col-span-1">
-                      <FieldLabel for={`unit-rate-${index()}`}>換算率 *</FieldLabel>
+                      <FieldLabel for={`unit-rate-${index}`}>換算率 *</FieldLabel>
                       <Input
-                        id={`unit-rate-${index()}`}
+                        id={`unit-rate-${index}`}
                         inputMode="decimal"
-                        value={row.conversionRate}
-                        disabled={row.isBase}
-                        onInput={(e) => patchUnit(index(), { conversionRate: e.currentTarget.value })}
+                        value={row().conversionRate}
+                        disabled={row().isBase}
+                        onInput={(e) => patchUnit(index, { conversionRate: e.currentTarget.value })}
                       />
                     </Field>
 
                     <Field class="sm:col-span-1">
-                      <FieldLabel for={`unit-sort-${index()}`}>排序</FieldLabel>
+                      <FieldLabel for={`unit-sort-${index}`}>排序</FieldLabel>
                       <Input
-                        id={`unit-sort-${index()}`}
+                        id={`unit-sort-${index}`}
                         inputMode="numeric"
-                        value={String(row.sortOrder)}
+                        value={String(row().sortOrder)}
                         onInput={(e) =>
-                          patchUnit(index(), { sortOrder: Number(e.currentTarget.value) || 0 })
+                          patchUnit(index, { sortOrder: Number(e.currentTarget.value) || 0 })
                         }
                       />
                     </Field>
 
                     <Field class="sm:col-span-2">
-                      <FieldLabel for={`unit-size-${index()}`}>規格說明</FieldLabel>
+                      <FieldLabel for={`unit-size-${index}`}>規格說明</FieldLabel>
                       <Input
-                        id={`unit-size-${index()}`}
-                        value={row.sizeDesc}
+                        id={`unit-size-${index}`}
+                        value={row().sizeDesc}
                         placeholder="如「1盒=3kg」"
-                        onInput={(e) => patchUnit(index(), { sizeDesc: e.currentTarget.value })}
+                        onInput={(e) => patchUnit(index, { sizeDesc: e.currentTarget.value })}
                       />
                     </Field>
 
@@ -752,8 +753,8 @@ export default function ProductsPage() {
                         <input
                           type="radio"
                           name="base-unit"
-                          checked={row.isBase}
-                          onChange={() => markBase(index())}
+                          checked={row().isBase}
+                          onChange={() => markBase(index)}
                         />
                         基本單位（換算率恆為 1）
                       </label>
@@ -762,7 +763,7 @@ export default function ProductsPage() {
                     <div class="flex items-center justify-end sm:col-span-1">
                       <button
                         type="button"
-                        onClick={() => removeUnit(index())}
+                        onClick={() => removeUnit(index)}
                         class="text-sm font-medium text-destructive hover:underline"
                       >
                         移除
@@ -770,7 +771,7 @@ export default function ProductsPage() {
                     </div>
                   </div>
                 )}
-              </For>
+              </Index>
             </section>
 
             <DialogFooter>

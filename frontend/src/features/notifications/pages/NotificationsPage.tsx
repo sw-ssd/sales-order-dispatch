@@ -24,6 +24,7 @@ import {
   TableRow,
 } from "~/components/ui";
 import { ListPagination } from "../../users/components/ListPagination";
+import { queryData } from "~/lib/query-data";
 import {
   NOTIFICATION_PAGE_SIZE,
   notificationClient,
@@ -194,14 +195,14 @@ export default function NotificationsPage() {
     })
   );
 
-  const total = () => query.data?.total ?? 0;
-  const unreadCount = () => query.data?.unreadCount ?? 0;
+  const total = () => queryData(query, (d) => d?.total) ?? 0;
+  const unreadCount = () => queryData(query, (d) => d?.unreadCount) ?? 0;
 
   const table = createTable({
     features: NOTIFICATION_TABLE_FEATURES,
     columns,
     get data() {
-      return query.data?.notifications ?? NO_NOTIFICATIONS;
+      return queryData(query, (d) => d?.notifications) ?? NO_NOTIFICATIONS;
     },
     get rowCount() {
       return total();
@@ -257,7 +258,7 @@ export default function NotificationsPage() {
 
   /** 本頁未讀（後端只認 `pending`/`sent` 可轉已讀，`failed` 刻意排除）。 */
   const pageUnreadIds = () =>
-    (query.data?.notifications ?? []).filter((n) => UNREAD_STATUSES.has(n.status)).map((n) => n.id);
+    (queryData(query, (d) => d?.notifications) ?? []).filter((n) => UNREAD_STATUSES.has(n.status)).map((n) => n.id);
 
   return (
     <main>
@@ -362,7 +363,7 @@ export default function NotificationsPage() {
           </TableHeader>
           <TableBody>
             <Show
-              when={query.data?.notifications?.length}
+              when={queryData(query, (d) => d?.notifications?.length)}
               fallback={
                 <TableRow>
                   <TableCell colSpan={columns.length}>

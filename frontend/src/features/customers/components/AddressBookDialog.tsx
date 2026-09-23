@@ -32,6 +32,7 @@ import {
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import { addressesQueryOptions, contactsQueryOptions, customerClient } from "../queries";
 import { addressSchema, contactSchema } from "../schemas";
+import { queryData } from "~/lib/query-data";
 
 /** 地址類型標籤（後端 `validAddressType` 只收這三個值）。 */
 const ADDRESS_TYPE_LABELS: Record<string, string> = {
@@ -494,7 +495,7 @@ export default function AddressBookDialog(props: AddressBookDialogProps) {
             </TableHeader>
             <TableBody>
               <Show
-                when={addressQuery.data?.addresses?.length}
+                when={queryData(addressQuery, (d) => d?.addresses?.length)}
                 fallback={
                   <TableRow>
                     <TableCell colSpan={5}>
@@ -503,7 +504,7 @@ export default function AddressBookDialog(props: AddressBookDialogProps) {
                   </TableRow>
                 }
               >
-                <For each={addressQuery.data?.addresses}>
+                <For each={queryData(addressQuery, (d) => d?.addresses)}>
                   {(address) => (
                     <TableRow>
                       <TableCell>
@@ -669,7 +670,7 @@ export default function AddressBookDialog(props: AddressBookDialogProps) {
             </TableHeader>
             <TableBody>
               <Show
-                when={contactQuery.data?.contacts?.length}
+                when={queryData(contactQuery, (d) => d?.contacts?.length)}
                 fallback={
                   <TableRow>
                     <TableCell colSpan={5}>
@@ -678,7 +679,7 @@ export default function AddressBookDialog(props: AddressBookDialogProps) {
                   </TableRow>
                 }
               >
-                <For each={contactQuery.data?.contacts}>
+                <For each={queryData(contactQuery, (d) => d?.contacts)}>
                   {(contact) => (
                     <TableRow>
                       <TableCell class="font-medium text-foreground">

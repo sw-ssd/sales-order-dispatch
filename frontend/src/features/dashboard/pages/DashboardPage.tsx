@@ -11,6 +11,7 @@ import {
 } from "~/components/ui";
 import { Can } from "~/lib/ability/Can";
 import { useAbility } from "~/lib/ability/context";
+import { queryData } from "~/lib/query-data";
 import { hasPermission } from "~/lib/ability/permissions";
 import type { NavRoute } from "~/components/layout/Sidebar";
 import {
@@ -106,8 +107,8 @@ export default function DashboardPage() {
 
   /** 今日待出貨：兩支都成功才有值；任一失敗回 undefined → 顯示「—」。 */
   const todayTotal = (): number | undefined => {
-    const a = todayPending.data?.total;
-    const b = todayProcessing.data?.total;
+    const a = queryData(todayPending, (d) => d?.total);
+    const b = queryData(todayProcessing, (d) => d?.total);
     return a === undefined || b === undefined ? undefined : a + b;
   };
 
@@ -142,13 +143,13 @@ export default function DashboardPage() {
           />
           <StatCard
             title="待處理訂單"
-            count={pending.data?.total}
+            count={queryData(pending, (d) => d?.total)}
             to="/orders"
             hint="尚未派車的訂單（不限日期）"
           />
           <StatCard
             title="處理中訂單"
-            count={processing.data?.total}
+            count={queryData(processing, (d) => d?.total)}
             to="/dispatch"
             hint="已派車、尚未完成的訂單"
           />

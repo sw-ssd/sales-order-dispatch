@@ -19,6 +19,7 @@ import {
   Input,
 } from "~/components/ui";
 import { boardOrdersQueryOptions, boardRoutesQueryOptions, dispatchClient } from "../queries";
+import { queryData } from "~/lib/query-data";
 
 /** 看板只處理這兩個狀態（dispatch spec：看板僅顯示 pending 或 processing 的訂單）。 */
 const BOARD_STATUSES = new Set(["pending", "processing"]);
@@ -100,12 +101,12 @@ export default function DispatchPage() {
 
   /** 該日可上板的訂單：只留 pending/processing，並排除未指派的處理中單（它們已在車次欄）。 */
   const boardable = createMemo(() =>
-    (orders.data?.pages ?? []).flatMap((p) => p.orders).filter((o) => BOARD_STATUSES.has(o.status))
+    (queryData(orders, (d) => d?.pages) ?? []).flatMap((p) => p.orders).filter((o) => BOARD_STATUSES.has(o.status))
   );
 
   /** 活躍車次＝看板的欄；停用車次不作派車目標。 */
   const activeRoutes = createMemo(
-    () => (routes.data?.routes ?? []).filter((r) => r.isActive && !r.deletedAt)
+    () => (queryData(routes, (d) => d?.routes) ?? []).filter((r) => r.isActive && !r.deletedAt)
   );
 
   /** 未指派欄：pending 且未綁車次。 */
@@ -132,7 +133,7 @@ export default function DispatchPage() {
 
   /** 車次欄截斷警告：車次取回筆數達單頁上限時，前端不假裝只有這些車次。 */
   const routesTruncated = createMemo(
-    () => Number(routes.data?.pagination?.total ?? 0) > (routes.data?.routes.length ?? 0)
+    () => Number(queryData(routes, (d) => d?.pagination?.total) ?? 0) > (queryData(routes, (d) => d?.routes.length) ?? 0)
   );
 
   /** 所有操作的共用收尾：一律重查看板（樂觀鎖失敗也要回到伺服器最新狀態，spec 要求）。 */
@@ -353,7 +354,7 @@ export default function DispatchPage() {
 
       <Show when={routesTruncated()}>
         <p class="mb-4 rounded-lg bg-warning/15 px-3 py-2 text-sm font-medium text-warning" role="status">
-          車次筆數超出單頁上限，僅顯示前 {routes.data?.routes.length} 筆。
+          車次筆數超出單頁上限，僅顯示前 {queryData(routes, (d) => d?.routes.length)} 筆。
         </p>
       </Show>
 

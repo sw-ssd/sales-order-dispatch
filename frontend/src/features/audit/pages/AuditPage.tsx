@@ -33,6 +33,7 @@ import {
 } from "~/components/ui";
 import { ListPagination } from "../../users/components/ListPagination";
 import { AUDIT_PAGE_SIZE, auditLogsQueryOptions } from "../queries";
+import { queryData } from "~/lib/query-data";
 
 /**
  * 稽核表格的 table 功能集：**只有分頁**。
@@ -216,13 +217,13 @@ export default function AuditPage() {
     auditLogsQueryOptions({ ...filter(), page: pagination().pageIndex + 1, pageSize: pagination().pageSize })
   );
 
-  const total = () => Number(query.data?.pagination?.total ?? 0);
+  const total = () => Number(queryData(query, (d) => d?.pagination?.total) ?? 0);
 
   const table = createTable({
     features: AUDIT_TABLE_FEATURES,
     columns,
     get data() {
-      return query.data?.items ?? NO_AUDIT_LOGS;
+      return queryData(query, (d) => d?.items) ?? NO_AUDIT_LOGS;
     },
     get rowCount() {
       return total();
@@ -392,7 +393,7 @@ export default function AuditPage() {
           </TableHeader>
           <TableBody>
             <Show
-              when={query.data?.items?.length}
+              when={queryData(query, (d) => d?.items?.length)}
               fallback={
                 <TableRow>
                   <TableCell colSpan={columns.length}>

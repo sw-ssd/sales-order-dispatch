@@ -47,6 +47,7 @@ import {
   usersQueryOptions,
 } from "../queries";
 import { userSchema } from "../schemas";
+import { queryData } from "~/lib/query-data";
 
 /**
  * 使用者表格的 table 功能集：分頁（後端無排序白名單 → 不開 sorting，見下方）。
@@ -179,13 +180,13 @@ export default function UsersPage() {
     })
   );
 
-  const total = () => Number(query.data?.pagination?.total ?? 0);
+  const total = () => Number(queryData(query, (d) => d?.pagination?.total) ?? 0);
 
   const table = createTable({
     features: USER_TABLE_FEATURES,
     columns,
     get data() {
-      return query.data?.users ?? NO_USERS;
+      return queryData(query, (d) => d?.users) ?? NO_USERS;
     },
     get rowCount() {
       return total();
@@ -211,7 +212,7 @@ export default function UsersPage() {
       });
     return [
       ...collect(pinnedCompanies()),
-      ...collect((companyOptions.data?.pages ?? []).flatMap((p) => p.companies)),
+      ...collect((queryData(companyOptions, (d) => d?.pages) ?? []).flatMap((p) => p.companies)),
     ];
   };
 
@@ -453,7 +454,7 @@ export default function UsersPage() {
           </TableHeader>
           <TableBody>
             <Show
-              when={query.data?.users?.length}
+              when={queryData(query, (d) => d?.users?.length)}
               fallback={
                 <TableRow>
                   <TableCell colSpan={5}>

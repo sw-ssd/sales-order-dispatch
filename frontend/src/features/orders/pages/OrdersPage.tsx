@@ -13,7 +13,7 @@ import {
   tableFeatures,
   type PaginationState,
 } from "@tanstack/solid-table";
-import { batch, createEffect, createMemo, createSignal, For, Show, type JSX } from "solid-js";
+import { batch, createEffect, createMemo, createSignal, For, Index, Show, type JSX } from "solid-js";
 import type { Customer } from "~/lib/proto/customers/v1/customer_pb";
 import type { Product } from "~/lib/proto/products/v1/product_pb";
 import type { SalesOrder } from "~/lib/proto/salesorder/v1/salesorder_pb";
@@ -44,6 +44,7 @@ import { appFormOptions, fieldValidators, firstMessage } from "../../form-helper
 import { customerDropdownQueryOptions } from "../../customers/queries";
 import { productDropdownQueryOptions } from "../../products/queries";
 import { ListPagination } from "../../users/components/ListPagination";
+import { queryData } from "~/lib/query-data";
 import {
   ORDER_PAGE_SIZE,
   orderClient,
@@ -181,7 +182,7 @@ export default function OrdersPage() {
   );
   const customerNameById = createMemo(() => {
     const map = new Map<string, string>();
-    for (const page of customerOptions.data?.pages ?? []) {
+    for (const page of queryData(customerOptions, (d) => d?.pages) ?? []) {
       for (const c of page.customers) map.set(c.id, c.name);
     }
     return map;
@@ -294,13 +295,13 @@ export default function OrdersPage() {
     })
   );
 
-  const total = () => query.data?.total ?? 0;
+  const total = () => queryData(query, (d) => d?.total) ?? 0;
 
   const table = createTable({
     features: ORDER_TABLE_FEATURES,
     columns,
     get data() {
-      return query.data?.orders ?? NO_ORDERS;
+      return queryData(query, (d) => d?.orders) ?? NO_ORDERS;
     },
     get rowCount() {
       return total();
@@ -340,7 +341,7 @@ export default function OrdersPage() {
   /** 商品 id → 商品（明細顯示名與單位選項來源）。 */
   const productById = createMemo(() => {
     const map = new Map<string, Product>();
-    for (const page of productOptions.data?.pages ?? []) {
+    for (const page of queryData(productOptions, (d) => d?.pages) ?? []) {
       for (const p of page.products) map.set(p.id, p);
     }
     return map;
@@ -533,7 +534,7 @@ export default function OrdersPage() {
     enabled: detailId() !== null,
   }));
 
-  const detailTotal = () => detail.data?.items?.length ?? 0;
+  const detailTotal = () => queryData(detail, (d) => d?.items?.length) ?? 0;
 
   return (
     <main>
@@ -593,7 +594,7 @@ export default function OrdersPage() {
               onChange={(e) => setCustomerDraft(e.currentTarget.value)}
             >
               <option value="">全部客戶</option>
-              <For each={(customerOptions.data?.pages ?? []).flatMap((p) => p.customers)}>
+              <For each={(queryData(customerOptions, (d) => d?.pages) ?? []).flatMap((p) => p.customers)}>
                 {(c: Customer) => <option value={c.id}>{c.name}</option>}
               </For>
             </select>
@@ -606,7 +607,7 @@ export default function OrdersPage() {
               onChange={(e) => setSourceDraft(e.currentTarget.value)}
             >
               <option value="">全部來源</option>
-              <For each={sourceOptions.data?.options ?? []}>
+              <For each={queryData(sourceOptions, (d) => d?.options) ?? []}>
                 {(o) => <option value={o.code}>{o.displayName}</option>}
               </For>
             </select>
@@ -640,7 +641,7 @@ export default function OrdersPage() {
           </TableHeader>
           <TableBody>
             <Show
-              when={query.data?.orders?.length}
+              when={queryData(query, (d) => d?.orders?.length)}
               fallback={
                 <TableRow>
                   <TableCell colSpan={7}>
@@ -708,7 +709,7 @@ export default function OrdersPage() {
                       onChange={(e) => field().handleChange(e.currentTarget.value)}
                     >
                       <option value="">請選擇</option>
-                      <For each={(customerOptions.data?.pages ?? []).flatMap((p) => p.customers)}>
+                      <For each={(queryData(customerOptions, (d) => d?.pages) ?? []).flatMap((p) => p.customers)}>
                         {(c: Customer) => <option value={c.id}>{c.name}</option>}
                       </For>
                     </select>
@@ -728,7 +729,7 @@ export default function OrdersPage() {
                       onChange={(e) => field().handleChange(e.currentTarget.value)}
                     >
                       <option value="">請選擇</option>
-                      <For each={sourceOptions.data?.options ?? []}>
+                      <For each={queryData(sourceOptions, (d) => d?.options) ?? []}>
                         {(o) => <option value={o.code}>{o.displayName}</option>}
                       </For>
                     </select>
@@ -782,36 +783,36 @@ export default function OrdersPage() {
                 )}
               </Show>
 
-              <For each={items()}>
+              <Index each={items()}>
                 {(row, index) => {
                   const product = () =>
-                    row.productId === "" ? undefined : productById().get(row.productId);
+                    row().productId === "" ? undefined : productById().get(row().productId);
                   return (
                     <div class="grid gap-3 rounded-lg border border-border p-3 sm:grid-cols-6">
                       <Field class="sm:col-span-2">
-                        <FieldLabel for={`item-product-${index()}`}>商品</FieldLabel>
+                        <FieldLabel for={`item-product-${index}`}>商品</FieldLabel>
                         <select
-                          id={`item-product-${index()}`}
-                          value={row.productId}
+                          id={`item-product-${index}`}
+                          value={row().productId}
                           onChange={(e) =>
-                            patchRow(index(), { productId: e.currentTarget.value, saveAlias: false })
+                            patchRow(index, { productId: e.currentTarget.value, saveAlias: false })
                           }
                         >
                           <option value="">（手打品名）</option>
-                          <For each={(productOptions.data?.pages ?? []).flatMap((p) => p.products)}>
+                          <For each={(queryData(productOptions, (d) => d?.pages) ?? []).flatMap((p) => p.products)}>
                             {(p: Product) => <option value={p.id}>{p.name}</option>}
                           </For>
                         </select>
                       </Field>
 
                       <Show
-                        when={row.productId === ""}
+                        when={row().productId === ""}
                         fallback={
                           <Field class="sm:col-span-2">
                             <FieldLabel>單位</FieldLabel>
                             <select
-                              value={row.unit}
-                              onChange={(e) => patchRow(index(), { unit: e.currentTarget.value })}
+                              value={row().unit}
+                              onChange={(e) => patchRow(index, { unit: e.currentTarget.value })}
                             >
                               <option value="">請選擇</option>
                               <For each={product()?.units ?? []}>
@@ -822,40 +823,40 @@ export default function OrdersPage() {
                         }
                       >
                         <Field class="sm:col-span-2">
-                          <FieldLabel for={`item-manual-${index()}`}>品名（手打）</FieldLabel>
+                          <FieldLabel for={`item-manual-${index}`}>品名（手打）</FieldLabel>
                           <Input
-                            id={`item-manual-${index()}`}
-                            value={row.manualName}
-                            onInput={(e) => patchRow(index(), { manualName: e.currentTarget.value })}
+                            id={`item-manual-${index}`}
+                            value={row().manualName}
+                            onInput={(e) => patchRow(index, { manualName: e.currentTarget.value })}
                           />
                         </Field>
                         <Field class="sm:col-span-1">
-                          <FieldLabel for={`item-unit-${index()}`}>單位</FieldLabel>
+                          <FieldLabel for={`item-unit-${index}`}>單位</FieldLabel>
                           <Input
-                            id={`item-unit-${index()}`}
-                            value={row.unit}
-                            onInput={(e) => patchRow(index(), { unit: e.currentTarget.value })}
+                            id={`item-unit-${index}`}
+                            value={row().unit}
+                            onInput={(e) => patchRow(index, { unit: e.currentTarget.value })}
                           />
                         </Field>
                       </Show>
 
                       <Field class="sm:col-span-1">
-                        <FieldLabel for={`item-qty-${index()}`}>數量 *</FieldLabel>
+                        <FieldLabel for={`item-qty-${index}`}>數量 *</FieldLabel>
                         <Input
-                          id={`item-qty-${index()}`}
+                          id={`item-qty-${index}`}
                           inputMode="decimal"
-                          value={row.qty}
-                          onInput={(e) => patchRow(index(), { qty: e.currentTarget.value })}
+                          value={row().qty}
+                          onInput={(e) => patchRow(index, { qty: e.currentTarget.value })}
                         />
                       </Field>
 
                       <Field class="sm:col-span-2">
-                        <FieldLabel for={`item-spec-${index()}`}>分切規格</FieldLabel>
+                        <FieldLabel for={`item-spec-${index}`}>分切規格</FieldLabel>
                         <select
-                          id={`item-spec-${index()}`}
-                          value={row.processingSpecId}
+                          id={`item-spec-${index}`}
+                          value={row().processingSpecId}
                           onChange={(e) =>
-                            patchRow(index(), { processingSpecId: e.currentTarget.value })
+                            patchRow(index, { processingSpecId: e.currentTarget.value })
                           }
                         >
                           <option value="">無</option>
@@ -866,20 +867,20 @@ export default function OrdersPage() {
                       </Field>
 
                       <Field class="sm:col-span-4">
-                        <FieldLabel for={`item-cut-${index()}`}>分切備註</FieldLabel>
+                        <FieldLabel for={`item-cut-${index}`}>分切備註</FieldLabel>
                         <Input
-                          id={`item-cut-${index()}`}
-                          value={row.specialCutNote}
-                          onInput={(e) => patchRow(index(), { specialCutNote: e.currentTarget.value })}
+                          id={`item-cut-${index}`}
+                          value={row().specialCutNote}
+                          onInput={(e) => patchRow(index, { specialCutNote: e.currentTarget.value })}
                         />
                       </Field>
 
-                      <Show when={row.productId !== ""}>
+                      <Show when={row().productId !== ""}>
                         <label class="flex items-end gap-2 pb-2 text-sm text-foreground">
                           <input
                             type="checkbox"
-                            checked={row.saveAlias}
-                            onChange={(e) => patchRow(index(), { saveAlias: e.currentTarget.checked })}
+                            checked={row().saveAlias}
+                            onChange={(e) => patchRow(index, { saveAlias: e.currentTarget.checked })}
                           />
                           存為客戶別名
                         </label>
@@ -888,7 +889,7 @@ export default function OrdersPage() {
                       <div class="flex items-end justify-end pb-2">
                         <button
                           type="button"
-                          onClick={() => removeRow(index())}
+                          onClick={() => removeRow(index)}
                           class="text-sm font-medium text-destructive hover:underline"
                         >
                           移除
@@ -897,7 +898,7 @@ export default function OrdersPage() {
                     </div>
                   );
                 }}
-              </For>
+              </Index>
             </section>
 
             <DialogFooter>
@@ -920,10 +921,10 @@ export default function OrdersPage() {
         <DialogContent class="max-w-3xl">
           <DialogHeader>
             <DialogTitle>訂單詳情</DialogTitle>
-            <DialogDescription>{detail.data?.order?.orderNo}</DialogDescription>
+            <DialogDescription>{queryData(detail, (d) => d?.order?.orderNo)}</DialogDescription>
           </DialogHeader>
 
-          <Show when={detail.data?.order} keyed>
+          <Show when={queryData(detail, (d) => d?.order)} keyed>
             {(o) => (
               <div class="space-y-4 text-sm">
                 <dl class="grid gap-3 sm:grid-cols-3">
@@ -970,7 +971,7 @@ export default function OrdersPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      <For each={detail.data?.items ?? []}>
+                      <For each={queryData(detail, (d) => d?.items) ?? []}>
                         {(it) => (
                           <TableRow>
                             <TableCell>{it.displayName}</TableCell>
@@ -990,11 +991,11 @@ export default function OrdersPage() {
                 <section>
                   <h3 class="mb-2 font-semibold text-foreground">事件軌跡</h3>
                   <Show
-                    when={(events.data?.events ?? []).length > 0}
+                    when={(queryData(events, (d) => d?.events) ?? []).length > 0}
                     fallback={<p class="text-muted-foreground">尚無事件</p>}
                   >
                     <ul class="space-y-2">
-                      <For each={events.data?.events ?? []}>
+                      <For each={queryData(events, (d) => d?.events) ?? []}>
                         {(ev) => (
                           <li class="flex flex-wrap gap-2 text-muted-foreground">
                             <span class="text-foreground">

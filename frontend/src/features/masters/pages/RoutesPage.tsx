@@ -38,6 +38,7 @@ import { appFormOptions, fieldValidators, firstMessage } from "../../form-helper
 import { ListPagination } from "../../users/components/ListPagination";
 import { ROUTES_PAGE_SIZE, routesQueryOptions, routeClient } from "../queries";
 import { routeSchema, toSortOrder } from "../schemas";
+import { queryData } from "~/lib/query-data";
 
 /**
  * 車次表格的 table 功能集：**只有分頁**。
@@ -182,13 +183,13 @@ export default function RoutesPage() {
     })
   );
 
-  const total = () => Number(query.data?.pagination?.total ?? 0);
+  const total = () => Number(queryData(query, (d) => d?.pagination?.total) ?? 0);
 
   const table = createTable({
     features: ROUTE_TABLE_FEATURES,
     columns,
     get data() {
-      return query.data?.routes ?? NO_ROUTES;
+      return queryData(query, (d) => d?.routes) ?? NO_ROUTES;
     },
     get rowCount() {
       return total();
@@ -384,7 +385,7 @@ export default function RoutesPage() {
           </TableHeader>
           <TableBody>
             <Show
-              when={query.data?.routes?.length}
+              when={queryData(query, (d) => d?.routes?.length)}
               fallback={
                 <TableRow>
                   <TableCell colSpan={6}>

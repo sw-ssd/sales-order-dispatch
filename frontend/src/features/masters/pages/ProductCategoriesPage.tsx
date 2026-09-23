@@ -42,6 +42,7 @@ import {
   productCategoryClient,
 } from "../queries";
 import { productCategorySchema, toSortOrder } from "../schemas";
+import { queryData } from "~/lib/query-data";
 
 /**
  * 分類表格的 table 功能集：**只有分頁**。
@@ -185,13 +186,13 @@ export default function ProductCategoriesPage() {
     })
   );
 
-  const total = () => Number(query.data?.pagination?.total ?? 0);
+  const total = () => Number(queryData(query, (d) => d?.pagination?.total) ?? 0);
 
   const table = createTable({
     features: PRODUCT_CATEGORY_TABLE_FEATURES,
     columns,
     get data() {
-      return query.data?.productCategories ?? NO_PRODUCT_CATEGORIES;
+      return queryData(query, (d) => d?.productCategories) ?? NO_PRODUCT_CATEGORIES;
     },
     get rowCount() {
       return total();
@@ -379,7 +380,7 @@ export default function ProductCategoriesPage() {
           </TableHeader>
           <TableBody>
             <Show
-              when={query.data?.productCategories?.length}
+              when={queryData(query, (d) => d?.productCategories?.length)}
               fallback={
                 <TableRow>
                   <TableCell colSpan={5}>

@@ -47,6 +47,7 @@ import {
   PAGE_SIZE,
 } from "../queries";
 import { departmentSchema } from "../schemas";
+import { queryData } from "~/lib/query-data";
 
 /**
  * 新增模式的欄位預設值。`form.reset(values)` 會把傳入的 values **整份取代** `defaultValues`
@@ -228,7 +229,7 @@ export default function DepartmentsPage() {
     })
   );
 
-  const total = () => Number(query.data?.pagination?.total ?? 0);
+  const total = () => Number(queryData(query, (d) => d?.pagination?.total) ?? 0);
 
   /**
    * table 實例。分頁一律手動（`manualPagination: true`）：
@@ -246,7 +247,7 @@ export default function DepartmentsPage() {
     features: DEPARTMENT_TABLE_FEATURES,
     columns,
     get data() {
-      return query.data?.departments ?? NO_DEPARTMENTS;
+      return queryData(query, (d) => d?.departments) ?? NO_DEPARTMENTS;
     },
     get rowCount() {
       return total();
@@ -282,7 +283,7 @@ export default function DepartmentsPage() {
   );
 
   const companyTotal = () =>
-    Number(companyOptions.data?.pages.at(-1)?.pagination?.total ?? 0);
+    Number(queryData(companyOptions, (d) => d?.pages.at(-1)?.pagination?.total) ?? 0);
 
   /**
    * 下拉選項＝補載的公司＋各頁攤平後**去重**（伺服器端分頁的頁界可能重疊，
@@ -298,7 +299,7 @@ export default function DepartmentsPage() {
       });
     return [
       ...collect(pinnedCompanies()),
-      ...collect((companyOptions.data?.pages ?? []).flatMap((p) => p.companies)),
+      ...collect((queryData(companyOptions, (d) => d?.pages) ?? []).flatMap((p) => p.companies)),
     ];
   };
 
@@ -567,7 +568,7 @@ export default function DepartmentsPage() {
               when={
                 !query.isPending &&
                 !query.isError &&
-                (query.data?.departments.length ?? 0) === 0
+                (queryData(query, (d) => d?.departments.length) ?? 0) === 0
               }
             >
               <TableRow class="hover:bg-transparent">

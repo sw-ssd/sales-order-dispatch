@@ -36,6 +36,7 @@ import {
   TableRow,
 } from "~/components/ui";
 import { ListPagination } from "../../users/components/ListPagination";
+import { queryData } from "~/lib/query-data";
 import {
   customerNameQueryOptions,
   returnCertificateQueryOptions,
@@ -198,13 +199,13 @@ export default function ReturnsPage() {
     })
   );
 
-  const total = () => query.data?.total ?? 0;
+  const total = () => queryData(query, (d) => d?.total) ?? 0;
 
   const table = createTable({
     features: RETURN_TABLE_FEATURES,
     columns,
     get data() {
-      return query.data?.entries ?? NO_RETURNS;
+      return queryData(query, (d) => d?.entries) ?? NO_RETURNS;
     },
     get rowCount() {
       return total();
@@ -250,13 +251,14 @@ export default function ReturnsPage() {
    * 審核才是本頁的主任務，客戶名稱是附加上下文。
    */
   const customerQuery = createQuery(() => ({
-    ...customerNameQueryOptions({ id: detailQuery.data?.customerId ?? "" }),
+    ...customerNameQueryOptions({ id: queryData(detailQuery, (d) => d?.customerId) ?? "" }),
     enabled: detailOpen() && detailQuery.data !== undefined,
   }));
 
   const customerLabel = () => {
-    if (customerQuery.data?.customer) return customerQuery.data.customer.name;
-    if (customerQuery.error) return `客戶 #${detailQuery.data?.customerId ?? ""}`;
+    const customer = queryData(customerQuery, (d) => d?.customer);
+    if (customer) return customer.name;
+    if (customerQuery.error) return `客戶 #${queryData(detailQuery, (d) => d?.customerId) ?? ""}`;
     return "載入中…";
   };
 
@@ -287,7 +289,7 @@ export default function ReturnsPage() {
    * 讓使用者看到後端的最新狀態再重試。
    */
   const review = async (decision: "approved" | "rejected") => {
-    const detail = detailQuery.data;
+    const detail = queryData(detailQuery, (d) => d);
     if (!detail || reviewing()) return;
     setReviewError(null);
     setReviewing(true);
@@ -464,7 +466,7 @@ export default function ReturnsPage() {
           </TableHeader>
           <TableBody>
             <Show
-              when={query.data?.entries?.length}
+              when={queryData(query, (d) => d?.entries?.length)}
               fallback={
                 <TableRow>
                   <TableCell colSpan={columns.length}>
@@ -527,7 +529,7 @@ export default function ReturnsPage() {
             )}
           </Show>
 
-          <Show when={detailQuery.data}>
+          <Show when={queryData(detailQuery, (d) => d)}>
             {(detail) => (
               <div class="space-y-3 text-sm">
                 <div class="grid gap-2 sm:grid-cols-2">
@@ -585,7 +587,7 @@ export default function ReturnsPage() {
           </Show>
 
           <DialogFooter>
-            <Show when={detailQuery.data?.status === "pending"}>
+            <Show when={queryData(detailQuery, (d) => d?.status) === "pending"}>
               <Button type="button" onClick={() => void approve()} disabled={reviewing()}>
                 核准
               </Button>
@@ -621,7 +623,7 @@ export default function ReturnsPage() {
             )}
           </Show>
 
-          <Show when={certQuery.data}>
+          <Show when={queryData(certQuery, (d) => d)}>
             {(cert) => (
               <div class="space-y-3 text-sm">
                 <div class="grid gap-2 sm:grid-cols-2">

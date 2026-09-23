@@ -4,6 +4,7 @@ import { For, Show } from "solid-js";
 import { cn } from "~/lib/cn";
 import { ALERT_CLASS, entitlementAlerts } from "./entitlements";
 import { tenantEntitlementsQueryOptions } from "./queries";
+import { queryData } from "~/lib/query-data";
 
 /**
  * shell 的權益提示條（spec §2.4 規則 2）：**只在**用量達 80/90% 或試用將到期時出現，
@@ -14,7 +15,11 @@ import { tenantEntitlementsQueryOptions } from "./queries";
 export default function PlanBanner() {
   const query = createQuery(() => tenantEntitlementsQueryOptions());
   /** 沒有資料（載入中／失敗）就沒有提示——提示條只能由後端回的投影決定。 */
-  const alerts = () => (query.data ? entitlementAlerts(query.data) : []);
+  const alerts = () => {
+    // 一個查詢只讀一次：`queryData` 的 pending 守衛在 `entitlementAlerts` 之前生效。
+    const data = queryData(query, (d) => d);
+    return data ? entitlementAlerts(data) : [];
+  };
 
   return (
     <Show when={alerts().length > 0}>

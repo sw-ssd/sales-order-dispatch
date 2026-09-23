@@ -27,6 +27,7 @@ import { PermissionMatrix } from "../components/PermissionMatrix";
 import { ListPagination } from "../components/ListPagination";
 import { ariaSort, createSortableHeaders } from "../components/SortableHeader";
 import { PAGE_SIZE, roleClient, rolesQueryOptions } from "../queries";
+import { queryData } from "~/lib/query-data";
 
 /**
  * 角色表格的 table 功能集：分頁 ＋ 排序（`manualSorting`，見下方 table）。
@@ -180,8 +181,8 @@ export default function RolesPage() {
     })
   );
 
-  const roles = () => query.data?.roles ?? [];
-  const total = () => Number(query.data?.pagination?.total ?? 0);
+  const roles = () => queryData(query, (d) => d?.roles) ?? [];
+  const total = () => Number(queryData(query, (d) => d?.pagination?.total) ?? 0);
   const selectedRole = () => roles().find((r) => r.id === selectedId()) ?? null;
   // 清單載入失敗由 query 狀態驅動；矩陣讀取／儲存失敗不屬於任何 query，走區域 signal。
   // 兩者共用一條 banner，清單錯誤優先（與改寫前的共用 `error` 同一個可見結果）。
@@ -203,7 +204,7 @@ export default function RolesPage() {
     features: ROLE_TABLE_FEATURES,
     columns,
     get data() {
-      return query.data?.roles ?? NO_ROLES;
+      return queryData(query, (d) => d?.roles) ?? NO_ROLES;
     },
     get rowCount() {
       return total();

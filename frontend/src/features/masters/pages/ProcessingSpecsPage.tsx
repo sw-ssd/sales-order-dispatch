@@ -43,6 +43,7 @@ import {
   processingSpecsQueryOptions,
 } from "../queries";
 import { processingSpecSchema, toSortOrder } from "../schemas";
+import { queryData } from "~/lib/query-data";
 
 /**
  * 規格表格的 table 功能集：**只有分頁**。
@@ -211,13 +212,13 @@ export default function ProcessingSpecsPage() {
     })
   );
 
-  const total = () => Number(query.data?.pagination?.total ?? 0);
+  const total = () => Number(queryData(query, (d) => d?.pagination?.total) ?? 0);
 
   const table = createTable({
     features: PROCESSING_SPEC_TABLE_FEATURES,
     columns,
     get data() {
-      return query.data?.processingSpecs ?? NO_PROCESSING_SPECS;
+      return queryData(query, (d) => d?.processingSpecs) ?? NO_PROCESSING_SPECS;
     },
     get rowCount() {
       return total();
@@ -422,7 +423,7 @@ export default function ProcessingSpecsPage() {
           </TableHeader>
           <TableBody>
             <Show
-              when={query.data?.processingSpecs?.length}
+              when={queryData(query, (d) => d?.processingSpecs?.length)}
               fallback={
                 <TableRow>
                   <TableCell colSpan={8}>

@@ -36,6 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui";
+import { queryData } from "~/lib/query-data";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import { ListPagination } from "../../users/components/ListPagination";
 import { createSortableHeaders } from "../../users/components/SortableHeader";
@@ -221,7 +222,7 @@ export default function CustomersPage() {
     })
   );
 
-  const total = () => Number(query.data?.pagination?.total ?? 0);
+  const total = () => Number(queryData(query, (d) => d?.pagination?.total) ?? 0);
 
   /**
    * table 實例。分頁與排序一律手動（`manualPagination`/`manualSorting`）：
@@ -231,7 +232,7 @@ export default function CustomersPage() {
     features: CUSTOMER_TABLE_FEATURES,
     columns,
     get data() {
-      return query.data?.customers ?? NO_CUSTOMERS;
+      return queryData(query, (d) => d?.customers ?? NO_CUSTOMERS);
     },
     get rowCount() {
       return total();
@@ -459,7 +460,7 @@ export default function CustomersPage() {
           </TableHeader>
           <TableBody>
             <Show
-              when={query.data?.customers?.length}
+              when={queryData(query, (d) => d?.customers?.length)}
               fallback={
                 <TableRow>
                   <TableCell colSpan={5}>

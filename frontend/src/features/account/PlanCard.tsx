@@ -21,6 +21,7 @@ import {
   usageValue,
 } from "./entitlements";
 import { tenantEntitlementsQueryOptions } from "./queries";
+import { queryData } from "~/lib/query-data";
 
 /**
  * 租戶後台的**唯讀**權益卡片（spec §2.4 第②面、§4.6）：方案、狀態、配額用量（`8/10`）與試用到期。
@@ -65,7 +66,7 @@ export default function PlanCard() {
             </Button>
           </Match>
 
-          <Match when={query.data}>
+          <Match when={queryData(query, (d) => d)}>
             {(entitlements) => (
               <>
                 <div class="flex flex-wrap items-center gap-2">

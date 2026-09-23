@@ -37,6 +37,7 @@ import {
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import { ListPagination } from "../../users/components/ListPagination";
 import { PRINT_LOG_PAGE_SIZE, printClient, printLogsQueryOptions } from "../queries";
+import { queryData } from "~/lib/query-data";
 import {
   DOC_TYPES,
   DOC_TYPE_LABELS,
@@ -193,13 +194,13 @@ export default function PrintPage() {
     })
   );
 
-  const total = () => query.data?.total ?? 0;
+  const total = () => queryData(query, (d) => d?.total) ?? 0;
 
   const table = createTable({
     features: PRINT_TABLE_FEATURES,
     columns,
     get data() {
-      return query.data?.entries ?? NO_LOGS;
+      return queryData(query, (d) => d?.entries) ?? NO_LOGS;
     },
     get rowCount() {
       return total();
@@ -427,7 +428,7 @@ export default function PrintPage() {
           </TableHeader>
           <TableBody>
             <Show
-              when={query.data?.entries?.length}
+              when={queryData(query, (d) => d?.entries?.length)}
               fallback={
                 <TableRow>
                   <TableCell colSpan={7}>

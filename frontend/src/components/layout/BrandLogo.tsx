@@ -2,6 +2,7 @@ import { createQuery } from "@tanstack/solid-query";
 import { Truck } from "lucide-solid";
 import { createSignal, Show } from "solid-js";
 import { meQueryOptions } from "~/lib/me";
+import { queryData } from "~/lib/query-data";
 
 /**
  * 側邊欄品牌圖示（規格 §8.1「側邊欄顯示當前公司 Logo」）：所屬公司有 Logo 用公司 Logo，
@@ -13,7 +14,12 @@ import { meQueryOptions } from "~/lib/me";
  */
 export default function BrandLogo() {
   const me = createQuery(() => meQueryOptions);
-  const logo = () => me.data?.company?.logo_url ?? "";
+  /**
+   * 一律走 `queryData`：`/me` 只有登入後才有，首次載入必然 pending —— 直接讀 `me.data` 會
+   * suspend，而這顆元件在側邊欄內、屬於路由 Suspense 邊界的一部分，等於整個 shell 陪它等。
+   */
+  const company = () => queryData(me, (d) => d?.company);
+  const logo = () => company()?.logo_url ?? "";
   /** 已載入失敗的 url；比對目前 url 才決定是否降級（換公司／換檔後不再套用舊失敗）。 */
   const [failedUrl, setFailedUrl] = createSignal("");
   return (
@@ -25,7 +31,7 @@ export default function BrandLogo() {
           Logo 因此提供「哪一家公司」的語意，而不是重複標題文字。 */}
       <img
         src={logo()}
-        alt={me.data?.company?.name ?? ""}
+        alt={company()?.name ?? ""}
         class="size-5 flex-none rounded object-contain transition group-hover:scale-110"
         onError={() => setFailedUrl(logo())}
       />

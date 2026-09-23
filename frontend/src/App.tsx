@@ -4,6 +4,7 @@ import { createMemo, type ParentProps } from "solid-js";
 import AppShell from "~/components/layout/AppShell";
 import { abilityQueryOptions } from "~/lib/ability/service";
 import { AbilityProvider } from "~/lib/ability/context";
+import { queryData } from "~/lib/query-data";
 
 /** 不套 shell 的路徑：登入頁與 403 各自是完整頁面。 */
 const CHROMELESS_PATHS: readonly string[] = ["/login", "/403"];
@@ -23,7 +24,9 @@ const EMPTY_ABILITY = new Set<string>();
 export default function App(props: ParentProps) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const ability = createQuery(() => abilityQueryOptions);
-  const perms = createMemo(() => ability.data ?? EMPTY_ABILITY);
+  // 走 `queryData`：pending 期間讀 `.data` 會 suspend，而這顆查詢在 `App` —— 一旦它把
+  // Suspense 拉起來，整個 shell（含側邊欄）都不會渲染，首次載入只剩一面白牆。
+  const perms = createMemo(() => queryData(ability, (d) => d ?? EMPTY_ABILITY));
 
   return (
     <AbilityProvider ability={perms}>

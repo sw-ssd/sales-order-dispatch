@@ -7,6 +7,7 @@ import {
   RouterProvider,
 } from "@tanstack/solid-router";
 import App from "~/App";
+import RouteSkeleton from "~/components/layout/RouteSkeleton";
 import AccountPage from "~/features/account/AccountPage";
 import LoginPage from "~/features/auth/pages/LoginPage";
 import ForbiddenPage from "~/features/auth/pages/ForbiddenPage";
@@ -273,7 +274,19 @@ const routeTree = rootRoute.addChildren([
   ...devRoutes,
 ]);
 
-export const router = createRouter({ routeTree });
+export const router = createRouter({
+  routeTree,
+  /**
+   * 路由層 Suspense 的 fallback。`@tanstack/solid-router` 在 client 把整條路由包在一個
+   * `Solid.Suspense` 內（`Matches` 的頂層邊界），而 `createQuery().data` 在**新 key 首次載入**
+   * 時會 suspend —— 沒有這個 fallback 就是 `null`，整個內容區在載入期間變成空白（側邊欄還在，
+   * 因為它在 `<Outlet/>` 之外），使用者只看到一面空牆。
+   *
+   * 注意這只是**兜底**：頁面仍應以 `queryData()`（`~/lib/query-data`）讀 `.data`，
+   * 讓載入中的區塊自己顯示既有結構，而不是整頁退化成骨架。
+   */
+  defaultPendingComponent: RouteSkeleton,
+});
 
 // 註冊 router 型別:Link/navigate 的 `to` 獲得路由字面量型別檢查。
 declare module "@tanstack/solid-router" {

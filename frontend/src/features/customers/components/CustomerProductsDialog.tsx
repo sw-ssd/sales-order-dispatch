@@ -32,6 +32,7 @@ import {
   pickerProductsQueryOptions,
 } from "../queries";
 import { customerProductSchema } from "../schemas";
+import { queryData } from "~/lib/query-data";
 
 /**
  * 錯誤訊息對照；樣板 = `AddressBookDialog` 的同一份 switch（各元件各自一份是本 repo 既有慣例）。
@@ -190,7 +191,7 @@ export default function CustomerProductsDialog(props: CustomerProductsDialogProp
     void form.handleSubmit();
   };
 
-  const products = () => pickerQuery.data?.products ?? [];
+  const products = () => queryData(pickerQuery, (d) => d?.products) ?? [];
 
   return (
     <Dialog
@@ -376,7 +377,7 @@ export default function CustomerProductsDialog(props: CustomerProductsDialogProp
             </TableHeader>
             <TableBody>
               <Show
-                when={listQuery.data?.products?.length}
+                when={queryData(listQuery, (d) => d?.products?.length)}
                 fallback={
                   <TableRow>
                     <TableCell colSpan={5}>
@@ -385,7 +386,7 @@ export default function CustomerProductsDialog(props: CustomerProductsDialogProp
                   </TableRow>
                 }
               >
-                <For each={listQuery.data?.products}>
+                <For each={queryData(listQuery, (d) => d?.products)}>
                   {(row) => (
                     <TableRow>
                       <TableCell class="font-medium text-foreground">{`#${row.productId}`}</TableCell>
