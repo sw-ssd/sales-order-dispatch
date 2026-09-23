@@ -5,6 +5,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"log"
 	"strconv"
 	"strings"
@@ -73,8 +74,8 @@ func (h *AuthHandler) QRLogin(ctx context.Context, req *connect.Request[v1.QRLog
 	}
 	// jti 先佔位再回應(防併發雙兌換)。Valkey 不可用 → 降級僅驗簽章與效期並記告警。
 	if err := qrcode.ClaimOnce(ctx, qrOneTime{h.deps.OneTime}, c.JTI, qrcode.Remaining(c)); err != nil {
-		// KV 錯誤(非「已使用」)即降級路徑:記告警,繼續兌換(安全與可用性取捨,見規格)。
-		if strings.Contains(err.Error(), "已使用") {
+		// 「已使用」= 一次性兌換已被別的請求佔走;其餘(KV 不可用)走降級路徑。
+		if errors.Is(err, qrcode.ErrTokenUsed) {
 			fail()
 			return nil, errcode.SysInvalidArgument.Error(map[string]string{"field": "token"})
 		}
@@ -126,7 +127,7 @@ func (h *AuthHandler) QRLogin(ctx context.Context, req *connect.Request[v1.QRLog
 	if len(accounts) == 0 {
 		return nil, errcode.SysInvalidArgument.Error(map[string]string{"field": "token"})
 	}
-	_ = coID
+	// 成功兌換即清掉該 token 的失敗計數;清除失敗不阻斷兌換(計數自然到期,不影響本次結果)。
 	_ = h.deps.Lockout.Clear(ctx, "qr:"+token)
 	return connect.NewResponse(&v1.QRLoginResponse{
 		CompanyId:    intString(coID),

@@ -1,6 +1,8 @@
 package qrcode_test
 
 import (
+	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -55,5 +57,33 @@ func TestVerifyRejectsExpired(t *testing.T) {
 	time.Sleep(3500 * time.Millisecond)
 	if _, err := qrcode.Verify("test-secret", token); err == nil {
 		t.Fatal("過期應拒絕")
+	}
+}
+
+// fakeJTI 以記憶體承載 ClaimOnce 的 Get/Set(測試專用)。
+type fakeJTI struct{ used map[string]bool }
+
+func (f *fakeJTI) Get(_ context.Context, key string) (string, bool, error) {
+	return "1", f.used[key], nil
+}
+
+func (f *fakeJTI) Set(_ context.Context, key, _ string, _ time.Duration) error {
+	f.used[key] = true
+	return nil
+}
+
+// TestClaimOnceUsesSentinel 重複兌換以 sentinel 標示,呼叫端靠 errors.Is 判別。
+//
+// 釘住的是「判別不可依賴訊息文字」:QR handler 曾以 strings.Contains(err.Error(), "已使用")
+// 區分這條路徑,訊息一改寫就會把重複兌換誤判成 KV 不可用,而降級路徑會放行已用掉的 token。
+func TestClaimOnceUsesSentinel(t *testing.T) {
+	ctx := context.Background()
+	kv := &fakeJTI{used: map[string]bool{}}
+	if err := qrcode.ClaimOnce(ctx, kv, "jti-1", time.Minute); err != nil {
+		t.Fatalf("首次兌換應成功: %v", err)
+	}
+	err := qrcode.ClaimOnce(ctx, kv, "jti-1", time.Minute)
+	if !errors.Is(err, qrcode.ErrTokenUsed) {
+		t.Fatalf("重複兌換應 errors.Is 為 ErrTokenUsed,得到 %v", err)
 	}
 }

@@ -25,6 +25,11 @@ const Purpose = "customer-qr-login"
 // DefaultTTL 為 token 效期預設 30 天(供印製/轉發場景),由呼叫端覆寫。
 const DefaultTTL = 30 * 24 * time.Hour
 
+// ErrTokenUsed 表示該 jti 已被兌換過(一次性保證)。
+// 呼叫端一律以 errors.Is 判別,不得比對訊息文字——訊息可能被改寫,而「已使用」
+// 被誤判成 KV 錯誤會把本該拒絕的兌換放行成降級路徑。
+var ErrTokenUsed = errors.New("qr: token 已使用")
+
 // Claims 為 QR token payload。
 type Claims struct {
 	CompanyID    int    `json:"company_id"`
@@ -123,7 +128,7 @@ func ClaimOnce(ctx context.Context, kv JTIStore, jti string, ttl time.Duration) 
 		return err
 	}
 	if ok {
-		return errors.New("qr: token 已使用")
+		return ErrTokenUsed
 	}
 	return kv.Set(ctx, JTIKey(jti), "1", ttl)
 }
