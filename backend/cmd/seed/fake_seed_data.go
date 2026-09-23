@@ -889,9 +889,9 @@ func seedNotifications(ctx context.Context, client *ent.Client, cid, did, actor 
 
 // seedPrintLogs 建立列印紀錄（4 種單據類型 + 1 筆補印）與其 PDF 檔案的 file_assets 列。
 //
-// file_assets 是 NOT NULL FK，故必須先建檔列。**同時把檔案寫到磁碟**：下載端點是
-// 「查 DB 列 → 開 storage_path 的檔」，只建列會讓列印頁每一條「下載」都 404
-// （先前版本只建列,實測 6 筆全部 404）。PDF 內容用最小合法文件即可 —— 示範資料要的是
+// file_assets 是 NOT NULL FK，故必須先建檔列；**同時**把檔案寫到磁碟 —— 下載端點是
+// 「查 DB 列 → 開 storage_path 的檔」，只建列會讓列印頁每一條「下載」都 404（表級斷言、
+// FK、頁面渲染全都正常，只有真的 GET 才看得到）。PDF 用最小合法文件即可：示範資料要的是
 // 「點得開」，不是可讀的報表。
 func seedPrintLogs(ctx context.Context, client *ent.Client, cid, did, actor int, routes []int, storageRoot string) error {
 	if len(routes) == 0 {
