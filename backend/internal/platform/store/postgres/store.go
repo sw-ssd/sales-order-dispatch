@@ -13,12 +13,15 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
 )
 
+// Store 以 database/sql 讀取平台域資料(admin／owner 連線,見套件說明)。
 type Store struct{ db *sql.DB }
 
 var _ store.Store = (*Store)(nil)
 
+// New 以既有 admin 連線建立 Store;連線的生命週期由呼叫端持有(Store 不 Close)。
 func New(db *sql.DB) *Store { return &Store{db: db} }
 
+// Features 列出全部功能定義,以 code 為鍵。
 func (s *Store) Features(ctx context.Context) (map[string]store.Feature, error) {
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT code, type, unit, description FROM platform.features`)
@@ -37,6 +40,7 @@ func (s *Store) Features(ctx context.Context) (map[string]store.Feature, error) 
 	return out, rows.Err()
 }
 
+// PlanEntitlements 回方案的功能清單;limit_value 為 NULL 時 Limit 保持 nil(不限)。
 func (s *Store) PlanEntitlements(ctx context.Context, planCode string) ([]store.Entitlement, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT pe.feature_code, pe.enabled, pe.limit_value

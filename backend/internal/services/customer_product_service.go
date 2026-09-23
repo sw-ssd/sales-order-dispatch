@@ -151,8 +151,6 @@ func (s *CustomerProductService) AddCustomerProduct(ctx context.Context, req *co
 	if cut := strings.TrimSpace(req.Msg.GetCutNote()); cut != "" {
 		build = build.SetCutNote(cut)
 	}
-	actor, _ := parseID(id.UserID)
-	_ = actor
 	created, err := build.Save(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
@@ -235,8 +233,6 @@ func (s *CustomerProductService) DeleteCustomerProduct(ctx context.Context, req 
 	if _, err := db.CustomerProduct.UpdateOneID(cp.ID).SetDeletedAt(time.Now().UTC()).Save(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
-	actor, _ := parseID(id.UserID)
-	_ = actor
 	if err := recordAuditBA(ctx, tx, "customer_product", "delete", cp.ID, cid, did, actorIDOf(id),
 		map[string]any{"alias": cp.AliasName}, map[string]any{"deleted": true}); err != nil {
 		return nil, toConnectError(err)
@@ -277,9 +273,8 @@ func (s *CustomerProductService) EnsureCustomerProduct(ctx context.Context, req 
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	prod, err := prodScopeQuery(db.Product.Query(), cid, did).
-		Where(product.ID(pid), product.DeletedAtIsNil()).Only(ctx)
-	if err != nil {
+	if _, err := prodScopeQuery(db.Product.Query(), cid, did).
+		Where(product.ID(pid), product.DeletedAtIsNil()).Only(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
 	if existing, err := db.CustomerProduct.Query().
@@ -311,7 +306,6 @@ func (s *CustomerProductService) EnsureCustomerProduct(ctx context.Context, req 
 		}
 		return nil, toConnectError(err)
 	}
-	_ = prod
 	return connect.NewResponse(&productsv1.EnsureCustomerProductResponse{
 		Product: customerProductToProto(created), Created: true,
 	}), nil

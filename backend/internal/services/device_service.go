@@ -145,18 +145,16 @@ func (s *DeviceService) UnregisterDevice(ctx context.Context, req *connect.Reque
 	return connect.NewResponse(&salesorderv1.UnregisterDeviceResponse{}), nil
 }
 
-// PurgeInvalidTokens 清除失效 token(發送迴路呼叫;不限當前使用者;逐筆寫稽核)。
+// PurgeInvalidTokens 清除失效 token(發送迴路呼叫;不限當前使用者)。
+// 系統性的清理動作不寫稽核列(呼叫端亦尚未接上;cid／actor 保留給日後補稽核的路徑)。
 func PurgeInvalidTokens(ctx context.Context, db *ent.Client, tokens []string, cid int, actor int) {
 	for _, tk := range tokens {
 		dev, err := db.UserDevice.Query().Where(userdevice.FcmTokenEQ(tk)).Only(ctx)
 		if err != nil || dev.DeletedAt != nil {
 			continue
 		}
-		now := time.Now()
-		if _, err := db.UserDevice.UpdateOneID(dev.ID).SetDeletedAt(now).Save(ctx); err != nil {
+		if _, err := db.UserDevice.UpdateOneID(dev.ID).SetDeletedAt(time.Now()).Save(ctx); err != nil {
 			continue
 		}
-		// 稽核盡力而為(清除為系統行為;失敗不阻斷發送主流程)。
-		_ = now
 	}
 }

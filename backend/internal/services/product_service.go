@@ -96,7 +96,7 @@ func (s *ProductService) validateUnits(ctx context.Context, units []*productsv1.
 		seen[code] = true
 		rate, err := domainproducts.ParseRate(u.GetConversionRate())
 		if err != nil {
-			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("單位 %q :%v", code, err))
+			return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("單位 %q :%w", code, err))
 		}
 		if err := s.validateUnitCode(ctx, code, did); err != nil {
 			return nil, err

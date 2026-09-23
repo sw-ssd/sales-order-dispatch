@@ -186,7 +186,6 @@ func (s *DispatchService) ConfirmDispatch(ctx context.Context, req *connect.Requ
 		return nil, errcode.SysInvalidArgument.Error(map[string]string{"reason": "該車次當日無待派訂單"})
 	}
 	actor, _ := parseID(id.UserID)
-	shared := time.Now().UTC()
 	resp := &salesorderv1.ConfirmDispatchResponse{}
 	for _, c := range cands {
 		// 逐筆獨立交易语意:本筆條件更新(pending → processing) + 事件;失敗记筆不挡他筆。
@@ -209,7 +208,6 @@ func (s *DispatchService) ConfirmDispatch(ctx context.Context, req *connect.Requ
 			_ = publishAfterCommit(ctx, deptID, BoardEvent{Type: "dispatch",
 				SalesOrderID: c.ID, RouteID: &c.RouteIDV,
 				DeliverySequence: c.SeqV, Version: c.VersionV + 1, DepartmentID: deptID})
-			_ = shared
 		}
 		resp.Items = append(resp.Items, item)
 	}

@@ -290,7 +290,6 @@ func pickingModel(ctx context.Context, qdb *ent.Client, coName string, r *ent.Ro
 	}
 	var list []ranked
 	for k, row := range agg {
-		_ = k
 		list = append(list, ranked{cat: catOf[k], row: row})
 	}
 	sort.Slice(list, func(i, j int) bool {

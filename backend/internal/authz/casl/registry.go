@@ -36,10 +36,12 @@ type FieldRegistry struct {
 	subjects map[string]SubjectDef
 }
 
+// NewFieldRegistry 建立空的欄位註冊表(由呼叫端以 Register 逐 subject 填入)。
 func NewFieldRegistry() *FieldRegistry {
 	return &FieldRegistry{subjects: map[string]SubjectDef{}}
 }
 
+// Register 註冊/覆蓋一個 subject 的欄位定義。
 func (r *FieldRegistry) Register(subject string, def SubjectDef) {
 	r.subjects[subject] = def
 }

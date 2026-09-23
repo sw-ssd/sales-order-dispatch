@@ -63,6 +63,8 @@ func sanitize(snap map[string]any) map[string]any {
 	}
 	return out
 }
+
+// Record 以交易內 client 寫入一筆稽核列;company_id／user_id 為 0 或缺交易即拒絕。
 func Record(ctx context.Context, tx *ent.Tx, e Entry) error {
 	companyID := e.CompanyID
 	if companyID == 0 {

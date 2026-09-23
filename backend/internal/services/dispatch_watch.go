@@ -79,11 +79,10 @@ func (s *DispatchService) WatchBoard(ctx context.Context, req *connect.Request[s
 	if err != nil {
 		return err
 	}
-	cid, did, err := deptScope(id)
+	_, did, err := deptScope(id)
 	if err != nil {
 		return err
 	}
-	_ = cid
 	// 看板為部門級:無部門上下文 → failed_precondition。
 	if did == nil {
 		// company_admin/super 無部門 → 以請求交易看其部門?不:看板必須定位部門,無部門即拒。

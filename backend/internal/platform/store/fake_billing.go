@@ -79,6 +79,7 @@ type AuditRecord struct {
 
 var _ BillingStore = (*FakeBilling)(nil)
 
+// NewFakeBilling 建立空的記憶體帳務 store(供單元測試與 CLI)。
 func NewFakeBilling() *FakeBilling {
 	return &FakeBilling{
 		dispatched:        map[int64]bool{},

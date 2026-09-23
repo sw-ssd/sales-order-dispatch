@@ -23,6 +23,7 @@ type Fake struct {
 
 var _ Store = (*Fake)(nil)
 
+// NewFake 建立空的記憶體 store。
 func NewFake() *Fake {
 	return &Fake{
 		features: map[string]Feature{},
@@ -32,24 +33,28 @@ func NewFake() *Fake {
 	}
 }
 
+// PutFeature 種一筆功能定義。
 func (f *Fake) PutFeature(x Feature) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.features[x.Code] = x
 }
 
+// PutPlan 種一個方案的功能清單(內部複製,呼叫端後續改動不影響 store)。
 func (f *Fake) PutPlan(planCode string, ents []Entitlement) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.plans[planCode] = cloneEntitlements(ents)
 }
 
+// PutSubscription 種一筆訂閱。
 func (f *Fake) PutSubscription(s Subscription) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.subs[s.CompanyID] = cloneSubscription(s)
 }
 
+// PutOverride 種一筆租戶例外(不檢查到期,與 SQL 實作同語意)。
 func (f *Fake) PutOverride(o Override) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -67,12 +72,14 @@ func (f *Fake) Features(context.Context) (map[string]Feature, error) {
 	return out, nil
 }
 
+// PlanEntitlements 回方案功能清單的副本;未知方案回空清單(與 SQL 實作同語意)。
 func (f *Fake) PlanEntitlements(_ context.Context, planCode string) ([]Entitlement, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return cloneEntitlements(f.plans[planCode]), nil
 }
 
+// Overrides 回該公司例外的副本(只剔除已撤銷者;到期由判定層判斷)。
 func (f *Fake) Overrides(_ context.Context, companyID int) ([]Override, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
