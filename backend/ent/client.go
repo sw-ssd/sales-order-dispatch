@@ -15,6 +15,7 @@ import (
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/salesorder/sales-order-1.0/backend/ent/announcement"
 	"github.com/salesorder/sales-order-1.0/backend/ent/auditlog"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customer"
@@ -54,6 +55,8 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// Announcement is the client for interacting with the Announcement builders.
+	Announcement *AnnouncementClient
 	// AuditLog is the client for interacting with the AuditLog builders.
 	AuditLog *AuditLogClient
 	// Company is the client for interacting with the Company builders.
@@ -129,6 +132,7 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.Announcement = NewAnnouncementClient(c.config)
 	c.AuditLog = NewAuditLogClient(c.config)
 	c.Company = NewCompanyClient(c.config)
 	c.Customer = NewCustomerClient(c.config)
@@ -253,6 +257,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	return &Tx{
 		ctx:                   ctx,
 		config:                cfg,
+		Announcement:          NewAnnouncementClient(cfg),
 		AuditLog:              NewAuditLogClient(cfg),
 		Company:               NewCompanyClient(cfg),
 		Customer:              NewCustomerClient(cfg),
@@ -304,6 +309,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	return &Tx{
 		ctx:                   ctx,
 		config:                cfg,
+		Announcement:          NewAnnouncementClient(cfg),
 		AuditLog:              NewAuditLogClient(cfg),
 		Company:               NewCompanyClient(cfg),
 		Customer:              NewCustomerClient(cfg),
@@ -342,7 +348,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		AuditLog.
+//		Announcement.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -365,13 +371,14 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.AuditLog, c.Company, c.Customer, c.CustomerAddress, c.CustomerContact,
-		c.CustomerCounter, c.CustomerProduct, c.Department, c.FileAsset, c.Metadict,
-		c.Notification, c.NotificationTemplate, c.OrderCounter, c.PrintLog,
-		c.PrintPreview, c.ProcessingSpec, c.Product, c.ProductCategory,
-		c.ProductProcessingSpec, c.ProductUnit, c.PromoTag, c.ReturnRequest,
-		c.ReturnRequestItem, c.Role, c.RolePermission, c.Route, c.SalesOrder,
-		c.SalesOrderEvent, c.SalesOrderItem, c.User, c.UserDevice, c.Warehouse,
+		c.Announcement, c.AuditLog, c.Company, c.Customer, c.CustomerAddress,
+		c.CustomerContact, c.CustomerCounter, c.CustomerProduct, c.Department,
+		c.FileAsset, c.Metadict, c.Notification, c.NotificationTemplate,
+		c.OrderCounter, c.PrintLog, c.PrintPreview, c.ProcessingSpec, c.Product,
+		c.ProductCategory, c.ProductProcessingSpec, c.ProductUnit, c.PromoTag,
+		c.ReturnRequest, c.ReturnRequestItem, c.Role, c.RolePermission, c.Route,
+		c.SalesOrder, c.SalesOrderEvent, c.SalesOrderItem, c.User, c.UserDevice,
+		c.Warehouse,
 	} {
 		n.Use(hooks...)
 	}
@@ -381,13 +388,14 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.AuditLog, c.Company, c.Customer, c.CustomerAddress, c.CustomerContact,
-		c.CustomerCounter, c.CustomerProduct, c.Department, c.FileAsset, c.Metadict,
-		c.Notification, c.NotificationTemplate, c.OrderCounter, c.PrintLog,
-		c.PrintPreview, c.ProcessingSpec, c.Product, c.ProductCategory,
-		c.ProductProcessingSpec, c.ProductUnit, c.PromoTag, c.ReturnRequest,
-		c.ReturnRequestItem, c.Role, c.RolePermission, c.Route, c.SalesOrder,
-		c.SalesOrderEvent, c.SalesOrderItem, c.User, c.UserDevice, c.Warehouse,
+		c.Announcement, c.AuditLog, c.Company, c.Customer, c.CustomerAddress,
+		c.CustomerContact, c.CustomerCounter, c.CustomerProduct, c.Department,
+		c.FileAsset, c.Metadict, c.Notification, c.NotificationTemplate,
+		c.OrderCounter, c.PrintLog, c.PrintPreview, c.ProcessingSpec, c.Product,
+		c.ProductCategory, c.ProductProcessingSpec, c.ProductUnit, c.PromoTag,
+		c.ReturnRequest, c.ReturnRequestItem, c.Role, c.RolePermission, c.Route,
+		c.SalesOrder, c.SalesOrderEvent, c.SalesOrderItem, c.User, c.UserDevice,
+		c.Warehouse,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -396,6 +404,8 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
+	case *AnnouncementMutation:
+		return c.Announcement.mutate(ctx, m)
 	case *AuditLogMutation:
 		return c.AuditLog.mutate(ctx, m)
 	case *CompanyMutation:
@@ -462,6 +472,139 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Warehouse.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
+// AnnouncementClient is a client for the Announcement schema.
+type AnnouncementClient struct {
+	config
+}
+
+// NewAnnouncementClient returns a client for the Announcement from the given config.
+func NewAnnouncementClient(c config) *AnnouncementClient {
+	return &AnnouncementClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `announcement.Hooks(f(g(h())))`.
+func (c *AnnouncementClient) Use(hooks ...Hook) {
+	c.hooks.Announcement = append(c.hooks.Announcement, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `announcement.Intercept(f(g(h())))`.
+func (c *AnnouncementClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Announcement = append(c.inters.Announcement, interceptors...)
+}
+
+// Create returns a builder for creating a Announcement entity.
+func (c *AnnouncementClient) Create() *AnnouncementCreate {
+	mutation := newAnnouncementMutation(c.config, OpCreate)
+	return &AnnouncementCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Announcement entities.
+func (c *AnnouncementClient) CreateBulk(builders ...*AnnouncementCreate) *AnnouncementCreateBulk {
+	return &AnnouncementCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *AnnouncementClient) MapCreateBulk(slice any, setFunc func(*AnnouncementCreate, int)) *AnnouncementCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &AnnouncementCreateBulk{err: fmt.Errorf("calling to AnnouncementClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*AnnouncementCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &AnnouncementCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Announcement.
+func (c *AnnouncementClient) Update() *AnnouncementUpdate {
+	mutation := newAnnouncementMutation(c.config, OpUpdate)
+	return &AnnouncementUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AnnouncementClient) UpdateOne(_m *Announcement) *AnnouncementUpdateOne {
+	mutation := newAnnouncementMutation(c.config, OpUpdateOne, withAnnouncement(_m))
+	return &AnnouncementUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AnnouncementClient) UpdateOneID(id int) *AnnouncementUpdateOne {
+	mutation := newAnnouncementMutation(c.config, OpUpdateOne, withAnnouncementID(id))
+	return &AnnouncementUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Announcement.
+func (c *AnnouncementClient) Delete() *AnnouncementDelete {
+	mutation := newAnnouncementMutation(c.config, OpDelete)
+	return &AnnouncementDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *AnnouncementClient) DeleteOne(_m *Announcement) *AnnouncementDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *AnnouncementClient) DeleteOneID(id int) *AnnouncementDeleteOne {
+	builder := c.Delete().Where(announcement.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AnnouncementDeleteOne{builder}
+}
+
+// Query returns a query builder for Announcement.
+func (c *AnnouncementClient) Query() *AnnouncementQuery {
+	return &AnnouncementQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeAnnouncement},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Announcement entity by its id.
+func (c *AnnouncementClient) Get(ctx context.Context, id int) (*Announcement, error) {
+	return c.Query().Where(announcement.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AnnouncementClient) GetX(ctx context.Context, id int) *Announcement {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *AnnouncementClient) Hooks() []Hook {
+	return c.hooks.Announcement
+}
+
+// Interceptors returns the client interceptors.
+func (c *AnnouncementClient) Interceptors() []Interceptor {
+	return c.inters.Announcement
+}
+
+func (c *AnnouncementClient) mutate(ctx context.Context, m *AnnouncementMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&AnnouncementCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&AnnouncementUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&AnnouncementUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&AnnouncementDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Announcement mutation op: %q", m.Op())
 	}
 }
 
@@ -4836,19 +4979,21 @@ func (c *WarehouseClient) mutate(ctx context.Context, m *WarehouseMutation) (Val
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		AuditLog, Company, Customer, CustomerAddress, CustomerContact, CustomerCounter,
-		CustomerProduct, Department, FileAsset, Metadict, Notification,
-		NotificationTemplate, OrderCounter, PrintLog, PrintPreview, ProcessingSpec,
-		Product, ProductCategory, ProductProcessingSpec, ProductUnit, PromoTag,
-		ReturnRequest, ReturnRequestItem, Role, RolePermission, Route, SalesOrder,
-		SalesOrderEvent, SalesOrderItem, User, UserDevice, Warehouse []ent.Hook
+		Announcement, AuditLog, Company, Customer, CustomerAddress, CustomerContact,
+		CustomerCounter, CustomerProduct, Department, FileAsset, Metadict,
+		Notification, NotificationTemplate, OrderCounter, PrintLog, PrintPreview,
+		ProcessingSpec, Product, ProductCategory, ProductProcessingSpec, ProductUnit,
+		PromoTag, ReturnRequest, ReturnRequestItem, Role, RolePermission, Route,
+		SalesOrder, SalesOrderEvent, SalesOrderItem, User, UserDevice,
+		Warehouse []ent.Hook
 	}
 	inters struct {
-		AuditLog, Company, Customer, CustomerAddress, CustomerContact, CustomerCounter,
-		CustomerProduct, Department, FileAsset, Metadict, Notification,
-		NotificationTemplate, OrderCounter, PrintLog, PrintPreview, ProcessingSpec,
-		Product, ProductCategory, ProductProcessingSpec, ProductUnit, PromoTag,
-		ReturnRequest, ReturnRequestItem, Role, RolePermission, Route, SalesOrder,
-		SalesOrderEvent, SalesOrderItem, User, UserDevice, Warehouse []ent.Interceptor
+		Announcement, AuditLog, Company, Customer, CustomerAddress, CustomerContact,
+		CustomerCounter, CustomerProduct, Department, FileAsset, Metadict,
+		Notification, NotificationTemplate, OrderCounter, PrintLog, PrintPreview,
+		ProcessingSpec, Product, ProductCategory, ProductProcessingSpec, ProductUnit,
+		PromoTag, ReturnRequest, ReturnRequestItem, Role, RolePermission, Route,
+		SalesOrder, SalesOrderEvent, SalesOrderItem, User, UserDevice,
+		Warehouse []ent.Interceptor
 	}
 )

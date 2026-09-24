@@ -137,6 +137,7 @@ func (s *Server) mountAuth() {
 	services.RegisterNotificationService(apiMux, entClient)    // NotificationService(07 Task 4.3.3)
 	services.RegisterDeviceService(apiMux, entClient)          // DeviceService(07 Task 4.3.4)
 	services.RegisterDispatchService(apiMux, entClient)        // DispatchService(08 Task 5.1)
+	services.RegisterAnnouncementService(apiMux, entClient)    // AnnouncementService(ANN 公告 CMS)
 	// 04 Task 3.6 檔案資產(REST:上傳/下載/軟刪除,掛同一 apiMux,與 Connect 路徑不衝突)。
 	fileassets.NewHandler(entClient, s.cfg.Storage.StorageRoot).RegisterRoutes(apiMux)
 	// GET /me:session 身分 + 所屬公司品牌(Web 側邊欄 Logo,規格 §8.1);REST 同一 apiMux。

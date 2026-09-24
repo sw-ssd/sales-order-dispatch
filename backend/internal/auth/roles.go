@@ -30,6 +30,9 @@ var rolePolicy = map[string]map[string][]string{
 		"dispatch":       {"*"},
 		"return_request": {"*"},
 		"notification":   {"*"},
+		// 公告 CMS（spec announcements 管理權限依範圍分層）:能開頁、能寫,
+		// 範圍（全系統/公司/部門）由 AnnouncementService 的範圍守衛收斂。
+		"announcement": {"read", "write"},
 		// 稽核：只有 company_admin（＋ super/developer 萬用展開）可查 —— 與
 		// AuditService.ListAuditLogs 的範圍推導一致（dept_admin/staff 一律 PermissionDenied）。
 		"audit_log": {"read"},
@@ -44,6 +47,8 @@ var rolePolicy = map[string]map[string][]string{
 		"dispatch":       {"*"},
 		"return_request": {"*"},
 		"notification":   {"*"},
+		// 公告 CMS:dept_admin 僅可管理本部門層（ AnnouncementService 範圍守衛）。
+		"announcement": {"read", "write"},
 	},
 	"staff": {
 		"customer":    {"*"},
@@ -165,7 +170,7 @@ func actionAllowed(acts []string, act string) bool {
 var adminResources = []string{
 	"company", "department", "user", "role",
 	"sales_order", "customer", "product", "print", "dispatch", "accounting",
-	"return_request", "notification", "audit_log",
+	"return_request", "notification", "audit_log", "announcement",
 }
 
 // PermissionSeed 描述單一 role_permissions 種子列( role code → resource → action )。

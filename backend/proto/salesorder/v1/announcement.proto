@@ -1,0 +1,112 @@
+syntax = "proto3";
+
+package salesorder.v1;
+option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1";
+
+// AnnouncementService:公告 CMS(spec announcements)。
+// 三型別(banner/news/article)、三層發佈範圍(company/department 皆空 = 全系統)、
+// 上下架時間窗、平台投放(Web/App)。CRUD 範圍守衛:super 全範圍、
+// company_admin 所屬公司(公司層+該公司部門層)、dept_admin 本部門層。
+service AnnouncementService {
+  // ListAnnouncements:管理列表(僅列可管理範圍;含未上架/停用;預設排除已刪除)。
+  rpc ListAnnouncements(ListAnnouncementsRequest) returns (ListAnnouncementsResponse);
+  // CreateAnnouncement:建立公告(範圍依身分收斂;type 非法 → invalid_argument)。
+  rpc CreateAnnouncement(CreateAnnouncementRequest) returns (CreateAnnouncementResponse);
+  // UpdateAnnouncement:全量替換(id 除外表所有欄位;布林無 present 語意,不採欄位式)。
+  // 空字串的可選欄位(image_url/link_url/unpublish_at)即清空;publish_at 空 → invalid_argument。
+  rpc UpdateAnnouncement(UpdateAnnouncementRequest) returns (UpdateAnnouncementResponse);
+  // DeleteAnnouncement:軟刪除。
+  rpc DeleteAnnouncement(DeleteAnnouncementRequest) returns (DeleteAnnouncementResponse);
+}
+
+// Announcement:公告單筆。
+message Announcement {
+  string id = 1;
+  string company_id = 2;        // 空 = 全系統公告
+  string department_id = 3;     // 空 = 全系統或公司層公告
+  string type = 4;              // banner / news / article
+  string title = 5;
+  string content = 6;
+  string image_url = 7;         // 可空
+  string link_url = 8;          // 可空(banner 點擊導向)
+  string publish_at = 9;        // RFC3339
+  string unpublish_at = 10;     // RFC3339;空 = 不自動下架
+  int32 sort_order = 11;
+  bool is_active = 12;
+  bool deploy_web = 13;         // 平台投放:Web 中台
+  bool deploy_app = 14;         // 平台投放:App 首頁
+  string created_at = 15;       // RFC3339
+  string updated_at = 16;       // RFC3339
+}
+
+// ListAnnouncementsRequest:管理列表請求。
+message ListAnnouncementsRequest {
+  int32 page = 1;          // 1-based,預設 1
+  int32 page_size = 2;     // 預設 20,上限 100
+  string type = 3;         // 可空(banner/news/article 過濾)
+  bool include_deleted = 4;
+}
+
+// ListAnnouncementsResponse:管理列表結果。
+message ListAnnouncementsResponse {
+  repeated Announcement announcements = 1;
+  int32 total = 2;
+}
+
+// CreateAnnouncementRequest:建立請求。**範圍欄位空值自動歸屬**(非 super):
+// company_id 空 → 自己的公司;dept_admin 的 department_id 空 → 自己的部門
+// (故 dept_admin 一律建部門層、company_admin 預設公司層,super 空 = 全系統)。
+// 覆寫時由 AnnouncementService 範圍守衛驗證(spec「管理權限依範圍分層」)。
+// publish_at 空 = 立即;unpublish_at 空 = 不自動下架。
+message CreateAnnouncementRequest {
+  string company_id = 1;
+  string department_id = 2;
+  string type = 3;
+  string title = 4;
+  string content = 5;
+  string image_url = 6;
+  string link_url = 7;
+  string publish_at = 8;
+  string unpublish_at = 9;
+  int32 sort_order = 10;
+  bool is_active = 11;
+  bool deploy_web = 12;
+  bool deploy_app = 13;
+}
+
+// CreateAnnouncementResponse:建立結果。
+message CreateAnnouncementResponse {
+  Announcement announcement = 1;
+}
+
+// UpdateAnnouncementRequest:全量替換請求(id 除外的內容欄位;布林無 present 語意,
+// 故不採欄位式;空字串可選欄位即清空,publish_at 空 → invalid_argument)。
+// **發佈範圍不可改**(v1:範圍於建立時決定;要改範圍 = 另建一筆並刪舊筆 ——
+// 避免 proto3 無法區分「清空範圍」與「不帶欄位」的含糊語意)。
+message UpdateAnnouncementRequest {
+  string id = 1;
+  string type = 4;
+  string title = 5;
+  string content = 6;
+  string image_url = 7;
+  string link_url = 8;
+  string publish_at = 9;
+  string unpublish_at = 10;
+  int32 sort_order = 11;
+  bool is_active = 12;
+  bool deploy_web = 13;
+  bool deploy_app = 14;
+}
+
+// UpdateAnnouncementResponse:更新結果。
+message UpdateAnnouncementResponse {
+  Announcement announcement = 1;
+}
+
+// DeleteAnnouncementRequest:軟刪除請求。
+message DeleteAnnouncementRequest {
+  string id = 1;
+}
+
+// DeleteAnnouncementResponse:軟刪除結果。
+message DeleteAnnouncementResponse {}

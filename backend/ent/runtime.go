@@ -5,6 +5,7 @@ package ent
 import (
 	"time"
 
+	"github.com/salesorder/sales-order-1.0/backend/ent/announcement"
 	"github.com/salesorder/sales-order-1.0/backend/ent/auditlog"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customer"
@@ -44,6 +45,50 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	announcementFields := schema.Announcement{}.Fields()
+	_ = announcementFields
+	// announcementDescType is the schema descriptor for type field.
+	announcementDescType := announcementFields[2].Descriptor()
+	// announcement.TypeValidator is a validator for the "type" field. It is called by the builders before save.
+	announcement.TypeValidator = announcementDescType.Validators[0].(func(string) error)
+	// announcementDescTitle is the schema descriptor for title field.
+	announcementDescTitle := announcementFields[3].Descriptor()
+	// announcement.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	announcement.TitleValidator = announcementDescTitle.Validators[0].(func(string) error)
+	// announcementDescContent is the schema descriptor for content field.
+	announcementDescContent := announcementFields[4].Descriptor()
+	// announcement.DefaultContent holds the default value on creation for the content field.
+	announcement.DefaultContent = announcementDescContent.Default.(string)
+	// announcementDescPublishAt is the schema descriptor for publish_at field.
+	announcementDescPublishAt := announcementFields[7].Descriptor()
+	// announcement.DefaultPublishAt holds the default value on creation for the publish_at field.
+	announcement.DefaultPublishAt = announcementDescPublishAt.Default.(func() time.Time)
+	// announcementDescSortOrder is the schema descriptor for sort_order field.
+	announcementDescSortOrder := announcementFields[9].Descriptor()
+	// announcement.DefaultSortOrder holds the default value on creation for the sort_order field.
+	announcement.DefaultSortOrder = announcementDescSortOrder.Default.(int)
+	// announcementDescIsActive is the schema descriptor for is_active field.
+	announcementDescIsActive := announcementFields[10].Descriptor()
+	// announcement.DefaultIsActive holds the default value on creation for the is_active field.
+	announcement.DefaultIsActive = announcementDescIsActive.Default.(bool)
+	// announcementDescDeployWeb is the schema descriptor for deploy_web field.
+	announcementDescDeployWeb := announcementFields[11].Descriptor()
+	// announcement.DefaultDeployWeb holds the default value on creation for the deploy_web field.
+	announcement.DefaultDeployWeb = announcementDescDeployWeb.Default.(bool)
+	// announcementDescDeployApp is the schema descriptor for deploy_app field.
+	announcementDescDeployApp := announcementFields[12].Descriptor()
+	// announcement.DefaultDeployApp holds the default value on creation for the deploy_app field.
+	announcement.DefaultDeployApp = announcementDescDeployApp.Default.(bool)
+	// announcementDescCreatedAt is the schema descriptor for created_at field.
+	announcementDescCreatedAt := announcementFields[14].Descriptor()
+	// announcement.DefaultCreatedAt holds the default value on creation for the created_at field.
+	announcement.DefaultCreatedAt = announcementDescCreatedAt.Default.(func() time.Time)
+	// announcementDescUpdatedAt is the schema descriptor for updated_at field.
+	announcementDescUpdatedAt := announcementFields[15].Descriptor()
+	// announcement.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	announcement.DefaultUpdatedAt = announcementDescUpdatedAt.Default.(func() time.Time)
+	// announcement.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	announcement.UpdateDefaultUpdatedAt = announcementDescUpdatedAt.UpdateDefault.(func() time.Time)
 	auditlogFields := schema.AuditLog{}.Fields()
 	_ = auditlogFields
 	// auditlogDescCreatedAt is the schema descriptor for created_at field.

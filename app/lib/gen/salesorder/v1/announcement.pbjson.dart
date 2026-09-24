@@ -146,8 +146,6 @@ const UpdateAnnouncementRequest$json = {
   '1': 'UpdateAnnouncementRequest',
   '2': [
     {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
-    {'1': 'company_id', '3': 2, '4': 1, '5': 9, '10': 'companyId'},
-    {'1': 'department_id', '3': 3, '4': 1, '5': 9, '10': 'departmentId'},
     {'1': 'type', '3': 4, '4': 1, '5': 9, '10': 'type'},
     {'1': 'title', '3': 5, '4': 1, '5': 9, '10': 'title'},
     {'1': 'content', '3': 6, '4': 1, '5': 9, '10': 'content'},
@@ -164,14 +162,13 @@ const UpdateAnnouncementRequest$json = {
 
 /// Descriptor for `UpdateAnnouncementRequest`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List updateAnnouncementRequestDescriptor = $convert.base64Decode(
-    'ChlVcGRhdGVBbm5vdW5jZW1lbnRSZXF1ZXN0Eg4KAmlkGAEgASgJUgJpZBIdCgpjb21wYW55X2'
-    'lkGAIgASgJUgljb21wYW55SWQSIwoNZGVwYXJ0bWVudF9pZBgDIAEoCVIMZGVwYXJ0bWVudElk'
-    'EhIKBHR5cGUYBCABKAlSBHR5cGUSFAoFdGl0bGUYBSABKAlSBXRpdGxlEhgKB2NvbnRlbnQYBi'
-    'ABKAlSB2NvbnRlbnQSGwoJaW1hZ2VfdXJsGAcgASgJUghpbWFnZVVybBIZCghsaW5rX3VybBgI'
-    'IAEoCVIHbGlua1VybBIdCgpwdWJsaXNoX2F0GAkgASgJUglwdWJsaXNoQXQSIQoMdW5wdWJsaX'
-    'NoX2F0GAogASgJUgt1bnB1Ymxpc2hBdBIdCgpzb3J0X29yZGVyGAsgASgFUglzb3J0T3JkZXIS'
-    'GwoJaXNfYWN0aXZlGAwgASgIUghpc0FjdGl2ZRIdCgpkZXBsb3lfd2ViGA0gASgIUglkZXBsb3'
-    'lXZWISHQoKZGVwbG95X2FwcBgOIAEoCFIJZGVwbG95QXBw');
+    'ChlVcGRhdGVBbm5vdW5jZW1lbnRSZXF1ZXN0Eg4KAmlkGAEgASgJUgJpZBISCgR0eXBlGAQgAS'
+    'gJUgR0eXBlEhQKBXRpdGxlGAUgASgJUgV0aXRsZRIYCgdjb250ZW50GAYgASgJUgdjb250ZW50'
+    'EhsKCWltYWdlX3VybBgHIAEoCVIIaW1hZ2VVcmwSGQoIbGlua191cmwYCCABKAlSB2xpbmtVcm'
+    'wSHQoKcHVibGlzaF9hdBgJIAEoCVIJcHVibGlzaEF0EiEKDHVucHVibGlzaF9hdBgKIAEoCVIL'
+    'dW5wdWJsaXNoQXQSHQoKc29ydF9vcmRlchgLIAEoBVIJc29ydE9yZGVyEhsKCWlzX2FjdGl2ZR'
+    'gMIAEoCFIIaXNBY3RpdmUSHQoKZGVwbG95X3dlYhgNIAEoCFIJZGVwbG95V2ViEh0KCmRlcGxv'
+    'eV9hcHAYDiABKAhSCWRlcGxveUFwcA==');
 
 @$core.Deprecated('Use updateAnnouncementResponseDescriptor instead')
 const UpdateAnnouncementResponse$json = {

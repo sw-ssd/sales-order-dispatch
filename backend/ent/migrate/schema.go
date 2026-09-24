@@ -9,6 +9,45 @@ import (
 )
 
 var (
+	// AnnouncementsColumns holds the columns for the "announcements" table.
+	AnnouncementsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "company_id", Type: field.TypeInt, Nullable: true},
+		{Name: "department_id", Type: field.TypeInt, Nullable: true},
+		{Name: "type", Type: field.TypeString},
+		{Name: "title", Type: field.TypeString},
+		{Name: "content", Type: field.TypeString, Default: ""},
+		{Name: "image_url", Type: field.TypeString, Nullable: true},
+		{Name: "link_url", Type: field.TypeString, Nullable: true},
+		{Name: "publish_at", Type: field.TypeTime},
+		{Name: "unpublish_at", Type: field.TypeTime, Nullable: true},
+		{Name: "sort_order", Type: field.TypeInt, Default: 0},
+		{Name: "is_active", Type: field.TypeBool, Default: true},
+		{Name: "deploy_web", Type: field.TypeBool, Default: true},
+		{Name: "deploy_app", Type: field.TypeBool, Default: true},
+		{Name: "created_by", Type: field.TypeInt, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+	}
+	// AnnouncementsTable holds the schema information for the "announcements" table.
+	AnnouncementsTable = &schema.Table{
+		Name:       "announcements",
+		Columns:    AnnouncementsColumns,
+		PrimaryKey: []*schema.Column{AnnouncementsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "announcement_company_id_department_id",
+				Unique:  false,
+				Columns: []*schema.Column{AnnouncementsColumns[1], AnnouncementsColumns[2]},
+			},
+			{
+				Name:    "announcement_type_sort_order",
+				Unique:  false,
+				Columns: []*schema.Column{AnnouncementsColumns[3], AnnouncementsColumns[10]},
+			},
+		},
+	}
 	// AuditLogsColumns holds the columns for the "audit_logs" table.
 	AuditLogsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -950,6 +989,7 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		AnnouncementsTable,
 		AuditLogsTable,
 		CompaniesTable,
 		CustomersTable,

@@ -421,10 +421,10 @@ class ListAnnouncementsResponse extends $pb.GeneratedMessage {
   void clearTotal() => $_clearField(2);
 }
 
-/// CreateAnnouncementRequest:建立請求。
-/// company_id/department_id 依身分收斂:super 可帶任一或留空(全系統);
-/// company_admin 必帶自己的 company_id(department 可帶該公司任一部門);
-/// dept_admin 必帶自己的 company_id + department_id。
+/// CreateAnnouncementRequest:建立請求。**範圍欄位空值自動歸屬**(非 super):
+/// company_id 空 → 自己的公司;dept_admin 的 department_id 空 → 自己的部門
+/// (故 dept_admin 一律建部門層、company_admin 預設公司層,super 空 = 全系統)。
+/// 覆寫時由 AnnouncementService 範圍守衛驗證(spec「管理權限依範圍分層」)。
 /// publish_at 空 = 立即;unpublish_at 空 = 不自動下架。
 class CreateAnnouncementRequest extends $pb.GeneratedMessage {
   factory CreateAnnouncementRequest({
@@ -697,13 +697,13 @@ class CreateAnnouncementResponse extends $pb.GeneratedMessage {
   Announcement ensureAnnouncement() => $_ensure(0);
 }
 
-/// UpdateAnnouncementRequest:全量替換請求(布林無 present 語意,故不採欄位式;
-/// 空字串可選欄位即清空,publish_at 空 → invalid_argument)。
+/// UpdateAnnouncementRequest:全量替換請求(id 除外的內容欄位;布林無 present 語意,
+/// 故不採欄位式;空字串可選欄位即清空,publish_at 空 → invalid_argument)。
+/// **發佈範圍不可改**(v1:範圍於建立時決定;要改範圍 = 另建一筆並刪舊筆 ——
+/// 避免 proto3 無法區分「清空範圍」與「不帶欄位」的含糊語意)。
 class UpdateAnnouncementRequest extends $pb.GeneratedMessage {
   factory UpdateAnnouncementRequest({
     $core.String? id,
-    $core.String? companyId,
-    $core.String? departmentId,
     $core.String? type,
     $core.String? title,
     $core.String? content,
@@ -718,8 +718,6 @@ class UpdateAnnouncementRequest extends $pb.GeneratedMessage {
   }) {
     final result = UpdateAnnouncementRequest._();
     if (id != null) result.id = id;
-    if (companyId != null) result.companyId = companyId;
-    if (departmentId != null) result.departmentId = departmentId;
     if (type != null) result.type = type;
     if (title != null) result.title = title;
     if (content != null) result.content = content;
@@ -748,8 +746,6 @@ class UpdateAnnouncementRequest extends $pb.GeneratedMessage {
       package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
       createEmptyInstance: UpdateAnnouncementRequest.$_createMessage)
     ..aOS(1, _omitFieldNames ? '' : 'id')
-    ..aOS(2, _omitFieldNames ? '' : 'companyId')
-    ..aOS(3, _omitFieldNames ? '' : 'departmentId')
     ..aOS(4, _omitFieldNames ? '' : 'type')
     ..aOS(5, _omitFieldNames ? '' : 'title')
     ..aOS(6, _omitFieldNames ? '' : 'content')
@@ -798,120 +794,102 @@ class UpdateAnnouncementRequest extends $pb.GeneratedMessage {
   @$pb.TagNumber(1)
   void clearId() => $_clearField(1);
 
-  @$pb.TagNumber(2)
-  $core.String get companyId => $_getSZ(1);
-  @$pb.TagNumber(2)
-  set companyId($core.String value) => $_setString(1, value);
-  @$pb.TagNumber(2)
-  $core.bool hasCompanyId() => $_has(1);
-  @$pb.TagNumber(2)
-  void clearCompanyId() => $_clearField(2);
-
-  @$pb.TagNumber(3)
-  $core.String get departmentId => $_getSZ(2);
-  @$pb.TagNumber(3)
-  set departmentId($core.String value) => $_setString(2, value);
-  @$pb.TagNumber(3)
-  $core.bool hasDepartmentId() => $_has(2);
-  @$pb.TagNumber(3)
-  void clearDepartmentId() => $_clearField(3);
-
   @$pb.TagNumber(4)
-  $core.String get type => $_getSZ(3);
+  $core.String get type => $_getSZ(1);
   @$pb.TagNumber(4)
-  set type($core.String value) => $_setString(3, value);
+  set type($core.String value) => $_setString(1, value);
   @$pb.TagNumber(4)
-  $core.bool hasType() => $_has(3);
+  $core.bool hasType() => $_has(1);
   @$pb.TagNumber(4)
   void clearType() => $_clearField(4);
 
   @$pb.TagNumber(5)
-  $core.String get title => $_getSZ(4);
+  $core.String get title => $_getSZ(2);
   @$pb.TagNumber(5)
-  set title($core.String value) => $_setString(4, value);
+  set title($core.String value) => $_setString(2, value);
   @$pb.TagNumber(5)
-  $core.bool hasTitle() => $_has(4);
+  $core.bool hasTitle() => $_has(2);
   @$pb.TagNumber(5)
   void clearTitle() => $_clearField(5);
 
   @$pb.TagNumber(6)
-  $core.String get content => $_getSZ(5);
+  $core.String get content => $_getSZ(3);
   @$pb.TagNumber(6)
-  set content($core.String value) => $_setString(5, value);
+  set content($core.String value) => $_setString(3, value);
   @$pb.TagNumber(6)
-  $core.bool hasContent() => $_has(5);
+  $core.bool hasContent() => $_has(3);
   @$pb.TagNumber(6)
   void clearContent() => $_clearField(6);
 
   @$pb.TagNumber(7)
-  $core.String get imageUrl => $_getSZ(6);
+  $core.String get imageUrl => $_getSZ(4);
   @$pb.TagNumber(7)
-  set imageUrl($core.String value) => $_setString(6, value);
+  set imageUrl($core.String value) => $_setString(4, value);
   @$pb.TagNumber(7)
-  $core.bool hasImageUrl() => $_has(6);
+  $core.bool hasImageUrl() => $_has(4);
   @$pb.TagNumber(7)
   void clearImageUrl() => $_clearField(7);
 
   @$pb.TagNumber(8)
-  $core.String get linkUrl => $_getSZ(7);
+  $core.String get linkUrl => $_getSZ(5);
   @$pb.TagNumber(8)
-  set linkUrl($core.String value) => $_setString(7, value);
+  set linkUrl($core.String value) => $_setString(5, value);
   @$pb.TagNumber(8)
-  $core.bool hasLinkUrl() => $_has(7);
+  $core.bool hasLinkUrl() => $_has(5);
   @$pb.TagNumber(8)
   void clearLinkUrl() => $_clearField(8);
 
   @$pb.TagNumber(9)
-  $core.String get publishAt => $_getSZ(8);
+  $core.String get publishAt => $_getSZ(6);
   @$pb.TagNumber(9)
-  set publishAt($core.String value) => $_setString(8, value);
+  set publishAt($core.String value) => $_setString(6, value);
   @$pb.TagNumber(9)
-  $core.bool hasPublishAt() => $_has(8);
+  $core.bool hasPublishAt() => $_has(6);
   @$pb.TagNumber(9)
   void clearPublishAt() => $_clearField(9);
 
   @$pb.TagNumber(10)
-  $core.String get unpublishAt => $_getSZ(9);
+  $core.String get unpublishAt => $_getSZ(7);
   @$pb.TagNumber(10)
-  set unpublishAt($core.String value) => $_setString(9, value);
+  set unpublishAt($core.String value) => $_setString(7, value);
   @$pb.TagNumber(10)
-  $core.bool hasUnpublishAt() => $_has(9);
+  $core.bool hasUnpublishAt() => $_has(7);
   @$pb.TagNumber(10)
   void clearUnpublishAt() => $_clearField(10);
 
   @$pb.TagNumber(11)
-  $core.int get sortOrder => $_getIZ(10);
+  $core.int get sortOrder => $_getIZ(8);
   @$pb.TagNumber(11)
-  set sortOrder($core.int value) => $_setSignedInt32(10, value);
+  set sortOrder($core.int value) => $_setSignedInt32(8, value);
   @$pb.TagNumber(11)
-  $core.bool hasSortOrder() => $_has(10);
+  $core.bool hasSortOrder() => $_has(8);
   @$pb.TagNumber(11)
   void clearSortOrder() => $_clearField(11);
 
   @$pb.TagNumber(12)
-  $core.bool get isActive => $_getBF(11);
+  $core.bool get isActive => $_getBF(9);
   @$pb.TagNumber(12)
-  set isActive($core.bool value) => $_setBool(11, value);
+  set isActive($core.bool value) => $_setBool(9, value);
   @$pb.TagNumber(12)
-  $core.bool hasIsActive() => $_has(11);
+  $core.bool hasIsActive() => $_has(9);
   @$pb.TagNumber(12)
   void clearIsActive() => $_clearField(12);
 
   @$pb.TagNumber(13)
-  $core.bool get deployWeb => $_getBF(12);
+  $core.bool get deployWeb => $_getBF(10);
   @$pb.TagNumber(13)
-  set deployWeb($core.bool value) => $_setBool(12, value);
+  set deployWeb($core.bool value) => $_setBool(10, value);
   @$pb.TagNumber(13)
-  $core.bool hasDeployWeb() => $_has(12);
+  $core.bool hasDeployWeb() => $_has(10);
   @$pb.TagNumber(13)
   void clearDeployWeb() => $_clearField(13);
 
   @$pb.TagNumber(14)
-  $core.bool get deployApp => $_getBF(13);
+  $core.bool get deployApp => $_getBF(11);
   @$pb.TagNumber(14)
-  set deployApp($core.bool value) => $_setBool(13, value);
+  set deployApp($core.bool value) => $_setBool(11, value);
   @$pb.TagNumber(14)
-  $core.bool hasDeployApp() => $_has(13);
+  $core.bool hasDeployApp() => $_has(11);
   @$pb.TagNumber(14)
   void clearDeployApp() => $_clearField(14);
 }
