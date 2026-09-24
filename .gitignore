@@ -43,3 +43,6 @@ data/
 # impeccable-ignore-end
 
 .playwright-mcp/
+
+# Tailkit → Pixso 管線的工作產物（Tailkit 原文為付費授權，不得入庫）
+docs/design/tailkit-pixso/work/
