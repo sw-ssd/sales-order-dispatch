@@ -2,7 +2,7 @@
 
 > 本文件整合所有先前規劃文件（原 `openspec/` 工作流已於 2026-08-03 停用並移除，內容遷移至 `docs/superpowers/specs/`），是後續**新增需求**與**開始實作**的單一入口。
 > 整合日期：2026-08-03；**現況對齊更新：2026-09-22**（計畫狀態以 `docs/superpowers/plans/README.md` 為準；功能層對照見 `docs/FUNCTION_LIST.md` §3）
-> 核心狀態：**monorepo；backend 01 auth、02 tenancy/users、03 metadicts/audit、04 master-data（含客戶專屬商品/檔案資產/QR 兌換）、05 sales-orders（後端 API＋狀態機＋取號）、09 printing 全數落地；06 returns（後端＋Web 退貨頁 `549933c`）、07 notifications 後端亦已落地（07 約 85%，FCM 為 Fake sender）＋Web 通知中心 `b193544`、08 dispatch 後端約 90%＋Web 看板已落地；fleet 未開工；frontend UI 四階段完成並落地 13 頁（使用者/客戶/訂單/商品/退貨/通知中心/稽核/派車看板/車次/倉別/分類/分切規格/單據列印）、app 僅骨架；未部署**
+> 核心狀態：**monorepo；backend 01 auth、02 tenancy/users、03 metadicts/audit、04 master-data（含客戶專屬商品/檔案資產/QR 兌換）、05 sales-orders（後端 API＋狀態機＋取號）、09 printing 全數落地；06 returns（後端＋Web 退貨頁 `549933c`）、07 notifications 後端亦已落地（07 約 85%，FCM 為 Fake sender）＋Web 通知中心 `b193544`、08 dispatch 後端約 90%＋Web 看板已落地；logistics 未開工；frontend UI 四階段完成並落地 13 頁（使用者/客戶/訂單/商品/退貨/通知中心/稽核/派車看板/車次/倉別/分類/分切規格/單據列印）、app 僅骨架；未部署**
 > 版本凍結：規格書 **v1.0.34** 已凍結為實作基準（2026-08-03 起；需求變更須升版）
 
 ---
@@ -18,7 +18,7 @@
 | `docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（v1.0.34，52KB） | 客戶版完整規格（18 章）；**細節欄位與流程的唯一權威** | ✅ 已定稿 |
 | `docs/需求備忘_2026-08-03.txt` | 2026-08-03 新增需求（不存金額 / 無 Email / 客戶多帳號 / 促銷推播 / 退貨 / 偏好送貨日 / 稽核保留） | ✅ 已對應至規格書 v1.0.34 |
 | `docs/superpowers/plans/README.md` | **計畫總索引**（現況對齊版）：backend 01~09、app、reference、archive 之狀態總表（2026-09-18 重建） | ✅ 現況對齊 |
-| `docs/superpowers/plans/backend/` | backend 分域執行計畫 01~09（2026-09-18 重建為反映現況）；`detail/` 含細部功能文件 01~10（10 = fleet D32） | ✅ 現況對齊 |
+| `docs/superpowers/plans/backend/` | backend 分域執行計畫 01~09（2026-09-18 重建為反映現況）；`detail/` 含細部功能文件 01~10（10 = logistics D32） | ✅ 現況對齊 |
 | `docs/superpowers/plans/archive/` | 歸檔：go8（完成）、casl（作廢）、consolidation（完成）、vibecheck（歷史）、`docs/archive/docs.zip`（備份） | 📦 歸檔 |
 | `docs/design/2026-09-18-pixso-版面美化-進度存檔.md` | Pixso 版面美化進度存檔 | ✅ 已產生 |
 | `docs/superpowers/plans/archive/2026-08-03-sales-order-1.0-vibecheck-plan.md` | vibe-check 重整建置計畫（22 節：問題/目標/流程圖/功能/架構/成本/時程/檢查點/風險假設） | ✅ 已產生 |

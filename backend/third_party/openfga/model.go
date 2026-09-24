@@ -4,8 +4,8 @@ package openfga
 // model 與 repo 同版本控管)。資源型別固定、角色→權限對映由 role_permissions→tuples 承載(資料驅動)。
 // 物件狀態條件由 domain 狀態機處理,不進 CEL。DSL 字串內不可放 // 註解(解析器不收,實測)。
 //
-// fleet 執行層(D32/10.8):vehicle/driver/fleet_delivery 帶 company/department 租戶 parent 邊
-// (物件建立時經 AfterCommit 寫 tuple);fleet_delivery#driver 寫 userset 主體
+// logistics 執行層(D32/10.8):vehicle/driver/logistics_delivery 帶 company/department 租戶 parent 邊
+// (物件建立時經 AfterCommit 寫 tuple);logistics_delivery#driver 寫 userset 主體
 // 「driver:<id>#assignee」,讓被指派司機本人沿 driver#assignee 到達 can_read/can_write
 // (10.8:被指派司機可操作其 delivery、他人 403)。
 const modelDSL = `model
@@ -43,7 +43,7 @@ type driver
     define department: [department#member]
     define assignee: [user]
 
-type fleet_delivery
+type logistics_delivery
   relations
     define company: [company#member]
     define department: [department#member]
