@@ -14,7 +14,7 @@
 |---|---|---|---|
 | 1 | Company schema 擴充 + CompanyService CRUD + 唯一性 + 停用連鎖 | ✅ 完成（2026-09-18, A2）| `internal/services/company_service.go`（CRUD + status 變更稽核 D18）＋ `server.go` identityFor/middleware 阻斷（2.1.3）|
 | 2 | 部門管理 API | ✅ 完成 | `company_service.go`（Department CRUD）、`ent/schema/department.go` |
-| 3 | 使用者 CRUD + 角色指派 + 停用 + ForceLogout | 🟡 部分 | `user_service.go`、`user.proto`；AssignRole/Deactivate/ForceLogout 含 D18 稽核 + tv+1；主帳號連鎖(D22)待 Phase 3 |
+| 3 | 使用者 CRUD + 角色指派 + 停用 + ForceLogout | ✅ 完成（2026-09-25） | `user_service.go`、`user.proto`；AssignRole/Deactivate/ForceLogout 含 D18 稽核 + tv+1；**主帳號連鎖（D22）已落地**：停用客戶主帳號 → 同交易連鎖停用全部子帳號（`cascadeDeactivateSubAccounts` 為唯一入口，`Deactivate` 與 `UpdateUser` 兩條路皆走它） |
 | 4 | Logo/Branding/PublicInfo/公開發現端點 | 🟡 部分 | PublicInfo 欄位序列化已做；Logo 上傳已落地（2026-09-22：`fileassets.logo`＋`GET /me`＋Web 上傳/側邊欄顯示；權限為 **company_admin 限所屬公司**，spec 3.1.1 已同步修訂）；殘：UpdateBranding／公開發現端點 |
 | 5 | roles + role_permissions schema + RoleService CRUD | ✅ 完成 | `role_service.go`、migration `00003`、`role.proto` |
 | 6 | 功能權限矩陣 + GetAbility 表驅動 + RLS data_scope 注入 | 🟡 部分 | ability 表驅動已做；data_scope 注入待 |
@@ -72,7 +72,7 @@
 - [x] **Step 2: 角色指派 + 停用** — AssignRole（含 guest 審核 / D18 稽核 / tv+1）、Deactivate（D18 稽核 / tv+1）已實作
 - [x] **Step 3: ForceLogout 範圍銜接** — ForceLogout（含不能對自己、D18 稽核 / tv+1）已實作
 
-**待辦摘要**：**主帳號連鎖子帳號（D22）未實作**——屬客戶帳號管理（一主多子）範疇，為 Phase 3/04 客戶主檔流程；本 Task 3 聚焦員工帳號管理。01 計畫 Task 7（首登強改密碼）與 01 Task 11（X-Api-Token）亦尚未落地（另列於 01 計畫）。
+**待辦摘要**：無。**主帳號連鎖（D22）已落地（2026-09-25）**：設計書 v1.0.31「後台停用主帳號連鎖停用子帳號」——`UserService.cascadeDeactivateSubAccounts` 於停用客戶主帳號（`is_primary && is_customer`）時，同交易停用同客戶全部子帳號（`status=inactive`＋`token_version+1`＋逐筆稽核帶 `cascade_from_primary`）。兩條停用路徑（`Deactivate` RPC 與 `UpdateUser(status→inactive)`）皆呼叫同一 helper —— 否則同一狀態變更有兩條路，只有一條會連鎖。需求規格 identity-access:72 的「任一帳號的停用 MUST NOT 影響其他帳號」指**個別帳號**操作，與本連鎖不衝突（子帳號之間互不影響）。客戶主帳號的業務 API 排除與店家自助帳號管理見 01 計畫 Task 11 與 04 計畫 Task 6.7。
 
 ---
 

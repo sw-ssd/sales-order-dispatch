@@ -7,6 +7,10 @@ import "context"
 type Meta struct {
 	IP        string
 	UserAgent string
+	// ActorKind 標示操作主體種類:空 = 人為操作(session/JWT);"api-token:<name>" = 機器代打
+	// (01 1.6.6 的 server-to-server token)。機器身分沒有自己的 users 列,稽核的 user_id
+	// 是 token 綁定的**真實使用者**,故另以此欄位區分「這個人是親自操作還是被排程代打」。
+	ActorKind string
 }
 
 type metaCtxKey struct{}

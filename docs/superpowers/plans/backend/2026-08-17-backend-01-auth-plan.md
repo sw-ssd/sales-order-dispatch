@@ -210,15 +210,21 @@
 
 ## Task 11: Authenticate 與 X-Api-Token middleware（細部 1.6.5–1.6.6）
 
-**實際狀態：⬜ 未開始**
+**實際狀態：✅ 完成（2026-09-25）**
 
-**說明**：`backend/internal` 下**無 middleware 目錄**；未實作 `middleware.Authenticate`（產生 `rls.Identity` 的 Chi/Connect 通用 handler）、`ApiTokenAuthenticate`、`PublicPaths` 白名單、config `ApiTokens`。目前路由（`server.go`）僅掛 OAuth 相關 handler，尚無通用認證 middleware 保護。
+**實際產物（已存在）：**
+- `Server.authzMiddleware`（`internal/server/server.go`）＝規格所稱的 `Authenticate`：解析 scs session／`Authorization: Bearer` JWT（`BearerToken`＋`TokenManager.VerifyAccess`）→ `identityFor` 載入使用者與公司狀態 → 注入 `authz.Identity` 與 `auth.RLSScope`。**未另立 middleware 目錄**：本專案所有業務路由共用 `authzMiddleware` 這一層（`domains.go` 以 `sessions.LoadAndSave(s.authzMiddleware(...))` 掛在 `/api/v1`），再以 `protectedRPC` 表逐 path 做 OpenFGA Check（D32 取代 Casbin）。
+- **X-Api-Token（1.6.6）已完成（2026-09-25）**：`internal/auth/apitoken.go`（`ParseAPITokens`／`MatchAPIToken`／`AllowsRPC`）＋ `authzMiddleware` 的第三條憑證路徑。設計取捨見檔頭：只存 SHA-256（原文不落設定檔）、綁**真實使用者**（稽核 `user_id` 有 FK 到 `users`，且權限判定自動沿用該人角色）、每 token 的 `rpc_prefixes` 白名單（空 = 不允許任何 RPC，fail-closed）。使用者憑證優先（session → JWT → API token，避免降級混淆）。設定 `API_TOKENS`（JSON，`config/auth.go`＋`.env.example` 已載明），格式錯誤即啟動 Fatal。
+- **PublicPaths 白名單**：未以「路徑清單跳過 middleware」實作，而是**白名單只對 `protectedRPC` 內的路徑生效** —— 公開端點（QR 兌換／登入／`/me`）本就不在該表，自然不被授權與 token 白名單限制（語意等價且少一份要同步的清單）。
+- 驗收已由測試覆蓋：`TestAuthzMiddlewareBearerJWT`（session/JWT）、`TestAuthzMiddlewareAPIToken`（白名單內外、無效 token、綁定已停用、公開端點不受限、使用者憑證優先）、`internal/auth/apitoken_test.go`（解析嚴格性、雜湊比對大小寫不拘、空名單 fail-closed）。
 
-- [ ] **Step 1: config 擴充** — `ApiTokens`（map 名稱→雜湊）
-- [ ] **Step 2: 實作 `Authenticate`** — 解析 session/JWT → 組 `authz.Identity`（先於 Task 3 Step 3）
-- [ ] **Step 3: 實作 `ApiTokenAuthenticate`** — API token 白名單驗證
-- [ ] **Step 4: `PublicPaths` 白名單** — `/api/v1/auth/oauth`、`/api/v1/companies/public`、QR 兌換
-- [ ] **Step 5: 全域掛載** — `server.go` 於業務路由前掛上 middleware
+- [x] **Step 1: config 擴充** — `Auth.APITokens`（JSON：name／sha256／user_id／rpc_prefixes）
+- [x] **Step 2: 實作 `Authenticate`** — session 與 Bearer JWT 兩路徑（`authzMiddleware`）
+- [x] **Step 3: 實作 `ApiTokenAuthenticate`** — `X-Api-Token` 雜湊比對＋RPC 前綴白名單
+- [x] **Step 4: 公開路徑** — 以「白名單只管 `protectedRPC` 內路徑」達成（無需獨立清單）
+- [x] **Step 5: 全域掛載** — `/api/v1` 統一掛載
+
+**待辦摘要**：無。**注意**：`X-Api-Token` 目前**尚無消費者**（`cmd/platform-cron` 直連資料庫、不經 HTTP），此路徑為規格要求的 M2M 能力預備；啟用時只需設 `API_TOKENS`。
 
 **待辦摘要**：完整未開始，為後續 domain（02~09）共用地基。
 

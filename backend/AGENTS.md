@@ -32,6 +32,8 @@
 - `role_permissions` 異動前必跑條件驗證 + 防鎖死(含 `all`/`*` subject);company_admin 的 id 欄位值須為自身公司或佔位符(以 `casl.ParseConditions` 展開驗證)。
 - 設定密鑰(JWT_SECRET 等)production 下空值/預設值 → `Init()` fail-fast 拒絕啟動;驗證端對空密鑰 fail-closed。
 - **平台側授權只有一層（G15，2026-09-20）**：`platform` schema 的表**不套 RLS**（設計如此；`app_rw` 對其為零權限，這是唯一的 DB 層緩解）。因此 console／平台 RPC 的 operator 授權**全靠服務層檢查**：任何新增的平台路徑都**必須**有服務層授權檢查與對應測試，沒有第二道防線會在事後擋下來。
+- **憑證種類與優先序（01 1.6.6，2026-09-25）**：`authzMiddleware` 依序認三種憑證 —— scs session → `Authorization: Bearer` JWT → `X-Api-Token`（靜態、server-to-server）。**使用者憑證一律優先**，同時帶多種時不得降級成機器身分。`X-Api-Token` 的設定（`API_TOKENS`）**只存 SHA-256**、綁**真實使用者**（稽核 `user_id` 有 FK 到 `users`），且每 token 有 `rpc_prefixes` 白名單並**只對 `protectedRPC` 內的路徑生效**（公開端點不受限；空白名單 fail-closed）。機器代打的稽核以 `after_snapshot._actor_kind = "api-token:<name>"` 標記，人為操作不寫該鍵。
+- **業務 RPC 的授權閘門（D22，2026-09-25）**：`protectedRPC` 需涵蓋**服務層不會擋**的業務資源。客戶主帳號（`users.is_primary AND is_customer`）對業務資源的排除由 OpenFGA 的 `ability#primary_account`（`can_read/can_write` 以 `but not primary_account` 表達）承載，tuple 由 `authz.Provision` 依 `PrimaryAccountDeniedResources()` 產生（**由 customer 角色權限推導**，新增業務資源自動涵蓋）；該清單永久排除 `customer_account`（主帳號唯一被允許的功能面）。`is_primary` 是通用欄位，判斷時**必須**同時檢查 `is_customer`。
 
 ## 4. 測試
 

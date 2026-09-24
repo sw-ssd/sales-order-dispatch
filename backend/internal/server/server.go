@@ -65,6 +65,9 @@ type Server struct {
 	// mountPlatformAuth 各自 OpenSQL，同一個行程兩個池）。由 InitDomains 一次建立、
 	// 兩處共用；nil = 尚未建立（測試直呼 mountXxx 時各開各的，與舊行為一致）。
 	platformAdminDB *sql.DB
+	// apiTokens 為 server-to-server 靜態 token 清單(01 1.6.6);空 = 不啟用該認證路徑。
+	// 於 mountAuth 由 config 解析一次(格式錯誤即 Fatal),middleware 逐請求比對雜湊。
+	apiTokens []auth.APIToken
 }
 
 // rpcAuth 為受保護 RPC path 的 OpenFGA 對映(resource, action)。
@@ -310,6 +313,33 @@ func (s *Server) authzMiddleware(entClient *ent.Client, sessions *scs.SessionMan
 					ctx = auth.WithRLS(ctx, scope)
 				}
 			}
+		} else if apiTok := auth.MatchAPIToken(s.apiTokens, r.Header.Get("X-Api-Token")); apiTok != nil {
+			// server-to-server 靜態 token 路徑(01 1.6.6)。**刻意排在 session 與 JWT 之後**:
+			// 使用者憑證優先,避免同一請求同時帶兩種憑證時被降級成機器身分(規格 1.6.6 第 3 點)。
+			//
+			// 白名單只對**受保護 RPC** 生效(protectedRPC 內的 path):token 代表「這台機器是誰」,
+			// 前綴清單才是它的授權邊界 —— 但公開端點(QR 兌換、登入、/me…)本就不需授權,
+			// 對它們套白名單會讓帶了 token 的機器連公開資源都拿不到(且 403 語意錯誤)。
+			//
+			// 落在 else-if 也表示:**無效的 X-Api-Token 不會被拒絕、只是不認證**(與 Bearer 路徑
+			// 一致)—— 否則任何誤帶此標頭的請求(含公開端點)都會被擋下。
+			// 真正的 401/403 由 authorizeRPC 對受保護 RPC 給出。
+			if _, isProtected := protectedRPC[r.URL.Path]; isProtected && !apiTok.AllowsRPC(r.URL.Path) {
+				writeConnectError(w, r, errcode.SysPermissionDenied.Error(map[string]string{
+					"reason": "api_token_rpc_not_allowed", "token": apiTok.Name}))
+				return
+			}
+			// 身分以該 token 綁定的使用者為準(不帶 tv 比對:機器不經 session/JWT 撤銷路徑)。
+			if id, scope, ok := s.identityFor(ctx, entClient, apiTok.UserID, -1); ok {
+				ctx = authz.WithIdentity(ctx, id)
+				ctx = auth.WithRLS(ctx, scope)
+				// 稽核歸屬標記:讓稽核列能區分「人為操作」與「機器代打」。
+				ctx = audit.WithMeta(ctx, audit.Meta{
+					IP: clientIP(r), UserAgent: r.UserAgent(),
+					ActorKind: "api-token:" + apiTok.Name,
+				})
+			}
+			// token 有效但綁定使用者不存在/已停用/公司停用 → 不注入身分(授權閘門給 401)。
 		}
 		// A2 公司停用連鎖(2.1.3):所屬公司非 active(非 developer)→ unauthenticated。
 		// 不解銷 session(scope.CompanyActive=false 時 identity 仍注入),使公司恢復 active 後

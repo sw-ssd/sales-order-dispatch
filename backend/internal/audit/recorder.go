@@ -89,6 +89,14 @@ func Record(ctx context.Context, tx *ent.Tx, e Entry) error {
 		}
 		after["_trace_id"] = traceID
 	}
+	// 機器代打標記(01 1.6.6):與 trace_id 同落點的鍵值欄位 —— 不為此加 migration/欄位。
+	// 人為操作不寫此鍵,故既有快照斷言不受影響。
+	if kind := MetaFrom(ctx).ActorKind; kind != "" {
+		if after == nil {
+			after = map[string]any{}
+		}
+		after["_actor_kind"] = kind
+	}
 	build := tx.AuditLog.Create().
 		SetCompanyID(companyID).
 		SetUserID(e.UserID).

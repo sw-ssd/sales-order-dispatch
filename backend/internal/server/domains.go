@@ -84,6 +84,15 @@ func (s *Server) mountAuth() {
 	// 與訂閱迴圈;ping 失敗走上面的 early-return,看板自然維持程序內直投(降級)。
 	services.EnableBoardFanout(context.Background(), valkeyClient)
 
+	// server-to-server 靜態 token 清單(01 1.6.6):格式錯誤即終止啟動 ——
+	// 設定壞掉若靜默忽略,排程會在半夜無聲停擺(見 auth.ParseAPITokens 檔頭)。
+	if toks, err := auth.ParseAPITokens(s.cfg.Auth.APITokens); err != nil {
+		log.Fatalf("auth: API_TOKENS 設定錯誤: %v", err)
+	} else if len(toks) > 0 {
+		s.apiTokens = toks
+		log.Printf("auth: server-to-server API token 已載入(%d 組)", len(toks))
+	}
+
 	kv := auth.NewRedisStore(valkeyClient)
 	tokens := auth.NewTokenManager(s.cfg.Auth.JWTSecret, kv, entClient)
 	s.tokens = tokens // 供 authzMiddleware Bearer JWT 路徑逐請求驗證(01 1.6/A2)

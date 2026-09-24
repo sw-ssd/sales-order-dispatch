@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -20,6 +22,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
+	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	authzopenfga "github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
@@ -597,4 +600,116 @@ func TestAuthorizeRPCFallbackSemantics(t *testing.T) {
 			t.Fatalf("啟用但無引擎應 fail-closed(internal),got %v", err)
 		}
 	})
+}
+
+// TestAuthzMiddlewareAPIToken 01 1.6.6(server-to-server X-Api-Token)的 middleware 契約:
+//
+//   - 有效 token + 白名單內**受保護 RPC** → 注入該 token 綁定使用者的身分並標記機器代打;
+//   - 有效 token + 白名單外受保護 RPC → 403(token 只證明「這台機器是誰」,前綴才是授權邊界);
+//   - 無效 token / 綁定已停用使用者 → **不注入身分**(401 由 authorizeRPC 給出,如同 Bearer 路徑
+//     —— 中間件不自行拒絕,否則帶了此標頭的公開端點也會被擋);
+//   - 公開端點不受白名單限制(本就不需授權);
+//   - 使用者憑證優先:同時帶 JWT 與 X-Api-Token 時以身分會話為準,不降級成機器。
+func TestAuthzMiddlewareAPIToken(t *testing.T) {
+	ctx := context.Background()
+	db := openIdentityDB(t, "file:identity-apitoken?mode=memory&cache=shared&_fk=1")
+	co := db.Company.Create().SetName("測試公司").SetIdentifier("TA-1").SetStatus(company.StatusActive).SaveX(ctx)
+	// 機器身分:重用既有使用者(稽核 user_id 有 FK 到 users,不建幽靈列)。
+	bot := db.User.Create().SetEmail("bot@example.com").SetName("排程").SetStatus(user.StatusActive).
+		SetRole("staff").SetPasswordHash("x").SetCompanyID(co.ID).SaveX(ctx)
+	human := db.User.Create().SetEmail("human@example.com").SetName("人").SetStatus(user.StatusActive).
+		SetRole("staff").SetPasswordHash("x").SetCompanyID(co.ID).SaveX(ctx)
+	// 綁定到已停用使用者的 token(token 有效但人不可用)。
+	dead := db.User.Create().SetEmail("dead@example.com").SetName("已停用").SetStatus(user.StatusInactive).
+		SetRole("staff").SetPasswordHash("x").SetCompanyID(co.ID).SaveX(ctx)
+
+	const rawBot, rawDead = "bot-raw-token", "dead-raw-token"
+	sum := func(s string) string { h := sha256.Sum256([]byte(s)); return hex.EncodeToString(h[:]) }
+
+	// 受保護 RPC 路徑取自 protectedRPC(白名單只對它們生效)。
+	const protectedPath = "/salesorder.v1.SalesOrderService/ListOrders"
+	const allowedPrefix = "/salesorder.v1.SalesOrderService/"
+
+	s := &Server{cfg: &config.Config{API: config.API{DeveloperAccountEnabled: true}}}
+	s.apiTokens = []auth.APIToken{
+		{Name: "scheduler", SHA256: sum(rawBot), UserID: bot.ID, RPCPrefixes: []string{allowedPrefix}},
+		{Name: "deadline", SHA256: sum(rawDead), UserID: dead.ID, RPCPrefixes: []string{allowedPrefix}},
+	}
+	s.tokens = auth.NewTokenManager("test-secret", auth.NewMemoryStore(), db)
+	sessions := auth.WebSessionManager(memstore.New(), 30*24*time.Hour, false, "lax")
+
+	var gotID authz.Identity
+	var gotKind string
+	probe := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotID = authz.IdentityFrom(r.Context())
+		gotKind = audit.MetaFrom(r.Context()).ActorKind
+		w.WriteHeader(http.StatusNoContent)
+	})
+	mw := sessions.LoadAndSave(s.authzMiddleware(db, sessions, probe))
+	apiReq := func(path, raw string) *http.Request {
+		r := httptest.NewRequest(http.MethodPost, path, nil)
+		if raw != "" {
+			r.Header.Set("X-Api-Token", raw)
+		}
+		return r
+	}
+
+	// ① 白名單內受保護 RPC → 注入機器綁定使用者並標記代打。
+	rec := httptest.NewRecorder()
+	mw.ServeHTTP(rec, apiReq(protectedPath, rawBot))
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("白名單內應放行,code=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if gotID.UserID != strconv.Itoa(bot.ID) {
+		t.Fatalf("應注入 token 綁定使用者 %d,got %q", bot.ID, gotID.UserID)
+	}
+	if gotKind != "api-token:scheduler" {
+		t.Fatalf("應標記機器代打 api-token:scheduler,got %q", gotKind)
+	}
+
+	// ② 白名單外受保護 RPC → 403。
+	rec = httptest.NewRecorder()
+	mw.ServeHTTP(rec, apiReq("/salesorder.v1.ReturnService/ListReturnRequests", rawBot))
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("白名單外應 403,got %d", rec.Code)
+	}
+
+	// ③ 無效 token → 不注入身分(授權閘門據此回 401);中間件本身不拒絕。
+	gotID = authz.Identity{}
+	rec = httptest.NewRecorder()
+	mw.ServeHTTP(rec, apiReq(protectedPath, "nope"))
+	if gotID.UserID != "" {
+		t.Fatalf("無效 token 不得注入身分,got %q", gotID.UserID)
+	}
+
+	// ④ 綁定使用者已停用 → 不注入身分。
+	gotID = authz.Identity{}
+	rec = httptest.NewRecorder()
+	mw.ServeHTTP(rec, apiReq(protectedPath, rawDead))
+	if gotID.UserID != "" {
+		t.Fatalf("綁定停用使用者不得注入身分,got %q", gotID.UserID)
+	}
+
+	// ⑤ 公開端點不受白名單限制(QR 兌換等本就不需授權)。
+	rec = httptest.NewRecorder()
+	mw.ServeHTTP(rec, apiReq("/salesorder.v1.AuthService/QRLogin", rawBot))
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("公開端點不應被白名單擋下,got %d", rec.Code)
+	}
+
+	// ⑥ 使用者憑證優先:同時帶 JWT 與 X-Api-Token → 以身分會話的人為準,且不標機器代打。
+	sessToken, err := s.tokens.IssueAccess(ctx, auth.TokenSubject{UserID: human.ID, CompanyID: co.ID, Role: human.Role})
+	if err != nil {
+		t.Fatalf("issue access: %v", err)
+	}
+	both := apiReq(protectedPath, rawBot)
+	both.Header.Set("Authorization", "Bearer "+sessToken)
+	rec = httptest.NewRecorder()
+	mw.ServeHTTP(rec, both)
+	if gotID.UserID != strconv.Itoa(human.ID) {
+		t.Fatalf("同時帶 JWT 與 API token 應以使用者憑證為準(%d),got %q", human.ID, gotID.UserID)
+	}
+	if gotKind != "" {
+		t.Fatalf("使用者憑證路徑不應標機器代打,got %q", gotKind)
+	}
 }

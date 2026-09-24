@@ -16,7 +16,7 @@
 |---|---|---|
 | 1 | customers schema 與 CRUD（細部 3.1.1–3.1.2） | ✅ 完成（2026-09-18）|
 | 2 | customer_counters 同事務取號（細部 3.1.3，D7） | ✅ 完成（2026-09-18；2026-09-20 修 id 主鍵落差，真 PG 上取號不再失敗）|
-| 3 | 建檔連動主帳號 + 業務子帳號 + 偏好欄位（細部 3.1.4–3.1.5，D22） | 🟡 部分（3.1.4 建檔連動＋臨時密碼交付已落地 2026-09-18；3.1.5 `preferred_delivery_days`/`promo_tag_ids` 欄位已存在，完整驗證與促銷連動待 07-promo_tags）|
+| 3 | 建檔連動主帳號 + 業務子帳號 + 偏好欄位（細部 3.1.4–3.1.5，D22） | 🟡 部分（3.1.4 建檔連動＋臨時密碼交付已落地 2026-09-18；**店家自助帳號管理 Task 6.7 已落地 2026-09-25**：`CustomerAccountService`（List/Create/Deactivate/ResetPassword）＝主帳號**唯一**可達面，見下；3.1.5 `preferred_delivery_days`/`promo_tag_ids` 欄位已存在，完整驗證與促銷連動待 07-promo_tags）|
 | 4 | 地址簿與聯絡人（細部 3.2.1–3.2.2） | ✅ 完成（2026-09-18；`customer_address_service.go`/`customer_contact_service.go`，00015）|
 | 5 | 商品三實體與單位換算（細部 3.3.1–3.3.3） | ✅ 完成（2026-09-19；`product_service.go`＋`domain/products/conversion.go`，00017）|
 | 6 | 倉別/車次/分切規格/分類 CRUD（細部 3.4.1–3.4.4） | ✅ 完成（2026-09-19；`masters.proto` 四 service 各 5 法＋restore，00016）|
@@ -68,6 +68,20 @@ FileStore 本地儲存（白名單 + magic bytes）；跨 domain 共用（02 Log
 ### Task 9: QR 簽章 token 與兌換端點（細部 3.8.1–3.8.2）
 客戶 QR 登入簽章 token 產生 + `/api/v1/...qrcode` 兌換端點（串 01-auth）。
 
+### Task 6.7: 店家帳號管理（主帳號自助，規格 4.2）
+**✅ 後端已落地（2026-09-25）**：`CustomerAccountService`（`customersv1.CustomerAccountService`，`internal/services/customer_account_service.go`）。
+
+為何需要這支服務：主帳號的業務能力被 OpenFGA 排除（`ability#primary_account`，見 `third_party/openfga/model.go` 與 `authz.PrimaryAccountDeniedResources`），所以它必須有自己的可達面 —— 帳號管理正是規格 4.2 賦予主帳號的**唯一**功能。少了它，主帳號登入後什麼都做不了。
+
+- `ListCustomerAccounts`：回自己客戶的**全部**帳號（含主帳號與業務子帳號，供 UI 灰化）；`manageable` 標示可否管理。
+- `CreateCustomerAccount`：新增子帳號（`account_name` 客戶內唯一、24h 臨時密碼、首登強改、寫稽核）。
+- `DeactivateCustomerAccount`：停用子帳號（`status`＋`tv+1`＋稽核）；**主帳號與業務子帳號不可**（防呆：主帳號不可自停避免鎖死；業務子帳號店家無其密碼）。
+- `ResetCustomerAccountPassword`：重發臨時密碼＋首登強改＋`tv+1`。
+
+三道界線：只有**客戶主帳號**可呼叫（用原始 `id.Role` 判斷，不可用展開的 `Roles` —— 角色繼承讓每個後台角色都含 `customer`）；範圍僅限自己客戶（跨客戶回 `not_found`，不洩漏存在性）；權限資源 `customer_account` 納入 customer 角色但**永久排除**於主帳號的 deny 清單。
+
+**殘**：App「帳號管理」頁（`sales-order-app`）與 `customer_account_manage` 深層連結路由（Task 6.7 Step 4–5）尚未實作；後端 API 已就緒。
+
 ---
 
-*最後更新：2026-09-22（Logo 上傳與消費面落地後再對齊；殘項僅 3.1.5 促銷連動）*
+*最後更新：2026-09-25（Task 6.7 後端落地、Task 3 分切規格關聯編輯落地；殘項：3.1.5 促銷連動、App 帳號管理頁）*

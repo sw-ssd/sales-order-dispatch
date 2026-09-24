@@ -208,3 +208,47 @@ func TestRecordFiltersSensitiveFields(t *testing.T) {
 		t.Errorf("快照洩漏 argon2id hash: %s", blob)
 	}
 }
+
+// TestRecordStampsActorKindForAPIToken 01 1.6.6:機器代打(server-to-server token)的稽核歸屬標記。
+//
+// 機器身分沒有自己的 users 列,稽核的 user_id 是 token 綁定的**真實使用者**;若不留標記,
+// 稽核調查時會誤判成「這個人親自做的」。故以 _actor_kind 區分。
+// 人為操作不寫此鍵(既有快照斷言不受影響)。
+func TestRecordStampsActorKindForAPIToken(t *testing.T) {
+	db := newAuditDB(t)
+	c := mustCompany(t, db)
+	u := mustUser(t, db, c.ID)
+
+	write := func(ctx context.Context) {
+		t.Helper()
+		tx, err := db.Tx(ctx)
+		if err != nil {
+			t.Fatalf("開交易: %v", err)
+		}
+		if err := audit.Record(ctx, tx, audit.Entry{
+			Action: "update", ResourceType: "company", ResourceID: "c-1",
+			CompanyID: c.ID, UserID: u.ID, After: map[string]any{"x": 1},
+		}); err != nil {
+			t.Fatalf("Record: %v", err)
+		}
+		if err := tx.Commit(); err != nil {
+			t.Fatalf("commit: %v", err)
+		}
+	}
+
+	// 機器代打 → 標記 token 名稱。
+	write(audit.WithMeta(context.Background(), audit.Meta{ActorKind: "api-token:scheduler"}))
+	// 人為操作(meta 無 ActorKind)→ 不寫該鍵。
+	write(audit.WithMeta(context.Background(), audit.Meta{IP: "1.2.3.4", UserAgent: "ua"}))
+
+	rows := db.AuditLog.Query().Order(ent.Asc("id")).AllX(context.Background())
+	if len(rows) != 2 {
+		t.Fatalf("期望 2 筆,got %d", len(rows))
+	}
+	if got := rows[0].AfterSnapshot["_actor_kind"]; got != "api-token:scheduler" {
+		t.Fatalf("機器代打應標 _actor_kind,got %v", got)
+	}
+	if _, ok := rows[1].AfterSnapshot["_actor_kind"]; ok {
+		t.Fatalf("人為操作不應寫 _actor_kind,got %v", rows[1].AfterSnapshot)
+	}
+}
