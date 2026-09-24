@@ -24,6 +24,7 @@ import WarehousesPage from "~/features/masters/pages/WarehousesPage";
 import ProductCategoriesPage from "~/features/masters/pages/ProductCategoriesPage";
 import ProcessingSpecsPage from "~/features/masters/pages/ProcessingSpecsPage";
 import PrintPage from "~/features/printing/pages/PrintPage";
+import AnnouncementsPage from "~/features/announcements/pages/AnnouncementsPage";
 import ReturnsPage from "~/features/returns/pages/ReturnsPage";
 import NotificationsPage from "~/features/notifications/pages/NotificationsPage";
 import AuditPage from "~/features/audit/pages/AuditPage";
@@ -227,6 +228,17 @@ const printRoute = createRoute({
 });
 
 /**
+ * 公告管理（spec announcements:三型別三層範圍的 CMS）。
+ * 守衛 `read, announcement`（rolePolicy:super/company_admin/dept_admin;範圍收斂在服務層）。
+ */
+const announcementsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/announcements",
+  component: AnnouncementsPage,
+  beforeLoad: requireAbility("read", "announcement"),
+});
+
+/**
  * 帳號／方案頁：租戶後台唯讀的權益卡片。
  *
  * 刻意的**沒有**能力守衛：`platform.*` 能力不得出現在租戶端（S11），而這張卡片誰看得到
@@ -270,6 +282,7 @@ const routeTree = rootRoute.addChildren([
   categoriesRoute,
   processingSpecsRoute,
   printRoute,
+  announcementsRoute,
   accountRoute,
   ...devRoutes,
 ]);

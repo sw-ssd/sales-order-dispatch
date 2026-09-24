@@ -7,6 +7,7 @@ import {
   ClipboardList,
   CreditCard,
   Home,
+  Megaphone,
   Network,
   Package,
   Printer,
@@ -42,6 +43,7 @@ export type NavRoute =
   | "/orders"
   | "/returns"
   | "/notifications"
+  | "/announcements"
   | "/products"
   | "/masters/routes"
   | "/masters/warehouses"
@@ -91,7 +93,8 @@ const NAV_SECTIONS: NavSection[] = [
       { label: "商品分類", icon: Tags, to: "/masters/categories" },
       { label: "分切規格", icon: Scissors, to: "/masters/processing-specs" },
       { label: "派車規劃", icon: Route, to: "/dispatch" },
-      { label: "單據列印", icon: Printer, to: "/printing" },
+            { label: "單據列印", icon: Printer, to: "/printing" },
+      { label: "公告管理", icon: Megaphone, to: "/announcements" },
     ],
   },
   {
