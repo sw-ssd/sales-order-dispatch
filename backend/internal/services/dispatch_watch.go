@@ -1,8 +1,9 @@
-// Package services 的看板訂閱(08 計畫 Task 5.2.1/5.2.3)。
+// Package services 的看板訂閱(08 計畫 Task 5.2.1/5.2.2/5.2.3)。
 // WatchBoard 為 server streaming:部門級訂閱(department_id → 連線集合),事件僅轉發不過濾日期;
 // heartbeat 25 秒保活(純連線維持,不寫事件、不進 Valkey);斷線清理註冊。
-// 跨 replica 轉發(5.2.2)要 Valkey 訂閱層 —— 本批先落地程序內註冊 + 發佈直投(同 replica 即時);
-// 多 replica 轉發待 Valkey 訂閱接線(介面已在 BoardPublisher 預留)。
+// 跨 replica(5.2.2)已落地:發佈走 combinedPublisher(本機直投 + Valkey 廣播),
+// 訂閱迴圈(startBoardSubscriber)把遠端事件灌回本機 hub —— Valkey 異常時維持
+// 程序內直投(降級:事件不保證補發,heartbeat 持續到達可當查詢節拍)。
 package services
 
 import (

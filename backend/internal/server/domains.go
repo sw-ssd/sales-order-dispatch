@@ -80,6 +80,9 @@ func (s *Server) mountAuth() {
 		log.Printf("auth: 略過掛載（Valkey: %v）", err)
 		return
 	}
+	// 看板跨 replica 層(08 5.2.2):Valkey 已 ping 過 → 複合發佈(本機直投＋廣播)
+	// 與訂閱迴圈;ping 失敗走上面的 early-return,看板自然維持程序內直投(降級)。
+	services.EnableBoardFanout(context.Background(), valkeyClient)
 
 	kv := auth.NewRedisStore(valkeyClient)
 	tokens := auth.NewTokenManager(s.cfg.Auth.JWTSecret, kv, entClient)
