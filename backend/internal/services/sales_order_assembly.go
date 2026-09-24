@@ -236,7 +236,7 @@ func customerPreferredDays(ctx context.Context, db *ent.Client, cid, custID int)
 }
 
 // orderCustomerGuard 客戶下單守衛(4.2.3):客戶子帳號強制 customer_id 為自己;
-// customer_products 未落地前不清單檢查(放行,RLS self 為最後防線);主帳號一律拒絕由 Casbin 層處理。
+// customer_products 未落地前不清單檢查(放行,RLS self 為最後防線);主帳號一律拒絕由授權層(middleware OpenFGA 閘門)處理。
 // 回傳實際落單的 customerID。
 //
 // 身分未帶 customer_id 時(今日 middleware 未填該欄):請求值為空即報錯,請求值非空則

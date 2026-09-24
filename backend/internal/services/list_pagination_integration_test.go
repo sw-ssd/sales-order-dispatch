@@ -611,7 +611,6 @@ func newListScanServerWithScope(t *testing.T, db *ent.Client, scope auth.RLSScop
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := authz.WithIdentity(r.Context(), super)
 		ctx = auth.WithRLS(ctx, scope)
-		ctx = authz.WithCASLEnabled(ctx, true)
 		ctx = authz.WithDB(ctx, db)
 		mux.ServeHTTP(w, r.WithContext(ctx))
 	})

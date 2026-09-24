@@ -37,7 +37,6 @@ func newRoleTestServerFGA(t *testing.T, id authz.Identity) (salesorderv1connect.
 	RegisterRoleServices(mux, db)
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := authz.WithIdentity(r.Context(), id)
-		ctx = authz.WithCASLEnabled(ctx, true)
 		ctx = authz.WithDB(ctx, db)
 		ctx = authz.WithEngine(ctx, fga)
 		mux.ServeHTTP(w, r.WithContext(ctx))

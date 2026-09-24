@@ -43,7 +43,7 @@ var validCompanyStatuses = map[string]bool{
 }
 
 // CompanyService 實作 salesorder.v1.CompanyService(公司主檔 CRUD)。
-// 授權比照 RoleService:每方法以 Casbin EnforceAny 檢查身分(未登入 → Unauthenticated,
+// 授權比照 RoleService:每方法以純 Go ACL EnforceAny 檢查身分(未登入 → Unauthenticated,
 // 無權 → PermissionDenied)。company 資源 read/update 限 super/company_admin(3.1.1),
 // create/delete 為 super 專屬(8.2);department 資源 read 限 company_admin/dept_admin,
 // write 限 company_admin(超集:super 全權)。
@@ -87,7 +87,7 @@ func RegisterCompanyServices(mux *http.ServeMux, db *ent.Client, entSvc entitlem
 	mux.Handle(departmentPath, departmentHandler)
 }
 
-// requireScope 檢查 ctx 身分具備 resource 資源的指定動作(Casbin EnforceAny,T14)。
+// requireScope 檢查 ctx 身分具備 resource 資源的指定動作(純 Go ACL EnforceAny,T14)。
 // 未登入 → AUTH-4001(Unauthenticated);無權 → SYS-4001(PermissionDenied)。
 //
 // SYS-4001 的訊息樣板只有「缺少權限」,資源／動作用 details 帶(resource／action):

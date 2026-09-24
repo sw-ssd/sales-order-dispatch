@@ -2,7 +2,7 @@
 // 授權決策已由 OpenFGA(internal/authz/openfga)提供:CASL 執行面(AccessibleFilter/Can)
 // 移除,本檔保留身分注入(ctx)、資料庫注入(ctx)與條件欄位白名單 Registry(供
 // role_service 條件驗證與前端條件建構器使用)。
-// 開關狀態與身分由 middleware 注入 ctx(server.authzMiddleware)。
+// 身分由 middleware 注入 ctx(server.authzMiddleware)。
 package authz
 
 import (
@@ -16,8 +16,7 @@ import (
 type ctxKey int
 
 const (
-	keyEnabled ctxKey = iota
-	keyRegistry
+	keyRegistry ctxKey = iota
 	keyIdentity
 	keyDB
 )
@@ -29,7 +28,7 @@ type Identity struct {
 	DepartmentID string
 	CustomerID   string
 	Role         string
-	Roles        []string // 全部角色 code(依 Casbin g 規則展開)
+	Roles        []string // 全部角色 code(依內建角色繼承展開(RolesFor))
 
 	// MustChangePassword 為首登/臨時密碼態(A3 1.5.2):true 時 middleware 僅放行
 	// ChangePassword,其餘受保護 RPC 回 failed_precondition。
@@ -50,12 +49,6 @@ func IdentityFrom(ctx context.Context) Identity {
 // WithDB 將 ent client 放入 ctx(測試與 server 組裝使用)。
 func WithDB(ctx context.Context, db *ent.Client) context.Context {
 	return context.WithValue(ctx, keyDB, db)
-}
-
-// WithCASLEnabled 由 middleware 每請求呼叫一次,記錄開關狀態。
-// 註:OpenFGA 落地後(CASL 執行面移除)此開關僅供向後相容記錄,授權決策不再查詢它。
-func WithCASLEnabled(ctx context.Context, enabled bool) context.Context {
-	return context.WithValue(ctx, keyEnabled, enabled)
 }
 
 // Registry 回傳進程級 FieldRegistry(啟動時註冊全部 subject,供條件白名單)。

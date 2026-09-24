@@ -70,7 +70,7 @@ type OrderTransitionInput struct {
 // 必要時稽核(dispatch_cancel/void),同一交易。呼叫端須傳入請求交易的 ent client(db):
 // 交易邊界由呼叫端擁有(比照 SetCompanyStatus)。
 //
-// 角色檢查由呼叫端(Casbin)執行,此處只守狀態機與原因必填。version 每次轉移 +1。
+// 角色檢查由呼叫端(授權層)執行,此處只守狀態機與原因必填。version 每次轉移 +1。
 func TransitionOrder(ctx context.Context, db *ent.Client, in OrderTransitionInput) error {
 	to := strings.TrimSpace(in.To)
 	needsReason := to == OrderStatusPending || to == OrderStatusVoided

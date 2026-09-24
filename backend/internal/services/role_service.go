@@ -28,7 +28,7 @@ import (
 )
 
 // RoleService 實作 salesorder.v1.RoleService(角色權限管理,T18)。
-// 權限檢查(T14 Casbin):role 資源僅 super / company_admin(含 g 繼承)可管理;
+// 權限檢查(T14 純 Go ACL):role 資源僅 super / company_admin(含 g 繼承)可管理;
 // company_admin 限管理自訂(非 is_system)角色,且規則條件不得引用他人公司(限自己公司)。
 // role_permissions 為 CASL ability 來源(前端權限矩陣與 AbilityService 共用)。
 type RoleService struct {
@@ -48,7 +48,7 @@ func RegisterRoleServices(mux *http.ServeMux, db *ent.Client) {
 	mux.Handle(path, handler)
 }
 
-// requireRole 檢查 ctx 身分具備 role 資源的指定動作(Casbin EnforceAny,T14)。
+// requireRole 檢查 ctx 身分具備 role 資源的指定動作(純 Go ACL EnforceAny,T14)。
 // 未登入 → Unauthenticated;無權 → PermissionDenied。
 func requireRole(ctx context.Context, action string) error {
 	id, err := requireAuth(ctx)
