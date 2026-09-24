@@ -82,12 +82,12 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
 2. **刪除語意一旦改變(硬刪→軟刪),必須重掃「所有碰得到該實體的路徑」**:硬刪除的 FK 曾是**隱性的不變式保護**,軟刪後列還在、保護消失。實證漏點:`CreateUser` 沒有公司存在性檢查、`Login` 未檢查公司是否軟刪除(已刪公司的使用者仍能登入取得 token)、`UpdateDepartment` 會改到已刪部門、`DeleteCompany` 的「仍有部門」前置檢查會被軟刪部門永久擋住。
    - 軟刪除的識別碼唯一性要用 **partial unique index**(`WHERE deleted_at IS NULL`),並移除舊的表層 UNIQUE。
    - 「刪除前的前置檢查」與「掛載資料到該列」之間有競態:需**兩側對同一列取互斥鎖**(掛載端 `FOR SHARE`、刪除端先 `FOR UPDATE` 再條件式 `UPDATE`)。**單側鎖不足**:READ COMMITTED 只重評目標列,`NOT EXISTS` 子查詢仍用敘述開始的快照。方言判斷用 `sql.Selector.Dialect()`(sqlite 不支援 `FOR ...`,不可寫入鎖子句)。
-3. **RLS 已全站生效**(2026-09-20 起:`00024`–`00028` 先對 18 張業務表 `ENABLE` + `FORCE`,後續波次續增,`00032`/`00034`/`00036`/`00038`/`00040`/`00042` 已達 **32 張**;policy 由 `00007`/`00011`/`00023` 定義、`00025` 正規化為 `NULLIF` 形式)。RLS 是跨公司隔離的**最後一道防線**,授權仍以服務層門檻為準(§9);未帶 scope 的查詢一律 fail-closed(0 列)。
+3. **RLS 已全站生效**(2026-09-20 起:`00024`–`00028` 先對 18 張業務表 `ENABLE` + `FORCE`,後續波次續增,`00032`/`00034`/`00036`/`00038`/`00040`/`00042`/`00045`/`00047` 已達 **36 張**;policy 由 `00007`/`00011`/`00023` 定義、`00025` 正規化為 `NULLIF` 形式)。RLS 是跨公司隔離的**最後一道防線**,授權仍以服務層門檻為準(§9);未帶 scope 的查詢一律 fail-closed(0 列)。
 4. **`toConnectError` 之類的全域錯誤映射**:不要把 DB 原始訊息(含 `SQLSTATE`/constraint 名)回給客戶端;約束類錯誤回 `FailedPrecondition` 並落 server log,`AlreadyExists` 僅用於真正的「已存在」語意(需在建立路徑自行前置判別)。映射的**碼**與規則見 §10。
 
 ## 9. RLS 與租戶交易（D36；2026-09-20 起全站生效）
 
-全站 **32 張**業務表已 `ENABLE` + `FORCE`（`00024`–`00028` 首批 18 張，`00032`／`00034`／`00036`／`00038`／`00040`／`00042` 續增；新增表依規範「policy 隨建表、ENABLE＋FORCE 另開一檔」；`00043` 是 `order_counters_id_seq` 的授權補正，見第 1-1 條）；policy 由 `00007`／`00011`／`00023` 定義、`00025` 正規化。請求層租戶交易（每個 unary RPC 一個交易、`SET LOCAL app.*` 由 driver 裝飾器在 `Tx(ctx)` 內套用）見 `internal/dbtenant`。以下每一條都是本計畫用實測換來的，違反其中任一條都會以「黑屏」或「靜默」的形式出錯。
+全站 **36 張**業務表已 `ENABLE` + `FORCE`（`00024`–`00028` 首批 18 張，`00032`／`00034`／`00036`／`00038`／`00040`／`00042`／`00045`／`00047` 續增；新增表依規範「policy 隨建表、ENABLE＋FORCE 另開一檔」；`00043` 是 `order_counters_id_seq` 的授權補正，見第 1-1 條）；policy 由 `00007`／`00011`／`00023` 定義、`00025` 正規化。請求層租戶交易（每個 unary RPC 一個交易、`SET LOCAL app.*` 由 driver 裝飾器在 `Tx(ctx)` 內套用）見 `internal/dbtenant`。以下每一條都是本計畫用實測換來的，違反其中任一條都會以「黑屏」或「靜默」的形式出錯。
 
 1. **PG 的 superuser 恆繞過 RLS（`FORCE` 亦然）** → 宣稱在驗 RLS 的測試**必須**以 `app_rw`（`00022` 的 `NOBYPASSRLS` 非 owner 角色）＋ `dbtenant.NewClient` 連線；以容器 superuser 連線的既有整合測試只能當 regression gate。
    為什麼：用 superuser 連線時，漏掛租戶交易的查詢照樣讀得到全部列 —— 測試全綠卻什麼都沒驗到（T5 實測）。
