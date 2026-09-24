@@ -327,7 +327,7 @@ packages:
     source: sdk
     version: "0.0.0"
   flutter_hooks:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: flutter_hooks
       sha256: "8ae1f090e5f4ef5cfa6670ce1ab5dddadd33f3533a7f9ba19d9f958aa2a89f42"
@@ -433,7 +433,7 @@ packages:
     source: hosted
     version: "3.1.0"
   fquery_core:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: fquery_core
       sha256: "5afce51cd179eb6239572b4c9c6b9dab2df9a96786dfe14982865a4787752d32"

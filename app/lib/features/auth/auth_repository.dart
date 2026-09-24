@@ -74,6 +74,48 @@ class AuthRepository {
     return tokens;
   }
 
+  /// 目前的 access token（無 token 回 null）；供已認證 transport 逐請求附加。
+  Future<String?> currentAccessToken() async =>
+      (await _tokenStorage.read())?.accessToken;
+
+  Future<bool>? _refreshing;
+
+  /// 以 refresh token 換新 token 對並落盤（單飛：併發呼叫共用同一次 refresh）。
+  ///
+  /// refresh 失敗（過期/已旋轉）→ 清除本機 token 回 false，交由呼叫端導回登入。
+  Future<bool> refreshTokens() =>
+      _refreshing ??= _doRefresh().whenComplete(() => _refreshing = null);
+
+  Future<bool> _doRefresh() async {
+    final pair = await _tokenStorage.read();
+    if (pair == null) return false;
+    try {
+      final response =
+          await _client.refresh(RefreshRequest(refreshToken: pair.refreshToken));
+      await _tokenStorage.save(AuthTokenPair(
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+      ));
+      return true;
+    } catch (_) {
+      await _tokenStorage.clear();
+      return false;
+    }
+  }
+
+  /// 登出：撤銷 refresh token（伺服器端，盡力而為）＋清除本機 token。
+  Future<void> logout() async {
+    final pair = await _tokenStorage.read();
+    if (pair != null) {
+      try {
+        await _client.logout(LogoutRequest(refreshToken: pair.refreshToken));
+      } catch (_) {
+        // 撤銷失敗不擋登出：本機 token 仍會清除，服務端到期自失效。
+      }
+    }
+    await _tokenStorage.clear();
+  }
+
   /// 業務 Google 登入:開啟系統瀏覽器走 PKCE 授權。
   ///
   /// 回傳授權碼與 verifier(待後端端點上線後換票);使用者取消時回傳 null。

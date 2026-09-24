@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:fquery/fquery.dart';
+import 'package:fquery_core/fquery_core.dart';
 
 import 'config.dart';
+import 'core/api.dart';
 import 'features/auth/auth_repository.dart';
 import 'features/auth/auth_transport.dart';
 import 'features/auth/token_storage.dart';
 import 'router/app_router.dart';
 
-/// 根 Widget。D29:後續在此掛 CacheProvider(fquery)+
-/// 根 ProviderScope(disco)。
+/// 根 Widget。D29 根佈線：CacheProvider(fquery) 已掛；
+/// 根 ProviderScope(disco) 仍屬後續任務。
 class SalesOrderApp extends StatefulWidget {
   const SalesOrderApp({super.key, required this.config});
 
@@ -22,13 +25,22 @@ class _SalesOrderAppState extends State<SalesOrderApp> {
     client: createAuthServiceClient(widget.config.apiBaseUrl),
     tokenStorage: SecureTokenStorage(),
   );
-  late final AppRouter _router = AppRouter(authRepository: _authRepository);
+  late final Api _api = Api(
+    baseUrl: widget.config.apiBaseUrl,
+    auth: _authRepository,
+  );
+  late final AppRouter _router =
+      AppRouter(authRepository: _authRepository, api: _api);
+  final QueryCache _queryCache = QueryCache();
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: '多公司訂出貨系統',
-      routerConfig: _router.config(),
+    return CacheProvider(
+      cache: _queryCache,
+      child: MaterialApp.router(
+        title: '多公司訂出貨系統',
+        routerConfig: _router.config(),
+      ),
     );
   }
 }

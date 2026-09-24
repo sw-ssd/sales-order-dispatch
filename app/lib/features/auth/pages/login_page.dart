@@ -1,5 +1,7 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 
+import '../../../ui/adaptive.dart';
 import '../auth_repository.dart';
 
 /// 店家登入頁(/login/shop):customer_code + password → AuthService.Login。
@@ -34,9 +36,8 @@ class _LoginPageState extends State<LoginPage> {
         password: _passwordController.text,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('登入成功')),
-      );
+      // 登入成功 → 進入主殼（navigate 清掉登入棧，返回鍵不會退回登入頁）。
+      context.router.navigatePath('/home');
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -49,8 +50,9 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('店家登入')),
+    return adaptivePage(
+      context,
+      title: '店家登入',
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 320),
@@ -83,7 +85,7 @@ class _LoginPageState extends State<LoginPage> {
                       (value == null || value.isEmpty) ? '請輸入密碼' : null,
                 ),
                 const SizedBox(height: 24),
-                FilledButton(
+                adaptiveFilledButton(
                   onPressed: _busy ? null : _submit,
                   child: _busy
                       ? const SizedBox(
