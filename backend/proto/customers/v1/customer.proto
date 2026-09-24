@@ -258,3 +258,60 @@ message GetCustomerQRCodeRequest {
 message GetCustomerQRCodeResponse {
   string qr_url = 1;
 }
+
+// ---- CustomerAccountService:店家自助管理登入帳號(D22/規格 4.2,Task 6.7) ----
+//
+// 僅**客戶主帳號**可呼叫(is_primary):主帳號是該客戶帳號體系的唯一管理者,也是它唯一被允許的
+// 功能面(業務 API 一律 403,見 server.protectedRPC 與 OpenFGA 的 primary_account 排除)。
+// 範圍僅限自己客戶,不得觸及其他客戶或員工帳號。
+//
+// 子帳號無管理權限(本服務對非主帳號一律拒絕);建立客戶時自動附帶的**業務子帳號**
+// (system_generated=true)店家可檢視但不可改名/停用/重置 —— 它專供所屬業務使用,店家並無其密碼。
+service CustomerAccountService {
+  rpc ListCustomerAccounts(ListCustomerAccountsRequest) returns (ListCustomerAccountsResponse);
+  rpc CreateCustomerAccount(CreateCustomerAccountRequest) returns (CreateCustomerAccountResponse);
+  rpc DeactivateCustomerAccount(DeactivateCustomerAccountRequest) returns (DeactivateCustomerAccountResponse);
+  rpc ResetCustomerAccountPassword(ResetCustomerAccountPasswordRequest) returns (ResetCustomerAccountPasswordResponse);
+}
+
+// CustomerAccount:登入帳號(不含密碼欄位)。
+message CustomerAccount {
+  string id = 1;
+  string account_name = 2;
+  bool is_primary = 3;         // 主帳號(清單恆含自己,標記供 UI 區隔)
+  bool system_generated = 4;   // 自動附帶的業務子帳號 → UI 灰化,不可管理
+  bool manageable = 5;         // 目前操作者可否管理(改名/停用/重置);false = 唯讀
+  string status = 6;
+  string created_at = 7;       // RFC3339
+}
+
+message ListCustomerAccountsRequest {}
+
+message ListCustomerAccountsResponse {
+  repeated CustomerAccount accounts = 1;
+}
+
+message CreateCustomerAccountRequest {
+  string account_name = 1; // 客戶內唯一(規格 4.2)
+}
+
+message CreateCustomerAccountResponse {
+  CustomerAccount account = 1;
+  string temp_password = 2;   // 24h 臨時密碼,僅本次回應回傳
+  string temp_expires_at = 3; // RFC3339
+}
+
+message DeactivateCustomerAccountRequest {
+  string account_id = 1;
+}
+
+message DeactivateCustomerAccountResponse {}
+
+message ResetCustomerAccountPasswordRequest {
+  string account_id = 1;
+}
+
+message ResetCustomerAccountPasswordResponse {
+  string temp_password = 1;
+  string temp_expires_at = 2;
+}

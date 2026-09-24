@@ -272,3 +272,78 @@ extension type CustomerServiceClient (connect.Transport _transport) {
     );
   }
 }
+/// ---- CustomerAccountService:店家自助管理登入帳號(D22/規格 4.2,Task 6.7) ----
+/// 僅**客戶主帳號**可呼叫(is_primary):主帳號是該客戶帳號體系的唯一管理者,也是它唯一被允許的
+/// 功能面(業務 API 一律 403,見 server.protectedRPC 與 OpenFGA 的 primary_account 排除)。
+/// 範圍僅限自己客戶,不得觸及其他客戶或員工帳號。
+/// 子帳號無管理權限(本服務對非主帳號一律拒絕);建立客戶時自動附帶的**業務子帳號**
+/// (system_generated=true)店家可檢視但不可改名/停用/重置 —— 它專供所屬業務使用,店家並無其密碼。
+extension type CustomerAccountServiceClient (connect.Transport _transport) {
+  Future<customersv1customer.ListCustomerAccountsResponse> listCustomerAccounts(
+    customersv1customer.ListCustomerAccountsRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.CustomerAccountService.listCustomerAccounts,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<customersv1customer.CreateCustomerAccountResponse> createCustomerAccount(
+    customersv1customer.CreateCustomerAccountRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.CustomerAccountService.createCustomerAccount,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<customersv1customer.DeactivateCustomerAccountResponse> deactivateCustomerAccount(
+    customersv1customer.DeactivateCustomerAccountRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.CustomerAccountService.deactivateCustomerAccount,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  Future<customersv1customer.ResetCustomerAccountPasswordResponse> resetCustomerAccountPassword(
+    customersv1customer.ResetCustomerAccountPasswordRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.CustomerAccountService.resetCustomerAccountPassword,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+}

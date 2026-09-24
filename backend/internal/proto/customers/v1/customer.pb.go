@@ -2168,6 +2168,459 @@ func (x *GetCustomerQRCodeResponse) GetQrUrl() string {
 	return ""
 }
 
+// CustomerAccount:登入帳號(不含密碼欄位)。
+type CustomerAccount struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	AccountName     string                 `protobuf:"bytes,2,opt,name=account_name,json=accountName,proto3" json:"account_name,omitempty"`
+	IsPrimary       bool                   `protobuf:"varint,3,opt,name=is_primary,json=isPrimary,proto3" json:"is_primary,omitempty"`                   // 主帳號(清單恆含自己,標記供 UI 區隔)
+	SystemGenerated bool                   `protobuf:"varint,4,opt,name=system_generated,json=systemGenerated,proto3" json:"system_generated,omitempty"` // 自動附帶的業務子帳號 → UI 灰化,不可管理
+	Manageable      bool                   `protobuf:"varint,5,opt,name=manageable,proto3" json:"manageable,omitempty"`                                  // 目前操作者可否管理(改名/停用/重置);false = 唯讀
+	Status          string                 `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`
+	CreatedAt       string                 `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"` // RFC3339
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *CustomerAccount) Reset() {
+	*x = CustomerAccount{}
+	mi := &file_customers_v1_customer_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CustomerAccount) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CustomerAccount) ProtoMessage() {}
+
+func (x *CustomerAccount) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CustomerAccount.ProtoReflect.Descriptor instead.
+func (*CustomerAccount) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *CustomerAccount) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CustomerAccount) GetAccountName() string {
+	if x != nil {
+		return x.AccountName
+	}
+	return ""
+}
+
+func (x *CustomerAccount) GetIsPrimary() bool {
+	if x != nil {
+		return x.IsPrimary
+	}
+	return false
+}
+
+func (x *CustomerAccount) GetSystemGenerated() bool {
+	if x != nil {
+		return x.SystemGenerated
+	}
+	return false
+}
+
+func (x *CustomerAccount) GetManageable() bool {
+	if x != nil {
+		return x.Manageable
+	}
+	return false
+}
+
+func (x *CustomerAccount) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *CustomerAccount) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+type ListCustomerAccountsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCustomerAccountsRequest) Reset() {
+	*x = ListCustomerAccountsRequest{}
+	mi := &file_customers_v1_customer_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCustomerAccountsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCustomerAccountsRequest) ProtoMessage() {}
+
+func (x *ListCustomerAccountsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCustomerAccountsRequest.ProtoReflect.Descriptor instead.
+func (*ListCustomerAccountsRequest) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{34}
+}
+
+type ListCustomerAccountsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Accounts      []*CustomerAccount     `protobuf:"bytes,1,rep,name=accounts,proto3" json:"accounts,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListCustomerAccountsResponse) Reset() {
+	*x = ListCustomerAccountsResponse{}
+	mi := &file_customers_v1_customer_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListCustomerAccountsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListCustomerAccountsResponse) ProtoMessage() {}
+
+func (x *ListCustomerAccountsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListCustomerAccountsResponse.ProtoReflect.Descriptor instead.
+func (*ListCustomerAccountsResponse) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *ListCustomerAccountsResponse) GetAccounts() []*CustomerAccount {
+	if x != nil {
+		return x.Accounts
+	}
+	return nil
+}
+
+type CreateCustomerAccountRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AccountName   string                 `protobuf:"bytes,1,opt,name=account_name,json=accountName,proto3" json:"account_name,omitempty"` // 客戶內唯一(規格 4.2)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateCustomerAccountRequest) Reset() {
+	*x = CreateCustomerAccountRequest{}
+	mi := &file_customers_v1_customer_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateCustomerAccountRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateCustomerAccountRequest) ProtoMessage() {}
+
+func (x *CreateCustomerAccountRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateCustomerAccountRequest.ProtoReflect.Descriptor instead.
+func (*CreateCustomerAccountRequest) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *CreateCustomerAccountRequest) GetAccountName() string {
+	if x != nil {
+		return x.AccountName
+	}
+	return ""
+}
+
+type CreateCustomerAccountResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Account       *CustomerAccount       `protobuf:"bytes,1,opt,name=account,proto3" json:"account,omitempty"`
+	TempPassword  string                 `protobuf:"bytes,2,opt,name=temp_password,json=tempPassword,proto3" json:"temp_password,omitempty"`      // 24h 臨時密碼,僅本次回應回傳
+	TempExpiresAt string                 `protobuf:"bytes,3,opt,name=temp_expires_at,json=tempExpiresAt,proto3" json:"temp_expires_at,omitempty"` // RFC3339
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateCustomerAccountResponse) Reset() {
+	*x = CreateCustomerAccountResponse{}
+	mi := &file_customers_v1_customer_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateCustomerAccountResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateCustomerAccountResponse) ProtoMessage() {}
+
+func (x *CreateCustomerAccountResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateCustomerAccountResponse.ProtoReflect.Descriptor instead.
+func (*CreateCustomerAccountResponse) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *CreateCustomerAccountResponse) GetAccount() *CustomerAccount {
+	if x != nil {
+		return x.Account
+	}
+	return nil
+}
+
+func (x *CreateCustomerAccountResponse) GetTempPassword() string {
+	if x != nil {
+		return x.TempPassword
+	}
+	return ""
+}
+
+func (x *CreateCustomerAccountResponse) GetTempExpiresAt() string {
+	if x != nil {
+		return x.TempExpiresAt
+	}
+	return ""
+}
+
+type DeactivateCustomerAccountRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AccountId     string                 `protobuf:"bytes,1,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeactivateCustomerAccountRequest) Reset() {
+	*x = DeactivateCustomerAccountRequest{}
+	mi := &file_customers_v1_customer_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeactivateCustomerAccountRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeactivateCustomerAccountRequest) ProtoMessage() {}
+
+func (x *DeactivateCustomerAccountRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeactivateCustomerAccountRequest.ProtoReflect.Descriptor instead.
+func (*DeactivateCustomerAccountRequest) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *DeactivateCustomerAccountRequest) GetAccountId() string {
+	if x != nil {
+		return x.AccountId
+	}
+	return ""
+}
+
+type DeactivateCustomerAccountResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeactivateCustomerAccountResponse) Reset() {
+	*x = DeactivateCustomerAccountResponse{}
+	mi := &file_customers_v1_customer_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeactivateCustomerAccountResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeactivateCustomerAccountResponse) ProtoMessage() {}
+
+func (x *DeactivateCustomerAccountResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeactivateCustomerAccountResponse.ProtoReflect.Descriptor instead.
+func (*DeactivateCustomerAccountResponse) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{39}
+}
+
+type ResetCustomerAccountPasswordRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AccountId     string                 `protobuf:"bytes,1,opt,name=account_id,json=accountId,proto3" json:"account_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResetCustomerAccountPasswordRequest) Reset() {
+	*x = ResetCustomerAccountPasswordRequest{}
+	mi := &file_customers_v1_customer_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResetCustomerAccountPasswordRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResetCustomerAccountPasswordRequest) ProtoMessage() {}
+
+func (x *ResetCustomerAccountPasswordRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResetCustomerAccountPasswordRequest.ProtoReflect.Descriptor instead.
+func (*ResetCustomerAccountPasswordRequest) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *ResetCustomerAccountPasswordRequest) GetAccountId() string {
+	if x != nil {
+		return x.AccountId
+	}
+	return ""
+}
+
+type ResetCustomerAccountPasswordResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TempPassword  string                 `protobuf:"bytes,1,opt,name=temp_password,json=tempPassword,proto3" json:"temp_password,omitempty"`
+	TempExpiresAt string                 `protobuf:"bytes,2,opt,name=temp_expires_at,json=tempExpiresAt,proto3" json:"temp_expires_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResetCustomerAccountPasswordResponse) Reset() {
+	*x = ResetCustomerAccountPasswordResponse{}
+	mi := &file_customers_v1_customer_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResetCustomerAccountPasswordResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResetCustomerAccountPasswordResponse) ProtoMessage() {}
+
+func (x *ResetCustomerAccountPasswordResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_customers_v1_customer_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResetCustomerAccountPasswordResponse.ProtoReflect.Descriptor instead.
+func (*ResetCustomerAccountPasswordResponse) Descriptor() ([]byte, []int) {
+	return file_customers_v1_customer_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *ResetCustomerAccountPasswordResponse) GetTempPassword() string {
+	if x != nil {
+		return x.TempPassword
+	}
+	return ""
+}
+
+func (x *ResetCustomerAccountPasswordResponse) GetTempExpiresAt() string {
+	if x != nil {
+		return x.TempExpiresAt
+	}
+	return ""
+}
+
 var File_customers_v1_customer_proto protoreflect.FileDescriptor
 
 const file_customers_v1_customer_proto_rawDesc = "" +
@@ -2375,7 +2828,38 @@ const file_customers_v1_customer_proto_rawDesc = "" +
 	"\vcustomer_id\x18\x01 \x01(\tR\n" +
 	"customerId\"2\n" +
 	"\x19GetCustomerQRCodeResponse\x12\x15\n" +
-	"\x06qr_url\x18\x01 \x01(\tR\x05qrUrl2\xd7\n" +
+	"\x06qr_url\x18\x01 \x01(\tR\x05qrUrl\"\xe5\x01\n" +
+	"\x0fCustomerAccount\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
+	"\faccount_name\x18\x02 \x01(\tR\vaccountName\x12\x1d\n" +
+	"\n" +
+	"is_primary\x18\x03 \x01(\bR\tisPrimary\x12)\n" +
+	"\x10system_generated\x18\x04 \x01(\bR\x0fsystemGenerated\x12\x1e\n" +
+	"\n" +
+	"manageable\x18\x05 \x01(\bR\n" +
+	"manageable\x12\x16\n" +
+	"\x06status\x18\x06 \x01(\tR\x06status\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\a \x01(\tR\tcreatedAt\"\x1d\n" +
+	"\x1bListCustomerAccountsRequest\"Y\n" +
+	"\x1cListCustomerAccountsResponse\x129\n" +
+	"\baccounts\x18\x01 \x03(\v2\x1d.customers.v1.CustomerAccountR\baccounts\"A\n" +
+	"\x1cCreateCustomerAccountRequest\x12!\n" +
+	"\faccount_name\x18\x01 \x01(\tR\vaccountName\"\xa5\x01\n" +
+	"\x1dCreateCustomerAccountResponse\x127\n" +
+	"\aaccount\x18\x01 \x01(\v2\x1d.customers.v1.CustomerAccountR\aaccount\x12#\n" +
+	"\rtemp_password\x18\x02 \x01(\tR\ftempPassword\x12&\n" +
+	"\x0ftemp_expires_at\x18\x03 \x01(\tR\rtempExpiresAt\"A\n" +
+	" DeactivateCustomerAccountRequest\x12\x1d\n" +
+	"\n" +
+	"account_id\x18\x01 \x01(\tR\taccountId\"#\n" +
+	"!DeactivateCustomerAccountResponse\"D\n" +
+	"#ResetCustomerAccountPasswordRequest\x12\x1d\n" +
+	"\n" +
+	"account_id\x18\x01 \x01(\tR\taccountId\"s\n" +
+	"$ResetCustomerAccountPasswordResponse\x12#\n" +
+	"\rtemp_password\x18\x01 \x01(\tR\ftempPassword\x12&\n" +
+	"\x0ftemp_expires_at\x18\x02 \x01(\tR\rtempExpiresAt2\xd7\n" +
 	"\n" +
 	"\x0fCustomerService\x12X\n" +
 	"\rListCustomers\x12\".customers.v1.ListCustomersRequest\x1a#.customers.v1.ListCustomersResponse\x12R\n" +
@@ -2394,7 +2878,12 @@ const file_customers_v1_customer_proto_rawDesc = "" +
 	"AddContact\x12\x1f.customers.v1.AddContactRequest\x1a .customers.v1.AddContactResponse\x12X\n" +
 	"\rUpdateContact\x12\".customers.v1.UpdateContactRequest\x1a#.customers.v1.UpdateContactResponse\x12X\n" +
 	"\rDeleteContact\x12\".customers.v1.DeleteContactRequest\x1a#.customers.v1.DeleteContactResponse\x12d\n" +
-	"\x11GetCustomerQRCode\x12&.customers.v1.GetCustomerQRCodeRequest\x1a'.customers.v1.GetCustomerQRCodeResponseBWZUgithub.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1;customersv1b\x06proto3"
+	"\x11GetCustomerQRCode\x12&.customers.v1.GetCustomerQRCodeRequest\x1a'.customers.v1.GetCustomerQRCodeResponse2\xff\x03\n" +
+	"\x16CustomerAccountService\x12m\n" +
+	"\x14ListCustomerAccounts\x12).customers.v1.ListCustomerAccountsRequest\x1a*.customers.v1.ListCustomerAccountsResponse\x12p\n" +
+	"\x15CreateCustomerAccount\x12*.customers.v1.CreateCustomerAccountRequest\x1a+.customers.v1.CreateCustomerAccountResponse\x12|\n" +
+	"\x19DeactivateCustomerAccount\x12..customers.v1.DeactivateCustomerAccountRequest\x1a/.customers.v1.DeactivateCustomerAccountResponse\x12\x85\x01\n" +
+	"\x1cResetCustomerAccountPassword\x121.customers.v1.ResetCustomerAccountPasswordRequest\x1a2.customers.v1.ResetCustomerAccountPasswordResponseBWZUgithub.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1;customersv1b\x06proto3"
 
 var (
 	file_customers_v1_customer_proto_rawDescOnce sync.Once
@@ -2408,46 +2897,55 @@ func file_customers_v1_customer_proto_rawDescGZIP() []byte {
 	return file_customers_v1_customer_proto_rawDescData
 }
 
-var file_customers_v1_customer_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
+var file_customers_v1_customer_proto_msgTypes = make([]protoimpl.MessageInfo, 42)
 var file_customers_v1_customer_proto_goTypes = []any{
-	(*Customer)(nil),                  // 0: customers.v1.Customer
-	(*ListCustomersRequest)(nil),      // 1: customers.v1.ListCustomersRequest
-	(*ListCustomersResponse)(nil),     // 2: customers.v1.ListCustomersResponse
-	(*GetCustomerRequest)(nil),        // 3: customers.v1.GetCustomerRequest
-	(*GetCustomerResponse)(nil),       // 4: customers.v1.GetCustomerResponse
-	(*CreateCustomerRequest)(nil),     // 5: customers.v1.CreateCustomerRequest
-	(*CreateCustomerResponse)(nil),    // 6: customers.v1.CreateCustomerResponse
-	(*UpdateCustomerRequest)(nil),     // 7: customers.v1.UpdateCustomerRequest
-	(*UpdateCustomerResponse)(nil),    // 8: customers.v1.UpdateCustomerResponse
-	(*DeleteCustomerRequest)(nil),     // 9: customers.v1.DeleteCustomerRequest
-	(*DeleteCustomerResponse)(nil),    // 10: customers.v1.DeleteCustomerResponse
-	(*RestoreCustomerRequest)(nil),    // 11: customers.v1.RestoreCustomerRequest
-	(*RestoreCustomerResponse)(nil),   // 12: customers.v1.RestoreCustomerResponse
-	(*CustomerAddress)(nil),           // 13: customers.v1.CustomerAddress
-	(*ListAddressesRequest)(nil),      // 14: customers.v1.ListAddressesRequest
-	(*ListAddressesResponse)(nil),     // 15: customers.v1.ListAddressesResponse
-	(*AddAddressRequest)(nil),         // 16: customers.v1.AddAddressRequest
-	(*AddAddressResponse)(nil),        // 17: customers.v1.AddAddressResponse
-	(*UpdateAddressRequest)(nil),      // 18: customers.v1.UpdateAddressRequest
-	(*UpdateAddressResponse)(nil),     // 19: customers.v1.UpdateAddressResponse
-	(*DeleteAddressRequest)(nil),      // 20: customers.v1.DeleteAddressRequest
-	(*DeleteAddressResponse)(nil),     // 21: customers.v1.DeleteAddressResponse
-	(*CustomerContact)(nil),           // 22: customers.v1.CustomerContact
-	(*ListContactsRequest)(nil),       // 23: customers.v1.ListContactsRequest
-	(*ListContactsResponse)(nil),      // 24: customers.v1.ListContactsResponse
-	(*AddContactRequest)(nil),         // 25: customers.v1.AddContactRequest
-	(*AddContactResponse)(nil),        // 26: customers.v1.AddContactResponse
-	(*UpdateContactRequest)(nil),      // 27: customers.v1.UpdateContactRequest
-	(*UpdateContactResponse)(nil),     // 28: customers.v1.UpdateContactResponse
-	(*DeleteContactRequest)(nil),      // 29: customers.v1.DeleteContactRequest
-	(*DeleteContactResponse)(nil),     // 30: customers.v1.DeleteContactResponse
-	(*GetCustomerQRCodeRequest)(nil),  // 31: customers.v1.GetCustomerQRCodeRequest
-	(*GetCustomerQRCodeResponse)(nil), // 32: customers.v1.GetCustomerQRCodeResponse
-	(*v1.Pagination)(nil),             // 33: salesorder.v1.Pagination
+	(*Customer)(nil),                             // 0: customers.v1.Customer
+	(*ListCustomersRequest)(nil),                 // 1: customers.v1.ListCustomersRequest
+	(*ListCustomersResponse)(nil),                // 2: customers.v1.ListCustomersResponse
+	(*GetCustomerRequest)(nil),                   // 3: customers.v1.GetCustomerRequest
+	(*GetCustomerResponse)(nil),                  // 4: customers.v1.GetCustomerResponse
+	(*CreateCustomerRequest)(nil),                // 5: customers.v1.CreateCustomerRequest
+	(*CreateCustomerResponse)(nil),               // 6: customers.v1.CreateCustomerResponse
+	(*UpdateCustomerRequest)(nil),                // 7: customers.v1.UpdateCustomerRequest
+	(*UpdateCustomerResponse)(nil),               // 8: customers.v1.UpdateCustomerResponse
+	(*DeleteCustomerRequest)(nil),                // 9: customers.v1.DeleteCustomerRequest
+	(*DeleteCustomerResponse)(nil),               // 10: customers.v1.DeleteCustomerResponse
+	(*RestoreCustomerRequest)(nil),               // 11: customers.v1.RestoreCustomerRequest
+	(*RestoreCustomerResponse)(nil),              // 12: customers.v1.RestoreCustomerResponse
+	(*CustomerAddress)(nil),                      // 13: customers.v1.CustomerAddress
+	(*ListAddressesRequest)(nil),                 // 14: customers.v1.ListAddressesRequest
+	(*ListAddressesResponse)(nil),                // 15: customers.v1.ListAddressesResponse
+	(*AddAddressRequest)(nil),                    // 16: customers.v1.AddAddressRequest
+	(*AddAddressResponse)(nil),                   // 17: customers.v1.AddAddressResponse
+	(*UpdateAddressRequest)(nil),                 // 18: customers.v1.UpdateAddressRequest
+	(*UpdateAddressResponse)(nil),                // 19: customers.v1.UpdateAddressResponse
+	(*DeleteAddressRequest)(nil),                 // 20: customers.v1.DeleteAddressRequest
+	(*DeleteAddressResponse)(nil),                // 21: customers.v1.DeleteAddressResponse
+	(*CustomerContact)(nil),                      // 22: customers.v1.CustomerContact
+	(*ListContactsRequest)(nil),                  // 23: customers.v1.ListContactsRequest
+	(*ListContactsResponse)(nil),                 // 24: customers.v1.ListContactsResponse
+	(*AddContactRequest)(nil),                    // 25: customers.v1.AddContactRequest
+	(*AddContactResponse)(nil),                   // 26: customers.v1.AddContactResponse
+	(*UpdateContactRequest)(nil),                 // 27: customers.v1.UpdateContactRequest
+	(*UpdateContactResponse)(nil),                // 28: customers.v1.UpdateContactResponse
+	(*DeleteContactRequest)(nil),                 // 29: customers.v1.DeleteContactRequest
+	(*DeleteContactResponse)(nil),                // 30: customers.v1.DeleteContactResponse
+	(*GetCustomerQRCodeRequest)(nil),             // 31: customers.v1.GetCustomerQRCodeRequest
+	(*GetCustomerQRCodeResponse)(nil),            // 32: customers.v1.GetCustomerQRCodeResponse
+	(*CustomerAccount)(nil),                      // 33: customers.v1.CustomerAccount
+	(*ListCustomerAccountsRequest)(nil),          // 34: customers.v1.ListCustomerAccountsRequest
+	(*ListCustomerAccountsResponse)(nil),         // 35: customers.v1.ListCustomerAccountsResponse
+	(*CreateCustomerAccountRequest)(nil),         // 36: customers.v1.CreateCustomerAccountRequest
+	(*CreateCustomerAccountResponse)(nil),        // 37: customers.v1.CreateCustomerAccountResponse
+	(*DeactivateCustomerAccountRequest)(nil),     // 38: customers.v1.DeactivateCustomerAccountRequest
+	(*DeactivateCustomerAccountResponse)(nil),    // 39: customers.v1.DeactivateCustomerAccountResponse
+	(*ResetCustomerAccountPasswordRequest)(nil),  // 40: customers.v1.ResetCustomerAccountPasswordRequest
+	(*ResetCustomerAccountPasswordResponse)(nil), // 41: customers.v1.ResetCustomerAccountPasswordResponse
+	(*v1.Pagination)(nil),                        // 42: salesorder.v1.Pagination
 }
 var file_customers_v1_customer_proto_depIdxs = []int32{
 	0,  // 0: customers.v1.ListCustomersResponse.customers:type_name -> customers.v1.Customer
-	33, // 1: customers.v1.ListCustomersResponse.pagination:type_name -> salesorder.v1.Pagination
+	42, // 1: customers.v1.ListCustomersResponse.pagination:type_name -> salesorder.v1.Pagination
 	0,  // 2: customers.v1.GetCustomerResponse.customer:type_name -> customers.v1.Customer
 	0,  // 3: customers.v1.CreateCustomerResponse.customer:type_name -> customers.v1.Customer
 	0,  // 4: customers.v1.UpdateCustomerResponse.customer:type_name -> customers.v1.Customer
@@ -2458,41 +2956,51 @@ var file_customers_v1_customer_proto_depIdxs = []int32{
 	22, // 9: customers.v1.ListContactsResponse.contacts:type_name -> customers.v1.CustomerContact
 	22, // 10: customers.v1.AddContactResponse.contact:type_name -> customers.v1.CustomerContact
 	22, // 11: customers.v1.UpdateContactResponse.contact:type_name -> customers.v1.CustomerContact
-	1,  // 12: customers.v1.CustomerService.ListCustomers:input_type -> customers.v1.ListCustomersRequest
-	3,  // 13: customers.v1.CustomerService.GetCustomer:input_type -> customers.v1.GetCustomerRequest
-	5,  // 14: customers.v1.CustomerService.CreateCustomer:input_type -> customers.v1.CreateCustomerRequest
-	7,  // 15: customers.v1.CustomerService.UpdateCustomer:input_type -> customers.v1.UpdateCustomerRequest
-	9,  // 16: customers.v1.CustomerService.DeleteCustomer:input_type -> customers.v1.DeleteCustomerRequest
-	11, // 17: customers.v1.CustomerService.RestoreCustomer:input_type -> customers.v1.RestoreCustomerRequest
-	14, // 18: customers.v1.CustomerService.ListAddresses:input_type -> customers.v1.ListAddressesRequest
-	16, // 19: customers.v1.CustomerService.AddAddress:input_type -> customers.v1.AddAddressRequest
-	18, // 20: customers.v1.CustomerService.UpdateAddress:input_type -> customers.v1.UpdateAddressRequest
-	20, // 21: customers.v1.CustomerService.DeleteAddress:input_type -> customers.v1.DeleteAddressRequest
-	23, // 22: customers.v1.CustomerService.ListContacts:input_type -> customers.v1.ListContactsRequest
-	25, // 23: customers.v1.CustomerService.AddContact:input_type -> customers.v1.AddContactRequest
-	27, // 24: customers.v1.CustomerService.UpdateContact:input_type -> customers.v1.UpdateContactRequest
-	29, // 25: customers.v1.CustomerService.DeleteContact:input_type -> customers.v1.DeleteContactRequest
-	31, // 26: customers.v1.CustomerService.GetCustomerQRCode:input_type -> customers.v1.GetCustomerQRCodeRequest
-	2,  // 27: customers.v1.CustomerService.ListCustomers:output_type -> customers.v1.ListCustomersResponse
-	4,  // 28: customers.v1.CustomerService.GetCustomer:output_type -> customers.v1.GetCustomerResponse
-	6,  // 29: customers.v1.CustomerService.CreateCustomer:output_type -> customers.v1.CreateCustomerResponse
-	8,  // 30: customers.v1.CustomerService.UpdateCustomer:output_type -> customers.v1.UpdateCustomerResponse
-	10, // 31: customers.v1.CustomerService.DeleteCustomer:output_type -> customers.v1.DeleteCustomerResponse
-	12, // 32: customers.v1.CustomerService.RestoreCustomer:output_type -> customers.v1.RestoreCustomerResponse
-	15, // 33: customers.v1.CustomerService.ListAddresses:output_type -> customers.v1.ListAddressesResponse
-	17, // 34: customers.v1.CustomerService.AddAddress:output_type -> customers.v1.AddAddressResponse
-	19, // 35: customers.v1.CustomerService.UpdateAddress:output_type -> customers.v1.UpdateAddressResponse
-	21, // 36: customers.v1.CustomerService.DeleteAddress:output_type -> customers.v1.DeleteAddressResponse
-	24, // 37: customers.v1.CustomerService.ListContacts:output_type -> customers.v1.ListContactsResponse
-	26, // 38: customers.v1.CustomerService.AddContact:output_type -> customers.v1.AddContactResponse
-	28, // 39: customers.v1.CustomerService.UpdateContact:output_type -> customers.v1.UpdateContactResponse
-	30, // 40: customers.v1.CustomerService.DeleteContact:output_type -> customers.v1.DeleteContactResponse
-	32, // 41: customers.v1.CustomerService.GetCustomerQRCode:output_type -> customers.v1.GetCustomerQRCodeResponse
-	27, // [27:42] is the sub-list for method output_type
-	12, // [12:27] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	33, // 12: customers.v1.ListCustomerAccountsResponse.accounts:type_name -> customers.v1.CustomerAccount
+	33, // 13: customers.v1.CreateCustomerAccountResponse.account:type_name -> customers.v1.CustomerAccount
+	1,  // 14: customers.v1.CustomerService.ListCustomers:input_type -> customers.v1.ListCustomersRequest
+	3,  // 15: customers.v1.CustomerService.GetCustomer:input_type -> customers.v1.GetCustomerRequest
+	5,  // 16: customers.v1.CustomerService.CreateCustomer:input_type -> customers.v1.CreateCustomerRequest
+	7,  // 17: customers.v1.CustomerService.UpdateCustomer:input_type -> customers.v1.UpdateCustomerRequest
+	9,  // 18: customers.v1.CustomerService.DeleteCustomer:input_type -> customers.v1.DeleteCustomerRequest
+	11, // 19: customers.v1.CustomerService.RestoreCustomer:input_type -> customers.v1.RestoreCustomerRequest
+	14, // 20: customers.v1.CustomerService.ListAddresses:input_type -> customers.v1.ListAddressesRequest
+	16, // 21: customers.v1.CustomerService.AddAddress:input_type -> customers.v1.AddAddressRequest
+	18, // 22: customers.v1.CustomerService.UpdateAddress:input_type -> customers.v1.UpdateAddressRequest
+	20, // 23: customers.v1.CustomerService.DeleteAddress:input_type -> customers.v1.DeleteAddressRequest
+	23, // 24: customers.v1.CustomerService.ListContacts:input_type -> customers.v1.ListContactsRequest
+	25, // 25: customers.v1.CustomerService.AddContact:input_type -> customers.v1.AddContactRequest
+	27, // 26: customers.v1.CustomerService.UpdateContact:input_type -> customers.v1.UpdateContactRequest
+	29, // 27: customers.v1.CustomerService.DeleteContact:input_type -> customers.v1.DeleteContactRequest
+	31, // 28: customers.v1.CustomerService.GetCustomerQRCode:input_type -> customers.v1.GetCustomerQRCodeRequest
+	34, // 29: customers.v1.CustomerAccountService.ListCustomerAccounts:input_type -> customers.v1.ListCustomerAccountsRequest
+	36, // 30: customers.v1.CustomerAccountService.CreateCustomerAccount:input_type -> customers.v1.CreateCustomerAccountRequest
+	38, // 31: customers.v1.CustomerAccountService.DeactivateCustomerAccount:input_type -> customers.v1.DeactivateCustomerAccountRequest
+	40, // 32: customers.v1.CustomerAccountService.ResetCustomerAccountPassword:input_type -> customers.v1.ResetCustomerAccountPasswordRequest
+	2,  // 33: customers.v1.CustomerService.ListCustomers:output_type -> customers.v1.ListCustomersResponse
+	4,  // 34: customers.v1.CustomerService.GetCustomer:output_type -> customers.v1.GetCustomerResponse
+	6,  // 35: customers.v1.CustomerService.CreateCustomer:output_type -> customers.v1.CreateCustomerResponse
+	8,  // 36: customers.v1.CustomerService.UpdateCustomer:output_type -> customers.v1.UpdateCustomerResponse
+	10, // 37: customers.v1.CustomerService.DeleteCustomer:output_type -> customers.v1.DeleteCustomerResponse
+	12, // 38: customers.v1.CustomerService.RestoreCustomer:output_type -> customers.v1.RestoreCustomerResponse
+	15, // 39: customers.v1.CustomerService.ListAddresses:output_type -> customers.v1.ListAddressesResponse
+	17, // 40: customers.v1.CustomerService.AddAddress:output_type -> customers.v1.AddAddressResponse
+	19, // 41: customers.v1.CustomerService.UpdateAddress:output_type -> customers.v1.UpdateAddressResponse
+	21, // 42: customers.v1.CustomerService.DeleteAddress:output_type -> customers.v1.DeleteAddressResponse
+	24, // 43: customers.v1.CustomerService.ListContacts:output_type -> customers.v1.ListContactsResponse
+	26, // 44: customers.v1.CustomerService.AddContact:output_type -> customers.v1.AddContactResponse
+	28, // 45: customers.v1.CustomerService.UpdateContact:output_type -> customers.v1.UpdateContactResponse
+	30, // 46: customers.v1.CustomerService.DeleteContact:output_type -> customers.v1.DeleteContactResponse
+	32, // 47: customers.v1.CustomerService.GetCustomerQRCode:output_type -> customers.v1.GetCustomerQRCodeResponse
+	35, // 48: customers.v1.CustomerAccountService.ListCustomerAccounts:output_type -> customers.v1.ListCustomerAccountsResponse
+	37, // 49: customers.v1.CustomerAccountService.CreateCustomerAccount:output_type -> customers.v1.CreateCustomerAccountResponse
+	39, // 50: customers.v1.CustomerAccountService.DeactivateCustomerAccount:output_type -> customers.v1.DeactivateCustomerAccountResponse
+	41, // 51: customers.v1.CustomerAccountService.ResetCustomerAccountPassword:output_type -> customers.v1.ResetCustomerAccountPasswordResponse
+	33, // [33:52] is the sub-list for method output_type
+	14, // [14:33] is the sub-list for method input_type
+	14, // [14:14] is the sub-list for extension type_name
+	14, // [14:14] is the sub-list for extension extendee
+	0,  // [0:14] is the sub-list for field type_name
 }
 
 func init() { file_customers_v1_customer_proto_init() }
@@ -2509,9 +3017,9 @@ func file_customers_v1_customer_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_customers_v1_customer_proto_rawDesc), len(file_customers_v1_customer_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   33,
+			NumMessages:   42,
 			NumExtensions: 0,
-			NumServices:   1,
+			NumServices:   2,
 		},
 		GoTypes:           file_customers_v1_customer_proto_goTypes,
 		DependencyIndexes: file_customers_v1_customer_proto_depIdxs,

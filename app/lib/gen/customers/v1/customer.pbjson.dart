@@ -833,6 +833,148 @@ final $typed_data.Uint8List getCustomerQRCodeResponseDescriptor =
     $convert.base64Decode(
         'ChlHZXRDdXN0b21lclFSQ29kZVJlc3BvbnNlEhUKBnFyX3VybBgBIAEoCVIFcXJVcmw=');
 
+@$core.Deprecated('Use customerAccountDescriptor instead')
+const CustomerAccount$json = {
+  '1': 'CustomerAccount',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'account_name', '3': 2, '4': 1, '5': 9, '10': 'accountName'},
+    {'1': 'is_primary', '3': 3, '4': 1, '5': 8, '10': 'isPrimary'},
+    {'1': 'system_generated', '3': 4, '4': 1, '5': 8, '10': 'systemGenerated'},
+    {'1': 'manageable', '3': 5, '4': 1, '5': 8, '10': 'manageable'},
+    {'1': 'status', '3': 6, '4': 1, '5': 9, '10': 'status'},
+    {'1': 'created_at', '3': 7, '4': 1, '5': 9, '10': 'createdAt'},
+  ],
+};
+
+/// Descriptor for `CustomerAccount`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List customerAccountDescriptor = $convert.base64Decode(
+    'Cg9DdXN0b21lckFjY291bnQSDgoCaWQYASABKAlSAmlkEiEKDGFjY291bnRfbmFtZRgCIAEoCV'
+    'ILYWNjb3VudE5hbWUSHQoKaXNfcHJpbWFyeRgDIAEoCFIJaXNQcmltYXJ5EikKEHN5c3RlbV9n'
+    'ZW5lcmF0ZWQYBCABKAhSD3N5c3RlbUdlbmVyYXRlZBIeCgptYW5hZ2VhYmxlGAUgASgIUgptYW'
+    '5hZ2VhYmxlEhYKBnN0YXR1cxgGIAEoCVIGc3RhdHVzEh0KCmNyZWF0ZWRfYXQYByABKAlSCWNy'
+    'ZWF0ZWRBdA==');
+
+@$core.Deprecated('Use listCustomerAccountsRequestDescriptor instead')
+const ListCustomerAccountsRequest$json = {
+  '1': 'ListCustomerAccountsRequest',
+};
+
+/// Descriptor for `ListCustomerAccountsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listCustomerAccountsRequestDescriptor =
+    $convert.base64Decode('ChtMaXN0Q3VzdG9tZXJBY2NvdW50c1JlcXVlc3Q=');
+
+@$core.Deprecated('Use listCustomerAccountsResponseDescriptor instead')
+const ListCustomerAccountsResponse$json = {
+  '1': 'ListCustomerAccountsResponse',
+  '2': [
+    {
+      '1': 'accounts',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.customers.v1.CustomerAccount',
+      '10': 'accounts'
+    },
+  ],
+};
+
+/// Descriptor for `ListCustomerAccountsResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listCustomerAccountsResponseDescriptor =
+    $convert.base64Decode(
+        'ChxMaXN0Q3VzdG9tZXJBY2NvdW50c1Jlc3BvbnNlEjkKCGFjY291bnRzGAEgAygLMh0uY3VzdG'
+        '9tZXJzLnYxLkN1c3RvbWVyQWNjb3VudFIIYWNjb3VudHM=');
+
+@$core.Deprecated('Use createCustomerAccountRequestDescriptor instead')
+const CreateCustomerAccountRequest$json = {
+  '1': 'CreateCustomerAccountRequest',
+  '2': [
+    {'1': 'account_name', '3': 1, '4': 1, '5': 9, '10': 'accountName'},
+  ],
+};
+
+/// Descriptor for `CreateCustomerAccountRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List createCustomerAccountRequestDescriptor =
+    $convert.base64Decode(
+        'ChxDcmVhdGVDdXN0b21lckFjY291bnRSZXF1ZXN0EiEKDGFjY291bnRfbmFtZRgBIAEoCVILYW'
+        'Njb3VudE5hbWU=');
+
+@$core.Deprecated('Use createCustomerAccountResponseDescriptor instead')
+const CreateCustomerAccountResponse$json = {
+  '1': 'CreateCustomerAccountResponse',
+  '2': [
+    {
+      '1': 'account',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.customers.v1.CustomerAccount',
+      '10': 'account'
+    },
+    {'1': 'temp_password', '3': 2, '4': 1, '5': 9, '10': 'tempPassword'},
+    {'1': 'temp_expires_at', '3': 3, '4': 1, '5': 9, '10': 'tempExpiresAt'},
+  ],
+};
+
+/// Descriptor for `CreateCustomerAccountResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List createCustomerAccountResponseDescriptor = $convert.base64Decode(
+    'Ch1DcmVhdGVDdXN0b21lckFjY291bnRSZXNwb25zZRI3CgdhY2NvdW50GAEgASgLMh0uY3VzdG'
+    '9tZXJzLnYxLkN1c3RvbWVyQWNjb3VudFIHYWNjb3VudBIjCg10ZW1wX3Bhc3N3b3JkGAIgASgJ'
+    'Ugx0ZW1wUGFzc3dvcmQSJgoPdGVtcF9leHBpcmVzX2F0GAMgASgJUg10ZW1wRXhwaXJlc0F0');
+
+@$core.Deprecated('Use deactivateCustomerAccountRequestDescriptor instead')
+const DeactivateCustomerAccountRequest$json = {
+  '1': 'DeactivateCustomerAccountRequest',
+  '2': [
+    {'1': 'account_id', '3': 1, '4': 1, '5': 9, '10': 'accountId'},
+  ],
+};
+
+/// Descriptor for `DeactivateCustomerAccountRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List deactivateCustomerAccountRequestDescriptor =
+    $convert.base64Decode(
+        'CiBEZWFjdGl2YXRlQ3VzdG9tZXJBY2NvdW50UmVxdWVzdBIdCgphY2NvdW50X2lkGAEgASgJUg'
+        'lhY2NvdW50SWQ=');
+
+@$core.Deprecated('Use deactivateCustomerAccountResponseDescriptor instead')
+const DeactivateCustomerAccountResponse$json = {
+  '1': 'DeactivateCustomerAccountResponse',
+};
+
+/// Descriptor for `DeactivateCustomerAccountResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List deactivateCustomerAccountResponseDescriptor =
+    $convert.base64Decode('CiFEZWFjdGl2YXRlQ3VzdG9tZXJBY2NvdW50UmVzcG9uc2U=');
+
+@$core.Deprecated('Use resetCustomerAccountPasswordRequestDescriptor instead')
+const ResetCustomerAccountPasswordRequest$json = {
+  '1': 'ResetCustomerAccountPasswordRequest',
+  '2': [
+    {'1': 'account_id', '3': 1, '4': 1, '5': 9, '10': 'accountId'},
+  ],
+};
+
+/// Descriptor for `ResetCustomerAccountPasswordRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List resetCustomerAccountPasswordRequestDescriptor =
+    $convert.base64Decode(
+        'CiNSZXNldEN1c3RvbWVyQWNjb3VudFBhc3N3b3JkUmVxdWVzdBIdCgphY2NvdW50X2lkGAEgAS'
+        'gJUglhY2NvdW50SWQ=');
+
+@$core.Deprecated('Use resetCustomerAccountPasswordResponseDescriptor instead')
+const ResetCustomerAccountPasswordResponse$json = {
+  '1': 'ResetCustomerAccountPasswordResponse',
+  '2': [
+    {'1': 'temp_password', '3': 1, '4': 1, '5': 9, '10': 'tempPassword'},
+    {'1': 'temp_expires_at', '3': 2, '4': 1, '5': 9, '10': 'tempExpiresAt'},
+  ],
+};
+
+/// Descriptor for `ResetCustomerAccountPasswordResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List resetCustomerAccountPasswordResponseDescriptor =
+    $convert.base64Decode(
+        'CiRSZXNldEN1c3RvbWVyQWNjb3VudFBhc3N3b3JkUmVzcG9uc2USIwoNdGVtcF9wYXNzd29yZB'
+        'gBIAEoCVIMdGVtcFBhc3N3b3JkEiYKD3RlbXBfZXhwaXJlc19hdBgCIAEoCVINdGVtcEV4cGly'
+        'ZXNBdA==');
+
 const $core.Map<$core.String, $core.dynamic> CustomerServiceBase$json = {
   '1': 'CustomerService',
   '2': [
@@ -980,3 +1122,63 @@ final $typed_data.Uint8List customerServiceDescriptor = $convert.base64Decode(
     'UmVxdWVzdBojLmN1c3RvbWVycy52MS5EZWxldGVDb250YWN0UmVzcG9uc2USZAoRR2V0Q3VzdG'
     '9tZXJRUkNvZGUSJi5jdXN0b21lcnMudjEuR2V0Q3VzdG9tZXJRUkNvZGVSZXF1ZXN0GicuY3Vz'
     'dG9tZXJzLnYxLkdldEN1c3RvbWVyUVJDb2RlUmVzcG9uc2U=');
+
+const $core.Map<$core.String, $core.dynamic> CustomerAccountServiceBase$json = {
+  '1': 'CustomerAccountService',
+  '2': [
+    {
+      '1': 'ListCustomerAccounts',
+      '2': '.customers.v1.ListCustomerAccountsRequest',
+      '3': '.customers.v1.ListCustomerAccountsResponse'
+    },
+    {
+      '1': 'CreateCustomerAccount',
+      '2': '.customers.v1.CreateCustomerAccountRequest',
+      '3': '.customers.v1.CreateCustomerAccountResponse'
+    },
+    {
+      '1': 'DeactivateCustomerAccount',
+      '2': '.customers.v1.DeactivateCustomerAccountRequest',
+      '3': '.customers.v1.DeactivateCustomerAccountResponse'
+    },
+    {
+      '1': 'ResetCustomerAccountPassword',
+      '2': '.customers.v1.ResetCustomerAccountPasswordRequest',
+      '3': '.customers.v1.ResetCustomerAccountPasswordResponse'
+    },
+  ],
+};
+
+@$core.Deprecated('Use customerAccountServiceDescriptor instead')
+const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
+    CustomerAccountServiceBase$messageJson = {
+  '.customers.v1.ListCustomerAccountsRequest': ListCustomerAccountsRequest$json,
+  '.customers.v1.ListCustomerAccountsResponse':
+      ListCustomerAccountsResponse$json,
+  '.customers.v1.CustomerAccount': CustomerAccount$json,
+  '.customers.v1.CreateCustomerAccountRequest':
+      CreateCustomerAccountRequest$json,
+  '.customers.v1.CreateCustomerAccountResponse':
+      CreateCustomerAccountResponse$json,
+  '.customers.v1.DeactivateCustomerAccountRequest':
+      DeactivateCustomerAccountRequest$json,
+  '.customers.v1.DeactivateCustomerAccountResponse':
+      DeactivateCustomerAccountResponse$json,
+  '.customers.v1.ResetCustomerAccountPasswordRequest':
+      ResetCustomerAccountPasswordRequest$json,
+  '.customers.v1.ResetCustomerAccountPasswordResponse':
+      ResetCustomerAccountPasswordResponse$json,
+};
+
+/// Descriptor for `CustomerAccountService`. Decode as a `google.protobuf.ServiceDescriptorProto`.
+final $typed_data.Uint8List customerAccountServiceDescriptor = $convert.base64Decode(
+    'ChZDdXN0b21lckFjY291bnRTZXJ2aWNlEm0KFExpc3RDdXN0b21lckFjY291bnRzEikuY3VzdG'
+    '9tZXJzLnYxLkxpc3RDdXN0b21lckFjY291bnRzUmVxdWVzdBoqLmN1c3RvbWVycy52MS5MaXN0'
+    'Q3VzdG9tZXJBY2NvdW50c1Jlc3BvbnNlEnAKFUNyZWF0ZUN1c3RvbWVyQWNjb3VudBIqLmN1c3'
+    'RvbWVycy52MS5DcmVhdGVDdXN0b21lckFjY291bnRSZXF1ZXN0GisuY3VzdG9tZXJzLnYxLkNy'
+    'ZWF0ZUN1c3RvbWVyQWNjb3VudFJlc3BvbnNlEnwKGURlYWN0aXZhdGVDdXN0b21lckFjY291bn'
+    'QSLi5jdXN0b21lcnMudjEuRGVhY3RpdmF0ZUN1c3RvbWVyQWNjb3VudFJlcXVlc3QaLy5jdXN0'
+    'b21lcnMudjEuRGVhY3RpdmF0ZUN1c3RvbWVyQWNjb3VudFJlc3BvbnNlEoUBChxSZXNldEN1c3'
+    'RvbWVyQWNjb3VudFBhc3N3b3JkEjEuY3VzdG9tZXJzLnYxLlJlc2V0Q3VzdG9tZXJBY2NvdW50'
+    'UGFzc3dvcmRSZXF1ZXN0GjIuY3VzdG9tZXJzLnYxLlJlc2V0Q3VzdG9tZXJBY2NvdW50UGFzc3'
+    'dvcmRSZXNwb25zZQ==');

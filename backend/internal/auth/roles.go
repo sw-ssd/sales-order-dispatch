@@ -79,6 +79,11 @@ var rolePolicy = map[string]map[string][]string{
 		"product":        {"read"},
 		"return_request": {"read", "write"},
 		"notification":   {"read", "write"},
+		// 店家自助帳號管理(D22/規格 4.2):主帳號登入後**唯一**可用的功能面 ——
+		// 它的業務能力已被 OpenFGA 的 primary_account 排除(見 authz.PrimaryAccountDeniedResources,
+		// 該推導亦永久排除本資源)。子帳號雖同樣持有本資源(繼承自 customer 角色),
+		// 但實際操作由 CustomerAccountService 的 is_primary 檢查擋下(規格 4.2:子帳號無管理權限)。
+		"customer_account": {"read", "write"},
 	},
 	"guest": {
 		"user": {"read"},
@@ -176,6 +181,7 @@ var adminResources = []string{
 	"company", "department", "user", "role",
 	"sales_order", "customer", "product", "print", "dispatch", "accounting",
 	"return_request", "notification", "audit_log", "announcement", "logistics",
+	"customer_account",
 }
 
 // PermissionSeed 描述單一 role_permissions 種子列( role code → resource → action )。

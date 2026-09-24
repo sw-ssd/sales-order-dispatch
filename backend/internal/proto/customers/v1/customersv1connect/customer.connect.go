@@ -23,6 +23,8 @@ const _ = connect.IsAtLeastVersion1_13_0
 const (
 	// CustomerServiceName is the fully-qualified name of the CustomerService service.
 	CustomerServiceName = "customers.v1.CustomerService"
+	// CustomerAccountServiceName is the fully-qualified name of the CustomerAccountService service.
+	CustomerAccountServiceName = "customers.v1.CustomerAccountService"
 )
 
 // These constants are the fully-qualified names of the RPCs defined in this package. They're
@@ -78,6 +80,18 @@ const (
 	// CustomerServiceGetCustomerQRCodeProcedure is the fully-qualified name of the CustomerService's
 	// GetCustomerQRCode RPC.
 	CustomerServiceGetCustomerQRCodeProcedure = "/customers.v1.CustomerService/GetCustomerQRCode"
+	// CustomerAccountServiceListCustomerAccountsProcedure is the fully-qualified name of the
+	// CustomerAccountService's ListCustomerAccounts RPC.
+	CustomerAccountServiceListCustomerAccountsProcedure = "/customers.v1.CustomerAccountService/ListCustomerAccounts"
+	// CustomerAccountServiceCreateCustomerAccountProcedure is the fully-qualified name of the
+	// CustomerAccountService's CreateCustomerAccount RPC.
+	CustomerAccountServiceCreateCustomerAccountProcedure = "/customers.v1.CustomerAccountService/CreateCustomerAccount"
+	// CustomerAccountServiceDeactivateCustomerAccountProcedure is the fully-qualified name of the
+	// CustomerAccountService's DeactivateCustomerAccount RPC.
+	CustomerAccountServiceDeactivateCustomerAccountProcedure = "/customers.v1.CustomerAccountService/DeactivateCustomerAccount"
+	// CustomerAccountServiceResetCustomerAccountPasswordProcedure is the fully-qualified name of the
+	// CustomerAccountService's ResetCustomerAccountPassword RPC.
+	CustomerAccountServiceResetCustomerAccountPasswordProcedure = "/customers.v1.CustomerAccountService/ResetCustomerAccountPassword"
 )
 
 // CustomerServiceClient is a client for the customers.v1.CustomerService service.
@@ -528,4 +542,154 @@ func (UnimplementedCustomerServiceHandler) DeleteContact(context.Context, *conne
 
 func (UnimplementedCustomerServiceHandler) GetCustomerQRCode(context.Context, *connect.Request[v1.GetCustomerQRCodeRequest]) (*connect.Response[v1.GetCustomerQRCodeResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("customers.v1.CustomerService.GetCustomerQRCode is not implemented"))
+}
+
+// CustomerAccountServiceClient is a client for the customers.v1.CustomerAccountService service.
+type CustomerAccountServiceClient interface {
+	ListCustomerAccounts(context.Context, *connect.Request[v1.ListCustomerAccountsRequest]) (*connect.Response[v1.ListCustomerAccountsResponse], error)
+	CreateCustomerAccount(context.Context, *connect.Request[v1.CreateCustomerAccountRequest]) (*connect.Response[v1.CreateCustomerAccountResponse], error)
+	DeactivateCustomerAccount(context.Context, *connect.Request[v1.DeactivateCustomerAccountRequest]) (*connect.Response[v1.DeactivateCustomerAccountResponse], error)
+	ResetCustomerAccountPassword(context.Context, *connect.Request[v1.ResetCustomerAccountPasswordRequest]) (*connect.Response[v1.ResetCustomerAccountPasswordResponse], error)
+}
+
+// NewCustomerAccountServiceClient constructs a client for the customers.v1.CustomerAccountService
+// service. By default, it uses the Connect protocol with the binary Protobuf Codec, asks for
+// gzipped responses, and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply
+// the connect.WithGRPC() or connect.WithGRPCWeb() options.
+//
+// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
+// http://api.acme.com or https://acme.com/grpc).
+func NewCustomerAccountServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) CustomerAccountServiceClient {
+	baseURL = strings.TrimRight(baseURL, "/")
+	customerAccountServiceMethods := v1.File_customers_v1_customer_proto.Services().ByName("CustomerAccountService").Methods()
+	return &customerAccountServiceClient{
+		listCustomerAccounts: connect.NewClient[v1.ListCustomerAccountsRequest, v1.ListCustomerAccountsResponse](
+			httpClient,
+			baseURL+CustomerAccountServiceListCustomerAccountsProcedure,
+			connect.WithSchema(customerAccountServiceMethods.ByName("ListCustomerAccounts")),
+			connect.WithClientOptions(opts...),
+		),
+		createCustomerAccount: connect.NewClient[v1.CreateCustomerAccountRequest, v1.CreateCustomerAccountResponse](
+			httpClient,
+			baseURL+CustomerAccountServiceCreateCustomerAccountProcedure,
+			connect.WithSchema(customerAccountServiceMethods.ByName("CreateCustomerAccount")),
+			connect.WithClientOptions(opts...),
+		),
+		deactivateCustomerAccount: connect.NewClient[v1.DeactivateCustomerAccountRequest, v1.DeactivateCustomerAccountResponse](
+			httpClient,
+			baseURL+CustomerAccountServiceDeactivateCustomerAccountProcedure,
+			connect.WithSchema(customerAccountServiceMethods.ByName("DeactivateCustomerAccount")),
+			connect.WithClientOptions(opts...),
+		),
+		resetCustomerAccountPassword: connect.NewClient[v1.ResetCustomerAccountPasswordRequest, v1.ResetCustomerAccountPasswordResponse](
+			httpClient,
+			baseURL+CustomerAccountServiceResetCustomerAccountPasswordProcedure,
+			connect.WithSchema(customerAccountServiceMethods.ByName("ResetCustomerAccountPassword")),
+			connect.WithClientOptions(opts...),
+		),
+	}
+}
+
+// customerAccountServiceClient implements CustomerAccountServiceClient.
+type customerAccountServiceClient struct {
+	listCustomerAccounts         *connect.Client[v1.ListCustomerAccountsRequest, v1.ListCustomerAccountsResponse]
+	createCustomerAccount        *connect.Client[v1.CreateCustomerAccountRequest, v1.CreateCustomerAccountResponse]
+	deactivateCustomerAccount    *connect.Client[v1.DeactivateCustomerAccountRequest, v1.DeactivateCustomerAccountResponse]
+	resetCustomerAccountPassword *connect.Client[v1.ResetCustomerAccountPasswordRequest, v1.ResetCustomerAccountPasswordResponse]
+}
+
+// ListCustomerAccounts calls customers.v1.CustomerAccountService.ListCustomerAccounts.
+func (c *customerAccountServiceClient) ListCustomerAccounts(ctx context.Context, req *connect.Request[v1.ListCustomerAccountsRequest]) (*connect.Response[v1.ListCustomerAccountsResponse], error) {
+	return c.listCustomerAccounts.CallUnary(ctx, req)
+}
+
+// CreateCustomerAccount calls customers.v1.CustomerAccountService.CreateCustomerAccount.
+func (c *customerAccountServiceClient) CreateCustomerAccount(ctx context.Context, req *connect.Request[v1.CreateCustomerAccountRequest]) (*connect.Response[v1.CreateCustomerAccountResponse], error) {
+	return c.createCustomerAccount.CallUnary(ctx, req)
+}
+
+// DeactivateCustomerAccount calls customers.v1.CustomerAccountService.DeactivateCustomerAccount.
+func (c *customerAccountServiceClient) DeactivateCustomerAccount(ctx context.Context, req *connect.Request[v1.DeactivateCustomerAccountRequest]) (*connect.Response[v1.DeactivateCustomerAccountResponse], error) {
+	return c.deactivateCustomerAccount.CallUnary(ctx, req)
+}
+
+// ResetCustomerAccountPassword calls
+// customers.v1.CustomerAccountService.ResetCustomerAccountPassword.
+func (c *customerAccountServiceClient) ResetCustomerAccountPassword(ctx context.Context, req *connect.Request[v1.ResetCustomerAccountPasswordRequest]) (*connect.Response[v1.ResetCustomerAccountPasswordResponse], error) {
+	return c.resetCustomerAccountPassword.CallUnary(ctx, req)
+}
+
+// CustomerAccountServiceHandler is an implementation of the customers.v1.CustomerAccountService
+// service.
+type CustomerAccountServiceHandler interface {
+	ListCustomerAccounts(context.Context, *connect.Request[v1.ListCustomerAccountsRequest]) (*connect.Response[v1.ListCustomerAccountsResponse], error)
+	CreateCustomerAccount(context.Context, *connect.Request[v1.CreateCustomerAccountRequest]) (*connect.Response[v1.CreateCustomerAccountResponse], error)
+	DeactivateCustomerAccount(context.Context, *connect.Request[v1.DeactivateCustomerAccountRequest]) (*connect.Response[v1.DeactivateCustomerAccountResponse], error)
+	ResetCustomerAccountPassword(context.Context, *connect.Request[v1.ResetCustomerAccountPasswordRequest]) (*connect.Response[v1.ResetCustomerAccountPasswordResponse], error)
+}
+
+// NewCustomerAccountServiceHandler builds an HTTP handler from the service implementation. It
+// returns the path on which to mount the handler and the handler itself.
+//
+// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
+// and JSON codecs. They also support gzip compression.
+func NewCustomerAccountServiceHandler(svc CustomerAccountServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	customerAccountServiceMethods := v1.File_customers_v1_customer_proto.Services().ByName("CustomerAccountService").Methods()
+	customerAccountServiceListCustomerAccountsHandler := connect.NewUnaryHandler(
+		CustomerAccountServiceListCustomerAccountsProcedure,
+		svc.ListCustomerAccounts,
+		connect.WithSchema(customerAccountServiceMethods.ByName("ListCustomerAccounts")),
+		connect.WithHandlerOptions(opts...),
+	)
+	customerAccountServiceCreateCustomerAccountHandler := connect.NewUnaryHandler(
+		CustomerAccountServiceCreateCustomerAccountProcedure,
+		svc.CreateCustomerAccount,
+		connect.WithSchema(customerAccountServiceMethods.ByName("CreateCustomerAccount")),
+		connect.WithHandlerOptions(opts...),
+	)
+	customerAccountServiceDeactivateCustomerAccountHandler := connect.NewUnaryHandler(
+		CustomerAccountServiceDeactivateCustomerAccountProcedure,
+		svc.DeactivateCustomerAccount,
+		connect.WithSchema(customerAccountServiceMethods.ByName("DeactivateCustomerAccount")),
+		connect.WithHandlerOptions(opts...),
+	)
+	customerAccountServiceResetCustomerAccountPasswordHandler := connect.NewUnaryHandler(
+		CustomerAccountServiceResetCustomerAccountPasswordProcedure,
+		svc.ResetCustomerAccountPassword,
+		connect.WithSchema(customerAccountServiceMethods.ByName("ResetCustomerAccountPassword")),
+		connect.WithHandlerOptions(opts...),
+	)
+	return "/customers.v1.CustomerAccountService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case CustomerAccountServiceListCustomerAccountsProcedure:
+			customerAccountServiceListCustomerAccountsHandler.ServeHTTP(w, r)
+		case CustomerAccountServiceCreateCustomerAccountProcedure:
+			customerAccountServiceCreateCustomerAccountHandler.ServeHTTP(w, r)
+		case CustomerAccountServiceDeactivateCustomerAccountProcedure:
+			customerAccountServiceDeactivateCustomerAccountHandler.ServeHTTP(w, r)
+		case CustomerAccountServiceResetCustomerAccountPasswordProcedure:
+			customerAccountServiceResetCustomerAccountPasswordHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
+}
+
+// UnimplementedCustomerAccountServiceHandler returns CodeUnimplemented from all methods.
+type UnimplementedCustomerAccountServiceHandler struct{}
+
+func (UnimplementedCustomerAccountServiceHandler) ListCustomerAccounts(context.Context, *connect.Request[v1.ListCustomerAccountsRequest]) (*connect.Response[v1.ListCustomerAccountsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("customers.v1.CustomerAccountService.ListCustomerAccounts is not implemented"))
+}
+
+func (UnimplementedCustomerAccountServiceHandler) CreateCustomerAccount(context.Context, *connect.Request[v1.CreateCustomerAccountRequest]) (*connect.Response[v1.CreateCustomerAccountResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("customers.v1.CustomerAccountService.CreateCustomerAccount is not implemented"))
+}
+
+func (UnimplementedCustomerAccountServiceHandler) DeactivateCustomerAccount(context.Context, *connect.Request[v1.DeactivateCustomerAccountRequest]) (*connect.Response[v1.DeactivateCustomerAccountResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("customers.v1.CustomerAccountService.DeactivateCustomerAccount is not implemented"))
+}
+
+func (UnimplementedCustomerAccountServiceHandler) ResetCustomerAccountPassword(context.Context, *connect.Request[v1.ResetCustomerAccountPasswordRequest]) (*connect.Response[v1.ResetCustomerAccountPasswordResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("customers.v1.CustomerAccountService.ResetCustomerAccountPassword is not implemented"))
 }

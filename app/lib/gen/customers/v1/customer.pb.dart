@@ -2961,6 +2961,649 @@ class GetCustomerQRCodeResponse extends $pb.GeneratedMessage {
   void clearQrUrl() => $_clearField(1);
 }
 
+/// CustomerAccount:登入帳號(不含密碼欄位)。
+class CustomerAccount extends $pb.GeneratedMessage {
+  factory CustomerAccount({
+    $core.String? id,
+    $core.String? accountName,
+    $core.bool? isPrimary,
+    $core.bool? systemGenerated,
+    $core.bool? manageable,
+    $core.String? status,
+    $core.String? createdAt,
+  }) {
+    final result = CustomerAccount._();
+    if (id != null) result.id = id;
+    if (accountName != null) result.accountName = accountName;
+    if (isPrimary != null) result.isPrimary = isPrimary;
+    if (systemGenerated != null) result.systemGenerated = systemGenerated;
+    if (manageable != null) result.manageable = manageable;
+    if (status != null) result.status = status;
+    if (createdAt != null) result.createdAt = createdAt;
+    return result;
+  }
+
+  CustomerAccount._();
+
+  factory CustomerAccount.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CustomerAccount()..mergeFromBuffer(data, registry);
+  factory CustomerAccount.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CustomerAccount()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CustomerAccount',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: CustomerAccount.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'accountName')
+    ..aOB(3, _omitFieldNames ? '' : 'isPrimary')
+    ..aOB(4, _omitFieldNames ? '' : 'systemGenerated')
+    ..aOB(5, _omitFieldNames ? '' : 'manageable')
+    ..aOS(6, _omitFieldNames ? '' : 'status')
+    ..aOS(7, _omitFieldNames ? '' : 'createdAt')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CustomerAccount clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CustomerAccount copyWith(void Function(CustomerAccount) updates) =>
+      super.copyWith((message) => updates(message as CustomerAccount))
+          as CustomerAccount;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use CustomerAccount() / CustomerAccount.new instead')
+  static CustomerAccount create() => CustomerAccount._();
+  static $pb.GeneratedMessage $_createMessage() => CustomerAccount._();
+  @$core.override
+  CustomerAccount createEmptyInstance() => CustomerAccount._();
+  @$core.pragma('dart2js:noInline')
+  static CustomerAccount getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<CustomerAccount>(
+          CustomerAccount.$_createMessage);
+  static CustomerAccount? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get accountName => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set accountName($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasAccountName() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearAccountName() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.bool get isPrimary => $_getBF(2);
+  @$pb.TagNumber(3)
+  set isPrimary($core.bool value) => $_setBool(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasIsPrimary() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearIsPrimary() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.bool get systemGenerated => $_getBF(3);
+  @$pb.TagNumber(4)
+  set systemGenerated($core.bool value) => $_setBool(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasSystemGenerated() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearSystemGenerated() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.bool get manageable => $_getBF(4);
+  @$pb.TagNumber(5)
+  set manageable($core.bool value) => $_setBool(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasManageable() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearManageable() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get status => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set status($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasStatus() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearStatus() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get createdAt => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set createdAt($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasCreatedAt() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearCreatedAt() => $_clearField(7);
+}
+
+class ListCustomerAccountsRequest extends $pb.GeneratedMessage {
+  factory ListCustomerAccountsRequest() => ListCustomerAccountsRequest._();
+
+  ListCustomerAccountsRequest._();
+
+  factory ListCustomerAccountsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListCustomerAccountsRequest()..mergeFromBuffer(data, registry);
+  factory ListCustomerAccountsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListCustomerAccountsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListCustomerAccountsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: ListCustomerAccountsRequest.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListCustomerAccountsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListCustomerAccountsRequest copyWith(
+          void Function(ListCustomerAccountsRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as ListCustomerAccountsRequest))
+          as ListCustomerAccountsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListCustomerAccountsRequest() / ListCustomerAccountsRequest.new instead')
+  static ListCustomerAccountsRequest create() =>
+      ListCustomerAccountsRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      ListCustomerAccountsRequest._();
+  @$core.override
+  ListCustomerAccountsRequest createEmptyInstance() =>
+      ListCustomerAccountsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ListCustomerAccountsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListCustomerAccountsRequest>(
+          ListCustomerAccountsRequest.$_createMessage);
+  static ListCustomerAccountsRequest? _defaultInstance;
+}
+
+class ListCustomerAccountsResponse extends $pb.GeneratedMessage {
+  factory ListCustomerAccountsResponse({
+    $core.Iterable<CustomerAccount>? accounts,
+  }) {
+    final result = ListCustomerAccountsResponse._();
+    if (accounts != null) result.accounts.addAll(accounts);
+    return result;
+  }
+
+  ListCustomerAccountsResponse._();
+
+  factory ListCustomerAccountsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListCustomerAccountsResponse()..mergeFromBuffer(data, registry);
+  factory ListCustomerAccountsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListCustomerAccountsResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListCustomerAccountsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: ListCustomerAccountsResponse.$_createMessage)
+    ..pPM<CustomerAccount>(1, _omitFieldNames ? '' : 'accounts',
+        subBuilder: CustomerAccount.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListCustomerAccountsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListCustomerAccountsResponse copyWith(
+          void Function(ListCustomerAccountsResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as ListCustomerAccountsResponse))
+          as ListCustomerAccountsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListCustomerAccountsResponse() / ListCustomerAccountsResponse.new instead')
+  static ListCustomerAccountsResponse create() =>
+      ListCustomerAccountsResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      ListCustomerAccountsResponse._();
+  @$core.override
+  ListCustomerAccountsResponse createEmptyInstance() =>
+      ListCustomerAccountsResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ListCustomerAccountsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListCustomerAccountsResponse>(
+          ListCustomerAccountsResponse.$_createMessage);
+  static ListCustomerAccountsResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<CustomerAccount> get accounts => $_getList(0);
+}
+
+class CreateCustomerAccountRequest extends $pb.GeneratedMessage {
+  factory CreateCustomerAccountRequest({
+    $core.String? accountName,
+  }) {
+    final result = CreateCustomerAccountRequest._();
+    if (accountName != null) result.accountName = accountName;
+    return result;
+  }
+
+  CreateCustomerAccountRequest._();
+
+  factory CreateCustomerAccountRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CreateCustomerAccountRequest()..mergeFromBuffer(data, registry);
+  factory CreateCustomerAccountRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CreateCustomerAccountRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CreateCustomerAccountRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: CreateCustomerAccountRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'accountName')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CreateCustomerAccountRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CreateCustomerAccountRequest copyWith(
+          void Function(CreateCustomerAccountRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as CreateCustomerAccountRequest))
+          as CreateCustomerAccountRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use CreateCustomerAccountRequest() / CreateCustomerAccountRequest.new instead')
+  static CreateCustomerAccountRequest create() =>
+      CreateCustomerAccountRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      CreateCustomerAccountRequest._();
+  @$core.override
+  CreateCustomerAccountRequest createEmptyInstance() =>
+      CreateCustomerAccountRequest._();
+  @$core.pragma('dart2js:noInline')
+  static CreateCustomerAccountRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<CreateCustomerAccountRequest>(
+          CreateCustomerAccountRequest.$_createMessage);
+  static CreateCustomerAccountRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get accountName => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set accountName($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasAccountName() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearAccountName() => $_clearField(1);
+}
+
+class CreateCustomerAccountResponse extends $pb.GeneratedMessage {
+  factory CreateCustomerAccountResponse({
+    CustomerAccount? account,
+    $core.String? tempPassword,
+    $core.String? tempExpiresAt,
+  }) {
+    final result = CreateCustomerAccountResponse._();
+    if (account != null) result.account = account;
+    if (tempPassword != null) result.tempPassword = tempPassword;
+    if (tempExpiresAt != null) result.tempExpiresAt = tempExpiresAt;
+    return result;
+  }
+
+  CreateCustomerAccountResponse._();
+
+  factory CreateCustomerAccountResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CreateCustomerAccountResponse()..mergeFromBuffer(data, registry);
+  factory CreateCustomerAccountResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CreateCustomerAccountResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CreateCustomerAccountResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: CreateCustomerAccountResponse.$_createMessage)
+    ..aOM<CustomerAccount>(1, _omitFieldNames ? '' : 'account',
+        subBuilder: CustomerAccount.$_createMessage)
+    ..aOS(2, _omitFieldNames ? '' : 'tempPassword')
+    ..aOS(3, _omitFieldNames ? '' : 'tempExpiresAt')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CreateCustomerAccountResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CreateCustomerAccountResponse copyWith(
+          void Function(CreateCustomerAccountResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as CreateCustomerAccountResponse))
+          as CreateCustomerAccountResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use CreateCustomerAccountResponse() / CreateCustomerAccountResponse.new instead')
+  static CreateCustomerAccountResponse create() =>
+      CreateCustomerAccountResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      CreateCustomerAccountResponse._();
+  @$core.override
+  CreateCustomerAccountResponse createEmptyInstance() =>
+      CreateCustomerAccountResponse._();
+  @$core.pragma('dart2js:noInline')
+  static CreateCustomerAccountResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<CreateCustomerAccountResponse>(
+          CreateCustomerAccountResponse.$_createMessage);
+  static CreateCustomerAccountResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  CustomerAccount get account => $_getN(0);
+  @$pb.TagNumber(1)
+  set account(CustomerAccount value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasAccount() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearAccount() => $_clearField(1);
+  @$pb.TagNumber(1)
+  CustomerAccount ensureAccount() => $_ensure(0);
+
+  @$pb.TagNumber(2)
+  $core.String get tempPassword => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set tempPassword($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasTempPassword() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearTempPassword() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get tempExpiresAt => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set tempExpiresAt($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasTempExpiresAt() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearTempExpiresAt() => $_clearField(3);
+}
+
+class DeactivateCustomerAccountRequest extends $pb.GeneratedMessage {
+  factory DeactivateCustomerAccountRequest({
+    $core.String? accountId,
+  }) {
+    final result = DeactivateCustomerAccountRequest._();
+    if (accountId != null) result.accountId = accountId;
+    return result;
+  }
+
+  DeactivateCustomerAccountRequest._();
+
+  factory DeactivateCustomerAccountRequest.fromBuffer(
+          $core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DeactivateCustomerAccountRequest()..mergeFromBuffer(data, registry);
+  factory DeactivateCustomerAccountRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DeactivateCustomerAccountRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DeactivateCustomerAccountRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: DeactivateCustomerAccountRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'accountId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DeactivateCustomerAccountRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DeactivateCustomerAccountRequest copyWith(
+          void Function(DeactivateCustomerAccountRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as DeactivateCustomerAccountRequest))
+          as DeactivateCustomerAccountRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use DeactivateCustomerAccountRequest() / DeactivateCustomerAccountRequest.new instead')
+  static DeactivateCustomerAccountRequest create() =>
+      DeactivateCustomerAccountRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      DeactivateCustomerAccountRequest._();
+  @$core.override
+  DeactivateCustomerAccountRequest createEmptyInstance() =>
+      DeactivateCustomerAccountRequest._();
+  @$core.pragma('dart2js:noInline')
+  static DeactivateCustomerAccountRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<DeactivateCustomerAccountRequest>(
+          DeactivateCustomerAccountRequest.$_createMessage);
+  static DeactivateCustomerAccountRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get accountId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set accountId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasAccountId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearAccountId() => $_clearField(1);
+}
+
+class DeactivateCustomerAccountResponse extends $pb.GeneratedMessage {
+  factory DeactivateCustomerAccountResponse() =>
+      DeactivateCustomerAccountResponse._();
+
+  DeactivateCustomerAccountResponse._();
+
+  factory DeactivateCustomerAccountResponse.fromBuffer(
+          $core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DeactivateCustomerAccountResponse()..mergeFromBuffer(data, registry);
+  factory DeactivateCustomerAccountResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      DeactivateCustomerAccountResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'DeactivateCustomerAccountResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: DeactivateCustomerAccountResponse.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DeactivateCustomerAccountResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  DeactivateCustomerAccountResponse copyWith(
+          void Function(DeactivateCustomerAccountResponse) updates) =>
+      super.copyWith((message) =>
+              updates(message as DeactivateCustomerAccountResponse))
+          as DeactivateCustomerAccountResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use DeactivateCustomerAccountResponse() / DeactivateCustomerAccountResponse.new instead')
+  static DeactivateCustomerAccountResponse create() =>
+      DeactivateCustomerAccountResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      DeactivateCustomerAccountResponse._();
+  @$core.override
+  DeactivateCustomerAccountResponse createEmptyInstance() =>
+      DeactivateCustomerAccountResponse._();
+  @$core.pragma('dart2js:noInline')
+  static DeactivateCustomerAccountResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<DeactivateCustomerAccountResponse>(
+          DeactivateCustomerAccountResponse.$_createMessage);
+  static DeactivateCustomerAccountResponse? _defaultInstance;
+}
+
+class ResetCustomerAccountPasswordRequest extends $pb.GeneratedMessage {
+  factory ResetCustomerAccountPasswordRequest({
+    $core.String? accountId,
+  }) {
+    final result = ResetCustomerAccountPasswordRequest._();
+    if (accountId != null) result.accountId = accountId;
+    return result;
+  }
+
+  ResetCustomerAccountPasswordRequest._();
+
+  factory ResetCustomerAccountPasswordRequest.fromBuffer(
+          $core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ResetCustomerAccountPasswordRequest()..mergeFromBuffer(data, registry);
+  factory ResetCustomerAccountPasswordRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ResetCustomerAccountPasswordRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ResetCustomerAccountPasswordRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: ResetCustomerAccountPasswordRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'accountId')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ResetCustomerAccountPasswordRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ResetCustomerAccountPasswordRequest copyWith(
+          void Function(ResetCustomerAccountPasswordRequest) updates) =>
+      super.copyWith((message) =>
+              updates(message as ResetCustomerAccountPasswordRequest))
+          as ResetCustomerAccountPasswordRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ResetCustomerAccountPasswordRequest() / ResetCustomerAccountPasswordRequest.new instead')
+  static ResetCustomerAccountPasswordRequest create() =>
+      ResetCustomerAccountPasswordRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      ResetCustomerAccountPasswordRequest._();
+  @$core.override
+  ResetCustomerAccountPasswordRequest createEmptyInstance() =>
+      ResetCustomerAccountPasswordRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ResetCustomerAccountPasswordRequest getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<
+              ResetCustomerAccountPasswordRequest>(
+          ResetCustomerAccountPasswordRequest.$_createMessage);
+  static ResetCustomerAccountPasswordRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get accountId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set accountId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasAccountId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearAccountId() => $_clearField(1);
+}
+
+class ResetCustomerAccountPasswordResponse extends $pb.GeneratedMessage {
+  factory ResetCustomerAccountPasswordResponse({
+    $core.String? tempPassword,
+    $core.String? tempExpiresAt,
+  }) {
+    final result = ResetCustomerAccountPasswordResponse._();
+    if (tempPassword != null) result.tempPassword = tempPassword;
+    if (tempExpiresAt != null) result.tempExpiresAt = tempExpiresAt;
+    return result;
+  }
+
+  ResetCustomerAccountPasswordResponse._();
+
+  factory ResetCustomerAccountPasswordResponse.fromBuffer(
+          $core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ResetCustomerAccountPasswordResponse()..mergeFromBuffer(data, registry);
+  factory ResetCustomerAccountPasswordResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ResetCustomerAccountPasswordResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ResetCustomerAccountPasswordResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'customers.v1'),
+      createEmptyInstance: ResetCustomerAccountPasswordResponse.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'tempPassword')
+    ..aOS(2, _omitFieldNames ? '' : 'tempExpiresAt')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ResetCustomerAccountPasswordResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ResetCustomerAccountPasswordResponse copyWith(
+          void Function(ResetCustomerAccountPasswordResponse) updates) =>
+      super.copyWith((message) =>
+              updates(message as ResetCustomerAccountPasswordResponse))
+          as ResetCustomerAccountPasswordResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ResetCustomerAccountPasswordResponse() / ResetCustomerAccountPasswordResponse.new instead')
+  static ResetCustomerAccountPasswordResponse create() =>
+      ResetCustomerAccountPasswordResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      ResetCustomerAccountPasswordResponse._();
+  @$core.override
+  ResetCustomerAccountPasswordResponse createEmptyInstance() =>
+      ResetCustomerAccountPasswordResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ResetCustomerAccountPasswordResponse getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<
+              ResetCustomerAccountPasswordResponse>(
+          ResetCustomerAccountPasswordResponse.$_createMessage);
+  static ResetCustomerAccountPasswordResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get tempPassword => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set tempPassword($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasTempPassword() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearTempPassword() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get tempExpiresAt => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set tempExpiresAt($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasTempExpiresAt() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearTempExpiresAt() => $_clearField(2);
+}
+
 /// CustomerService:客戶主檔管理(dept_admin/staff 限所屬部門)。
 class CustomerServiceApi {
   final $pb.RpcClient _client;
@@ -3042,6 +3685,54 @@ class CustomerServiceApi {
           $pb.ClientContext? ctx, GetCustomerQRCodeRequest request) =>
       _client.invoke<GetCustomerQRCodeResponse>(ctx, 'CustomerService',
           'GetCustomerQRCode', request, GetCustomerQRCodeResponse());
+}
+
+/// ---- CustomerAccountService:店家自助管理登入帳號(D22/規格 4.2,Task 6.7) ----
+///
+/// 僅**客戶主帳號**可呼叫(is_primary):主帳號是該客戶帳號體系的唯一管理者,也是它唯一被允許的
+/// 功能面(業務 API 一律 403,見 server.protectedRPC 與 OpenFGA 的 primary_account 排除)。
+/// 範圍僅限自己客戶,不得觸及其他客戶或員工帳號。
+///
+/// 子帳號無管理權限(本服務對非主帳號一律拒絕);建立客戶時自動附帶的**業務子帳號**
+/// (system_generated=true)店家可檢視但不可改名/停用/重置 —— 它專供所屬業務使用,店家並無其密碼。
+class CustomerAccountServiceApi {
+  final $pb.RpcClient _client;
+
+  CustomerAccountServiceApi(this._client);
+
+  $async.Future<ListCustomerAccountsResponse> listCustomerAccounts(
+          $pb.ClientContext? ctx, ListCustomerAccountsRequest request) =>
+      _client.invoke<ListCustomerAccountsResponse>(
+          ctx,
+          'CustomerAccountService',
+          'ListCustomerAccounts',
+          request,
+          ListCustomerAccountsResponse());
+  $async.Future<CreateCustomerAccountResponse> createCustomerAccount(
+          $pb.ClientContext? ctx, CreateCustomerAccountRequest request) =>
+      _client.invoke<CreateCustomerAccountResponse>(
+          ctx,
+          'CustomerAccountService',
+          'CreateCustomerAccount',
+          request,
+          CreateCustomerAccountResponse());
+  $async.Future<DeactivateCustomerAccountResponse> deactivateCustomerAccount(
+          $pb.ClientContext? ctx, DeactivateCustomerAccountRequest request) =>
+      _client.invoke<DeactivateCustomerAccountResponse>(
+          ctx,
+          'CustomerAccountService',
+          'DeactivateCustomerAccount',
+          request,
+          DeactivateCustomerAccountResponse());
+  $async.Future<ResetCustomerAccountPasswordResponse>
+      resetCustomerAccountPassword($pb.ClientContext? ctx,
+              ResetCustomerAccountPasswordRequest request) =>
+          _client.invoke<ResetCustomerAccountPasswordResponse>(
+              ctx,
+              'CustomerAccountService',
+              'ResetCustomerAccountPassword',
+              request,
+              ResetCustomerAccountPasswordResponse());
 }
 
 const $core.bool _omitFieldNames =

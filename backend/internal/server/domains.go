@@ -122,6 +122,7 @@ func (s *Server) mountAuth() {
 	services.RegisterMetadictServices(apiMux, entClient)                                          // MetadictService(03 Task 2)
 	services.RegisterAuditServices(apiMux, entClient)                                             // AuditService(03 Task 6, A4)
 	services.RegisterCustomerServices(apiMux, entClient, s.cfg.Auth.FrontendURL, entSvc)          // CustomerService(04 Task 1-2 + D22 帳號交付 URL)
+	services.RegisterCustomerAccountService(apiMux, entClient)                                    // 店家自助帳號管理(D22 Task 6.7:主帳號唯一可達面)
 	services.SetQRSecret(s.cfg.Auth.JWTSecret)                                                    // QR 簽章密鑰(JWT 複用;04 Task 3.8.1)
 	services.SetPrintPipeline(print.NewClient(s.cfg.API.GotenbergURL), s.cfg.Storage.StorageRoot) // PDF 產線(09 Task 5.4)
 	// 04 Task 3.4 部門級主檔(Warehouse/Route/ProcessingSpec/ProductCategory)。

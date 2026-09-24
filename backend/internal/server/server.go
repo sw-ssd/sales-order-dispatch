@@ -139,6 +139,13 @@ var protectedRPC = map[string]rpcAuth{
 	"/products.v1.ProductService/UpdateProduct":            {"product", "write"},
 	"/products.v1.ProductService/DeleteProduct":            {"product", "write"},
 	"/products.v1.ProductService/RestoreProduct":           {"product", "write"},
+	// 店家自助帳號管理(D22/規格 4.2):主帳號唯一可達面。資源 customer_account **不在**主帳號的
+	// 排除清單(authz.PrimaryAccountDeniedResources 永久排除它),故主帳號在此通過;
+	// 子帳號雖同角色也能過這道閘門,但由服務層的 is_primary 檢查擋下(規格:子帳號無管理權限)。
+	"/customers.v1.CustomerAccountService/ListCustomerAccounts":         {"customer_account", "read"},
+	"/customers.v1.CustomerAccountService/CreateCustomerAccount":        {"customer_account", "write"},
+	"/customers.v1.CustomerAccountService/DeactivateCustomerAccount":    {"customer_account", "write"},
+	"/customers.v1.CustomerAccountService/ResetCustomerAccountPassword": {"customer_account", "write"},
 }
 
 // SetOpenFGA 注入 OpenFGA 授權引擎(啟動組裝時;nil 則跳過 middleware 檢查)。

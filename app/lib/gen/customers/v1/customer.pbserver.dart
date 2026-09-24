@@ -131,3 +131,55 @@ abstract class CustomerServiceBase extends $pb.GeneratedService {
   $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
       get $messageJson => CustomerServiceBase$messageJson;
 }
+
+abstract class CustomerAccountServiceBase extends $pb.GeneratedService {
+  $async.Future<$1.ListCustomerAccountsResponse> listCustomerAccounts(
+      $pb.ServerContext ctx, $1.ListCustomerAccountsRequest request);
+  $async.Future<$1.CreateCustomerAccountResponse> createCustomerAccount(
+      $pb.ServerContext ctx, $1.CreateCustomerAccountRequest request);
+  $async.Future<$1.DeactivateCustomerAccountResponse> deactivateCustomerAccount(
+      $pb.ServerContext ctx, $1.DeactivateCustomerAccountRequest request);
+  $async.Future<$1.ResetCustomerAccountPasswordResponse>
+      resetCustomerAccountPassword($pb.ServerContext ctx,
+          $1.ResetCustomerAccountPasswordRequest request);
+
+  $pb.GeneratedMessage createRequest($core.String methodName) {
+    switch (methodName) {
+      case 'ListCustomerAccounts':
+        return $1.ListCustomerAccountsRequest();
+      case 'CreateCustomerAccount':
+        return $1.CreateCustomerAccountRequest();
+      case 'DeactivateCustomerAccount':
+        return $1.DeactivateCustomerAccountRequest();
+      case 'ResetCustomerAccountPassword':
+        return $1.ResetCustomerAccountPasswordRequest();
+      default:
+        throw $core.ArgumentError('Unknown method: $methodName');
+    }
+  }
+
+  $async.Future<$pb.GeneratedMessage> handleCall($pb.ServerContext ctx,
+      $core.String methodName, $pb.GeneratedMessage request) {
+    switch (methodName) {
+      case 'ListCustomerAccounts':
+        return listCustomerAccounts(
+            ctx, request as $1.ListCustomerAccountsRequest);
+      case 'CreateCustomerAccount':
+        return createCustomerAccount(
+            ctx, request as $1.CreateCustomerAccountRequest);
+      case 'DeactivateCustomerAccount':
+        return deactivateCustomerAccount(
+            ctx, request as $1.DeactivateCustomerAccountRequest);
+      case 'ResetCustomerAccountPassword':
+        return resetCustomerAccountPassword(
+            ctx, request as $1.ResetCustomerAccountPasswordRequest);
+      default:
+        throw $core.ArgumentError('Unknown method: $methodName');
+    }
+  }
+
+  $core.Map<$core.String, $core.dynamic> get $json =>
+      CustomerAccountServiceBase$json;
+  $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
+      get $messageJson => CustomerAccountServiceBase$messageJson;
+}

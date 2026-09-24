@@ -44,7 +44,10 @@ func PrimaryAccountDeniedResources() []string {
 	seen := map[string]bool{}
 	var out []string
 	for _, p := range auth.BuiltinRolePermissions() {
-		if p.Role != "customer" || seen[p.Resource] {
+		// accountManagementResource 是主帳號**唯一被允許**的功能面(規格 4.2:主帳號登入僅供
+		// 帳號管理)。若它哪天被納入 customer 角色權限,這裡必須排除 —— 否則推導會把它一起 deny,
+		// 主帳號就什麼都做不了(含它唯一該能做的事)。
+		if p.Role != "customer" || p.Resource == accountManagementResource || seen[p.Resource] {
 			continue
 		}
 		seen[p.Resource] = true
@@ -53,6 +56,10 @@ func PrimaryAccountDeniedResources() []string {
 	sort.Strings(out)
 	return out
 }
+
+// accountManagementResource 為店家自助帳號管理的權限資源名(CustomerAccountService)。
+// 主帳號的排除清單必須永遠不含它(見 PrimaryAccountDeniedResources)。
+const accountManagementResource = "customer_account"
 
 // managedTuple 判斷 tuple 是否屬本 reconcile 管理範圍(role→ability 與 user→role),
 // 避免誤刪非本模組寫入的其他 tuple。

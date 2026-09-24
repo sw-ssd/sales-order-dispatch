@@ -1079,6 +1079,203 @@ export declare type GetCustomerQRCodeResponse = Message<"customers.v1.GetCustome
 export declare const GetCustomerQRCodeResponseSchema: GenMessage<GetCustomerQRCodeResponse>;
 
 /**
+ * CustomerAccount:登入帳號(不含密碼欄位)。
+ *
+ * @generated from message customers.v1.CustomerAccount
+ */
+export declare type CustomerAccount = Message<"customers.v1.CustomerAccount"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string account_name = 2;
+   */
+  accountName: string;
+
+  /**
+   * 主帳號(清單恆含自己,標記供 UI 區隔)
+   *
+   * @generated from field: bool is_primary = 3;
+   */
+  isPrimary: boolean;
+
+  /**
+   * 自動附帶的業務子帳號 → UI 灰化,不可管理
+   *
+   * @generated from field: bool system_generated = 4;
+   */
+  systemGenerated: boolean;
+
+  /**
+   * 目前操作者可否管理(改名/停用/重置);false = 唯讀
+   *
+   * @generated from field: bool manageable = 5;
+   */
+  manageable: boolean;
+
+  /**
+   * @generated from field: string status = 6;
+   */
+  status: string;
+
+  /**
+   * RFC3339
+   *
+   * @generated from field: string created_at = 7;
+   */
+  createdAt: string;
+};
+
+/**
+ * Describes the message customers.v1.CustomerAccount.
+ * Use `create(CustomerAccountSchema)` to create a new message.
+ */
+export declare const CustomerAccountSchema: GenMessage<CustomerAccount>;
+
+/**
+ * @generated from message customers.v1.ListCustomerAccountsRequest
+ */
+export declare type ListCustomerAccountsRequest = Message<"customers.v1.ListCustomerAccountsRequest"> & {
+};
+
+/**
+ * Describes the message customers.v1.ListCustomerAccountsRequest.
+ * Use `create(ListCustomerAccountsRequestSchema)` to create a new message.
+ */
+export declare const ListCustomerAccountsRequestSchema: GenMessage<ListCustomerAccountsRequest>;
+
+/**
+ * @generated from message customers.v1.ListCustomerAccountsResponse
+ */
+export declare type ListCustomerAccountsResponse = Message<"customers.v1.ListCustomerAccountsResponse"> & {
+  /**
+   * @generated from field: repeated customers.v1.CustomerAccount accounts = 1;
+   */
+  accounts: CustomerAccount[];
+};
+
+/**
+ * Describes the message customers.v1.ListCustomerAccountsResponse.
+ * Use `create(ListCustomerAccountsResponseSchema)` to create a new message.
+ */
+export declare const ListCustomerAccountsResponseSchema: GenMessage<ListCustomerAccountsResponse>;
+
+/**
+ * @generated from message customers.v1.CreateCustomerAccountRequest
+ */
+export declare type CreateCustomerAccountRequest = Message<"customers.v1.CreateCustomerAccountRequest"> & {
+  /**
+   * 客戶內唯一(規格 4.2)
+   *
+   * @generated from field: string account_name = 1;
+   */
+  accountName: string;
+};
+
+/**
+ * Describes the message customers.v1.CreateCustomerAccountRequest.
+ * Use `create(CreateCustomerAccountRequestSchema)` to create a new message.
+ */
+export declare const CreateCustomerAccountRequestSchema: GenMessage<CreateCustomerAccountRequest>;
+
+/**
+ * @generated from message customers.v1.CreateCustomerAccountResponse
+ */
+export declare type CreateCustomerAccountResponse = Message<"customers.v1.CreateCustomerAccountResponse"> & {
+  /**
+   * @generated from field: customers.v1.CustomerAccount account = 1;
+   */
+  account?: CustomerAccount | undefined;
+
+  /**
+   * 24h 臨時密碼,僅本次回應回傳
+   *
+   * @generated from field: string temp_password = 2;
+   */
+  tempPassword: string;
+
+  /**
+   * RFC3339
+   *
+   * @generated from field: string temp_expires_at = 3;
+   */
+  tempExpiresAt: string;
+};
+
+/**
+ * Describes the message customers.v1.CreateCustomerAccountResponse.
+ * Use `create(CreateCustomerAccountResponseSchema)` to create a new message.
+ */
+export declare const CreateCustomerAccountResponseSchema: GenMessage<CreateCustomerAccountResponse>;
+
+/**
+ * @generated from message customers.v1.DeactivateCustomerAccountRequest
+ */
+export declare type DeactivateCustomerAccountRequest = Message<"customers.v1.DeactivateCustomerAccountRequest"> & {
+  /**
+   * @generated from field: string account_id = 1;
+   */
+  accountId: string;
+};
+
+/**
+ * Describes the message customers.v1.DeactivateCustomerAccountRequest.
+ * Use `create(DeactivateCustomerAccountRequestSchema)` to create a new message.
+ */
+export declare const DeactivateCustomerAccountRequestSchema: GenMessage<DeactivateCustomerAccountRequest>;
+
+/**
+ * @generated from message customers.v1.DeactivateCustomerAccountResponse
+ */
+export declare type DeactivateCustomerAccountResponse = Message<"customers.v1.DeactivateCustomerAccountResponse"> & {
+};
+
+/**
+ * Describes the message customers.v1.DeactivateCustomerAccountResponse.
+ * Use `create(DeactivateCustomerAccountResponseSchema)` to create a new message.
+ */
+export declare const DeactivateCustomerAccountResponseSchema: GenMessage<DeactivateCustomerAccountResponse>;
+
+/**
+ * @generated from message customers.v1.ResetCustomerAccountPasswordRequest
+ */
+export declare type ResetCustomerAccountPasswordRequest = Message<"customers.v1.ResetCustomerAccountPasswordRequest"> & {
+  /**
+   * @generated from field: string account_id = 1;
+   */
+  accountId: string;
+};
+
+/**
+ * Describes the message customers.v1.ResetCustomerAccountPasswordRequest.
+ * Use `create(ResetCustomerAccountPasswordRequestSchema)` to create a new message.
+ */
+export declare const ResetCustomerAccountPasswordRequestSchema: GenMessage<ResetCustomerAccountPasswordRequest>;
+
+/**
+ * @generated from message customers.v1.ResetCustomerAccountPasswordResponse
+ */
+export declare type ResetCustomerAccountPasswordResponse = Message<"customers.v1.ResetCustomerAccountPasswordResponse"> & {
+  /**
+   * @generated from field: string temp_password = 1;
+   */
+  tempPassword: string;
+
+  /**
+   * @generated from field: string temp_expires_at = 2;
+   */
+  tempExpiresAt: string;
+};
+
+/**
+ * Describes the message customers.v1.ResetCustomerAccountPasswordResponse.
+ * Use `create(ResetCustomerAccountPasswordResponseSchema)` to create a new message.
+ */
+export declare const ResetCustomerAccountPasswordResponseSchema: GenMessage<ResetCustomerAccountPasswordResponse>;
+
+/**
  * CustomerService:客戶主檔管理(dept_admin/staff 限所屬部門)。
  *
  * @generated from service customers.v1.CustomerService
@@ -1219,6 +1416,53 @@ export declare const CustomerService: GenService<{
     methodKind: "unary";
     input: typeof GetCustomerQRCodeRequestSchema;
     output: typeof GetCustomerQRCodeResponseSchema;
+  },
+}>;
+
+/**
+ * ---- CustomerAccountService:店家自助管理登入帳號(D22/規格 4.2,Task 6.7) ----
+ *
+ * 僅**客戶主帳號**可呼叫(is_primary):主帳號是該客戶帳號體系的唯一管理者,也是它唯一被允許的
+ * 功能面(業務 API 一律 403,見 server.protectedRPC 與 OpenFGA 的 primary_account 排除)。
+ * 範圍僅限自己客戶,不得觸及其他客戶或員工帳號。
+ *
+ * 子帳號無管理權限(本服務對非主帳號一律拒絕);建立客戶時自動附帶的**業務子帳號**
+ * (system_generated=true)店家可檢視但不可改名/停用/重置 —— 它專供所屬業務使用,店家並無其密碼。
+ *
+ * @generated from service customers.v1.CustomerAccountService
+ */
+export declare const CustomerAccountService: GenService<{
+  /**
+   * @generated from rpc customers.v1.CustomerAccountService.ListCustomerAccounts
+   */
+  listCustomerAccounts: {
+    methodKind: "unary";
+    input: typeof ListCustomerAccountsRequestSchema;
+    output: typeof ListCustomerAccountsResponseSchema;
+  },
+  /**
+   * @generated from rpc customers.v1.CustomerAccountService.CreateCustomerAccount
+   */
+  createCustomerAccount: {
+    methodKind: "unary";
+    input: typeof CreateCustomerAccountRequestSchema;
+    output: typeof CreateCustomerAccountResponseSchema;
+  },
+  /**
+   * @generated from rpc customers.v1.CustomerAccountService.DeactivateCustomerAccount
+   */
+  deactivateCustomerAccount: {
+    methodKind: "unary";
+    input: typeof DeactivateCustomerAccountRequestSchema;
+    output: typeof DeactivateCustomerAccountResponseSchema;
+  },
+  /**
+   * @generated from rpc customers.v1.CustomerAccountService.ResetCustomerAccountPassword
+   */
+  resetCustomerAccountPassword: {
+    methodKind: "unary";
+    input: typeof ResetCustomerAccountPasswordRequestSchema;
+    output: typeof ResetCustomerAccountPasswordResponseSchema;
   },
 }>;
 
