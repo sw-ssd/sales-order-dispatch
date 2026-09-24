@@ -5,7 +5,7 @@
 > - 相依文件:無(本文件為所有 domain 的前置);被相依:`02-tenancy-users.md`(2.9 接管 1.8)、其餘全部文件(認證 middleware、RLS 注入、稽核入口)。
 > - 範圍註記:Task 1.9(前端登入與路由守衛)、1.10(App 登入)為前端/App 範圍,不在本文件;本文件僅提供其所需後端介面(1.4 導向端點、1.6 JWT/refresh、1.8 ability、3.8 QR token 見 `04-master-data.md`)。
 
-> ⚠️ **D32 覆寫(2026-09-17)**:本文件所述 **Casbin / CASL** 機制已被「授權改用 **OpenFGA + RLS**、CASL 移除」取代。凡與 D32 衝突處以 D32 為準;`1.2.x` enforcer 改為 OpenFGA client(見下)、`1.8.x` CASL JSON 改為 OpenFGA 驅動的權限回應、`1.11.x` developer 繞過 OpenFGA **Check**(RLS 注入不變)。詳細授權層實作模式見 `10-fleet-execution.md` §10.8。
+> ⚠️ **D32 覆寫(2026-09-17)**:本文件所述 **Casbin / CASL** 機制已被「授權改用 **OpenFGA + RLS**、CASL 移除」取代。凡與 D32 衝突處以 D32 為準;`1.2.x` enforcer 改為 OpenFGA client(見下)、`1.8.x` CASL JSON 改為 OpenFGA 驅動的權限回應、`1.11.x` developer 繞過 OpenFGA **Check**(RLS 注入不變)。詳細授權層實作模式見 `10-logistics-execution.md` §10.8。
 
 ---
 
@@ -77,13 +77,13 @@
 
 ## 子功能 1.2.1: OpenFGA 授權模型與 store 初始化(D32)
 
-- **目標**: 以 OpenFGA 定義資源級授權(型別/relations/userset rewrite),取代 Casbin RBAC with domain。相依: D32、`10-fleet-execution.md` §10.8(同模式)。
+- **目標**: 以 OpenFGA 定義資源級授權(型別/relations/userset rewrite),取代 Casbin RBAC with domain。相依: D32、`10-logistics-execution.md` §10.8(同模式)。
 - **檔案**:
   - Create `backend/internal/authz/openfga.go`(client + store 初始化)
   - Create `third_party/openfga`(client,PostgreSQL datastore、單一 store)
 - **介面**: `authz.NewClient(cfg) (*openfga.Client, error)`;`authz.Check(ctx, user, relation, object) (bool, error)`;`authz.ListObjects(...)`(資源可見性);`authz.Write / Delete(tuples)`。
 - **實作邏輯**:
-  1. 型別:`company` / `department` 租戶型別 + `role`/`group`/`system`;資源(`driver`/`vehicle`/`fleet_delivery`/...)以租戶 parent 邊 + **userset rewrite** 繼承,不必逐筆 tuple。
+  1. 型別:`company` / `department` 租戶型別 + `role`/`group`/`system`;資源(`driver`/`vehicle`/`logistics_delivery`/...)以租戶 parent 邊 + **userset rewrite** 繼承,不必逐筆 tuple。
   2. 資源名稱詞彙對齊功能權限(如 `customers`、`sales_orders`、`roles`),供功能權限矩陣與 API 權限管理(**2.10 改為 tuple 管理**)共用。
   3. client singleton 注入 middleware(1.6.5)與各 domain handler。
 - **錯誤處理**: store 初始化失敗 → 啟動 fail-fast;`Check` 執行期錯誤記 log 並 deny(預設拒絕)。
@@ -100,7 +100,7 @@
 - **實作邏輯**:
   1. OpenFGA 以 PostgreSQL datastore 儲存 tuple(單一 store);內部表與業務表同庫、僅後端存取。
   2. tuple 異動經 Valkey pub/sub 廣播(複用 D14 跨 replica 基礎設施),其他 replica 重讀 store。
-  3. 角色/指派/資源歸屬異動**經事件流同步寫入 OpenFGA tuple**(見 `10-fleet-execution.md` §10.8),不在業務 handler 內同步處理。
+  3. 角色/指派/資源歸屬異動**經事件流同步寫入 OpenFGA tuple**(見 `10-logistics-execution.md` §10.8),不在業務 handler 內同步處理。
 - **錯誤處理**: datastore 連線失敗 → 啟動 fail-fast;寫入失敗回寫稽核並提示。
 - **驗收**:
   - [ ] 重啟後 tuple 仍存在;新增 role→resource tuple 後不重啟即生效。
@@ -116,7 +116,7 @@
 - **實作邏輯**:
   1. 依規格 §3.4 預設矩陣建立**model**:型別 `company` / `department` / `role`/`group`/`system` + 資源(`sales_order`/`customer`/`role`/...)與其 relation(`writer`/`reader`/`assignee`…);以 **userset rewrite** 承載「角色→action→資源」,`super` 以 `system` 型別對全域資源建 relation。
   2. seeder 冪等:以「type/relation 不存在才建立、tuple 不存在才寫入」方式執行,重跑不重複;使用者後續於 2.10 調整的 tuple 不被覆蓋(只補缺,不還原)。
-  3. 使用者→角色指派(**對應原 `g` 規則**)不在 seeder,由 2.3.1 使用者 CRUD / 角色變更**經事件流寫入 OpenFGA tuple**(見 `10-fleet-execution.md` §10.8)。
+  3. 使用者→角色指派(**對應原 `g` 規則**)不在 seeder,由 2.3.1 使用者 CRUD / 角色變更**經事件流寫入 OpenFGA tuple**(見 `10-logistics-execution.md` §10.8)。
 - **錯誤處理**: seed 失敗 → 啟動 fail-fast(無預設授權的系統不可用)。
 - **驗收**:
   - [ ] 全新部署後:`staff` 無法存取他部門資源、`company_admin` 可跨部門限自己公司、`super` 可存取所有公司(以 OpenFGA `Check` 驗證)。

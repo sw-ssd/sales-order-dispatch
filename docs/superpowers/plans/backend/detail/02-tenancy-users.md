@@ -11,7 +11,7 @@ decisions: [D3, D4, D5, D6, D7, D8, D9, D10, D17, D18, D20, D21]
 > 對應原計畫 Phase 2 的 Task 2.1、2.2、2.3、2.4、2.9、2.10(Task 2.5、2.6 見 `03-metadicts-audit.md`;Task 2.7、2.8、2.11 為前端,不在本文件)。
 > 子功能編號可雙向追溯原計畫 Task;每個子功能六欄(目標/檔案/介面/實作邏輯/錯誤處理/驗收)即為該單元的 done 定義。
 
-> ⚠️ **D32 覆寫(2026-09-17)**:本文件所述 **Casbin / CASL** 機制已被「授權改用 **OpenFGA + RLS**、CASL 移除」取代。`2.10`(API 權限管理)由「Casbin policy」改為 **OpenFGA tuple 管理**;`2.9` 的 CASL `GetAbility` 改為 OpenFGA 驅動的權限回應;RLS(data_scope)職責不變。詳細授權層見 `01-auth.md` 1.2.x 與 `10-fleet-execution.md` §10.8。凡與 D32 衝突處以 D32 為準。
+> ⚠️ **D32 覆寫(2026-09-17)**:本文件所述 **Casbin / CASL** 機制已被「授權改用 **OpenFGA + RLS**、CASL 移除」取代。`2.10`(API 權限管理)由「Casbin policy」改為 **OpenFGA tuple 管理**;`2.9` 的 CASL `GetAbility` 改為 OpenFGA 驅動的權限回應;RLS(data_scope)職責不變。詳細授權層見 `01-auth.md` 1.2.x 與 `10-logistics-execution.md` §10.8。凡與 D32 衝突處以 D32 為準。
 
 ## 共通規則(各子功能引用、不重複)
 

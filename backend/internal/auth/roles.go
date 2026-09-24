@@ -49,8 +49,8 @@ var rolePolicy = map[string]map[string][]string{
 		"notification":   {"*"},
 		// 公告 CMS:dept_admin 僅可管理本部門層（ AnnouncementService 範圍守衛）。
 		"announcement": {"read", "write"},
-		// fleet 執行層(D32/10.1):建檔(司機/車輛)與車次指派為後台動作。
-		"fleet": {"*"},
+		// logistics 執行層(D32/10.1):建檔(司機/車輛)與車次指派為後台動作。
+		"logistics": {"*"},
 	},
 	"staff": {
 		"customer":    {"*"},
@@ -59,9 +59,9 @@ var rolePolicy = map[string]map[string][]string{
 		"print":       {"*"},
 		"dispatch":    {"read"},
 		"accounting":  {"read"},
-		// fleet:staff 只讀 —— 司機身分(角色多為 staff)要開 ListMyDeliveries;
+		// logistics:staff 只讀 —— 司機身分(角色多為 staff)要開 ListMyDeliveries;
 		// 寫(建檔/指派)限 dept_admin 以上(10.1 驗收:dept_admin 建車/建司機)。
-		"fleet": {"read"},
+		"logistics": {"read"},
 		// 退貨:staff 可看、可審 —— 審核權再由服務層收斂到「該客戶主責業務」
 		// (return_review.go canReview);此處只給類別,不給個別客戶的判斷。
 		"return_request": {"read", "write"},
@@ -175,7 +175,7 @@ func actionAllowed(acts []string, act string) bool {
 var adminResources = []string{
 	"company", "department", "user", "role",
 	"sales_order", "customer", "product", "print", "dispatch", "accounting",
-	"return_request", "notification", "audit_log", "announcement", "fleet",
+	"return_request", "notification", "audit_log", "announcement", "logistics",
 }
 
 // PermissionSeed 描述單一 role_permissions 種子列( role code → resource → action )。

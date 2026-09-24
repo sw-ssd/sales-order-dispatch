@@ -1,0 +1,105 @@
+syntax = "proto3";
+
+package salesorder.v1;
+option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1";
+
+// LogisticsService:logistics 執行層首批(D32/10.1/10.4/10.12)。
+// 建檔(司機/車輛)與指派為後台動作(dept_admin 以上;rolePolicy logistics);
+// ListMyDeliveries 為**被指派司機本人**的任務清單(10.12:身分必須對應 logistics_drivers 列,
+// instance 級每列再經 OpenFGA Check —— 10.8:被指派司機可操作其 delivery、他人 403)。
+service LogisticsService {
+  // CreateDriver:建司機(關聯既有 users;同部門 user 不重複建)。
+  rpc CreateDriver(CreateDriverRequest) returns (CreateDriverResponse);
+  // CreateVehicle:建車輛(plate_no 部門內唯一,重複 → already_exists)。
+  rpc CreateVehicle(CreateVehicleRequest) returns (CreateVehicleResponse);
+  // AssignDelivery:指派車次 → 司機/車輛(粒度 = route;存在即重指派,
+  // version 樂觀鎖:衝突 → failed_precondition;同交易寫稽核,tuple 經 AfterCommit 同步)。
+  rpc AssignDelivery(AssignDeliveryRequest) returns (AssignDeliveryResponse);
+  // ListMyDeliveries:我(drivers.user_id = 身分)被指派的配送清單。
+  rpc ListMyDeliveries(ListMyDeliveriesRequest) returns (ListMyDeliveriesResponse);
+}
+
+// LogisticsDriver:司機單筆。
+message LogisticsDriver {
+  string id = 1;
+  string company_id = 2;
+  string department_id = 3;
+  string user_id = 4; // 關聯 users.id
+  string name = 5;
+  string phone = 6;
+  string current_status = 7; // online / offline / on_task
+}
+
+// CreateDriverRequest:建司機請求。
+message CreateDriverRequest {
+  string user_id = 1; // 必填:既有使用者
+  string name = 2;    // 必填
+  string phone = 3;   // 可空
+}
+
+// CreateDriverResponse:建司機結果。
+message CreateDriverResponse {
+  LogisticsDriver driver = 1;
+}
+
+// Vehicle:車輛單筆。
+message Vehicle {
+  string id = 1;
+  string company_id = 2;
+  string department_id = 3;
+  string plate_no = 4;
+  string vehicle_type = 5;
+  string status = 6; // idle / in_use / maintenance
+}
+
+// CreateVehicleRequest:建車輛請求。
+message CreateVehicleRequest {
+  string plate_no = 1;    // 必填
+  string vehicle_type = 2; // 可空
+}
+
+// CreateVehicleResponse:建車輛結果。
+message CreateVehicleResponse {
+  Vehicle vehicle = 1;
+}
+
+// LogisticsDelivery:配送執行單元(route 粒度)。
+message LogisticsDelivery {
+  string id = 1;
+  string company_id = 2;
+  string department_id = 3;
+  string route_id = 4;
+  string driver_id = 5;  // 可空
+  string vehicle_id = 6; // 可空
+  string assigned_by = 7;
+  string status = 8;     // pending / in_progress / completed / cancelled
+  string version = 9;    // 樂觀鎖(字串型別便於前端原樣回填,同退貨 expected_version 慣例)
+  string created_at = 10; // RFC3339
+  string updated_at = 11; // RFC3339
+}
+
+// AssignDeliveryRequest:指派請求。
+// 新建時 version 帶 "0";重指派帶讀取到的 version(不符 → failed_precondition)。
+message AssignDeliveryRequest {
+  string route_id = 1;
+  string driver_id = 2;  // 空 = 解除指派
+  string vehicle_id = 3; // 空 = 解除指派
+  string version = 4;
+}
+
+// AssignDeliveryResponse:指派結果(含遞增後的 version)。
+message AssignDeliveryResponse {
+  LogisticsDelivery delivery = 1;
+}
+
+// ListMyDeliveriesRequest:我的配送清單請求。
+message ListMyDeliveriesRequest {
+  int32 page = 1;      // 1-based,預設 1
+  int32 page_size = 2; // 預設 20,上限 100
+}
+
+// ListMyDeliveriesResponse:我的配送清單結果。
+message ListMyDeliveriesResponse {
+  repeated LogisticsDelivery deliveries = 1;
+  int32 total = 2;
+}

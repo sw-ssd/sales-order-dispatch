@@ -4,7 +4,7 @@
 
 **Goal:** 以 CASL JSON 為前後端同源的第二權限模型——後端 Go 自研評估器執行 list 查詢過濾與單筆實例檢查（env 開關控制），前端 SolidJS 以 `@casl/ability` 自寫 binding 驅動路由守衛與顯示控制；Casbin 與 RLS 不動。
 
-> ⚠️ **D32 作廢（2026-09-17）**：CASL 已移除，本計畫**作廢**（不再執行）。前端 UI 權限改由 **OpenFGA `Check` / `list-objects`** 驅動；授權層見決策 D32 與 `10-fleet-execution.md` §10.8。
+> ⚠️ **D32 作廢（2026-09-17）**：CASL 已移除，本計畫**作廢**（不再執行）。前端 UI 權限改由 **OpenFGA `Check` / `list-objects`** 驅動；授權層見決策 D32 與 `10-logistics-execution.md` §10.8。
 
 **Architecture:** `role_permissions` 擴充為 CASL 規則表（conditions/inverted/sort_order），同時驅動 `GetAbility`（前端）與 `authz/casl` 引擎（後端）。後端引擎三件套：條件 AST parser → Evaluator（`Can`，反向掃規則）→ Translate（rules→SQL WHERE，對應 `rulesToQuery`）；FieldRegistry 一份定義供 SQL 翻譯、實例擷取、UI 條件建構器白名單三方消費。語意正確性以 golden fixture 對賭（真 `@casl/ability` 產生、Go 重放）。
 

@@ -5,7 +5,7 @@
 > 本文件為**唯一實作計畫**，整合原里程碑總覽與詳細任務清單；舊版計畫（`2026-07-16-sales-order-2.0-phase1.md`、`2026-07-17-multi-company-sales-order-1-0.md`、`2026-07-17-multi-company-sales-order-1-0-companies.md`、`2026-07-17-sales-order-1-0-milestones.md`）已於 2026-07-17 收斂刪除。
 > 每個 Task 包含 Goal、Files、Interfaces、Steps、Acceptance Criteria，使用 checkbox 追蹤。
 
-> ⚠️ **D32 覆寫（2026-09-17）**：授權機制由 **Casbin/CASL 改為 OpenFGA + RLS**（CASL 移除）。凡提及 Casbin 之 Task(1.2、2.10)與 CASL 之 Task(1.8、1.9、2.9)以 D32 為準(授權層見 `plans/backend/detail/01-auth.md` 1.2.x、`02-tenancy-users.md` 2.10、`10-fleet-execution.md` §10.8)。**新增 fleet 執行層 Phase 5.5（Task 5.8–5.11）**：fleet 主檔/指派/定位/簽收/OSRM，見下方 Phase 5.5 與 `plans/backend/detail/10-fleet-execution.md`（嚴格遵循 go8 架構）。
+> ⚠️ **D32 覆寫（2026-09-17）**：授權機制由 **Casbin/CASL 改為 OpenFGA + RLS**（CASL 移除）。凡提及 Casbin 之 Task(1.2、2.10)與 CASL 之 Task(1.8、1.9、2.9)以 D32 為準(授權層見 `plans/backend/detail/01-auth.md` 1.2.x、`02-tenancy-users.md` 2.10、`10-logistics-execution.md` §10.8)。**新增 logistics 執行層 Phase 5.5（Task 5.8–5.11）**：logistics 主檔/指派/定位/簽收/OSRM，見下方 Phase 5.5 與 `plans/backend/detail/10-logistics-execution.md`（嚴格遵循 go8 架構）。
 
 ---
 
@@ -1252,30 +1252,30 @@
 
 ---
 
-## Phase 5.5: fleet 執行層（物流現場執行,D32）
+## Phase 5.5: logistics 執行層（物流現場執行,D32）
 
-> D32:授權 OpenFGA + RLS、API Connect-RPC、後台指派、部門級。嚴格遵循 go8 架構(see `plans/backend/detail/10-fleet-execution.md`):`internal/domain/fleet/`(handler/usecase/repository/register/transformation 六欄)、`config/fleet.go`(OSRM/geocode)、`third_party/{openfga,osrm,geocode}`、Connect handler 於 `internal/server/domains.go` `InitDomains()` 掛載。
+> D32:授權 OpenFGA + RLS、API Connect-RPC、後台指派、部門級。嚴格遵循 go8 架構(see `plans/backend/detail/10-logistics-execution.md`):`internal/domain/logistics/`(handler/usecase/repository/register/transformation 六欄)、`config/logistics.go`(OSRM/geocode)、`third_party/{openfga,osrm,geocode}`、Connect handler 於 `internal/server/domains.go` `InitDomains()` 掛載。
 
-### Task 5.8: fleet 主檔與車次指派（FleetService + AssignmentService）
+### Task 5.8: logistics 主檔與車次指派（LogisticsService + AssignmentService）
 
-**Goal:** 建立部門級 fleet 主檔（fleets/vehicles/drivers/service_areas/zones）並以 OpenFGA + RLS 管隔離；把車次指派實際車輛/司機（後台,Fleetbase 粒度落在 `fleet_delivery`）。
+**Goal:** 建立部門級 logistics 主檔（logistics_teams/vehicles/drivers/service_areas/zones）並以 OpenFGA + RLS 管隔離；把車次指派實際車輛/司機（後台,Fleetbase 粒度落在 `logistics_delivery`）。
 
 **Files:**
-- Create: `ent/schema/fleet.go`、`vehicle.go`、`driver.go`、`service_area.go`、`zone.go`、`fleet_delivery.go`
-- Create: `backend/internal/domain/fleet/{handler.go,usecase.go,repository.go,register.go,transformation.go}`
+- Create: `ent/schema/logistics.go`、`vehicle.go`、`driver.go`、`service_area.go`、`zone.go`、`logistics_delivery.go`
+- Create: `backend/internal/domain/logistics/{handler.go,usecase.go,repository.go,register.go,transformation.go}`
 - Create: `backend/internal/authz/openfga.go`（client,PostgreSQL store）
-- Create: `backend/config/fleet.go`
-- Update: `proto/v1/fleet.proto`（FleetService/AssignmentService）;`backend/internal/server/domains.go`（InitDomains 掛載）
+- Create: `backend/config/logistics.go`
+- Update: `proto/v1/logistics.proto`（LogisticsService/AssignmentService）;`backend/internal/server/domains.go`（InitDomains 掛載）
 
 **Interfaces:**
-- `FleetService.CreateVehicle/CreateDriver/ListVehicle/ListDriver/SoftDelete*`
+- `LogisticsService.CreateVehicle/CreateDriver/ListVehicle/ListDriver/SoftDelete*`
 - `AssignmentService.AssignRouteDelivery(route_id, driver_uuid, vehicle_uuid, version)`
 
 **Steps:**
 - [ ] Step 1: Ent schema（department 級 + `deleted_at`,`plate_no` 部分唯一索引）。
-- [ ] Step 2: migration 建表 + RLS policy `fleet_dept_isolation`（`app.current_department_id`/`data_scope`）。
-- [ ] Step 3: OpenFGA model 定義 fleet 資源 + type seed;RPC 進入點 `Check`、list `list-objects`。
-- [ ] Step 4: 後台把 `route_id` 指派到 `fleet_delivery`（`driver_assigned_uuid`/`vehicle_assigned_uuid`/`version` 樂觀鎖）。
+- [ ] Step 2: migration 建表 + RLS policy `logistics_dept_isolation`（`app.current_department_id`/`data_scope`）。
+- [ ] Step 3: OpenFGA model 定義 logistics 資源 + type seed;RPC 進入點 `Check`、list `list-objects`。
+- [ ] Step 4: 後台把 `route_id` 指派到 `logistics_delivery`（`driver_assigned_uuid`/`vehicle_assigned_uuid`/`version` 樂觀鎖）。
 
 **Acceptance Criteria:**
 - [ ] 跨部門資料隔離（RLS + OpenFGA）;並發指派樂觀鎖拒絕。
@@ -1289,7 +1289,7 @@
 
 **Files:**
 - Create: `ent/schema/position.go`
-- Create: `backend/internal/domain/fleet/tracking.go`
+- Create: `backend/internal/domain/logistics/tracking.go`
 - Update: `proto/v1/tracking.proto`（`TrackingService.SubmitPosition/SubscribePositions`）
 
 **Interfaces:**
@@ -1310,15 +1310,15 @@
 **Goal:** 司機配送執行（開始/完成/取消）、POD 簽收（photo/signature/scan）、OSRM 路線/ETA。
 
 **Files:**
-- Create: `ent/schema/proof.go`;`backend/internal/domain/fleet/delivery.go`、`routing.go`
+- Create: `ent/schema/proof.go`;`backend/internal/domain/logistics/delivery.go`、`routing.go`
 - Create: `backend/third_party/osrm/osrm.go`、`backend/third_party/geocode/geocode.go`
-- Update: `proto/v1/fleet.proto`（`DeliveryService`/`RoutingService`）;`config/fleet.go`（OSRM_HOST/geocode）
+- Update: `proto/v1/logistics.proto`（`DeliveryService`/`RoutingService`）;`config/logistics.go`（OSRM_HOST/geocode）
 
 **Interfaces:**
 - `DeliveryService.Start/Complete/Cancel`;`RoutingService.GetRoute(delivery_id)`
 
 **Steps:**
-- [ ] Step 1: `fleet_deliveries` 狀態機 + `fleet_delivery_events` + 稽核同事務（D18）。
+- [ ] Step 1: `logistics_deliveries` 狀態機 + `logistics_delivery_events` + 稽核同事務（D18）。
 - [ ] Step 2: POD 上傳（photo/signature/scan）走檔案資產（D17）。
 - [ ] Step 3: `customer_addresses(type=shipping)` 座標（地理編碼,缺座標不擋建檔）;OSRM 路線/ETA。
 
@@ -1328,9 +1328,9 @@
 
 ---
 
-### Task 5.11: fleet 執行層驗收（D32）
+### Task 5.11: logistics 執行層驗收（D32）
 
-**Goal:** 確認 fleet 執行層與授權/隔離完整。
+**Goal:** 確認 logistics 執行層與授權/隔離完整。
 
 **Acceptance Criteria:**
 - [ ] OpenFGA Check + RLS 部門隔離正確;`list-objects` 回正確集合。
@@ -1338,18 +1338,18 @@
 
 ---
 
-### Task 5.12: fleet 閉環延伸（A：每單回寫 / geofence / 通知,1.0）
+### Task 5.12: logistics 閉環延伸（A：每單回寫 / geofence / 通知,1.0）
 
-**Goal:** 讓 fleet 執行層閉環：車次完成回寫每單 `sales_order`、geofence 自動到站判定、通知走既有 D16。
+**Goal:** 讓 logistics 執行層閉環：車次完成回寫每單 `sales_order`、geofence 自動到站判定、通知走既有 D16。
 
 **Files:**
-- Create: `backend/internal/domain/fleet/geofence.go`、`notify.go`（D16 路由）;update `delivery.go`（每單回寫）
-- Update: `proto/v1/…`（`sales_order.delivered_date`）;`fleet-execution` 延伸
+- Create: `backend/internal/domain/logistics/geofence.go`、`notify.go`（D16 路由）;update `delivery.go`（每單回寫）
+- Update: `proto/v1/…`（`sales_order.delivered_date`）;`logistics-execution` 延伸
 
 **Steps:**
 - [ ] Step 1: `DeliveryService.Complete` 同交易逐筆回寫車次所載 `sales_order` → `delivered` + 事件 + 稽核（D18）。
 - [ ] Step 2: geofence（service_area/zone 空間判定）進入配送點自動標到站、提示 POD。
-- [ ] Step 3: fleet 事件接 D16 通知（指派推司機、送達推店家/主責業務）。
+- [ ] Step 3: logistics 事件接 D16 通知（指派推司機、送達推店家/主責業務）。
 
 **Acceptance Criteria:**
 - [ ] 完成車次後每單可見 `delivered`;司機進 zone 自動到站;指派/送達走 D16 通知。
@@ -1360,7 +1360,7 @@
 
 **Goal:** `drivers` 關聯 users,以 OpenFGA driver relation + RLS data_scope 賦權;司機用既有 JWT 登入只取被指派任務。
 
-**Files:** `internal/domain/fleet/driver.go`;`internal/authz`(model 增 driver relation);`config/fleet.go`
+**Files:** `internal/domain/logistics/driver.go`;`internal/authz`(model 增 driver relation);`config/logistics.go`
 
 **Steps:**
 - [ ] Step 1: `drivers` Ent + `user_id` 關聯;建司機時事件流寫 OpenFGA driver/assignee tuple。
@@ -1374,9 +1374,9 @@
 
 ### Task 5.22: 配送停點 / waypoint 清單（1.0 簡版）
 
-**Goal:** `fleet_delivery` 依 `delivery_sequence` 展開為停點清單(客戶/地址/訂單/座標)。
+**Goal:** `logistics_delivery` 依 `delivery_sequence` 展開為停點清單(客戶/地址/訂單/座標)。
 
-**Files:** `internal/domain/fleet/delivery.go`(`GetStops`);由 `fleet_deliveries`+`sales_order`+`customer_addresses` join 產出
+**Files:** `internal/domain/logistics/delivery.go`(`GetStops`);由 `logistics_deliveries`+`sales_order`+`customer_addresses` join 產出
 
 **Acceptance Criteria:**
 - [ ] 司機取得依序停點清單;缺座標標示不擋清單。
@@ -1387,7 +1387,7 @@
 
 **Goal:** 中台車隊 CRUD 頁 + Leaflet 即時執行地圖(Connect 串流訂閱 `driver.location_changed`)。
 
-**Files:** `frontend/src/routes/admin/fleet.tsx`、`live-map.tsx`;沿 4.1 既有 TanStack Query + Connect 串流慣例
+**Files:** `frontend/src/routes/admin/logistics.tsx`、`live-map.tsx`;沿 4.1 既有 TanStack Query + Connect 串流慣例
 
 **Acceptance Criteria:**
 - [ ] 可 CRUD 車/司機/車隊;地圖即時移動 marker。
@@ -1401,13 +1401,13 @@
 **Files:** `app/lib/...`(driver mode;沿既有 App 基建 + JWT);POD 走檔案資產
 
 **Acceptance Criteria:**
-- [ ] 司機 App 可載入任務 → 逐站執行 → 上報 → POD 完成,fleet 閉環。
+- [ ] 司機 App 可載入任務 → 逐站執行 → 上報 → POD 完成,logistics 閉環。
 
 ---
 
-## Phase 5.6: fleet 延伸（1.1+,v1 後）
+## Phase 5.6: logistics 延伸（1.1+,v1 後）
 
-> 以下 fleet 能力**不在 1.0**，納入 1.1+（或另行評估），避免 1.0 fleet 執行層過重。詳 `fleet-execution/spec.md` §1.1+ 延伸。
+> 以下 logistics 能力**不在 1.0**，納入 1.1+（或另行評估），避免 1.0 logistics 執行層過重。詳 `logistics-execution/spec.md` §1.1+ 延伸。
 
 ### Task 5.13（1.1+）: 自動派單（距離最近司機、容量/車型匹配）
 ### Task 5.14（1.1+）: 多點路線優化（VRP/TSP）
@@ -1418,8 +1418,8 @@
 ### Task 5.19（1.1+）: 司機 App 背景 GPS / 離線快取
 ### Task 5.20（1.1+）: 每單 tracking 狀態鏈（Fleetbase tracking_numbers/statuses）
 ### Task 5.25（1.1+）: 位置軌跡保留 / 回播 / 稽核
-### Task 5.26（1.1+）: fleet 報表與績效分析
-### Task 5.27（1.1+）: 多公司 fleet 視圖（super 跨公司）
+### Task 5.26（1.1+）: logistics 報表與績效分析
+### Task 5.27（1.1+）: 多公司 logistics 視圖（super 跨公司）
 ### Task 5.28（1.1+）: 出庫 / 裝車確認（銜接揀貨單）
 ### Task 5.29（1.1+）: 司機簽到 / 離班 / 交接
 ### Task 5.30（1.1+）: 重簽 / 作廢 POD（簽收時效操作）

@@ -262,7 +262,7 @@
 **實際狀態：⬜ 未開始**
 
 **說明**：未實作 `middleware.DeveloperBypass`、config `DeveloperAccountEnabled`/`Env`、`audit.Recorder` 介面/`NoopRecorder`、`SeedDeveloperRole`。亦無 audit 相關 code（`internal/` 無 audit package）。
-> **D32 衝突**：主計畫標頭指示授權改 OpenFGA + RLS；實際實作仍 Casbin。是否導入 OpenFGA 需決策定奪（見 10-fleet-execution.md §10.8 與決策 D32）。
+> **D32 衝突**：主計畫標頭指示授權改 OpenFGA + RLS；實際實作仍 Casbin。是否導入 OpenFGA 需決策定奪（見 10-logistics-execution.md §10.8 與決策 D32）。
 
 - [ ] **Step 1: config** — `DeveloperAccountEnabled`、`Env`、fail-fast 防護
 - [ ] **Step 2: developer bypass middleware** — `Authenticate` 之後的高權繞過

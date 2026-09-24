@@ -5,7 +5,7 @@
 > 日期：2026-08-05
 > 對應設計文件：`docs/superpowers/specs/2026-08-05-sales-order-1.0-subproject-decomposition-design.md`
 >
-> ⚠️ **D32 覆寫（2026-09-17）**：Task 14（Casbin + RLS）改為 **OpenFGA + RLS**；前端 `@casl/ability` 移除、改由 OpenFGA `Check` / `list-objects` 驅動。凡與 D32 衝突處以 D32 為準（詳見決策 D32 與 `10-fleet-execution.md` §10.8）。
+> ⚠️ **D32 覆寫（2026-09-17）**：Task 14（Casbin + RLS）改為 **OpenFGA + RLS**；前端 `@casl/ability` 移除、改由 OpenFGA `Check` / `list-objects` 驅動。凡與 D32 衝突處以 D32 為準（詳見決策 D32 與 `10-logistics-execution.md` §10.8）。
 > 對應規格書：`docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（v1.0.34）
 > 對應決策記錄：`docs/superpowers/specs/2026-07-19-sales-order-1.0-decisions.md`（D1–D32；D32 覆寫見上）
 > 狀態：**實作暫緩；本計畫供未來開工時直接指派與追蹤**（實際進度見 `docs/superpowers/plans/README.md`）

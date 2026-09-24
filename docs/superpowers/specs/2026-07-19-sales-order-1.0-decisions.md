@@ -238,18 +238,18 @@
 - **理由**：集中 DI 讓啟動依賴與 fail-fast 檢查一目瞭然；cmd 拆分讓 migrate/seed 不依賴 server 啟動；config 逐檔有 code completion 且新增 key 有明確歸檔流程。
 - 修訂來源：2026-08-24 設計文件 `docs/superpowers/specs/2026-08-24-backend-go8-structure-design.md`；參考 https://github.com/sowiner/go8。（插入位置依編號排序；D29/D30 條目由其各自計畫執行時補入本節。）
 
-### D32：整合 Fleetbase 物流「執行層」— 授權改 OpenFGA + RLS、fleet 部門級、Connect-RPC、後台指派、NetSuite 不接
+### D32：整合 Fleetbase 物流「執行層」— 授權改 OpenFGA + RLS、logistics 部門級、Connect-RPC、後台指派、NetSuite 不接
 
 - **選擇**：
-  1. **授權模型改為 OpenFGA + RLS，移除 Casbin 與 CASL**：服務/資源層授權決策交由內嵌 OpenFGA（Go library、PostgreSQL datastore、單一 store）；`company` / `department` 為租戶型別 + `role`/`group`/`system`，`driver`/`vehicle`/`fleet_delivery` 等資源以租戶 parent 邊 + **userset rewrite**；middleware 對受保護 RPC 做 `Check`（boolean 決策）、`list-objects` 做資源可見性。**RLS（data_scope all/company/department/self）保留為資料庫層兜底**（沿用 D3 的 RLS 半部）。**CASL 移除**——前端 UI 權限直接由 OpenFGA `Check` / list-objects 驅動，不引入 CASL ability。此項**修訂 D3 / D8 / D9 / D30 的 Casbin 與 CASL 部分**；因 1.0 尚未實作，零遷移成本。
-  2. **fleet 執行層納入 1.0，部門級**：drivers/vehicles/fleets/service_areas/zones/fleet_deliveries/positions/proofs 皆帶 `company_id` + `department_id`，RLS data_scope = department（staff/dept_admin 看本部門、company_admin 看全部門、super 全公司）。
-  3. **API = Connect-RPC（沿用 D4）**：fleet 能力以 proto service 定義（`FleetService` / `AssignmentService` / `TrackingService` / `DeliveryService`），不另走 REST/chi。
-  4. **vehicle/driver 由後台指派，粒度依 Fleetbase**：driver+vehicle 指派落在 `fleet_delivery`（每筆帶 `driver_assigned_uuid` / `vehicle_assigned_uuid`，對齊 Fleetbase `Order.php`），非固定「車次↔車」1:1 表；一車一司機可服務多車次、可重指派（`version` 樂觀鎖）；自動派單（距離最近）明確排 v1 之後。
-  5. **NetSuite 不接 fleet**：fleet 執行層完全獨立、不與 NetSuite 同步或產生任何耦合。
+  1. **授權模型改為 OpenFGA + RLS，移除 Casbin 與 CASL**：服務/資源層授權決策交由內嵌 OpenFGA（Go library、PostgreSQL datastore、單一 store）；`company` / `department` 為租戶型別 + `role`/`group`/`system`，`driver`/`vehicle`/`logistics_delivery` 等資源以租戶 parent 邊 + **userset rewrite**；middleware 對受保護 RPC 做 `Check`（boolean 決策）、`list-objects` 做資源可見性。**RLS（data_scope all/company/department/self）保留為資料庫層兜底**（沿用 D3 的 RLS 半部）。**CASL 移除**——前端 UI 權限直接由 OpenFGA `Check` / list-objects 驅動，不引入 CASL ability。此項**修訂 D3 / D8 / D9 / D30 的 Casbin 與 CASL 部分**；因 1.0 尚未實作，零遷移成本。
+  2. **logistics 執行層納入 1.0，部門級**：drivers/vehicles/logistics_teams/service_areas/zones/logistics_deliveries/positions/proofs 皆帶 `company_id` + `department_id`，RLS data_scope = department（staff/dept_admin 看本部門、company_admin 看全部門、super 全公司）。
+  3. **API = Connect-RPC（沿用 D4）**：logistics 能力以 proto service 定義（`LogisticsService` / `AssignmentService` / `TrackingService` / `DeliveryService`），不另走 REST/chi。
+  4. **vehicle/driver 由後台指派，粒度依 Fleetbase**：driver+vehicle 指派落在 `logistics_delivery`（每筆帶 `driver_assigned_uuid` / `vehicle_assigned_uuid`，對齊 Fleetbase `Order.php`），非固定「車次↔車」1:1 表；一車一司機可服務多車次、可重指派（`version` 樂觀鎖）；自動派單（距離最近）明確排 v1 之後。
+  5. **NetSuite 不接 logistics**：logistics 執行層完全獨立、不與 NetSuite 同步或產生任何耦合。
   6. **客戶送貨地址補座標**：`customer_addresses` 增加 `location geography(Point)` + 地理編碼（`shipping` 地址建立/更新時 geocode），供 OSRM 路線 / ETA；**不另引入 Fleetbase 式 places 模型**（master-data 保留地址簿為客戶子資源）；PostGIS 不可用時 fallback `latitude`/`longitude`。
-- **理由**：1.0 覆蓋「規劃/裝單」層，fleet 執行層補足「現場配送/追蹤/簽收」層（派車看板完成的車次需實際綁定車輛與司機執行）。授權改 OpenFGA 提供資源級/使用者集合（userset）授權，比 Casbin 角色 RBAC 更適合 fleet 的資源歸屬；RLS 續當資料庫最後防線；CASL 移除避免「前端第二權限模型」與 OpenFGA 重疊（單一授權來源）。
-- **已考慮 alternative**：保留 Casbin + CASL（1.0 原 D3/D30）— 已修訂，整合 fleet 需資源級授權與單一授權來源；OpenFGA 僅用於 fleet、核心保留 Casbin — 拒絕，兩套授權引擎並存增加維運與不一致風險；WebSocket / Redis hub — 衝突 D4/D5/D14（沿用 Connect 串流 + Valkey pub/sub）。
-- **修訂來源**：2026-09-17 Fleetbase 整合決策（Fleetbase 側 `FLEETBASE_物流平台重建_PLAN.md` 之 F1–F4）；詳細需求見 `docs/superpowers/specs/1.0-requirements/fleet-execution/spec.md`、細部實作 `docs/superpowers/plans/backend/detail/10-fleet-execution.md`、master-data 地址座標見 master-data spec。
+- **理由**：1.0 覆蓋「規劃/裝單」層，logistics 執行層補足「現場配送/追蹤/簽收」層（派車看板完成的車次需實際綁定車輛與司機執行）。授權改 OpenFGA 提供資源級/使用者集合（userset）授權，比 Casbin 角色 RBAC 更適合 logistics 的資源歸屬；RLS 續當資料庫最後防線；CASL 移除避免「前端第二權限模型」與 OpenFGA 重疊（單一授權來源）。
+- **已考慮 alternative**：保留 Casbin + CASL（1.0 原 D3/D30）— 已修訂，整合 logistics 需資源級授權與單一授權來源；OpenFGA 僅用於 logistics、核心保留 Casbin — 拒絕，兩套授權引擎並存增加維運與不一致風險；WebSocket / Redis hub — 衝突 D4/D5/D14（沿用 Connect 串流 + Valkey pub/sub）。
+- **修訂來源**：2026-09-17 Fleetbase 整合決策（Fleetbase 側 `FLEETBASE_物流平台重建_PLAN.md` 之 F1–F4）；詳細需求見 `docs/superpowers/specs/1.0-requirements/logistics-execution/spec.md`、細部實作 `docs/superpowers/plans/backend/detail/10-logistics-execution.md`、master-data 地址座標見 master-data spec。
 - **修訂（2026-09-18）**：
   1. **彈性角色＝資料驅動**：D9 自訂角色可彈性建立；`role → 權限` 的對映以 **tuples（資料）** 承載，由 `role_permissions` 異動時 translate 成 OpenFGA tuples（`<role_code> → 資源 can_read/can_write 關係`）。**model 固定一組資源型別與 relations，不隨角色增減；新增自訂角色不動 model**。
   2. **條件採兩層分工（取代「屬性/狀態條件以 OpenFGA condition 表達」之字面）**：OpenFGA 僅負責**關係性 / 角色 / 租戶範圍**授權（userset member/admin、資源歸屬、`role_permissions` 之身分層級）;對**物件可變狀態**的條件（如「僅能 cancel pending 訂單」）由 **domain 狀態機 / use-case 層**執行（D13），避免把資料模型洩漏進授權層、避免狀態規則於兩處重複漂移。前端 UI 權限仍由 OpenFGA `Check`/list-objects 驅動。

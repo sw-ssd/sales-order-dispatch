@@ -129,28 +129,28 @@ func (f FileAssetFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, e
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.FileAssetMutation", m)
 }
 
-// The FleetDeliveryFunc type is an adapter to allow the use of ordinary
-// function as FleetDelivery mutator.
-type FleetDeliveryFunc func(context.Context, *ent.FleetDeliveryMutation) (ent.Value, error)
+// The LogisticsDeliveryFunc type is an adapter to allow the use of ordinary
+// function as LogisticsDelivery mutator.
+type LogisticsDeliveryFunc func(context.Context, *ent.LogisticsDeliveryMutation) (ent.Value, error)
 
 // Mutate calls f(ctx, m).
-func (f FleetDeliveryFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.FleetDeliveryMutation); ok {
+func (f LogisticsDeliveryFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.LogisticsDeliveryMutation); ok {
 		return f(ctx, mv)
 	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.FleetDeliveryMutation", m)
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.LogisticsDeliveryMutation", m)
 }
 
-// The FleetDriverFunc type is an adapter to allow the use of ordinary
-// function as FleetDriver mutator.
-type FleetDriverFunc func(context.Context, *ent.FleetDriverMutation) (ent.Value, error)
+// The LogisticsDriverFunc type is an adapter to allow the use of ordinary
+// function as LogisticsDriver mutator.
+type LogisticsDriverFunc func(context.Context, *ent.LogisticsDriverMutation) (ent.Value, error)
 
 // Mutate calls f(ctx, m).
-func (f FleetDriverFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.FleetDriverMutation); ok {
+func (f LogisticsDriverFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.LogisticsDriverMutation); ok {
 		return f(ctx, mv)
 	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.FleetDriverMutation", m)
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.LogisticsDriverMutation", m)
 }
 
 // The MetadictFunc type is an adapter to allow the use of ordinary

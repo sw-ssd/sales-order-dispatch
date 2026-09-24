@@ -5,7 +5,7 @@
 > - 範圍：1.0（後端 Phase 1–2、前端 WEB-INF-05 展開）
 > - 修訂：D3 三層分工表述（新增第四參與者「CASL 執行層」，不改 RLS/Casbin 角色）；將產生決策記錄 **D30**
 >
-> ⚠️ **D32 作廢（2026-09-17）**：CASL 已移除，本設計**作廢**。授權改由 **OpenFGA + RLS** 承擔、CASL 不引入（見決策 D32 及 `10-fleet-execution.md` §10.8）；本文件僅保留為歷史設計紀錄。
+> ⚠️ **D32 作廢（2026-09-17）**：CASL 已移除，本設計**作廢**。授權改由 **OpenFGA + RLS** 承擔、CASL 不引入（見決策 D32 及 `10-logistics-execution.md` §10.8）；本文件僅保留為歷史設計紀錄。
 > - 參考：[CASL — Ability to database query](https://casl.js.org/v7/en/advanced/ability-to-database-query)、[stalniy/casl#8 sql & sequelize support](https://github.com/stalniy/casl/issues/8)
 
 ## 0. 背景與問題

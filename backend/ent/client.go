@@ -25,8 +25,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/customerproduct"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/fileasset"
-	"github.com/salesorder/sales-order-1.0/backend/ent/fleetdelivery"
-	"github.com/salesorder/sales-order-1.0/backend/ent/fleetdriver"
+	"github.com/salesorder/sales-order-1.0/backend/ent/logisticsdelivery"
+	"github.com/salesorder/sales-order-1.0/backend/ent/logisticsdriver"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/notification"
 	"github.com/salesorder/sales-order-1.0/backend/ent/notificationtemplate"
@@ -78,10 +78,10 @@ type Client struct {
 	Department *DepartmentClient
 	// FileAsset is the client for interacting with the FileAsset builders.
 	FileAsset *FileAssetClient
-	// FleetDelivery is the client for interacting with the FleetDelivery builders.
-	FleetDelivery *FleetDeliveryClient
-	// FleetDriver is the client for interacting with the FleetDriver builders.
-	FleetDriver *FleetDriverClient
+	// LogisticsDelivery is the client for interacting with the LogisticsDelivery builders.
+	LogisticsDelivery *LogisticsDeliveryClient
+	// LogisticsDriver is the client for interacting with the LogisticsDriver builders.
+	LogisticsDriver *LogisticsDriverClient
 	// Metadict is the client for interacting with the Metadict builders.
 	Metadict *MetadictClient
 	// Notification is the client for interacting with the Notification builders.
@@ -151,8 +151,8 @@ func (c *Client) init() {
 	c.CustomerProduct = NewCustomerProductClient(c.config)
 	c.Department = NewDepartmentClient(c.config)
 	c.FileAsset = NewFileAssetClient(c.config)
-	c.FleetDelivery = NewFleetDeliveryClient(c.config)
-	c.FleetDriver = NewFleetDriverClient(c.config)
+	c.LogisticsDelivery = NewLogisticsDeliveryClient(c.config)
+	c.LogisticsDriver = NewLogisticsDriverClient(c.config)
 	c.Metadict = NewMetadictClient(c.config)
 	c.Notification = NewNotificationClient(c.config)
 	c.NotificationTemplate = NewNotificationTemplateClient(c.config)
@@ -279,8 +279,8 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		CustomerProduct:       NewCustomerProductClient(cfg),
 		Department:            NewDepartmentClient(cfg),
 		FileAsset:             NewFileAssetClient(cfg),
-		FleetDelivery:         NewFleetDeliveryClient(cfg),
-		FleetDriver:           NewFleetDriverClient(cfg),
+		LogisticsDelivery:     NewLogisticsDeliveryClient(cfg),
+		LogisticsDriver:       NewLogisticsDriverClient(cfg),
 		Metadict:              NewMetadictClient(cfg),
 		Notification:          NewNotificationClient(cfg),
 		NotificationTemplate:  NewNotificationTemplateClient(cfg),
@@ -334,8 +334,8 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		CustomerProduct:       NewCustomerProductClient(cfg),
 		Department:            NewDepartmentClient(cfg),
 		FileAsset:             NewFileAssetClient(cfg),
-		FleetDelivery:         NewFleetDeliveryClient(cfg),
-		FleetDriver:           NewFleetDriverClient(cfg),
+		LogisticsDelivery:     NewLogisticsDeliveryClient(cfg),
+		LogisticsDriver:       NewLogisticsDriverClient(cfg),
 		Metadict:              NewMetadictClient(cfg),
 		Notification:          NewNotificationClient(cfg),
 		NotificationTemplate:  NewNotificationTemplateClient(cfg),
@@ -391,12 +391,13 @@ func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.Announcement, c.AuditLog, c.Company, c.Customer, c.CustomerAddress,
 		c.CustomerContact, c.CustomerCounter, c.CustomerProduct, c.Department,
-		c.FileAsset, c.FleetDelivery, c.FleetDriver, c.Metadict, c.Notification,
-		c.NotificationTemplate, c.OrderCounter, c.PrintLog, c.PrintPreview,
-		c.ProcessingSpec, c.Product, c.ProductCategory, c.ProductProcessingSpec,
-		c.ProductUnit, c.PromoTag, c.ReturnRequest, c.ReturnRequestItem, c.Role,
-		c.RolePermission, c.Route, c.SalesOrder, c.SalesOrderEvent, c.SalesOrderItem,
-		c.User, c.UserDevice, c.Vehicle, c.Warehouse,
+		c.FileAsset, c.LogisticsDelivery, c.LogisticsDriver, c.Metadict,
+		c.Notification, c.NotificationTemplate, c.OrderCounter, c.PrintLog,
+		c.PrintPreview, c.ProcessingSpec, c.Product, c.ProductCategory,
+		c.ProductProcessingSpec, c.ProductUnit, c.PromoTag, c.ReturnRequest,
+		c.ReturnRequestItem, c.Role, c.RolePermission, c.Route, c.SalesOrder,
+		c.SalesOrderEvent, c.SalesOrderItem, c.User, c.UserDevice, c.Vehicle,
+		c.Warehouse,
 	} {
 		n.Use(hooks...)
 	}
@@ -408,12 +409,13 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.Announcement, c.AuditLog, c.Company, c.Customer, c.CustomerAddress,
 		c.CustomerContact, c.CustomerCounter, c.CustomerProduct, c.Department,
-		c.FileAsset, c.FleetDelivery, c.FleetDriver, c.Metadict, c.Notification,
-		c.NotificationTemplate, c.OrderCounter, c.PrintLog, c.PrintPreview,
-		c.ProcessingSpec, c.Product, c.ProductCategory, c.ProductProcessingSpec,
-		c.ProductUnit, c.PromoTag, c.ReturnRequest, c.ReturnRequestItem, c.Role,
-		c.RolePermission, c.Route, c.SalesOrder, c.SalesOrderEvent, c.SalesOrderItem,
-		c.User, c.UserDevice, c.Vehicle, c.Warehouse,
+		c.FileAsset, c.LogisticsDelivery, c.LogisticsDriver, c.Metadict,
+		c.Notification, c.NotificationTemplate, c.OrderCounter, c.PrintLog,
+		c.PrintPreview, c.ProcessingSpec, c.Product, c.ProductCategory,
+		c.ProductProcessingSpec, c.ProductUnit, c.PromoTag, c.ReturnRequest,
+		c.ReturnRequestItem, c.Role, c.RolePermission, c.Route, c.SalesOrder,
+		c.SalesOrderEvent, c.SalesOrderItem, c.User, c.UserDevice, c.Vehicle,
+		c.Warehouse,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -442,10 +444,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Department.mutate(ctx, m)
 	case *FileAssetMutation:
 		return c.FileAsset.mutate(ctx, m)
-	case *FleetDeliveryMutation:
-		return c.FleetDelivery.mutate(ctx, m)
-	case *FleetDriverMutation:
-		return c.FleetDriver.mutate(ctx, m)
+	case *LogisticsDeliveryMutation:
+		return c.LogisticsDelivery.mutate(ctx, m)
+	case *LogisticsDriverMutation:
+		return c.LogisticsDriver.mutate(ctx, m)
 	case *MetadictMutation:
 		return c.Metadict.mutate(ctx, m)
 	case *NotificationMutation:
@@ -1893,107 +1895,107 @@ func (c *FileAssetClient) mutate(ctx context.Context, m *FileAssetMutation) (Val
 	}
 }
 
-// FleetDeliveryClient is a client for the FleetDelivery schema.
-type FleetDeliveryClient struct {
+// LogisticsDeliveryClient is a client for the LogisticsDelivery schema.
+type LogisticsDeliveryClient struct {
 	config
 }
 
-// NewFleetDeliveryClient returns a client for the FleetDelivery from the given config.
-func NewFleetDeliveryClient(c config) *FleetDeliveryClient {
-	return &FleetDeliveryClient{config: c}
+// NewLogisticsDeliveryClient returns a client for the LogisticsDelivery from the given config.
+func NewLogisticsDeliveryClient(c config) *LogisticsDeliveryClient {
+	return &LogisticsDeliveryClient{config: c}
 }
 
 // Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `fleetdelivery.Hooks(f(g(h())))`.
-func (c *FleetDeliveryClient) Use(hooks ...Hook) {
-	c.hooks.FleetDelivery = append(c.hooks.FleetDelivery, hooks...)
+// A call to `Use(f, g, h)` equals to `logisticsdelivery.Hooks(f(g(h())))`.
+func (c *LogisticsDeliveryClient) Use(hooks ...Hook) {
+	c.hooks.LogisticsDelivery = append(c.hooks.LogisticsDelivery, hooks...)
 }
 
 // Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `fleetdelivery.Intercept(f(g(h())))`.
-func (c *FleetDeliveryClient) Intercept(interceptors ...Interceptor) {
-	c.inters.FleetDelivery = append(c.inters.FleetDelivery, interceptors...)
+// A call to `Intercept(f, g, h)` equals to `logisticsdelivery.Intercept(f(g(h())))`.
+func (c *LogisticsDeliveryClient) Intercept(interceptors ...Interceptor) {
+	c.inters.LogisticsDelivery = append(c.inters.LogisticsDelivery, interceptors...)
 }
 
-// Create returns a builder for creating a FleetDelivery entity.
-func (c *FleetDeliveryClient) Create() *FleetDeliveryCreate {
-	mutation := newFleetDeliveryMutation(c.config, OpCreate)
-	return &FleetDeliveryCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Create returns a builder for creating a LogisticsDelivery entity.
+func (c *LogisticsDeliveryClient) Create() *LogisticsDeliveryCreate {
+	mutation := newLogisticsDeliveryMutation(c.config, OpCreate)
+	return &LogisticsDeliveryCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// CreateBulk returns a builder for creating a bulk of FleetDelivery entities.
-func (c *FleetDeliveryClient) CreateBulk(builders ...*FleetDeliveryCreate) *FleetDeliveryCreateBulk {
-	return &FleetDeliveryCreateBulk{config: c.config, builders: builders}
+// CreateBulk returns a builder for creating a bulk of LogisticsDelivery entities.
+func (c *LogisticsDeliveryClient) CreateBulk(builders ...*LogisticsDeliveryCreate) *LogisticsDeliveryCreateBulk {
+	return &LogisticsDeliveryCreateBulk{config: c.config, builders: builders}
 }
 
 // MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
 // a builder and applies setFunc on it.
-func (c *FleetDeliveryClient) MapCreateBulk(slice any, setFunc func(*FleetDeliveryCreate, int)) *FleetDeliveryCreateBulk {
+func (c *LogisticsDeliveryClient) MapCreateBulk(slice any, setFunc func(*LogisticsDeliveryCreate, int)) *LogisticsDeliveryCreateBulk {
 	rv := reflect.ValueOf(slice)
 	if rv.Kind() != reflect.Slice {
-		return &FleetDeliveryCreateBulk{err: fmt.Errorf("calling to FleetDeliveryClient.MapCreateBulk with wrong type %T, need slice", slice)}
+		return &LogisticsDeliveryCreateBulk{err: fmt.Errorf("calling to LogisticsDeliveryClient.MapCreateBulk with wrong type %T, need slice", slice)}
 	}
-	builders := make([]*FleetDeliveryCreate, rv.Len())
+	builders := make([]*LogisticsDeliveryCreate, rv.Len())
 	for i := 0; i < rv.Len(); i++ {
 		builders[i] = c.Create()
 		setFunc(builders[i], i)
 	}
-	return &FleetDeliveryCreateBulk{config: c.config, builders: builders}
+	return &LogisticsDeliveryCreateBulk{config: c.config, builders: builders}
 }
 
-// Update returns an update builder for FleetDelivery.
-func (c *FleetDeliveryClient) Update() *FleetDeliveryUpdate {
-	mutation := newFleetDeliveryMutation(c.config, OpUpdate)
-	return &FleetDeliveryUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Update returns an update builder for LogisticsDelivery.
+func (c *LogisticsDeliveryClient) Update() *LogisticsDeliveryUpdate {
+	mutation := newLogisticsDeliveryMutation(c.config, OpUpdate)
+	return &LogisticsDeliveryUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOne returns an update builder for the given entity.
-func (c *FleetDeliveryClient) UpdateOne(_m *FleetDelivery) *FleetDeliveryUpdateOne {
-	mutation := newFleetDeliveryMutation(c.config, OpUpdateOne, withFleetDelivery(_m))
-	return &FleetDeliveryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *LogisticsDeliveryClient) UpdateOne(_m *LogisticsDelivery) *LogisticsDeliveryUpdateOne {
+	mutation := newLogisticsDeliveryMutation(c.config, OpUpdateOne, withLogisticsDelivery(_m))
+	return &LogisticsDeliveryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *FleetDeliveryClient) UpdateOneID(id int) *FleetDeliveryUpdateOne {
-	mutation := newFleetDeliveryMutation(c.config, OpUpdateOne, withFleetDeliveryID(id))
-	return &FleetDeliveryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *LogisticsDeliveryClient) UpdateOneID(id int) *LogisticsDeliveryUpdateOne {
+	mutation := newLogisticsDeliveryMutation(c.config, OpUpdateOne, withLogisticsDeliveryID(id))
+	return &LogisticsDeliveryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// Delete returns a delete builder for FleetDelivery.
-func (c *FleetDeliveryClient) Delete() *FleetDeliveryDelete {
-	mutation := newFleetDeliveryMutation(c.config, OpDelete)
-	return &FleetDeliveryDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Delete returns a delete builder for LogisticsDelivery.
+func (c *LogisticsDeliveryClient) Delete() *LogisticsDeliveryDelete {
+	mutation := newLogisticsDeliveryMutation(c.config, OpDelete)
+	return &LogisticsDeliveryDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // DeleteOne returns a builder for deleting the given entity.
-func (c *FleetDeliveryClient) DeleteOne(_m *FleetDelivery) *FleetDeliveryDeleteOne {
+func (c *LogisticsDeliveryClient) DeleteOne(_m *LogisticsDelivery) *LogisticsDeliveryDeleteOne {
 	return c.DeleteOneID(_m.ID)
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *FleetDeliveryClient) DeleteOneID(id int) *FleetDeliveryDeleteOne {
-	builder := c.Delete().Where(fleetdelivery.ID(id))
+func (c *LogisticsDeliveryClient) DeleteOneID(id int) *LogisticsDeliveryDeleteOne {
+	builder := c.Delete().Where(logisticsdelivery.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
-	return &FleetDeliveryDeleteOne{builder}
+	return &LogisticsDeliveryDeleteOne{builder}
 }
 
-// Query returns a query builder for FleetDelivery.
-func (c *FleetDeliveryClient) Query() *FleetDeliveryQuery {
-	return &FleetDeliveryQuery{
+// Query returns a query builder for LogisticsDelivery.
+func (c *LogisticsDeliveryClient) Query() *LogisticsDeliveryQuery {
+	return &LogisticsDeliveryQuery{
 		config: c.config,
-		ctx:    &QueryContext{Type: TypeFleetDelivery},
+		ctx:    &QueryContext{Type: TypeLogisticsDelivery},
 		inters: c.Interceptors(),
 	}
 }
 
-// Get returns a FleetDelivery entity by its id.
-func (c *FleetDeliveryClient) Get(ctx context.Context, id int) (*FleetDelivery, error) {
-	return c.Query().Where(fleetdelivery.ID(id)).Only(ctx)
+// Get returns a LogisticsDelivery entity by its id.
+func (c *LogisticsDeliveryClient) Get(ctx context.Context, id int) (*LogisticsDelivery, error) {
+	return c.Query().Where(logisticsdelivery.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *FleetDeliveryClient) GetX(ctx context.Context, id int) *FleetDelivery {
+func (c *LogisticsDeliveryClient) GetX(ctx context.Context, id int) *LogisticsDelivery {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
@@ -2002,131 +2004,131 @@ func (c *FleetDeliveryClient) GetX(ctx context.Context, id int) *FleetDelivery {
 }
 
 // Hooks returns the client hooks.
-func (c *FleetDeliveryClient) Hooks() []Hook {
-	return c.hooks.FleetDelivery
+func (c *LogisticsDeliveryClient) Hooks() []Hook {
+	return c.hooks.LogisticsDelivery
 }
 
 // Interceptors returns the client interceptors.
-func (c *FleetDeliveryClient) Interceptors() []Interceptor {
-	return c.inters.FleetDelivery
+func (c *LogisticsDeliveryClient) Interceptors() []Interceptor {
+	return c.inters.LogisticsDelivery
 }
 
-func (c *FleetDeliveryClient) mutate(ctx context.Context, m *FleetDeliveryMutation) (Value, error) {
+func (c *LogisticsDeliveryClient) mutate(ctx context.Context, m *LogisticsDeliveryMutation) (Value, error) {
 	switch m.Op() {
 	case OpCreate:
-		return (&FleetDeliveryCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+		return (&LogisticsDeliveryCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
 	case OpUpdate:
-		return (&FleetDeliveryUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+		return (&LogisticsDeliveryUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
 	case OpUpdateOne:
-		return (&FleetDeliveryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+		return (&LogisticsDeliveryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
 	case OpDelete, OpDeleteOne:
-		return (&FleetDeliveryDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+		return (&LogisticsDeliveryDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
-		return nil, fmt.Errorf("ent: unknown FleetDelivery mutation op: %q", m.Op())
+		return nil, fmt.Errorf("ent: unknown LogisticsDelivery mutation op: %q", m.Op())
 	}
 }
 
-// FleetDriverClient is a client for the FleetDriver schema.
-type FleetDriverClient struct {
+// LogisticsDriverClient is a client for the LogisticsDriver schema.
+type LogisticsDriverClient struct {
 	config
 }
 
-// NewFleetDriverClient returns a client for the FleetDriver from the given config.
-func NewFleetDriverClient(c config) *FleetDriverClient {
-	return &FleetDriverClient{config: c}
+// NewLogisticsDriverClient returns a client for the LogisticsDriver from the given config.
+func NewLogisticsDriverClient(c config) *LogisticsDriverClient {
+	return &LogisticsDriverClient{config: c}
 }
 
 // Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `fleetdriver.Hooks(f(g(h())))`.
-func (c *FleetDriverClient) Use(hooks ...Hook) {
-	c.hooks.FleetDriver = append(c.hooks.FleetDriver, hooks...)
+// A call to `Use(f, g, h)` equals to `logisticsdriver.Hooks(f(g(h())))`.
+func (c *LogisticsDriverClient) Use(hooks ...Hook) {
+	c.hooks.LogisticsDriver = append(c.hooks.LogisticsDriver, hooks...)
 }
 
 // Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `fleetdriver.Intercept(f(g(h())))`.
-func (c *FleetDriverClient) Intercept(interceptors ...Interceptor) {
-	c.inters.FleetDriver = append(c.inters.FleetDriver, interceptors...)
+// A call to `Intercept(f, g, h)` equals to `logisticsdriver.Intercept(f(g(h())))`.
+func (c *LogisticsDriverClient) Intercept(interceptors ...Interceptor) {
+	c.inters.LogisticsDriver = append(c.inters.LogisticsDriver, interceptors...)
 }
 
-// Create returns a builder for creating a FleetDriver entity.
-func (c *FleetDriverClient) Create() *FleetDriverCreate {
-	mutation := newFleetDriverMutation(c.config, OpCreate)
-	return &FleetDriverCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Create returns a builder for creating a LogisticsDriver entity.
+func (c *LogisticsDriverClient) Create() *LogisticsDriverCreate {
+	mutation := newLogisticsDriverMutation(c.config, OpCreate)
+	return &LogisticsDriverCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// CreateBulk returns a builder for creating a bulk of FleetDriver entities.
-func (c *FleetDriverClient) CreateBulk(builders ...*FleetDriverCreate) *FleetDriverCreateBulk {
-	return &FleetDriverCreateBulk{config: c.config, builders: builders}
+// CreateBulk returns a builder for creating a bulk of LogisticsDriver entities.
+func (c *LogisticsDriverClient) CreateBulk(builders ...*LogisticsDriverCreate) *LogisticsDriverCreateBulk {
+	return &LogisticsDriverCreateBulk{config: c.config, builders: builders}
 }
 
 // MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
 // a builder and applies setFunc on it.
-func (c *FleetDriverClient) MapCreateBulk(slice any, setFunc func(*FleetDriverCreate, int)) *FleetDriverCreateBulk {
+func (c *LogisticsDriverClient) MapCreateBulk(slice any, setFunc func(*LogisticsDriverCreate, int)) *LogisticsDriverCreateBulk {
 	rv := reflect.ValueOf(slice)
 	if rv.Kind() != reflect.Slice {
-		return &FleetDriverCreateBulk{err: fmt.Errorf("calling to FleetDriverClient.MapCreateBulk with wrong type %T, need slice", slice)}
+		return &LogisticsDriverCreateBulk{err: fmt.Errorf("calling to LogisticsDriverClient.MapCreateBulk with wrong type %T, need slice", slice)}
 	}
-	builders := make([]*FleetDriverCreate, rv.Len())
+	builders := make([]*LogisticsDriverCreate, rv.Len())
 	for i := 0; i < rv.Len(); i++ {
 		builders[i] = c.Create()
 		setFunc(builders[i], i)
 	}
-	return &FleetDriverCreateBulk{config: c.config, builders: builders}
+	return &LogisticsDriverCreateBulk{config: c.config, builders: builders}
 }
 
-// Update returns an update builder for FleetDriver.
-func (c *FleetDriverClient) Update() *FleetDriverUpdate {
-	mutation := newFleetDriverMutation(c.config, OpUpdate)
-	return &FleetDriverUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Update returns an update builder for LogisticsDriver.
+func (c *LogisticsDriverClient) Update() *LogisticsDriverUpdate {
+	mutation := newLogisticsDriverMutation(c.config, OpUpdate)
+	return &LogisticsDriverUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOne returns an update builder for the given entity.
-func (c *FleetDriverClient) UpdateOne(_m *FleetDriver) *FleetDriverUpdateOne {
-	mutation := newFleetDriverMutation(c.config, OpUpdateOne, withFleetDriver(_m))
-	return &FleetDriverUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *LogisticsDriverClient) UpdateOne(_m *LogisticsDriver) *LogisticsDriverUpdateOne {
+	mutation := newLogisticsDriverMutation(c.config, OpUpdateOne, withLogisticsDriver(_m))
+	return &LogisticsDriverUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *FleetDriverClient) UpdateOneID(id int) *FleetDriverUpdateOne {
-	mutation := newFleetDriverMutation(c.config, OpUpdateOne, withFleetDriverID(id))
-	return &FleetDriverUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+func (c *LogisticsDriverClient) UpdateOneID(id int) *LogisticsDriverUpdateOne {
+	mutation := newLogisticsDriverMutation(c.config, OpUpdateOne, withLogisticsDriverID(id))
+	return &LogisticsDriverUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
-// Delete returns a delete builder for FleetDriver.
-func (c *FleetDriverClient) Delete() *FleetDriverDelete {
-	mutation := newFleetDriverMutation(c.config, OpDelete)
-	return &FleetDriverDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+// Delete returns a delete builder for LogisticsDriver.
+func (c *LogisticsDriverClient) Delete() *LogisticsDriverDelete {
+	mutation := newLogisticsDriverMutation(c.config, OpDelete)
+	return &LogisticsDriverDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
 
 // DeleteOne returns a builder for deleting the given entity.
-func (c *FleetDriverClient) DeleteOne(_m *FleetDriver) *FleetDriverDeleteOne {
+func (c *LogisticsDriverClient) DeleteOne(_m *LogisticsDriver) *LogisticsDriverDeleteOne {
 	return c.DeleteOneID(_m.ID)
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *FleetDriverClient) DeleteOneID(id int) *FleetDriverDeleteOne {
-	builder := c.Delete().Where(fleetdriver.ID(id))
+func (c *LogisticsDriverClient) DeleteOneID(id int) *LogisticsDriverDeleteOne {
+	builder := c.Delete().Where(logisticsdriver.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
-	return &FleetDriverDeleteOne{builder}
+	return &LogisticsDriverDeleteOne{builder}
 }
 
-// Query returns a query builder for FleetDriver.
-func (c *FleetDriverClient) Query() *FleetDriverQuery {
-	return &FleetDriverQuery{
+// Query returns a query builder for LogisticsDriver.
+func (c *LogisticsDriverClient) Query() *LogisticsDriverQuery {
+	return &LogisticsDriverQuery{
 		config: c.config,
-		ctx:    &QueryContext{Type: TypeFleetDriver},
+		ctx:    &QueryContext{Type: TypeLogisticsDriver},
 		inters: c.Interceptors(),
 	}
 }
 
-// Get returns a FleetDriver entity by its id.
-func (c *FleetDriverClient) Get(ctx context.Context, id int) (*FleetDriver, error) {
-	return c.Query().Where(fleetdriver.ID(id)).Only(ctx)
+// Get returns a LogisticsDriver entity by its id.
+func (c *LogisticsDriverClient) Get(ctx context.Context, id int) (*LogisticsDriver, error) {
+	return c.Query().Where(logisticsdriver.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *FleetDriverClient) GetX(ctx context.Context, id int) *FleetDriver {
+func (c *LogisticsDriverClient) GetX(ctx context.Context, id int) *LogisticsDriver {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
@@ -2135,27 +2137,27 @@ func (c *FleetDriverClient) GetX(ctx context.Context, id int) *FleetDriver {
 }
 
 // Hooks returns the client hooks.
-func (c *FleetDriverClient) Hooks() []Hook {
-	return c.hooks.FleetDriver
+func (c *LogisticsDriverClient) Hooks() []Hook {
+	return c.hooks.LogisticsDriver
 }
 
 // Interceptors returns the client interceptors.
-func (c *FleetDriverClient) Interceptors() []Interceptor {
-	return c.inters.FleetDriver
+func (c *LogisticsDriverClient) Interceptors() []Interceptor {
+	return c.inters.LogisticsDriver
 }
 
-func (c *FleetDriverClient) mutate(ctx context.Context, m *FleetDriverMutation) (Value, error) {
+func (c *LogisticsDriverClient) mutate(ctx context.Context, m *LogisticsDriverMutation) (Value, error) {
 	switch m.Op() {
 	case OpCreate:
-		return (&FleetDriverCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+		return (&LogisticsDriverCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
 	case OpUpdate:
-		return (&FleetDriverUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+		return (&LogisticsDriverUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
 	case OpUpdateOne:
-		return (&FleetDriverUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+		return (&LogisticsDriverUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
 	case OpDelete, OpDeleteOne:
-		return (&FleetDriverDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+		return (&LogisticsDriverDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
-		return nil, fmt.Errorf("ent: unknown FleetDriver mutation op: %q", m.Op())
+		return nil, fmt.Errorf("ent: unknown LogisticsDriver mutation op: %q", m.Op())
 	}
 }
 
@@ -5403,8 +5405,8 @@ func (c *WarehouseClient) mutate(ctx context.Context, m *WarehouseMutation) (Val
 type (
 	hooks struct {
 		Announcement, AuditLog, Company, Customer, CustomerAddress, CustomerContact,
-		CustomerCounter, CustomerProduct, Department, FileAsset, FleetDelivery,
-		FleetDriver, Metadict, Notification, NotificationTemplate, OrderCounter,
+		CustomerCounter, CustomerProduct, Department, FileAsset, LogisticsDelivery,
+		LogisticsDriver, Metadict, Notification, NotificationTemplate, OrderCounter,
 		PrintLog, PrintPreview, ProcessingSpec, Product, ProductCategory,
 		ProductProcessingSpec, ProductUnit, PromoTag, ReturnRequest, ReturnRequestItem,
 		Role, RolePermission, Route, SalesOrder, SalesOrderEvent, SalesOrderItem, User,
@@ -5412,8 +5414,8 @@ type (
 	}
 	inters struct {
 		Announcement, AuditLog, Company, Customer, CustomerAddress, CustomerContact,
-		CustomerCounter, CustomerProduct, Department, FileAsset, FleetDelivery,
-		FleetDriver, Metadict, Notification, NotificationTemplate, OrderCounter,
+		CustomerCounter, CustomerProduct, Department, FileAsset, LogisticsDelivery,
+		LogisticsDriver, Metadict, Notification, NotificationTemplate, OrderCounter,
 		PrintLog, PrintPreview, ProcessingSpec, Product, ProductCategory,
 		ProductProcessingSpec, ProductUnit, PromoTag, ReturnRequest, ReturnRequestItem,
 		Role, RolePermission, Route, SalesOrder, SalesOrderEvent, SalesOrderItem, User,

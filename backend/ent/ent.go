@@ -22,8 +22,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/customerproduct"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/fileasset"
-	"github.com/salesorder/sales-order-1.0/backend/ent/fleetdelivery"
-	"github.com/salesorder/sales-order-1.0/backend/ent/fleetdriver"
+	"github.com/salesorder/sales-order-1.0/backend/ent/logisticsdelivery"
+	"github.com/salesorder/sales-order-1.0/backend/ent/logisticsdriver"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/notification"
 	"github.com/salesorder/sales-order-1.0/backend/ent/notificationtemplate"
@@ -118,8 +118,8 @@ func checkColumn(t, c string) error {
 			customerproduct.Table:       customerproduct.ValidColumn,
 			department.Table:            department.ValidColumn,
 			fileasset.Table:             fileasset.ValidColumn,
-			fleetdelivery.Table:         fleetdelivery.ValidColumn,
-			fleetdriver.Table:           fleetdriver.ValidColumn,
+			logisticsdelivery.Table:     logisticsdelivery.ValidColumn,
+			logisticsdriver.Table:       logisticsdriver.ValidColumn,
 			metadict.Table:              metadict.ValidColumn,
 			notification.Table:          notification.ValidColumn,
 			notificationtemplate.Table:  notificationtemplate.ValidColumn,

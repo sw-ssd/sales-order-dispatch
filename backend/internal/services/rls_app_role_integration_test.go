@@ -15,7 +15,7 @@ import (
 // businessTables 為明確授權的業務表白名單（00022 的 18 張 ＋ 00031 的訂單四表 ＋
 // 00033 的 customer_products ＋ 00035 的 file_assets ＋ 00037 的列印兩表 ＋
 // 00039 的退貨兩表 ＋ 00041 的通知四表 ＋ 00044 announcements ＋
-// 00046 的 fleet 三表（fleet_drivers/vehicles/fleet_deliveries），共 36 張；
+// 00046 的 logistics 三表（logistics_drivers/vehicles/logistics_deliveries），共 36 張；
 // 各表授權由其 migration 明示列舉）。
 // 授權必須恰好落在這些表，多一張即為權限外洩（如內嵌 OpenFGA 的授權表）。
 var businessTables = map[string]bool{
@@ -31,8 +31,8 @@ var businessTables = map[string]bool{
 	"return_requests": true, "return_request_items": true,
 	"notification_templates": true, "notifications": true,
 	"user_devices": true, "promo_tags": true,
-	"announcements": true,
-	"fleet_drivers": true, "vehicles": true, "fleet_deliveries": true,
+	"announcements":     true,
+	"logistics_drivers": true, "vehicles": true, "logistics_deliveries": true,
 }
 
 // TestIntegrationAppRolePrivileges 驗證業務角色是非 owner、且對業務表有 DML 權限：

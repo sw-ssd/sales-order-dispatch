@@ -20,7 +20,7 @@
 | `07-notifications.md` | 4.3、4.4 | 通知範本、FCM/站內發送、裝置管理 |
 | `08-dispatch.md` | 5.1、5.2 | 派車、Connect 串流看板(僅後端) |
 | `09-printing.md` | 5.3–5.5 | 四種單據模板、Gotenberg、列印記錄 |
-| `10-fleet-execution.md` | 5.8–5.24（Phase 5.5,1.0 已補入參考計畫） | fleet 執行層：主檔/指派/定位/簽收/閉環/司機身分/停點/console/App（D32） |
+| `10-logistics-execution.md` | 5.8–5.24（Phase 5.5,1.0 已補入參考計畫） | logistics 執行層：主檔/指派/定位/簽收/閉環/司機身分/停點/console/App（D32） |
 
 原計畫各 Phase 驗收 Task(1.12、2.12、3.9、4.8、5.7)不拆,驗收時回到原計畫勾選。
 
@@ -109,14 +109,14 @@ flowchart LR
     F --> G
     E --> H[08-dispatch<br/>5.1-5.2]
     H --> I[09-printing<br/>5.3-5.5]
-    H --> J[10-fleet-execution<br/>5.8-5.24]
+    H --> J[10-logistics-execution<br/>5.8-5.24]
 ```
 
-新增 `10-fleet-execution`（D32）：授權引擎改 **OpenFGA + RLS**（取代本目錄其他文件對 Casbin/CASL 的描述，衝突處以 D32 為準）；fleet 領域為部門級；API 走 Connect-RPC。
+新增 `10-logistics-execution`（D32）：授權引擎改 **OpenFGA + RLS**（取代本目錄其他文件對 Casbin/CASL 的描述，衝突處以 D32 為準）；logistics 領域為部門級；API 走 Connect-RPC。
 
 關鍵跨檔依賴:
-- fleet 相關(新增, D32):`10.3`(地址座標)相依 `04-master-data`(customer_addresses);`10.7`(OSRM)相依 `10.3` 的 shipping 座標。
-- `10.4`(指派)相依 `08-dispatch`(車次 `route_id` 裝單完成);`10.8`(OpenFGA)為 fleet 全部 RPC 授權前置。
+- logistics 相關(新增, D32):`10.3`(地址座標)相依 `04-master-data`(customer_addresses);`10.7`(OSRM)相依 `10.3` 的 shipping 座標。
+- `10.4`(指派)相依 `08-dispatch`(車次 `route_id` 裝單完成);`10.8`(OpenFGA)為 logistics 全部 RPC 授權前置。
 - `4.2.x`(下單邏輯)相依 `3.3.3`(單位換算)、`3.5.3`(別名建立)、`3.1.5`(偏好送貨日)。
 - `5.1.2`(批次 Confirm)相依 `4.1.3`(狀態機);`5.1.4`(派車通知)相依 `4.4`。
 - `4.7.5`(退貨推播稽核)相依 `4.3`/`4.4`、`2.6`。

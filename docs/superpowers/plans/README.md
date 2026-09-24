@@ -12,7 +12,7 @@
 
 - `2026-08-05-sales-order-1.0-subproject-implementation-plan.md`（根層）：主計畫。50 Tasks 分 5 Waves，涵蓋 Backend / Web / App 三子專案
 - `backend/`：後端分域實作計畫（01~09）
-- `backend/detail/`：後端細部功能文件。`00-index.md` 為共通規則；01~10 對應各分域（10 = fleet 執行層 D32）
+- `backend/detail/`：後端細部功能文件。`00-index.md` 為共通規則；01~10 對應各分域（10 = logistics 執行層 D32）
 - `app/`：App 技術棧與認證基礎計畫
 - `frontend/`：Web 中台計畫（2026-09-18 起，6 份）：`auth-users`（現況對齊）、`openfga-authz-frontend`（CASL→權限集合遷移）、`ui-library-phase1`、`forms-tanstack-phase2`、`tables-phase3`、`tailkit-ark`（Ark 行為 × Tailkit 視覺）
 - `reference/`：原計畫（v2.9.0）。各計畫以「原計畫 Task x.y」引用
@@ -55,7 +55,7 @@ graph TD
 | 07-notifications | `backend/2026-08-17-backend-07-notifications-plan.md` | 通知與 FCM | 🟡 部分 | 後端約 85%：四表 schema（00041）＋渲染＋通知中心＋DeviceService＋Sender／Failmark（Fake；FCM 實裝另案）＋四路觸發（下單／專屬／退貨審核／派車）＋00042 RLS ENABLE＋FORCE；**Web 通知中心 `b193544`**（清單/未讀篩選/單列與整頁標記已讀＋`notification` 權限資源）；派車 adapter 待 08、App 頁待 |
 | 08-dispatch | `backend/2026-08-17-backend-08-dispatch-plan.md` | 派車看板 | ✅ 完成（2026-09-24） | `DispatchService` 4 RPC（Assign／Confirm／Cancel／WatchBoard）＋派車通知＋提交後發佈（**跨 replica 已落地 2026-09-24**：combinedPublisher 直投＋廣播、startBoardSubscriber 訂閱迴圈,降級=直投＋heartbeat 查詢節拍,探針 TestIntegrationBoardValkeyCrossReplica/Degrade 綠）＋重印警告；Web 看板頁已落地（`e3ed769`：日期過濾前置＋車次欄 DnD＋批次確認＋取消派車＋串流訂閱）；車次主檔 Web 頁已落地（`e950b23`，看板欄位來源的硬前置）；車次主檔來源齊備 |
 | 09-printing | `backend/2026-08-17-backend-09-printing-plan.md` | 列印與 PDF | ✅ 完成（2026-09-22） | Tasks 1–4 全數落地：`internal/print`（view model＋四模板＋Gotenberg client＋PDF 產線）、printlog／printpreview schema（00037）、Preview／Print／ListLogs RPC、00038 RLS ENABLE＋FORCE、全整合綠 ok=30 fail=0；**Web 列印頁 `13c76f4`**（預覽/正式列印/紀錄查詢） |
-| fleet-execution（D32） | `backend/detail/10-fleet-execution.md` | Fleetbase 物流執行層 | 🟡 部分（2026-09-24） | D32 授權首批落地：三表 00046/00047＋FleetService 四 RPC（建檔/指派 version 樂觀鎖/本人清單）＋model fleet 三型別（租戶 parent＋driver#assignee）＋tuple AfterCommit 對帳＋10.8/10.12 閘門＋跨部門/本人隔離探針綠;GPS/POD/狀態機/uuid/fleets 聚合待（見細部文件狀態註記） |
+| logistics-execution（D32） | `backend/detail/10-logistics-execution.md` | Fleetbase 物流執行層 | 🟡 部分（2026-09-24） | D32 授權首批落地：三表 00046/00047＋LogisticsService 四 RPC（建檔/指派 version 樂觀鎖/本人清單）＋model logistics 三型別（租戶 parent＋driver#assignee）＋tuple AfterCommit 對帳＋10.8/10.12 閘門＋跨部門/本人隔離探針綠;GPS/POD/狀態機/uuid/logistics_teams 聚合待（見細部文件狀態註記） |
 | app-flutter-stack | `app/2026-08-04-app-flutter-stack.md` | App 技術棧與認證基礎（D29） | 🟡 部分 | Task 1（骨架）✅、Task 5/6/7（token/auth transport/router）部分；**根佈線與業務畫面已落地 2026-09-24**（CacheProvider+fquery、Bearer 401 單飛重試、訂單/退貨/通知三件套 Material/Cupertino 自適應 `9865b3c`＋實機整合測試）；core/config、Sembast 鏡像未落地 |
 | frontend-auth-users | `frontend/2026-09-18-frontend-auth-users-plan.md` | Web 中台 auth/users/ability | 🟡 部分 | 17/17 打勾：登入雙 tab、403、Google OIDC、公司/部門/角色/使用者四頁＋PermissionMatrix＋分頁、`requireAbility` 路由守衛已完成；另客戶主檔頁 `206192a`、訂單管理頁 `6953b02`、商品總表頁 `61feab2`、派車看板 `e3ed769`、車次主檔 `e950b23`、單據列印 `13c76f4`、退貨 `549933c`、通知中心 `b193544`、稽核 `834f575`、客戶地址簿/聯絡人 `183d205`、部門級主檔三頁 `0a590d0`、客戶專屬商品對話框 `6192c13`、公告管理頁 `943e3c1` 已落地；待辦為其餘業務頁 |
 | frontend-openfga | `frontend/2026-09-18-openfga-authz-frontend-plan.md` | CASL → 權限集合遷移 | ✅ 完成 | F1–F4 全落地：`permissions.ts`（Set 查詢）、`service.ts` 載入權限集合、`Can`/`guards` 改用 `hasPermission`、`@casl/ability` 已自依賴移除 |

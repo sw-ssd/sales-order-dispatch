@@ -21,8 +21,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/customerproduct"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/fileasset"
-	"github.com/salesorder/sales-order-1.0/backend/ent/fleetdelivery"
-	"github.com/salesorder/sales-order-1.0/backend/ent/fleetdriver"
+	"github.com/salesorder/sales-order-1.0/backend/ent/logisticsdelivery"
+	"github.com/salesorder/sales-order-1.0/backend/ent/logisticsdriver"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/notification"
 	"github.com/salesorder/sales-order-1.0/backend/ent/notificationtemplate"
@@ -69,8 +69,8 @@ const (
 	TypeCustomerProduct       = "CustomerProduct"
 	TypeDepartment            = "Department"
 	TypeFileAsset             = "FileAsset"
-	TypeFleetDelivery         = "FleetDelivery"
-	TypeFleetDriver           = "FleetDriver"
+	TypeLogisticsDelivery     = "LogisticsDelivery"
+	TypeLogisticsDriver       = "LogisticsDriver"
 	TypeMetadict              = "Metadict"
 	TypeNotification          = "Notification"
 	TypeNotificationTemplate  = "NotificationTemplate"
@@ -11748,8 +11748,8 @@ func (m *FileAssetMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown FileAsset edge %s", name)
 }
 
-// FleetDeliveryMutation represents an operation that mutates the FleetDelivery nodes in the graph.
-type FleetDeliveryMutation struct {
+// LogisticsDeliveryMutation represents an operation that mutates the LogisticsDelivery nodes in the graph.
+type LogisticsDeliveryMutation struct {
 	config
 	op               Op
 	typ              string
@@ -11774,21 +11774,21 @@ type FleetDeliveryMutation struct {
 	updated_at       *time.Time
 	clearedFields    map[string]struct{}
 	done             bool
-	oldValue         func(context.Context) (*FleetDelivery, error)
-	predicates       []predicate.FleetDelivery
+	oldValue         func(context.Context) (*LogisticsDelivery, error)
+	predicates       []predicate.LogisticsDelivery
 }
 
-var _ ent.Mutation = (*FleetDeliveryMutation)(nil)
+var _ ent.Mutation = (*LogisticsDeliveryMutation)(nil)
 
-// fleetdeliveryOption allows management of the mutation configuration using functional options.
-type fleetdeliveryOption func(*FleetDeliveryMutation)
+// logisticsdeliveryOption allows management of the mutation configuration using functional options.
+type logisticsdeliveryOption func(*LogisticsDeliveryMutation)
 
-// newFleetDeliveryMutation creates new mutation for the FleetDelivery entity.
-func newFleetDeliveryMutation(c config, op Op, opts ...fleetdeliveryOption) *FleetDeliveryMutation {
-	m := &FleetDeliveryMutation{
+// newLogisticsDeliveryMutation creates new mutation for the LogisticsDelivery entity.
+func newLogisticsDeliveryMutation(c config, op Op, opts ...logisticsdeliveryOption) *LogisticsDeliveryMutation {
+	m := &LogisticsDeliveryMutation{
 		config:        c,
 		op:            op,
-		typ:           TypeFleetDelivery,
+		typ:           TypeLogisticsDelivery,
 		clearedFields: make(map[string]struct{}),
 	}
 	for _, opt := range opts {
@@ -11797,20 +11797,20 @@ func newFleetDeliveryMutation(c config, op Op, opts ...fleetdeliveryOption) *Fle
 	return m
 }
 
-// withFleetDeliveryID sets the ID field of the mutation.
-func withFleetDeliveryID(id int) fleetdeliveryOption {
-	return func(m *FleetDeliveryMutation) {
+// withLogisticsDeliveryID sets the ID field of the mutation.
+func withLogisticsDeliveryID(id int) logisticsdeliveryOption {
+	return func(m *LogisticsDeliveryMutation) {
 		var (
 			err   error
 			once  sync.Once
-			value *FleetDelivery
+			value *LogisticsDelivery
 		)
-		m.oldValue = func(ctx context.Context) (*FleetDelivery, error) {
+		m.oldValue = func(ctx context.Context) (*LogisticsDelivery, error) {
 			once.Do(func() {
 				if m.done {
 					err = errors.New("querying old values post mutation is not allowed")
 				} else {
-					value, err = m.Client().FleetDelivery.Get(ctx, id)
+					value, err = m.Client().LogisticsDelivery.Get(ctx, id)
 				}
 			})
 			return value, err
@@ -11819,10 +11819,10 @@ func withFleetDeliveryID(id int) fleetdeliveryOption {
 	}
 }
 
-// withFleetDelivery sets the old FleetDelivery of the mutation.
-func withFleetDelivery(node *FleetDelivery) fleetdeliveryOption {
-	return func(m *FleetDeliveryMutation) {
-		m.oldValue = func(context.Context) (*FleetDelivery, error) {
+// withLogisticsDelivery sets the old LogisticsDelivery of the mutation.
+func withLogisticsDelivery(node *LogisticsDelivery) logisticsdeliveryOption {
+	return func(m *LogisticsDeliveryMutation) {
+		m.oldValue = func(context.Context) (*LogisticsDelivery, error) {
 			return node, nil
 		}
 		m.id = &node.ID
@@ -11831,7 +11831,7 @@ func withFleetDelivery(node *FleetDelivery) fleetdeliveryOption {
 
 // Client returns a new `ent.Client` from the mutation. If the mutation was
 // executed in a transaction (ent.Tx), a transactional client is returned.
-func (m FleetDeliveryMutation) Client() *Client {
+func (m LogisticsDeliveryMutation) Client() *Client {
 	client := &Client{config: m.config}
 	client.init()
 	return client
@@ -11839,7 +11839,7 @@ func (m FleetDeliveryMutation) Client() *Client {
 
 // Tx returns an `ent.Tx` for mutations that were executed in transactions;
 // it returns an error otherwise.
-func (m FleetDeliveryMutation) Tx() (*Tx, error) {
+func (m LogisticsDeliveryMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
 		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
@@ -11850,7 +11850,7 @@ func (m FleetDeliveryMutation) Tx() (*Tx, error) {
 
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *FleetDeliveryMutation) ID() (id int, exists bool) {
+func (m *LogisticsDeliveryMutation) ID() (id int, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -11861,7 +11861,7 @@ func (m *FleetDeliveryMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *FleetDeliveryMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *LogisticsDeliveryMutation) IDs(ctx context.Context) ([]int, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
@@ -11870,20 +11870,20 @@ func (m *FleetDeliveryMutation) IDs(ctx context.Context) ([]int, error) {
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().FleetDelivery.Query().Where(m.predicates...).IDs(ctx)
+		return m.Client().LogisticsDelivery.Query().Where(m.predicates...).IDs(ctx)
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
 }
 
 // SetCompanyID sets the "company_id" field.
-func (m *FleetDeliveryMutation) SetCompanyID(i int) {
+func (m *LogisticsDeliveryMutation) SetCompanyID(i int) {
 	m.company_id = &i
 	m.addcompany_id = nil
 }
 
 // CompanyID returns the value of the "company_id" field in the mutation.
-func (m *FleetDeliveryMutation) CompanyID() (r int, exists bool) {
+func (m *LogisticsDeliveryMutation) CompanyID() (r int, exists bool) {
 	v := m.company_id
 	if v == nil {
 		return
@@ -11891,10 +11891,10 @@ func (m *FleetDeliveryMutation) CompanyID() (r int, exists bool) {
 	return *v, true
 }
 
-// OldCompanyID returns the old "company_id" field's value of the FleetDelivery entity.
-// If the FleetDelivery object wasn't provided to the builder, the object is fetched from the database.
+// OldCompanyID returns the old "company_id" field's value of the LogisticsDelivery entity.
+// If the LogisticsDelivery object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FleetDeliveryMutation) OldCompanyID(ctx context.Context) (v int, err error) {
+func (m *LogisticsDeliveryMutation) OldCompanyID(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldCompanyID is only allowed on UpdateOne operations")
 	}
@@ -11909,7 +11909,7 @@ func (m *FleetDeliveryMutation) OldCompanyID(ctx context.Context) (v int, err er
 }
 
 // AddCompanyID adds i to the "company_id" field.
-func (m *FleetDeliveryMutation) AddCompanyID(i int) {
+func (m *LogisticsDeliveryMutation) AddCompanyID(i int) {
 	if m.addcompany_id != nil {
 		*m.addcompany_id += i
 	} else {
@@ -11918,7 +11918,7 @@ func (m *FleetDeliveryMutation) AddCompanyID(i int) {
 }
 
 // AddedCompanyID returns the value that was added to the "company_id" field in this mutation.
-func (m *FleetDeliveryMutation) AddedCompanyID() (r int, exists bool) {
+func (m *LogisticsDeliveryMutation) AddedCompanyID() (r int, exists bool) {
 	v := m.addcompany_id
 	if v == nil {
 		return
@@ -11927,19 +11927,19 @@ func (m *FleetDeliveryMutation) AddedCompanyID() (r int, exists bool) {
 }
 
 // ResetCompanyID resets all changes to the "company_id" field.
-func (m *FleetDeliveryMutation) ResetCompanyID() {
+func (m *LogisticsDeliveryMutation) ResetCompanyID() {
 	m.company_id = nil
 	m.addcompany_id = nil
 }
 
 // SetDepartmentID sets the "department_id" field.
-func (m *FleetDeliveryMutation) SetDepartmentID(i int) {
+func (m *LogisticsDeliveryMutation) SetDepartmentID(i int) {
 	m.department_id = &i
 	m.adddepartment_id = nil
 }
 
 // DepartmentID returns the value of the "department_id" field in the mutation.
-func (m *FleetDeliveryMutation) DepartmentID() (r int, exists bool) {
+func (m *LogisticsDeliveryMutation) DepartmentID() (r int, exists bool) {
 	v := m.department_id
 	if v == nil {
 		return
@@ -11947,10 +11947,10 @@ func (m *FleetDeliveryMutation) DepartmentID() (r int, exists bool) {
 	return *v, true
 }
 
-// OldDepartmentID returns the old "department_id" field's value of the FleetDelivery entity.
-// If the FleetDelivery object wasn't provided to the builder, the object is fetched from the database.
+// OldDepartmentID returns the old "department_id" field's value of the LogisticsDelivery entity.
+// If the LogisticsDelivery object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FleetDeliveryMutation) OldDepartmentID(ctx context.Context) (v *int, err error) {
+func (m *LogisticsDeliveryMutation) OldDepartmentID(ctx context.Context) (v *int, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldDepartmentID is only allowed on UpdateOne operations")
 	}
@@ -11965,7 +11965,7 @@ func (m *FleetDeliveryMutation) OldDepartmentID(ctx context.Context) (v *int, er
 }
 
 // AddDepartmentID adds i to the "department_id" field.
-func (m *FleetDeliveryMutation) AddDepartmentID(i int) {
+func (m *LogisticsDeliveryMutation) AddDepartmentID(i int) {
 	if m.adddepartment_id != nil {
 		*m.adddepartment_id += i
 	} else {
@@ -11974,7 +11974,7 @@ func (m *FleetDeliveryMutation) AddDepartmentID(i int) {
 }
 
 // AddedDepartmentID returns the value that was added to the "department_id" field in this mutation.
-func (m *FleetDeliveryMutation) AddedDepartmentID() (r int, exists bool) {
+func (m *LogisticsDeliveryMutation) AddedDepartmentID() (r int, exists bool) {
 	v := m.adddepartment_id
 	if v == nil {
 		return
@@ -11983,33 +11983,33 @@ func (m *FleetDeliveryMutation) AddedDepartmentID() (r int, exists bool) {
 }
 
 // ClearDepartmentID clears the value of the "department_id" field.
-func (m *FleetDeliveryMutation) ClearDepartmentID() {
+func (m *LogisticsDeliveryMutation) ClearDepartmentID() {
 	m.department_id = nil
 	m.adddepartment_id = nil
-	m.clearedFields[fleetdelivery.FieldDepartmentID] = struct{}{}
+	m.clearedFields[logisticsdelivery.FieldDepartmentID] = struct{}{}
 }
 
 // DepartmentIDCleared returns if the "department_id" field was cleared in this mutation.
-func (m *FleetDeliveryMutation) DepartmentIDCleared() bool {
-	_, ok := m.clearedFields[fleetdelivery.FieldDepartmentID]
+func (m *LogisticsDeliveryMutation) DepartmentIDCleared() bool {
+	_, ok := m.clearedFields[logisticsdelivery.FieldDepartmentID]
 	return ok
 }
 
 // ResetDepartmentID resets all changes to the "department_id" field.
-func (m *FleetDeliveryMutation) ResetDepartmentID() {
+func (m *LogisticsDeliveryMutation) ResetDepartmentID() {
 	m.department_id = nil
 	m.adddepartment_id = nil
-	delete(m.clearedFields, fleetdelivery.FieldDepartmentID)
+	delete(m.clearedFields, logisticsdelivery.FieldDepartmentID)
 }
 
 // SetRouteID sets the "route_id" field.
-func (m *FleetDeliveryMutation) SetRouteID(i int) {
+func (m *LogisticsDeliveryMutation) SetRouteID(i int) {
 	m.route_id = &i
 	m.addroute_id = nil
 }
 
 // RouteID returns the value of the "route_id" field in the mutation.
-func (m *FleetDeliveryMutation) RouteID() (r int, exists bool) {
+func (m *LogisticsDeliveryMutation) RouteID() (r int, exists bool) {
 	v := m.route_id
 	if v == nil {
 		return
@@ -12017,10 +12017,10 @@ func (m *FleetDeliveryMutation) RouteID() (r int, exists bool) {
 	return *v, true
 }
 
-// OldRouteID returns the old "route_id" field's value of the FleetDelivery entity.
-// If the FleetDelivery object wasn't provided to the builder, the object is fetched from the database.
+// OldRouteID returns the old "route_id" field's value of the LogisticsDelivery entity.
+// If the LogisticsDelivery object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FleetDeliveryMutation) OldRouteID(ctx context.Context) (v int, err error) {
+func (m *LogisticsDeliveryMutation) OldRouteID(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldRouteID is only allowed on UpdateOne operations")
 	}
@@ -12035,7 +12035,7 @@ func (m *FleetDeliveryMutation) OldRouteID(ctx context.Context) (v int, err erro
 }
 
 // AddRouteID adds i to the "route_id" field.
-func (m *FleetDeliveryMutation) AddRouteID(i int) {
+func (m *LogisticsDeliveryMutation) AddRouteID(i int) {
 	if m.addroute_id != nil {
 		*m.addroute_id += i
 	} else {
@@ -12044,7 +12044,7 @@ func (m *FleetDeliveryMutation) AddRouteID(i int) {
 }
 
 // AddedRouteID returns the value that was added to the "route_id" field in this mutation.
-func (m *FleetDeliveryMutation) AddedRouteID() (r int, exists bool) {
+func (m *LogisticsDeliveryMutation) AddedRouteID() (r int, exists bool) {
 	v := m.addroute_id
 	if v == nil {
 		return
@@ -12053,19 +12053,19 @@ func (m *FleetDeliveryMutation) AddedRouteID() (r int, exists bool) {
 }
 
 // ResetRouteID resets all changes to the "route_id" field.
-func (m *FleetDeliveryMutation) ResetRouteID() {
+func (m *LogisticsDeliveryMutation) ResetRouteID() {
 	m.route_id = nil
 	m.addroute_id = nil
 }
 
 // SetDriverID sets the "driver_id" field.
-func (m *FleetDeliveryMutation) SetDriverID(i int) {
+func (m *LogisticsDeliveryMutation) SetDriverID(i int) {
 	m.driver_id = &i
 	m.adddriver_id = nil
 }
 
 // DriverID returns the value of the "driver_id" field in the mutation.
-func (m *FleetDeliveryMutation) DriverID() (r int, exists bool) {
+func (m *LogisticsDeliveryMutation) DriverID() (r int, exists bool) {
 	v := m.driver_id
 	if v == nil {
 		return
@@ -12073,10 +12073,10 @@ func (m *FleetDeliveryMutation) DriverID() (r int, exists bool) {
 	return *v, true
 }
 
-// OldDriverID returns the old "driver_id" field's value of the FleetDelivery entity.
-// If the FleetDelivery object wasn't provided to the builder, the object is fetched from the database.
+// OldDriverID returns the old "driver_id" field's value of the LogisticsDelivery entity.
+// If the LogisticsDelivery object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FleetDeliveryMutation) OldDriverID(ctx context.Context) (v *int, err error) {
+func (m *LogisticsDeliveryMutation) OldDriverID(ctx context.Context) (v *int, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldDriverID is only allowed on UpdateOne operations")
 	}
@@ -12091,7 +12091,7 @@ func (m *FleetDeliveryMutation) OldDriverID(ctx context.Context) (v *int, err er
 }
 
 // AddDriverID adds i to the "driver_id" field.
-func (m *FleetDeliveryMutation) AddDriverID(i int) {
+func (m *LogisticsDeliveryMutation) AddDriverID(i int) {
 	if m.adddriver_id != nil {
 		*m.adddriver_id += i
 	} else {
@@ -12100,7 +12100,7 @@ func (m *FleetDeliveryMutation) AddDriverID(i int) {
 }
 
 // AddedDriverID returns the value that was added to the "driver_id" field in this mutation.
-func (m *FleetDeliveryMutation) AddedDriverID() (r int, exists bool) {
+func (m *LogisticsDeliveryMutation) AddedDriverID() (r int, exists bool) {
 	v := m.adddriver_id
 	if v == nil {
 		return
@@ -12109,33 +12109,33 @@ func (m *FleetDeliveryMutation) AddedDriverID() (r int, exists bool) {
 }
 
 // ClearDriverID clears the value of the "driver_id" field.
-func (m *FleetDeliveryMutation) ClearDriverID() {
+func (m *LogisticsDeliveryMutation) ClearDriverID() {
 	m.driver_id = nil
 	m.adddriver_id = nil
-	m.clearedFields[fleetdelivery.FieldDriverID] = struct{}{}
+	m.clearedFields[logisticsdelivery.FieldDriverID] = struct{}{}
 }
 
 // DriverIDCleared returns if the "driver_id" field was cleared in this mutation.
-func (m *FleetDeliveryMutation) DriverIDCleared() bool {
-	_, ok := m.clearedFields[fleetdelivery.FieldDriverID]
+func (m *LogisticsDeliveryMutation) DriverIDCleared() bool {
+	_, ok := m.clearedFields[logisticsdelivery.FieldDriverID]
 	return ok
 }
 
 // ResetDriverID resets all changes to the "driver_id" field.
-func (m *FleetDeliveryMutation) ResetDriverID() {
+func (m *LogisticsDeliveryMutation) ResetDriverID() {
 	m.driver_id = nil
 	m.adddriver_id = nil
-	delete(m.clearedFields, fleetdelivery.FieldDriverID)
+	delete(m.clearedFields, logisticsdelivery.FieldDriverID)
 }
 
 // SetVehicleID sets the "vehicle_id" field.
-func (m *FleetDeliveryMutation) SetVehicleID(i int) {
+func (m *LogisticsDeliveryMutation) SetVehicleID(i int) {
 	m.vehicle_id = &i
 	m.addvehicle_id = nil
 }
 
 // VehicleID returns the value of the "vehicle_id" field in the mutation.
-func (m *FleetDeliveryMutation) VehicleID() (r int, exists bool) {
+func (m *LogisticsDeliveryMutation) VehicleID() (r int, exists bool) {
 	v := m.vehicle_id
 	if v == nil {
 		return
@@ -12143,10 +12143,10 @@ func (m *FleetDeliveryMutation) VehicleID() (r int, exists bool) {
 	return *v, true
 }
 
-// OldVehicleID returns the old "vehicle_id" field's value of the FleetDelivery entity.
-// If the FleetDelivery object wasn't provided to the builder, the object is fetched from the database.
+// OldVehicleID returns the old "vehicle_id" field's value of the LogisticsDelivery entity.
+// If the LogisticsDelivery object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FleetDeliveryMutation) OldVehicleID(ctx context.Context) (v *int, err error) {
+func (m *LogisticsDeliveryMutation) OldVehicleID(ctx context.Context) (v *int, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldVehicleID is only allowed on UpdateOne operations")
 	}
@@ -12161,7 +12161,7 @@ func (m *FleetDeliveryMutation) OldVehicleID(ctx context.Context) (v *int, err e
 }
 
 // AddVehicleID adds i to the "vehicle_id" field.
-func (m *FleetDeliveryMutation) AddVehicleID(i int) {
+func (m *LogisticsDeliveryMutation) AddVehicleID(i int) {
 	if m.addvehicle_id != nil {
 		*m.addvehicle_id += i
 	} else {
@@ -12170,7 +12170,7 @@ func (m *FleetDeliveryMutation) AddVehicleID(i int) {
 }
 
 // AddedVehicleID returns the value that was added to the "vehicle_id" field in this mutation.
-func (m *FleetDeliveryMutation) AddedVehicleID() (r int, exists bool) {
+func (m *LogisticsDeliveryMutation) AddedVehicleID() (r int, exists bool) {
 	v := m.addvehicle_id
 	if v == nil {
 		return
@@ -12179,33 +12179,33 @@ func (m *FleetDeliveryMutation) AddedVehicleID() (r int, exists bool) {
 }
 
 // ClearVehicleID clears the value of the "vehicle_id" field.
-func (m *FleetDeliveryMutation) ClearVehicleID() {
+func (m *LogisticsDeliveryMutation) ClearVehicleID() {
 	m.vehicle_id = nil
 	m.addvehicle_id = nil
-	m.clearedFields[fleetdelivery.FieldVehicleID] = struct{}{}
+	m.clearedFields[logisticsdelivery.FieldVehicleID] = struct{}{}
 }
 
 // VehicleIDCleared returns if the "vehicle_id" field was cleared in this mutation.
-func (m *FleetDeliveryMutation) VehicleIDCleared() bool {
-	_, ok := m.clearedFields[fleetdelivery.FieldVehicleID]
+func (m *LogisticsDeliveryMutation) VehicleIDCleared() bool {
+	_, ok := m.clearedFields[logisticsdelivery.FieldVehicleID]
 	return ok
 }
 
 // ResetVehicleID resets all changes to the "vehicle_id" field.
-func (m *FleetDeliveryMutation) ResetVehicleID() {
+func (m *LogisticsDeliveryMutation) ResetVehicleID() {
 	m.vehicle_id = nil
 	m.addvehicle_id = nil
-	delete(m.clearedFields, fleetdelivery.FieldVehicleID)
+	delete(m.clearedFields, logisticsdelivery.FieldVehicleID)
 }
 
 // SetAssignedBy sets the "assigned_by" field.
-func (m *FleetDeliveryMutation) SetAssignedBy(i int) {
+func (m *LogisticsDeliveryMutation) SetAssignedBy(i int) {
 	m.assigned_by = &i
 	m.addassigned_by = nil
 }
 
 // AssignedBy returns the value of the "assigned_by" field in the mutation.
-func (m *FleetDeliveryMutation) AssignedBy() (r int, exists bool) {
+func (m *LogisticsDeliveryMutation) AssignedBy() (r int, exists bool) {
 	v := m.assigned_by
 	if v == nil {
 		return
@@ -12213,10 +12213,10 @@ func (m *FleetDeliveryMutation) AssignedBy() (r int, exists bool) {
 	return *v, true
 }
 
-// OldAssignedBy returns the old "assigned_by" field's value of the FleetDelivery entity.
-// If the FleetDelivery object wasn't provided to the builder, the object is fetched from the database.
+// OldAssignedBy returns the old "assigned_by" field's value of the LogisticsDelivery entity.
+// If the LogisticsDelivery object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FleetDeliveryMutation) OldAssignedBy(ctx context.Context) (v int, err error) {
+func (m *LogisticsDeliveryMutation) OldAssignedBy(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldAssignedBy is only allowed on UpdateOne operations")
 	}
@@ -12231,7 +12231,7 @@ func (m *FleetDeliveryMutation) OldAssignedBy(ctx context.Context) (v int, err e
 }
 
 // AddAssignedBy adds i to the "assigned_by" field.
-func (m *FleetDeliveryMutation) AddAssignedBy(i int) {
+func (m *LogisticsDeliveryMutation) AddAssignedBy(i int) {
 	if m.addassigned_by != nil {
 		*m.addassigned_by += i
 	} else {
@@ -12240,7 +12240,7 @@ func (m *FleetDeliveryMutation) AddAssignedBy(i int) {
 }
 
 // AddedAssignedBy returns the value that was added to the "assigned_by" field in this mutation.
-func (m *FleetDeliveryMutation) AddedAssignedBy() (r int, exists bool) {
+func (m *LogisticsDeliveryMutation) AddedAssignedBy() (r int, exists bool) {
 	v := m.addassigned_by
 	if v == nil {
 		return
@@ -12249,18 +12249,18 @@ func (m *FleetDeliveryMutation) AddedAssignedBy() (r int, exists bool) {
 }
 
 // ResetAssignedBy resets all changes to the "assigned_by" field.
-func (m *FleetDeliveryMutation) ResetAssignedBy() {
+func (m *LogisticsDeliveryMutation) ResetAssignedBy() {
 	m.assigned_by = nil
 	m.addassigned_by = nil
 }
 
 // SetStatus sets the "status" field.
-func (m *FleetDeliveryMutation) SetStatus(s string) {
+func (m *LogisticsDeliveryMutation) SetStatus(s string) {
 	m.status = &s
 }
 
 // Status returns the value of the "status" field in the mutation.
-func (m *FleetDeliveryMutation) Status() (r string, exists bool) {
+func (m *LogisticsDeliveryMutation) Status() (r string, exists bool) {
 	v := m.status
 	if v == nil {
 		return
@@ -12268,10 +12268,10 @@ func (m *FleetDeliveryMutation) Status() (r string, exists bool) {
 	return *v, true
 }
 
-// OldStatus returns the old "status" field's value of the FleetDelivery entity.
-// If the FleetDelivery object wasn't provided to the builder, the object is fetched from the database.
+// OldStatus returns the old "status" field's value of the LogisticsDelivery entity.
+// If the LogisticsDelivery object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FleetDeliveryMutation) OldStatus(ctx context.Context) (v string, err error) {
+func (m *LogisticsDeliveryMutation) OldStatus(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
 	}
@@ -12286,18 +12286,18 @@ func (m *FleetDeliveryMutation) OldStatus(ctx context.Context) (v string, err er
 }
 
 // ResetStatus resets all changes to the "status" field.
-func (m *FleetDeliveryMutation) ResetStatus() {
+func (m *LogisticsDeliveryMutation) ResetStatus() {
 	m.status = nil
 }
 
 // SetVersion sets the "version" field.
-func (m *FleetDeliveryMutation) SetVersion(i int) {
+func (m *LogisticsDeliveryMutation) SetVersion(i int) {
 	m.version = &i
 	m.addversion = nil
 }
 
 // Version returns the value of the "version" field in the mutation.
-func (m *FleetDeliveryMutation) Version() (r int, exists bool) {
+func (m *LogisticsDeliveryMutation) Version() (r int, exists bool) {
 	v := m.version
 	if v == nil {
 		return
@@ -12305,10 +12305,10 @@ func (m *FleetDeliveryMutation) Version() (r int, exists bool) {
 	return *v, true
 }
 
-// OldVersion returns the old "version" field's value of the FleetDelivery entity.
-// If the FleetDelivery object wasn't provided to the builder, the object is fetched from the database.
+// OldVersion returns the old "version" field's value of the LogisticsDelivery entity.
+// If the LogisticsDelivery object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FleetDeliveryMutation) OldVersion(ctx context.Context) (v int, err error) {
+func (m *LogisticsDeliveryMutation) OldVersion(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldVersion is only allowed on UpdateOne operations")
 	}
@@ -12323,7 +12323,7 @@ func (m *FleetDeliveryMutation) OldVersion(ctx context.Context) (v int, err erro
 }
 
 // AddVersion adds i to the "version" field.
-func (m *FleetDeliveryMutation) AddVersion(i int) {
+func (m *LogisticsDeliveryMutation) AddVersion(i int) {
 	if m.addversion != nil {
 		*m.addversion += i
 	} else {
@@ -12332,7 +12332,7 @@ func (m *FleetDeliveryMutation) AddVersion(i int) {
 }
 
 // AddedVersion returns the value that was added to the "version" field in this mutation.
-func (m *FleetDeliveryMutation) AddedVersion() (r int, exists bool) {
+func (m *LogisticsDeliveryMutation) AddedVersion() (r int, exists bool) {
 	v := m.addversion
 	if v == nil {
 		return
@@ -12341,18 +12341,18 @@ func (m *FleetDeliveryMutation) AddedVersion() (r int, exists bool) {
 }
 
 // ResetVersion resets all changes to the "version" field.
-func (m *FleetDeliveryMutation) ResetVersion() {
+func (m *LogisticsDeliveryMutation) ResetVersion() {
 	m.version = nil
 	m.addversion = nil
 }
 
 // SetDeletedAt sets the "deleted_at" field.
-func (m *FleetDeliveryMutation) SetDeletedAt(t time.Time) {
+func (m *LogisticsDeliveryMutation) SetDeletedAt(t time.Time) {
 	m.deleted_at = &t
 }
 
 // DeletedAt returns the value of the "deleted_at" field in the mutation.
-func (m *FleetDeliveryMutation) DeletedAt() (r time.Time, exists bool) {
+func (m *LogisticsDeliveryMutation) DeletedAt() (r time.Time, exists bool) {
 	v := m.deleted_at
 	if v == nil {
 		return
@@ -12360,10 +12360,10 @@ func (m *FleetDeliveryMutation) DeletedAt() (r time.Time, exists bool) {
 	return *v, true
 }
 
-// OldDeletedAt returns the old "deleted_at" field's value of the FleetDelivery entity.
-// If the FleetDelivery object wasn't provided to the builder, the object is fetched from the database.
+// OldDeletedAt returns the old "deleted_at" field's value of the LogisticsDelivery entity.
+// If the LogisticsDelivery object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FleetDeliveryMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
+func (m *LogisticsDeliveryMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
 	}
@@ -12378,30 +12378,30 @@ func (m *FleetDeliveryMutation) OldDeletedAt(ctx context.Context) (v *time.Time,
 }
 
 // ClearDeletedAt clears the value of the "deleted_at" field.
-func (m *FleetDeliveryMutation) ClearDeletedAt() {
+func (m *LogisticsDeliveryMutation) ClearDeletedAt() {
 	m.deleted_at = nil
-	m.clearedFields[fleetdelivery.FieldDeletedAt] = struct{}{}
+	m.clearedFields[logisticsdelivery.FieldDeletedAt] = struct{}{}
 }
 
 // DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
-func (m *FleetDeliveryMutation) DeletedAtCleared() bool {
-	_, ok := m.clearedFields[fleetdelivery.FieldDeletedAt]
+func (m *LogisticsDeliveryMutation) DeletedAtCleared() bool {
+	_, ok := m.clearedFields[logisticsdelivery.FieldDeletedAt]
 	return ok
 }
 
 // ResetDeletedAt resets all changes to the "deleted_at" field.
-func (m *FleetDeliveryMutation) ResetDeletedAt() {
+func (m *LogisticsDeliveryMutation) ResetDeletedAt() {
 	m.deleted_at = nil
-	delete(m.clearedFields, fleetdelivery.FieldDeletedAt)
+	delete(m.clearedFields, logisticsdelivery.FieldDeletedAt)
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (m *FleetDeliveryMutation) SetCreatedAt(t time.Time) {
+func (m *LogisticsDeliveryMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
 }
 
 // CreatedAt returns the value of the "created_at" field in the mutation.
-func (m *FleetDeliveryMutation) CreatedAt() (r time.Time, exists bool) {
+func (m *LogisticsDeliveryMutation) CreatedAt() (r time.Time, exists bool) {
 	v := m.created_at
 	if v == nil {
 		return
@@ -12409,10 +12409,10 @@ func (m *FleetDeliveryMutation) CreatedAt() (r time.Time, exists bool) {
 	return *v, true
 }
 
-// OldCreatedAt returns the old "created_at" field's value of the FleetDelivery entity.
-// If the FleetDelivery object wasn't provided to the builder, the object is fetched from the database.
+// OldCreatedAt returns the old "created_at" field's value of the LogisticsDelivery entity.
+// If the LogisticsDelivery object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FleetDeliveryMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+func (m *LogisticsDeliveryMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
 	}
@@ -12427,17 +12427,17 @@ func (m *FleetDeliveryMutation) OldCreatedAt(ctx context.Context) (v time.Time, 
 }
 
 // ResetCreatedAt resets all changes to the "created_at" field.
-func (m *FleetDeliveryMutation) ResetCreatedAt() {
+func (m *LogisticsDeliveryMutation) ResetCreatedAt() {
 	m.created_at = nil
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (m *FleetDeliveryMutation) SetUpdatedAt(t time.Time) {
+func (m *LogisticsDeliveryMutation) SetUpdatedAt(t time.Time) {
 	m.updated_at = &t
 }
 
 // UpdatedAt returns the value of the "updated_at" field in the mutation.
-func (m *FleetDeliveryMutation) UpdatedAt() (r time.Time, exists bool) {
+func (m *LogisticsDeliveryMutation) UpdatedAt() (r time.Time, exists bool) {
 	v := m.updated_at
 	if v == nil {
 		return
@@ -12445,10 +12445,10 @@ func (m *FleetDeliveryMutation) UpdatedAt() (r time.Time, exists bool) {
 	return *v, true
 }
 
-// OldUpdatedAt returns the old "updated_at" field's value of the FleetDelivery entity.
-// If the FleetDelivery object wasn't provided to the builder, the object is fetched from the database.
+// OldUpdatedAt returns the old "updated_at" field's value of the LogisticsDelivery entity.
+// If the LogisticsDelivery object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FleetDeliveryMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+func (m *LogisticsDeliveryMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
 	}
@@ -12463,19 +12463,19 @@ func (m *FleetDeliveryMutation) OldUpdatedAt(ctx context.Context) (v time.Time, 
 }
 
 // ResetUpdatedAt resets all changes to the "updated_at" field.
-func (m *FleetDeliveryMutation) ResetUpdatedAt() {
+func (m *LogisticsDeliveryMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
-// Where appends a list predicates to the FleetDeliveryMutation builder.
-func (m *FleetDeliveryMutation) Where(ps ...predicate.FleetDelivery) {
+// Where appends a list predicates to the LogisticsDeliveryMutation builder.
+func (m *LogisticsDeliveryMutation) Where(ps ...predicate.LogisticsDelivery) {
 	m.predicates = append(m.predicates, ps...)
 }
 
-// WhereP appends storage-level predicates to the FleetDeliveryMutation builder. Using this method,
+// WhereP appends storage-level predicates to the LogisticsDeliveryMutation builder. Using this method,
 // users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *FleetDeliveryMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.FleetDelivery, len(ps))
+func (m *LogisticsDeliveryMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.LogisticsDelivery, len(ps))
 	for i := range ps {
 		p[i] = ps[i]
 	}
@@ -12483,57 +12483,57 @@ func (m *FleetDeliveryMutation) WhereP(ps ...func(*sql.Selector)) {
 }
 
 // Op returns the operation name.
-func (m *FleetDeliveryMutation) Op() Op {
+func (m *LogisticsDeliveryMutation) Op() Op {
 	return m.op
 }
 
 // SetOp allows setting the mutation operation.
-func (m *FleetDeliveryMutation) SetOp(op Op) {
+func (m *LogisticsDeliveryMutation) SetOp(op Op) {
 	m.op = op
 }
 
-// Type returns the node type of this mutation (FleetDelivery).
-func (m *FleetDeliveryMutation) Type() string {
+// Type returns the node type of this mutation (LogisticsDelivery).
+func (m *LogisticsDeliveryMutation) Type() string {
 	return m.typ
 }
 
 // Fields returns all fields that were changed during this mutation. Note that in
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
-func (m *FleetDeliveryMutation) Fields() []string {
+func (m *LogisticsDeliveryMutation) Fields() []string {
 	fields := make([]string, 0, 11)
 	if m.company_id != nil {
-		fields = append(fields, fleetdelivery.FieldCompanyID)
+		fields = append(fields, logisticsdelivery.FieldCompanyID)
 	}
 	if m.department_id != nil {
-		fields = append(fields, fleetdelivery.FieldDepartmentID)
+		fields = append(fields, logisticsdelivery.FieldDepartmentID)
 	}
 	if m.route_id != nil {
-		fields = append(fields, fleetdelivery.FieldRouteID)
+		fields = append(fields, logisticsdelivery.FieldRouteID)
 	}
 	if m.driver_id != nil {
-		fields = append(fields, fleetdelivery.FieldDriverID)
+		fields = append(fields, logisticsdelivery.FieldDriverID)
 	}
 	if m.vehicle_id != nil {
-		fields = append(fields, fleetdelivery.FieldVehicleID)
+		fields = append(fields, logisticsdelivery.FieldVehicleID)
 	}
 	if m.assigned_by != nil {
-		fields = append(fields, fleetdelivery.FieldAssignedBy)
+		fields = append(fields, logisticsdelivery.FieldAssignedBy)
 	}
 	if m.status != nil {
-		fields = append(fields, fleetdelivery.FieldStatus)
+		fields = append(fields, logisticsdelivery.FieldStatus)
 	}
 	if m.version != nil {
-		fields = append(fields, fleetdelivery.FieldVersion)
+		fields = append(fields, logisticsdelivery.FieldVersion)
 	}
 	if m.deleted_at != nil {
-		fields = append(fields, fleetdelivery.FieldDeletedAt)
+		fields = append(fields, logisticsdelivery.FieldDeletedAt)
 	}
 	if m.created_at != nil {
-		fields = append(fields, fleetdelivery.FieldCreatedAt)
+		fields = append(fields, logisticsdelivery.FieldCreatedAt)
 	}
 	if m.updated_at != nil {
-		fields = append(fields, fleetdelivery.FieldUpdatedAt)
+		fields = append(fields, logisticsdelivery.FieldUpdatedAt)
 	}
 	return fields
 }
@@ -12541,29 +12541,29 @@ func (m *FleetDeliveryMutation) Fields() []string {
 // Field returns the value of a field with the given name. The second boolean
 // return value indicates that this field was not set, or was not defined in the
 // schema.
-func (m *FleetDeliveryMutation) Field(name string) (ent.Value, bool) {
+func (m *LogisticsDeliveryMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case fleetdelivery.FieldCompanyID:
+	case logisticsdelivery.FieldCompanyID:
 		return m.CompanyID()
-	case fleetdelivery.FieldDepartmentID:
+	case logisticsdelivery.FieldDepartmentID:
 		return m.DepartmentID()
-	case fleetdelivery.FieldRouteID:
+	case logisticsdelivery.FieldRouteID:
 		return m.RouteID()
-	case fleetdelivery.FieldDriverID:
+	case logisticsdelivery.FieldDriverID:
 		return m.DriverID()
-	case fleetdelivery.FieldVehicleID:
+	case logisticsdelivery.FieldVehicleID:
 		return m.VehicleID()
-	case fleetdelivery.FieldAssignedBy:
+	case logisticsdelivery.FieldAssignedBy:
 		return m.AssignedBy()
-	case fleetdelivery.FieldStatus:
+	case logisticsdelivery.FieldStatus:
 		return m.Status()
-	case fleetdelivery.FieldVersion:
+	case logisticsdelivery.FieldVersion:
 		return m.Version()
-	case fleetdelivery.FieldDeletedAt:
+	case logisticsdelivery.FieldDeletedAt:
 		return m.DeletedAt()
-	case fleetdelivery.FieldCreatedAt:
+	case logisticsdelivery.FieldCreatedAt:
 		return m.CreatedAt()
-	case fleetdelivery.FieldUpdatedAt:
+	case logisticsdelivery.FieldUpdatedAt:
 		return m.UpdatedAt()
 	}
 	return nil, false
@@ -12572,110 +12572,110 @@ func (m *FleetDeliveryMutation) Field(name string) (ent.Value, bool) {
 // OldField returns the old value of the field from the database. An error is
 // returned if the mutation operation is not UpdateOne, or the query to the
 // database failed.
-func (m *FleetDeliveryMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+func (m *LogisticsDeliveryMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case fleetdelivery.FieldCompanyID:
+	case logisticsdelivery.FieldCompanyID:
 		return m.OldCompanyID(ctx)
-	case fleetdelivery.FieldDepartmentID:
+	case logisticsdelivery.FieldDepartmentID:
 		return m.OldDepartmentID(ctx)
-	case fleetdelivery.FieldRouteID:
+	case logisticsdelivery.FieldRouteID:
 		return m.OldRouteID(ctx)
-	case fleetdelivery.FieldDriverID:
+	case logisticsdelivery.FieldDriverID:
 		return m.OldDriverID(ctx)
-	case fleetdelivery.FieldVehicleID:
+	case logisticsdelivery.FieldVehicleID:
 		return m.OldVehicleID(ctx)
-	case fleetdelivery.FieldAssignedBy:
+	case logisticsdelivery.FieldAssignedBy:
 		return m.OldAssignedBy(ctx)
-	case fleetdelivery.FieldStatus:
+	case logisticsdelivery.FieldStatus:
 		return m.OldStatus(ctx)
-	case fleetdelivery.FieldVersion:
+	case logisticsdelivery.FieldVersion:
 		return m.OldVersion(ctx)
-	case fleetdelivery.FieldDeletedAt:
+	case logisticsdelivery.FieldDeletedAt:
 		return m.OldDeletedAt(ctx)
-	case fleetdelivery.FieldCreatedAt:
+	case logisticsdelivery.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
-	case fleetdelivery.FieldUpdatedAt:
+	case logisticsdelivery.FieldUpdatedAt:
 		return m.OldUpdatedAt(ctx)
 	}
-	return nil, fmt.Errorf("unknown FleetDelivery field %s", name)
+	return nil, fmt.Errorf("unknown LogisticsDelivery field %s", name)
 }
 
 // SetField sets the value of a field with the given name. It returns an error if
 // the field is not defined in the schema, or if the type mismatched the field
 // type.
-func (m *FleetDeliveryMutation) SetField(name string, value ent.Value) error {
+func (m *LogisticsDeliveryMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case fleetdelivery.FieldCompanyID:
+	case logisticsdelivery.FieldCompanyID:
 		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCompanyID(v)
 		return nil
-	case fleetdelivery.FieldDepartmentID:
+	case logisticsdelivery.FieldDepartmentID:
 		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetDepartmentID(v)
 		return nil
-	case fleetdelivery.FieldRouteID:
+	case logisticsdelivery.FieldRouteID:
 		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetRouteID(v)
 		return nil
-	case fleetdelivery.FieldDriverID:
+	case logisticsdelivery.FieldDriverID:
 		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetDriverID(v)
 		return nil
-	case fleetdelivery.FieldVehicleID:
+	case logisticsdelivery.FieldVehicleID:
 		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetVehicleID(v)
 		return nil
-	case fleetdelivery.FieldAssignedBy:
+	case logisticsdelivery.FieldAssignedBy:
 		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetAssignedBy(v)
 		return nil
-	case fleetdelivery.FieldStatus:
+	case logisticsdelivery.FieldStatus:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetStatus(v)
 		return nil
-	case fleetdelivery.FieldVersion:
+	case logisticsdelivery.FieldVersion:
 		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetVersion(v)
 		return nil
-	case fleetdelivery.FieldDeletedAt:
+	case logisticsdelivery.FieldDeletedAt:
 		v, ok := value.(time.Time)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetDeletedAt(v)
 		return nil
-	case fleetdelivery.FieldCreatedAt:
+	case logisticsdelivery.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCreatedAt(v)
 		return nil
-	case fleetdelivery.FieldUpdatedAt:
+	case logisticsdelivery.FieldUpdatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
@@ -12683,33 +12683,33 @@ func (m *FleetDeliveryMutation) SetField(name string, value ent.Value) error {
 		m.SetUpdatedAt(v)
 		return nil
 	}
-	return fmt.Errorf("unknown FleetDelivery field %s", name)
+	return fmt.Errorf("unknown LogisticsDelivery field %s", name)
 }
 
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
-func (m *FleetDeliveryMutation) AddedFields() []string {
+func (m *LogisticsDeliveryMutation) AddedFields() []string {
 	var fields []string
 	if m.addcompany_id != nil {
-		fields = append(fields, fleetdelivery.FieldCompanyID)
+		fields = append(fields, logisticsdelivery.FieldCompanyID)
 	}
 	if m.adddepartment_id != nil {
-		fields = append(fields, fleetdelivery.FieldDepartmentID)
+		fields = append(fields, logisticsdelivery.FieldDepartmentID)
 	}
 	if m.addroute_id != nil {
-		fields = append(fields, fleetdelivery.FieldRouteID)
+		fields = append(fields, logisticsdelivery.FieldRouteID)
 	}
 	if m.adddriver_id != nil {
-		fields = append(fields, fleetdelivery.FieldDriverID)
+		fields = append(fields, logisticsdelivery.FieldDriverID)
 	}
 	if m.addvehicle_id != nil {
-		fields = append(fields, fleetdelivery.FieldVehicleID)
+		fields = append(fields, logisticsdelivery.FieldVehicleID)
 	}
 	if m.addassigned_by != nil {
-		fields = append(fields, fleetdelivery.FieldAssignedBy)
+		fields = append(fields, logisticsdelivery.FieldAssignedBy)
 	}
 	if m.addversion != nil {
-		fields = append(fields, fleetdelivery.FieldVersion)
+		fields = append(fields, logisticsdelivery.FieldVersion)
 	}
 	return fields
 }
@@ -12717,21 +12717,21 @@ func (m *FleetDeliveryMutation) AddedFields() []string {
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
-func (m *FleetDeliveryMutation) AddedField(name string) (ent.Value, bool) {
+func (m *LogisticsDeliveryMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
-	case fleetdelivery.FieldCompanyID:
+	case logisticsdelivery.FieldCompanyID:
 		return m.AddedCompanyID()
-	case fleetdelivery.FieldDepartmentID:
+	case logisticsdelivery.FieldDepartmentID:
 		return m.AddedDepartmentID()
-	case fleetdelivery.FieldRouteID:
+	case logisticsdelivery.FieldRouteID:
 		return m.AddedRouteID()
-	case fleetdelivery.FieldDriverID:
+	case logisticsdelivery.FieldDriverID:
 		return m.AddedDriverID()
-	case fleetdelivery.FieldVehicleID:
+	case logisticsdelivery.FieldVehicleID:
 		return m.AddedVehicleID()
-	case fleetdelivery.FieldAssignedBy:
+	case logisticsdelivery.FieldAssignedBy:
 		return m.AddedAssignedBy()
-	case fleetdelivery.FieldVersion:
+	case logisticsdelivery.FieldVersion:
 		return m.AddedVersion()
 	}
 	return nil, false
@@ -12740,51 +12740,51 @@ func (m *FleetDeliveryMutation) AddedField(name string) (ent.Value, bool) {
 // AddField adds the value to the field with the given name. It returns an error if
 // the field is not defined in the schema, or if the type mismatched the field
 // type.
-func (m *FleetDeliveryMutation) AddField(name string, value ent.Value) error {
+func (m *LogisticsDeliveryMutation) AddField(name string, value ent.Value) error {
 	switch name {
-	case fleetdelivery.FieldCompanyID:
+	case logisticsdelivery.FieldCompanyID:
 		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddCompanyID(v)
 		return nil
-	case fleetdelivery.FieldDepartmentID:
+	case logisticsdelivery.FieldDepartmentID:
 		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddDepartmentID(v)
 		return nil
-	case fleetdelivery.FieldRouteID:
+	case logisticsdelivery.FieldRouteID:
 		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddRouteID(v)
 		return nil
-	case fleetdelivery.FieldDriverID:
+	case logisticsdelivery.FieldDriverID:
 		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddDriverID(v)
 		return nil
-	case fleetdelivery.FieldVehicleID:
+	case logisticsdelivery.FieldVehicleID:
 		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddVehicleID(v)
 		return nil
-	case fleetdelivery.FieldAssignedBy:
+	case logisticsdelivery.FieldAssignedBy:
 		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddAssignedBy(v)
 		return nil
-	case fleetdelivery.FieldVersion:
+	case logisticsdelivery.FieldVersion:
 		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
@@ -12792,146 +12792,146 @@ func (m *FleetDeliveryMutation) AddField(name string, value ent.Value) error {
 		m.AddVersion(v)
 		return nil
 	}
-	return fmt.Errorf("unknown FleetDelivery numeric field %s", name)
+	return fmt.Errorf("unknown LogisticsDelivery numeric field %s", name)
 }
 
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
-func (m *FleetDeliveryMutation) ClearedFields() []string {
+func (m *LogisticsDeliveryMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(fleetdelivery.FieldDepartmentID) {
-		fields = append(fields, fleetdelivery.FieldDepartmentID)
+	if m.FieldCleared(logisticsdelivery.FieldDepartmentID) {
+		fields = append(fields, logisticsdelivery.FieldDepartmentID)
 	}
-	if m.FieldCleared(fleetdelivery.FieldDriverID) {
-		fields = append(fields, fleetdelivery.FieldDriverID)
+	if m.FieldCleared(logisticsdelivery.FieldDriverID) {
+		fields = append(fields, logisticsdelivery.FieldDriverID)
 	}
-	if m.FieldCleared(fleetdelivery.FieldVehicleID) {
-		fields = append(fields, fleetdelivery.FieldVehicleID)
+	if m.FieldCleared(logisticsdelivery.FieldVehicleID) {
+		fields = append(fields, logisticsdelivery.FieldVehicleID)
 	}
-	if m.FieldCleared(fleetdelivery.FieldDeletedAt) {
-		fields = append(fields, fleetdelivery.FieldDeletedAt)
+	if m.FieldCleared(logisticsdelivery.FieldDeletedAt) {
+		fields = append(fields, logisticsdelivery.FieldDeletedAt)
 	}
 	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
 // cleared in this mutation.
-func (m *FleetDeliveryMutation) FieldCleared(name string) bool {
+func (m *LogisticsDeliveryMutation) FieldCleared(name string) bool {
 	_, ok := m.clearedFields[name]
 	return ok
 }
 
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
-func (m *FleetDeliveryMutation) ClearField(name string) error {
+func (m *LogisticsDeliveryMutation) ClearField(name string) error {
 	switch name {
-	case fleetdelivery.FieldDepartmentID:
+	case logisticsdelivery.FieldDepartmentID:
 		m.ClearDepartmentID()
 		return nil
-	case fleetdelivery.FieldDriverID:
+	case logisticsdelivery.FieldDriverID:
 		m.ClearDriverID()
 		return nil
-	case fleetdelivery.FieldVehicleID:
+	case logisticsdelivery.FieldVehicleID:
 		m.ClearVehicleID()
 		return nil
-	case fleetdelivery.FieldDeletedAt:
+	case logisticsdelivery.FieldDeletedAt:
 		m.ClearDeletedAt()
 		return nil
 	}
-	return fmt.Errorf("unknown FleetDelivery nullable field %s", name)
+	return fmt.Errorf("unknown LogisticsDelivery nullable field %s", name)
 }
 
 // ResetField resets all changes in the mutation for the field with the given name.
 // It returns an error if the field is not defined in the schema.
-func (m *FleetDeliveryMutation) ResetField(name string) error {
+func (m *LogisticsDeliveryMutation) ResetField(name string) error {
 	switch name {
-	case fleetdelivery.FieldCompanyID:
+	case logisticsdelivery.FieldCompanyID:
 		m.ResetCompanyID()
 		return nil
-	case fleetdelivery.FieldDepartmentID:
+	case logisticsdelivery.FieldDepartmentID:
 		m.ResetDepartmentID()
 		return nil
-	case fleetdelivery.FieldRouteID:
+	case logisticsdelivery.FieldRouteID:
 		m.ResetRouteID()
 		return nil
-	case fleetdelivery.FieldDriverID:
+	case logisticsdelivery.FieldDriverID:
 		m.ResetDriverID()
 		return nil
-	case fleetdelivery.FieldVehicleID:
+	case logisticsdelivery.FieldVehicleID:
 		m.ResetVehicleID()
 		return nil
-	case fleetdelivery.FieldAssignedBy:
+	case logisticsdelivery.FieldAssignedBy:
 		m.ResetAssignedBy()
 		return nil
-	case fleetdelivery.FieldStatus:
+	case logisticsdelivery.FieldStatus:
 		m.ResetStatus()
 		return nil
-	case fleetdelivery.FieldVersion:
+	case logisticsdelivery.FieldVersion:
 		m.ResetVersion()
 		return nil
-	case fleetdelivery.FieldDeletedAt:
+	case logisticsdelivery.FieldDeletedAt:
 		m.ResetDeletedAt()
 		return nil
-	case fleetdelivery.FieldCreatedAt:
+	case logisticsdelivery.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
-	case fleetdelivery.FieldUpdatedAt:
+	case logisticsdelivery.FieldUpdatedAt:
 		m.ResetUpdatedAt()
 		return nil
 	}
-	return fmt.Errorf("unknown FleetDelivery field %s", name)
+	return fmt.Errorf("unknown LogisticsDelivery field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
-func (m *FleetDeliveryMutation) AddedEdges() []string {
+func (m *LogisticsDeliveryMutation) AddedEdges() []string {
 	edges := make([]string, 0, 0)
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
-func (m *FleetDeliveryMutation) AddedIDs(name string) []ent.Value {
+func (m *LogisticsDeliveryMutation) AddedIDs(name string) []ent.Value {
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
-func (m *FleetDeliveryMutation) RemovedEdges() []string {
+func (m *LogisticsDeliveryMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 0)
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
-func (m *FleetDeliveryMutation) RemovedIDs(name string) []ent.Value {
+func (m *LogisticsDeliveryMutation) RemovedIDs(name string) []ent.Value {
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *FleetDeliveryMutation) ClearedEdges() []string {
+func (m *LogisticsDeliveryMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 0)
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
-func (m *FleetDeliveryMutation) EdgeCleared(name string) bool {
+func (m *LogisticsDeliveryMutation) EdgeCleared(name string) bool {
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
-func (m *FleetDeliveryMutation) ClearEdge(name string) error {
-	return fmt.Errorf("unknown FleetDelivery unique edge %s", name)
+func (m *LogisticsDeliveryMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown LogisticsDelivery unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
-func (m *FleetDeliveryMutation) ResetEdge(name string) error {
-	return fmt.Errorf("unknown FleetDelivery edge %s", name)
+func (m *LogisticsDeliveryMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown LogisticsDelivery edge %s", name)
 }
 
-// FleetDriverMutation represents an operation that mutates the FleetDriver nodes in the graph.
-type FleetDriverMutation struct {
+// LogisticsDriverMutation represents an operation that mutates the LogisticsDriver nodes in the graph.
+type LogisticsDriverMutation struct {
 	config
 	op               Op
 	typ              string
@@ -12950,21 +12950,21 @@ type FleetDriverMutation struct {
 	updated_at       *time.Time
 	clearedFields    map[string]struct{}
 	done             bool
-	oldValue         func(context.Context) (*FleetDriver, error)
-	predicates       []predicate.FleetDriver
+	oldValue         func(context.Context) (*LogisticsDriver, error)
+	predicates       []predicate.LogisticsDriver
 }
 
-var _ ent.Mutation = (*FleetDriverMutation)(nil)
+var _ ent.Mutation = (*LogisticsDriverMutation)(nil)
 
-// fleetdriverOption allows management of the mutation configuration using functional options.
-type fleetdriverOption func(*FleetDriverMutation)
+// logisticsdriverOption allows management of the mutation configuration using functional options.
+type logisticsdriverOption func(*LogisticsDriverMutation)
 
-// newFleetDriverMutation creates new mutation for the FleetDriver entity.
-func newFleetDriverMutation(c config, op Op, opts ...fleetdriverOption) *FleetDriverMutation {
-	m := &FleetDriverMutation{
+// newLogisticsDriverMutation creates new mutation for the LogisticsDriver entity.
+func newLogisticsDriverMutation(c config, op Op, opts ...logisticsdriverOption) *LogisticsDriverMutation {
+	m := &LogisticsDriverMutation{
 		config:        c,
 		op:            op,
-		typ:           TypeFleetDriver,
+		typ:           TypeLogisticsDriver,
 		clearedFields: make(map[string]struct{}),
 	}
 	for _, opt := range opts {
@@ -12973,20 +12973,20 @@ func newFleetDriverMutation(c config, op Op, opts ...fleetdriverOption) *FleetDr
 	return m
 }
 
-// withFleetDriverID sets the ID field of the mutation.
-func withFleetDriverID(id int) fleetdriverOption {
-	return func(m *FleetDriverMutation) {
+// withLogisticsDriverID sets the ID field of the mutation.
+func withLogisticsDriverID(id int) logisticsdriverOption {
+	return func(m *LogisticsDriverMutation) {
 		var (
 			err   error
 			once  sync.Once
-			value *FleetDriver
+			value *LogisticsDriver
 		)
-		m.oldValue = func(ctx context.Context) (*FleetDriver, error) {
+		m.oldValue = func(ctx context.Context) (*LogisticsDriver, error) {
 			once.Do(func() {
 				if m.done {
 					err = errors.New("querying old values post mutation is not allowed")
 				} else {
-					value, err = m.Client().FleetDriver.Get(ctx, id)
+					value, err = m.Client().LogisticsDriver.Get(ctx, id)
 				}
 			})
 			return value, err
@@ -12995,10 +12995,10 @@ func withFleetDriverID(id int) fleetdriverOption {
 	}
 }
 
-// withFleetDriver sets the old FleetDriver of the mutation.
-func withFleetDriver(node *FleetDriver) fleetdriverOption {
-	return func(m *FleetDriverMutation) {
-		m.oldValue = func(context.Context) (*FleetDriver, error) {
+// withLogisticsDriver sets the old LogisticsDriver of the mutation.
+func withLogisticsDriver(node *LogisticsDriver) logisticsdriverOption {
+	return func(m *LogisticsDriverMutation) {
+		m.oldValue = func(context.Context) (*LogisticsDriver, error) {
 			return node, nil
 		}
 		m.id = &node.ID
@@ -13007,7 +13007,7 @@ func withFleetDriver(node *FleetDriver) fleetdriverOption {
 
 // Client returns a new `ent.Client` from the mutation. If the mutation was
 // executed in a transaction (ent.Tx), a transactional client is returned.
-func (m FleetDriverMutation) Client() *Client {
+func (m LogisticsDriverMutation) Client() *Client {
 	client := &Client{config: m.config}
 	client.init()
 	return client
@@ -13015,7 +13015,7 @@ func (m FleetDriverMutation) Client() *Client {
 
 // Tx returns an `ent.Tx` for mutations that were executed in transactions;
 // it returns an error otherwise.
-func (m FleetDriverMutation) Tx() (*Tx, error) {
+func (m LogisticsDriverMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
 		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
@@ -13026,7 +13026,7 @@ func (m FleetDriverMutation) Tx() (*Tx, error) {
 
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *FleetDriverMutation) ID() (id int, exists bool) {
+func (m *LogisticsDriverMutation) ID() (id int, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -13037,7 +13037,7 @@ func (m *FleetDriverMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *FleetDriverMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *LogisticsDriverMutation) IDs(ctx context.Context) ([]int, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
@@ -13046,20 +13046,20 @@ func (m *FleetDriverMutation) IDs(ctx context.Context) ([]int, error) {
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
-		return m.Client().FleetDriver.Query().Where(m.predicates...).IDs(ctx)
+		return m.Client().LogisticsDriver.Query().Where(m.predicates...).IDs(ctx)
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
 }
 
 // SetCompanyID sets the "company_id" field.
-func (m *FleetDriverMutation) SetCompanyID(i int) {
+func (m *LogisticsDriverMutation) SetCompanyID(i int) {
 	m.company_id = &i
 	m.addcompany_id = nil
 }
 
 // CompanyID returns the value of the "company_id" field in the mutation.
-func (m *FleetDriverMutation) CompanyID() (r int, exists bool) {
+func (m *LogisticsDriverMutation) CompanyID() (r int, exists bool) {
 	v := m.company_id
 	if v == nil {
 		return
@@ -13067,10 +13067,10 @@ func (m *FleetDriverMutation) CompanyID() (r int, exists bool) {
 	return *v, true
 }
 
-// OldCompanyID returns the old "company_id" field's value of the FleetDriver entity.
-// If the FleetDriver object wasn't provided to the builder, the object is fetched from the database.
+// OldCompanyID returns the old "company_id" field's value of the LogisticsDriver entity.
+// If the LogisticsDriver object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FleetDriverMutation) OldCompanyID(ctx context.Context) (v int, err error) {
+func (m *LogisticsDriverMutation) OldCompanyID(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldCompanyID is only allowed on UpdateOne operations")
 	}
@@ -13085,7 +13085,7 @@ func (m *FleetDriverMutation) OldCompanyID(ctx context.Context) (v int, err erro
 }
 
 // AddCompanyID adds i to the "company_id" field.
-func (m *FleetDriverMutation) AddCompanyID(i int) {
+func (m *LogisticsDriverMutation) AddCompanyID(i int) {
 	if m.addcompany_id != nil {
 		*m.addcompany_id += i
 	} else {
@@ -13094,7 +13094,7 @@ func (m *FleetDriverMutation) AddCompanyID(i int) {
 }
 
 // AddedCompanyID returns the value that was added to the "company_id" field in this mutation.
-func (m *FleetDriverMutation) AddedCompanyID() (r int, exists bool) {
+func (m *LogisticsDriverMutation) AddedCompanyID() (r int, exists bool) {
 	v := m.addcompany_id
 	if v == nil {
 		return
@@ -13103,19 +13103,19 @@ func (m *FleetDriverMutation) AddedCompanyID() (r int, exists bool) {
 }
 
 // ResetCompanyID resets all changes to the "company_id" field.
-func (m *FleetDriverMutation) ResetCompanyID() {
+func (m *LogisticsDriverMutation) ResetCompanyID() {
 	m.company_id = nil
 	m.addcompany_id = nil
 }
 
 // SetDepartmentID sets the "department_id" field.
-func (m *FleetDriverMutation) SetDepartmentID(i int) {
+func (m *LogisticsDriverMutation) SetDepartmentID(i int) {
 	m.department_id = &i
 	m.adddepartment_id = nil
 }
 
 // DepartmentID returns the value of the "department_id" field in the mutation.
-func (m *FleetDriverMutation) DepartmentID() (r int, exists bool) {
+func (m *LogisticsDriverMutation) DepartmentID() (r int, exists bool) {
 	v := m.department_id
 	if v == nil {
 		return
@@ -13123,10 +13123,10 @@ func (m *FleetDriverMutation) DepartmentID() (r int, exists bool) {
 	return *v, true
 }
 
-// OldDepartmentID returns the old "department_id" field's value of the FleetDriver entity.
-// If the FleetDriver object wasn't provided to the builder, the object is fetched from the database.
+// OldDepartmentID returns the old "department_id" field's value of the LogisticsDriver entity.
+// If the LogisticsDriver object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FleetDriverMutation) OldDepartmentID(ctx context.Context) (v *int, err error) {
+func (m *LogisticsDriverMutation) OldDepartmentID(ctx context.Context) (v *int, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldDepartmentID is only allowed on UpdateOne operations")
 	}
@@ -13141,7 +13141,7 @@ func (m *FleetDriverMutation) OldDepartmentID(ctx context.Context) (v *int, err 
 }
 
 // AddDepartmentID adds i to the "department_id" field.
-func (m *FleetDriverMutation) AddDepartmentID(i int) {
+func (m *LogisticsDriverMutation) AddDepartmentID(i int) {
 	if m.adddepartment_id != nil {
 		*m.adddepartment_id += i
 	} else {
@@ -13150,7 +13150,7 @@ func (m *FleetDriverMutation) AddDepartmentID(i int) {
 }
 
 // AddedDepartmentID returns the value that was added to the "department_id" field in this mutation.
-func (m *FleetDriverMutation) AddedDepartmentID() (r int, exists bool) {
+func (m *LogisticsDriverMutation) AddedDepartmentID() (r int, exists bool) {
 	v := m.adddepartment_id
 	if v == nil {
 		return
@@ -13159,33 +13159,33 @@ func (m *FleetDriverMutation) AddedDepartmentID() (r int, exists bool) {
 }
 
 // ClearDepartmentID clears the value of the "department_id" field.
-func (m *FleetDriverMutation) ClearDepartmentID() {
+func (m *LogisticsDriverMutation) ClearDepartmentID() {
 	m.department_id = nil
 	m.adddepartment_id = nil
-	m.clearedFields[fleetdriver.FieldDepartmentID] = struct{}{}
+	m.clearedFields[logisticsdriver.FieldDepartmentID] = struct{}{}
 }
 
 // DepartmentIDCleared returns if the "department_id" field was cleared in this mutation.
-func (m *FleetDriverMutation) DepartmentIDCleared() bool {
-	_, ok := m.clearedFields[fleetdriver.FieldDepartmentID]
+func (m *LogisticsDriverMutation) DepartmentIDCleared() bool {
+	_, ok := m.clearedFields[logisticsdriver.FieldDepartmentID]
 	return ok
 }
 
 // ResetDepartmentID resets all changes to the "department_id" field.
-func (m *FleetDriverMutation) ResetDepartmentID() {
+func (m *LogisticsDriverMutation) ResetDepartmentID() {
 	m.department_id = nil
 	m.adddepartment_id = nil
-	delete(m.clearedFields, fleetdriver.FieldDepartmentID)
+	delete(m.clearedFields, logisticsdriver.FieldDepartmentID)
 }
 
 // SetUserID sets the "user_id" field.
-func (m *FleetDriverMutation) SetUserID(i int) {
+func (m *LogisticsDriverMutation) SetUserID(i int) {
 	m.user_id = &i
 	m.adduser_id = nil
 }
 
 // UserID returns the value of the "user_id" field in the mutation.
-func (m *FleetDriverMutation) UserID() (r int, exists bool) {
+func (m *LogisticsDriverMutation) UserID() (r int, exists bool) {
 	v := m.user_id
 	if v == nil {
 		return
@@ -13193,10 +13193,10 @@ func (m *FleetDriverMutation) UserID() (r int, exists bool) {
 	return *v, true
 }
 
-// OldUserID returns the old "user_id" field's value of the FleetDriver entity.
-// If the FleetDriver object wasn't provided to the builder, the object is fetched from the database.
+// OldUserID returns the old "user_id" field's value of the LogisticsDriver entity.
+// If the LogisticsDriver object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FleetDriverMutation) OldUserID(ctx context.Context) (v int, err error) {
+func (m *LogisticsDriverMutation) OldUserID(ctx context.Context) (v int, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldUserID is only allowed on UpdateOne operations")
 	}
@@ -13211,7 +13211,7 @@ func (m *FleetDriverMutation) OldUserID(ctx context.Context) (v int, err error) 
 }
 
 // AddUserID adds i to the "user_id" field.
-func (m *FleetDriverMutation) AddUserID(i int) {
+func (m *LogisticsDriverMutation) AddUserID(i int) {
 	if m.adduser_id != nil {
 		*m.adduser_id += i
 	} else {
@@ -13220,7 +13220,7 @@ func (m *FleetDriverMutation) AddUserID(i int) {
 }
 
 // AddedUserID returns the value that was added to the "user_id" field in this mutation.
-func (m *FleetDriverMutation) AddedUserID() (r int, exists bool) {
+func (m *LogisticsDriverMutation) AddedUserID() (r int, exists bool) {
 	v := m.adduser_id
 	if v == nil {
 		return
@@ -13229,18 +13229,18 @@ func (m *FleetDriverMutation) AddedUserID() (r int, exists bool) {
 }
 
 // ResetUserID resets all changes to the "user_id" field.
-func (m *FleetDriverMutation) ResetUserID() {
+func (m *LogisticsDriverMutation) ResetUserID() {
 	m.user_id = nil
 	m.adduser_id = nil
 }
 
 // SetName sets the "name" field.
-func (m *FleetDriverMutation) SetName(s string) {
+func (m *LogisticsDriverMutation) SetName(s string) {
 	m.name = &s
 }
 
 // Name returns the value of the "name" field in the mutation.
-func (m *FleetDriverMutation) Name() (r string, exists bool) {
+func (m *LogisticsDriverMutation) Name() (r string, exists bool) {
 	v := m.name
 	if v == nil {
 		return
@@ -13248,10 +13248,10 @@ func (m *FleetDriverMutation) Name() (r string, exists bool) {
 	return *v, true
 }
 
-// OldName returns the old "name" field's value of the FleetDriver entity.
-// If the FleetDriver object wasn't provided to the builder, the object is fetched from the database.
+// OldName returns the old "name" field's value of the LogisticsDriver entity.
+// If the LogisticsDriver object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FleetDriverMutation) OldName(ctx context.Context) (v string, err error) {
+func (m *LogisticsDriverMutation) OldName(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldName is only allowed on UpdateOne operations")
 	}
@@ -13266,17 +13266,17 @@ func (m *FleetDriverMutation) OldName(ctx context.Context) (v string, err error)
 }
 
 // ResetName resets all changes to the "name" field.
-func (m *FleetDriverMutation) ResetName() {
+func (m *LogisticsDriverMutation) ResetName() {
 	m.name = nil
 }
 
 // SetPhone sets the "phone" field.
-func (m *FleetDriverMutation) SetPhone(s string) {
+func (m *LogisticsDriverMutation) SetPhone(s string) {
 	m.phone = &s
 }
 
 // Phone returns the value of the "phone" field in the mutation.
-func (m *FleetDriverMutation) Phone() (r string, exists bool) {
+func (m *LogisticsDriverMutation) Phone() (r string, exists bool) {
 	v := m.phone
 	if v == nil {
 		return
@@ -13284,10 +13284,10 @@ func (m *FleetDriverMutation) Phone() (r string, exists bool) {
 	return *v, true
 }
 
-// OldPhone returns the old "phone" field's value of the FleetDriver entity.
-// If the FleetDriver object wasn't provided to the builder, the object is fetched from the database.
+// OldPhone returns the old "phone" field's value of the LogisticsDriver entity.
+// If the LogisticsDriver object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FleetDriverMutation) OldPhone(ctx context.Context) (v string, err error) {
+func (m *LogisticsDriverMutation) OldPhone(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldPhone is only allowed on UpdateOne operations")
 	}
@@ -13302,30 +13302,30 @@ func (m *FleetDriverMutation) OldPhone(ctx context.Context) (v string, err error
 }
 
 // ClearPhone clears the value of the "phone" field.
-func (m *FleetDriverMutation) ClearPhone() {
+func (m *LogisticsDriverMutation) ClearPhone() {
 	m.phone = nil
-	m.clearedFields[fleetdriver.FieldPhone] = struct{}{}
+	m.clearedFields[logisticsdriver.FieldPhone] = struct{}{}
 }
 
 // PhoneCleared returns if the "phone" field was cleared in this mutation.
-func (m *FleetDriverMutation) PhoneCleared() bool {
-	_, ok := m.clearedFields[fleetdriver.FieldPhone]
+func (m *LogisticsDriverMutation) PhoneCleared() bool {
+	_, ok := m.clearedFields[logisticsdriver.FieldPhone]
 	return ok
 }
 
 // ResetPhone resets all changes to the "phone" field.
-func (m *FleetDriverMutation) ResetPhone() {
+func (m *LogisticsDriverMutation) ResetPhone() {
 	m.phone = nil
-	delete(m.clearedFields, fleetdriver.FieldPhone)
+	delete(m.clearedFields, logisticsdriver.FieldPhone)
 }
 
 // SetCurrentStatus sets the "current_status" field.
-func (m *FleetDriverMutation) SetCurrentStatus(s string) {
+func (m *LogisticsDriverMutation) SetCurrentStatus(s string) {
 	m.current_status = &s
 }
 
 // CurrentStatus returns the value of the "current_status" field in the mutation.
-func (m *FleetDriverMutation) CurrentStatus() (r string, exists bool) {
+func (m *LogisticsDriverMutation) CurrentStatus() (r string, exists bool) {
 	v := m.current_status
 	if v == nil {
 		return
@@ -13333,10 +13333,10 @@ func (m *FleetDriverMutation) CurrentStatus() (r string, exists bool) {
 	return *v, true
 }
 
-// OldCurrentStatus returns the old "current_status" field's value of the FleetDriver entity.
-// If the FleetDriver object wasn't provided to the builder, the object is fetched from the database.
+// OldCurrentStatus returns the old "current_status" field's value of the LogisticsDriver entity.
+// If the LogisticsDriver object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FleetDriverMutation) OldCurrentStatus(ctx context.Context) (v string, err error) {
+func (m *LogisticsDriverMutation) OldCurrentStatus(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldCurrentStatus is only allowed on UpdateOne operations")
 	}
@@ -13351,17 +13351,17 @@ func (m *FleetDriverMutation) OldCurrentStatus(ctx context.Context) (v string, e
 }
 
 // ResetCurrentStatus resets all changes to the "current_status" field.
-func (m *FleetDriverMutation) ResetCurrentStatus() {
+func (m *LogisticsDriverMutation) ResetCurrentStatus() {
 	m.current_status = nil
 }
 
 // SetDeletedAt sets the "deleted_at" field.
-func (m *FleetDriverMutation) SetDeletedAt(t time.Time) {
+func (m *LogisticsDriverMutation) SetDeletedAt(t time.Time) {
 	m.deleted_at = &t
 }
 
 // DeletedAt returns the value of the "deleted_at" field in the mutation.
-func (m *FleetDriverMutation) DeletedAt() (r time.Time, exists bool) {
+func (m *LogisticsDriverMutation) DeletedAt() (r time.Time, exists bool) {
 	v := m.deleted_at
 	if v == nil {
 		return
@@ -13369,10 +13369,10 @@ func (m *FleetDriverMutation) DeletedAt() (r time.Time, exists bool) {
 	return *v, true
 }
 
-// OldDeletedAt returns the old "deleted_at" field's value of the FleetDriver entity.
-// If the FleetDriver object wasn't provided to the builder, the object is fetched from the database.
+// OldDeletedAt returns the old "deleted_at" field's value of the LogisticsDriver entity.
+// If the LogisticsDriver object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FleetDriverMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
+func (m *LogisticsDriverMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
 	}
@@ -13387,30 +13387,30 @@ func (m *FleetDriverMutation) OldDeletedAt(ctx context.Context) (v *time.Time, e
 }
 
 // ClearDeletedAt clears the value of the "deleted_at" field.
-func (m *FleetDriverMutation) ClearDeletedAt() {
+func (m *LogisticsDriverMutation) ClearDeletedAt() {
 	m.deleted_at = nil
-	m.clearedFields[fleetdriver.FieldDeletedAt] = struct{}{}
+	m.clearedFields[logisticsdriver.FieldDeletedAt] = struct{}{}
 }
 
 // DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
-func (m *FleetDriverMutation) DeletedAtCleared() bool {
-	_, ok := m.clearedFields[fleetdriver.FieldDeletedAt]
+func (m *LogisticsDriverMutation) DeletedAtCleared() bool {
+	_, ok := m.clearedFields[logisticsdriver.FieldDeletedAt]
 	return ok
 }
 
 // ResetDeletedAt resets all changes to the "deleted_at" field.
-func (m *FleetDriverMutation) ResetDeletedAt() {
+func (m *LogisticsDriverMutation) ResetDeletedAt() {
 	m.deleted_at = nil
-	delete(m.clearedFields, fleetdriver.FieldDeletedAt)
+	delete(m.clearedFields, logisticsdriver.FieldDeletedAt)
 }
 
 // SetCreatedAt sets the "created_at" field.
-func (m *FleetDriverMutation) SetCreatedAt(t time.Time) {
+func (m *LogisticsDriverMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
 }
 
 // CreatedAt returns the value of the "created_at" field in the mutation.
-func (m *FleetDriverMutation) CreatedAt() (r time.Time, exists bool) {
+func (m *LogisticsDriverMutation) CreatedAt() (r time.Time, exists bool) {
 	v := m.created_at
 	if v == nil {
 		return
@@ -13418,10 +13418,10 @@ func (m *FleetDriverMutation) CreatedAt() (r time.Time, exists bool) {
 	return *v, true
 }
 
-// OldCreatedAt returns the old "created_at" field's value of the FleetDriver entity.
-// If the FleetDriver object wasn't provided to the builder, the object is fetched from the database.
+// OldCreatedAt returns the old "created_at" field's value of the LogisticsDriver entity.
+// If the LogisticsDriver object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FleetDriverMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+func (m *LogisticsDriverMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
 	}
@@ -13436,17 +13436,17 @@ func (m *FleetDriverMutation) OldCreatedAt(ctx context.Context) (v time.Time, er
 }
 
 // ResetCreatedAt resets all changes to the "created_at" field.
-func (m *FleetDriverMutation) ResetCreatedAt() {
+func (m *LogisticsDriverMutation) ResetCreatedAt() {
 	m.created_at = nil
 }
 
 // SetUpdatedAt sets the "updated_at" field.
-func (m *FleetDriverMutation) SetUpdatedAt(t time.Time) {
+func (m *LogisticsDriverMutation) SetUpdatedAt(t time.Time) {
 	m.updated_at = &t
 }
 
 // UpdatedAt returns the value of the "updated_at" field in the mutation.
-func (m *FleetDriverMutation) UpdatedAt() (r time.Time, exists bool) {
+func (m *LogisticsDriverMutation) UpdatedAt() (r time.Time, exists bool) {
 	v := m.updated_at
 	if v == nil {
 		return
@@ -13454,10 +13454,10 @@ func (m *FleetDriverMutation) UpdatedAt() (r time.Time, exists bool) {
 	return *v, true
 }
 
-// OldUpdatedAt returns the old "updated_at" field's value of the FleetDriver entity.
-// If the FleetDriver object wasn't provided to the builder, the object is fetched from the database.
+// OldUpdatedAt returns the old "updated_at" field's value of the LogisticsDriver entity.
+// If the LogisticsDriver object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *FleetDriverMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+func (m *LogisticsDriverMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
 	}
@@ -13472,19 +13472,19 @@ func (m *FleetDriverMutation) OldUpdatedAt(ctx context.Context) (v time.Time, er
 }
 
 // ResetUpdatedAt resets all changes to the "updated_at" field.
-func (m *FleetDriverMutation) ResetUpdatedAt() {
+func (m *LogisticsDriverMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
-// Where appends a list predicates to the FleetDriverMutation builder.
-func (m *FleetDriverMutation) Where(ps ...predicate.FleetDriver) {
+// Where appends a list predicates to the LogisticsDriverMutation builder.
+func (m *LogisticsDriverMutation) Where(ps ...predicate.LogisticsDriver) {
 	m.predicates = append(m.predicates, ps...)
 }
 
-// WhereP appends storage-level predicates to the FleetDriverMutation builder. Using this method,
+// WhereP appends storage-level predicates to the LogisticsDriverMutation builder. Using this method,
 // users can use type-assertion to append predicates that do not depend on any generated package.
-func (m *FleetDriverMutation) WhereP(ps ...func(*sql.Selector)) {
-	p := make([]predicate.FleetDriver, len(ps))
+func (m *LogisticsDriverMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.LogisticsDriver, len(ps))
 	for i := range ps {
 		p[i] = ps[i]
 	}
@@ -13492,51 +13492,51 @@ func (m *FleetDriverMutation) WhereP(ps ...func(*sql.Selector)) {
 }
 
 // Op returns the operation name.
-func (m *FleetDriverMutation) Op() Op {
+func (m *LogisticsDriverMutation) Op() Op {
 	return m.op
 }
 
 // SetOp allows setting the mutation operation.
-func (m *FleetDriverMutation) SetOp(op Op) {
+func (m *LogisticsDriverMutation) SetOp(op Op) {
 	m.op = op
 }
 
-// Type returns the node type of this mutation (FleetDriver).
-func (m *FleetDriverMutation) Type() string {
+// Type returns the node type of this mutation (LogisticsDriver).
+func (m *LogisticsDriverMutation) Type() string {
 	return m.typ
 }
 
 // Fields returns all fields that were changed during this mutation. Note that in
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
-func (m *FleetDriverMutation) Fields() []string {
+func (m *LogisticsDriverMutation) Fields() []string {
 	fields := make([]string, 0, 9)
 	if m.company_id != nil {
-		fields = append(fields, fleetdriver.FieldCompanyID)
+		fields = append(fields, logisticsdriver.FieldCompanyID)
 	}
 	if m.department_id != nil {
-		fields = append(fields, fleetdriver.FieldDepartmentID)
+		fields = append(fields, logisticsdriver.FieldDepartmentID)
 	}
 	if m.user_id != nil {
-		fields = append(fields, fleetdriver.FieldUserID)
+		fields = append(fields, logisticsdriver.FieldUserID)
 	}
 	if m.name != nil {
-		fields = append(fields, fleetdriver.FieldName)
+		fields = append(fields, logisticsdriver.FieldName)
 	}
 	if m.phone != nil {
-		fields = append(fields, fleetdriver.FieldPhone)
+		fields = append(fields, logisticsdriver.FieldPhone)
 	}
 	if m.current_status != nil {
-		fields = append(fields, fleetdriver.FieldCurrentStatus)
+		fields = append(fields, logisticsdriver.FieldCurrentStatus)
 	}
 	if m.deleted_at != nil {
-		fields = append(fields, fleetdriver.FieldDeletedAt)
+		fields = append(fields, logisticsdriver.FieldDeletedAt)
 	}
 	if m.created_at != nil {
-		fields = append(fields, fleetdriver.FieldCreatedAt)
+		fields = append(fields, logisticsdriver.FieldCreatedAt)
 	}
 	if m.updated_at != nil {
-		fields = append(fields, fleetdriver.FieldUpdatedAt)
+		fields = append(fields, logisticsdriver.FieldUpdatedAt)
 	}
 	return fields
 }
@@ -13544,25 +13544,25 @@ func (m *FleetDriverMutation) Fields() []string {
 // Field returns the value of a field with the given name. The second boolean
 // return value indicates that this field was not set, or was not defined in the
 // schema.
-func (m *FleetDriverMutation) Field(name string) (ent.Value, bool) {
+func (m *LogisticsDriverMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case fleetdriver.FieldCompanyID:
+	case logisticsdriver.FieldCompanyID:
 		return m.CompanyID()
-	case fleetdriver.FieldDepartmentID:
+	case logisticsdriver.FieldDepartmentID:
 		return m.DepartmentID()
-	case fleetdriver.FieldUserID:
+	case logisticsdriver.FieldUserID:
 		return m.UserID()
-	case fleetdriver.FieldName:
+	case logisticsdriver.FieldName:
 		return m.Name()
-	case fleetdriver.FieldPhone:
+	case logisticsdriver.FieldPhone:
 		return m.Phone()
-	case fleetdriver.FieldCurrentStatus:
+	case logisticsdriver.FieldCurrentStatus:
 		return m.CurrentStatus()
-	case fleetdriver.FieldDeletedAt:
+	case logisticsdriver.FieldDeletedAt:
 		return m.DeletedAt()
-	case fleetdriver.FieldCreatedAt:
+	case logisticsdriver.FieldCreatedAt:
 		return m.CreatedAt()
-	case fleetdriver.FieldUpdatedAt:
+	case logisticsdriver.FieldUpdatedAt:
 		return m.UpdatedAt()
 	}
 	return nil, false
@@ -13571,92 +13571,92 @@ func (m *FleetDriverMutation) Field(name string) (ent.Value, bool) {
 // OldField returns the old value of the field from the database. An error is
 // returned if the mutation operation is not UpdateOne, or the query to the
 // database failed.
-func (m *FleetDriverMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+func (m *LogisticsDriverMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case fleetdriver.FieldCompanyID:
+	case logisticsdriver.FieldCompanyID:
 		return m.OldCompanyID(ctx)
-	case fleetdriver.FieldDepartmentID:
+	case logisticsdriver.FieldDepartmentID:
 		return m.OldDepartmentID(ctx)
-	case fleetdriver.FieldUserID:
+	case logisticsdriver.FieldUserID:
 		return m.OldUserID(ctx)
-	case fleetdriver.FieldName:
+	case logisticsdriver.FieldName:
 		return m.OldName(ctx)
-	case fleetdriver.FieldPhone:
+	case logisticsdriver.FieldPhone:
 		return m.OldPhone(ctx)
-	case fleetdriver.FieldCurrentStatus:
+	case logisticsdriver.FieldCurrentStatus:
 		return m.OldCurrentStatus(ctx)
-	case fleetdriver.FieldDeletedAt:
+	case logisticsdriver.FieldDeletedAt:
 		return m.OldDeletedAt(ctx)
-	case fleetdriver.FieldCreatedAt:
+	case logisticsdriver.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
-	case fleetdriver.FieldUpdatedAt:
+	case logisticsdriver.FieldUpdatedAt:
 		return m.OldUpdatedAt(ctx)
 	}
-	return nil, fmt.Errorf("unknown FleetDriver field %s", name)
+	return nil, fmt.Errorf("unknown LogisticsDriver field %s", name)
 }
 
 // SetField sets the value of a field with the given name. It returns an error if
 // the field is not defined in the schema, or if the type mismatched the field
 // type.
-func (m *FleetDriverMutation) SetField(name string, value ent.Value) error {
+func (m *LogisticsDriverMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case fleetdriver.FieldCompanyID:
+	case logisticsdriver.FieldCompanyID:
 		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCompanyID(v)
 		return nil
-	case fleetdriver.FieldDepartmentID:
+	case logisticsdriver.FieldDepartmentID:
 		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetDepartmentID(v)
 		return nil
-	case fleetdriver.FieldUserID:
+	case logisticsdriver.FieldUserID:
 		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetUserID(v)
 		return nil
-	case fleetdriver.FieldName:
+	case logisticsdriver.FieldName:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetName(v)
 		return nil
-	case fleetdriver.FieldPhone:
+	case logisticsdriver.FieldPhone:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetPhone(v)
 		return nil
-	case fleetdriver.FieldCurrentStatus:
+	case logisticsdriver.FieldCurrentStatus:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCurrentStatus(v)
 		return nil
-	case fleetdriver.FieldDeletedAt:
+	case logisticsdriver.FieldDeletedAt:
 		v, ok := value.(time.Time)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetDeletedAt(v)
 		return nil
-	case fleetdriver.FieldCreatedAt:
+	case logisticsdriver.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCreatedAt(v)
 		return nil
-	case fleetdriver.FieldUpdatedAt:
+	case logisticsdriver.FieldUpdatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
@@ -13664,21 +13664,21 @@ func (m *FleetDriverMutation) SetField(name string, value ent.Value) error {
 		m.SetUpdatedAt(v)
 		return nil
 	}
-	return fmt.Errorf("unknown FleetDriver field %s", name)
+	return fmt.Errorf("unknown LogisticsDriver field %s", name)
 }
 
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
-func (m *FleetDriverMutation) AddedFields() []string {
+func (m *LogisticsDriverMutation) AddedFields() []string {
 	var fields []string
 	if m.addcompany_id != nil {
-		fields = append(fields, fleetdriver.FieldCompanyID)
+		fields = append(fields, logisticsdriver.FieldCompanyID)
 	}
 	if m.adddepartment_id != nil {
-		fields = append(fields, fleetdriver.FieldDepartmentID)
+		fields = append(fields, logisticsdriver.FieldDepartmentID)
 	}
 	if m.adduser_id != nil {
-		fields = append(fields, fleetdriver.FieldUserID)
+		fields = append(fields, logisticsdriver.FieldUserID)
 	}
 	return fields
 }
@@ -13686,13 +13686,13 @@ func (m *FleetDriverMutation) AddedFields() []string {
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
-func (m *FleetDriverMutation) AddedField(name string) (ent.Value, bool) {
+func (m *LogisticsDriverMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
-	case fleetdriver.FieldCompanyID:
+	case logisticsdriver.FieldCompanyID:
 		return m.AddedCompanyID()
-	case fleetdriver.FieldDepartmentID:
+	case logisticsdriver.FieldDepartmentID:
 		return m.AddedDepartmentID()
-	case fleetdriver.FieldUserID:
+	case logisticsdriver.FieldUserID:
 		return m.AddedUserID()
 	}
 	return nil, false
@@ -13701,23 +13701,23 @@ func (m *FleetDriverMutation) AddedField(name string) (ent.Value, bool) {
 // AddField adds the value to the field with the given name. It returns an error if
 // the field is not defined in the schema, or if the type mismatched the field
 // type.
-func (m *FleetDriverMutation) AddField(name string, value ent.Value) error {
+func (m *LogisticsDriverMutation) AddField(name string, value ent.Value) error {
 	switch name {
-	case fleetdriver.FieldCompanyID:
+	case logisticsdriver.FieldCompanyID:
 		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddCompanyID(v)
 		return nil
-	case fleetdriver.FieldDepartmentID:
+	case logisticsdriver.FieldDepartmentID:
 		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddDepartmentID(v)
 		return nil
-	case fleetdriver.FieldUserID:
+	case logisticsdriver.FieldUserID:
 		v, ok := value.(int)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
@@ -13725,130 +13725,130 @@ func (m *FleetDriverMutation) AddField(name string, value ent.Value) error {
 		m.AddUserID(v)
 		return nil
 	}
-	return fmt.Errorf("unknown FleetDriver numeric field %s", name)
+	return fmt.Errorf("unknown LogisticsDriver numeric field %s", name)
 }
 
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
-func (m *FleetDriverMutation) ClearedFields() []string {
+func (m *LogisticsDriverMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(fleetdriver.FieldDepartmentID) {
-		fields = append(fields, fleetdriver.FieldDepartmentID)
+	if m.FieldCleared(logisticsdriver.FieldDepartmentID) {
+		fields = append(fields, logisticsdriver.FieldDepartmentID)
 	}
-	if m.FieldCleared(fleetdriver.FieldPhone) {
-		fields = append(fields, fleetdriver.FieldPhone)
+	if m.FieldCleared(logisticsdriver.FieldPhone) {
+		fields = append(fields, logisticsdriver.FieldPhone)
 	}
-	if m.FieldCleared(fleetdriver.FieldDeletedAt) {
-		fields = append(fields, fleetdriver.FieldDeletedAt)
+	if m.FieldCleared(logisticsdriver.FieldDeletedAt) {
+		fields = append(fields, logisticsdriver.FieldDeletedAt)
 	}
 	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
 // cleared in this mutation.
-func (m *FleetDriverMutation) FieldCleared(name string) bool {
+func (m *LogisticsDriverMutation) FieldCleared(name string) bool {
 	_, ok := m.clearedFields[name]
 	return ok
 }
 
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
-func (m *FleetDriverMutation) ClearField(name string) error {
+func (m *LogisticsDriverMutation) ClearField(name string) error {
 	switch name {
-	case fleetdriver.FieldDepartmentID:
+	case logisticsdriver.FieldDepartmentID:
 		m.ClearDepartmentID()
 		return nil
-	case fleetdriver.FieldPhone:
+	case logisticsdriver.FieldPhone:
 		m.ClearPhone()
 		return nil
-	case fleetdriver.FieldDeletedAt:
+	case logisticsdriver.FieldDeletedAt:
 		m.ClearDeletedAt()
 		return nil
 	}
-	return fmt.Errorf("unknown FleetDriver nullable field %s", name)
+	return fmt.Errorf("unknown LogisticsDriver nullable field %s", name)
 }
 
 // ResetField resets all changes in the mutation for the field with the given name.
 // It returns an error if the field is not defined in the schema.
-func (m *FleetDriverMutation) ResetField(name string) error {
+func (m *LogisticsDriverMutation) ResetField(name string) error {
 	switch name {
-	case fleetdriver.FieldCompanyID:
+	case logisticsdriver.FieldCompanyID:
 		m.ResetCompanyID()
 		return nil
-	case fleetdriver.FieldDepartmentID:
+	case logisticsdriver.FieldDepartmentID:
 		m.ResetDepartmentID()
 		return nil
-	case fleetdriver.FieldUserID:
+	case logisticsdriver.FieldUserID:
 		m.ResetUserID()
 		return nil
-	case fleetdriver.FieldName:
+	case logisticsdriver.FieldName:
 		m.ResetName()
 		return nil
-	case fleetdriver.FieldPhone:
+	case logisticsdriver.FieldPhone:
 		m.ResetPhone()
 		return nil
-	case fleetdriver.FieldCurrentStatus:
+	case logisticsdriver.FieldCurrentStatus:
 		m.ResetCurrentStatus()
 		return nil
-	case fleetdriver.FieldDeletedAt:
+	case logisticsdriver.FieldDeletedAt:
 		m.ResetDeletedAt()
 		return nil
-	case fleetdriver.FieldCreatedAt:
+	case logisticsdriver.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
-	case fleetdriver.FieldUpdatedAt:
+	case logisticsdriver.FieldUpdatedAt:
 		m.ResetUpdatedAt()
 		return nil
 	}
-	return fmt.Errorf("unknown FleetDriver field %s", name)
+	return fmt.Errorf("unknown LogisticsDriver field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
-func (m *FleetDriverMutation) AddedEdges() []string {
+func (m *LogisticsDriverMutation) AddedEdges() []string {
 	edges := make([]string, 0, 0)
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
-func (m *FleetDriverMutation) AddedIDs(name string) []ent.Value {
+func (m *LogisticsDriverMutation) AddedIDs(name string) []ent.Value {
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
-func (m *FleetDriverMutation) RemovedEdges() []string {
+func (m *LogisticsDriverMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 0)
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
-func (m *FleetDriverMutation) RemovedIDs(name string) []ent.Value {
+func (m *LogisticsDriverMutation) RemovedIDs(name string) []ent.Value {
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
-func (m *FleetDriverMutation) ClearedEdges() []string {
+func (m *LogisticsDriverMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 0)
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
-func (m *FleetDriverMutation) EdgeCleared(name string) bool {
+func (m *LogisticsDriverMutation) EdgeCleared(name string) bool {
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
-func (m *FleetDriverMutation) ClearEdge(name string) error {
-	return fmt.Errorf("unknown FleetDriver unique edge %s", name)
+func (m *LogisticsDriverMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown LogisticsDriver unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
-func (m *FleetDriverMutation) ResetEdge(name string) error {
-	return fmt.Errorf("unknown FleetDriver edge %s", name)
+func (m *LogisticsDriverMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown LogisticsDriver edge %s", name)
 }
 
 // MetadictMutation represents an operation that mutates the Metadict nodes in the graph.

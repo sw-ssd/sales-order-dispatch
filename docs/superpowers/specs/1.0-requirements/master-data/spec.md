@@ -97,9 +97,9 @@
 - **THEN** 該筆資料寫入 `deleted_at` 且不再出現於預設查詢結果
 - **AND** 既有歷史單據關聯的資料不受影響
 
-### Requirement: 客戶送貨地址座標（供 fleet 執行層）
+### Requirement: 客戶送貨地址座標（供 logistics 執行層）
 
-系統 SHALL 於 `customer_addresses`（`type=shipping`）記錄座標 `location geography(Point)`，於建立 / 更新地址時進行地理編碼（geocode），供 fleet 執行層的 OSRM 路線 / ETA 使用（D32）。**不另建立 Fleetbase 式 places 表**；地址簿仍為客戶子資源。地理編碼失敗時地址 MUST 仍可建立（僅 `location` 為空），於 fleet 路線計算時提示缺座標（見 fleet-execution spec）。PostGIS 不可用時 fallback `latitude` / `longitude` 欄位。
+系統 SHALL 於 `customer_addresses`（`type=shipping`）記錄座標 `location geography(Point)`，於建立 / 更新地址時進行地理編碼（geocode），供 logistics 執行層的 OSRM 路線 / ETA 使用（D32）。**不另建立 Fleetbase 式 places 表**；地址簿仍為客戶子資源。地理編碼失敗時地址 MUST 仍可建立（僅 `location` 為空），於 logistics 路線計算時提示缺座標（見 logistics-execution spec）。PostGIS 不可用時 fallback `latitude` / `longitude` 欄位。
 
 #### Scenario: shipping 地址可取得座標
 
@@ -111,7 +111,7 @@
 
 - **WHEN** 地址無法地理編碼（如地址不完整）
 - **THEN** 地址照常建立、`location` 為空
-- **AND** 當該地址被納入 fleet 路線計算時，系統提示缺座標
+- **AND** 當該地址被納入 logistics 路線計算時，系統提示缺座標
 
 ### Requirement: 商品主檔維護
 

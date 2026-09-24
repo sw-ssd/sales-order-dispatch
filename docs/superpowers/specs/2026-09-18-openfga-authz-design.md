@@ -10,7 +10,7 @@
 
 1. **授權引擎由 Casbin + CASL 遷移至內嵌 OpenFGA + RLS**（D32）：OpenFGA 負責服務/資源層授權決策（`Check` / `list-objects`）；RLS（`data_scope` all/company/department/self）保留為資料庫層兜底。
 2. **Casbin 與 CASL 自後端移除**（engine、執行面、依賴）；前端由「CASL ability」遷移至「OpenFGA 驅動的後端 proxy」。
-3. **RLS policy 只建核心表**（users / roles / companies / departments / role_permissions），使後端可端到端運作；未開工領域（03–09、fleet）的表與 policy 各自領域開工時再補，並沿用本波授權介面。
+3. **RLS policy 只建核心表**（users / roles / companies / departments / role_permissions），使後端可端到端運作；未開工領域（03–09、logistics）的表與 policy 各自領域開工時再補，並沿用本波授權介面。
 4. 一併補齊地基阻礙：核心表 migration、7 內建角色 seed、`bcrypt → Argon2id`。
 5. 範圍**不含**未開工領域的業務 schema/RPC。
 

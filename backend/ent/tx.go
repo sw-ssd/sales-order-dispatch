@@ -32,10 +32,10 @@ type Tx struct {
 	Department *DepartmentClient
 	// FileAsset is the client for interacting with the FileAsset builders.
 	FileAsset *FileAssetClient
-	// FleetDelivery is the client for interacting with the FleetDelivery builders.
-	FleetDelivery *FleetDeliveryClient
-	// FleetDriver is the client for interacting with the FleetDriver builders.
-	FleetDriver *FleetDriverClient
+	// LogisticsDelivery is the client for interacting with the LogisticsDelivery builders.
+	LogisticsDelivery *LogisticsDeliveryClient
+	// LogisticsDriver is the client for interacting with the LogisticsDriver builders.
+	LogisticsDriver *LogisticsDriverClient
 	// Metadict is the client for interacting with the Metadict builders.
 	Metadict *MetadictClient
 	// Notification is the client for interacting with the Notification builders.
@@ -225,8 +225,8 @@ func (tx *Tx) init() {
 	tx.CustomerProduct = NewCustomerProductClient(tx.config)
 	tx.Department = NewDepartmentClient(tx.config)
 	tx.FileAsset = NewFileAssetClient(tx.config)
-	tx.FleetDelivery = NewFleetDeliveryClient(tx.config)
-	tx.FleetDriver = NewFleetDriverClient(tx.config)
+	tx.LogisticsDelivery = NewLogisticsDeliveryClient(tx.config)
+	tx.LogisticsDriver = NewLogisticsDriverClient(tx.config)
 	tx.Metadict = NewMetadictClient(tx.config)
 	tx.Notification = NewNotificationClient(tx.config)
 	tx.NotificationTemplate = NewNotificationTemplateClient(tx.config)

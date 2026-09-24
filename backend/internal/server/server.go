@@ -99,11 +99,11 @@ var protectedRPC = map[string]rpcAuth{
 	"/salesorder.v1.UserService/AssignRole":             {"user", "write"},
 	"/salesorder.v1.UserService/Deactivate":             {"user", "write"},
 	"/salesorder.v1.UserService/ForceLogout":            {"user", "write"},
-	// fleet(D32/10.1/10.12):建檔與指派 = write;本人任務清單 = read。
-	"/salesorder.v1.FleetService/CreateDriver":     {"fleet", "write"},
-	"/salesorder.v1.FleetService/CreateVehicle":    {"fleet", "write"},
-	"/salesorder.v1.FleetService/AssignDelivery":   {"fleet", "write"},
-	"/salesorder.v1.FleetService/ListMyDeliveries": {"fleet", "read"},
+	// logistics(D32/10.1/10.12):建檔與指派 = write;本人任務清單 = read。
+	"/salesorder.v1.LogisticsService/CreateDriver":     {"logistics", "write"},
+	"/salesorder.v1.LogisticsService/CreateVehicle":    {"logistics", "write"},
+	"/salesorder.v1.LogisticsService/AssignDelivery":   {"logistics", "write"},
+	"/salesorder.v1.LogisticsService/ListMyDeliveries": {"logistics", "read"},
 }
 
 // SetOpenFGA 注入 OpenFGA 授權引擎(啟動組裝時;nil 則跳過 middleware 檢查)。
