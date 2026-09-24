@@ -36,6 +36,12 @@ type Department func(*sql.Selector)
 // FileAsset is the predicate function for fileasset builders.
 type FileAsset func(*sql.Selector)
 
+// FleetDelivery is the predicate function for fleetdelivery builders.
+type FleetDelivery func(*sql.Selector)
+
+// FleetDriver is the predicate function for fleetdriver builders.
+type FleetDriver func(*sql.Selector)
+
 // Metadict is the predicate function for metadict builders.
 type Metadict func(*sql.Selector)
 
@@ -101,6 +107,9 @@ type User func(*sql.Selector)
 
 // UserDevice is the predicate function for userdevice builders.
 type UserDevice func(*sql.Selector)
+
+// Vehicle is the predicate function for vehicle builders.
+type Vehicle func(*sql.Selector)
 
 // Warehouse is the predicate function for warehouse builders.
 type Warehouse func(*sql.Selector)

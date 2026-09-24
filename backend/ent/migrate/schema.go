@@ -309,6 +309,70 @@ var (
 			},
 		},
 	}
+	// FleetDeliveriesColumns holds the columns for the "fleet_deliveries" table.
+	FleetDeliveriesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "company_id", Type: field.TypeInt},
+		{Name: "department_id", Type: field.TypeInt, Nullable: true},
+		{Name: "route_id", Type: field.TypeInt},
+		{Name: "driver_id", Type: field.TypeInt, Nullable: true},
+		{Name: "vehicle_id", Type: field.TypeInt, Nullable: true},
+		{Name: "assigned_by", Type: field.TypeInt},
+		{Name: "status", Type: field.TypeString, Default: "pending"},
+		{Name: "version", Type: field.TypeInt, Default: 1},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// FleetDeliveriesTable holds the schema information for the "fleet_deliveries" table.
+	FleetDeliveriesTable = &schema.Table{
+		Name:       "fleet_deliveries",
+		Columns:    FleetDeliveriesColumns,
+		PrimaryKey: []*schema.Column{FleetDeliveriesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "fleetdelivery_department_id_route_id",
+				Unique:  false,
+				Columns: []*schema.Column{FleetDeliveriesColumns[2], FleetDeliveriesColumns[3]},
+			},
+			{
+				Name:    "fleetdelivery_driver_id",
+				Unique:  false,
+				Columns: []*schema.Column{FleetDeliveriesColumns[4]},
+			},
+		},
+	}
+	// FleetDriversColumns holds the columns for the "fleet_drivers" table.
+	FleetDriversColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "company_id", Type: field.TypeInt},
+		{Name: "department_id", Type: field.TypeInt, Nullable: true},
+		{Name: "user_id", Type: field.TypeInt},
+		{Name: "name", Type: field.TypeString},
+		{Name: "phone", Type: field.TypeString, Nullable: true},
+		{Name: "current_status", Type: field.TypeString, Default: "offline"},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// FleetDriversTable holds the schema information for the "fleet_drivers" table.
+	FleetDriversTable = &schema.Table{
+		Name:       "fleet_drivers",
+		Columns:    FleetDriversColumns,
+		PrimaryKey: []*schema.Column{FleetDriversColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "fleetdriver_department_id_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{FleetDriversColumns[2], FleetDriversColumns[3]},
+			},
+			{
+				Name:    "fleetdriver_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{FleetDriversColumns[3]},
+			},
+		},
+	}
 	// MetadictsColumns holds the columns for the "metadicts" table.
 	MetadictsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -959,6 +1023,31 @@ var (
 			},
 		},
 	}
+	// VehiclesColumns holds the columns for the "vehicles" table.
+	VehiclesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "company_id", Type: field.TypeInt},
+		{Name: "department_id", Type: field.TypeInt, Nullable: true},
+		{Name: "plate_no", Type: field.TypeString},
+		{Name: "vehicle_type", Type: field.TypeString, Nullable: true},
+		{Name: "status", Type: field.TypeString, Default: "idle"},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+	}
+	// VehiclesTable holds the schema information for the "vehicles" table.
+	VehiclesTable = &schema.Table{
+		Name:       "vehicles",
+		Columns:    VehiclesColumns,
+		PrimaryKey: []*schema.Column{VehiclesColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "vehicle_department_id_plate_no",
+				Unique:  false,
+				Columns: []*schema.Column{VehiclesColumns[2], VehiclesColumns[3]},
+			},
+		},
+	}
 	// WarehousesColumns holds the columns for the "warehouses" table.
 	WarehousesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -999,6 +1088,8 @@ var (
 		CustomerProductsTable,
 		DepartmentsTable,
 		FileAssetsTable,
+		FleetDeliveriesTable,
+		FleetDriversTable,
 		MetadictsTable,
 		NotificationsTable,
 		NotificationTemplatesTable,
@@ -1021,6 +1112,7 @@ var (
 		SalesOrderItemsTable,
 		UsersTable,
 		UserDevicesTable,
+		VehiclesTable,
 		WarehousesTable,
 	}
 )

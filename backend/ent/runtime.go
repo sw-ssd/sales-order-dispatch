@@ -15,6 +15,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/customerproduct"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/fileasset"
+	"github.com/salesorder/sales-order-1.0/backend/ent/fleetdelivery"
+	"github.com/salesorder/sales-order-1.0/backend/ent/fleetdriver"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/notification"
 	"github.com/salesorder/sales-order-1.0/backend/ent/notificationtemplate"
@@ -38,6 +40,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/schema"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/ent/userdevice"
+	"github.com/salesorder/sales-order-1.0/backend/ent/vehicle"
 	"github.com/salesorder/sales-order-1.0/backend/ent/warehouse"
 )
 
@@ -253,6 +256,46 @@ func init() {
 	fileassetDescCreatedAt := fileassetFields[11].Descriptor()
 	// fileasset.DefaultCreatedAt holds the default value on creation for the created_at field.
 	fileasset.DefaultCreatedAt = fileassetDescCreatedAt.Default.(func() time.Time)
+	fleetdeliveryFields := schema.FleetDelivery{}.Fields()
+	_ = fleetdeliveryFields
+	// fleetdeliveryDescStatus is the schema descriptor for status field.
+	fleetdeliveryDescStatus := fleetdeliveryFields[6].Descriptor()
+	// fleetdelivery.DefaultStatus holds the default value on creation for the status field.
+	fleetdelivery.DefaultStatus = fleetdeliveryDescStatus.Default.(string)
+	// fleetdeliveryDescVersion is the schema descriptor for version field.
+	fleetdeliveryDescVersion := fleetdeliveryFields[7].Descriptor()
+	// fleetdelivery.DefaultVersion holds the default value on creation for the version field.
+	fleetdelivery.DefaultVersion = fleetdeliveryDescVersion.Default.(int)
+	// fleetdeliveryDescCreatedAt is the schema descriptor for created_at field.
+	fleetdeliveryDescCreatedAt := fleetdeliveryFields[9].Descriptor()
+	// fleetdelivery.DefaultCreatedAt holds the default value on creation for the created_at field.
+	fleetdelivery.DefaultCreatedAt = fleetdeliveryDescCreatedAt.Default.(func() time.Time)
+	// fleetdeliveryDescUpdatedAt is the schema descriptor for updated_at field.
+	fleetdeliveryDescUpdatedAt := fleetdeliveryFields[10].Descriptor()
+	// fleetdelivery.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	fleetdelivery.DefaultUpdatedAt = fleetdeliveryDescUpdatedAt.Default.(func() time.Time)
+	// fleetdelivery.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	fleetdelivery.UpdateDefaultUpdatedAt = fleetdeliveryDescUpdatedAt.UpdateDefault.(func() time.Time)
+	fleetdriverFields := schema.FleetDriver{}.Fields()
+	_ = fleetdriverFields
+	// fleetdriverDescName is the schema descriptor for name field.
+	fleetdriverDescName := fleetdriverFields[3].Descriptor()
+	// fleetdriver.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	fleetdriver.NameValidator = fleetdriverDescName.Validators[0].(func(string) error)
+	// fleetdriverDescCurrentStatus is the schema descriptor for current_status field.
+	fleetdriverDescCurrentStatus := fleetdriverFields[5].Descriptor()
+	// fleetdriver.DefaultCurrentStatus holds the default value on creation for the current_status field.
+	fleetdriver.DefaultCurrentStatus = fleetdriverDescCurrentStatus.Default.(string)
+	// fleetdriverDescCreatedAt is the schema descriptor for created_at field.
+	fleetdriverDescCreatedAt := fleetdriverFields[7].Descriptor()
+	// fleetdriver.DefaultCreatedAt holds the default value on creation for the created_at field.
+	fleetdriver.DefaultCreatedAt = fleetdriverDescCreatedAt.Default.(func() time.Time)
+	// fleetdriverDescUpdatedAt is the schema descriptor for updated_at field.
+	fleetdriverDescUpdatedAt := fleetdriverFields[8].Descriptor()
+	// fleetdriver.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	fleetdriver.DefaultUpdatedAt = fleetdriverDescUpdatedAt.Default.(func() time.Time)
+	// fleetdriver.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	fleetdriver.UpdateDefaultUpdatedAt = fleetdriverDescUpdatedAt.UpdateDefault.(func() time.Time)
 	metadictFields := schema.Metadict{}.Fields()
 	_ = metadictFields
 	// metadictDescType is the schema descriptor for type field.
@@ -795,6 +838,26 @@ func init() {
 	userdevice.DefaultUpdatedAt = userdeviceDescUpdatedAt.Default.(func() time.Time)
 	// userdevice.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	userdevice.UpdateDefaultUpdatedAt = userdeviceDescUpdatedAt.UpdateDefault.(func() time.Time)
+	vehicleFields := schema.Vehicle{}.Fields()
+	_ = vehicleFields
+	// vehicleDescPlateNo is the schema descriptor for plate_no field.
+	vehicleDescPlateNo := vehicleFields[2].Descriptor()
+	// vehicle.PlateNoValidator is a validator for the "plate_no" field. It is called by the builders before save.
+	vehicle.PlateNoValidator = vehicleDescPlateNo.Validators[0].(func(string) error)
+	// vehicleDescStatus is the schema descriptor for status field.
+	vehicleDescStatus := vehicleFields[4].Descriptor()
+	// vehicle.DefaultStatus holds the default value on creation for the status field.
+	vehicle.DefaultStatus = vehicleDescStatus.Default.(string)
+	// vehicleDescCreatedAt is the schema descriptor for created_at field.
+	vehicleDescCreatedAt := vehicleFields[6].Descriptor()
+	// vehicle.DefaultCreatedAt holds the default value on creation for the created_at field.
+	vehicle.DefaultCreatedAt = vehicleDescCreatedAt.Default.(func() time.Time)
+	// vehicleDescUpdatedAt is the schema descriptor for updated_at field.
+	vehicleDescUpdatedAt := vehicleFields[7].Descriptor()
+	// vehicle.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	vehicle.DefaultUpdatedAt = vehicleDescUpdatedAt.Default.(func() time.Time)
+	// vehicle.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	vehicle.UpdateDefaultUpdatedAt = vehicleDescUpdatedAt.UpdateDefault.(func() time.Time)
 	warehouseFields := schema.Warehouse{}.Fields()
 	_ = warehouseFields
 	// warehouseDescCode is the schema descriptor for code field.

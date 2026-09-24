@@ -129,6 +129,30 @@ func (f FileAssetFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, e
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.FileAssetMutation", m)
 }
 
+// The FleetDeliveryFunc type is an adapter to allow the use of ordinary
+// function as FleetDelivery mutator.
+type FleetDeliveryFunc func(context.Context, *ent.FleetDeliveryMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f FleetDeliveryFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.FleetDeliveryMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.FleetDeliveryMutation", m)
+}
+
+// The FleetDriverFunc type is an adapter to allow the use of ordinary
+// function as FleetDriver mutator.
+type FleetDriverFunc func(context.Context, *ent.FleetDriverMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f FleetDriverFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.FleetDriverMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.FleetDriverMutation", m)
+}
+
 // The MetadictFunc type is an adapter to allow the use of ordinary
 // function as Metadict mutator.
 type MetadictFunc func(context.Context, *ent.MetadictMutation) (ent.Value, error)
@@ -391,6 +415,18 @@ func (f UserDeviceFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.UserDeviceMutation", m)
+}
+
+// The VehicleFunc type is an adapter to allow the use of ordinary
+// function as Vehicle mutator.
+type VehicleFunc func(context.Context, *ent.VehicleMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f VehicleFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.VehicleMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.VehicleMutation", m)
 }
 
 // The WarehouseFunc type is an adapter to allow the use of ordinary
