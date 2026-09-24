@@ -32,9 +32,15 @@ func (LogisticsDelivery) Fields() []ent.Field {
 			Nillable(), // 指派的車輛(vehicles.id)
 		field.Int("assigned_by"), // 操作者(users.id)
 		field.String("status").
-			Default("pending"), // pending / in_progress / completed / cancelled(10.6 狀態機另案)
+			Default("pending"), // pending → in_progress → completed;pending/in_progress → cancelled(10.6)
 		field.Int("version").
 			Default(1), // 樂觀鎖(10.4 重指派遞增)
+		field.Time("started_at").
+			Optional().
+			Nillable(), // 開始執行(10.6)
+		field.Time("completed_at").
+			Optional().
+			Nillable(), // 完成簽收(10.6)
 		field.Time("deleted_at").
 			Optional().
 			Nillable(), // 軟刪除(D10)

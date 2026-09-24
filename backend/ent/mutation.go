@@ -22,7 +22,9 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/fileasset"
 	"github.com/salesorder/sales-order-1.0/backend/ent/logisticsdelivery"
+	"github.com/salesorder/sales-order-1.0/backend/ent/logisticsdeliveryevent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/logisticsdriver"
+	"github.com/salesorder/sales-order-1.0/backend/ent/logisticsproof"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/notification"
 	"github.com/salesorder/sales-order-1.0/backend/ent/notificationtemplate"
@@ -59,42 +61,44 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeAnnouncement          = "Announcement"
-	TypeAuditLog              = "AuditLog"
-	TypeCompany               = "Company"
-	TypeCustomer              = "Customer"
-	TypeCustomerAddress       = "CustomerAddress"
-	TypeCustomerContact       = "CustomerContact"
-	TypeCustomerCounter       = "CustomerCounter"
-	TypeCustomerProduct       = "CustomerProduct"
-	TypeDepartment            = "Department"
-	TypeFileAsset             = "FileAsset"
-	TypeLogisticsDelivery     = "LogisticsDelivery"
-	TypeLogisticsDriver       = "LogisticsDriver"
-	TypeMetadict              = "Metadict"
-	TypeNotification          = "Notification"
-	TypeNotificationTemplate  = "NotificationTemplate"
-	TypeOrderCounter          = "OrderCounter"
-	TypePrintLog              = "PrintLog"
-	TypePrintPreview          = "PrintPreview"
-	TypeProcessingSpec        = "ProcessingSpec"
-	TypeProduct               = "Product"
-	TypeProductCategory       = "ProductCategory"
-	TypeProductProcessingSpec = "ProductProcessingSpec"
-	TypeProductUnit           = "ProductUnit"
-	TypePromoTag              = "PromoTag"
-	TypeReturnRequest         = "ReturnRequest"
-	TypeReturnRequestItem     = "ReturnRequestItem"
-	TypeRole                  = "Role"
-	TypeRolePermission        = "RolePermission"
-	TypeRoute                 = "Route"
-	TypeSalesOrder            = "SalesOrder"
-	TypeSalesOrderEvent       = "SalesOrderEvent"
-	TypeSalesOrderItem        = "SalesOrderItem"
-	TypeUser                  = "User"
-	TypeUserDevice            = "UserDevice"
-	TypeVehicle               = "Vehicle"
-	TypeWarehouse             = "Warehouse"
+	TypeAnnouncement           = "Announcement"
+	TypeAuditLog               = "AuditLog"
+	TypeCompany                = "Company"
+	TypeCustomer               = "Customer"
+	TypeCustomerAddress        = "CustomerAddress"
+	TypeCustomerContact        = "CustomerContact"
+	TypeCustomerCounter        = "CustomerCounter"
+	TypeCustomerProduct        = "CustomerProduct"
+	TypeDepartment             = "Department"
+	TypeFileAsset              = "FileAsset"
+	TypeLogisticsDelivery      = "LogisticsDelivery"
+	TypeLogisticsDeliveryEvent = "LogisticsDeliveryEvent"
+	TypeLogisticsDriver        = "LogisticsDriver"
+	TypeLogisticsProof         = "LogisticsProof"
+	TypeMetadict               = "Metadict"
+	TypeNotification           = "Notification"
+	TypeNotificationTemplate   = "NotificationTemplate"
+	TypeOrderCounter           = "OrderCounter"
+	TypePrintLog               = "PrintLog"
+	TypePrintPreview           = "PrintPreview"
+	TypeProcessingSpec         = "ProcessingSpec"
+	TypeProduct                = "Product"
+	TypeProductCategory        = "ProductCategory"
+	TypeProductProcessingSpec  = "ProductProcessingSpec"
+	TypeProductUnit            = "ProductUnit"
+	TypePromoTag               = "PromoTag"
+	TypeReturnRequest          = "ReturnRequest"
+	TypeReturnRequestItem      = "ReturnRequestItem"
+	TypeRole                   = "Role"
+	TypeRolePermission         = "RolePermission"
+	TypeRoute                  = "Route"
+	TypeSalesOrder             = "SalesOrder"
+	TypeSalesOrderEvent        = "SalesOrderEvent"
+	TypeSalesOrderItem         = "SalesOrderItem"
+	TypeUser                   = "User"
+	TypeUserDevice             = "UserDevice"
+	TypeVehicle                = "Vehicle"
+	TypeWarehouse              = "Warehouse"
 )
 
 // AnnouncementMutation represents an operation that mutates the Announcement nodes in the graph.
@@ -11769,6 +11773,8 @@ type LogisticsDeliveryMutation struct {
 	status           *string
 	version          *int
 	addversion       *int
+	started_at       *time.Time
+	completed_at     *time.Time
 	deleted_at       *time.Time
 	created_at       *time.Time
 	updated_at       *time.Time
@@ -12346,6 +12352,104 @@ func (m *LogisticsDeliveryMutation) ResetVersion() {
 	m.addversion = nil
 }
 
+// SetStartedAt sets the "started_at" field.
+func (m *LogisticsDeliveryMutation) SetStartedAt(t time.Time) {
+	m.started_at = &t
+}
+
+// StartedAt returns the value of the "started_at" field in the mutation.
+func (m *LogisticsDeliveryMutation) StartedAt() (r time.Time, exists bool) {
+	v := m.started_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStartedAt returns the old "started_at" field's value of the LogisticsDelivery entity.
+// If the LogisticsDelivery object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LogisticsDeliveryMutation) OldStartedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStartedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStartedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStartedAt: %w", err)
+	}
+	return oldValue.StartedAt, nil
+}
+
+// ClearStartedAt clears the value of the "started_at" field.
+func (m *LogisticsDeliveryMutation) ClearStartedAt() {
+	m.started_at = nil
+	m.clearedFields[logisticsdelivery.FieldStartedAt] = struct{}{}
+}
+
+// StartedAtCleared returns if the "started_at" field was cleared in this mutation.
+func (m *LogisticsDeliveryMutation) StartedAtCleared() bool {
+	_, ok := m.clearedFields[logisticsdelivery.FieldStartedAt]
+	return ok
+}
+
+// ResetStartedAt resets all changes to the "started_at" field.
+func (m *LogisticsDeliveryMutation) ResetStartedAt() {
+	m.started_at = nil
+	delete(m.clearedFields, logisticsdelivery.FieldStartedAt)
+}
+
+// SetCompletedAt sets the "completed_at" field.
+func (m *LogisticsDeliveryMutation) SetCompletedAt(t time.Time) {
+	m.completed_at = &t
+}
+
+// CompletedAt returns the value of the "completed_at" field in the mutation.
+func (m *LogisticsDeliveryMutation) CompletedAt() (r time.Time, exists bool) {
+	v := m.completed_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCompletedAt returns the old "completed_at" field's value of the LogisticsDelivery entity.
+// If the LogisticsDelivery object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LogisticsDeliveryMutation) OldCompletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCompletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCompletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCompletedAt: %w", err)
+	}
+	return oldValue.CompletedAt, nil
+}
+
+// ClearCompletedAt clears the value of the "completed_at" field.
+func (m *LogisticsDeliveryMutation) ClearCompletedAt() {
+	m.completed_at = nil
+	m.clearedFields[logisticsdelivery.FieldCompletedAt] = struct{}{}
+}
+
+// CompletedAtCleared returns if the "completed_at" field was cleared in this mutation.
+func (m *LogisticsDeliveryMutation) CompletedAtCleared() bool {
+	_, ok := m.clearedFields[logisticsdelivery.FieldCompletedAt]
+	return ok
+}
+
+// ResetCompletedAt resets all changes to the "completed_at" field.
+func (m *LogisticsDeliveryMutation) ResetCompletedAt() {
+	m.completed_at = nil
+	delete(m.clearedFields, logisticsdelivery.FieldCompletedAt)
+}
+
 // SetDeletedAt sets the "deleted_at" field.
 func (m *LogisticsDeliveryMutation) SetDeletedAt(t time.Time) {
 	m.deleted_at = &t
@@ -12501,7 +12605,7 @@ func (m *LogisticsDeliveryMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *LogisticsDeliveryMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 13)
 	if m.company_id != nil {
 		fields = append(fields, logisticsdelivery.FieldCompanyID)
 	}
@@ -12525,6 +12629,12 @@ func (m *LogisticsDeliveryMutation) Fields() []string {
 	}
 	if m.version != nil {
 		fields = append(fields, logisticsdelivery.FieldVersion)
+	}
+	if m.started_at != nil {
+		fields = append(fields, logisticsdelivery.FieldStartedAt)
+	}
+	if m.completed_at != nil {
+		fields = append(fields, logisticsdelivery.FieldCompletedAt)
 	}
 	if m.deleted_at != nil {
 		fields = append(fields, logisticsdelivery.FieldDeletedAt)
@@ -12559,6 +12669,10 @@ func (m *LogisticsDeliveryMutation) Field(name string) (ent.Value, bool) {
 		return m.Status()
 	case logisticsdelivery.FieldVersion:
 		return m.Version()
+	case logisticsdelivery.FieldStartedAt:
+		return m.StartedAt()
+	case logisticsdelivery.FieldCompletedAt:
+		return m.CompletedAt()
 	case logisticsdelivery.FieldDeletedAt:
 		return m.DeletedAt()
 	case logisticsdelivery.FieldCreatedAt:
@@ -12590,6 +12704,10 @@ func (m *LogisticsDeliveryMutation) OldField(ctx context.Context, name string) (
 		return m.OldStatus(ctx)
 	case logisticsdelivery.FieldVersion:
 		return m.OldVersion(ctx)
+	case logisticsdelivery.FieldStartedAt:
+		return m.OldStartedAt(ctx)
+	case logisticsdelivery.FieldCompletedAt:
+		return m.OldCompletedAt(ctx)
 	case logisticsdelivery.FieldDeletedAt:
 		return m.OldDeletedAt(ctx)
 	case logisticsdelivery.FieldCreatedAt:
@@ -12660,6 +12778,20 @@ func (m *LogisticsDeliveryMutation) SetField(name string, value ent.Value) error
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetVersion(v)
+		return nil
+	case logisticsdelivery.FieldStartedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStartedAt(v)
+		return nil
+	case logisticsdelivery.FieldCompletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCompletedAt(v)
 		return nil
 	case logisticsdelivery.FieldDeletedAt:
 		v, ok := value.(time.Time)
@@ -12808,6 +12940,12 @@ func (m *LogisticsDeliveryMutation) ClearedFields() []string {
 	if m.FieldCleared(logisticsdelivery.FieldVehicleID) {
 		fields = append(fields, logisticsdelivery.FieldVehicleID)
 	}
+	if m.FieldCleared(logisticsdelivery.FieldStartedAt) {
+		fields = append(fields, logisticsdelivery.FieldStartedAt)
+	}
+	if m.FieldCleared(logisticsdelivery.FieldCompletedAt) {
+		fields = append(fields, logisticsdelivery.FieldCompletedAt)
+	}
 	if m.FieldCleared(logisticsdelivery.FieldDeletedAt) {
 		fields = append(fields, logisticsdelivery.FieldDeletedAt)
 	}
@@ -12833,6 +12971,12 @@ func (m *LogisticsDeliveryMutation) ClearField(name string) error {
 		return nil
 	case logisticsdelivery.FieldVehicleID:
 		m.ClearVehicleID()
+		return nil
+	case logisticsdelivery.FieldStartedAt:
+		m.ClearStartedAt()
+		return nil
+	case logisticsdelivery.FieldCompletedAt:
+		m.ClearCompletedAt()
 		return nil
 	case logisticsdelivery.FieldDeletedAt:
 		m.ClearDeletedAt()
@@ -12868,6 +13012,12 @@ func (m *LogisticsDeliveryMutation) ResetField(name string) error {
 		return nil
 	case logisticsdelivery.FieldVersion:
 		m.ResetVersion()
+		return nil
+	case logisticsdelivery.FieldStartedAt:
+		m.ResetStartedAt()
+		return nil
+	case logisticsdelivery.FieldCompletedAt:
+		m.ResetCompletedAt()
 		return nil
 	case logisticsdelivery.FieldDeletedAt:
 		m.ResetDeletedAt()
@@ -12928,6 +13078,799 @@ func (m *LogisticsDeliveryMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *LogisticsDeliveryMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown LogisticsDelivery edge %s", name)
+}
+
+// LogisticsDeliveryEventMutation represents an operation that mutates the LogisticsDeliveryEvent nodes in the graph.
+type LogisticsDeliveryEventMutation struct {
+	config
+	op                       Op
+	typ                      string
+	id                       *int
+	logistics_delivery_id    *int
+	addlogistics_delivery_id *int
+	company_id               *int
+	addcompany_id            *int
+	event_type               *string
+	actor_id                 *int
+	addactor_id              *int
+	reason                   *string
+	payload                  *map[string]interface{}
+	created_at               *time.Time
+	clearedFields            map[string]struct{}
+	done                     bool
+	oldValue                 func(context.Context) (*LogisticsDeliveryEvent, error)
+	predicates               []predicate.LogisticsDeliveryEvent
+}
+
+var _ ent.Mutation = (*LogisticsDeliveryEventMutation)(nil)
+
+// logisticsdeliveryeventOption allows management of the mutation configuration using functional options.
+type logisticsdeliveryeventOption func(*LogisticsDeliveryEventMutation)
+
+// newLogisticsDeliveryEventMutation creates new mutation for the LogisticsDeliveryEvent entity.
+func newLogisticsDeliveryEventMutation(c config, op Op, opts ...logisticsdeliveryeventOption) *LogisticsDeliveryEventMutation {
+	m := &LogisticsDeliveryEventMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeLogisticsDeliveryEvent,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withLogisticsDeliveryEventID sets the ID field of the mutation.
+func withLogisticsDeliveryEventID(id int) logisticsdeliveryeventOption {
+	return func(m *LogisticsDeliveryEventMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *LogisticsDeliveryEvent
+		)
+		m.oldValue = func(ctx context.Context) (*LogisticsDeliveryEvent, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().LogisticsDeliveryEvent.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withLogisticsDeliveryEvent sets the old LogisticsDeliveryEvent of the mutation.
+func withLogisticsDeliveryEvent(node *LogisticsDeliveryEvent) logisticsdeliveryeventOption {
+	return func(m *LogisticsDeliveryEventMutation) {
+		m.oldValue = func(context.Context) (*LogisticsDeliveryEvent, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m LogisticsDeliveryEventMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m LogisticsDeliveryEventMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *LogisticsDeliveryEventMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *LogisticsDeliveryEventMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().LogisticsDeliveryEvent.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetLogisticsDeliveryID sets the "logistics_delivery_id" field.
+func (m *LogisticsDeliveryEventMutation) SetLogisticsDeliveryID(i int) {
+	m.logistics_delivery_id = &i
+	m.addlogistics_delivery_id = nil
+}
+
+// LogisticsDeliveryID returns the value of the "logistics_delivery_id" field in the mutation.
+func (m *LogisticsDeliveryEventMutation) LogisticsDeliveryID() (r int, exists bool) {
+	v := m.logistics_delivery_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLogisticsDeliveryID returns the old "logistics_delivery_id" field's value of the LogisticsDeliveryEvent entity.
+// If the LogisticsDeliveryEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LogisticsDeliveryEventMutation) OldLogisticsDeliveryID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLogisticsDeliveryID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLogisticsDeliveryID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLogisticsDeliveryID: %w", err)
+	}
+	return oldValue.LogisticsDeliveryID, nil
+}
+
+// AddLogisticsDeliveryID adds i to the "logistics_delivery_id" field.
+func (m *LogisticsDeliveryEventMutation) AddLogisticsDeliveryID(i int) {
+	if m.addlogistics_delivery_id != nil {
+		*m.addlogistics_delivery_id += i
+	} else {
+		m.addlogistics_delivery_id = &i
+	}
+}
+
+// AddedLogisticsDeliveryID returns the value that was added to the "logistics_delivery_id" field in this mutation.
+func (m *LogisticsDeliveryEventMutation) AddedLogisticsDeliveryID() (r int, exists bool) {
+	v := m.addlogistics_delivery_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetLogisticsDeliveryID resets all changes to the "logistics_delivery_id" field.
+func (m *LogisticsDeliveryEventMutation) ResetLogisticsDeliveryID() {
+	m.logistics_delivery_id = nil
+	m.addlogistics_delivery_id = nil
+}
+
+// SetCompanyID sets the "company_id" field.
+func (m *LogisticsDeliveryEventMutation) SetCompanyID(i int) {
+	m.company_id = &i
+	m.addcompany_id = nil
+}
+
+// CompanyID returns the value of the "company_id" field in the mutation.
+func (m *LogisticsDeliveryEventMutation) CompanyID() (r int, exists bool) {
+	v := m.company_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCompanyID returns the old "company_id" field's value of the LogisticsDeliveryEvent entity.
+// If the LogisticsDeliveryEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LogisticsDeliveryEventMutation) OldCompanyID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCompanyID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCompanyID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCompanyID: %w", err)
+	}
+	return oldValue.CompanyID, nil
+}
+
+// AddCompanyID adds i to the "company_id" field.
+func (m *LogisticsDeliveryEventMutation) AddCompanyID(i int) {
+	if m.addcompany_id != nil {
+		*m.addcompany_id += i
+	} else {
+		m.addcompany_id = &i
+	}
+}
+
+// AddedCompanyID returns the value that was added to the "company_id" field in this mutation.
+func (m *LogisticsDeliveryEventMutation) AddedCompanyID() (r int, exists bool) {
+	v := m.addcompany_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCompanyID resets all changes to the "company_id" field.
+func (m *LogisticsDeliveryEventMutation) ResetCompanyID() {
+	m.company_id = nil
+	m.addcompany_id = nil
+}
+
+// SetEventType sets the "event_type" field.
+func (m *LogisticsDeliveryEventMutation) SetEventType(s string) {
+	m.event_type = &s
+}
+
+// EventType returns the value of the "event_type" field in the mutation.
+func (m *LogisticsDeliveryEventMutation) EventType() (r string, exists bool) {
+	v := m.event_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEventType returns the old "event_type" field's value of the LogisticsDeliveryEvent entity.
+// If the LogisticsDeliveryEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LogisticsDeliveryEventMutation) OldEventType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEventType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEventType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEventType: %w", err)
+	}
+	return oldValue.EventType, nil
+}
+
+// ResetEventType resets all changes to the "event_type" field.
+func (m *LogisticsDeliveryEventMutation) ResetEventType() {
+	m.event_type = nil
+}
+
+// SetActorID sets the "actor_id" field.
+func (m *LogisticsDeliveryEventMutation) SetActorID(i int) {
+	m.actor_id = &i
+	m.addactor_id = nil
+}
+
+// ActorID returns the value of the "actor_id" field in the mutation.
+func (m *LogisticsDeliveryEventMutation) ActorID() (r int, exists bool) {
+	v := m.actor_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldActorID returns the old "actor_id" field's value of the LogisticsDeliveryEvent entity.
+// If the LogisticsDeliveryEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LogisticsDeliveryEventMutation) OldActorID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldActorID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldActorID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldActorID: %w", err)
+	}
+	return oldValue.ActorID, nil
+}
+
+// AddActorID adds i to the "actor_id" field.
+func (m *LogisticsDeliveryEventMutation) AddActorID(i int) {
+	if m.addactor_id != nil {
+		*m.addactor_id += i
+	} else {
+		m.addactor_id = &i
+	}
+}
+
+// AddedActorID returns the value that was added to the "actor_id" field in this mutation.
+func (m *LogisticsDeliveryEventMutation) AddedActorID() (r int, exists bool) {
+	v := m.addactor_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetActorID resets all changes to the "actor_id" field.
+func (m *LogisticsDeliveryEventMutation) ResetActorID() {
+	m.actor_id = nil
+	m.addactor_id = nil
+}
+
+// SetReason sets the "reason" field.
+func (m *LogisticsDeliveryEventMutation) SetReason(s string) {
+	m.reason = &s
+}
+
+// Reason returns the value of the "reason" field in the mutation.
+func (m *LogisticsDeliveryEventMutation) Reason() (r string, exists bool) {
+	v := m.reason
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReason returns the old "reason" field's value of the LogisticsDeliveryEvent entity.
+// If the LogisticsDeliveryEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LogisticsDeliveryEventMutation) OldReason(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReason is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReason requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReason: %w", err)
+	}
+	return oldValue.Reason, nil
+}
+
+// ClearReason clears the value of the "reason" field.
+func (m *LogisticsDeliveryEventMutation) ClearReason() {
+	m.reason = nil
+	m.clearedFields[logisticsdeliveryevent.FieldReason] = struct{}{}
+}
+
+// ReasonCleared returns if the "reason" field was cleared in this mutation.
+func (m *LogisticsDeliveryEventMutation) ReasonCleared() bool {
+	_, ok := m.clearedFields[logisticsdeliveryevent.FieldReason]
+	return ok
+}
+
+// ResetReason resets all changes to the "reason" field.
+func (m *LogisticsDeliveryEventMutation) ResetReason() {
+	m.reason = nil
+	delete(m.clearedFields, logisticsdeliveryevent.FieldReason)
+}
+
+// SetPayload sets the "payload" field.
+func (m *LogisticsDeliveryEventMutation) SetPayload(value map[string]interface{}) {
+	m.payload = &value
+}
+
+// Payload returns the value of the "payload" field in the mutation.
+func (m *LogisticsDeliveryEventMutation) Payload() (r map[string]interface{}, exists bool) {
+	v := m.payload
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPayload returns the old "payload" field's value of the LogisticsDeliveryEvent entity.
+// If the LogisticsDeliveryEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LogisticsDeliveryEventMutation) OldPayload(ctx context.Context) (v map[string]interface{}, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPayload is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPayload requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPayload: %w", err)
+	}
+	return oldValue.Payload, nil
+}
+
+// ClearPayload clears the value of the "payload" field.
+func (m *LogisticsDeliveryEventMutation) ClearPayload() {
+	m.payload = nil
+	m.clearedFields[logisticsdeliveryevent.FieldPayload] = struct{}{}
+}
+
+// PayloadCleared returns if the "payload" field was cleared in this mutation.
+func (m *LogisticsDeliveryEventMutation) PayloadCleared() bool {
+	_, ok := m.clearedFields[logisticsdeliveryevent.FieldPayload]
+	return ok
+}
+
+// ResetPayload resets all changes to the "payload" field.
+func (m *LogisticsDeliveryEventMutation) ResetPayload() {
+	m.payload = nil
+	delete(m.clearedFields, logisticsdeliveryevent.FieldPayload)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *LogisticsDeliveryEventMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *LogisticsDeliveryEventMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the LogisticsDeliveryEvent entity.
+// If the LogisticsDeliveryEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LogisticsDeliveryEventMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *LogisticsDeliveryEventMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// Where appends a list predicates to the LogisticsDeliveryEventMutation builder.
+func (m *LogisticsDeliveryEventMutation) Where(ps ...predicate.LogisticsDeliveryEvent) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the LogisticsDeliveryEventMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *LogisticsDeliveryEventMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.LogisticsDeliveryEvent, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *LogisticsDeliveryEventMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *LogisticsDeliveryEventMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (LogisticsDeliveryEvent).
+func (m *LogisticsDeliveryEventMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *LogisticsDeliveryEventMutation) Fields() []string {
+	fields := make([]string, 0, 7)
+	if m.logistics_delivery_id != nil {
+		fields = append(fields, logisticsdeliveryevent.FieldLogisticsDeliveryID)
+	}
+	if m.company_id != nil {
+		fields = append(fields, logisticsdeliveryevent.FieldCompanyID)
+	}
+	if m.event_type != nil {
+		fields = append(fields, logisticsdeliveryevent.FieldEventType)
+	}
+	if m.actor_id != nil {
+		fields = append(fields, logisticsdeliveryevent.FieldActorID)
+	}
+	if m.reason != nil {
+		fields = append(fields, logisticsdeliveryevent.FieldReason)
+	}
+	if m.payload != nil {
+		fields = append(fields, logisticsdeliveryevent.FieldPayload)
+	}
+	if m.created_at != nil {
+		fields = append(fields, logisticsdeliveryevent.FieldCreatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *LogisticsDeliveryEventMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case logisticsdeliveryevent.FieldLogisticsDeliveryID:
+		return m.LogisticsDeliveryID()
+	case logisticsdeliveryevent.FieldCompanyID:
+		return m.CompanyID()
+	case logisticsdeliveryevent.FieldEventType:
+		return m.EventType()
+	case logisticsdeliveryevent.FieldActorID:
+		return m.ActorID()
+	case logisticsdeliveryevent.FieldReason:
+		return m.Reason()
+	case logisticsdeliveryevent.FieldPayload:
+		return m.Payload()
+	case logisticsdeliveryevent.FieldCreatedAt:
+		return m.CreatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *LogisticsDeliveryEventMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case logisticsdeliveryevent.FieldLogisticsDeliveryID:
+		return m.OldLogisticsDeliveryID(ctx)
+	case logisticsdeliveryevent.FieldCompanyID:
+		return m.OldCompanyID(ctx)
+	case logisticsdeliveryevent.FieldEventType:
+		return m.OldEventType(ctx)
+	case logisticsdeliveryevent.FieldActorID:
+		return m.OldActorID(ctx)
+	case logisticsdeliveryevent.FieldReason:
+		return m.OldReason(ctx)
+	case logisticsdeliveryevent.FieldPayload:
+		return m.OldPayload(ctx)
+	case logisticsdeliveryevent.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown LogisticsDeliveryEvent field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *LogisticsDeliveryEventMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case logisticsdeliveryevent.FieldLogisticsDeliveryID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLogisticsDeliveryID(v)
+		return nil
+	case logisticsdeliveryevent.FieldCompanyID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCompanyID(v)
+		return nil
+	case logisticsdeliveryevent.FieldEventType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEventType(v)
+		return nil
+	case logisticsdeliveryevent.FieldActorID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetActorID(v)
+		return nil
+	case logisticsdeliveryevent.FieldReason:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReason(v)
+		return nil
+	case logisticsdeliveryevent.FieldPayload:
+		v, ok := value.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPayload(v)
+		return nil
+	case logisticsdeliveryevent.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown LogisticsDeliveryEvent field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *LogisticsDeliveryEventMutation) AddedFields() []string {
+	var fields []string
+	if m.addlogistics_delivery_id != nil {
+		fields = append(fields, logisticsdeliveryevent.FieldLogisticsDeliveryID)
+	}
+	if m.addcompany_id != nil {
+		fields = append(fields, logisticsdeliveryevent.FieldCompanyID)
+	}
+	if m.addactor_id != nil {
+		fields = append(fields, logisticsdeliveryevent.FieldActorID)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *LogisticsDeliveryEventMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case logisticsdeliveryevent.FieldLogisticsDeliveryID:
+		return m.AddedLogisticsDeliveryID()
+	case logisticsdeliveryevent.FieldCompanyID:
+		return m.AddedCompanyID()
+	case logisticsdeliveryevent.FieldActorID:
+		return m.AddedActorID()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *LogisticsDeliveryEventMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case logisticsdeliveryevent.FieldLogisticsDeliveryID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddLogisticsDeliveryID(v)
+		return nil
+	case logisticsdeliveryevent.FieldCompanyID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCompanyID(v)
+		return nil
+	case logisticsdeliveryevent.FieldActorID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddActorID(v)
+		return nil
+	}
+	return fmt.Errorf("unknown LogisticsDeliveryEvent numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *LogisticsDeliveryEventMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(logisticsdeliveryevent.FieldReason) {
+		fields = append(fields, logisticsdeliveryevent.FieldReason)
+	}
+	if m.FieldCleared(logisticsdeliveryevent.FieldPayload) {
+		fields = append(fields, logisticsdeliveryevent.FieldPayload)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *LogisticsDeliveryEventMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *LogisticsDeliveryEventMutation) ClearField(name string) error {
+	switch name {
+	case logisticsdeliveryevent.FieldReason:
+		m.ClearReason()
+		return nil
+	case logisticsdeliveryevent.FieldPayload:
+		m.ClearPayload()
+		return nil
+	}
+	return fmt.Errorf("unknown LogisticsDeliveryEvent nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *LogisticsDeliveryEventMutation) ResetField(name string) error {
+	switch name {
+	case logisticsdeliveryevent.FieldLogisticsDeliveryID:
+		m.ResetLogisticsDeliveryID()
+		return nil
+	case logisticsdeliveryevent.FieldCompanyID:
+		m.ResetCompanyID()
+		return nil
+	case logisticsdeliveryevent.FieldEventType:
+		m.ResetEventType()
+		return nil
+	case logisticsdeliveryevent.FieldActorID:
+		m.ResetActorID()
+		return nil
+	case logisticsdeliveryevent.FieldReason:
+		m.ResetReason()
+		return nil
+	case logisticsdeliveryevent.FieldPayload:
+		m.ResetPayload()
+		return nil
+	case logisticsdeliveryevent.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown LogisticsDeliveryEvent field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *LogisticsDeliveryEventMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *LogisticsDeliveryEventMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *LogisticsDeliveryEventMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *LogisticsDeliveryEventMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *LogisticsDeliveryEventMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *LogisticsDeliveryEventMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *LogisticsDeliveryEventMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown LogisticsDeliveryEvent unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *LogisticsDeliveryEventMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown LogisticsDeliveryEvent edge %s", name)
 }
 
 // LogisticsDriverMutation represents an operation that mutates the LogisticsDriver nodes in the graph.
@@ -13849,6 +14792,1047 @@ func (m *LogisticsDriverMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *LogisticsDriverMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown LogisticsDriver edge %s", name)
+}
+
+// LogisticsProofMutation represents an operation that mutates the LogisticsProof nodes in the graph.
+type LogisticsProofMutation struct {
+	config
+	op                       Op
+	typ                      string
+	id                       *int
+	logistics_delivery_id    *int
+	addlogistics_delivery_id *int
+	company_id               *int
+	addcompany_id            *int
+	department_id            *int
+	adddepartment_id         *int
+	proof_type               *string
+	file_asset_id            *int
+	addfile_asset_id         *int
+	remarks                  *string
+	captured_by              *int
+	addcaptured_by           *int
+	captured_at              *time.Time
+	deleted_at               *time.Time
+	created_at               *time.Time
+	clearedFields            map[string]struct{}
+	done                     bool
+	oldValue                 func(context.Context) (*LogisticsProof, error)
+	predicates               []predicate.LogisticsProof
+}
+
+var _ ent.Mutation = (*LogisticsProofMutation)(nil)
+
+// logisticsproofOption allows management of the mutation configuration using functional options.
+type logisticsproofOption func(*LogisticsProofMutation)
+
+// newLogisticsProofMutation creates new mutation for the LogisticsProof entity.
+func newLogisticsProofMutation(c config, op Op, opts ...logisticsproofOption) *LogisticsProofMutation {
+	m := &LogisticsProofMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeLogisticsProof,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withLogisticsProofID sets the ID field of the mutation.
+func withLogisticsProofID(id int) logisticsproofOption {
+	return func(m *LogisticsProofMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *LogisticsProof
+		)
+		m.oldValue = func(ctx context.Context) (*LogisticsProof, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().LogisticsProof.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withLogisticsProof sets the old LogisticsProof of the mutation.
+func withLogisticsProof(node *LogisticsProof) logisticsproofOption {
+	return func(m *LogisticsProofMutation) {
+		m.oldValue = func(context.Context) (*LogisticsProof, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m LogisticsProofMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m LogisticsProofMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *LogisticsProofMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *LogisticsProofMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().LogisticsProof.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetLogisticsDeliveryID sets the "logistics_delivery_id" field.
+func (m *LogisticsProofMutation) SetLogisticsDeliveryID(i int) {
+	m.logistics_delivery_id = &i
+	m.addlogistics_delivery_id = nil
+}
+
+// LogisticsDeliveryID returns the value of the "logistics_delivery_id" field in the mutation.
+func (m *LogisticsProofMutation) LogisticsDeliveryID() (r int, exists bool) {
+	v := m.logistics_delivery_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLogisticsDeliveryID returns the old "logistics_delivery_id" field's value of the LogisticsProof entity.
+// If the LogisticsProof object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LogisticsProofMutation) OldLogisticsDeliveryID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLogisticsDeliveryID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLogisticsDeliveryID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLogisticsDeliveryID: %w", err)
+	}
+	return oldValue.LogisticsDeliveryID, nil
+}
+
+// AddLogisticsDeliveryID adds i to the "logistics_delivery_id" field.
+func (m *LogisticsProofMutation) AddLogisticsDeliveryID(i int) {
+	if m.addlogistics_delivery_id != nil {
+		*m.addlogistics_delivery_id += i
+	} else {
+		m.addlogistics_delivery_id = &i
+	}
+}
+
+// AddedLogisticsDeliveryID returns the value that was added to the "logistics_delivery_id" field in this mutation.
+func (m *LogisticsProofMutation) AddedLogisticsDeliveryID() (r int, exists bool) {
+	v := m.addlogistics_delivery_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetLogisticsDeliveryID resets all changes to the "logistics_delivery_id" field.
+func (m *LogisticsProofMutation) ResetLogisticsDeliveryID() {
+	m.logistics_delivery_id = nil
+	m.addlogistics_delivery_id = nil
+}
+
+// SetCompanyID sets the "company_id" field.
+func (m *LogisticsProofMutation) SetCompanyID(i int) {
+	m.company_id = &i
+	m.addcompany_id = nil
+}
+
+// CompanyID returns the value of the "company_id" field in the mutation.
+func (m *LogisticsProofMutation) CompanyID() (r int, exists bool) {
+	v := m.company_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCompanyID returns the old "company_id" field's value of the LogisticsProof entity.
+// If the LogisticsProof object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LogisticsProofMutation) OldCompanyID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCompanyID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCompanyID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCompanyID: %w", err)
+	}
+	return oldValue.CompanyID, nil
+}
+
+// AddCompanyID adds i to the "company_id" field.
+func (m *LogisticsProofMutation) AddCompanyID(i int) {
+	if m.addcompany_id != nil {
+		*m.addcompany_id += i
+	} else {
+		m.addcompany_id = &i
+	}
+}
+
+// AddedCompanyID returns the value that was added to the "company_id" field in this mutation.
+func (m *LogisticsProofMutation) AddedCompanyID() (r int, exists bool) {
+	v := m.addcompany_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCompanyID resets all changes to the "company_id" field.
+func (m *LogisticsProofMutation) ResetCompanyID() {
+	m.company_id = nil
+	m.addcompany_id = nil
+}
+
+// SetDepartmentID sets the "department_id" field.
+func (m *LogisticsProofMutation) SetDepartmentID(i int) {
+	m.department_id = &i
+	m.adddepartment_id = nil
+}
+
+// DepartmentID returns the value of the "department_id" field in the mutation.
+func (m *LogisticsProofMutation) DepartmentID() (r int, exists bool) {
+	v := m.department_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDepartmentID returns the old "department_id" field's value of the LogisticsProof entity.
+// If the LogisticsProof object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LogisticsProofMutation) OldDepartmentID(ctx context.Context) (v *int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDepartmentID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDepartmentID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDepartmentID: %w", err)
+	}
+	return oldValue.DepartmentID, nil
+}
+
+// AddDepartmentID adds i to the "department_id" field.
+func (m *LogisticsProofMutation) AddDepartmentID(i int) {
+	if m.adddepartment_id != nil {
+		*m.adddepartment_id += i
+	} else {
+		m.adddepartment_id = &i
+	}
+}
+
+// AddedDepartmentID returns the value that was added to the "department_id" field in this mutation.
+func (m *LogisticsProofMutation) AddedDepartmentID() (r int, exists bool) {
+	v := m.adddepartment_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearDepartmentID clears the value of the "department_id" field.
+func (m *LogisticsProofMutation) ClearDepartmentID() {
+	m.department_id = nil
+	m.adddepartment_id = nil
+	m.clearedFields[logisticsproof.FieldDepartmentID] = struct{}{}
+}
+
+// DepartmentIDCleared returns if the "department_id" field was cleared in this mutation.
+func (m *LogisticsProofMutation) DepartmentIDCleared() bool {
+	_, ok := m.clearedFields[logisticsproof.FieldDepartmentID]
+	return ok
+}
+
+// ResetDepartmentID resets all changes to the "department_id" field.
+func (m *LogisticsProofMutation) ResetDepartmentID() {
+	m.department_id = nil
+	m.adddepartment_id = nil
+	delete(m.clearedFields, logisticsproof.FieldDepartmentID)
+}
+
+// SetProofType sets the "proof_type" field.
+func (m *LogisticsProofMutation) SetProofType(s string) {
+	m.proof_type = &s
+}
+
+// ProofType returns the value of the "proof_type" field in the mutation.
+func (m *LogisticsProofMutation) ProofType() (r string, exists bool) {
+	v := m.proof_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProofType returns the old "proof_type" field's value of the LogisticsProof entity.
+// If the LogisticsProof object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LogisticsProofMutation) OldProofType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProofType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProofType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProofType: %w", err)
+	}
+	return oldValue.ProofType, nil
+}
+
+// ResetProofType resets all changes to the "proof_type" field.
+func (m *LogisticsProofMutation) ResetProofType() {
+	m.proof_type = nil
+}
+
+// SetFileAssetID sets the "file_asset_id" field.
+func (m *LogisticsProofMutation) SetFileAssetID(i int) {
+	m.file_asset_id = &i
+	m.addfile_asset_id = nil
+}
+
+// FileAssetID returns the value of the "file_asset_id" field in the mutation.
+func (m *LogisticsProofMutation) FileAssetID() (r int, exists bool) {
+	v := m.file_asset_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFileAssetID returns the old "file_asset_id" field's value of the LogisticsProof entity.
+// If the LogisticsProof object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LogisticsProofMutation) OldFileAssetID(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFileAssetID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFileAssetID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFileAssetID: %w", err)
+	}
+	return oldValue.FileAssetID, nil
+}
+
+// AddFileAssetID adds i to the "file_asset_id" field.
+func (m *LogisticsProofMutation) AddFileAssetID(i int) {
+	if m.addfile_asset_id != nil {
+		*m.addfile_asset_id += i
+	} else {
+		m.addfile_asset_id = &i
+	}
+}
+
+// AddedFileAssetID returns the value that was added to the "file_asset_id" field in this mutation.
+func (m *LogisticsProofMutation) AddedFileAssetID() (r int, exists bool) {
+	v := m.addfile_asset_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetFileAssetID resets all changes to the "file_asset_id" field.
+func (m *LogisticsProofMutation) ResetFileAssetID() {
+	m.file_asset_id = nil
+	m.addfile_asset_id = nil
+}
+
+// SetRemarks sets the "remarks" field.
+func (m *LogisticsProofMutation) SetRemarks(s string) {
+	m.remarks = &s
+}
+
+// Remarks returns the value of the "remarks" field in the mutation.
+func (m *LogisticsProofMutation) Remarks() (r string, exists bool) {
+	v := m.remarks
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRemarks returns the old "remarks" field's value of the LogisticsProof entity.
+// If the LogisticsProof object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LogisticsProofMutation) OldRemarks(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRemarks is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRemarks requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRemarks: %w", err)
+	}
+	return oldValue.Remarks, nil
+}
+
+// ClearRemarks clears the value of the "remarks" field.
+func (m *LogisticsProofMutation) ClearRemarks() {
+	m.remarks = nil
+	m.clearedFields[logisticsproof.FieldRemarks] = struct{}{}
+}
+
+// RemarksCleared returns if the "remarks" field was cleared in this mutation.
+func (m *LogisticsProofMutation) RemarksCleared() bool {
+	_, ok := m.clearedFields[logisticsproof.FieldRemarks]
+	return ok
+}
+
+// ResetRemarks resets all changes to the "remarks" field.
+func (m *LogisticsProofMutation) ResetRemarks() {
+	m.remarks = nil
+	delete(m.clearedFields, logisticsproof.FieldRemarks)
+}
+
+// SetCapturedBy sets the "captured_by" field.
+func (m *LogisticsProofMutation) SetCapturedBy(i int) {
+	m.captured_by = &i
+	m.addcaptured_by = nil
+}
+
+// CapturedBy returns the value of the "captured_by" field in the mutation.
+func (m *LogisticsProofMutation) CapturedBy() (r int, exists bool) {
+	v := m.captured_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCapturedBy returns the old "captured_by" field's value of the LogisticsProof entity.
+// If the LogisticsProof object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LogisticsProofMutation) OldCapturedBy(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCapturedBy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCapturedBy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCapturedBy: %w", err)
+	}
+	return oldValue.CapturedBy, nil
+}
+
+// AddCapturedBy adds i to the "captured_by" field.
+func (m *LogisticsProofMutation) AddCapturedBy(i int) {
+	if m.addcaptured_by != nil {
+		*m.addcaptured_by += i
+	} else {
+		m.addcaptured_by = &i
+	}
+}
+
+// AddedCapturedBy returns the value that was added to the "captured_by" field in this mutation.
+func (m *LogisticsProofMutation) AddedCapturedBy() (r int, exists bool) {
+	v := m.addcaptured_by
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCapturedBy resets all changes to the "captured_by" field.
+func (m *LogisticsProofMutation) ResetCapturedBy() {
+	m.captured_by = nil
+	m.addcaptured_by = nil
+}
+
+// SetCapturedAt sets the "captured_at" field.
+func (m *LogisticsProofMutation) SetCapturedAt(t time.Time) {
+	m.captured_at = &t
+}
+
+// CapturedAt returns the value of the "captured_at" field in the mutation.
+func (m *LogisticsProofMutation) CapturedAt() (r time.Time, exists bool) {
+	v := m.captured_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCapturedAt returns the old "captured_at" field's value of the LogisticsProof entity.
+// If the LogisticsProof object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LogisticsProofMutation) OldCapturedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCapturedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCapturedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCapturedAt: %w", err)
+	}
+	return oldValue.CapturedAt, nil
+}
+
+// ResetCapturedAt resets all changes to the "captured_at" field.
+func (m *LogisticsProofMutation) ResetCapturedAt() {
+	m.captured_at = nil
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (m *LogisticsProofMutation) SetDeletedAt(t time.Time) {
+	m.deleted_at = &t
+}
+
+// DeletedAt returns the value of the "deleted_at" field in the mutation.
+func (m *LogisticsProofMutation) DeletedAt() (r time.Time, exists bool) {
+	v := m.deleted_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeletedAt returns the old "deleted_at" field's value of the LogisticsProof entity.
+// If the LogisticsProof object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LogisticsProofMutation) OldDeletedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
+	}
+	return oldValue.DeletedAt, nil
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (m *LogisticsProofMutation) ClearDeletedAt() {
+	m.deleted_at = nil
+	m.clearedFields[logisticsproof.FieldDeletedAt] = struct{}{}
+}
+
+// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
+func (m *LogisticsProofMutation) DeletedAtCleared() bool {
+	_, ok := m.clearedFields[logisticsproof.FieldDeletedAt]
+	return ok
+}
+
+// ResetDeletedAt resets all changes to the "deleted_at" field.
+func (m *LogisticsProofMutation) ResetDeletedAt() {
+	m.deleted_at = nil
+	delete(m.clearedFields, logisticsproof.FieldDeletedAt)
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *LogisticsProofMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *LogisticsProofMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the LogisticsProof entity.
+// If the LogisticsProof object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LogisticsProofMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *LogisticsProofMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// Where appends a list predicates to the LogisticsProofMutation builder.
+func (m *LogisticsProofMutation) Where(ps ...predicate.LogisticsProof) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the LogisticsProofMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *LogisticsProofMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.LogisticsProof, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *LogisticsProofMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *LogisticsProofMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (LogisticsProof).
+func (m *LogisticsProofMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *LogisticsProofMutation) Fields() []string {
+	fields := make([]string, 0, 10)
+	if m.logistics_delivery_id != nil {
+		fields = append(fields, logisticsproof.FieldLogisticsDeliveryID)
+	}
+	if m.company_id != nil {
+		fields = append(fields, logisticsproof.FieldCompanyID)
+	}
+	if m.department_id != nil {
+		fields = append(fields, logisticsproof.FieldDepartmentID)
+	}
+	if m.proof_type != nil {
+		fields = append(fields, logisticsproof.FieldProofType)
+	}
+	if m.file_asset_id != nil {
+		fields = append(fields, logisticsproof.FieldFileAssetID)
+	}
+	if m.remarks != nil {
+		fields = append(fields, logisticsproof.FieldRemarks)
+	}
+	if m.captured_by != nil {
+		fields = append(fields, logisticsproof.FieldCapturedBy)
+	}
+	if m.captured_at != nil {
+		fields = append(fields, logisticsproof.FieldCapturedAt)
+	}
+	if m.deleted_at != nil {
+		fields = append(fields, logisticsproof.FieldDeletedAt)
+	}
+	if m.created_at != nil {
+		fields = append(fields, logisticsproof.FieldCreatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *LogisticsProofMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case logisticsproof.FieldLogisticsDeliveryID:
+		return m.LogisticsDeliveryID()
+	case logisticsproof.FieldCompanyID:
+		return m.CompanyID()
+	case logisticsproof.FieldDepartmentID:
+		return m.DepartmentID()
+	case logisticsproof.FieldProofType:
+		return m.ProofType()
+	case logisticsproof.FieldFileAssetID:
+		return m.FileAssetID()
+	case logisticsproof.FieldRemarks:
+		return m.Remarks()
+	case logisticsproof.FieldCapturedBy:
+		return m.CapturedBy()
+	case logisticsproof.FieldCapturedAt:
+		return m.CapturedAt()
+	case logisticsproof.FieldDeletedAt:
+		return m.DeletedAt()
+	case logisticsproof.FieldCreatedAt:
+		return m.CreatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *LogisticsProofMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case logisticsproof.FieldLogisticsDeliveryID:
+		return m.OldLogisticsDeliveryID(ctx)
+	case logisticsproof.FieldCompanyID:
+		return m.OldCompanyID(ctx)
+	case logisticsproof.FieldDepartmentID:
+		return m.OldDepartmentID(ctx)
+	case logisticsproof.FieldProofType:
+		return m.OldProofType(ctx)
+	case logisticsproof.FieldFileAssetID:
+		return m.OldFileAssetID(ctx)
+	case logisticsproof.FieldRemarks:
+		return m.OldRemarks(ctx)
+	case logisticsproof.FieldCapturedBy:
+		return m.OldCapturedBy(ctx)
+	case logisticsproof.FieldCapturedAt:
+		return m.OldCapturedAt(ctx)
+	case logisticsproof.FieldDeletedAt:
+		return m.OldDeletedAt(ctx)
+	case logisticsproof.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown LogisticsProof field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *LogisticsProofMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case logisticsproof.FieldLogisticsDeliveryID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLogisticsDeliveryID(v)
+		return nil
+	case logisticsproof.FieldCompanyID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCompanyID(v)
+		return nil
+	case logisticsproof.FieldDepartmentID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDepartmentID(v)
+		return nil
+	case logisticsproof.FieldProofType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProofType(v)
+		return nil
+	case logisticsproof.FieldFileAssetID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFileAssetID(v)
+		return nil
+	case logisticsproof.FieldRemarks:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRemarks(v)
+		return nil
+	case logisticsproof.FieldCapturedBy:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCapturedBy(v)
+		return nil
+	case logisticsproof.FieldCapturedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCapturedAt(v)
+		return nil
+	case logisticsproof.FieldDeletedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeletedAt(v)
+		return nil
+	case logisticsproof.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown LogisticsProof field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *LogisticsProofMutation) AddedFields() []string {
+	var fields []string
+	if m.addlogistics_delivery_id != nil {
+		fields = append(fields, logisticsproof.FieldLogisticsDeliveryID)
+	}
+	if m.addcompany_id != nil {
+		fields = append(fields, logisticsproof.FieldCompanyID)
+	}
+	if m.adddepartment_id != nil {
+		fields = append(fields, logisticsproof.FieldDepartmentID)
+	}
+	if m.addfile_asset_id != nil {
+		fields = append(fields, logisticsproof.FieldFileAssetID)
+	}
+	if m.addcaptured_by != nil {
+		fields = append(fields, logisticsproof.FieldCapturedBy)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *LogisticsProofMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case logisticsproof.FieldLogisticsDeliveryID:
+		return m.AddedLogisticsDeliveryID()
+	case logisticsproof.FieldCompanyID:
+		return m.AddedCompanyID()
+	case logisticsproof.FieldDepartmentID:
+		return m.AddedDepartmentID()
+	case logisticsproof.FieldFileAssetID:
+		return m.AddedFileAssetID()
+	case logisticsproof.FieldCapturedBy:
+		return m.AddedCapturedBy()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *LogisticsProofMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case logisticsproof.FieldLogisticsDeliveryID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddLogisticsDeliveryID(v)
+		return nil
+	case logisticsproof.FieldCompanyID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCompanyID(v)
+		return nil
+	case logisticsproof.FieldDepartmentID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddDepartmentID(v)
+		return nil
+	case logisticsproof.FieldFileAssetID:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddFileAssetID(v)
+		return nil
+	case logisticsproof.FieldCapturedBy:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCapturedBy(v)
+		return nil
+	}
+	return fmt.Errorf("unknown LogisticsProof numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *LogisticsProofMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(logisticsproof.FieldDepartmentID) {
+		fields = append(fields, logisticsproof.FieldDepartmentID)
+	}
+	if m.FieldCleared(logisticsproof.FieldRemarks) {
+		fields = append(fields, logisticsproof.FieldRemarks)
+	}
+	if m.FieldCleared(logisticsproof.FieldDeletedAt) {
+		fields = append(fields, logisticsproof.FieldDeletedAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *LogisticsProofMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *LogisticsProofMutation) ClearField(name string) error {
+	switch name {
+	case logisticsproof.FieldDepartmentID:
+		m.ClearDepartmentID()
+		return nil
+	case logisticsproof.FieldRemarks:
+		m.ClearRemarks()
+		return nil
+	case logisticsproof.FieldDeletedAt:
+		m.ClearDeletedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown LogisticsProof nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *LogisticsProofMutation) ResetField(name string) error {
+	switch name {
+	case logisticsproof.FieldLogisticsDeliveryID:
+		m.ResetLogisticsDeliveryID()
+		return nil
+	case logisticsproof.FieldCompanyID:
+		m.ResetCompanyID()
+		return nil
+	case logisticsproof.FieldDepartmentID:
+		m.ResetDepartmentID()
+		return nil
+	case logisticsproof.FieldProofType:
+		m.ResetProofType()
+		return nil
+	case logisticsproof.FieldFileAssetID:
+		m.ResetFileAssetID()
+		return nil
+	case logisticsproof.FieldRemarks:
+		m.ResetRemarks()
+		return nil
+	case logisticsproof.FieldCapturedBy:
+		m.ResetCapturedBy()
+		return nil
+	case logisticsproof.FieldCapturedAt:
+		m.ResetCapturedAt()
+		return nil
+	case logisticsproof.FieldDeletedAt:
+		m.ResetDeletedAt()
+		return nil
+	case logisticsproof.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown LogisticsProof field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *LogisticsProofMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *LogisticsProofMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *LogisticsProofMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *LogisticsProofMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *LogisticsProofMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *LogisticsProofMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *LogisticsProofMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown LogisticsProof unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *LogisticsProofMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown LogisticsProof edge %s", name)
 }
 
 // MetadictMutation represents an operation that mutates the Metadict nodes in the graph.

@@ -34,8 +34,12 @@ type Tx struct {
 	FileAsset *FileAssetClient
 	// LogisticsDelivery is the client for interacting with the LogisticsDelivery builders.
 	LogisticsDelivery *LogisticsDeliveryClient
+	// LogisticsDeliveryEvent is the client for interacting with the LogisticsDeliveryEvent builders.
+	LogisticsDeliveryEvent *LogisticsDeliveryEventClient
 	// LogisticsDriver is the client for interacting with the LogisticsDriver builders.
 	LogisticsDriver *LogisticsDriverClient
+	// LogisticsProof is the client for interacting with the LogisticsProof builders.
+	LogisticsProof *LogisticsProofClient
 	// Metadict is the client for interacting with the Metadict builders.
 	Metadict *MetadictClient
 	// Notification is the client for interacting with the Notification builders.
@@ -226,7 +230,9 @@ func (tx *Tx) init() {
 	tx.Department = NewDepartmentClient(tx.config)
 	tx.FileAsset = NewFileAssetClient(tx.config)
 	tx.LogisticsDelivery = NewLogisticsDeliveryClient(tx.config)
+	tx.LogisticsDeliveryEvent = NewLogisticsDeliveryEventClient(tx.config)
 	tx.LogisticsDriver = NewLogisticsDriverClient(tx.config)
+	tx.LogisticsProof = NewLogisticsProofClient(tx.config)
 	tx.Metadict = NewMetadictClient(tx.config)
 	tx.Notification = NewNotificationClient(tx.config)
 	tx.NotificationTemplate = NewNotificationTemplateClient(tx.config)

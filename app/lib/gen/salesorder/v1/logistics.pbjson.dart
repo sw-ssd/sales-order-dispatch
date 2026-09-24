@@ -140,6 +140,8 @@ const LogisticsDelivery$json = {
     {'1': 'version', '3': 9, '4': 1, '5': 9, '10': 'version'},
     {'1': 'created_at', '3': 10, '4': 1, '5': 9, '10': 'createdAt'},
     {'1': 'updated_at', '3': 11, '4': 1, '5': 9, '10': 'updatedAt'},
+    {'1': 'started_at', '3': 12, '4': 1, '5': 9, '10': 'startedAt'},
+    {'1': 'completed_at', '3': 13, '4': 1, '5': 9, '10': 'completedAt'},
   ],
 };
 
@@ -151,7 +153,8 @@ final $typed_data.Uint8List logisticsDeliveryDescriptor = $convert.base64Decode(
     'ljbGVfaWQYBiABKAlSCXZlaGljbGVJZBIfCgthc3NpZ25lZF9ieRgHIAEoCVIKYXNzaWduZWRC'
     'eRIWCgZzdGF0dXMYCCABKAlSBnN0YXR1cxIYCgd2ZXJzaW9uGAkgASgJUgd2ZXJzaW9uEh0KCm'
     'NyZWF0ZWRfYXQYCiABKAlSCWNyZWF0ZWRBdBIdCgp1cGRhdGVkX2F0GAsgASgJUgl1cGRhdGVk'
-    'QXQ=');
+    'QXQSHQoKc3RhcnRlZF9hdBgMIAEoCVIJc3RhcnRlZEF0EiEKDGNvbXBsZXRlZF9hdBgNIAEoCV'
+    'ILY29tcGxldGVkQXQ=');
 
 @$core.Deprecated('Use assignDeliveryRequestDescriptor instead')
 const AssignDeliveryRequest$json = {
@@ -228,6 +231,169 @@ final $typed_data.Uint8List listMyDeliveriesResponseDescriptor = $convert.base64
     'JkZXIudjEuTG9naXN0aWNzRGVsaXZlcnlSCmRlbGl2ZXJpZXMSFAoFdG90YWwYAiABKAVSBXRv'
     'dGFs');
 
+@$core.Deprecated('Use logisticsProofDescriptor instead')
+const LogisticsProof$json = {
+  '1': 'LogisticsProof',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 9, '10': 'id'},
+    {
+      '1': 'logistics_delivery_id',
+      '3': 2,
+      '4': 1,
+      '5': 9,
+      '10': 'logisticsDeliveryId'
+    },
+    {'1': 'proof_type', '3': 3, '4': 1, '5': 9, '10': 'proofType'},
+    {'1': 'file_asset_id', '3': 4, '4': 1, '5': 9, '10': 'fileAssetId'},
+    {'1': 'remarks', '3': 5, '4': 1, '5': 9, '10': 'remarks'},
+    {'1': 'captured_at', '3': 6, '4': 1, '5': 9, '10': 'capturedAt'},
+  ],
+};
+
+/// Descriptor for `LogisticsProof`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List logisticsProofDescriptor = $convert.base64Decode(
+    'Cg5Mb2dpc3RpY3NQcm9vZhIOCgJpZBgBIAEoCVICaWQSMgoVbG9naXN0aWNzX2RlbGl2ZXJ5X2'
+    'lkGAIgASgJUhNsb2dpc3RpY3NEZWxpdmVyeUlkEh0KCnByb29mX3R5cGUYAyABKAlSCXByb29m'
+    'VHlwZRIiCg1maWxlX2Fzc2V0X2lkGAQgASgJUgtmaWxlQXNzZXRJZBIYCgdyZW1hcmtzGAUgAS'
+    'gJUgdyZW1hcmtzEh8KC2NhcHR1cmVkX2F0GAYgASgJUgpjYXB0dXJlZEF0');
+
+@$core.Deprecated('Use startDeliveryRequestDescriptor instead')
+const StartDeliveryRequest$json = {
+  '1': 'StartDeliveryRequest',
+  '2': [
+    {'1': 'delivery_id', '3': 1, '4': 1, '5': 9, '10': 'deliveryId'},
+    {'1': 'version', '3': 2, '4': 1, '5': 9, '10': 'version'},
+  ],
+};
+
+/// Descriptor for `StartDeliveryRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List startDeliveryRequestDescriptor = $convert.base64Decode(
+    'ChRTdGFydERlbGl2ZXJ5UmVxdWVzdBIfCgtkZWxpdmVyeV9pZBgBIAEoCVIKZGVsaXZlcnlJZB'
+    'IYCgd2ZXJzaW9uGAIgASgJUgd2ZXJzaW9u');
+
+@$core.Deprecated('Use startDeliveryResponseDescriptor instead')
+const StartDeliveryResponse$json = {
+  '1': 'StartDeliveryResponse',
+  '2': [
+    {
+      '1': 'delivery',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.salesorder.v1.LogisticsDelivery',
+      '10': 'delivery'
+    },
+  ],
+};
+
+/// Descriptor for `StartDeliveryResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List startDeliveryResponseDescriptor = $convert.base64Decode(
+    'ChVTdGFydERlbGl2ZXJ5UmVzcG9uc2USPAoIZGVsaXZlcnkYASABKAsyIC5zYWxlc29yZGVyLn'
+    'YxLkxvZ2lzdGljc0RlbGl2ZXJ5UghkZWxpdmVyeQ==');
+
+@$core.Deprecated('Use completeDeliveryRequestDescriptor instead')
+const CompleteDeliveryRequest$json = {
+  '1': 'CompleteDeliveryRequest',
+  '2': [
+    {'1': 'delivery_id', '3': 1, '4': 1, '5': 9, '10': 'deliveryId'},
+    {'1': 'version', '3': 2, '4': 1, '5': 9, '10': 'version'},
+    {
+      '1': 'proofs',
+      '3': 3,
+      '4': 3,
+      '5': 11,
+      '6': '.salesorder.v1.CompleteProof',
+      '10': 'proofs'
+    },
+  ],
+};
+
+/// Descriptor for `CompleteDeliveryRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List completeDeliveryRequestDescriptor = $convert.base64Decode(
+    'ChdDb21wbGV0ZURlbGl2ZXJ5UmVxdWVzdBIfCgtkZWxpdmVyeV9pZBgBIAEoCVIKZGVsaXZlcn'
+    'lJZBIYCgd2ZXJzaW9uGAIgASgJUgd2ZXJzaW9uEjQKBnByb29mcxgDIAMoCzIcLnNhbGVzb3Jk'
+    'ZXIudjEuQ29tcGxldGVQcm9vZlIGcHJvb2Zz');
+
+@$core.Deprecated('Use completeProofDescriptor instead')
+const CompleteProof$json = {
+  '1': 'CompleteProof',
+  '2': [
+    {'1': 'proof_type', '3': 1, '4': 1, '5': 9, '10': 'proofType'},
+    {'1': 'file_asset_id', '3': 2, '4': 1, '5': 9, '10': 'fileAssetId'},
+    {'1': 'remarks', '3': 3, '4': 1, '5': 9, '10': 'remarks'},
+  ],
+};
+
+/// Descriptor for `CompleteProof`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List completeProofDescriptor = $convert.base64Decode(
+    'Cg1Db21wbGV0ZVByb29mEh0KCnByb29mX3R5cGUYASABKAlSCXByb29mVHlwZRIiCg1maWxlX2'
+    'Fzc2V0X2lkGAIgASgJUgtmaWxlQXNzZXRJZBIYCgdyZW1hcmtzGAMgASgJUgdyZW1hcmtz');
+
+@$core.Deprecated('Use completeDeliveryResponseDescriptor instead')
+const CompleteDeliveryResponse$json = {
+  '1': 'CompleteDeliveryResponse',
+  '2': [
+    {
+      '1': 'delivery',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.salesorder.v1.LogisticsDelivery',
+      '10': 'delivery'
+    },
+    {
+      '1': 'proofs',
+      '3': 2,
+      '4': 3,
+      '5': 11,
+      '6': '.salesorder.v1.LogisticsProof',
+      '10': 'proofs'
+    },
+  ],
+};
+
+/// Descriptor for `CompleteDeliveryResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List completeDeliveryResponseDescriptor = $convert.base64Decode(
+    'ChhDb21wbGV0ZURlbGl2ZXJ5UmVzcG9uc2USPAoIZGVsaXZlcnkYASABKAsyIC5zYWxlc29yZG'
+    'VyLnYxLkxvZ2lzdGljc0RlbGl2ZXJ5UghkZWxpdmVyeRI1CgZwcm9vZnMYAiADKAsyHS5zYWxl'
+    'c29yZGVyLnYxLkxvZ2lzdGljc1Byb29mUgZwcm9vZnM=');
+
+@$core.Deprecated('Use cancelDeliveryRequestDescriptor instead')
+const CancelDeliveryRequest$json = {
+  '1': 'CancelDeliveryRequest',
+  '2': [
+    {'1': 'delivery_id', '3': 1, '4': 1, '5': 9, '10': 'deliveryId'},
+    {'1': 'version', '3': 2, '4': 1, '5': 9, '10': 'version'},
+    {'1': 'reason', '3': 3, '4': 1, '5': 9, '10': 'reason'},
+  ],
+};
+
+/// Descriptor for `CancelDeliveryRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List cancelDeliveryRequestDescriptor = $convert.base64Decode(
+    'ChVDYW5jZWxEZWxpdmVyeVJlcXVlc3QSHwoLZGVsaXZlcnlfaWQYASABKAlSCmRlbGl2ZXJ5SW'
+    'QSGAoHdmVyc2lvbhgCIAEoCVIHdmVyc2lvbhIWCgZyZWFzb24YAyABKAlSBnJlYXNvbg==');
+
+@$core.Deprecated('Use cancelDeliveryResponseDescriptor instead')
+const CancelDeliveryResponse$json = {
+  '1': 'CancelDeliveryResponse',
+  '2': [
+    {
+      '1': 'delivery',
+      '3': 1,
+      '4': 1,
+      '5': 11,
+      '6': '.salesorder.v1.LogisticsDelivery',
+      '10': 'delivery'
+    },
+  ],
+};
+
+/// Descriptor for `CancelDeliveryResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List cancelDeliveryResponseDescriptor =
+    $convert.base64Decode(
+        'ChZDYW5jZWxEZWxpdmVyeVJlc3BvbnNlEjwKCGRlbGl2ZXJ5GAEgASgLMiAuc2FsZXNvcmRlci'
+        '52MS5Mb2dpc3RpY3NEZWxpdmVyeVIIZGVsaXZlcnk=');
+
 const $core.Map<$core.String, $core.dynamic> LogisticsServiceBase$json = {
   '1': 'LogisticsService',
   '2': [
@@ -251,6 +417,21 @@ const $core.Map<$core.String, $core.dynamic> LogisticsServiceBase$json = {
       '2': '.salesorder.v1.ListMyDeliveriesRequest',
       '3': '.salesorder.v1.ListMyDeliveriesResponse'
     },
+    {
+      '1': 'StartDelivery',
+      '2': '.salesorder.v1.StartDeliveryRequest',
+      '3': '.salesorder.v1.StartDeliveryResponse'
+    },
+    {
+      '1': 'CompleteDelivery',
+      '2': '.salesorder.v1.CompleteDeliveryRequest',
+      '3': '.salesorder.v1.CompleteDeliveryResponse'
+    },
+    {
+      '1': 'CancelDelivery',
+      '2': '.salesorder.v1.CancelDeliveryRequest',
+      '3': '.salesorder.v1.CancelDeliveryResponse'
+    },
   ],
 };
 
@@ -268,6 +449,14 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.salesorder.v1.LogisticsDelivery': LogisticsDelivery$json,
   '.salesorder.v1.ListMyDeliveriesRequest': ListMyDeliveriesRequest$json,
   '.salesorder.v1.ListMyDeliveriesResponse': ListMyDeliveriesResponse$json,
+  '.salesorder.v1.StartDeliveryRequest': StartDeliveryRequest$json,
+  '.salesorder.v1.StartDeliveryResponse': StartDeliveryResponse$json,
+  '.salesorder.v1.CompleteDeliveryRequest': CompleteDeliveryRequest$json,
+  '.salesorder.v1.CompleteProof': CompleteProof$json,
+  '.salesorder.v1.CompleteDeliveryResponse': CompleteDeliveryResponse$json,
+  '.salesorder.v1.LogisticsProof': LogisticsProof$json,
+  '.salesorder.v1.CancelDeliveryRequest': CancelDeliveryRequest$json,
+  '.salesorder.v1.CancelDeliveryResponse': CancelDeliveryResponse$json,
 };
 
 /// Descriptor for `LogisticsService`. Decode as a `google.protobuf.ServiceDescriptorProto`.
@@ -279,4 +468,9 @@ final $typed_data.Uint8List logisticsServiceDescriptor = $convert.base64Decode(
     'bGVzb3JkZXIudjEuQXNzaWduRGVsaXZlcnlSZXF1ZXN0GiUuc2FsZXNvcmRlci52MS5Bc3NpZ2'
     '5EZWxpdmVyeVJlc3BvbnNlEmMKEExpc3RNeURlbGl2ZXJpZXMSJi5zYWxlc29yZGVyLnYxLkxp'
     'c3RNeURlbGl2ZXJpZXNSZXF1ZXN0Gicuc2FsZXNvcmRlci52MS5MaXN0TXlEZWxpdmVyaWVzUm'
-    'VzcG9uc2U=');
+    'VzcG9uc2USWgoNU3RhcnREZWxpdmVyeRIjLnNhbGVzb3JkZXIudjEuU3RhcnREZWxpdmVyeVJl'
+    'cXVlc3QaJC5zYWxlc29yZGVyLnYxLlN0YXJ0RGVsaXZlcnlSZXNwb25zZRJjChBDb21wbGV0ZU'
+    'RlbGl2ZXJ5EiYuc2FsZXNvcmRlci52MS5Db21wbGV0ZURlbGl2ZXJ5UmVxdWVzdBonLnNhbGVz'
+    'b3JkZXIudjEuQ29tcGxldGVEZWxpdmVyeVJlc3BvbnNlEl0KDkNhbmNlbERlbGl2ZXJ5EiQuc2'
+    'FsZXNvcmRlci52MS5DYW5jZWxEZWxpdmVyeVJlcXVlc3QaJS5zYWxlc29yZGVyLnYxLkNhbmNl'
+    'bERlbGl2ZXJ5UmVzcG9uc2U=');

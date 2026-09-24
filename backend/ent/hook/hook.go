@@ -141,6 +141,18 @@ func (f LogisticsDeliveryFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.LogisticsDeliveryMutation", m)
 }
 
+// The LogisticsDeliveryEventFunc type is an adapter to allow the use of ordinary
+// function as LogisticsDeliveryEvent mutator.
+type LogisticsDeliveryEventFunc func(context.Context, *ent.LogisticsDeliveryEventMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f LogisticsDeliveryEventFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.LogisticsDeliveryEventMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.LogisticsDeliveryEventMutation", m)
+}
+
 // The LogisticsDriverFunc type is an adapter to allow the use of ordinary
 // function as LogisticsDriver mutator.
 type LogisticsDriverFunc func(context.Context, *ent.LogisticsDriverMutation) (ent.Value, error)
@@ -151,6 +163,18 @@ func (f LogisticsDriverFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Va
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.LogisticsDriverMutation", m)
+}
+
+// The LogisticsProofFunc type is an adapter to allow the use of ordinary
+// function as LogisticsProof mutator.
+type LogisticsProofFunc func(context.Context, *ent.LogisticsProofMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f LogisticsProofFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.LogisticsProofMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.LogisticsProofMutation", m)
 }
 
 // The MetadictFunc type is an adapter to allow the use of ordinary

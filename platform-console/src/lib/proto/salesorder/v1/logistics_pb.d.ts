@@ -276,6 +276,20 @@ export declare type LogisticsDelivery = Message<"salesorder.v1.LogisticsDelivery
    * @generated from field: string updated_at = 11;
    */
   updatedAt: string;
+
+  /**
+   * RFC3339,可空
+   *
+   * @generated from field: string started_at = 12;
+   */
+  startedAt: string;
+
+  /**
+   * RFC3339,可空
+   *
+   * @generated from field: string completed_at = 13;
+   */
+  completedAt: string;
 };
 
 /**
@@ -391,6 +405,222 @@ export declare type ListMyDeliveriesResponse = Message<"salesorder.v1.ListMyDeli
 export declare const ListMyDeliveriesResponseSchema: GenMessage<ListMyDeliveriesResponse>;
 
 /**
+ * LogisticsProof:簽收證明 POD(D17 檔案資產)。
+ *
+ * @generated from message salesorder.v1.LogisticsProof
+ */
+export declare type LogisticsProof = Message<"salesorder.v1.LogisticsProof"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string logistics_delivery_id = 2;
+   */
+  logisticsDeliveryId: string;
+
+  /**
+   * photo / signature / scan
+   *
+   * @generated from field: string proof_type = 3;
+   */
+  proofType: string;
+
+  /**
+   * @generated from field: string file_asset_id = 4;
+   */
+  fileAssetId: string;
+
+  /**
+   * @generated from field: string remarks = 5;
+   */
+  remarks: string;
+
+  /**
+   * RFC3339
+   *
+   * @generated from field: string captured_at = 6;
+   */
+  capturedAt: string;
+};
+
+/**
+ * Describes the message salesorder.v1.LogisticsProof.
+ * Use `create(LogisticsProofSchema)` to create a new message.
+ */
+export declare const LogisticsProofSchema: GenMessage<LogisticsProof>;
+
+/**
+ * StartDeliveryRequest:開始配送請求(id + version 樂觀鎖)。
+ *
+ * @generated from message salesorder.v1.StartDeliveryRequest
+ */
+export declare type StartDeliveryRequest = Message<"salesorder.v1.StartDeliveryRequest"> & {
+  /**
+   * @generated from field: string delivery_id = 1;
+   */
+  deliveryId: string;
+
+  /**
+   * @generated from field: string version = 2;
+   */
+  version: string;
+};
+
+/**
+ * Describes the message salesorder.v1.StartDeliveryRequest.
+ * Use `create(StartDeliveryRequestSchema)` to create a new message.
+ */
+export declare const StartDeliveryRequestSchema: GenMessage<StartDeliveryRequest>;
+
+/**
+ * StartDeliveryResponse:開始配送結果。
+ *
+ * @generated from message salesorder.v1.StartDeliveryResponse
+ */
+export declare type StartDeliveryResponse = Message<"salesorder.v1.StartDeliveryResponse"> & {
+  /**
+   * @generated from field: salesorder.v1.LogisticsDelivery delivery = 1;
+   */
+  delivery?: LogisticsDelivery | undefined;
+};
+
+/**
+ * Describes the message salesorder.v1.StartDeliveryResponse.
+ * Use `create(StartDeliveryResponseSchema)` to create a new message.
+ */
+export declare const StartDeliveryResponseSchema: GenMessage<StartDeliveryResponse>;
+
+/**
+ * CompleteDeliveryRequest:完成配送請求。proofs 可空(無簽收亦可完成);
+ * 每筆 proof 的 file_asset_id 來自既有檔案上傳端點(POST /api/v1/files,owner_type=logistics_delivery)。
+ *
+ * @generated from message salesorder.v1.CompleteDeliveryRequest
+ */
+export declare type CompleteDeliveryRequest = Message<"salesorder.v1.CompleteDeliveryRequest"> & {
+  /**
+   * @generated from field: string delivery_id = 1;
+   */
+  deliveryId: string;
+
+  /**
+   * @generated from field: string version = 2;
+   */
+  version: string;
+
+  /**
+   * @generated from field: repeated salesorder.v1.CompleteProof proofs = 3;
+   */
+  proofs: CompleteProof[];
+};
+
+/**
+ * Describes the message salesorder.v1.CompleteDeliveryRequest.
+ * Use `create(CompleteDeliveryRequestSchema)` to create a new message.
+ */
+export declare const CompleteDeliveryRequestSchema: GenMessage<CompleteDeliveryRequest>;
+
+/**
+ * CompleteProof:一筆簽收證明(型別 + 檔案資產 id + 備註)。
+ *
+ * @generated from message salesorder.v1.CompleteProof
+ */
+export declare type CompleteProof = Message<"salesorder.v1.CompleteProof"> & {
+  /**
+   * photo / signature / scan
+   *
+   * @generated from field: string proof_type = 1;
+   */
+  proofType: string;
+
+  /**
+   * @generated from field: string file_asset_id = 2;
+   */
+  fileAssetId: string;
+
+  /**
+   * @generated from field: string remarks = 3;
+   */
+  remarks: string;
+};
+
+/**
+ * Describes the message salesorder.v1.CompleteProof.
+ * Use `create(CompleteProofSchema)` to create a new message.
+ */
+export declare const CompleteProofSchema: GenMessage<CompleteProof>;
+
+/**
+ * CompleteDeliveryResponse:完成配送結果(含寫入的 proofs)。
+ *
+ * @generated from message salesorder.v1.CompleteDeliveryResponse
+ */
+export declare type CompleteDeliveryResponse = Message<"salesorder.v1.CompleteDeliveryResponse"> & {
+  /**
+   * @generated from field: salesorder.v1.LogisticsDelivery delivery = 1;
+   */
+  delivery?: LogisticsDelivery | undefined;
+
+  /**
+   * @generated from field: repeated salesorder.v1.LogisticsProof proofs = 2;
+   */
+  proofs: LogisticsProof[];
+};
+
+/**
+ * Describes the message salesorder.v1.CompleteDeliveryResponse.
+ * Use `create(CompleteDeliveryResponseSchema)` to create a new message.
+ */
+export declare const CompleteDeliveryResponseSchema: GenMessage<CompleteDeliveryResponse>;
+
+/**
+ * CancelDeliveryRequest:取消配送請求(reason 必填)。
+ *
+ * @generated from message salesorder.v1.CancelDeliveryRequest
+ */
+export declare type CancelDeliveryRequest = Message<"salesorder.v1.CancelDeliveryRequest"> & {
+  /**
+   * @generated from field: string delivery_id = 1;
+   */
+  deliveryId: string;
+
+  /**
+   * @generated from field: string version = 2;
+   */
+  version: string;
+
+  /**
+   * @generated from field: string reason = 3;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message salesorder.v1.CancelDeliveryRequest.
+ * Use `create(CancelDeliveryRequestSchema)` to create a new message.
+ */
+export declare const CancelDeliveryRequestSchema: GenMessage<CancelDeliveryRequest>;
+
+/**
+ * CancelDeliveryResponse:取消配送結果。
+ *
+ * @generated from message salesorder.v1.CancelDeliveryResponse
+ */
+export declare type CancelDeliveryResponse = Message<"salesorder.v1.CancelDeliveryResponse"> & {
+  /**
+   * @generated from field: salesorder.v1.LogisticsDelivery delivery = 1;
+   */
+  delivery?: LogisticsDelivery | undefined;
+};
+
+/**
+ * Describes the message salesorder.v1.CancelDeliveryResponse.
+ * Use `create(CancelDeliveryResponseSchema)` to create a new message.
+ */
+export declare const CancelDeliveryResponseSchema: GenMessage<CancelDeliveryResponse>;
+
+/**
  * LogisticsService:logistics 執行層首批(D32/10.1/10.4/10.12)。
  * 建檔(司機/車輛)與指派為後台動作(dept_admin 以上;rolePolicy logistics);
  * ListMyDeliveries 為**被指派司機本人**的任務清單(10.12:身分必須對應 logistics_drivers 列,
@@ -439,6 +669,36 @@ export declare const LogisticsService: GenService<{
     methodKind: "unary";
     input: typeof ListMyDeliveriesRequestSchema;
     output: typeof ListMyDeliveriesResponseSchema;
+  },
+  /**
+   * StartDelivery:被指派司機開始執行(pending → in_progress;10.6)。
+   *
+   * @generated from rpc salesorder.v1.LogisticsService.StartDelivery
+   */
+  startDelivery: {
+    methodKind: "unary";
+    input: typeof StartDeliveryRequestSchema;
+    output: typeof StartDeliveryResponseSchema;
+  },
+  /**
+   * CompleteDelivery:完成並簽收(in_progress → completed;POD 可多筆,同一交易寫事件與稽核)。
+   *
+   * @generated from rpc salesorder.v1.LogisticsService.CompleteDelivery
+   */
+  completeDelivery: {
+    methodKind: "unary";
+    input: typeof CompleteDeliveryRequestSchema;
+    output: typeof CompleteDeliveryResponseSchema;
+  },
+  /**
+   * CancelDelivery:取消配送(pending/in_progress → cancelled;reason 必填)。
+   *
+   * @generated from rpc salesorder.v1.LogisticsService.CancelDelivery
+   */
+  cancelDelivery: {
+    methodKind: "unary";
+    input: typeof CancelDeliveryRequestSchema;
+    output: typeof CancelDeliveryResponseSchema;
   },
 }>;
 

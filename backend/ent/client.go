@@ -26,7 +26,9 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/fileasset"
 	"github.com/salesorder/sales-order-1.0/backend/ent/logisticsdelivery"
+	"github.com/salesorder/sales-order-1.0/backend/ent/logisticsdeliveryevent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/logisticsdriver"
+	"github.com/salesorder/sales-order-1.0/backend/ent/logisticsproof"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/notification"
 	"github.com/salesorder/sales-order-1.0/backend/ent/notificationtemplate"
@@ -80,8 +82,12 @@ type Client struct {
 	FileAsset *FileAssetClient
 	// LogisticsDelivery is the client for interacting with the LogisticsDelivery builders.
 	LogisticsDelivery *LogisticsDeliveryClient
+	// LogisticsDeliveryEvent is the client for interacting with the LogisticsDeliveryEvent builders.
+	LogisticsDeliveryEvent *LogisticsDeliveryEventClient
 	// LogisticsDriver is the client for interacting with the LogisticsDriver builders.
 	LogisticsDriver *LogisticsDriverClient
+	// LogisticsProof is the client for interacting with the LogisticsProof builders.
+	LogisticsProof *LogisticsProofClient
 	// Metadict is the client for interacting with the Metadict builders.
 	Metadict *MetadictClient
 	// Notification is the client for interacting with the Notification builders.
@@ -152,7 +158,9 @@ func (c *Client) init() {
 	c.Department = NewDepartmentClient(c.config)
 	c.FileAsset = NewFileAssetClient(c.config)
 	c.LogisticsDelivery = NewLogisticsDeliveryClient(c.config)
+	c.LogisticsDeliveryEvent = NewLogisticsDeliveryEventClient(c.config)
 	c.LogisticsDriver = NewLogisticsDriverClient(c.config)
+	c.LogisticsProof = NewLogisticsProofClient(c.config)
 	c.Metadict = NewMetadictClient(c.config)
 	c.Notification = NewNotificationClient(c.config)
 	c.NotificationTemplate = NewNotificationTemplateClient(c.config)
@@ -267,44 +275,46 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:                   ctx,
-		config:                cfg,
-		Announcement:          NewAnnouncementClient(cfg),
-		AuditLog:              NewAuditLogClient(cfg),
-		Company:               NewCompanyClient(cfg),
-		Customer:              NewCustomerClient(cfg),
-		CustomerAddress:       NewCustomerAddressClient(cfg),
-		CustomerContact:       NewCustomerContactClient(cfg),
-		CustomerCounter:       NewCustomerCounterClient(cfg),
-		CustomerProduct:       NewCustomerProductClient(cfg),
-		Department:            NewDepartmentClient(cfg),
-		FileAsset:             NewFileAssetClient(cfg),
-		LogisticsDelivery:     NewLogisticsDeliveryClient(cfg),
-		LogisticsDriver:       NewLogisticsDriverClient(cfg),
-		Metadict:              NewMetadictClient(cfg),
-		Notification:          NewNotificationClient(cfg),
-		NotificationTemplate:  NewNotificationTemplateClient(cfg),
-		OrderCounter:          NewOrderCounterClient(cfg),
-		PrintLog:              NewPrintLogClient(cfg),
-		PrintPreview:          NewPrintPreviewClient(cfg),
-		ProcessingSpec:        NewProcessingSpecClient(cfg),
-		Product:               NewProductClient(cfg),
-		ProductCategory:       NewProductCategoryClient(cfg),
-		ProductProcessingSpec: NewProductProcessingSpecClient(cfg),
-		ProductUnit:           NewProductUnitClient(cfg),
-		PromoTag:              NewPromoTagClient(cfg),
-		ReturnRequest:         NewReturnRequestClient(cfg),
-		ReturnRequestItem:     NewReturnRequestItemClient(cfg),
-		Role:                  NewRoleClient(cfg),
-		RolePermission:        NewRolePermissionClient(cfg),
-		Route:                 NewRouteClient(cfg),
-		SalesOrder:            NewSalesOrderClient(cfg),
-		SalesOrderEvent:       NewSalesOrderEventClient(cfg),
-		SalesOrderItem:        NewSalesOrderItemClient(cfg),
-		User:                  NewUserClient(cfg),
-		UserDevice:            NewUserDeviceClient(cfg),
-		Vehicle:               NewVehicleClient(cfg),
-		Warehouse:             NewWarehouseClient(cfg),
+		ctx:                    ctx,
+		config:                 cfg,
+		Announcement:           NewAnnouncementClient(cfg),
+		AuditLog:               NewAuditLogClient(cfg),
+		Company:                NewCompanyClient(cfg),
+		Customer:               NewCustomerClient(cfg),
+		CustomerAddress:        NewCustomerAddressClient(cfg),
+		CustomerContact:        NewCustomerContactClient(cfg),
+		CustomerCounter:        NewCustomerCounterClient(cfg),
+		CustomerProduct:        NewCustomerProductClient(cfg),
+		Department:             NewDepartmentClient(cfg),
+		FileAsset:              NewFileAssetClient(cfg),
+		LogisticsDelivery:      NewLogisticsDeliveryClient(cfg),
+		LogisticsDeliveryEvent: NewLogisticsDeliveryEventClient(cfg),
+		LogisticsDriver:        NewLogisticsDriverClient(cfg),
+		LogisticsProof:         NewLogisticsProofClient(cfg),
+		Metadict:               NewMetadictClient(cfg),
+		Notification:           NewNotificationClient(cfg),
+		NotificationTemplate:   NewNotificationTemplateClient(cfg),
+		OrderCounter:           NewOrderCounterClient(cfg),
+		PrintLog:               NewPrintLogClient(cfg),
+		PrintPreview:           NewPrintPreviewClient(cfg),
+		ProcessingSpec:         NewProcessingSpecClient(cfg),
+		Product:                NewProductClient(cfg),
+		ProductCategory:        NewProductCategoryClient(cfg),
+		ProductProcessingSpec:  NewProductProcessingSpecClient(cfg),
+		ProductUnit:            NewProductUnitClient(cfg),
+		PromoTag:               NewPromoTagClient(cfg),
+		ReturnRequest:          NewReturnRequestClient(cfg),
+		ReturnRequestItem:      NewReturnRequestItemClient(cfg),
+		Role:                   NewRoleClient(cfg),
+		RolePermission:         NewRolePermissionClient(cfg),
+		Route:                  NewRouteClient(cfg),
+		SalesOrder:             NewSalesOrderClient(cfg),
+		SalesOrderEvent:        NewSalesOrderEventClient(cfg),
+		SalesOrderItem:         NewSalesOrderItemClient(cfg),
+		User:                   NewUserClient(cfg),
+		UserDevice:             NewUserDeviceClient(cfg),
+		Vehicle:                NewVehicleClient(cfg),
+		Warehouse:              NewWarehouseClient(cfg),
 	}, nil
 }
 
@@ -322,44 +332,46 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:                   ctx,
-		config:                cfg,
-		Announcement:          NewAnnouncementClient(cfg),
-		AuditLog:              NewAuditLogClient(cfg),
-		Company:               NewCompanyClient(cfg),
-		Customer:              NewCustomerClient(cfg),
-		CustomerAddress:       NewCustomerAddressClient(cfg),
-		CustomerContact:       NewCustomerContactClient(cfg),
-		CustomerCounter:       NewCustomerCounterClient(cfg),
-		CustomerProduct:       NewCustomerProductClient(cfg),
-		Department:            NewDepartmentClient(cfg),
-		FileAsset:             NewFileAssetClient(cfg),
-		LogisticsDelivery:     NewLogisticsDeliveryClient(cfg),
-		LogisticsDriver:       NewLogisticsDriverClient(cfg),
-		Metadict:              NewMetadictClient(cfg),
-		Notification:          NewNotificationClient(cfg),
-		NotificationTemplate:  NewNotificationTemplateClient(cfg),
-		OrderCounter:          NewOrderCounterClient(cfg),
-		PrintLog:              NewPrintLogClient(cfg),
-		PrintPreview:          NewPrintPreviewClient(cfg),
-		ProcessingSpec:        NewProcessingSpecClient(cfg),
-		Product:               NewProductClient(cfg),
-		ProductCategory:       NewProductCategoryClient(cfg),
-		ProductProcessingSpec: NewProductProcessingSpecClient(cfg),
-		ProductUnit:           NewProductUnitClient(cfg),
-		PromoTag:              NewPromoTagClient(cfg),
-		ReturnRequest:         NewReturnRequestClient(cfg),
-		ReturnRequestItem:     NewReturnRequestItemClient(cfg),
-		Role:                  NewRoleClient(cfg),
-		RolePermission:        NewRolePermissionClient(cfg),
-		Route:                 NewRouteClient(cfg),
-		SalesOrder:            NewSalesOrderClient(cfg),
-		SalesOrderEvent:       NewSalesOrderEventClient(cfg),
-		SalesOrderItem:        NewSalesOrderItemClient(cfg),
-		User:                  NewUserClient(cfg),
-		UserDevice:            NewUserDeviceClient(cfg),
-		Vehicle:               NewVehicleClient(cfg),
-		Warehouse:             NewWarehouseClient(cfg),
+		ctx:                    ctx,
+		config:                 cfg,
+		Announcement:           NewAnnouncementClient(cfg),
+		AuditLog:               NewAuditLogClient(cfg),
+		Company:                NewCompanyClient(cfg),
+		Customer:               NewCustomerClient(cfg),
+		CustomerAddress:        NewCustomerAddressClient(cfg),
+		CustomerContact:        NewCustomerContactClient(cfg),
+		CustomerCounter:        NewCustomerCounterClient(cfg),
+		CustomerProduct:        NewCustomerProductClient(cfg),
+		Department:             NewDepartmentClient(cfg),
+		FileAsset:              NewFileAssetClient(cfg),
+		LogisticsDelivery:      NewLogisticsDeliveryClient(cfg),
+		LogisticsDeliveryEvent: NewLogisticsDeliveryEventClient(cfg),
+		LogisticsDriver:        NewLogisticsDriverClient(cfg),
+		LogisticsProof:         NewLogisticsProofClient(cfg),
+		Metadict:               NewMetadictClient(cfg),
+		Notification:           NewNotificationClient(cfg),
+		NotificationTemplate:   NewNotificationTemplateClient(cfg),
+		OrderCounter:           NewOrderCounterClient(cfg),
+		PrintLog:               NewPrintLogClient(cfg),
+		PrintPreview:           NewPrintPreviewClient(cfg),
+		ProcessingSpec:         NewProcessingSpecClient(cfg),
+		Product:                NewProductClient(cfg),
+		ProductCategory:        NewProductCategoryClient(cfg),
+		ProductProcessingSpec:  NewProductProcessingSpecClient(cfg),
+		ProductUnit:            NewProductUnitClient(cfg),
+		PromoTag:               NewPromoTagClient(cfg),
+		ReturnRequest:          NewReturnRequestClient(cfg),
+		ReturnRequestItem:      NewReturnRequestItemClient(cfg),
+		Role:                   NewRoleClient(cfg),
+		RolePermission:         NewRolePermissionClient(cfg),
+		Route:                  NewRouteClient(cfg),
+		SalesOrder:             NewSalesOrderClient(cfg),
+		SalesOrderEvent:        NewSalesOrderEventClient(cfg),
+		SalesOrderItem:         NewSalesOrderItemClient(cfg),
+		User:                   NewUserClient(cfg),
+		UserDevice:             NewUserDeviceClient(cfg),
+		Vehicle:                NewVehicleClient(cfg),
+		Warehouse:              NewWarehouseClient(cfg),
 	}, nil
 }
 
@@ -391,13 +403,13 @@ func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.Announcement, c.AuditLog, c.Company, c.Customer, c.CustomerAddress,
 		c.CustomerContact, c.CustomerCounter, c.CustomerProduct, c.Department,
-		c.FileAsset, c.LogisticsDelivery, c.LogisticsDriver, c.Metadict,
-		c.Notification, c.NotificationTemplate, c.OrderCounter, c.PrintLog,
-		c.PrintPreview, c.ProcessingSpec, c.Product, c.ProductCategory,
-		c.ProductProcessingSpec, c.ProductUnit, c.PromoTag, c.ReturnRequest,
-		c.ReturnRequestItem, c.Role, c.RolePermission, c.Route, c.SalesOrder,
-		c.SalesOrderEvent, c.SalesOrderItem, c.User, c.UserDevice, c.Vehicle,
-		c.Warehouse,
+		c.FileAsset, c.LogisticsDelivery, c.LogisticsDeliveryEvent, c.LogisticsDriver,
+		c.LogisticsProof, c.Metadict, c.Notification, c.NotificationTemplate,
+		c.OrderCounter, c.PrintLog, c.PrintPreview, c.ProcessingSpec, c.Product,
+		c.ProductCategory, c.ProductProcessingSpec, c.ProductUnit, c.PromoTag,
+		c.ReturnRequest, c.ReturnRequestItem, c.Role, c.RolePermission, c.Route,
+		c.SalesOrder, c.SalesOrderEvent, c.SalesOrderItem, c.User, c.UserDevice,
+		c.Vehicle, c.Warehouse,
 	} {
 		n.Use(hooks...)
 	}
@@ -409,13 +421,13 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.Announcement, c.AuditLog, c.Company, c.Customer, c.CustomerAddress,
 		c.CustomerContact, c.CustomerCounter, c.CustomerProduct, c.Department,
-		c.FileAsset, c.LogisticsDelivery, c.LogisticsDriver, c.Metadict,
-		c.Notification, c.NotificationTemplate, c.OrderCounter, c.PrintLog,
-		c.PrintPreview, c.ProcessingSpec, c.Product, c.ProductCategory,
-		c.ProductProcessingSpec, c.ProductUnit, c.PromoTag, c.ReturnRequest,
-		c.ReturnRequestItem, c.Role, c.RolePermission, c.Route, c.SalesOrder,
-		c.SalesOrderEvent, c.SalesOrderItem, c.User, c.UserDevice, c.Vehicle,
-		c.Warehouse,
+		c.FileAsset, c.LogisticsDelivery, c.LogisticsDeliveryEvent, c.LogisticsDriver,
+		c.LogisticsProof, c.Metadict, c.Notification, c.NotificationTemplate,
+		c.OrderCounter, c.PrintLog, c.PrintPreview, c.ProcessingSpec, c.Product,
+		c.ProductCategory, c.ProductProcessingSpec, c.ProductUnit, c.PromoTag,
+		c.ReturnRequest, c.ReturnRequestItem, c.Role, c.RolePermission, c.Route,
+		c.SalesOrder, c.SalesOrderEvent, c.SalesOrderItem, c.User, c.UserDevice,
+		c.Vehicle, c.Warehouse,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -446,8 +458,12 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.FileAsset.mutate(ctx, m)
 	case *LogisticsDeliveryMutation:
 		return c.LogisticsDelivery.mutate(ctx, m)
+	case *LogisticsDeliveryEventMutation:
+		return c.LogisticsDeliveryEvent.mutate(ctx, m)
 	case *LogisticsDriverMutation:
 		return c.LogisticsDriver.mutate(ctx, m)
+	case *LogisticsProofMutation:
+		return c.LogisticsProof.mutate(ctx, m)
 	case *MetadictMutation:
 		return c.Metadict.mutate(ctx, m)
 	case *NotificationMutation:
@@ -2028,6 +2044,139 @@ func (c *LogisticsDeliveryClient) mutate(ctx context.Context, m *LogisticsDelive
 	}
 }
 
+// LogisticsDeliveryEventClient is a client for the LogisticsDeliveryEvent schema.
+type LogisticsDeliveryEventClient struct {
+	config
+}
+
+// NewLogisticsDeliveryEventClient returns a client for the LogisticsDeliveryEvent from the given config.
+func NewLogisticsDeliveryEventClient(c config) *LogisticsDeliveryEventClient {
+	return &LogisticsDeliveryEventClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `logisticsdeliveryevent.Hooks(f(g(h())))`.
+func (c *LogisticsDeliveryEventClient) Use(hooks ...Hook) {
+	c.hooks.LogisticsDeliveryEvent = append(c.hooks.LogisticsDeliveryEvent, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `logisticsdeliveryevent.Intercept(f(g(h())))`.
+func (c *LogisticsDeliveryEventClient) Intercept(interceptors ...Interceptor) {
+	c.inters.LogisticsDeliveryEvent = append(c.inters.LogisticsDeliveryEvent, interceptors...)
+}
+
+// Create returns a builder for creating a LogisticsDeliveryEvent entity.
+func (c *LogisticsDeliveryEventClient) Create() *LogisticsDeliveryEventCreate {
+	mutation := newLogisticsDeliveryEventMutation(c.config, OpCreate)
+	return &LogisticsDeliveryEventCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of LogisticsDeliveryEvent entities.
+func (c *LogisticsDeliveryEventClient) CreateBulk(builders ...*LogisticsDeliveryEventCreate) *LogisticsDeliveryEventCreateBulk {
+	return &LogisticsDeliveryEventCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *LogisticsDeliveryEventClient) MapCreateBulk(slice any, setFunc func(*LogisticsDeliveryEventCreate, int)) *LogisticsDeliveryEventCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &LogisticsDeliveryEventCreateBulk{err: fmt.Errorf("calling to LogisticsDeliveryEventClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*LogisticsDeliveryEventCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &LogisticsDeliveryEventCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for LogisticsDeliveryEvent.
+func (c *LogisticsDeliveryEventClient) Update() *LogisticsDeliveryEventUpdate {
+	mutation := newLogisticsDeliveryEventMutation(c.config, OpUpdate)
+	return &LogisticsDeliveryEventUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *LogisticsDeliveryEventClient) UpdateOne(_m *LogisticsDeliveryEvent) *LogisticsDeliveryEventUpdateOne {
+	mutation := newLogisticsDeliveryEventMutation(c.config, OpUpdateOne, withLogisticsDeliveryEvent(_m))
+	return &LogisticsDeliveryEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *LogisticsDeliveryEventClient) UpdateOneID(id int) *LogisticsDeliveryEventUpdateOne {
+	mutation := newLogisticsDeliveryEventMutation(c.config, OpUpdateOne, withLogisticsDeliveryEventID(id))
+	return &LogisticsDeliveryEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for LogisticsDeliveryEvent.
+func (c *LogisticsDeliveryEventClient) Delete() *LogisticsDeliveryEventDelete {
+	mutation := newLogisticsDeliveryEventMutation(c.config, OpDelete)
+	return &LogisticsDeliveryEventDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *LogisticsDeliveryEventClient) DeleteOne(_m *LogisticsDeliveryEvent) *LogisticsDeliveryEventDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *LogisticsDeliveryEventClient) DeleteOneID(id int) *LogisticsDeliveryEventDeleteOne {
+	builder := c.Delete().Where(logisticsdeliveryevent.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &LogisticsDeliveryEventDeleteOne{builder}
+}
+
+// Query returns a query builder for LogisticsDeliveryEvent.
+func (c *LogisticsDeliveryEventClient) Query() *LogisticsDeliveryEventQuery {
+	return &LogisticsDeliveryEventQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeLogisticsDeliveryEvent},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a LogisticsDeliveryEvent entity by its id.
+func (c *LogisticsDeliveryEventClient) Get(ctx context.Context, id int) (*LogisticsDeliveryEvent, error) {
+	return c.Query().Where(logisticsdeliveryevent.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *LogisticsDeliveryEventClient) GetX(ctx context.Context, id int) *LogisticsDeliveryEvent {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *LogisticsDeliveryEventClient) Hooks() []Hook {
+	return c.hooks.LogisticsDeliveryEvent
+}
+
+// Interceptors returns the client interceptors.
+func (c *LogisticsDeliveryEventClient) Interceptors() []Interceptor {
+	return c.inters.LogisticsDeliveryEvent
+}
+
+func (c *LogisticsDeliveryEventClient) mutate(ctx context.Context, m *LogisticsDeliveryEventMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&LogisticsDeliveryEventCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&LogisticsDeliveryEventUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&LogisticsDeliveryEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&LogisticsDeliveryEventDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown LogisticsDeliveryEvent mutation op: %q", m.Op())
+	}
+}
+
 // LogisticsDriverClient is a client for the LogisticsDriver schema.
 type LogisticsDriverClient struct {
 	config
@@ -2158,6 +2307,139 @@ func (c *LogisticsDriverClient) mutate(ctx context.Context, m *LogisticsDriverMu
 		return (&LogisticsDriverDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown LogisticsDriver mutation op: %q", m.Op())
+	}
+}
+
+// LogisticsProofClient is a client for the LogisticsProof schema.
+type LogisticsProofClient struct {
+	config
+}
+
+// NewLogisticsProofClient returns a client for the LogisticsProof from the given config.
+func NewLogisticsProofClient(c config) *LogisticsProofClient {
+	return &LogisticsProofClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `logisticsproof.Hooks(f(g(h())))`.
+func (c *LogisticsProofClient) Use(hooks ...Hook) {
+	c.hooks.LogisticsProof = append(c.hooks.LogisticsProof, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `logisticsproof.Intercept(f(g(h())))`.
+func (c *LogisticsProofClient) Intercept(interceptors ...Interceptor) {
+	c.inters.LogisticsProof = append(c.inters.LogisticsProof, interceptors...)
+}
+
+// Create returns a builder for creating a LogisticsProof entity.
+func (c *LogisticsProofClient) Create() *LogisticsProofCreate {
+	mutation := newLogisticsProofMutation(c.config, OpCreate)
+	return &LogisticsProofCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of LogisticsProof entities.
+func (c *LogisticsProofClient) CreateBulk(builders ...*LogisticsProofCreate) *LogisticsProofCreateBulk {
+	return &LogisticsProofCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *LogisticsProofClient) MapCreateBulk(slice any, setFunc func(*LogisticsProofCreate, int)) *LogisticsProofCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &LogisticsProofCreateBulk{err: fmt.Errorf("calling to LogisticsProofClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*LogisticsProofCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &LogisticsProofCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for LogisticsProof.
+func (c *LogisticsProofClient) Update() *LogisticsProofUpdate {
+	mutation := newLogisticsProofMutation(c.config, OpUpdate)
+	return &LogisticsProofUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *LogisticsProofClient) UpdateOne(_m *LogisticsProof) *LogisticsProofUpdateOne {
+	mutation := newLogisticsProofMutation(c.config, OpUpdateOne, withLogisticsProof(_m))
+	return &LogisticsProofUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *LogisticsProofClient) UpdateOneID(id int) *LogisticsProofUpdateOne {
+	mutation := newLogisticsProofMutation(c.config, OpUpdateOne, withLogisticsProofID(id))
+	return &LogisticsProofUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for LogisticsProof.
+func (c *LogisticsProofClient) Delete() *LogisticsProofDelete {
+	mutation := newLogisticsProofMutation(c.config, OpDelete)
+	return &LogisticsProofDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *LogisticsProofClient) DeleteOne(_m *LogisticsProof) *LogisticsProofDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *LogisticsProofClient) DeleteOneID(id int) *LogisticsProofDeleteOne {
+	builder := c.Delete().Where(logisticsproof.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &LogisticsProofDeleteOne{builder}
+}
+
+// Query returns a query builder for LogisticsProof.
+func (c *LogisticsProofClient) Query() *LogisticsProofQuery {
+	return &LogisticsProofQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeLogisticsProof},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a LogisticsProof entity by its id.
+func (c *LogisticsProofClient) Get(ctx context.Context, id int) (*LogisticsProof, error) {
+	return c.Query().Where(logisticsproof.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *LogisticsProofClient) GetX(ctx context.Context, id int) *LogisticsProof {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *LogisticsProofClient) Hooks() []Hook {
+	return c.hooks.LogisticsProof
+}
+
+// Interceptors returns the client interceptors.
+func (c *LogisticsProofClient) Interceptors() []Interceptor {
+	return c.inters.LogisticsProof
+}
+
+func (c *LogisticsProofClient) mutate(ctx context.Context, m *LogisticsProofMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&LogisticsProofCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&LogisticsProofUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&LogisticsProofUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&LogisticsProofDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown LogisticsProof mutation op: %q", m.Op())
 	}
 }
 
@@ -5406,19 +5688,21 @@ type (
 	hooks struct {
 		Announcement, AuditLog, Company, Customer, CustomerAddress, CustomerContact,
 		CustomerCounter, CustomerProduct, Department, FileAsset, LogisticsDelivery,
-		LogisticsDriver, Metadict, Notification, NotificationTemplate, OrderCounter,
-		PrintLog, PrintPreview, ProcessingSpec, Product, ProductCategory,
-		ProductProcessingSpec, ProductUnit, PromoTag, ReturnRequest, ReturnRequestItem,
-		Role, RolePermission, Route, SalesOrder, SalesOrderEvent, SalesOrderItem, User,
-		UserDevice, Vehicle, Warehouse []ent.Hook
+		LogisticsDeliveryEvent, LogisticsDriver, LogisticsProof, Metadict,
+		Notification, NotificationTemplate, OrderCounter, PrintLog, PrintPreview,
+		ProcessingSpec, Product, ProductCategory, ProductProcessingSpec, ProductUnit,
+		PromoTag, ReturnRequest, ReturnRequestItem, Role, RolePermission, Route,
+		SalesOrder, SalesOrderEvent, SalesOrderItem, User, UserDevice, Vehicle,
+		Warehouse []ent.Hook
 	}
 	inters struct {
 		Announcement, AuditLog, Company, Customer, CustomerAddress, CustomerContact,
 		CustomerCounter, CustomerProduct, Department, FileAsset, LogisticsDelivery,
-		LogisticsDriver, Metadict, Notification, NotificationTemplate, OrderCounter,
-		PrintLog, PrintPreview, ProcessingSpec, Product, ProductCategory,
-		ProductProcessingSpec, ProductUnit, PromoTag, ReturnRequest, ReturnRequestItem,
-		Role, RolePermission, Route, SalesOrder, SalesOrderEvent, SalesOrderItem, User,
-		UserDevice, Vehicle, Warehouse []ent.Interceptor
+		LogisticsDeliveryEvent, LogisticsDriver, LogisticsProof, Metadict,
+		Notification, NotificationTemplate, OrderCounter, PrintLog, PrintPreview,
+		ProcessingSpec, Product, ProductCategory, ProductProcessingSpec, ProductUnit,
+		PromoTag, ReturnRequest, ReturnRequestItem, Role, RolePermission, Route,
+		SalesOrder, SalesOrderEvent, SalesOrderItem, User, UserDevice, Vehicle,
+		Warehouse []ent.Interceptor
 	}
 )

@@ -556,6 +556,8 @@ class LogisticsDelivery extends $pb.GeneratedMessage {
     $core.String? version,
     $core.String? createdAt,
     $core.String? updatedAt,
+    $core.String? startedAt,
+    $core.String? completedAt,
   }) {
     final result = LogisticsDelivery._();
     if (id != null) result.id = id;
@@ -569,6 +571,8 @@ class LogisticsDelivery extends $pb.GeneratedMessage {
     if (version != null) result.version = version;
     if (createdAt != null) result.createdAt = createdAt;
     if (updatedAt != null) result.updatedAt = updatedAt;
+    if (startedAt != null) result.startedAt = startedAt;
+    if (completedAt != null) result.completedAt = completedAt;
     return result;
   }
 
@@ -596,6 +600,8 @@ class LogisticsDelivery extends $pb.GeneratedMessage {
     ..aOS(9, _omitFieldNames ? '' : 'version')
     ..aOS(10, _omitFieldNames ? '' : 'createdAt')
     ..aOS(11, _omitFieldNames ? '' : 'updatedAt')
+    ..aOS(12, _omitFieldNames ? '' : 'startedAt')
+    ..aOS(13, _omitFieldNames ? '' : 'completedAt')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -718,6 +724,24 @@ class LogisticsDelivery extends $pb.GeneratedMessage {
   $core.bool hasUpdatedAt() => $_has(10);
   @$pb.TagNumber(11)
   void clearUpdatedAt() => $_clearField(11);
+
+  @$pb.TagNumber(12)
+  $core.String get startedAt => $_getSZ(11);
+  @$pb.TagNumber(12)
+  set startedAt($core.String value) => $_setString(11, value);
+  @$pb.TagNumber(12)
+  $core.bool hasStartedAt() => $_has(11);
+  @$pb.TagNumber(12)
+  void clearStartedAt() => $_clearField(12);
+
+  @$pb.TagNumber(13)
+  $core.String get completedAt => $_getSZ(12);
+  @$pb.TagNumber(13)
+  set completedAt($core.String value) => $_setString(12, value);
+  @$pb.TagNumber(13)
+  $core.bool hasCompletedAt() => $_has(12);
+  @$pb.TagNumber(13)
+  void clearCompletedAt() => $_clearField(13);
 }
 
 /// AssignDeliveryRequest:指派請求。
@@ -1020,6 +1044,639 @@ class ListMyDeliveriesResponse extends $pb.GeneratedMessage {
   void clearTotal() => $_clearField(2);
 }
 
+/// LogisticsProof:簽收證明 POD(D17 檔案資產)。
+class LogisticsProof extends $pb.GeneratedMessage {
+  factory LogisticsProof({
+    $core.String? id,
+    $core.String? logisticsDeliveryId,
+    $core.String? proofType,
+    $core.String? fileAssetId,
+    $core.String? remarks,
+    $core.String? capturedAt,
+  }) {
+    final result = LogisticsProof._();
+    if (id != null) result.id = id;
+    if (logisticsDeliveryId != null)
+      result.logisticsDeliveryId = logisticsDeliveryId;
+    if (proofType != null) result.proofType = proofType;
+    if (fileAssetId != null) result.fileAssetId = fileAssetId;
+    if (remarks != null) result.remarks = remarks;
+    if (capturedAt != null) result.capturedAt = capturedAt;
+    return result;
+  }
+
+  LogisticsProof._();
+
+  factory LogisticsProof.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      LogisticsProof()..mergeFromBuffer(data, registry);
+  factory LogisticsProof.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      LogisticsProof()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'LogisticsProof',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: LogisticsProof.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'logisticsDeliveryId')
+    ..aOS(3, _omitFieldNames ? '' : 'proofType')
+    ..aOS(4, _omitFieldNames ? '' : 'fileAssetId')
+    ..aOS(5, _omitFieldNames ? '' : 'remarks')
+    ..aOS(6, _omitFieldNames ? '' : 'capturedAt')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  LogisticsProof clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  LogisticsProof copyWith(void Function(LogisticsProof) updates) =>
+      super.copyWith((message) => updates(message as LogisticsProof))
+          as LogisticsProof;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use LogisticsProof() / LogisticsProof.new instead')
+  static LogisticsProof create() => LogisticsProof._();
+  static $pb.GeneratedMessage $_createMessage() => LogisticsProof._();
+  @$core.override
+  LogisticsProof createEmptyInstance() => LogisticsProof._();
+  @$core.pragma('dart2js:noInline')
+  static LogisticsProof getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<LogisticsProof>(
+          LogisticsProof.$_createMessage);
+  static LogisticsProof? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get id => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set id($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get logisticsDeliveryId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set logisticsDeliveryId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasLogisticsDeliveryId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearLogisticsDeliveryId() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get proofType => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set proofType($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasProofType() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearProofType() => $_clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get fileAssetId => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set fileAssetId($core.String value) => $_setString(3, value);
+  @$pb.TagNumber(4)
+  $core.bool hasFileAssetId() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearFileAssetId() => $_clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get remarks => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set remarks($core.String value) => $_setString(4, value);
+  @$pb.TagNumber(5)
+  $core.bool hasRemarks() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearRemarks() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get capturedAt => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set capturedAt($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasCapturedAt() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearCapturedAt() => $_clearField(6);
+}
+
+/// StartDeliveryRequest:開始配送請求(id + version 樂觀鎖)。
+class StartDeliveryRequest extends $pb.GeneratedMessage {
+  factory StartDeliveryRequest({
+    $core.String? deliveryId,
+    $core.String? version,
+  }) {
+    final result = StartDeliveryRequest._();
+    if (deliveryId != null) result.deliveryId = deliveryId;
+    if (version != null) result.version = version;
+    return result;
+  }
+
+  StartDeliveryRequest._();
+
+  factory StartDeliveryRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StartDeliveryRequest()..mergeFromBuffer(data, registry);
+  factory StartDeliveryRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StartDeliveryRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'StartDeliveryRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: StartDeliveryRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'deliveryId')
+    ..aOS(2, _omitFieldNames ? '' : 'version')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StartDeliveryRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StartDeliveryRequest copyWith(void Function(StartDeliveryRequest) updates) =>
+      super.copyWith((message) => updates(message as StartDeliveryRequest))
+          as StartDeliveryRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use StartDeliveryRequest() / StartDeliveryRequest.new instead')
+  static StartDeliveryRequest create() => StartDeliveryRequest._();
+  static $pb.GeneratedMessage $_createMessage() => StartDeliveryRequest._();
+  @$core.override
+  StartDeliveryRequest createEmptyInstance() => StartDeliveryRequest._();
+  @$core.pragma('dart2js:noInline')
+  static StartDeliveryRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<StartDeliveryRequest>(
+          StartDeliveryRequest.$_createMessage);
+  static StartDeliveryRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get deliveryId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set deliveryId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasDeliveryId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearDeliveryId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get version => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set version($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasVersion() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearVersion() => $_clearField(2);
+}
+
+/// StartDeliveryResponse:開始配送結果。
+class StartDeliveryResponse extends $pb.GeneratedMessage {
+  factory StartDeliveryResponse({
+    LogisticsDelivery? delivery,
+  }) {
+    final result = StartDeliveryResponse._();
+    if (delivery != null) result.delivery = delivery;
+    return result;
+  }
+
+  StartDeliveryResponse._();
+
+  factory StartDeliveryResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StartDeliveryResponse()..mergeFromBuffer(data, registry);
+  factory StartDeliveryResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      StartDeliveryResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'StartDeliveryResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: StartDeliveryResponse.$_createMessage)
+    ..aOM<LogisticsDelivery>(1, _omitFieldNames ? '' : 'delivery',
+        subBuilder: LogisticsDelivery.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StartDeliveryResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  StartDeliveryResponse copyWith(
+          void Function(StartDeliveryResponse) updates) =>
+      super.copyWith((message) => updates(message as StartDeliveryResponse))
+          as StartDeliveryResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use StartDeliveryResponse() / StartDeliveryResponse.new instead')
+  static StartDeliveryResponse create() => StartDeliveryResponse._();
+  static $pb.GeneratedMessage $_createMessage() => StartDeliveryResponse._();
+  @$core.override
+  StartDeliveryResponse createEmptyInstance() => StartDeliveryResponse._();
+  @$core.pragma('dart2js:noInline')
+  static StartDeliveryResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<StartDeliveryResponse>(
+          StartDeliveryResponse.$_createMessage);
+  static StartDeliveryResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  LogisticsDelivery get delivery => $_getN(0);
+  @$pb.TagNumber(1)
+  set delivery(LogisticsDelivery value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasDelivery() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearDelivery() => $_clearField(1);
+  @$pb.TagNumber(1)
+  LogisticsDelivery ensureDelivery() => $_ensure(0);
+}
+
+/// CompleteDeliveryRequest:完成配送請求。proofs 可空(無簽收亦可完成);
+/// 每筆 proof 的 file_asset_id 來自既有檔案上傳端點(POST /api/v1/files,owner_type=logistics_delivery)。
+class CompleteDeliveryRequest extends $pb.GeneratedMessage {
+  factory CompleteDeliveryRequest({
+    $core.String? deliveryId,
+    $core.String? version,
+    $core.Iterable<CompleteProof>? proofs,
+  }) {
+    final result = CompleteDeliveryRequest._();
+    if (deliveryId != null) result.deliveryId = deliveryId;
+    if (version != null) result.version = version;
+    if (proofs != null) result.proofs.addAll(proofs);
+    return result;
+  }
+
+  CompleteDeliveryRequest._();
+
+  factory CompleteDeliveryRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CompleteDeliveryRequest()..mergeFromBuffer(data, registry);
+  factory CompleteDeliveryRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CompleteDeliveryRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CompleteDeliveryRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: CompleteDeliveryRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'deliveryId')
+    ..aOS(2, _omitFieldNames ? '' : 'version')
+    ..pPM<CompleteProof>(3, _omitFieldNames ? '' : 'proofs',
+        subBuilder: CompleteProof.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CompleteDeliveryRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CompleteDeliveryRequest copyWith(
+          void Function(CompleteDeliveryRequest) updates) =>
+      super.copyWith((message) => updates(message as CompleteDeliveryRequest))
+          as CompleteDeliveryRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use CompleteDeliveryRequest() / CompleteDeliveryRequest.new instead')
+  static CompleteDeliveryRequest create() => CompleteDeliveryRequest._();
+  static $pb.GeneratedMessage $_createMessage() => CompleteDeliveryRequest._();
+  @$core.override
+  CompleteDeliveryRequest createEmptyInstance() => CompleteDeliveryRequest._();
+  @$core.pragma('dart2js:noInline')
+  static CompleteDeliveryRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<CompleteDeliveryRequest>(
+          CompleteDeliveryRequest.$_createMessage);
+  static CompleteDeliveryRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get deliveryId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set deliveryId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasDeliveryId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearDeliveryId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get version => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set version($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasVersion() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearVersion() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $pb.PbList<CompleteProof> get proofs => $_getList(2);
+}
+
+/// CompleteProof:一筆簽收證明(型別 + 檔案資產 id + 備註)。
+class CompleteProof extends $pb.GeneratedMessage {
+  factory CompleteProof({
+    $core.String? proofType,
+    $core.String? fileAssetId,
+    $core.String? remarks,
+  }) {
+    final result = CompleteProof._();
+    if (proofType != null) result.proofType = proofType;
+    if (fileAssetId != null) result.fileAssetId = fileAssetId;
+    if (remarks != null) result.remarks = remarks;
+    return result;
+  }
+
+  CompleteProof._();
+
+  factory CompleteProof.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CompleteProof()..mergeFromBuffer(data, registry);
+  factory CompleteProof.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CompleteProof()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CompleteProof',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: CompleteProof.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'proofType')
+    ..aOS(2, _omitFieldNames ? '' : 'fileAssetId')
+    ..aOS(3, _omitFieldNames ? '' : 'remarks')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CompleteProof clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CompleteProof copyWith(void Function(CompleteProof) updates) =>
+      super.copyWith((message) => updates(message as CompleteProof))
+          as CompleteProof;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated('Use CompleteProof() / CompleteProof.new instead')
+  static CompleteProof create() => CompleteProof._();
+  static $pb.GeneratedMessage $_createMessage() => CompleteProof._();
+  @$core.override
+  CompleteProof createEmptyInstance() => CompleteProof._();
+  @$core.pragma('dart2js:noInline')
+  static CompleteProof getDefault() =>
+      _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<CompleteProof>(
+          CompleteProof.$_createMessage);
+  static CompleteProof? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get proofType => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set proofType($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasProofType() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearProofType() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get fileAssetId => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set fileAssetId($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasFileAssetId() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearFileAssetId() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get remarks => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set remarks($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasRemarks() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearRemarks() => $_clearField(3);
+}
+
+/// CompleteDeliveryResponse:完成配送結果(含寫入的 proofs)。
+class CompleteDeliveryResponse extends $pb.GeneratedMessage {
+  factory CompleteDeliveryResponse({
+    LogisticsDelivery? delivery,
+    $core.Iterable<LogisticsProof>? proofs,
+  }) {
+    final result = CompleteDeliveryResponse._();
+    if (delivery != null) result.delivery = delivery;
+    if (proofs != null) result.proofs.addAll(proofs);
+    return result;
+  }
+
+  CompleteDeliveryResponse._();
+
+  factory CompleteDeliveryResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CompleteDeliveryResponse()..mergeFromBuffer(data, registry);
+  factory CompleteDeliveryResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CompleteDeliveryResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CompleteDeliveryResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: CompleteDeliveryResponse.$_createMessage)
+    ..aOM<LogisticsDelivery>(1, _omitFieldNames ? '' : 'delivery',
+        subBuilder: LogisticsDelivery.$_createMessage)
+    ..pPM<LogisticsProof>(2, _omitFieldNames ? '' : 'proofs',
+        subBuilder: LogisticsProof.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CompleteDeliveryResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CompleteDeliveryResponse copyWith(
+          void Function(CompleteDeliveryResponse) updates) =>
+      super.copyWith((message) => updates(message as CompleteDeliveryResponse))
+          as CompleteDeliveryResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use CompleteDeliveryResponse() / CompleteDeliveryResponse.new instead')
+  static CompleteDeliveryResponse create() => CompleteDeliveryResponse._();
+  static $pb.GeneratedMessage $_createMessage() => CompleteDeliveryResponse._();
+  @$core.override
+  CompleteDeliveryResponse createEmptyInstance() =>
+      CompleteDeliveryResponse._();
+  @$core.pragma('dart2js:noInline')
+  static CompleteDeliveryResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<CompleteDeliveryResponse>(
+          CompleteDeliveryResponse.$_createMessage);
+  static CompleteDeliveryResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  LogisticsDelivery get delivery => $_getN(0);
+  @$pb.TagNumber(1)
+  set delivery(LogisticsDelivery value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasDelivery() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearDelivery() => $_clearField(1);
+  @$pb.TagNumber(1)
+  LogisticsDelivery ensureDelivery() => $_ensure(0);
+
+  @$pb.TagNumber(2)
+  $pb.PbList<LogisticsProof> get proofs => $_getList(1);
+}
+
+/// CancelDeliveryRequest:取消配送請求(reason 必填)。
+class CancelDeliveryRequest extends $pb.GeneratedMessage {
+  factory CancelDeliveryRequest({
+    $core.String? deliveryId,
+    $core.String? version,
+    $core.String? reason,
+  }) {
+    final result = CancelDeliveryRequest._();
+    if (deliveryId != null) result.deliveryId = deliveryId;
+    if (version != null) result.version = version;
+    if (reason != null) result.reason = reason;
+    return result;
+  }
+
+  CancelDeliveryRequest._();
+
+  factory CancelDeliveryRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CancelDeliveryRequest()..mergeFromBuffer(data, registry);
+  factory CancelDeliveryRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CancelDeliveryRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CancelDeliveryRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: CancelDeliveryRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'deliveryId')
+    ..aOS(2, _omitFieldNames ? '' : 'version')
+    ..aOS(3, _omitFieldNames ? '' : 'reason')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CancelDeliveryRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CancelDeliveryRequest copyWith(
+          void Function(CancelDeliveryRequest) updates) =>
+      super.copyWith((message) => updates(message as CancelDeliveryRequest))
+          as CancelDeliveryRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use CancelDeliveryRequest() / CancelDeliveryRequest.new instead')
+  static CancelDeliveryRequest create() => CancelDeliveryRequest._();
+  static $pb.GeneratedMessage $_createMessage() => CancelDeliveryRequest._();
+  @$core.override
+  CancelDeliveryRequest createEmptyInstance() => CancelDeliveryRequest._();
+  @$core.pragma('dart2js:noInline')
+  static CancelDeliveryRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<CancelDeliveryRequest>(
+          CancelDeliveryRequest.$_createMessage);
+  static CancelDeliveryRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get deliveryId => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set deliveryId($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasDeliveryId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearDeliveryId() => $_clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.String get version => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set version($core.String value) => $_setString(1, value);
+  @$pb.TagNumber(2)
+  $core.bool hasVersion() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearVersion() => $_clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get reason => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set reason($core.String value) => $_setString(2, value);
+  @$pb.TagNumber(3)
+  $core.bool hasReason() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearReason() => $_clearField(3);
+}
+
+/// CancelDeliveryResponse:取消配送結果。
+class CancelDeliveryResponse extends $pb.GeneratedMessage {
+  factory CancelDeliveryResponse({
+    LogisticsDelivery? delivery,
+  }) {
+    final result = CancelDeliveryResponse._();
+    if (delivery != null) result.delivery = delivery;
+    return result;
+  }
+
+  CancelDeliveryResponse._();
+
+  factory CancelDeliveryResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CancelDeliveryResponse()..mergeFromBuffer(data, registry);
+  factory CancelDeliveryResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      CancelDeliveryResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'CancelDeliveryResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: CancelDeliveryResponse.$_createMessage)
+    ..aOM<LogisticsDelivery>(1, _omitFieldNames ? '' : 'delivery',
+        subBuilder: LogisticsDelivery.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CancelDeliveryResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  CancelDeliveryResponse copyWith(
+          void Function(CancelDeliveryResponse) updates) =>
+      super.copyWith((message) => updates(message as CancelDeliveryResponse))
+          as CancelDeliveryResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use CancelDeliveryResponse() / CancelDeliveryResponse.new instead')
+  static CancelDeliveryResponse create() => CancelDeliveryResponse._();
+  static $pb.GeneratedMessage $_createMessage() => CancelDeliveryResponse._();
+  @$core.override
+  CancelDeliveryResponse createEmptyInstance() => CancelDeliveryResponse._();
+  @$core.pragma('dart2js:noInline')
+  static CancelDeliveryResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<CancelDeliveryResponse>(
+          CancelDeliveryResponse.$_createMessage);
+  static CancelDeliveryResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  LogisticsDelivery get delivery => $_getN(0);
+  @$pb.TagNumber(1)
+  set delivery(LogisticsDelivery value) => $_setField(1, value);
+  @$pb.TagNumber(1)
+  $core.bool hasDelivery() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearDelivery() => $_clearField(1);
+  @$pb.TagNumber(1)
+  LogisticsDelivery ensureDelivery() => $_ensure(0);
+}
+
 /// LogisticsService:logistics 執行層首批(D32/10.1/10.4/10.12)。
 /// 建檔(司機/車輛)與指派為後台動作(dept_admin 以上;rolePolicy logistics);
 /// ListMyDeliveries 為**被指派司機本人**的任務清單(10.12:身分必須對應 logistics_drivers 列,
@@ -1053,6 +1710,24 @@ class LogisticsServiceApi {
           $pb.ClientContext? ctx, ListMyDeliveriesRequest request) =>
       _client.invoke<ListMyDeliveriesResponse>(ctx, 'LogisticsService',
           'ListMyDeliveries', request, ListMyDeliveriesResponse());
+
+  /// StartDelivery:被指派司機開始執行(pending → in_progress;10.6)。
+  $async.Future<StartDeliveryResponse> startDelivery(
+          $pb.ClientContext? ctx, StartDeliveryRequest request) =>
+      _client.invoke<StartDeliveryResponse>(ctx, 'LogisticsService',
+          'StartDelivery', request, StartDeliveryResponse());
+
+  /// CompleteDelivery:完成並簽收(in_progress → completed;POD 可多筆,同一交易寫事件與稽核)。
+  $async.Future<CompleteDeliveryResponse> completeDelivery(
+          $pb.ClientContext? ctx, CompleteDeliveryRequest request) =>
+      _client.invoke<CompleteDeliveryResponse>(ctx, 'LogisticsService',
+          'CompleteDelivery', request, CompleteDeliveryResponse());
+
+  /// CancelDelivery:取消配送(pending/in_progress → cancelled;reason 必填)。
+  $async.Future<CancelDeliveryResponse> cancelDelivery(
+          $pb.ClientContext? ctx, CancelDeliveryRequest request) =>
+      _client.invoke<CancelDeliveryResponse>(ctx, 'LogisticsService',
+          'CancelDelivery', request, CancelDeliveryResponse());
 }
 
 const $core.bool _omitFieldNames =

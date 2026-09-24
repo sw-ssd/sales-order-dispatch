@@ -320,6 +320,8 @@ var (
 		{Name: "assigned_by", Type: field.TypeInt},
 		{Name: "status", Type: field.TypeString, Default: "pending"},
 		{Name: "version", Type: field.TypeInt, Default: 1},
+		{Name: "started_at", Type: field.TypeTime, Nullable: true},
+		{Name: "completed_at", Type: field.TypeTime, Nullable: true},
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
@@ -339,6 +341,30 @@ var (
 				Name:    "logisticsdelivery_driver_id",
 				Unique:  false,
 				Columns: []*schema.Column{LogisticsDeliveriesColumns[4]},
+			},
+		},
+	}
+	// LogisticsDeliveryEventsColumns holds the columns for the "logistics_delivery_events" table.
+	LogisticsDeliveryEventsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "logistics_delivery_id", Type: field.TypeInt},
+		{Name: "company_id", Type: field.TypeInt},
+		{Name: "event_type", Type: field.TypeString},
+		{Name: "actor_id", Type: field.TypeInt},
+		{Name: "reason", Type: field.TypeString, Nullable: true},
+		{Name: "payload", Type: field.TypeJSON, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// LogisticsDeliveryEventsTable holds the schema information for the "logistics_delivery_events" table.
+	LogisticsDeliveryEventsTable = &schema.Table{
+		Name:       "logistics_delivery_events",
+		Columns:    LogisticsDeliveryEventsColumns,
+		PrimaryKey: []*schema.Column{LogisticsDeliveryEventsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "logisticsdeliveryevent_logistics_delivery_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{LogisticsDeliveryEventsColumns[1], LogisticsDeliveryEventsColumns[7]},
 			},
 		},
 	}
@@ -370,6 +396,33 @@ var (
 				Name:    "logisticsdriver_user_id",
 				Unique:  false,
 				Columns: []*schema.Column{LogisticsDriversColumns[3]},
+			},
+		},
+	}
+	// LogisticsProofsColumns holds the columns for the "logistics_proofs" table.
+	LogisticsProofsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "logistics_delivery_id", Type: field.TypeInt},
+		{Name: "company_id", Type: field.TypeInt},
+		{Name: "department_id", Type: field.TypeInt, Nullable: true},
+		{Name: "proof_type", Type: field.TypeString},
+		{Name: "file_asset_id", Type: field.TypeInt},
+		{Name: "remarks", Type: field.TypeString, Nullable: true},
+		{Name: "captured_by", Type: field.TypeInt},
+		{Name: "captured_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+	}
+	// LogisticsProofsTable holds the schema information for the "logistics_proofs" table.
+	LogisticsProofsTable = &schema.Table{
+		Name:       "logistics_proofs",
+		Columns:    LogisticsProofsColumns,
+		PrimaryKey: []*schema.Column{LogisticsProofsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "logisticsproof_logistics_delivery_id",
+				Unique:  false,
+				Columns: []*schema.Column{LogisticsProofsColumns[1]},
 			},
 		},
 	}
@@ -1089,7 +1142,9 @@ var (
 		DepartmentsTable,
 		FileAssetsTable,
 		LogisticsDeliveriesTable,
+		LogisticsDeliveryEventsTable,
 		LogisticsDriversTable,
+		LogisticsProofsTable,
 		MetadictsTable,
 		NotificationsTable,
 		NotificationTemplatesTable,

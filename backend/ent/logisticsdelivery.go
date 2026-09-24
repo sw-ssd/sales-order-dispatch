@@ -33,6 +33,10 @@ type LogisticsDelivery struct {
 	Status string `json:"status,omitempty"`
 	// Version holds the value of the "version" field.
 	Version int `json:"version,omitempty"`
+	// StartedAt holds the value of the "started_at" field.
+	StartedAt *time.Time `json:"started_at,omitempty"`
+	// CompletedAt holds the value of the "completed_at" field.
+	CompletedAt *time.Time `json:"completed_at,omitempty"`
 	// DeletedAt holds the value of the "deleted_at" field.
 	DeletedAt *time.Time `json:"deleted_at,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
@@ -51,7 +55,7 @@ func (*LogisticsDelivery) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case logisticsdelivery.FieldStatus:
 			values[i] = new(sql.NullString)
-		case logisticsdelivery.FieldDeletedAt, logisticsdelivery.FieldCreatedAt, logisticsdelivery.FieldUpdatedAt:
+		case logisticsdelivery.FieldStartedAt, logisticsdelivery.FieldCompletedAt, logisticsdelivery.FieldDeletedAt, logisticsdelivery.FieldCreatedAt, logisticsdelivery.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -124,6 +128,20 @@ func (_m *LogisticsDelivery) assignValues(columns []string, values []any) error 
 				return fmt.Errorf("unexpected type %T for field version", values[i])
 			} else if value.Valid {
 				_m.Version = int(value.Int64)
+			}
+		case logisticsdelivery.FieldStartedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field started_at", values[i])
+			} else if value.Valid {
+				_m.StartedAt = new(time.Time)
+				*_m.StartedAt = value.Time
+			}
+		case logisticsdelivery.FieldCompletedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field completed_at", values[i])
+			} else if value.Valid {
+				_m.CompletedAt = new(time.Time)
+				*_m.CompletedAt = value.Time
 			}
 		case logisticsdelivery.FieldDeletedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -209,6 +227,16 @@ func (_m *LogisticsDelivery) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("version=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Version))
+	builder.WriteString(", ")
+	if v := _m.StartedAt; v != nil {
+		builder.WriteString("started_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	if v := _m.CompletedAt; v != nil {
+		builder.WriteString("completed_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	if v := _m.DeletedAt; v != nil {
 		builder.WriteString("deleted_at=")

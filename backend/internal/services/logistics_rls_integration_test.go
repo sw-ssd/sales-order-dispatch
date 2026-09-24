@@ -53,6 +53,19 @@ func TestIntegrationLogisticsCrossDeptAndSelfIsolation(t *testing.T) {
 		{"policy 存在", `SELECT count(*) = 3 FROM pg_policies
 			WHERE tablename IN ('logistics_drivers', 'vehicles', 'logistics_deliveries')
 			AND policyname LIKE 'core_%'`},
+		// 10.6:事件表 append-only(僅 SELECT/INSERT)、POD 表完整 CRUD;兩表皆 ENABLE+FORCE。
+		{"事件表 append-only", `SELECT has_table_privilege('app_rw', 'logistics_delivery_events', 'SELECT')
+			AND has_table_privilege('app_rw', 'logistics_delivery_events', 'INSERT')
+			AND NOT has_table_privilege('app_rw', 'logistics_delivery_events', 'UPDATE')
+			AND NOT has_table_privilege('app_rw', 'logistics_delivery_events', 'DELETE')`},
+		{"POD 表 CRUD", `SELECT has_table_privilege('app_rw', 'logistics_proofs', 'SELECT')
+			AND has_table_privilege('app_rw', 'logistics_proofs', 'INSERT')
+			AND has_table_privilege('app_rw', 'logistics_proofs', 'UPDATE')
+			AND has_table_privilege('app_rw', 'logistics_proofs', 'DELETE')`},
+		{"10.6 表 ENABLE+FORCE", `SELECT bool_and(relrowsecurity AND relforcerowsecurity) FROM pg_class
+			WHERE relname IN ('logistics_delivery_events', 'logistics_proofs')`},
+		{"10.6 序列", `SELECT has_sequence_privilege('app_rw', 'logistics_delivery_events_id_seq', 'USAGE')
+			AND has_sequence_privilege('app_rw', 'logistics_proofs_id_seq', 'USAGE')`},
 	} {
 		var ok bool
 		if err := adminSql.QueryRow(q.sql).Scan(&ok); err != nil {
@@ -215,5 +228,57 @@ func TestIntegrationLogisticsCrossDeptAndSelfIsolation(t *testing.T) {
 	}
 	if ok {
 		t.Fatal("dept B 管理者不得寫 dept A 的 delivery(無 manager 邊)")
+	}
+
+	// ⑤ 10.6 狀態機:司機 A 本人開始 → 完成(真 RLS 寫入事件表);
+	//    司機 B 不得操作 A 的配送(本人隔離,negative control)。
+	{
+		drvRPC := logisticsServer(idOf(uItoa(drvA), "staff", deptA.ID), scopeDept(deptA.ID, uItoa(drvA)))
+		cur, err := drvRPC.ListMyDeliveries(ctx, connect.NewRequest(&v1.ListMyDeliveriesRequest{}))
+		if err != nil {
+			t.Fatalf("駕駛 A 清單: %v", err)
+		}
+		if cur.Msg.GetTotal() != 1 {
+			t.Fatalf("駕駛 A 應見 1 筆,got %d", cur.Msg.GetTotal())
+		}
+		v := cur.Msg.GetDeliveries()[0].GetVersion()
+		started, err := drvRPC.StartDelivery(ctx, connect.NewRequest(&v1.StartDeliveryRequest{
+			DeliveryId: deliveryA, Version: v,
+		}))
+		if err != nil {
+			t.Fatalf("駕駛 A 開始: %v", err)
+		}
+		if started.Msg.GetDelivery().GetStatus() != DeliveryStatusInProgress {
+			t.Fatalf("開始後應 in_progress,got %s", started.Msg.GetDelivery().GetStatus())
+		}
+		done, err := drvRPC.CompleteDelivery(ctx, connect.NewRequest(&v1.CompleteDeliveryRequest{
+			DeliveryId: deliveryA, Version: started.Msg.GetDelivery().GetVersion(),
+		}))
+		if err != nil {
+			t.Fatalf("駕駛 A 完成: %v", err)
+		}
+		if done.Msg.GetDelivery().GetStatus() != DeliveryStatusCompleted {
+			t.Fatalf("完成後應 completed,got %s", done.Msg.GetDelivery().GetStatus())
+		}
+
+		// 事件表:真 RLS 下寫入的軌跡讀得回來(started + completed)。
+		var nEvents int
+		if err := adminSql.QueryRow(`SELECT count(*) FROM logistics_delivery_events
+			WHERE logistics_delivery_id = $1 AND event_type IN ('started','completed')`,
+			mustAnnID(t, deliveryA)).Scan(&nEvents); err != nil {
+			t.Fatalf("讀事件軌跡: %v", err)
+		}
+		if nEvents != 2 {
+			t.Fatalf("事件軌跡應有 2 筆(started/completed),got %d", nEvents)
+		}
+
+		// 負向:另一位司機(乙部)不得操作甲部的配送。
+		otherRPC := logisticsServer(idOf(uItoa(drvB), "staff", deptB.ID), scopeDept(deptB.ID, uItoa(drvB)))
+		if _, err := otherRPC.StartDelivery(ctx, connect.NewRequest(&v1.StartDeliveryRequest{
+			DeliveryId: deliveryA, Version: "10",
+		})); connect.CodeOf(err) != connect.CodeNotFound &&
+			connect.CodeOf(err) != connect.CodePermissionDenied {
+			t.Fatalf("跨部門司機操作應 not_found/permission_denied,got %v", err)
+		}
 	}
 }

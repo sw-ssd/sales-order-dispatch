@@ -84,4 +84,58 @@ extension type LogisticsServiceClient (connect.Transport _transport) {
       onTrailer: onTrailer,
     );
   }
+
+  /// StartDelivery:被指派司機開始執行(pending → in_progress;10.6)。
+  Future<salesorderv1logistics.StartDeliveryResponse> startDelivery(
+    salesorderv1logistics.StartDeliveryRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.LogisticsService.startDelivery,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// CompleteDelivery:完成並簽收(in_progress → completed;POD 可多筆,同一交易寫事件與稽核)。
+  Future<salesorderv1logistics.CompleteDeliveryResponse> completeDelivery(
+    salesorderv1logistics.CompleteDeliveryRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.LogisticsService.completeDelivery,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
+
+  /// CancelDelivery:取消配送(pending/in_progress → cancelled;reason 必填)。
+  Future<salesorderv1logistics.CancelDeliveryResponse> cancelDelivery(
+    salesorderv1logistics.CancelDeliveryRequest input, {
+    connect.Headers? headers,
+    connect.AbortSignal? signal,
+    Function(connect.Headers)? onHeader,
+    Function(connect.Headers)? onTrailer,
+  }) {
+    return connect.Client(_transport).unary(
+      specs.LogisticsService.cancelDelivery,
+      input,
+      signal: signal,
+      headers: headers,
+      onHeader: onHeader,
+      onTrailer: onTrailer,
+    );
+  }
 }

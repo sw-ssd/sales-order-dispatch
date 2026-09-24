@@ -94,6 +94,16 @@ func Version(v int) predicate.LogisticsDelivery {
 	return predicate.LogisticsDelivery(sql.FieldEQ(FieldVersion, v))
 }
 
+// StartedAt applies equality check predicate on the "started_at" field. It's identical to StartedAtEQ.
+func StartedAt(v time.Time) predicate.LogisticsDelivery {
+	return predicate.LogisticsDelivery(sql.FieldEQ(FieldStartedAt, v))
+}
+
+// CompletedAt applies equality check predicate on the "completed_at" field. It's identical to CompletedAtEQ.
+func CompletedAt(v time.Time) predicate.LogisticsDelivery {
+	return predicate.LogisticsDelivery(sql.FieldEQ(FieldCompletedAt, v))
+}
+
 // DeletedAt applies equality check predicate on the "deleted_at" field. It's identical to DeletedAtEQ.
 func DeletedAt(v time.Time) predicate.LogisticsDelivery {
 	return predicate.LogisticsDelivery(sql.FieldEQ(FieldDeletedAt, v))
@@ -482,6 +492,106 @@ func VersionLT(v int) predicate.LogisticsDelivery {
 // VersionLTE applies the LTE predicate on the "version" field.
 func VersionLTE(v int) predicate.LogisticsDelivery {
 	return predicate.LogisticsDelivery(sql.FieldLTE(FieldVersion, v))
+}
+
+// StartedAtEQ applies the EQ predicate on the "started_at" field.
+func StartedAtEQ(v time.Time) predicate.LogisticsDelivery {
+	return predicate.LogisticsDelivery(sql.FieldEQ(FieldStartedAt, v))
+}
+
+// StartedAtNEQ applies the NEQ predicate on the "started_at" field.
+func StartedAtNEQ(v time.Time) predicate.LogisticsDelivery {
+	return predicate.LogisticsDelivery(sql.FieldNEQ(FieldStartedAt, v))
+}
+
+// StartedAtIn applies the In predicate on the "started_at" field.
+func StartedAtIn(vs ...time.Time) predicate.LogisticsDelivery {
+	return predicate.LogisticsDelivery(sql.FieldIn(FieldStartedAt, vs...))
+}
+
+// StartedAtNotIn applies the NotIn predicate on the "started_at" field.
+func StartedAtNotIn(vs ...time.Time) predicate.LogisticsDelivery {
+	return predicate.LogisticsDelivery(sql.FieldNotIn(FieldStartedAt, vs...))
+}
+
+// StartedAtGT applies the GT predicate on the "started_at" field.
+func StartedAtGT(v time.Time) predicate.LogisticsDelivery {
+	return predicate.LogisticsDelivery(sql.FieldGT(FieldStartedAt, v))
+}
+
+// StartedAtGTE applies the GTE predicate on the "started_at" field.
+func StartedAtGTE(v time.Time) predicate.LogisticsDelivery {
+	return predicate.LogisticsDelivery(sql.FieldGTE(FieldStartedAt, v))
+}
+
+// StartedAtLT applies the LT predicate on the "started_at" field.
+func StartedAtLT(v time.Time) predicate.LogisticsDelivery {
+	return predicate.LogisticsDelivery(sql.FieldLT(FieldStartedAt, v))
+}
+
+// StartedAtLTE applies the LTE predicate on the "started_at" field.
+func StartedAtLTE(v time.Time) predicate.LogisticsDelivery {
+	return predicate.LogisticsDelivery(sql.FieldLTE(FieldStartedAt, v))
+}
+
+// StartedAtIsNil applies the IsNil predicate on the "started_at" field.
+func StartedAtIsNil() predicate.LogisticsDelivery {
+	return predicate.LogisticsDelivery(sql.FieldIsNull(FieldStartedAt))
+}
+
+// StartedAtNotNil applies the NotNil predicate on the "started_at" field.
+func StartedAtNotNil() predicate.LogisticsDelivery {
+	return predicate.LogisticsDelivery(sql.FieldNotNull(FieldStartedAt))
+}
+
+// CompletedAtEQ applies the EQ predicate on the "completed_at" field.
+func CompletedAtEQ(v time.Time) predicate.LogisticsDelivery {
+	return predicate.LogisticsDelivery(sql.FieldEQ(FieldCompletedAt, v))
+}
+
+// CompletedAtNEQ applies the NEQ predicate on the "completed_at" field.
+func CompletedAtNEQ(v time.Time) predicate.LogisticsDelivery {
+	return predicate.LogisticsDelivery(sql.FieldNEQ(FieldCompletedAt, v))
+}
+
+// CompletedAtIn applies the In predicate on the "completed_at" field.
+func CompletedAtIn(vs ...time.Time) predicate.LogisticsDelivery {
+	return predicate.LogisticsDelivery(sql.FieldIn(FieldCompletedAt, vs...))
+}
+
+// CompletedAtNotIn applies the NotIn predicate on the "completed_at" field.
+func CompletedAtNotIn(vs ...time.Time) predicate.LogisticsDelivery {
+	return predicate.LogisticsDelivery(sql.FieldNotIn(FieldCompletedAt, vs...))
+}
+
+// CompletedAtGT applies the GT predicate on the "completed_at" field.
+func CompletedAtGT(v time.Time) predicate.LogisticsDelivery {
+	return predicate.LogisticsDelivery(sql.FieldGT(FieldCompletedAt, v))
+}
+
+// CompletedAtGTE applies the GTE predicate on the "completed_at" field.
+func CompletedAtGTE(v time.Time) predicate.LogisticsDelivery {
+	return predicate.LogisticsDelivery(sql.FieldGTE(FieldCompletedAt, v))
+}
+
+// CompletedAtLT applies the LT predicate on the "completed_at" field.
+func CompletedAtLT(v time.Time) predicate.LogisticsDelivery {
+	return predicate.LogisticsDelivery(sql.FieldLT(FieldCompletedAt, v))
+}
+
+// CompletedAtLTE applies the LTE predicate on the "completed_at" field.
+func CompletedAtLTE(v time.Time) predicate.LogisticsDelivery {
+	return predicate.LogisticsDelivery(sql.FieldLTE(FieldCompletedAt, v))
+}
+
+// CompletedAtIsNil applies the IsNil predicate on the "completed_at" field.
+func CompletedAtIsNil() predicate.LogisticsDelivery {
+	return predicate.LogisticsDelivery(sql.FieldIsNull(FieldCompletedAt))
+}
+
+// CompletedAtNotNil applies the NotNil predicate on the "completed_at" field.
+func CompletedAtNotNil() predicate.LogisticsDelivery {
+	return predicate.LogisticsDelivery(sql.FieldNotNull(FieldCompletedAt))
 }
 
 // DeletedAtEQ applies the EQ predicate on the "deleted_at" field.

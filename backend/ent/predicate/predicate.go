@@ -39,8 +39,14 @@ type FileAsset func(*sql.Selector)
 // LogisticsDelivery is the predicate function for logisticsdelivery builders.
 type LogisticsDelivery func(*sql.Selector)
 
+// LogisticsDeliveryEvent is the predicate function for logisticsdeliveryevent builders.
+type LogisticsDeliveryEvent func(*sql.Selector)
+
 // LogisticsDriver is the predicate function for logisticsdriver builders.
 type LogisticsDriver func(*sql.Selector)
+
+// LogisticsProof is the predicate function for logisticsproof builders.
+type LogisticsProof func(*sql.Selector)
 
 // Metadict is the predicate function for metadict builders.
 type Metadict func(*sql.Selector)

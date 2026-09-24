@@ -45,6 +45,15 @@ const (
 	// LogisticsServiceListMyDeliveriesProcedure is the fully-qualified name of the LogisticsService's
 	// ListMyDeliveries RPC.
 	LogisticsServiceListMyDeliveriesProcedure = "/salesorder.v1.LogisticsService/ListMyDeliveries"
+	// LogisticsServiceStartDeliveryProcedure is the fully-qualified name of the LogisticsService's
+	// StartDelivery RPC.
+	LogisticsServiceStartDeliveryProcedure = "/salesorder.v1.LogisticsService/StartDelivery"
+	// LogisticsServiceCompleteDeliveryProcedure is the fully-qualified name of the LogisticsService's
+	// CompleteDelivery RPC.
+	LogisticsServiceCompleteDeliveryProcedure = "/salesorder.v1.LogisticsService/CompleteDelivery"
+	// LogisticsServiceCancelDeliveryProcedure is the fully-qualified name of the LogisticsService's
+	// CancelDelivery RPC.
+	LogisticsServiceCancelDeliveryProcedure = "/salesorder.v1.LogisticsService/CancelDelivery"
 )
 
 // LogisticsServiceClient is a client for the salesorder.v1.LogisticsService service.
@@ -58,6 +67,12 @@ type LogisticsServiceClient interface {
 	AssignDelivery(context.Context, *connect.Request[v1.AssignDeliveryRequest]) (*connect.Response[v1.AssignDeliveryResponse], error)
 	// ListMyDeliveries:我(drivers.user_id = 身分)被指派的配送清單。
 	ListMyDeliveries(context.Context, *connect.Request[v1.ListMyDeliveriesRequest]) (*connect.Response[v1.ListMyDeliveriesResponse], error)
+	// StartDelivery:被指派司機開始執行(pending → in_progress;10.6)。
+	StartDelivery(context.Context, *connect.Request[v1.StartDeliveryRequest]) (*connect.Response[v1.StartDeliveryResponse], error)
+	// CompleteDelivery:完成並簽收(in_progress → completed;POD 可多筆,同一交易寫事件與稽核)。
+	CompleteDelivery(context.Context, *connect.Request[v1.CompleteDeliveryRequest]) (*connect.Response[v1.CompleteDeliveryResponse], error)
+	// CancelDelivery:取消配送(pending/in_progress → cancelled;reason 必填)。
+	CancelDelivery(context.Context, *connect.Request[v1.CancelDeliveryRequest]) (*connect.Response[v1.CancelDeliveryResponse], error)
 }
 
 // NewLogisticsServiceClient constructs a client for the salesorder.v1.LogisticsService service. By
@@ -95,6 +110,24 @@ func NewLogisticsServiceClient(httpClient connect.HTTPClient, baseURL string, op
 			connect.WithSchema(logisticsServiceMethods.ByName("ListMyDeliveries")),
 			connect.WithClientOptions(opts...),
 		),
+		startDelivery: connect.NewClient[v1.StartDeliveryRequest, v1.StartDeliveryResponse](
+			httpClient,
+			baseURL+LogisticsServiceStartDeliveryProcedure,
+			connect.WithSchema(logisticsServiceMethods.ByName("StartDelivery")),
+			connect.WithClientOptions(opts...),
+		),
+		completeDelivery: connect.NewClient[v1.CompleteDeliveryRequest, v1.CompleteDeliveryResponse](
+			httpClient,
+			baseURL+LogisticsServiceCompleteDeliveryProcedure,
+			connect.WithSchema(logisticsServiceMethods.ByName("CompleteDelivery")),
+			connect.WithClientOptions(opts...),
+		),
+		cancelDelivery: connect.NewClient[v1.CancelDeliveryRequest, v1.CancelDeliveryResponse](
+			httpClient,
+			baseURL+LogisticsServiceCancelDeliveryProcedure,
+			connect.WithSchema(logisticsServiceMethods.ByName("CancelDelivery")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -104,6 +137,9 @@ type logisticsServiceClient struct {
 	createVehicle    *connect.Client[v1.CreateVehicleRequest, v1.CreateVehicleResponse]
 	assignDelivery   *connect.Client[v1.AssignDeliveryRequest, v1.AssignDeliveryResponse]
 	listMyDeliveries *connect.Client[v1.ListMyDeliveriesRequest, v1.ListMyDeliveriesResponse]
+	startDelivery    *connect.Client[v1.StartDeliveryRequest, v1.StartDeliveryResponse]
+	completeDelivery *connect.Client[v1.CompleteDeliveryRequest, v1.CompleteDeliveryResponse]
+	cancelDelivery   *connect.Client[v1.CancelDeliveryRequest, v1.CancelDeliveryResponse]
 }
 
 // CreateDriver calls salesorder.v1.LogisticsService.CreateDriver.
@@ -126,6 +162,21 @@ func (c *logisticsServiceClient) ListMyDeliveries(ctx context.Context, req *conn
 	return c.listMyDeliveries.CallUnary(ctx, req)
 }
 
+// StartDelivery calls salesorder.v1.LogisticsService.StartDelivery.
+func (c *logisticsServiceClient) StartDelivery(ctx context.Context, req *connect.Request[v1.StartDeliveryRequest]) (*connect.Response[v1.StartDeliveryResponse], error) {
+	return c.startDelivery.CallUnary(ctx, req)
+}
+
+// CompleteDelivery calls salesorder.v1.LogisticsService.CompleteDelivery.
+func (c *logisticsServiceClient) CompleteDelivery(ctx context.Context, req *connect.Request[v1.CompleteDeliveryRequest]) (*connect.Response[v1.CompleteDeliveryResponse], error) {
+	return c.completeDelivery.CallUnary(ctx, req)
+}
+
+// CancelDelivery calls salesorder.v1.LogisticsService.CancelDelivery.
+func (c *logisticsServiceClient) CancelDelivery(ctx context.Context, req *connect.Request[v1.CancelDeliveryRequest]) (*connect.Response[v1.CancelDeliveryResponse], error) {
+	return c.cancelDelivery.CallUnary(ctx, req)
+}
+
 // LogisticsServiceHandler is an implementation of the salesorder.v1.LogisticsService service.
 type LogisticsServiceHandler interface {
 	// CreateDriver:建司機(關聯既有 users;同部門 user 不重複建)。
@@ -137,6 +188,12 @@ type LogisticsServiceHandler interface {
 	AssignDelivery(context.Context, *connect.Request[v1.AssignDeliveryRequest]) (*connect.Response[v1.AssignDeliveryResponse], error)
 	// ListMyDeliveries:我(drivers.user_id = 身分)被指派的配送清單。
 	ListMyDeliveries(context.Context, *connect.Request[v1.ListMyDeliveriesRequest]) (*connect.Response[v1.ListMyDeliveriesResponse], error)
+	// StartDelivery:被指派司機開始執行(pending → in_progress;10.6)。
+	StartDelivery(context.Context, *connect.Request[v1.StartDeliveryRequest]) (*connect.Response[v1.StartDeliveryResponse], error)
+	// CompleteDelivery:完成並簽收(in_progress → completed;POD 可多筆,同一交易寫事件與稽核)。
+	CompleteDelivery(context.Context, *connect.Request[v1.CompleteDeliveryRequest]) (*connect.Response[v1.CompleteDeliveryResponse], error)
+	// CancelDelivery:取消配送(pending/in_progress → cancelled;reason 必填)。
+	CancelDelivery(context.Context, *connect.Request[v1.CancelDeliveryRequest]) (*connect.Response[v1.CancelDeliveryResponse], error)
 }
 
 // NewLogisticsServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -170,6 +227,24 @@ func NewLogisticsServiceHandler(svc LogisticsServiceHandler, opts ...connect.Han
 		connect.WithSchema(logisticsServiceMethods.ByName("ListMyDeliveries")),
 		connect.WithHandlerOptions(opts...),
 	)
+	logisticsServiceStartDeliveryHandler := connect.NewUnaryHandler(
+		LogisticsServiceStartDeliveryProcedure,
+		svc.StartDelivery,
+		connect.WithSchema(logisticsServiceMethods.ByName("StartDelivery")),
+		connect.WithHandlerOptions(opts...),
+	)
+	logisticsServiceCompleteDeliveryHandler := connect.NewUnaryHandler(
+		LogisticsServiceCompleteDeliveryProcedure,
+		svc.CompleteDelivery,
+		connect.WithSchema(logisticsServiceMethods.ByName("CompleteDelivery")),
+		connect.WithHandlerOptions(opts...),
+	)
+	logisticsServiceCancelDeliveryHandler := connect.NewUnaryHandler(
+		LogisticsServiceCancelDeliveryProcedure,
+		svc.CancelDelivery,
+		connect.WithSchema(logisticsServiceMethods.ByName("CancelDelivery")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/salesorder.v1.LogisticsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case LogisticsServiceCreateDriverProcedure:
@@ -180,6 +255,12 @@ func NewLogisticsServiceHandler(svc LogisticsServiceHandler, opts ...connect.Han
 			logisticsServiceAssignDeliveryHandler.ServeHTTP(w, r)
 		case LogisticsServiceListMyDeliveriesProcedure:
 			logisticsServiceListMyDeliveriesHandler.ServeHTTP(w, r)
+		case LogisticsServiceStartDeliveryProcedure:
+			logisticsServiceStartDeliveryHandler.ServeHTTP(w, r)
+		case LogisticsServiceCompleteDeliveryProcedure:
+			logisticsServiceCompleteDeliveryHandler.ServeHTTP(w, r)
+		case LogisticsServiceCancelDeliveryProcedure:
+			logisticsServiceCancelDeliveryHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -203,4 +284,16 @@ func (UnimplementedLogisticsServiceHandler) AssignDelivery(context.Context, *con
 
 func (UnimplementedLogisticsServiceHandler) ListMyDeliveries(context.Context, *connect.Request[v1.ListMyDeliveriesRequest]) (*connect.Response[v1.ListMyDeliveriesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("salesorder.v1.LogisticsService.ListMyDeliveries is not implemented"))
+}
+
+func (UnimplementedLogisticsServiceHandler) StartDelivery(context.Context, *connect.Request[v1.StartDeliveryRequest]) (*connect.Response[v1.StartDeliveryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("salesorder.v1.LogisticsService.StartDelivery is not implemented"))
+}
+
+func (UnimplementedLogisticsServiceHandler) CompleteDelivery(context.Context, *connect.Request[v1.CompleteDeliveryRequest]) (*connect.Response[v1.CompleteDeliveryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("salesorder.v1.LogisticsService.CompleteDelivery is not implemented"))
+}
+
+func (UnimplementedLogisticsServiceHandler) CancelDelivery(context.Context, *connect.Request[v1.CancelDeliveryRequest]) (*connect.Response[v1.CancelDeliveryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("salesorder.v1.LogisticsService.CancelDelivery is not implemented"))
 }

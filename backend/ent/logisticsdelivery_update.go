@@ -207,6 +207,46 @@ func (_u *LogisticsDeliveryUpdate) AddVersion(v int) *LogisticsDeliveryUpdate {
 	return _u
 }
 
+// SetStartedAt sets the "started_at" field.
+func (_u *LogisticsDeliveryUpdate) SetStartedAt(v time.Time) *LogisticsDeliveryUpdate {
+	_u.mutation.SetStartedAt(v)
+	return _u
+}
+
+// SetNillableStartedAt sets the "started_at" field if the given value is not nil.
+func (_u *LogisticsDeliveryUpdate) SetNillableStartedAt(v *time.Time) *LogisticsDeliveryUpdate {
+	if v != nil {
+		_u.SetStartedAt(*v)
+	}
+	return _u
+}
+
+// ClearStartedAt clears the value of the "started_at" field.
+func (_u *LogisticsDeliveryUpdate) ClearStartedAt() *LogisticsDeliveryUpdate {
+	_u.mutation.ClearStartedAt()
+	return _u
+}
+
+// SetCompletedAt sets the "completed_at" field.
+func (_u *LogisticsDeliveryUpdate) SetCompletedAt(v time.Time) *LogisticsDeliveryUpdate {
+	_u.mutation.SetCompletedAt(v)
+	return _u
+}
+
+// SetNillableCompletedAt sets the "completed_at" field if the given value is not nil.
+func (_u *LogisticsDeliveryUpdate) SetNillableCompletedAt(v *time.Time) *LogisticsDeliveryUpdate {
+	if v != nil {
+		_u.SetCompletedAt(*v)
+	}
+	return _u
+}
+
+// ClearCompletedAt clears the value of the "completed_at" field.
+func (_u *LogisticsDeliveryUpdate) ClearCompletedAt() *LogisticsDeliveryUpdate {
+	_u.mutation.ClearCompletedAt()
+	return _u
+}
+
 // SetDeletedAt sets the "deleted_at" field.
 func (_u *LogisticsDeliveryUpdate) SetDeletedAt(v time.Time) *LogisticsDeliveryUpdate {
 	_u.mutation.SetDeletedAt(v)
@@ -350,6 +390,18 @@ func (_u *LogisticsDeliveryUpdate) sqlSave(ctx context.Context) (_node int, err 
 	}
 	if value, ok := _u.mutation.AddedVersion(); ok {
 		_spec.AddField(logisticsdelivery.FieldVersion, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.StartedAt(); ok {
+		_spec.SetField(logisticsdelivery.FieldStartedAt, field.TypeTime, value)
+	}
+	if _u.mutation.StartedAtCleared() {
+		_spec.ClearField(logisticsdelivery.FieldStartedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.CompletedAt(); ok {
+		_spec.SetField(logisticsdelivery.FieldCompletedAt, field.TypeTime, value)
+	}
+	if _u.mutation.CompletedAtCleared() {
+		_spec.ClearField(logisticsdelivery.FieldCompletedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.DeletedAt(); ok {
 		_spec.SetField(logisticsdelivery.FieldDeletedAt, field.TypeTime, value)
@@ -562,6 +614,46 @@ func (_u *LogisticsDeliveryUpdateOne) AddVersion(v int) *LogisticsDeliveryUpdate
 	return _u
 }
 
+// SetStartedAt sets the "started_at" field.
+func (_u *LogisticsDeliveryUpdateOne) SetStartedAt(v time.Time) *LogisticsDeliveryUpdateOne {
+	_u.mutation.SetStartedAt(v)
+	return _u
+}
+
+// SetNillableStartedAt sets the "started_at" field if the given value is not nil.
+func (_u *LogisticsDeliveryUpdateOne) SetNillableStartedAt(v *time.Time) *LogisticsDeliveryUpdateOne {
+	if v != nil {
+		_u.SetStartedAt(*v)
+	}
+	return _u
+}
+
+// ClearStartedAt clears the value of the "started_at" field.
+func (_u *LogisticsDeliveryUpdateOne) ClearStartedAt() *LogisticsDeliveryUpdateOne {
+	_u.mutation.ClearStartedAt()
+	return _u
+}
+
+// SetCompletedAt sets the "completed_at" field.
+func (_u *LogisticsDeliveryUpdateOne) SetCompletedAt(v time.Time) *LogisticsDeliveryUpdateOne {
+	_u.mutation.SetCompletedAt(v)
+	return _u
+}
+
+// SetNillableCompletedAt sets the "completed_at" field if the given value is not nil.
+func (_u *LogisticsDeliveryUpdateOne) SetNillableCompletedAt(v *time.Time) *LogisticsDeliveryUpdateOne {
+	if v != nil {
+		_u.SetCompletedAt(*v)
+	}
+	return _u
+}
+
+// ClearCompletedAt clears the value of the "completed_at" field.
+func (_u *LogisticsDeliveryUpdateOne) ClearCompletedAt() *LogisticsDeliveryUpdateOne {
+	_u.mutation.ClearCompletedAt()
+	return _u
+}
+
 // SetDeletedAt sets the "deleted_at" field.
 func (_u *LogisticsDeliveryUpdateOne) SetDeletedAt(v time.Time) *LogisticsDeliveryUpdateOne {
 	_u.mutation.SetDeletedAt(v)
@@ -735,6 +827,18 @@ func (_u *LogisticsDeliveryUpdateOne) sqlSave(ctx context.Context) (_node *Logis
 	}
 	if value, ok := _u.mutation.AddedVersion(); ok {
 		_spec.AddField(logisticsdelivery.FieldVersion, field.TypeInt, value)
+	}
+	if value, ok := _u.mutation.StartedAt(); ok {
+		_spec.SetField(logisticsdelivery.FieldStartedAt, field.TypeTime, value)
+	}
+	if _u.mutation.StartedAtCleared() {
+		_spec.ClearField(logisticsdelivery.FieldStartedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.CompletedAt(); ok {
+		_spec.SetField(logisticsdelivery.FieldCompletedAt, field.TypeTime, value)
+	}
+	if _u.mutation.CompletedAtCleared() {
+		_spec.ClearField(logisticsdelivery.FieldCompletedAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.DeletedAt(); ok {
 		_spec.SetField(logisticsdelivery.FieldDeletedAt, field.TypeTime, value)

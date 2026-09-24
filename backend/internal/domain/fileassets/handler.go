@@ -19,6 +19,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customer"
 	"github.com/salesorder/sales-order-1.0/backend/ent/fileasset"
+	"github.com/salesorder/sales-order-1.0/backend/ent/logisticsdelivery"
 	"github.com/salesorder/sales-order-1.0/backend/ent/product"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
@@ -166,10 +167,24 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// checkOwner 驗 owner 存在且同租戶(公司/客戶/商品三類;其餘 owner_type 拒絕,避免孤兒關聯)。
+// checkOwner 驗 owner 存在且同租戶(公司/客戶/商品/配送四類;其餘 owner_type 拒絕,避免孤兒關聯)。
 // db **必須是租戶交易內的 client**(RLS:交易外的查詢一律 0 列 → 誤判 owner 不存在)。
 func (h *Handler) checkOwner(ctx context.Context, db *ent.Client, cid int, did *int, ownerType string, ownerID int) error {
 	switch ownerType {
+	case "logistics_delivery":
+		// POD 簽收檔(D32/10.6):只能掛在自己公司、且可見範圍內的配送執行單。
+		d, err := db.LogisticsDelivery.Query().
+			Where(logisticsdelivery.ID(ownerID), logisticsdelivery.DeletedAtIsNil()).Only(ctx)
+		if err != nil {
+			if ent.IsNotFound(err) {
+				return errcode.SysInvalidArgument.Error(map[string]string{"field": "owner_id"})
+			}
+			return errcode.SysInternal.Wrap(err)
+		}
+		if d.CompanyID != cid {
+			return errcode.SysPermissionDenied.Error(nil)
+		}
+		return nil
 	case "company":
 		ok, err := db.Company.Query().Where(company.ID(ownerID), company.DeletedAtIsNil()).Exist(ctx)
 		if err != nil {

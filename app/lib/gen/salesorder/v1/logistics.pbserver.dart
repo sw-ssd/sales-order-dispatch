@@ -29,6 +29,12 @@ abstract class LogisticsServiceBase extends $pb.GeneratedService {
       $pb.ServerContext ctx, $0.AssignDeliveryRequest request);
   $async.Future<$0.ListMyDeliveriesResponse> listMyDeliveries(
       $pb.ServerContext ctx, $0.ListMyDeliveriesRequest request);
+  $async.Future<$0.StartDeliveryResponse> startDelivery(
+      $pb.ServerContext ctx, $0.StartDeliveryRequest request);
+  $async.Future<$0.CompleteDeliveryResponse> completeDelivery(
+      $pb.ServerContext ctx, $0.CompleteDeliveryRequest request);
+  $async.Future<$0.CancelDeliveryResponse> cancelDelivery(
+      $pb.ServerContext ctx, $0.CancelDeliveryRequest request);
 
   $pb.GeneratedMessage createRequest($core.String methodName) {
     switch (methodName) {
@@ -40,6 +46,12 @@ abstract class LogisticsServiceBase extends $pb.GeneratedService {
         return $0.AssignDeliveryRequest();
       case 'ListMyDeliveries':
         return $0.ListMyDeliveriesRequest();
+      case 'StartDelivery':
+        return $0.StartDeliveryRequest();
+      case 'CompleteDelivery':
+        return $0.CompleteDeliveryRequest();
+      case 'CancelDelivery':
+        return $0.CancelDeliveryRequest();
       default:
         throw $core.ArgumentError('Unknown method: $methodName');
     }
@@ -56,6 +68,12 @@ abstract class LogisticsServiceBase extends $pb.GeneratedService {
         return assignDelivery(ctx, request as $0.AssignDeliveryRequest);
       case 'ListMyDeliveries':
         return listMyDeliveries(ctx, request as $0.ListMyDeliveriesRequest);
+      case 'StartDelivery':
+        return startDelivery(ctx, request as $0.StartDeliveryRequest);
+      case 'CompleteDelivery':
+        return completeDelivery(ctx, request as $0.CompleteDeliveryRequest);
+      case 'CancelDelivery':
+        return cancelDelivery(ctx, request as $0.CancelDeliveryRequest);
       default:
         throw $core.ArgumentError('Unknown method: $methodName');
     }

@@ -108,6 +108,34 @@ func (_c *LogisticsDeliveryCreate) SetNillableVersion(v *int) *LogisticsDelivery
 	return _c
 }
 
+// SetStartedAt sets the "started_at" field.
+func (_c *LogisticsDeliveryCreate) SetStartedAt(v time.Time) *LogisticsDeliveryCreate {
+	_c.mutation.SetStartedAt(v)
+	return _c
+}
+
+// SetNillableStartedAt sets the "started_at" field if the given value is not nil.
+func (_c *LogisticsDeliveryCreate) SetNillableStartedAt(v *time.Time) *LogisticsDeliveryCreate {
+	if v != nil {
+		_c.SetStartedAt(*v)
+	}
+	return _c
+}
+
+// SetCompletedAt sets the "completed_at" field.
+func (_c *LogisticsDeliveryCreate) SetCompletedAt(v time.Time) *LogisticsDeliveryCreate {
+	_c.mutation.SetCompletedAt(v)
+	return _c
+}
+
+// SetNillableCompletedAt sets the "completed_at" field if the given value is not nil.
+func (_c *LogisticsDeliveryCreate) SetNillableCompletedAt(v *time.Time) *LogisticsDeliveryCreate {
+	if v != nil {
+		_c.SetCompletedAt(*v)
+	}
+	return _c
+}
+
 // SetDeletedAt sets the "deleted_at" field.
 func (_c *LogisticsDeliveryCreate) SetDeletedAt(v time.Time) *LogisticsDeliveryCreate {
 	_c.mutation.SetDeletedAt(v)
@@ -283,6 +311,14 @@ func (_c *LogisticsDeliveryCreate) createSpec() (*LogisticsDelivery, *sqlgraph.C
 	if value, ok := _c.mutation.Version(); ok {
 		_spec.SetField(logisticsdelivery.FieldVersion, field.TypeInt, value)
 		_node.Version = value
+	}
+	if value, ok := _c.mutation.StartedAt(); ok {
+		_spec.SetField(logisticsdelivery.FieldStartedAt, field.TypeTime, value)
+		_node.StartedAt = &value
+	}
+	if value, ok := _c.mutation.CompletedAt(); ok {
+		_spec.SetField(logisticsdelivery.FieldCompletedAt, field.TypeTime, value)
+		_node.CompletedAt = &value
 	}
 	if value, ok := _c.mutation.DeletedAt(); ok {
 		_spec.SetField(logisticsdelivery.FieldDeletedAt, field.TypeTime, value)

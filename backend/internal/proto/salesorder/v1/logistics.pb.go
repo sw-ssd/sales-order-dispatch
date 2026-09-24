@@ -413,10 +413,12 @@ type LogisticsDelivery struct {
 	DriverId      string                 `protobuf:"bytes,5,opt,name=driver_id,json=driverId,proto3" json:"driver_id,omitempty"`    // 可空
 	VehicleId     string                 `protobuf:"bytes,6,opt,name=vehicle_id,json=vehicleId,proto3" json:"vehicle_id,omitempty"` // 可空
 	AssignedBy    string                 `protobuf:"bytes,7,opt,name=assigned_by,json=assignedBy,proto3" json:"assigned_by,omitempty"`
-	Status        string                 `protobuf:"bytes,8,opt,name=status,proto3" json:"status,omitempty"`                         // pending / in_progress / completed / cancelled
-	Version       string                 `protobuf:"bytes,9,opt,name=version,proto3" json:"version,omitempty"`                       // 樂觀鎖(字串型別便於前端原樣回填,同退貨 expected_version 慣例)
-	CreatedAt     string                 `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"` // RFC3339
-	UpdatedAt     string                 `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"` // RFC3339
+	Status        string                 `protobuf:"bytes,8,opt,name=status,proto3" json:"status,omitempty"`                               // pending / in_progress / completed / cancelled
+	Version       string                 `protobuf:"bytes,9,opt,name=version,proto3" json:"version,omitempty"`                             // 樂觀鎖(字串型別便於前端原樣回填,同退貨 expected_version 慣例)
+	CreatedAt     string                 `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`       // RFC3339
+	UpdatedAt     string                 `protobuf:"bytes,11,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`       // RFC3339
+	StartedAt     string                 `protobuf:"bytes,12,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`       // RFC3339,可空
+	CompletedAt   string                 `protobuf:"bytes,13,opt,name=completed_at,json=completedAt,proto3" json:"completed_at,omitempty"` // RFC3339,可空
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -524,6 +526,20 @@ func (x *LogisticsDelivery) GetCreatedAt() string {
 func (x *LogisticsDelivery) GetUpdatedAt() string {
 	if x != nil {
 		return x.UpdatedAt
+	}
+	return ""
+}
+
+func (x *LogisticsDelivery) GetStartedAt() string {
+	if x != nil {
+		return x.StartedAt
+	}
+	return ""
+}
+
+func (x *LogisticsDelivery) GetCompletedAt() string {
+	if x != nil {
+		return x.CompletedAt
 	}
 	return ""
 }
@@ -749,6 +765,471 @@ func (x *ListMyDeliveriesResponse) GetTotal() int32 {
 	return 0
 }
 
+// LogisticsProof:簽收證明 POD(D17 檔案資產)。
+type LogisticsProof struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	LogisticsDeliveryId string                 `protobuf:"bytes,2,opt,name=logistics_delivery_id,json=logisticsDeliveryId,proto3" json:"logistics_delivery_id,omitempty"`
+	ProofType           string                 `protobuf:"bytes,3,opt,name=proof_type,json=proofType,proto3" json:"proof_type,omitempty"` // photo / signature / scan
+	FileAssetId         string                 `protobuf:"bytes,4,opt,name=file_asset_id,json=fileAssetId,proto3" json:"file_asset_id,omitempty"`
+	Remarks             string                 `protobuf:"bytes,5,opt,name=remarks,proto3" json:"remarks,omitempty"`
+	CapturedAt          string                 `protobuf:"bytes,6,opt,name=captured_at,json=capturedAt,proto3" json:"captured_at,omitempty"` // RFC3339
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *LogisticsProof) Reset() {
+	*x = LogisticsProof{}
+	mi := &file_salesorder_v1_logistics_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LogisticsProof) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LogisticsProof) ProtoMessage() {}
+
+func (x *LogisticsProof) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_logistics_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LogisticsProof.ProtoReflect.Descriptor instead.
+func (*LogisticsProof) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_logistics_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *LogisticsProof) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *LogisticsProof) GetLogisticsDeliveryId() string {
+	if x != nil {
+		return x.LogisticsDeliveryId
+	}
+	return ""
+}
+
+func (x *LogisticsProof) GetProofType() string {
+	if x != nil {
+		return x.ProofType
+	}
+	return ""
+}
+
+func (x *LogisticsProof) GetFileAssetId() string {
+	if x != nil {
+		return x.FileAssetId
+	}
+	return ""
+}
+
+func (x *LogisticsProof) GetRemarks() string {
+	if x != nil {
+		return x.Remarks
+	}
+	return ""
+}
+
+func (x *LogisticsProof) GetCapturedAt() string {
+	if x != nil {
+		return x.CapturedAt
+	}
+	return ""
+}
+
+// StartDeliveryRequest:開始配送請求(id + version 樂觀鎖)。
+type StartDeliveryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	DeliveryId    string                 `protobuf:"bytes,1,opt,name=delivery_id,json=deliveryId,proto3" json:"delivery_id,omitempty"`
+	Version       string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StartDeliveryRequest) Reset() {
+	*x = StartDeliveryRequest{}
+	mi := &file_salesorder_v1_logistics_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartDeliveryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartDeliveryRequest) ProtoMessage() {}
+
+func (x *StartDeliveryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_logistics_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartDeliveryRequest.ProtoReflect.Descriptor instead.
+func (*StartDeliveryRequest) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_logistics_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *StartDeliveryRequest) GetDeliveryId() string {
+	if x != nil {
+		return x.DeliveryId
+	}
+	return ""
+}
+
+func (x *StartDeliveryRequest) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+// StartDeliveryResponse:開始配送結果。
+type StartDeliveryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Delivery      *LogisticsDelivery     `protobuf:"bytes,1,opt,name=delivery,proto3" json:"delivery,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StartDeliveryResponse) Reset() {
+	*x = StartDeliveryResponse{}
+	mi := &file_salesorder_v1_logistics_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartDeliveryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartDeliveryResponse) ProtoMessage() {}
+
+func (x *StartDeliveryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_logistics_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartDeliveryResponse.ProtoReflect.Descriptor instead.
+func (*StartDeliveryResponse) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_logistics_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *StartDeliveryResponse) GetDelivery() *LogisticsDelivery {
+	if x != nil {
+		return x.Delivery
+	}
+	return nil
+}
+
+// CompleteDeliveryRequest:完成配送請求。proofs 可空(無簽收亦可完成);
+// 每筆 proof 的 file_asset_id 來自既有檔案上傳端點(POST /api/v1/files,owner_type=logistics_delivery)。
+type CompleteDeliveryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	DeliveryId    string                 `protobuf:"bytes,1,opt,name=delivery_id,json=deliveryId,proto3" json:"delivery_id,omitempty"`
+	Version       string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
+	Proofs        []*CompleteProof       `protobuf:"bytes,3,rep,name=proofs,proto3" json:"proofs,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CompleteDeliveryRequest) Reset() {
+	*x = CompleteDeliveryRequest{}
+	mi := &file_salesorder_v1_logistics_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompleteDeliveryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompleteDeliveryRequest) ProtoMessage() {}
+
+func (x *CompleteDeliveryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_logistics_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompleteDeliveryRequest.ProtoReflect.Descriptor instead.
+func (*CompleteDeliveryRequest) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_logistics_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *CompleteDeliveryRequest) GetDeliveryId() string {
+	if x != nil {
+		return x.DeliveryId
+	}
+	return ""
+}
+
+func (x *CompleteDeliveryRequest) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *CompleteDeliveryRequest) GetProofs() []*CompleteProof {
+	if x != nil {
+		return x.Proofs
+	}
+	return nil
+}
+
+// CompleteProof:一筆簽收證明(型別 + 檔案資產 id + 備註)。
+type CompleteProof struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProofType     string                 `protobuf:"bytes,1,opt,name=proof_type,json=proofType,proto3" json:"proof_type,omitempty"` // photo / signature / scan
+	FileAssetId   string                 `protobuf:"bytes,2,opt,name=file_asset_id,json=fileAssetId,proto3" json:"file_asset_id,omitempty"`
+	Remarks       string                 `protobuf:"bytes,3,opt,name=remarks,proto3" json:"remarks,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CompleteProof) Reset() {
+	*x = CompleteProof{}
+	mi := &file_salesorder_v1_logistics_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompleteProof) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompleteProof) ProtoMessage() {}
+
+func (x *CompleteProof) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_logistics_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompleteProof.ProtoReflect.Descriptor instead.
+func (*CompleteProof) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_logistics_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *CompleteProof) GetProofType() string {
+	if x != nil {
+		return x.ProofType
+	}
+	return ""
+}
+
+func (x *CompleteProof) GetFileAssetId() string {
+	if x != nil {
+		return x.FileAssetId
+	}
+	return ""
+}
+
+func (x *CompleteProof) GetRemarks() string {
+	if x != nil {
+		return x.Remarks
+	}
+	return ""
+}
+
+// CompleteDeliveryResponse:完成配送結果(含寫入的 proofs)。
+type CompleteDeliveryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Delivery      *LogisticsDelivery     `protobuf:"bytes,1,opt,name=delivery,proto3" json:"delivery,omitempty"`
+	Proofs        []*LogisticsProof      `protobuf:"bytes,2,rep,name=proofs,proto3" json:"proofs,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CompleteDeliveryResponse) Reset() {
+	*x = CompleteDeliveryResponse{}
+	mi := &file_salesorder_v1_logistics_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompleteDeliveryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompleteDeliveryResponse) ProtoMessage() {}
+
+func (x *CompleteDeliveryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_logistics_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompleteDeliveryResponse.ProtoReflect.Descriptor instead.
+func (*CompleteDeliveryResponse) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_logistics_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *CompleteDeliveryResponse) GetDelivery() *LogisticsDelivery {
+	if x != nil {
+		return x.Delivery
+	}
+	return nil
+}
+
+func (x *CompleteDeliveryResponse) GetProofs() []*LogisticsProof {
+	if x != nil {
+		return x.Proofs
+	}
+	return nil
+}
+
+// CancelDeliveryRequest:取消配送請求(reason 必填)。
+type CancelDeliveryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	DeliveryId    string                 `protobuf:"bytes,1,opt,name=delivery_id,json=deliveryId,proto3" json:"delivery_id,omitempty"`
+	Version       string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
+	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelDeliveryRequest) Reset() {
+	*x = CancelDeliveryRequest{}
+	mi := &file_salesorder_v1_logistics_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelDeliveryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelDeliveryRequest) ProtoMessage() {}
+
+func (x *CancelDeliveryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_logistics_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelDeliveryRequest.ProtoReflect.Descriptor instead.
+func (*CancelDeliveryRequest) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_logistics_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *CancelDeliveryRequest) GetDeliveryId() string {
+	if x != nil {
+		return x.DeliveryId
+	}
+	return ""
+}
+
+func (x *CancelDeliveryRequest) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *CancelDeliveryRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// CancelDeliveryResponse:取消配送結果。
+type CancelDeliveryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Delivery      *LogisticsDelivery     `protobuf:"bytes,1,opt,name=delivery,proto3" json:"delivery,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelDeliveryResponse) Reset() {
+	*x = CancelDeliveryResponse{}
+	mi := &file_salesorder_v1_logistics_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelDeliveryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelDeliveryResponse) ProtoMessage() {}
+
+func (x *CancelDeliveryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_logistics_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelDeliveryResponse.ProtoReflect.Descriptor instead.
+func (*CancelDeliveryResponse) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_logistics_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *CancelDeliveryResponse) GetDelivery() *LogisticsDelivery {
+	if x != nil {
+		return x.Delivery
+	}
+	return nil
+}
+
 var File_salesorder_v1_logistics_proto protoreflect.FileDescriptor
 
 const file_salesorder_v1_logistics_proto_rawDesc = "" +
@@ -781,7 +1262,7 @@ const file_salesorder_v1_logistics_proto_rawDesc = "" +
 	"\bplate_no\x18\x01 \x01(\tR\aplateNo\x12!\n" +
 	"\fvehicle_type\x18\x02 \x01(\tR\vvehicleType\"I\n" +
 	"\x15CreateVehicleResponse\x120\n" +
-	"\avehicle\x18\x01 \x01(\v2\x16.salesorder.v1.VehicleR\avehicle\"\xcf\x02\n" +
+	"\avehicle\x18\x01 \x01(\v2\x16.salesorder.v1.VehicleR\avehicle\"\x91\x03\n" +
 	"\x11LogisticsDelivery\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -799,7 +1280,10 @@ const file_salesorder_v1_logistics_proto_rawDesc = "" +
 	"created_at\x18\n" +
 	" \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\v \x01(\tR\tupdatedAt\"\x88\x01\n" +
+	"updated_at\x18\v \x01(\tR\tupdatedAt\x12\x1d\n" +
+	"\n" +
+	"started_at\x18\f \x01(\tR\tstartedAt\x12!\n" +
+	"\fcompleted_at\x18\r \x01(\tR\vcompletedAt\"\x88\x01\n" +
 	"\x15AssignDeliveryRequest\x12\x19\n" +
 	"\broute_id\x18\x01 \x01(\tR\arouteId\x12\x1b\n" +
 	"\tdriver_id\x18\x02 \x01(\tR\bdriverId\x12\x1d\n" +
@@ -815,12 +1299,50 @@ const file_salesorder_v1_logistics_proto_rawDesc = "" +
 	"\n" +
 	"deliveries\x18\x01 \x03(\v2 .salesorder.v1.LogisticsDeliveryR\n" +
 	"deliveries\x12\x14\n" +
-	"\x05total\x18\x02 \x01(\x05R\x05total2\x8b\x03\n" +
+	"\x05total\x18\x02 \x01(\x05R\x05total\"\xd2\x01\n" +
+	"\x0eLogisticsProof\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x122\n" +
+	"\x15logistics_delivery_id\x18\x02 \x01(\tR\x13logisticsDeliveryId\x12\x1d\n" +
+	"\n" +
+	"proof_type\x18\x03 \x01(\tR\tproofType\x12\"\n" +
+	"\rfile_asset_id\x18\x04 \x01(\tR\vfileAssetId\x12\x18\n" +
+	"\aremarks\x18\x05 \x01(\tR\aremarks\x12\x1f\n" +
+	"\vcaptured_at\x18\x06 \x01(\tR\n" +
+	"capturedAt\"Q\n" +
+	"\x14StartDeliveryRequest\x12\x1f\n" +
+	"\vdelivery_id\x18\x01 \x01(\tR\n" +
+	"deliveryId\x12\x18\n" +
+	"\aversion\x18\x02 \x01(\tR\aversion\"U\n" +
+	"\x15StartDeliveryResponse\x12<\n" +
+	"\bdelivery\x18\x01 \x01(\v2 .salesorder.v1.LogisticsDeliveryR\bdelivery\"\x8a\x01\n" +
+	"\x17CompleteDeliveryRequest\x12\x1f\n" +
+	"\vdelivery_id\x18\x01 \x01(\tR\n" +
+	"deliveryId\x12\x18\n" +
+	"\aversion\x18\x02 \x01(\tR\aversion\x124\n" +
+	"\x06proofs\x18\x03 \x03(\v2\x1c.salesorder.v1.CompleteProofR\x06proofs\"l\n" +
+	"\rCompleteProof\x12\x1d\n" +
+	"\n" +
+	"proof_type\x18\x01 \x01(\tR\tproofType\x12\"\n" +
+	"\rfile_asset_id\x18\x02 \x01(\tR\vfileAssetId\x12\x18\n" +
+	"\aremarks\x18\x03 \x01(\tR\aremarks\"\x8f\x01\n" +
+	"\x18CompleteDeliveryResponse\x12<\n" +
+	"\bdelivery\x18\x01 \x01(\v2 .salesorder.v1.LogisticsDeliveryR\bdelivery\x125\n" +
+	"\x06proofs\x18\x02 \x03(\v2\x1d.salesorder.v1.LogisticsProofR\x06proofs\"j\n" +
+	"\x15CancelDeliveryRequest\x12\x1f\n" +
+	"\vdelivery_id\x18\x01 \x01(\tR\n" +
+	"deliveryId\x12\x18\n" +
+	"\aversion\x18\x02 \x01(\tR\aversion\x12\x16\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\"V\n" +
+	"\x16CancelDeliveryResponse\x12<\n" +
+	"\bdelivery\x18\x01 \x01(\v2 .salesorder.v1.LogisticsDeliveryR\bdelivery2\xab\x05\n" +
 	"\x10LogisticsService\x12W\n" +
 	"\fCreateDriver\x12\".salesorder.v1.CreateDriverRequest\x1a#.salesorder.v1.CreateDriverResponse\x12Z\n" +
 	"\rCreateVehicle\x12#.salesorder.v1.CreateVehicleRequest\x1a$.salesorder.v1.CreateVehicleResponse\x12]\n" +
 	"\x0eAssignDelivery\x12$.salesorder.v1.AssignDeliveryRequest\x1a%.salesorder.v1.AssignDeliveryResponse\x12c\n" +
-	"\x10ListMyDeliveries\x12&.salesorder.v1.ListMyDeliveriesRequest\x1a'.salesorder.v1.ListMyDeliveriesResponseBYZWgithub.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1b\x06proto3"
+	"\x10ListMyDeliveries\x12&.salesorder.v1.ListMyDeliveriesRequest\x1a'.salesorder.v1.ListMyDeliveriesResponse\x12Z\n" +
+	"\rStartDelivery\x12#.salesorder.v1.StartDeliveryRequest\x1a$.salesorder.v1.StartDeliveryResponse\x12c\n" +
+	"\x10CompleteDelivery\x12&.salesorder.v1.CompleteDeliveryRequest\x1a'.salesorder.v1.CompleteDeliveryResponse\x12]\n" +
+	"\x0eCancelDelivery\x12$.salesorder.v1.CancelDeliveryRequest\x1a%.salesorder.v1.CancelDeliveryResponseBYZWgithub.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1b\x06proto3"
 
 var (
 	file_salesorder_v1_logistics_proto_rawDescOnce sync.Once
@@ -834,7 +1356,7 @@ func file_salesorder_v1_logistics_proto_rawDescGZIP() []byte {
 	return file_salesorder_v1_logistics_proto_rawDescData
 }
 
-var file_salesorder_v1_logistics_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_salesorder_v1_logistics_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_salesorder_v1_logistics_proto_goTypes = []any{
 	(*LogisticsDriver)(nil),          // 0: salesorder.v1.LogisticsDriver
 	(*CreateDriverRequest)(nil),      // 1: salesorder.v1.CreateDriverRequest
@@ -847,25 +1369,44 @@ var file_salesorder_v1_logistics_proto_goTypes = []any{
 	(*AssignDeliveryResponse)(nil),   // 8: salesorder.v1.AssignDeliveryResponse
 	(*ListMyDeliveriesRequest)(nil),  // 9: salesorder.v1.ListMyDeliveriesRequest
 	(*ListMyDeliveriesResponse)(nil), // 10: salesorder.v1.ListMyDeliveriesResponse
+	(*LogisticsProof)(nil),           // 11: salesorder.v1.LogisticsProof
+	(*StartDeliveryRequest)(nil),     // 12: salesorder.v1.StartDeliveryRequest
+	(*StartDeliveryResponse)(nil),    // 13: salesorder.v1.StartDeliveryResponse
+	(*CompleteDeliveryRequest)(nil),  // 14: salesorder.v1.CompleteDeliveryRequest
+	(*CompleteProof)(nil),            // 15: salesorder.v1.CompleteProof
+	(*CompleteDeliveryResponse)(nil), // 16: salesorder.v1.CompleteDeliveryResponse
+	(*CancelDeliveryRequest)(nil),    // 17: salesorder.v1.CancelDeliveryRequest
+	(*CancelDeliveryResponse)(nil),   // 18: salesorder.v1.CancelDeliveryResponse
 }
 var file_salesorder_v1_logistics_proto_depIdxs = []int32{
 	0,  // 0: salesorder.v1.CreateDriverResponse.driver:type_name -> salesorder.v1.LogisticsDriver
 	3,  // 1: salesorder.v1.CreateVehicleResponse.vehicle:type_name -> salesorder.v1.Vehicle
 	6,  // 2: salesorder.v1.AssignDeliveryResponse.delivery:type_name -> salesorder.v1.LogisticsDelivery
 	6,  // 3: salesorder.v1.ListMyDeliveriesResponse.deliveries:type_name -> salesorder.v1.LogisticsDelivery
-	1,  // 4: salesorder.v1.LogisticsService.CreateDriver:input_type -> salesorder.v1.CreateDriverRequest
-	4,  // 5: salesorder.v1.LogisticsService.CreateVehicle:input_type -> salesorder.v1.CreateVehicleRequest
-	7,  // 6: salesorder.v1.LogisticsService.AssignDelivery:input_type -> salesorder.v1.AssignDeliveryRequest
-	9,  // 7: salesorder.v1.LogisticsService.ListMyDeliveries:input_type -> salesorder.v1.ListMyDeliveriesRequest
-	2,  // 8: salesorder.v1.LogisticsService.CreateDriver:output_type -> salesorder.v1.CreateDriverResponse
-	5,  // 9: salesorder.v1.LogisticsService.CreateVehicle:output_type -> salesorder.v1.CreateVehicleResponse
-	8,  // 10: salesorder.v1.LogisticsService.AssignDelivery:output_type -> salesorder.v1.AssignDeliveryResponse
-	10, // 11: salesorder.v1.LogisticsService.ListMyDeliveries:output_type -> salesorder.v1.ListMyDeliveriesResponse
-	8,  // [8:12] is the sub-list for method output_type
-	4,  // [4:8] is the sub-list for method input_type
-	4,  // [4:4] is the sub-list for extension type_name
-	4,  // [4:4] is the sub-list for extension extendee
-	0,  // [0:4] is the sub-list for field type_name
+	6,  // 4: salesorder.v1.StartDeliveryResponse.delivery:type_name -> salesorder.v1.LogisticsDelivery
+	15, // 5: salesorder.v1.CompleteDeliveryRequest.proofs:type_name -> salesorder.v1.CompleteProof
+	6,  // 6: salesorder.v1.CompleteDeliveryResponse.delivery:type_name -> salesorder.v1.LogisticsDelivery
+	11, // 7: salesorder.v1.CompleteDeliveryResponse.proofs:type_name -> salesorder.v1.LogisticsProof
+	6,  // 8: salesorder.v1.CancelDeliveryResponse.delivery:type_name -> salesorder.v1.LogisticsDelivery
+	1,  // 9: salesorder.v1.LogisticsService.CreateDriver:input_type -> salesorder.v1.CreateDriverRequest
+	4,  // 10: salesorder.v1.LogisticsService.CreateVehicle:input_type -> salesorder.v1.CreateVehicleRequest
+	7,  // 11: salesorder.v1.LogisticsService.AssignDelivery:input_type -> salesorder.v1.AssignDeliveryRequest
+	9,  // 12: salesorder.v1.LogisticsService.ListMyDeliveries:input_type -> salesorder.v1.ListMyDeliveriesRequest
+	12, // 13: salesorder.v1.LogisticsService.StartDelivery:input_type -> salesorder.v1.StartDeliveryRequest
+	14, // 14: salesorder.v1.LogisticsService.CompleteDelivery:input_type -> salesorder.v1.CompleteDeliveryRequest
+	17, // 15: salesorder.v1.LogisticsService.CancelDelivery:input_type -> salesorder.v1.CancelDeliveryRequest
+	2,  // 16: salesorder.v1.LogisticsService.CreateDriver:output_type -> salesorder.v1.CreateDriverResponse
+	5,  // 17: salesorder.v1.LogisticsService.CreateVehicle:output_type -> salesorder.v1.CreateVehicleResponse
+	8,  // 18: salesorder.v1.LogisticsService.AssignDelivery:output_type -> salesorder.v1.AssignDeliveryResponse
+	10, // 19: salesorder.v1.LogisticsService.ListMyDeliveries:output_type -> salesorder.v1.ListMyDeliveriesResponse
+	13, // 20: salesorder.v1.LogisticsService.StartDelivery:output_type -> salesorder.v1.StartDeliveryResponse
+	16, // 21: salesorder.v1.LogisticsService.CompleteDelivery:output_type -> salesorder.v1.CompleteDeliveryResponse
+	18, // 22: salesorder.v1.LogisticsService.CancelDelivery:output_type -> salesorder.v1.CancelDeliveryResponse
+	16, // [16:23] is the sub-list for method output_type
+	9,  // [9:16] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_salesorder_v1_logistics_proto_init() }
@@ -879,7 +1420,7 @@ func file_salesorder_v1_logistics_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_salesorder_v1_logistics_proto_rawDesc), len(file_salesorder_v1_logistics_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -46,4 +46,28 @@ abstract final class LogisticsService {
     salesorderv1logistics.ListMyDeliveriesRequest.new,
     salesorderv1logistics.ListMyDeliveriesResponse.new,
   );
+
+  /// StartDelivery:被指派司機開始執行(pending → in_progress;10.6)。
+  static const startDelivery = connect.Spec(
+    '/$name/StartDelivery',
+    connect.StreamType.unary,
+    salesorderv1logistics.StartDeliveryRequest.new,
+    salesorderv1logistics.StartDeliveryResponse.new,
+  );
+
+  /// CompleteDelivery:完成並簽收(in_progress → completed;POD 可多筆,同一交易寫事件與稽核)。
+  static const completeDelivery = connect.Spec(
+    '/$name/CompleteDelivery',
+    connect.StreamType.unary,
+    salesorderv1logistics.CompleteDeliveryRequest.new,
+    salesorderv1logistics.CompleteDeliveryResponse.new,
+  );
+
+  /// CancelDelivery:取消配送(pending/in_progress → cancelled;reason 必填)。
+  static const cancelDelivery = connect.Spec(
+    '/$name/CancelDelivery',
+    connect.StreamType.unary,
+    salesorderv1logistics.CancelDeliveryRequest.new,
+    salesorderv1logistics.CancelDeliveryResponse.new,
+  );
 }

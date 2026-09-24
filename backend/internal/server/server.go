@@ -104,6 +104,11 @@ var protectedRPC = map[string]rpcAuth{
 	"/salesorder.v1.LogisticsService/CreateVehicle":    {"logistics", "write"},
 	"/salesorder.v1.LogisticsService/AssignDelivery":   {"logistics", "write"},
 	"/salesorder.v1.LogisticsService/ListMyDeliveries": {"logistics", "read"},
+	// 10.6 配送執行:司機本人的狀態轉移,能力面只到 read(「是不是本人」由服務層
+	// deliverySelfGate 收斂 —— 指派欄位與 OpenFGA instance 級雙重判定,不靠角色放寬)。
+	"/salesorder.v1.LogisticsService/StartDelivery":    {"logistics", "read"},
+	"/salesorder.v1.LogisticsService/CompleteDelivery": {"logistics", "read"},
+	"/salesorder.v1.LogisticsService/CancelDelivery":   {"logistics", "read"},
 }
 
 // SetOpenFGA 注入 OpenFGA 授權引擎(啟動組裝時;nil 則跳過 middleware 檢查)。

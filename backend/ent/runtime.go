@@ -16,7 +16,9 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/fileasset"
 	"github.com/salesorder/sales-order-1.0/backend/ent/logisticsdelivery"
+	"github.com/salesorder/sales-order-1.0/backend/ent/logisticsdeliveryevent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/logisticsdriver"
+	"github.com/salesorder/sales-order-1.0/backend/ent/logisticsproof"
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/ent/notification"
 	"github.com/salesorder/sales-order-1.0/backend/ent/notificationtemplate"
@@ -267,15 +269,25 @@ func init() {
 	// logisticsdelivery.DefaultVersion holds the default value on creation for the version field.
 	logisticsdelivery.DefaultVersion = logisticsdeliveryDescVersion.Default.(int)
 	// logisticsdeliveryDescCreatedAt is the schema descriptor for created_at field.
-	logisticsdeliveryDescCreatedAt := logisticsdeliveryFields[9].Descriptor()
+	logisticsdeliveryDescCreatedAt := logisticsdeliveryFields[11].Descriptor()
 	// logisticsdelivery.DefaultCreatedAt holds the default value on creation for the created_at field.
 	logisticsdelivery.DefaultCreatedAt = logisticsdeliveryDescCreatedAt.Default.(func() time.Time)
 	// logisticsdeliveryDescUpdatedAt is the schema descriptor for updated_at field.
-	logisticsdeliveryDescUpdatedAt := logisticsdeliveryFields[10].Descriptor()
+	logisticsdeliveryDescUpdatedAt := logisticsdeliveryFields[12].Descriptor()
 	// logisticsdelivery.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	logisticsdelivery.DefaultUpdatedAt = logisticsdeliveryDescUpdatedAt.Default.(func() time.Time)
 	// logisticsdelivery.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	logisticsdelivery.UpdateDefaultUpdatedAt = logisticsdeliveryDescUpdatedAt.UpdateDefault.(func() time.Time)
+	logisticsdeliveryeventFields := schema.LogisticsDeliveryEvent{}.Fields()
+	_ = logisticsdeliveryeventFields
+	// logisticsdeliveryeventDescEventType is the schema descriptor for event_type field.
+	logisticsdeliveryeventDescEventType := logisticsdeliveryeventFields[2].Descriptor()
+	// logisticsdeliveryevent.EventTypeValidator is a validator for the "event_type" field. It is called by the builders before save.
+	logisticsdeliveryevent.EventTypeValidator = logisticsdeliveryeventDescEventType.Validators[0].(func(string) error)
+	// logisticsdeliveryeventDescCreatedAt is the schema descriptor for created_at field.
+	logisticsdeliveryeventDescCreatedAt := logisticsdeliveryeventFields[6].Descriptor()
+	// logisticsdeliveryevent.DefaultCreatedAt holds the default value on creation for the created_at field.
+	logisticsdeliveryevent.DefaultCreatedAt = logisticsdeliveryeventDescCreatedAt.Default.(func() time.Time)
 	logisticsdriverFields := schema.LogisticsDriver{}.Fields()
 	_ = logisticsdriverFields
 	// logisticsdriverDescName is the schema descriptor for name field.
@@ -296,6 +308,16 @@ func init() {
 	logisticsdriver.DefaultUpdatedAt = logisticsdriverDescUpdatedAt.Default.(func() time.Time)
 	// logisticsdriver.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	logisticsdriver.UpdateDefaultUpdatedAt = logisticsdriverDescUpdatedAt.UpdateDefault.(func() time.Time)
+	logisticsproofFields := schema.LogisticsProof{}.Fields()
+	_ = logisticsproofFields
+	// logisticsproofDescProofType is the schema descriptor for proof_type field.
+	logisticsproofDescProofType := logisticsproofFields[3].Descriptor()
+	// logisticsproof.ProofTypeValidator is a validator for the "proof_type" field. It is called by the builders before save.
+	logisticsproof.ProofTypeValidator = logisticsproofDescProofType.Validators[0].(func(string) error)
+	// logisticsproofDescCreatedAt is the schema descriptor for created_at field.
+	logisticsproofDescCreatedAt := logisticsproofFields[9].Descriptor()
+	// logisticsproof.DefaultCreatedAt holds the default value on creation for the created_at field.
+	logisticsproof.DefaultCreatedAt = logisticsproofDescCreatedAt.Default.(func() time.Time)
 	metadictFields := schema.Metadict{}.Fields()
 	_ = metadictFields
 	// metadictDescType is the schema descriptor for type field.

@@ -17,6 +17,12 @@ service LogisticsService {
   rpc AssignDelivery(AssignDeliveryRequest) returns (AssignDeliveryResponse);
   // ListMyDeliveries:我(drivers.user_id = 身分)被指派的配送清單。
   rpc ListMyDeliveries(ListMyDeliveriesRequest) returns (ListMyDeliveriesResponse);
+  // StartDelivery:被指派司機開始執行(pending → in_progress;10.6)。
+  rpc StartDelivery(StartDeliveryRequest) returns (StartDeliveryResponse);
+  // CompleteDelivery:完成並簽收(in_progress → completed;POD 可多筆,同一交易寫事件與稽核)。
+  rpc CompleteDelivery(CompleteDeliveryRequest) returns (CompleteDeliveryResponse);
+  // CancelDelivery:取消配送(pending/in_progress → cancelled;reason 必填)。
+  rpc CancelDelivery(CancelDeliveryRequest) returns (CancelDeliveryResponse);
 }
 
 // LogisticsDriver:司機單筆。
@@ -76,6 +82,8 @@ message LogisticsDelivery {
   string version = 9;    // 樂觀鎖(字串型別便於前端原樣回填,同退貨 expected_version 慣例)
   string created_at = 10; // RFC3339
   string updated_at = 11; // RFC3339
+  string started_at = 12;   // RFC3339,可空
+  string completed_at = 13; // RFC3339,可空
 }
 
 // AssignDeliveryRequest:指派請求。
@@ -102,4 +110,58 @@ message ListMyDeliveriesRequest {
 message ListMyDeliveriesResponse {
   repeated LogisticsDelivery deliveries = 1;
   int32 total = 2;
+}
+
+// LogisticsProof:簽收證明 POD(D17 檔案資產)。
+message LogisticsProof {
+  string id = 1;
+  string logistics_delivery_id = 2;
+  string proof_type = 3;   // photo / signature / scan
+  string file_asset_id = 4;
+  string remarks = 5;
+  string captured_at = 6;  // RFC3339
+}
+
+// StartDeliveryRequest:開始配送請求(id + version 樂觀鎖)。
+message StartDeliveryRequest {
+  string delivery_id = 1;
+  string version = 2;
+}
+
+// StartDeliveryResponse:開始配送結果。
+message StartDeliveryResponse {
+  LogisticsDelivery delivery = 1;
+}
+
+// CompleteDeliveryRequest:完成配送請求。proofs 可空(無簽收亦可完成);
+// 每筆 proof 的 file_asset_id 來自既有檔案上傳端點(POST /api/v1/files,owner_type=logistics_delivery)。
+message CompleteDeliveryRequest {
+  string delivery_id = 1;
+  string version = 2;
+  repeated CompleteProof proofs = 3;
+}
+
+// CompleteProof:一筆簽收證明(型別 + 檔案資產 id + 備註)。
+message CompleteProof {
+  string proof_type = 1; // photo / signature / scan
+  string file_asset_id = 2;
+  string remarks = 3;
+}
+
+// CompleteDeliveryResponse:完成配送結果(含寫入的 proofs)。
+message CompleteDeliveryResponse {
+  LogisticsDelivery delivery = 1;
+  repeated LogisticsProof proofs = 2;
+}
+
+// CancelDeliveryRequest:取消配送請求(reason 必填)。
+message CancelDeliveryRequest {
+  string delivery_id = 1;
+  string version = 2;
+  string reason = 3;
+}
+
+// CancelDeliveryResponse:取消配送結果。
+message CancelDeliveryResponse {
+  LogisticsDelivery delivery = 1;
 }
