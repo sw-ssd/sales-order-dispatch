@@ -17,11 +17,12 @@
 |--------|------|------|------|
 | `backend` | Go（`go 1.25.7`）；ent + Connect-RPC + OpenFGA + RLS + goose + Valkey | API 後端（Connect-RPC，前綴 `/api/v1`） | 見 `backend/go.mod` |
 | `frontend` | SolidJS（`solid-js ^1.9.15`）+ TypeScript + Vite 8 + Tailwind CSS v4 | 網頁中台（SPA） | 見 `frontend/package.json` |
-| `app` | Flutter + Dart（sdk `^3.10.0`） | 跨平台行動 App（iOS／Android，雙 flavor） | `pubspec.yaml` `1.0.0+1`；Flutter 版本由 `.fvmrc`（`stable`）決定 |
+| `platform-console` | SolidJS + TypeScript + Vite | 平台營運後台（operator 用；掛在 `/platform/`） | 見 `platform-console/package.json` |
+| `app` | Flutter + Dart | 跨平台行動 App（iOS／Android，雙 flavor：`dev`／`prod`） | 見 `app/pubspec.yaml`；Flutter 版本由 `.fvmrc`（`stable`）決定 |
 
 - **主要語言**：文件與程式碼註解以**繁體中文**為主；識別字、檔案名稱、套件名稱維持英文原文。
 - **API 前綴**：後端統一使用 `/api/v1`。
-- **存放庫結構**：單一 Git 倉庫（根目錄即 monorepo 根）：根 `package.json`＋`pnpm-workspace.yaml`（工作區 `backend`／`frontend`／`app`，turbo 編排）與根 `Taskfile.yml`（`includes` 三個子專案，另提供 `infra:*`／`fga:*`）。子專案不再各自獨立成倉。
+- **存放庫結構**：單一 Git 倉庫（根目錄即 monorepo 根）：根 `package.json`＋`pnpm-workspace.yaml`（工作區 `backend`／`frontend`／`platform-console`／`app`／`infra`，turbo 編排）與根 `Taskfile.yml`（`includes` 四個子專案，另提供 `infra:*`／`fga:*`）。子專案不再各自獨立成倉。
 
 ---
 
@@ -56,14 +57,17 @@
 │   ├── superpowers/           # specs/（設計書與決策 D1–D32）、plans/（backend 01~09…）、reports/
 │   ├── design/                # 版面與設計進度存檔
 │   └── archive/               # 歸檔（docs.zip）
-├── frontend/                  # SolidJS 網頁前端（Vite + Vitest）
+├── platform-console/          # 平台營運後台（SolidJS + Vite；獨立於租戶端，有自己的 proto 生成碼）
+│   ├── src/                   # pages/、lib/api.ts、lib/proto/
+│   └── package.json / Taskfile.yml
+├── frontend/                  # SolidJS 租戶網頁中台（Vite + Vitest）
 │   ├── src/
 │   │   ├── features/<name>/   # 頁面與領域元件（users、auth…，各自 pages/ 與 components/）
 │   │   ├── components/ui/     # Ark UI（行為）× 語意 token 的基礎元件（含 sidebar/、demo/）
 │   │   ├── components/layout/ # AppShell / Sidebar / Topbar
 │   │   ├── lib/               # transport、query-client、ability、proto 生成碼
 │   │   └── router/ App.tsx main.tsx index.css test-setup.ts
-│   ├── scripts/               # casl-golden-gen.mjs
+│   ├── scripts/               # （casl-golden-gen.mjs 已失效：CASL 已移除，見下方註）
 │   ├── index.html / vite.config.ts / vitest.config.ts / tsconfig.json / eslint.config.js
 │   └── package.json / AGENTS.md / Taskfile.yml
 ├── .superpowers/sdd/          # SDD 工作區（各波計畫、報告與複審紀錄）
@@ -79,12 +83,12 @@
 
 ## 3. 常用建置與執行指令
 
-### 3.1 sales-order-backend（Go）
+### 3.1 backend（Go）
 
 需安裝 [Task](https://taskfile.dev/) 與 Go 1.25；開發時建議一併安裝 `air`、Docker/Podman。
 
 ```bash
-cd sales-order-backend
+cd backend
 
 # 啟動本地基礎設施（Postgres + Valkey + Mailpit）
 task infra:start
@@ -95,37 +99,38 @@ task dev
 # 直接執行
 task run
 
-# 資料庫遷移
-task goose:up              # 套用 migration
-task db:migrate -- <name>  # 產生新的 Goose 遷移檔
+# 資料庫遷移（goose，migration 檔在 backend/database/migrations/）
+task backend:migrate:up      # 套用全部未套用的 migration
+task backend:migrate:status  # 目前版本
+task backend:migrate:down    # 回退一版
+
+# 種子資料（冪等；development 才會建示範租戶）
+task backend:seed
 
 # 程式碼產生
-task ent:gen               # Ent
-task swagger               # Swagger 文件
-task oapigen               # NetSuite OpenAPI client
-task typego                # 前端 TypeScript 型別
+task backend:proto:gen     # buf：proto → Go / TS(前端+console) / Dart
+go generate ./ent          # Ent 產生碼（改 ent/schema 後）
 
 # 測試
-task test:unit             # go test -short ./...
-task test:integration      # go test -run Integration ./...
-task test                  # 全部測試
+task backend:test                 # go test -count=1 ./...
+task backend:test:integration     # go test -tags integration -count=1 ./...
+task backend:check                # fmt + vet + golangci-lint + test（CI 同款閘門）
 
-# 品質檢查
-task fmt                   # go fmt ./...
-task vet                   # go vet ./...
-task lint                  # golangci-lint run
-task vuln                  # govulncheck ./...
+# 品質檢查（check 已含前三項；單獨跑時）
+go fmt ./...  /  go vet ./...  /  golangci-lint run
 
-# 部署
-task gcp:deploy            # Cloud Run 一鍵部署
+# 平台排程（單趟執行；非長駐服務）
+task backend:platform:cron
 ```
 
-### 3.2 sales-order-frontend（SolidJS）
+**註**：本專案**沒有** `task swagger`／`task oapigen`／`task typego`／`task gcp:deploy`（舊版殘留）；對外契約一律以 protobuf 為來源，型別由 `task backend:proto:gen` 產生。
+
+### 3.2 frontend（SolidJS）
 
 需安裝 pnpm。
 
 ```bash
-cd sales-order-frontend
+cd frontend
 pnpm install
 
 # 開發伺服器（預設 http://localhost:3000）
@@ -151,12 +156,12 @@ task deploy                # patch 版本、建置、登入、部署 hosting
 task ui:add -- <component-name>
 ```
 
-### 3.3 sales-order-app（Flutter）
+### 3.3 app（Flutter）
 
 建議透過 FVM（Flutter Version Management）使用固定版本 `3.35.2`；VS Code 啟動設定位於 `.vscode/launch.json`。
 
 ```bash
-cd sales-order-app
+cd app
 fvm flutter pub get
 
 # 開發執行
@@ -172,15 +177,12 @@ fvm flutter build appbundle --flavor prod --target lib/main_prod.dart
 fvm flutter build ios --flavor prod --target lib/main_prod.dart   # 需 macOS + Xcode
 
 # 測試
-task test:maestro          # Maestro 整合測試
-fvm flutter test           # 若新增單元/Widget 測試
-
-# 截圖（需後端在線）
-task screenshots:android
-task screenshots:ios
+task app:test              # flutter test（單元／Widget）
+fvm flutter test integration_test/app_flow_test.dart            # iOS 模擬器實機整合
+fvm flutter test integration_test/app_flow_test.dart -d emulator-5554 --flavor dev  # Android（必須帶 flavor）
 ```
 
-> 注意：`sales-order-app/Taskfile.yml` 內部分任務直接呼叫 `flutter` / `dart`，若系統 PATH 未掛載 Flutter，請改用 `fvm flutter ...` / `fvm dart ...` 手動執行對應指令。
+> 注意：`app/Taskfile.yml` 內部分任務直接呼叫 `flutter` / `dart`，若系統 PATH 未掛載 Flutter，請改用 `fvm flutter ...` / `fvm dart ...` 手動執行對應指令。
 
 ---
 
@@ -196,37 +198,35 @@ task screenshots:ios
 
 > **定案：專案程式碼索引與查詢皆需先經過 codebase-memory-mcp。**
 
-### 4.1 sales-order-backend
+### 4.1 backend
 
-採用網域分層（DDD 風格），每個 `internal/domain/<domain>` 通常包含：
+後端以**服務層**為主（`internal/services/`，121 檔、一檔一 service 或一組相關 service），再依職責分層：
 
-- `model.go`：request/response/filter DTO
-- `handler.go`：HTTP handler
-- `repository.go`：Ent 資料存取
-- `usecase.go`：業務邏輯
-- `register.go`：路由註冊
-- `transformation.go`：DTO 與 ent 模型轉換
-- `*_test.go` / `*_mock.go`：測試與 mock
+- `internal/services/`：Connect-RPC handler（各 service 提供 `Register*Service(s)`）＋服務層業務邏輯與授權（`requireScope`／`requireRole`／各 domain 的 scope 函式）。
+- `internal/domain/<name>/`：**真正的 DDD 子域**（`auth`／`customers`／`fileassets`／`products`／`roles`），含 usecase 與 repository 介面。
+- `internal/platform/`：SaaS 平台域（billing／entitlements／cron／operatorauth／store…），**不受 RLS**。
+- `internal/auth`（JWT／session／密碼／角色繼承）、`internal/authz`（OpenFGA engine 與 provision）、`internal/dbtenant`（租戶交易與 RLS driver 裝飾）、`internal/audit`、`internal/errcode`（錯誤碼註冊表）、`internal/resterr`、`internal/obs/requestid`。
+- `cmd/`：入口有 `server`／`migrate`／`seed`／`platform-cron`／`gen-errcodes`。
 
-網域名稱多為複數英文，例如 `sales_orders`、`customers`、`departments`。`cmd/sw8/main.go` 是主入口，`internal/server/initDomains.go` 註冊所有 domain 路由。
+路由與中介層組裝在 `internal/server/`（`server.go` 的 `authzMiddleware` ＋ `protectedRPC` 授權表；`domains.go` 掛載全部服務，一律掛在 `/api/v1` 之下）。
 
-### 4.2 sales-order-frontend
+### 4.2 frontend
 
-- **路由**：TanStack Solid Router 檔案式路由，定義於 `src/routes/`，自動編譯為 `src/routeTree.gen.ts`。
-- **資料取得**：每個領域在 `src/lib/<domain>/` 建立 API 請求與 `queryOptions`，於 `src/lib/<domain>/index.ts` 匯出。
-- **狀態管理**：伺服器狀態用 TanStack Solid Query；認證狀態用 SolidJS store 並持久化至 `localStorage`。
-- **UI 元件**：`src/components/ui/` 為 shadcn/ui 風格基礎元件，使用 `class-variance-authority` + `tailwind-merge` + `clsx`（`cn()` 輔助函式）。
-- **路徑別名**：`~/*` 對應 `./src/*`。
+- **路由**：TanStack Solid Router，**程式式定義**於 `src/router/index.tsx`（`createRoute` + `lazyRouteComponent`），**沒有**檔案式路由或 `routeTree.gen.ts`。
+- **資料取得**：領域為單位放 `src/features/<name>/`（各自 `pages/`、`queries.ts`），共用查詢工具在 `src/lib/`。
+- **狀態管理**：伺服器狀態用 TanStack Solid Query；認證狀態為 SolidJS store。
+- **UI 元件**：`src/components/ui/` 為 Ark UI（行為）＋語意 token 的基礎元件；樣式以 Tailwind CSS v4 與 `cn()`（`clsx` + `tailwind-merge`）組合。
+- **權限**：`src/lib/ability/` 的權限集合（由後端 `GetAbility` 投影載入）；`@casl/ability` 已移除。
 
-### 4.3 sales-order-app
+### 4.3 app（Flutter）
 
-採三層式架構：
+- `lib/core/`：API transport（單一 `ApiClient`，Bearer ＋ 401 單飛 refresh 重試）、設定（`config.dart`）。
+- `lib/features/<name>/`：依領域分（`auth`／`orders`／`returns`／`notifications`／`shell`…），各自 pages／repository／provider。
+- `lib/router/`：`auto_route` 路由表。
+- `lib/ui/`：**平台自適應元件**（`adaptive.dart`：iOS 走 Cupertino、Android 走 Material，整合測試以語意標籤斷言）；`ui/themes/` 為主題。
+- `lib/gen/`：proto 產生碼（`task app:gen` 之 build_runner 產生部分為 Riverpod/Freezed 等）。
 
-- `lib/layer_business/`：業務邏輯、網路（Dio + interceptor）、路由（auto_route）、服務（Signal/Provider）、相依注入（GetIt + disco）
-- `lib/layer_data/`：Freezed/json_serializable 模型、Sembast 本地儲存、常數、JsonConverter
-- `lib/layer_presentation/`：畫面（stories）、共用 widget、主題
-
-Flavor 分為 `dev` / `prod`，進入點分別為 `lib/main_dev.dart` / `lib/main_prod.dart`。產生檔（`*.g.dart`、`*.freezed.dart`、`*.gform.dart`、`routes.gr.dart`、`lib/gen/*` 等）皆已入版控，修改來源檔後務必重新執行 `build_runner`。
+Flavor 分 `dev` / `prod`，入口 `lib/main_dev.dart` / `lib/main_prod.dart`（**API base URL 直接寫在入口檔**）。產生檔已入版控，改來源檔後須重跑 `task app:gen`。
 
 ---
 
@@ -234,57 +234,31 @@ Flavor 分為 `dev` / `prod`，進入點分別為 `lib/main_dev.dart` / `lib/mai
 
 | 子專案 | 測試框架 | 現況 | 執行指令 |
 |--------|----------|------|----------|
-| sales-order-backend | `testify` + `suite`；整合測試用 `ory/dockertest` | 有單元與整合測試 | `task test:unit` / `task test:integration` / `task test` |
-| sales-order-frontend | Vitest 3.2 + jsdom + `@solidjs/testing-library` | 目前無測試檔 | `pnpm run test` |
-| sales-order-app | `flutter_test`；整合測試用 Maestro | 目前無 `test/` 目錄；有 Maestro flow | `fvm flutter test` / `task test:maestro` |
+| backend | 標準 `testing`；整合測試用 `testcontainers-go`（tag `integration`） | 166 個測試檔（含 75 個整合探針） | `task backend:test` / `task backend:test:integration` / `task backend:check` |
+| frontend | Vitest + jsdom + `@solidjs/testing-library` | 41 個測試檔（366 tests） | `task frontend:test` |
+| console | Vitest | 12 個測試檔 | `task console:test` |
+| app | `flutter_test` ＋ `integration_test`（真機／模擬器） | 單元 + 整合各一組 | `task app:test`（單元）／`fvm flutter test integration_test/...`（實機） |
 
-- 後端整合測試會啟動 PostgreSQL container，再建立 schema、session、OpenFGA engine。
-- App 的 Maestro flow 位於 `integration_test/.maestro/`，截圖 flow 需後端在線（預設檢查 `http://localhost:3080/`）。
+- 後端整合測試以 `testcontainers-go` 起一次性 PostgreSQL，套真 migration 後建 schema／session／OpenFGA engine（**非** `ory/dockertest`）。
+- 整合測試必須帶 `-count=1`（Taskfile 與 CI 皆已內建），否則快取會回報假綠。
+- 前端 `vitest` 不快取通過結果，故不需 `-count=1`。
+- App 目前**沒有** Maestro flow（舊版殘留）；實機驗證走 `integration_test/app_flow_test.dart`（Android 需 `--flavor dev`）。
 
 ---
 
 ## 6. 部署流程
 
-### sales-order-backend
+本倉**目前沒有部署管線**。`.github/workflows/ci.yml` 只有五個驗證 job，**沒有任何 deploy job**：
 
-部署至 GCP Cloud Run + Cloud SQL（`hexagon-salesorder-platform` 專案）：
+| job | 內容 |
+|-----|------|
+| `go` | lint、`go test -count=1 ./...`、錯誤碼 baseline 守門、產生檔冪等（proto 三端＋console 的 errcode.ts）、build、govulncheck |
+| `go-integration` | `go test -tags integration -count=1 ./...`（testcontainers 拋棄式容器） |
+| `frontend` | 租戶中台四道 gate（typecheck／lint／test／build） |
+| `platform-console` | typecheck／lint／test／build |
+| `flutter` | `flutter pub get` + `flutter analyze`（**不建置 App**） |
 
-```bash
-cd sales-order-backend
-task gcp:deploy
-```
-
-此流程會自動遞增 `API_VERSION` patch、建置 Docker image、推送至 Artifact Registry、部署到 Cloud Run。
-
-### sales-order-frontend
-
-部署至 Firebase Hosting：
-
-```bash
-cd sales-order-frontend
-task deploy
-```
-
-`firebase.json` 將 `/api/**` 與 `/customer_account_qrcode/**` 重寫至 Cloud Run 後端 `hexagon-backend`，其餘路徑回傳 `index.html`（SPA fallback）。
-
-### sales-order-app
-
-無 CI/CD 服務，發布以本機 Fastlane + Taskfile 為主：
-
-```bash
-cd sales-order-app
-
-# 一鍵 release（clean → 產生碼 → build 號 +1 → appbundle + ipa）
-task build
-
-# Android Play Store Beta
-cd android && bundle exec fastlane android beta
-
-# iOS TestFlight
-cd ios && bundle exec fastlane ios beta
-```
-
-商店截圖後製使用 [ButterKit](https://butterkit.app)（僅支援 App Store），原始截圖由 Maestro 產生，詳見 `sales-order-app/AGENTS.md` 第 7 節。
+repo 內也無 `firebase.json`／Dockerfile／fastlane 設定。部署方式待補（規劃見 `docs/PLANNING_OVERVIEW.md`）。知名取捨：`flutter` job 只做 `pub get` + `analyze`，**不建置 App**，故 Android／iOS 的原生建置問題（如 `app/android/gradle/wrapper` 變更）在 CI 不會被驗到 —— 需在本機以 `--flavor dev` 實機測試把關。
 
 ---
 
@@ -292,28 +266,23 @@ cd ios && bundle exec fastlane ios beta
 
 ### 環境變數與憑證
 
-- **sales-order-backend**：
-  - `hexagon.env` 目前被追蹤在 repo 中且包含範例/真實憑證，請避免將生產環境祕鑰寫入。
-  - `.env` 與 `token.export` 已被 `.gitignore` 排除。
-  - 生產環境請設定 `SESSION_SECURE=true`、`SESSION_HTTP_ONLY=true`、`SESSION_SAME_SITE=lax`（或更嚴格）。
-  - NetSuite client 目前設定 `InsecureSkipVerify: true`，生產環境應移除或改為正確 TLS 設定。
+- **backend**：
+  - 唯一的 env 範本是 `backend/.env.example`（**不含真實憑證**）；`.env*` 已被 `.gitignore` 排除（保留 `.env.example`）。真實密鑰只放部署環境或本地未追蹤檔案。
+  - 生產環境請設定 `SESSION_SECURE=true`、`SESSION_SAME_SITE=lax`（或更嚴格）；`JWT_SECRET` 留空或預設值會被 `Init()` fail-fast 拒絕。
+  - `API_TOKENS`（若啟用）只放 token 的 **SHA-256**，不得放原文。
   - `cmd/token` 產生的 JWT 無 `exp`，請評估是否符合安全需求。
 
-- **sales-order-frontend**：
+- **frontend**：
   - `.env` / `.env.production` 可能包含機敏資訊，已阻擋直接讀取，請勿提交真實機密。
-  - `VITE_API_ACCESS_TOKEN` 與 `VITE_AUTH_SECRET` 是客戶端機密，避免在 log 或 UI 中暴露。
-
-- **sales-order-app**：
-  - `.dev.env` / `.prod.env` 已被 `.gitignore` 排除；但 `dev.env.hexagon`（含實際值）與 `lib/env/*.g.dart`（混淆後的值）在版控內，請勿外洩。
-  - `Taskfile.yml` 的 `upload:ios` 任務內嵌 App Store Connect API key ID 與 issuer；私鑰（`.p8`）放在 `.private_keys/`（已 gitignore）。
-  - Maestro 測試 flow（`integration_test/.maestro/salesrep_login/Flow.yaml`、`screenshots/Flow.yaml`、`screenshots_store_ios/Flow.yaml`）含明碼測試帳密，請勿對外洩漏。
+- **app**：無 env 檔機制 —— API base URL 直接寫在 `lib/main_dev.dart`（`http://localhost:3080/api/v1`）與 `lib/main_prod.dart`（`https://api.example.com/api/v1`，佔位）。**prod 的 base URL 目前是範例值，上架前必須改為真實網域**。無 fastlane／截圖 flow／CI 發布設定。
 
 ### 認證與授權
 
-- 後端支援兩種認證（皆由 `server.authzMiddleware` 逐請求驗證）：
-  1. **Session Cookie**：Web 中台，`scs` session。
-  2. **API JWT Token**：`Authorization: Bearer` header，用於 Mobile App 與 API 客戶端（access 1h／refresh 30d，使用時旋轉）。
-- 後端授權為 **OpenFGA + RLS**（D32）：受保護 RPC 由 middleware 做 OpenFGA `Check`（developer/super 逃生門、無引擎 fail-closed），`role_permissions` 為權限定義來源並同步 tuples；服務層 `requireScope`/`requireRole`（純 Go ACL）為 fallback；資料範圍由 RLS 兜底（32 張業務表 ENABLE+FORCE，`dbtenant`）。
+- 後端支援三種認證（皆由 `server.authzMiddleware` 逐請求驗證，**順序即優先序**）：
+  1. **Session Cookie**：Web 中台，`scs` session（store 為 Valkey）。
+  2. **API JWT Token**：`Authorization: Bearer` header，用於 Mobile App 與 API 客戶端（access 1h／refresh 30d，旋轉制，帶 `tv` claim）。
+  3. **`X-Api-Token`**：靜態、**僅 server-to-server**（見上方「認證用憑證」）。
+- 後端授權為 **OpenFGA + RLS**（D32）：受保護 RPC 由 middleware 做 OpenFGA `Check`（developer/super 逃生門、無引擎 fail-closed），`role_permissions` 為權限定義來源並同步 tuples；服務層 `requireScope`/`requireRole`（純 Go ACL）為 fallback；資料範圍由 RLS 兜底（38 張業務表 ENABLE+FORCE，`dbtenant`）。
 - 前端權限為權限集合查詢（`Can`／guards；@casl/ability 已於 2026-09-19 移除，集合由後端 `GetAbility` 投影載入）。
 
 ### 資料安全
@@ -324,8 +293,7 @@ cd ios && bundle exec fastlane ios beta
 
 ### Deep Link
 
-- App 處理 `/customer_account_qrcode/:customerAccount` 深度連結，基礎 URL 為 `https://frontend.hexagonty.com/customer_account_qrcode`。
-- 前端 `firebase.json` 也將 `/customer_account_qrcode/**` 重寫至後端，由後端提供對應內容或導引。
+App 與前端**目前都未實作** deep link 路由（`customer_account_qrcode`／`customer_account_manage` 皆無對應處理）。規格要求的兩條深層連結（QR 登入、帳號管理）見 `docs/superpowers/specs/1.0-requirements/identity-access/spec.md`；實作時需同時處理 iOS Universal Link 與 Android App Link，且連結**不得內含登入憑證**。後端已提供對應 API（QR 產生見 `CustomerService.GetCustomerQRCode`；帳號管理見 `CustomerAccountService`）。
 
 ---
 
@@ -335,35 +303,31 @@ cd ios && bundle exec fastlane ios beta
 
 1. 先啟動後端與資料庫：
    ```bash
-   cd sales-order-backend
+   cd backend
    task infra:start
    task dev
    ```
 2. 再啟動前端或 App：
    ```bash
-   cd sales-order-frontend && pnpm run dev
+   cd frontend && pnpm run dev
    # 或
-   cd sales-order-app && fvm flutter run --flavor dev --target lib/main_dev.dart
+   cd app && fvm flutter run --flavor dev --target lib/main_dev.dart
    ```
 
-### API Access Token
+### 認證用憑證（三種，優先序固定）
 
-後端 `cmd/token` 產生的 JWT 必須設定到前端與 App 的環境變數中：
+`server.authzMiddleware` 每請求依序嘗試，**使用者憑證優先**（同時帶多種時不得降級成機器身分）：
 
-- 前端：`VITE_API_ACCESS_TOKEN`
-- App：`.dev.env` / `.prod.env` 中的 `API_ACCESS_TOKEN`
+1. **Web session cookie**（`scs`，store 為 Valkey）—— 網頁中台。
+2. **`Authorization: Bearer <JWT>`** —— App 與 API 客戶端（access 1h／refresh 30d 旋轉制，帶 `tv` claim）。
+3. **`X-Api-Token`（靜態）** —— **僅供 server-to-server／M2M**（設定見 `backend/config/auth.go` 的 `Auth.APITokens`）。
 
-後端 `AuthInterceptor` 與 `ApiTokenMiddleware` 皆以 `X-Sowinsoft-Token` header 驗證此 token。
+> `X-Api-Token` **MUST NOT** 配置於 Web 或 App 客戶端（規格 §4.3、細部 1.6.6）：token 是**共用長效**機密，放進前端 bundle／App 封包等於公開。設定只存原文的 SHA-256、綁定真實使用者、每組 token 另有 RPC 前綴白名單。**目前尚無任何呼叫方**（`cmd/platform-cron` 直連資料庫不經 HTTP），屬規格要求的 M2M 預備能力。
+> 前端與 App **都沒有**任何 API token 環境變數；不要把憑證注入客戶端產物。
 
 ### 型別同步
 
-後端修改 DTO 後，可執行 `task typego` 產生前端 TypeScript 型別至 `frontend_types/`（前端再視需要匯入）。
-
-### 截圖與上架素材
-
-- Maestro 截圖 flow 位於 `sales-order-app/integration_test/.maestro/`。
-- 後製專案位於 `appimg/screenshots.butterkit/`。
-- iOS 成品輸出至 `appimg/export_app_store/`，Android 成品輸出至 `appimg/export_google_play/`。
+protobuf 為唯一型別來源：改 `backend/proto/**` 後執行 `task backend:proto:gen`（buf），一次產生 Go（`backend/internal/proto`）、前端與 console 的 TS（各自 `src/lib/proto`）以及 App 的 Dart（`app/lib/gen`）。前端／App 一律匯入生成碼，沒有獨立的 DTO 產生步驟。
 
 ---
 
@@ -372,15 +336,15 @@ cd ios && bundle exec fastlane ios beta
 開始修改前，建議確認：
 
 1. **是否在正確的子專案工作？** 子專案位於 `backend`、`frontend`、`app`；根目錄是 monorepo 根（pnpm 工作區與根 Taskfile），不是任一子專案的目錄。
-2. **後端是否已啟動？** 前端與 App 開發、截圖測試都需要後端在線。
-3. **修改後端 Ent schema 後**，是否已執行 `task ent:gen` 並確認遷移檔？
-4. **修改 App 的 Freezed / json_serializable / reactive_forms / auto_route / envied / dart_mappable 來源檔後**，是否已重新執行 `build_runner` 並提交產生檔？
-5. **修改前端路由後**，是否已讓 Vite 重新編譯 `routeTree.gen.ts`？
-6. **新增環境變數後**，是否已更新對應的 `.env.example`、Valibot 綱目或 envied 類別？
-7. **新增使用者可見文字時**，請維持繁體中文（App UI 多為硬編碼）。
-8. **若更動了本文件提及的架構、指令或流程，請同步更新本文件與對應子專案的 `AGENTS.md`。**
-9. **進行程式碼索引／查詢前**，是否已先經過 codebase-memory-mcp（見 §4.0）？
+2. **後端是否已啟動？** 前端開發與 App 實機整合測試都需要後端在線（`task backend:run`）。
+3. **修改後端 Ent schema 後**，是否已執行 `go generate ./ent` 並新增對應 migration？（改 proto 則 `task backend:proto:gen`，產生檔一併提交——CI 有冪等檢查。）
+4. **修改 App 帶 `@riverpod`／`@freezed`／`@JsonSerializable` 等標註的檔案後**，是否已執行 `task app:gen`（build_runner）並提交產生檔？
+5. **新增後端環境變數後**，是否已更新 `backend/.env.example`？（前端目前無 env 檔機制；App 的設定值寫在 `lib/main_dev.dart`／`lib/main_prod.dart`。）
+6. **新增使用者可見文字時**，請維持繁體中文。
+7. **若更動了本文件提及的架構、指令或流程，請同步更新本文件與對應子專案的 `AGENTS.md`。**
+8. **進行程式碼索引／查詢前**，是否已先經過 codebase-memory-mcp（見 §4.0）？
+9. **改動受保護 RPC 時**，是否已在 `server.protectedRPC` 補上（resource, action）？未列入的路徑不受 OpenFGA 閘門保護。
 
 ---
 
-最後更新：根據本專案當前工作目錄內容查證整理。
+*最後更新：2026-09-25（修正舊版殘留：目錄名、任務名、認證機制、測試框架與部署段落；以實際 repo 狀態逐項查證）*
