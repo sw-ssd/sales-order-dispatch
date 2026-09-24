@@ -5,6 +5,11 @@
 > 定位：本文件為 fleet 執行層的細部分解；新增到 `plans/backend/detail/00-index.md` 的地圖。授權引擎採 **OpenFGA + RLS**（D32，取代本目錄其他文件對 Casbin/CASL 的描述；凡與 D32 衝突處以 D32 為準）。
 > 編號：`10.x`。對應參考計畫 **Phase 5.5（Task 5.8–5.24,1.0）**（已補入 `plans/reference/2026-07-17-sales-order-1-0-tasks.md`）。
 
+> **執行狀態（2026-09-24,D32 授權首批落地）**：
+> - **已落地**：`fleet_drivers`/`vehicles`/`fleet_deliveries` 三表（00046 建表+policy+app_rw、00047 ENABLE+FORCE;**無 `fleets` 聚合表、無 `uuid` 欄** —— 與本文件綱要有出入,依 repo 先例 bigserial 收斂,uuid 待統一裁決）、FleetService 四支 RPC（CreateDriver/CreateVehicle/AssignDelivery/ListMyDeliveries;指派 version 樂觀鎖＋D18 稽核）、OpenFGA model fleet 三型別（租戶 parent 邊 + `driver#assignee` userset;見 `third_party/openfga/model.go`）、tuple 同步（**AfterCommit 直寫對帳**,非佇列 outbox —— 指派事實可由 DB 重算,失敗僅記日誌,見 `internal/services/fleet_events.go`）、10.12/10.8 閘門（ListMyDeliveries 要求 fleet_drivers 列 + 逐列 instance Check）、rolePolicy `fleet`（dept_admin 讀寫/staff 讀）＋ protectedRPC 四條。
+> - **未落地**：`fleets` 聚合、`service_areas`/`zones`（PostGIS）、`positions` GPS 串流（10.5–10.7）、`fleet_delivery_events` 軌跡、狀態機（10.6,pending/in_progress/... 僅建列預設 pending）、POD（10.10）、`fleet_delivery_events`/proofs 欄位綱要其餘、uuid 主鍵、department#member/#admin 成員 provision（目前 instance 判決靠 assigned_by/driver 邊;成員邊產製另案）。
+> - **測試**：model 契約 5 子測試（`internal/authz/openfga/fleet_test.go`）、服務 3 測試（sqlite,含樂觀鎖與閘門）、跨部門/本人隔離整合探針（app_rw + 真 RLS + 記憶體引擎,`fleet_rls_integration_test.go`）全綠。
+
 ## 0. go8 架構嚴格遵循（D31 + 本領域）
 
 本領域一律依 go8 / D31 結構慣例落地，不另發明目錄:
