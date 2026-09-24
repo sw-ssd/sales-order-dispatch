@@ -80,29 +80,35 @@ func TestBuiltinRolePermissionsContent(t *testing.T) {
 	if has("guest", "sales_order", "read") {
 		t.Error("guest 不應有 sales_order read")
 	}
-	// customer 具名。
-	if !has("customer", "sales_order", "read") || !has("customer", "product", "read") {
-		t.Error("customer 缺少 sales_order/product read")
+	// customer 具名:App 自助三資源(訂單讀寫/退貨讀寫/本人通知讀寫),
+	// 對應規格 sales-orders 4.2.3(客戶自行下單)、4.4(客戶 App 發起退貨)、
+	// notifications(退貨審核結果推播客戶子帳號)。
+	if !has("customer", "sales_order", "read") || !has("customer", "sales_order", "write") {
+		t.Error("customer 缺少 sales_order read/write(App 查單/建單/取消)")
+	}
+	if !has("customer", "product", "read") {
+		t.Error("customer 缺少 product read")
 	}
 	// 退貨頁守衛(requireAbility("read","return_request"))的受眾契約:
 	// 員工看得到清單、staff 另有 write 才能審(canReview 再收斂到該客戶主責業務);
-	// customer 刻意不給 —— 客戶自助走 App,Web 端維持 403 指引(D25)。
+	// customer 有讀寫走 App 自助(查看自己申請+發起;Web 無建單入口,審核權仍由
+	// canReview 收斂,不受此影響)。
 	if !has("staff", "return_request", "read") || !has("staff", "return_request", "write") {
 		t.Error("staff 缺少 return_request read/write(可看可審)")
 	}
 	if !has("dept_admin", "return_request", "read") || !has("company_admin", "return_request", "read") {
 		t.Error("dept_admin/company_admin 缺少 return_request read")
 	}
-	if has("customer", "return_request", "read") {
-		t.Error("customer 不應有 return_request read(Web 端維持 403)")
+	if !has("customer", "return_request", "read") || !has("customer", "return_request", "write") {
+		t.Error("customer 缺少 return_request read/write(App 查看/發起退貨)")
 	}
-	// 通知中心(/notifications)同一批契約:員工可讀可標已讀,customer 不給(Web 403,
-	// 客戶通知走 App;NotificationService 本身只回 user_id = 本人的列)。
+	// 通知中心同一批契約:員工可讀可標已讀;customer 亦讀寫 —— NotificationService
+	// 只回 user_id = 本人的列,App 通知中心是客戶收單建立/退貨審核通知的唯一入口。
 	if !has("staff", "notification", "read") || !has("staff", "notification", "write") {
 		t.Error("staff 缺少 notification read/write(可讀清單、可標已讀)")
 	}
-	if has("customer", "notification", "read") {
-		t.Error("customer 不應有 notification read(Web 端維持 403)")
+	if !has("customer", "notification", "read") || !has("customer", "notification", "write") {
+		t.Error("customer 缺少 notification read/write(App 通知中心)")
 	}
 	// 稽核頁守衛：範圍與 AuditService.ListAuditLogs 一致 —— company_admin 可查、
 	// dept_admin/staff/customer 一律不可（後端 default 分支直接 PermissionDenied）。

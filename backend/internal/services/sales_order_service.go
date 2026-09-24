@@ -43,8 +43,33 @@ func RegisterSalesOrderService(mux *http.ServeMux, db *ent.Client) {
 	mux.Handle(path, handler)
 }
 
-// orderScopeQuery 依範圍對訂單查詢加入 company/department where。
-func orderScopeQuery(q *ent.SalesOrderQuery, cid int, did *int) *ent.SalesOrderQuery {
+// orderScope 依身分回訂單範圍 (company, department 可空, customer 可空):
+// customer → 本公司且僅自己客戶（規格 4.2.3 客戶自查/自行下單的入口）;
+// super/company_admin → 公司層;dept_admin/staff → 本部門;其餘(guest)→ permission_denied。
+//
+// 刻意不重用 deptScope:那是主檔語意（刻意拒絕 customer），訂單是客戶自己的資料。
+func orderScope(id authz.Identity) (int, *int, *int, error) {
+	if hasRole(id, "customer") {
+		cid, err := parseID(id.CompanyID)
+		if err != nil {
+			return 0, nil, nil, errcode.SysPermissionDenied.Error(nil)
+		}
+		custID, err := parseID(id.CustomerID)
+		if err != nil {
+			return 0, nil, nil, errcode.SysPermissionDenied.Error(nil)
+		}
+		return cid, nil, &custID, nil
+	}
+	cid, did, err := deptScope(id)
+	return cid, did, nil, err
+}
+
+// orderScopeQuery 依範圍對訂單查詢加入 company/department/customer where。
+// custID 非空（customer 身分）時只看自己客戶的訂單,不看部門維度。
+func orderScopeQuery(q *ent.SalesOrderQuery, cid int, did, custID *int) *ent.SalesOrderQuery {
+	if custID != nil {
+		return q.Where(salesorder.CompanyIDEQ(cid), salesorder.CustomerIDEQ(*custID))
+	}
 	if did != nil {
 		return q.Where(salesorder.CompanyIDEQ(cid), salesorder.DepartmentIDEQ(*did))
 	}
@@ -65,11 +90,11 @@ func (s *SalesOrderService) ListOrders(ctx context.Context, req *connect.Request
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := deptScope(id)
+	cid, did, custID, err := orderScope(id)
 	if err != nil {
 		return nil, err
 	}
-	q := orderScopeQuery(dbtenant.Client(ctx, s.db).SalesOrder.Query(), cid, did)
+	q := orderScopeQuery(dbtenant.Client(ctx, s.db).SalesOrder.Query(), cid, did, custID)
 	if !req.Msg.GetIncludeDeleted() {
 		q = q.Where(salesorder.DeletedAtIsNil())
 	}
@@ -126,7 +151,7 @@ func (s *SalesOrderService) GetOrder(ctx context.Context, req *connect.Request[s
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := deptScope(id)
+	cid, did, custID, err := orderScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +159,7 @@ func (s *SalesOrderService) GetOrder(ctx context.Context, req *connect.Request[s
 	if err != nil {
 		return nil, err
 	}
-	o, err := orderScopeQuery(dbtenant.Client(ctx, s.db).SalesOrder.Query(), cid, did).
+	o, err := orderScopeQuery(dbtenant.Client(ctx, s.db).SalesOrder.Query(), cid, did, custID).
 		Where(salesorder.ID(oid), salesorder.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
@@ -161,7 +186,7 @@ func (s *SalesOrderService) CreateOrder(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := deptScope(id)
+	cid, did, _, err := orderScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -284,7 +309,7 @@ func (s *SalesOrderService) UpdateOrder(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := deptScope(id)
+	cid, did, custID, err := orderScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +322,7 @@ func (s *SalesOrderService) UpdateOrder(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, err
 	}
-	o, err := orderScopeQuery(db.SalesOrder.Query(), cid, did).
+	o, err := orderScopeQuery(db.SalesOrder.Query(), cid, did, custID).
 		Where(salesorder.ID(oid), salesorder.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
@@ -411,7 +436,7 @@ func (s *SalesOrderService) DeleteOrder(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := deptScope(id)
+	cid, did, custID, err := orderScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -424,7 +449,7 @@ func (s *SalesOrderService) DeleteOrder(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, err
 	}
-	o, err := orderScopeQuery(db.SalesOrder.Query(), cid, did).
+	o, err := orderScopeQuery(db.SalesOrder.Query(), cid, did, custID).
 		Where(salesorder.ID(oid), salesorder.DeletedAtIsNil()).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
@@ -456,7 +481,7 @@ func (s *SalesOrderService) ListOrderEvents(ctx context.Context, req *connect.Re
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := deptScope(id)
+	cid, did, custID, err := orderScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -464,7 +489,7 @@ func (s *SalesOrderService) ListOrderEvents(ctx context.Context, req *connect.Re
 	if err != nil {
 		return nil, err
 	}
-	if _, err := orderScopeQuery(dbtenant.Client(ctx, s.db).SalesOrder.Query(), cid, did).
+	if _, err := orderScopeQuery(dbtenant.Client(ctx, s.db).SalesOrder.Query(), cid, did, custID).
 		Where(salesorder.ID(oid), salesorder.DeletedAtIsNil()).Only(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
@@ -495,7 +520,7 @@ func (s *SalesOrderService) transition(ctx context.Context, rawID, to, reason st
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := deptScope(id)
+	cid, did, custID, err := orderScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -508,7 +533,7 @@ func (s *SalesOrderService) transition(ctx context.Context, rawID, to, reason st
 	if err != nil {
 		return nil, err
 	}
-	if _, err := orderScopeQuery(db.SalesOrder.Query(), cid, did).
+	if _, err := orderScopeQuery(db.SalesOrder.Query(), cid, did, custID).
 		Where(salesorder.ID(oid), salesorder.DeletedAtIsNil()).Only(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
@@ -530,7 +555,7 @@ func (s *SalesOrderService) transitionOrder(ctx context.Context, rawID, to, reas
 	if err != nil {
 		return nil, err
 	}
-	cid, did, err := deptScope(id)
+	cid, did, custID, err := orderScope(id)
 	if err != nil {
 		return nil, err
 	}
@@ -543,7 +568,7 @@ func (s *SalesOrderService) transitionOrder(ctx context.Context, rawID, to, reas
 	if err != nil {
 		return nil, err
 	}
-	if _, err := orderScopeQuery(db.SalesOrder.Query(), cid, did).
+	if _, err := orderScopeQuery(db.SalesOrder.Query(), cid, did, custID).
 		Where(salesorder.ID(oid), salesorder.DeletedAtIsNil()).Only(ctx); err != nil {
 		return nil, toConnectError(err)
 	}

@@ -129,7 +129,7 @@ func New(cfg *config.Config) *Server {
 func (s *Server) Init() error {
 	// 設計書 §4.4 啟動防護：production 誤開 developer 繞過授權 → 拒絕啟動。
 	if s.cfg.API.Env == "production" && s.cfg.API.DeveloperAccountEnabled {
-		return fmt.Errorf("config: ENV=production 且 DEVELOPER_ACCOUNT_ENABLED=true 會繞過 Casbin/RLS,拒絕啟動")
+		return fmt.Errorf("config: ENV=production 且 DEVELOPER_ACCOUNT_ENABLED=true 會繞過 OpenFGA/RLS,拒絕啟動")
 	}
 	// 啟動防護：production 不得使用空或預設 JWT 密鑰（JWT_SECRET 未設定時 envconfig 落回
 	// config/auth.go 的 dev 預設常數,等同未設定 → 拒絕啟動）。
@@ -234,7 +234,6 @@ func clientIP(r *http.Request) string {
 func (s *Server) authzMiddleware(entClient *ent.Client, sessions *scs.SessionManager, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		ctx = authz.WithCASLEnabled(ctx, s.cfg.API.CASLEnforcementEnabled)
 		ctx = authz.WithDB(ctx, entClient)
 		// 稽核來源資訊(IP / User-Agent)每請求注入一次,供 service 層寫稽核(I9;03 2.6.2)。
 		ctx = audit.WithMeta(ctx, audit.Meta{IP: clientIP(r), UserAgent: r.UserAgent()})
@@ -368,24 +367,31 @@ func (s *Server) identityFor(ctx context.Context, entClient *ent.Client, userID 
 		if sessionTokenVersion >= 0 && sessionTokenVersion != u.TokenVersion {
 			return errIdentityRejected
 		}
-		// developer 帳號僅在開關啟用時繞過 Casbin/RLS（設計書 §4.4）。
+		// developer 帳號僅在開關啟用時繞過 OpenFGA/RLS（設計書 §4.4）。
 		if u.Role == "developer" && !s.cfg.API.DeveloperAccountEnabled {
 			return errIdentityRejected
 		}
 
-		var companyID, deptID string
+		var companyID, deptID, customerID string
 		if u.Edges.Company != nil {
 			companyID = strconv.FormatInt(int64(u.Edges.Company.ID), 10)
 		}
 		if u.Edges.Department != nil {
 			deptID = strconv.FormatInt(int64(u.Edges.Department.ID), 10)
 		}
+		// 客戶帳號帶 customer_id:orderScope(訂單自查範圍)、orderCustomerGuard(4.2.3
+		// 下單守衛)、returnCustomerScope(退貨 self 範圍)都以此為準 —— 空值會讓這三條
+		// 客戶路徑一律 permission_denied。
+		if u.CustomerID != nil {
+			customerID = strconv.FormatInt(int64(*u.CustomerID), 10)
+		}
 		id = authz.Identity{
 			UserID:             strconv.FormatInt(int64(u.ID), 10),
 			CompanyID:          companyID,
 			DepartmentID:       deptID,
+			CustomerID:         customerID,
 			Role:               u.Role,
-			Roles:              auth.RolesFor(u.Role), // 依 Casbin g 展開(含自身)
+			Roles:              auth.RolesFor(u.Role), // 依內建角色繼承展開(含自身)
 			MustChangePassword: u.MustChangePassword,  // A3 首登/臨時密碼態
 		}
 		// A2 公司停用連鎖(2.1.3):companyActive=false 表示公司非 active(company 為 nil 視同停用),

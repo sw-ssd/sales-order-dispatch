@@ -60,8 +60,15 @@ var rolePolicy = map[string]map[string][]string{
 		"notification": {"read", "write"},
 	},
 	"customer": {
-		"sales_order": {"read"},
-		"product":     {"read"},
+		// App 自助（規格 sales-orders 4.2 客戶自行下單／4.4 客戶 App 發起退貨、
+		// notifications 退貨審核結果推播客戶子帳號）：訂單讀寫（限 orderScope
+		// 收斂到自己客戶）、退貨申請讀寫（審核權另由 return_review.canReview
+		// 收斂到主責業務）、本人通知讀寫。主檔類資源（customer/user/公司部門）
+		// 仍一律不給。
+		"sales_order":    {"read", "write"},
+		"product":        {"read"},
+		"return_request": {"read", "write"},
+		"notification":   {"read", "write"},
 	},
 	"guest": {
 		"user": {"read"},
