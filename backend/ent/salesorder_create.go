@@ -170,6 +170,20 @@ func (_c *SalesOrderCreate) SetNillableDeliverySequence(v *int) *SalesOrderCreat
 	return _c
 }
 
+// SetDeliveredAt sets the "delivered_at" field.
+func (_c *SalesOrderCreate) SetDeliveredAt(v time.Time) *SalesOrderCreate {
+	_c.mutation.SetDeliveredAt(v)
+	return _c
+}
+
+// SetNillableDeliveredAt sets the "delivered_at" field if the given value is not nil.
+func (_c *SalesOrderCreate) SetNillableDeliveredAt(v *time.Time) *SalesOrderCreate {
+	if v != nil {
+		_c.SetDeliveredAt(*v)
+	}
+	return _c
+}
+
 // SetVersion sets the "version" field.
 func (_c *SalesOrderCreate) SetVersion(v int) *SalesOrderCreate {
 	_c.mutation.SetVersion(v)
@@ -425,6 +439,10 @@ func (_c *SalesOrderCreate) createSpec() (*SalesOrder, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.DeliverySequence(); ok {
 		_spec.SetField(salesorder.FieldDeliverySequence, field.TypeInt, value)
 		_node.DeliverySequence = &value
+	}
+	if value, ok := _c.mutation.DeliveredAt(); ok {
+		_spec.SetField(salesorder.FieldDeliveredAt, field.TypeTime, value)
+		_node.DeliveredAt = &value
 	}
 	if value, ok := _c.mutation.Version(); ok {
 		_spec.SetField(salesorder.FieldVersion, field.TypeInt, value)

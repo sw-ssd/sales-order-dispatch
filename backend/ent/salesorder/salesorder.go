@@ -39,6 +39,8 @@ const (
 	FieldRouteID = "route_id"
 	// FieldDeliverySequence holds the string denoting the delivery_sequence field in the database.
 	FieldDeliverySequence = "delivery_sequence"
+	// FieldDeliveredAt holds the string denoting the delivered_at field in the database.
+	FieldDeliveredAt = "delivered_at"
 	// FieldVersion holds the string denoting the version field in the database.
 	FieldVersion = "version"
 	// FieldCreatedBy holds the string denoting the created_by field in the database.
@@ -71,6 +73,7 @@ var Columns = []string{
 	FieldDispatchedBy,
 	FieldRouteID,
 	FieldDeliverySequence,
+	FieldDeliveredAt,
 	FieldVersion,
 	FieldCreatedBy,
 	FieldUpdatedBy,
@@ -179,6 +182,11 @@ func ByRouteID(opts ...sql.OrderTermOption) OrderOption {
 // ByDeliverySequence orders the results by the delivery_sequence field.
 func ByDeliverySequence(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDeliverySequence, opts...).ToFunc()
+}
+
+// ByDeliveredAt orders the results by the delivered_at field.
+func ByDeliveredAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDeliveredAt, opts...).ToFunc()
 }
 
 // ByVersion orders the results by the version field.

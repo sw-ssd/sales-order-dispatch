@@ -747,15 +747,15 @@ func init() {
 	// salesorder.StatusValidator is a validator for the "status" field. It is called by the builders before save.
 	salesorder.StatusValidator = salesorderDescStatus.Validators[0].(func(string) error)
 	// salesorderDescVersion is the schema descriptor for version field.
-	salesorderDescVersion := salesorderFields[13].Descriptor()
+	salesorderDescVersion := salesorderFields[14].Descriptor()
 	// salesorder.DefaultVersion holds the default value on creation for the version field.
 	salesorder.DefaultVersion = salesorderDescVersion.Default.(int)
 	// salesorderDescCreatedAt is the schema descriptor for created_at field.
-	salesorderDescCreatedAt := salesorderFields[16].Descriptor()
+	salesorderDescCreatedAt := salesorderFields[17].Descriptor()
 	// salesorder.DefaultCreatedAt holds the default value on creation for the created_at field.
 	salesorder.DefaultCreatedAt = salesorderDescCreatedAt.Default.(func() time.Time)
 	// salesorderDescUpdatedAt is the schema descriptor for updated_at field.
-	salesorderDescUpdatedAt := salesorderFields[17].Descriptor()
+	salesorderDescUpdatedAt := salesorderFields[18].Descriptor()
 	// salesorder.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	salesorder.DefaultUpdatedAt = salesorderDescUpdatedAt.Default.(func() time.Time)
 	// salesorder.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

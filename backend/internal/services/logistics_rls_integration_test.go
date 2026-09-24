@@ -6,6 +6,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -279,6 +280,84 @@ func TestIntegrationLogisticsCrossDeptAndSelfIsolation(t *testing.T) {
 		})); connect.CodeOf(err) != connect.CodeNotFound &&
 			connect.CodeOf(err) != connect.CodePermissionDenied {
 			t.Fatalf("跨部門司機操作應 not_found/permission_denied,got %v", err)
+		}
+	}
+
+	// ⑥ 10.9 送達回寫:真 RLS 下,配送完成把**該車次**上的 processing 訂單標送達。
+	//    用一條新的甲部車次(避免動到已完成的配送:狀態機宣告終態無出口,
+	//    重指派已被守衛擋下 —— 見 logistics_service.go 的終態守衛)。
+	{
+		cust := adminDB.Customer.Create().SetCustomerCode("FLP-C1").SetName("探針客戶").
+			SetCompanyID(co.ID).SetDepartmentID(deptA.ID).SaveX(ctx)
+		routeA2 := adminDB.Route.Create().SetCode("RA2").SetName("甲線二").
+			SetCompanyID(co.ID).SetDepartmentID(deptA.ID).SaveX(ctx).ID
+		orderA := adminDB.SalesOrder.Create().
+			SetCompanyID(co.ID).SetDepartmentID(deptA.ID).
+			SetOrderNo("FLP-ORD-A").SetCustomerID(cust.ID).SetSource("W").
+			SetStatus(OrderStatusProcessing).SetRouteID(routeA2).
+			SetVersion(1).SaveX(ctx).ID
+		orderOther := adminDB.SalesOrder.Create().
+			SetCompanyID(co.ID).SetDepartmentID(deptA.ID).
+			SetOrderNo("FLP-ORD-B").SetCustomerID(cust.ID).SetSource("W").
+			SetStatus(OrderStatusProcessing).SetRouteID(routeA). // 別條車次 → 不得被回寫
+			SetVersion(1).SaveX(ctx).ID
+
+		mgrRPC := logisticsServer(idOf(uItoa(mgrA), "dept_admin", deptA.ID), scopeDept(deptA.ID, uItoa(mgrA)))
+		drvRPC := logisticsServer(idOf(uItoa(drvA), "staff", deptA.ID), scopeDept(deptA.ID, uItoa(drvA)))
+
+		// 甲部司機的 drivers 列 id(前面已建過;以清單取得配送上的 driver id)。
+		cur, err := drvRPC.ListMyDeliveries(ctx, connect.NewRequest(&v1.ListMyDeliveriesRequest{}))
+		if err != nil || cur.Msg.GetTotal() != 1 {
+			t.Fatalf("讀甲部配送: err=%v total=%d", err, cur.Msg.GetTotal())
+		}
+		driverID := cur.Msg.GetDeliveries()[0].GetDriverId()
+
+		asg, err := mgrRPC.AssignDelivery(ctx, connect.NewRequest(&v1.AssignDeliveryRequest{
+			RouteId: uItoa(routeA2), DriverId: driverID, Version: "0",
+		}))
+		if err != nil {
+			t.Fatalf("指派新車次: %v", err)
+		}
+		newDelID := asg.Msg.GetDelivery().GetId()
+		if _, err := drvRPC.StartDelivery(ctx, connect.NewRequest(&v1.StartDeliveryRequest{
+			DeliveryId: newDelID, Version: asg.Msg.GetDelivery().GetVersion(),
+		})); err != nil {
+			t.Fatalf("開始: %v", err)
+		}
+		if _, err := drvRPC.CompleteDelivery(ctx, connect.NewRequest(&v1.CompleteDeliveryRequest{
+			DeliveryId: newDelID, Version: "2",
+		})); err != nil {
+			t.Fatalf("完成(含回寫): %v", err)
+		}
+
+		// 該車次訂單已送達(completed + delivered_at);他車次不受影響。
+		o := adminDB.SalesOrder.GetX(ctx, orderA)
+		if o.Status != OrderStatusCompleted || o.DeliveredAt == nil {
+			t.Fatalf("車次訂單應被回寫,got status=%s delivered_at=%v", o.Status, o.DeliveredAt)
+		}
+		oo := adminDB.SalesOrder.GetX(ctx, orderOther)
+		if oo.Status != OrderStatusProcessing || oo.DeliveredAt != nil {
+			t.Fatalf("他車次訂單不應被回寫,got status=%s", oo.Status)
+		}
+		// 事件 + 稽核(真 DB)。
+		var nEv, nAudit int
+		if err := adminSql.QueryRow(`SELECT count(*) FROM sales_order_events
+			WHERE sales_order_id = $1 AND event_type = 'complete'`, orderA).Scan(&nEv); err != nil {
+			t.Fatalf("讀訂單事件: %v", err)
+		}
+		if err := adminSql.QueryRow(`SELECT count(*) FROM audit_logs
+			WHERE resource_type = 'sales_order' AND resource_id = $1 AND action = 'update'`,
+			strconv.Itoa(orderA)).Scan(&nAudit); err != nil {
+			t.Fatalf("讀稽核: %v", err)
+		}
+		if nEv != 1 || nAudit != 1 {
+			t.Fatalf("送達回寫應各寫 1 筆事件與稽核,got events=%d audits=%d", nEv, nAudit)
+		}
+		// 終態守衛:已完成的配送不得再重指派。
+		if _, err := mgrRPC.AssignDelivery(ctx, connect.NewRequest(&v1.AssignDeliveryRequest{
+			RouteId: uItoa(routeA2), DriverId: driverID, Version: "3",
+		})); connect.CodeOf(err) != connect.CodeInvalidArgument {
+			t.Fatalf("已完成配送重指派應 invalid_argument,got %v", err)
 		}
 	}
 }

@@ -42,6 +42,7 @@ type SalesOrder struct {
 	CreatedAt            string                 `protobuf:"bytes,16,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`                                   // RFC3339
 	UpdatedAt            string                 `protobuf:"bytes,17,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`                                   // RFC3339
 	DeletedAt            string                 `protobuf:"bytes,18,opt,name=deleted_at,json=deletedAt,proto3" json:"deleted_at,omitempty"`                                   // RFC3339(可空;include_deleted 時回傳)
+	DeliveredAt          string                 `protobuf:"bytes,19,opt,name=delivered_at,json=deliveredAt,proto3" json:"delivered_at,omitempty"`                             // 可空(RFC3339;10.9 送達回寫寫入,非空即實際送達)
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -198,6 +199,13 @@ func (x *SalesOrder) GetUpdatedAt() string {
 func (x *SalesOrder) GetDeletedAt() string {
 	if x != nil {
 		return x.DeletedAt
+	}
+	return ""
+}
+
+func (x *SalesOrder) GetDeliveredAt() string {
+	if x != nil {
+		return x.DeliveredAt
 	}
 	return ""
 }
@@ -1476,7 +1484,7 @@ var File_salesorder_v1_salesorder_proto protoreflect.FileDescriptor
 
 const file_salesorder_v1_salesorder_proto_rawDesc = "" +
 	"\n" +
-	"\x1esalesorder/v1/salesorder.proto\x12\rsalesorder.v1\x1a\x1asalesorder/v1/common.proto\"\xc1\x04\n" +
+	"\x1esalesorder/v1/salesorder.proto\x12\rsalesorder.v1\x1a\x1asalesorder/v1/common.proto\"\xe4\x04\n" +
 	"\n" +
 	"SalesOrder\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
@@ -1503,7 +1511,8 @@ const file_salesorder_v1_salesorder_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\x11 \x01(\tR\tupdatedAt\x12\x1d\n" +
 	"\n" +
-	"deleted_at\x18\x12 \x01(\tR\tdeletedAt\"\xbd\x02\n" +
+	"deleted_at\x18\x12 \x01(\tR\tdeletedAt\x12!\n" +
+	"\fdelivered_at\x18\x13 \x01(\tR\vdeliveredAt\"\xbd\x02\n" +
 	"\x0eSalesOrderItem\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +

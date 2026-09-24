@@ -119,6 +119,11 @@ func DeliverySequence(v int) predicate.SalesOrder {
 	return predicate.SalesOrder(sql.FieldEQ(FieldDeliverySequence, v))
 }
 
+// DeliveredAt applies equality check predicate on the "delivered_at" field. It's identical to DeliveredAtEQ.
+func DeliveredAt(v time.Time) predicate.SalesOrder {
+	return predicate.SalesOrder(sql.FieldEQ(FieldDeliveredAt, v))
+}
+
 // Version applies equality check predicate on the "version" field. It's identical to VersionEQ.
 func Version(v int) predicate.SalesOrder {
 	return predicate.SalesOrder(sql.FieldEQ(FieldVersion, v))
@@ -847,6 +852,56 @@ func DeliverySequenceIsNil() predicate.SalesOrder {
 // DeliverySequenceNotNil applies the NotNil predicate on the "delivery_sequence" field.
 func DeliverySequenceNotNil() predicate.SalesOrder {
 	return predicate.SalesOrder(sql.FieldNotNull(FieldDeliverySequence))
+}
+
+// DeliveredAtEQ applies the EQ predicate on the "delivered_at" field.
+func DeliveredAtEQ(v time.Time) predicate.SalesOrder {
+	return predicate.SalesOrder(sql.FieldEQ(FieldDeliveredAt, v))
+}
+
+// DeliveredAtNEQ applies the NEQ predicate on the "delivered_at" field.
+func DeliveredAtNEQ(v time.Time) predicate.SalesOrder {
+	return predicate.SalesOrder(sql.FieldNEQ(FieldDeliveredAt, v))
+}
+
+// DeliveredAtIn applies the In predicate on the "delivered_at" field.
+func DeliveredAtIn(vs ...time.Time) predicate.SalesOrder {
+	return predicate.SalesOrder(sql.FieldIn(FieldDeliveredAt, vs...))
+}
+
+// DeliveredAtNotIn applies the NotIn predicate on the "delivered_at" field.
+func DeliveredAtNotIn(vs ...time.Time) predicate.SalesOrder {
+	return predicate.SalesOrder(sql.FieldNotIn(FieldDeliveredAt, vs...))
+}
+
+// DeliveredAtGT applies the GT predicate on the "delivered_at" field.
+func DeliveredAtGT(v time.Time) predicate.SalesOrder {
+	return predicate.SalesOrder(sql.FieldGT(FieldDeliveredAt, v))
+}
+
+// DeliveredAtGTE applies the GTE predicate on the "delivered_at" field.
+func DeliveredAtGTE(v time.Time) predicate.SalesOrder {
+	return predicate.SalesOrder(sql.FieldGTE(FieldDeliveredAt, v))
+}
+
+// DeliveredAtLT applies the LT predicate on the "delivered_at" field.
+func DeliveredAtLT(v time.Time) predicate.SalesOrder {
+	return predicate.SalesOrder(sql.FieldLT(FieldDeliveredAt, v))
+}
+
+// DeliveredAtLTE applies the LTE predicate on the "delivered_at" field.
+func DeliveredAtLTE(v time.Time) predicate.SalesOrder {
+	return predicate.SalesOrder(sql.FieldLTE(FieldDeliveredAt, v))
+}
+
+// DeliveredAtIsNil applies the IsNil predicate on the "delivered_at" field.
+func DeliveredAtIsNil() predicate.SalesOrder {
+	return predicate.SalesOrder(sql.FieldIsNull(FieldDeliveredAt))
+}
+
+// DeliveredAtNotNil applies the NotNil predicate on the "delivered_at" field.
+func DeliveredAtNotNil() predicate.SalesOrder {
+	return predicate.SalesOrder(sql.FieldNotNull(FieldDeliveredAt))
 }
 
 // VersionEQ applies the EQ predicate on the "version" field.

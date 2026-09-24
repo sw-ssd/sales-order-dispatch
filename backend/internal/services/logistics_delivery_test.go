@@ -254,3 +254,43 @@ func atoiT(t *testing.T, s string) int {
 	}
 	return n
 }
+
+// TestAssignDeliveryGuardsTerminalStatus 終態配送不得重指派(10.6 狀態機補上的守衛):
+// 司機/車輛欄位與 FGA 判決不該在配送完成後再被改動。
+func TestAssignDeliveryGuardsTerminalStatus(t *testing.T) {
+	ctx := context.Background()
+	f, driverUID, _, _ := setupAssignedDelivery(t)
+	admin := f.newLogisticsServer(t, logisticsIdentity("dept_admin", f.managerID, f.coID, f.deptID))
+	driver := f.newLogisticsServer(t, logisticsIdentity("staff", driverUID, f.coID, f.deptID))
+
+	if _, err := driver.StartDelivery(ctx, connect.NewRequest(&v1.StartDeliveryRequest{
+		DeliveryId: "1", Version: "1",
+	})); err != nil {
+		t.Fatalf("開始: %v", err)
+	}
+	if _, err := driver.CompleteDelivery(ctx, connect.NewRequest(&v1.CompleteDeliveryRequest{
+		DeliveryId: "1", Version: "2",
+	})); err != nil {
+		t.Fatalf("完成: %v", err)
+	}
+	// 已完成 → 重指派應被拒(即使 version 正確)。
+	if _, err := admin.AssignDelivery(ctx, connect.NewRequest(&v1.AssignDeliveryRequest{
+		RouteId: uItoa(f.routeID), DriverId: "1", Version: "3",
+	})); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("已完成配送重指派應 invalid_argument,got %v", err)
+	}
+	// 取消後同理。
+	f2, driverUID2, _, _ := setupAssignedDelivery(t)
+	admin2 := f2.newLogisticsServer(t, logisticsIdentity("dept_admin", f2.managerID, f2.coID, f2.deptID))
+	driver2 := f2.newLogisticsServer(t, logisticsIdentity("staff", driverUID2, f2.coID, f2.deptID))
+	if _, err := driver2.CancelDelivery(ctx, connect.NewRequest(&v1.CancelDeliveryRequest{
+		DeliveryId: "1", Version: "1", Reason: "客戶臨時取消",
+	})); err != nil {
+		t.Fatalf("取消: %v", err)
+	}
+	if _, err := admin2.AssignDelivery(ctx, connect.NewRequest(&v1.AssignDeliveryRequest{
+		RouteId: uItoa(f2.routeID), DriverId: "1", Version: "2",
+	})); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("已取消配送重指派應 invalid_argument,got %v", err)
+	}
+}

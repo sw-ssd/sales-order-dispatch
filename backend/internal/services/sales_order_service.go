@@ -49,7 +49,11 @@ func RegisterSalesOrderService(mux *http.ServeMux, db *ent.Client) {
 //
 // 刻意不重用 deptScope:那是主檔語意（刻意拒絕 customer），訂單是客戶自己的資料。
 func orderScope(id authz.Identity) (int, *int, *int, error) {
-	if hasRole(id, "customer") {
+	// 判「是不是客戶帳號」必須用原始角色 id.Role,不可用 hasRole(id, "customer"):
+	// 角色繼承是 company_admin → dept_admin → staff → customer,展開後的 Roles 讓
+	// **所有後台角色都含 customer**,於是每個管理者都會誤入此分支、缺 CustomerID → 全員 403
+	// (2026-09-24 實機踩到;其他 customer 判斷如 returnCustomerScope 皆用 id.Role)。
+	if id.Role == "customer" {
 		cid, err := parseID(id.CompanyID)
 		if err != nil {
 			return 0, nil, nil, errcode.SysPermissionDenied.Error(nil)
@@ -631,6 +635,9 @@ func salesOrderToProto(o *ent.SalesOrder) *salesorderv1.SalesOrder {
 	}
 	if o.DeletedAt != nil {
 		p.DeletedAt = o.DeletedAt.UTC().Format(time.RFC3339)
+	}
+	if o.DeliveredAt != nil {
+		p.DeliveredAt = o.DeliveredAt.UTC().Format(time.RFC3339)
 	}
 	return p
 }

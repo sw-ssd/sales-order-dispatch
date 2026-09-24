@@ -918,6 +918,7 @@ var (
 		{Name: "dispatched_by", Type: field.TypeInt, Nullable: true},
 		{Name: "route_id", Type: field.TypeInt, Nullable: true},
 		{Name: "delivery_sequence", Type: field.TypeInt, Nullable: true},
+		{Name: "delivered_at", Type: field.TypeTime, Nullable: true},
 		{Name: "version", Type: field.TypeInt, Default: 1},
 		{Name: "created_by", Type: field.TypeInt, Nullable: true},
 		{Name: "updated_by", Type: field.TypeInt, Nullable: true},

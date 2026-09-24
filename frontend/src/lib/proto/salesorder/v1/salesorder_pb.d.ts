@@ -135,6 +135,13 @@ export declare type SalesOrder = Message<"salesorder.v1.SalesOrder"> & {
    * @generated from field: string deleted_at = 18;
    */
   deletedAt: string;
+
+  /**
+   * 可空(RFC3339;10.9 送達回寫寫入,非空即實際送達)
+   *
+   * @generated from field: string delivered_at = 19;
+   */
+  deliveredAt: string;
 };
 
 /**

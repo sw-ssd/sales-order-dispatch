@@ -139,3 +139,8 @@ func deliveryEventFor(from, to string) string {
 		return to
 	}
 }
+
+// isTerminalDeliveryStatus 回報配送狀態是否為終態(無任何合法出口)。
+func isTerminalDeliveryStatus(s string) bool {
+	return len(allowedDeliveryTransitions[s]) == 0
+}

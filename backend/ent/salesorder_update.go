@@ -307,6 +307,26 @@ func (_u *SalesOrderUpdate) ClearDeliverySequence() *SalesOrderUpdate {
 	return _u
 }
 
+// SetDeliveredAt sets the "delivered_at" field.
+func (_u *SalesOrderUpdate) SetDeliveredAt(v time.Time) *SalesOrderUpdate {
+	_u.mutation.SetDeliveredAt(v)
+	return _u
+}
+
+// SetNillableDeliveredAt sets the "delivered_at" field if the given value is not nil.
+func (_u *SalesOrderUpdate) SetNillableDeliveredAt(v *time.Time) *SalesOrderUpdate {
+	if v != nil {
+		_u.SetDeliveredAt(*v)
+	}
+	return _u
+}
+
+// ClearDeliveredAt clears the value of the "delivered_at" field.
+func (_u *SalesOrderUpdate) ClearDeliveredAt() *SalesOrderUpdate {
+	_u.mutation.ClearDeliveredAt()
+	return _u
+}
+
 // SetVersion sets the "version" field.
 func (_u *SalesOrderUpdate) SetVersion(v int) *SalesOrderUpdate {
 	_u.mutation.ResetVersion()
@@ -578,6 +598,12 @@ func (_u *SalesOrderUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	}
 	if _u.mutation.DeliverySequenceCleared() {
 		_spec.ClearField(salesorder.FieldDeliverySequence, field.TypeInt)
+	}
+	if value, ok := _u.mutation.DeliveredAt(); ok {
+		_spec.SetField(salesorder.FieldDeliveredAt, field.TypeTime, value)
+	}
+	if _u.mutation.DeliveredAtCleared() {
+		_spec.ClearField(salesorder.FieldDeliveredAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.Version(); ok {
 		_spec.SetField(salesorder.FieldVersion, field.TypeInt, value)
@@ -914,6 +940,26 @@ func (_u *SalesOrderUpdateOne) ClearDeliverySequence() *SalesOrderUpdateOne {
 	return _u
 }
 
+// SetDeliveredAt sets the "delivered_at" field.
+func (_u *SalesOrderUpdateOne) SetDeliveredAt(v time.Time) *SalesOrderUpdateOne {
+	_u.mutation.SetDeliveredAt(v)
+	return _u
+}
+
+// SetNillableDeliveredAt sets the "delivered_at" field if the given value is not nil.
+func (_u *SalesOrderUpdateOne) SetNillableDeliveredAt(v *time.Time) *SalesOrderUpdateOne {
+	if v != nil {
+		_u.SetDeliveredAt(*v)
+	}
+	return _u
+}
+
+// ClearDeliveredAt clears the value of the "delivered_at" field.
+func (_u *SalesOrderUpdateOne) ClearDeliveredAt() *SalesOrderUpdateOne {
+	_u.mutation.ClearDeliveredAt()
+	return _u
+}
+
 // SetVersion sets the "version" field.
 func (_u *SalesOrderUpdateOne) SetVersion(v int) *SalesOrderUpdateOne {
 	_u.mutation.ResetVersion()
@@ -1215,6 +1261,12 @@ func (_u *SalesOrderUpdateOne) sqlSave(ctx context.Context) (_node *SalesOrder, 
 	}
 	if _u.mutation.DeliverySequenceCleared() {
 		_spec.ClearField(salesorder.FieldDeliverySequence, field.TypeInt)
+	}
+	if value, ok := _u.mutation.DeliveredAt(); ok {
+		_spec.SetField(salesorder.FieldDeliveredAt, field.TypeTime, value)
+	}
+	if _u.mutation.DeliveredAtCleared() {
+		_spec.ClearField(salesorder.FieldDeliveredAt, field.TypeTime)
 	}
 	if value, ok := _u.mutation.Version(); ok {
 		_spec.SetField(salesorder.FieldVersion, field.TypeInt, value)

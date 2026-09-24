@@ -22,6 +22,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/logisticsdelivery"
 	"github.com/salesorder/sales-order-1.0/backend/ent/logisticsdriver"
 	"github.com/salesorder/sales-order-1.0/backend/ent/route"
+	"github.com/salesorder/sales-order-1.0/backend/ent/salesorder"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/ent/vehicle"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
@@ -413,6 +414,14 @@ func (s *LogisticsService) AssignDelivery(ctx context.Context, req *connect.Requ
 		auditAction = "create"
 	default:
 		// 重指派:樂觀鎖(不符即拒絕,同 dispatch 慣例 SYS-1001 + reason)。
+		// 終態(completed/cancelled)不得重指派 —— 10.6 的狀態機宣告終態無出口,
+		// 若允許改 driver/vehicle,會出現「狀態已完成但司機換人」且 FGA 判決隨之移交的
+		// 矛盾(實作狀態機後補上的守衛)。要重跑請對新車次建立新的配送單。
+		if isTerminalDeliveryStatus(existing.Status) {
+			return nil, errcode.SysInvalidArgument.Error(map[string]string{
+				"reason": "配送已完成或已取消，不可重指派", "status": existing.Status,
+			})
+		}
 		expect, err := strconv.Atoi(rawVersion)
 		if err != nil || expect != existing.Version {
 			return nil, errcode.SysInvalidArgument.
@@ -644,9 +653,17 @@ func (s *LogisticsService) CompleteDelivery(ctx context.Context, req *connect.Re
 	if err != nil {
 		return nil, err
 	}
+	// 10.9 送達回寫:該車次所載每筆訂單標送達(processing → completed + delivered_at +
+	// 事件 + 稽核,同一交易)。任一筆失敗 → 整交易回滾(含上面的配送完成與 POD),
+	// 避免「配送完成但訂單沒結」的半套狀態。
+	delivered, err := s.writebackDeliveredOrders(ctx, tx.Client(), saved, me)
+	if err != nil {
+		return nil, err
+	}
 	if err := recordAuditBA(ctx, tx, "logistics_delivery", "update", saved.ID, cid, did, me,
 		map[string]any{"status": DeliveryStatusInProgress},
-		map[string]any{"status": DeliveryStatusCompleted, "proofs": len(proofs)}); err != nil {
+		map[string]any{"status": DeliveryStatusCompleted, "proofs": len(proofs),
+			"delivered_orders": delivered}); err != nil {
 		return nil, err
 	}
 	out := make([]*salesorderv1.LogisticsProof, 0, len(proofs))
@@ -816,4 +833,48 @@ func routeQ1(ctx context.Context, db *ent.Client, rid, cid int, did *int) (*ent.
 		return nil, toConnectError(err)
 	}
 	return row, nil
+}
+
+// writebackDeliveredOrders 執行 10.9 送達回寫:把該配送所屬車次上「運送中」的每筆訂單
+// 標為完成並蓋送達時點,回傳成功回寫的訂單數。
+//
+// 篩選條件是 RouteID + status=processing:派車確認(08 ConfirmDispatch)會把訂單轉
+// processing 並寫 route_id,所以「車次所載」精確等於「該 route 的 processing 訂單」。
+// 不撈 pending/cancelled/completed —— 那些不是這台車載的貨;pulling them in would
+// make an unrelated pending order block delivery completion (狀態機不允許 pending→completed)。
+//
+// 回寫本身走既有狀態機 TransitionOrder(不自行改 status):同一交易內逐筆條件更新,
+// 任一笔失敗即回傳錯誤 → 呼叫端交易回滾(10.9 錯誤處理:不留部分送達)。
+// 車次上沒有 processing 訂單(例如先建配送、後派車)不算錯誤:回寫 0 筆、配送照常完成。
+func (s *LogisticsService) writebackDeliveredOrders(ctx context.Context, db *ent.Client,
+	d *ent.LogisticsDelivery, actor int) (int, error) {
+	if d.RouteID == 0 {
+		return 0, nil
+	}
+	orders, err := db.SalesOrder.Query().Where(
+		salesorder.RouteIDEQ(d.RouteID),
+		salesorder.CompanyIDEQ(d.CompanyID),
+		salesorder.StatusEQ(OrderStatusProcessing),
+		salesorder.DeletedAtIsNil(),
+	).All(ctx)
+	if err != nil {
+		return 0, toConnectError(err)
+	}
+	return markOrdersDelivered(ctx, db, orders, actor)
+}
+
+// markOrdersDelivered 逐筆標送達(失敗即返回,由呼叫端的交易回滾)。
+// 與查詢分開是為了讓「批次中任一筆失敗即整體回滾」可被直接測試(見
+// logistics_delivered_writeback_test.go:不需要併發插隊就能驗證 fail-fast)。
+func markOrdersDelivered(ctx context.Context, db *ent.Client, orders []*ent.SalesOrder, actor int) (int, error) {
+	now := time.Now().UTC()
+	for _, o := range orders {
+		if err := TransitionOrder(ctx, db, OrderTransitionInput{
+			OrderID: o.ID, To: OrderStatusCompleted, ActorID: actor,
+			MarkDelivered: true, DeliveredAt: &now,
+		}); err != nil {
+			return 0, err
+		}
+	}
+	return len(orders), nil
 }

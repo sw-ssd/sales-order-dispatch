@@ -56,6 +56,12 @@ func CanOrderTransition(from, to string) bool {
 // OrderTransitionInput 為一次狀態轉移的參數。Reason 僅 dispatch_cancel/void 必填;
 // DispatchedBy/RouteID/DeliverySequence 為 dispatch 時的派車欄位(dispatch_cancel 保留
 // route 看板位置,故不清 route 欄)。
+//
+// MarkDelivered 供 10.9 送達回寫使用:標記 delivered_at。與手動完成
+// (SalesOrderService.CompleteOrder,店家自行確認完成)的差別在於**誰促成**——
+// 兩者都走同一條狀態機,但只有回寫會蓋送達時點;同時事件 payload 帶 source=delivery,
+// 讓事後追查分得出「司機完成配送」與「店家手動結案」。
+// 只設 delivered_at 而不改狀態的呼叫(如對已完成訂單補標)不被支援 —— 狀態機是唯一入口。
 type OrderTransitionInput struct {
 	OrderID          int
 	To               string
@@ -64,6 +70,8 @@ type OrderTransitionInput struct {
 	DispatchedBy     *int
 	RouteID          *int
 	DeliverySequence *int
+	MarkDelivered    bool
+	DeliveredAt      *time.Time
 }
 
 // TransitionOrder 執行一次訂單狀態轉移:條件更新(WHERE status=前值) + 事件 +
@@ -112,6 +120,14 @@ func TransitionOrder(ctx context.Context, db *ent.Client, in OrderTransitionInpu
 	case OrderStatusPending:
 		upd = upd.ClearDispatchedAt().ClearDispatchedBy()
 	}
+	if in.MarkDelivered {
+		// 10.9:完成由配送回寫促成 → 蓋送達時點(呼叫端帶入以維持同時點,未帶則取當下)。
+		at := time.Now().UTC()
+		if in.DeliveredAt != nil {
+			at = in.DeliveredAt.UTC()
+		}
+		upd = upd.SetDeliveredAt(at)
+	}
 	updated, err := upd.Save(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -122,6 +138,11 @@ func TransitionOrder(ctx context.Context, db *ent.Client, in OrderTransitionInpu
 		return errcode.SysInternal.Wrap(err)
 	}
 	eventType := orderEventFor(from, to)
+	payload := map[string]any{"from": from, "to": to}
+	if in.MarkDelivered {
+		// 10.9:標記促成來源,區別「司機完成配送」與「店家手動結案」。
+		payload["source"] = "delivery"
+	}
 	create := db.SalesOrderEvent.Create().
 		SetSalesOrderID(updated.ID).
 		SetCompanyID(updated.CompanyID).
@@ -130,12 +151,13 @@ func TransitionOrder(ctx context.Context, db *ent.Client, in OrderTransitionInpu
 	if strings.TrimSpace(in.Reason) != "" {
 		create = create.SetReason(strings.TrimSpace(in.Reason))
 	}
-	create = create.SetPayload(map[string]any{"from": from, "to": to})
+	create = create.SetPayload(payload)
 	if _, err := create.Save(ctx); err != nil {
 		return errcode.SysInternal.Wrap(err)
 	}
-	// dispatch_cancel/void 除事件外同交易寫稽核(D13/D18)。
-	if eventType == OrderEventDispatchCancel || eventType == OrderEventVoid {
+	// dispatch_cancel/void 除事件外同交易寫稽核(D13/D18);10.9 送達回寫同理
+	// (稽核的 before/after 需看得出「因配送完成而結案」)。
+	if eventType == OrderEventDispatchCancel || eventType == OrderEventVoid || in.MarkDelivered {
 		tx, ok := dbtenant.TxFrom(ctx)
 		if !ok {
 			return errcode.SysInternal.Wrap(errors.New("TransitionOrder 需在呼叫端的交易內執行"))
@@ -145,10 +167,21 @@ func TransitionOrder(ctx context.Context, db *ent.Client, in OrderTransitionInpu
 			d := *updated.DepartmentID
 			did = &d
 		}
-		if err := recordAuditBA(ctx, tx, "sales_order", eventType, updated.ID,
+		after := map[string]any{"status": to, "reason": strings.TrimSpace(in.Reason)}
+		auditAction := eventType
+		if in.MarkDelivered {
+			// action 枚舉無 "complete"(§5.2 列舉:create/update/delete/login/logout/print/
+			// force_logout/role_change/dispatch_cancel/void)→ 送達回寫以 update 記錄,
+			// 事實由 before/after 承載(status 前後值 + source=delivery)。
+			auditAction = "update"
+			after["source"] = "delivery"
+			if updated.DeliveredAt != nil {
+				after["delivered_at"] = updated.DeliveredAt.UTC().Format(time.RFC3339)
+			}
+		}
+		if err := recordAuditBA(ctx, tx, "sales_order", auditAction, updated.ID,
 			updated.CompanyID, did, in.ActorID,
-			map[string]any{"status": from},
-			map[string]any{"status": to, "reason": strings.TrimSpace(in.Reason)}); err != nil {
+			map[string]any{"status": from}, after); err != nil {
 			return errcode.SysInternal.Wrap(err)
 		}
 	}

@@ -949,6 +949,14 @@ export default function OrdersPage() {
                     <dd>{o.expectedDeliveryDate || "—"}</dd>
                   </div>
                   <div>
+                    <dt class="text-muted-foreground">送達時間</dt>
+                    <dd>
+                      {o.deliveredAt
+                        ? o.deliveredAt.slice(0, 19).replace("T", " ")
+                        : "—"}
+                    </dd>
+                  </div>
+                  <div>
                     <dt class="text-muted-foreground">建立時間</dt>
                     <dd>{o.createdAt.slice(0, 19).replace("T", " ")}</dd>
                   </div>

@@ -33400,6 +33400,7 @@ type SalesOrderMutation struct {
 	addroute_id            *int
 	delivery_sequence      *int
 	adddelivery_sequence   *int
+	delivered_at           *time.Time
 	version                *int
 	addversion             *int
 	created_by             *int
@@ -34230,6 +34231,55 @@ func (m *SalesOrderMutation) ResetDeliverySequence() {
 	delete(m.clearedFields, salesorder.FieldDeliverySequence)
 }
 
+// SetDeliveredAt sets the "delivered_at" field.
+func (m *SalesOrderMutation) SetDeliveredAt(t time.Time) {
+	m.delivered_at = &t
+}
+
+// DeliveredAt returns the value of the "delivered_at" field in the mutation.
+func (m *SalesOrderMutation) DeliveredAt() (r time.Time, exists bool) {
+	v := m.delivered_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDeliveredAt returns the old "delivered_at" field's value of the SalesOrder entity.
+// If the SalesOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SalesOrderMutation) OldDeliveredAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDeliveredAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDeliveredAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDeliveredAt: %w", err)
+	}
+	return oldValue.DeliveredAt, nil
+}
+
+// ClearDeliveredAt clears the value of the "delivered_at" field.
+func (m *SalesOrderMutation) ClearDeliveredAt() {
+	m.delivered_at = nil
+	m.clearedFields[salesorder.FieldDeliveredAt] = struct{}{}
+}
+
+// DeliveredAtCleared returns if the "delivered_at" field was cleared in this mutation.
+func (m *SalesOrderMutation) DeliveredAtCleared() bool {
+	_, ok := m.clearedFields[salesorder.FieldDeliveredAt]
+	return ok
+}
+
+// ResetDeliveredAt resets all changes to the "delivered_at" field.
+func (m *SalesOrderMutation) ResetDeliveredAt() {
+	m.delivered_at = nil
+	delete(m.clearedFields, salesorder.FieldDeliveredAt)
+}
+
 // SetVersion sets the "version" field.
 func (m *SalesOrderMutation) SetVersion(i int) {
 	m.version = &i
@@ -34581,7 +34631,7 @@ func (m *SalesOrderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *SalesOrderMutation) Fields() []string {
-	fields := make([]string, 0, 19)
+	fields := make([]string, 0, 20)
 	if m.company_id != nil {
 		fields = append(fields, salesorder.FieldCompanyID)
 	}
@@ -34620,6 +34670,9 @@ func (m *SalesOrderMutation) Fields() []string {
 	}
 	if m.delivery_sequence != nil {
 		fields = append(fields, salesorder.FieldDeliverySequence)
+	}
+	if m.delivered_at != nil {
+		fields = append(fields, salesorder.FieldDeliveredAt)
 	}
 	if m.version != nil {
 		fields = append(fields, salesorder.FieldVersion)
@@ -34673,6 +34726,8 @@ func (m *SalesOrderMutation) Field(name string) (ent.Value, bool) {
 		return m.RouteID()
 	case salesorder.FieldDeliverySequence:
 		return m.DeliverySequence()
+	case salesorder.FieldDeliveredAt:
+		return m.DeliveredAt()
 	case salesorder.FieldVersion:
 		return m.Version()
 	case salesorder.FieldCreatedBy:
@@ -34720,6 +34775,8 @@ func (m *SalesOrderMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldRouteID(ctx)
 	case salesorder.FieldDeliverySequence:
 		return m.OldDeliverySequence(ctx)
+	case salesorder.FieldDeliveredAt:
+		return m.OldDeliveredAt(ctx)
 	case salesorder.FieldVersion:
 		return m.OldVersion(ctx)
 	case salesorder.FieldCreatedBy:
@@ -34831,6 +34888,13 @@ func (m *SalesOrderMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetDeliverySequence(v)
+		return nil
+	case salesorder.FieldDeliveredAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDeliveredAt(v)
 		return nil
 	case salesorder.FieldVersion:
 		v, ok := value.(int)
@@ -35051,6 +35115,9 @@ func (m *SalesOrderMutation) ClearedFields() []string {
 	if m.FieldCleared(salesorder.FieldDeliverySequence) {
 		fields = append(fields, salesorder.FieldDeliverySequence)
 	}
+	if m.FieldCleared(salesorder.FieldDeliveredAt) {
+		fields = append(fields, salesorder.FieldDeliveredAt)
+	}
 	if m.FieldCleared(salesorder.FieldCreatedBy) {
 		fields = append(fields, salesorder.FieldCreatedBy)
 	}
@@ -35097,6 +35164,9 @@ func (m *SalesOrderMutation) ClearField(name string) error {
 		return nil
 	case salesorder.FieldDeliverySequence:
 		m.ClearDeliverySequence()
+		return nil
+	case salesorder.FieldDeliveredAt:
+		m.ClearDeliveredAt()
 		return nil
 	case salesorder.FieldCreatedBy:
 		m.ClearCreatedBy()
@@ -35153,6 +35223,9 @@ func (m *SalesOrderMutation) ResetField(name string) error {
 		return nil
 	case salesorder.FieldDeliverySequence:
 		m.ResetDeliverySequence()
+		return nil
+	case salesorder.FieldDeliveredAt:
+		m.ResetDeliveredAt()
 		return nil
 	case salesorder.FieldVersion:
 		m.ResetVersion()

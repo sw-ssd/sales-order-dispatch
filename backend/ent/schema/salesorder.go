@@ -48,7 +48,10 @@ func (SalesOrder) Fields() []ent.Field {
 			Nillable(), // 取消派車保留看板位置(D13),故本欄不清
 		field.Int("delivery_sequence").
 			Optional().
-			Nillable(),
+			Nillable(), // route 看板序(D13)
+		field.Time("delivered_at").
+			Optional().
+			Nillable(), // 送達時點(10.9 由配送完成回寫),非空即代表實際送達
 		field.Int("version").
 			Default(1), // 樂觀鎖(D14 看板拖放)
 		field.Int("created_by").

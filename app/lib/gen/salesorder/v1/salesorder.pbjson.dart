@@ -49,6 +49,7 @@ const SalesOrder$json = {
     {'1': 'created_at', '3': 16, '4': 1, '5': 9, '10': 'createdAt'},
     {'1': 'updated_at', '3': 17, '4': 1, '5': 9, '10': 'updatedAt'},
     {'1': 'deleted_at', '3': 18, '4': 1, '5': 9, '10': 'deletedAt'},
+    {'1': 'delivered_at', '3': 19, '4': 1, '5': 9, '10': 'deliveredAt'},
   ],
 };
 
@@ -64,7 +65,8 @@ final $typed_data.Uint8List salesOrderDescriptor = $convert.base64Decode(
     'oIcm91dGVfaWQYDSABKAlSB3JvdXRlSWQSKwoRZGVsaXZlcnlfc2VxdWVuY2UYDiABKAVSEGRl'
     'bGl2ZXJ5U2VxdWVuY2USGAoHdmVyc2lvbhgPIAEoBVIHdmVyc2lvbhIdCgpjcmVhdGVkX2F0GB'
     'AgASgJUgljcmVhdGVkQXQSHQoKdXBkYXRlZF9hdBgRIAEoCVIJdXBkYXRlZEF0Eh0KCmRlbGV0'
-    'ZWRfYXQYEiABKAlSCWRlbGV0ZWRBdA==');
+    'ZWRfYXQYEiABKAlSCWRlbGV0ZWRBdBIhCgxkZWxpdmVyZWRfYXQYEyABKAlSC2RlbGl2ZXJlZE'
+    'F0');
 
 @$core.Deprecated('Use salesOrderItemDescriptor instead')
 const SalesOrderItem$json = {

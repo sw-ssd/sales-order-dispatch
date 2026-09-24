@@ -43,6 +43,8 @@ type SalesOrder struct {
 	RouteID *int `json:"route_id,omitempty"`
 	// DeliverySequence holds the value of the "delivery_sequence" field.
 	DeliverySequence *int `json:"delivery_sequence,omitempty"`
+	// DeliveredAt holds the value of the "delivered_at" field.
+	DeliveredAt *time.Time `json:"delivered_at,omitempty"`
 	// Version holds the value of the "version" field.
 	Version int `json:"version,omitempty"`
 	// CreatedBy holds the value of the "created_by" field.
@@ -67,7 +69,7 @@ func (*SalesOrder) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case salesorder.FieldOrderNo, salesorder.FieldSource, salesorder.FieldStatus, salesorder.FieldNote:
 			values[i] = new(sql.NullString)
-		case salesorder.FieldExpectedDeliveryDate, salesorder.FieldDispatchedAt, salesorder.FieldCreatedAt, salesorder.FieldUpdatedAt, salesorder.FieldDeletedAt:
+		case salesorder.FieldExpectedDeliveryDate, salesorder.FieldDispatchedAt, salesorder.FieldDeliveredAt, salesorder.FieldCreatedAt, salesorder.FieldUpdatedAt, salesorder.FieldDeletedAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -174,6 +176,13 @@ func (_m *SalesOrder) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.DeliverySequence = new(int)
 				*_m.DeliverySequence = int(value.Int64)
+			}
+		case salesorder.FieldDeliveredAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field delivered_at", values[i])
+			} else if value.Valid {
+				_m.DeliveredAt = new(time.Time)
+				*_m.DeliveredAt = value.Time
 			}
 		case salesorder.FieldVersion:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -299,6 +308,11 @@ func (_m *SalesOrder) String() string {
 	if v := _m.DeliverySequence; v != nil {
 		builder.WriteString("delivery_sequence=")
 		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
+	builder.WriteString(", ")
+	if v := _m.DeliveredAt; v != nil {
+		builder.WriteString("delivered_at=")
+		builder.WriteString(v.Format(time.ANSIC))
 	}
 	builder.WriteString(", ")
 	builder.WriteString("version=")

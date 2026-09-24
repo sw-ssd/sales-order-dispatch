@@ -38,6 +38,7 @@ class SalesOrder extends $pb.GeneratedMessage {
     $core.String? createdAt,
     $core.String? updatedAt,
     $core.String? deletedAt,
+    $core.String? deliveredAt,
   }) {
     final result = SalesOrder._();
     if (id != null) result.id = id;
@@ -59,6 +60,7 @@ class SalesOrder extends $pb.GeneratedMessage {
     if (createdAt != null) result.createdAt = createdAt;
     if (updatedAt != null) result.updatedAt = updatedAt;
     if (deletedAt != null) result.deletedAt = deletedAt;
+    if (deliveredAt != null) result.deliveredAt = deliveredAt;
     return result;
   }
 
@@ -93,6 +95,7 @@ class SalesOrder extends $pb.GeneratedMessage {
     ..aOS(16, _omitFieldNames ? '' : 'createdAt')
     ..aOS(17, _omitFieldNames ? '' : 'updatedAt')
     ..aOS(18, _omitFieldNames ? '' : 'deletedAt')
+    ..aOS(19, _omitFieldNames ? '' : 'deliveredAt')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -276,6 +279,15 @@ class SalesOrder extends $pb.GeneratedMessage {
   $core.bool hasDeletedAt() => $_has(17);
   @$pb.TagNumber(18)
   void clearDeletedAt() => $_clearField(18);
+
+  @$pb.TagNumber(19)
+  $core.String get deliveredAt => $_getSZ(18);
+  @$pb.TagNumber(19)
+  set deliveredAt($core.String value) => $_setString(18, value);
+  @$pb.TagNumber(19)
+  $core.bool hasDeliveredAt() => $_has(18);
+  @$pb.TagNumber(19)
+  void clearDeliveredAt() => $_clearField(19);
 }
 
 /// SalesOrderItem:訂單明細(不含金額)。

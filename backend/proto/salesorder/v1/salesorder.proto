@@ -29,6 +29,7 @@ message SalesOrder {
   string created_at = 16;            // RFC3339
   string updated_at = 17;            // RFC3339
   string deleted_at = 18;            // RFC3339(可空;include_deleted 時回傳)
+  string delivered_at = 19;          // 可空(RFC3339;10.9 送達回寫寫入,非空即實際送達)
 }
 
 // SalesOrderItem:訂單明細(不含金額)。
