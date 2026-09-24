@@ -40,9 +40,7 @@ class _LoginPageState extends State<LoginPage> {
       context.router.navigatePath('/home');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authErrorMessage(e))),
-      );
+      showFeedback(context, authErrorMessage(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

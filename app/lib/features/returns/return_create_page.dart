@@ -113,11 +113,7 @@ class _ReturnCreatePageState extends State<ReturnCreatePage> {
     }
   }
 
-  void _snack(String message) {
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
+  void _snack(String message) => showFeedback(context, message);
 
   @override
   Widget build(BuildContext context) {

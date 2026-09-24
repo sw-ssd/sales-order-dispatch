@@ -41,16 +41,11 @@ class ReturnDetailPage extends HookWidget {
         ));
         await query.refetch();
         if (!context.mounted) return;
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(content: Text(decision == 'approved' ? '已核准' : '已拒絕')),
-        );
+        showFeedback(context, decision == 'approved' ? '已核准' : '已拒絕');
         Navigator.of(context).pop(true);
       } catch (e) {
         busy.value = false;
-        if (context.mounted) {
-          ScaffoldMessenger.maybeOf(context)
-              ?.showSnackBar(SnackBar(content: Text('審核失敗：$e')));
-        }
+        if (context.mounted) showFeedback(context, '審核失敗：$e');
       }
     }
 

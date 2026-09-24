@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -93,7 +95,12 @@ Widget adaptivePage(
         leading: leading,
         automaticBackgroundVisibility: false,
       ),
-      child: SafeArea(child: body),
+      // 透明 Material 襯底：頁內仍可能有 Material 控制項（TextFormField 等,
+      // 混用是刻意的 v1 折衷——它們要求 Material 祖先,而 CupertinoPageScaffold 沒有）。
+      child: Material(
+        type: MaterialType.transparency,
+        child: SafeArea(child: body),
+      ),
     );
   }
   return Scaffold(
@@ -410,6 +417,16 @@ Future<void> showModalAdaptive(
       ],
     ),
   );
+}
+
+/// 輕量回饋訊息：Android → SnackBar；iOS → alert（ CupertinoScaffold 無
+/// SnackBar 所需的 Scaffold,Messenger 會靜默吞掉 —— 導致失敗看似無反應）。
+void showFeedback(BuildContext context, String message) {
+  if (isCupertinoTarget()) {
+    unawaited(showModalAdaptive(context, title: '提示', message: message));
+    return;
+  }
+  ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(message)));
 }
 
 /// 依平台推入子頁：CupertinoPageRoute（iOS）／MaterialPageRoute（Android）。

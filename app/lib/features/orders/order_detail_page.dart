@@ -50,17 +50,11 @@ class OrderDetailPage extends HookWidget {
       busy.value = true;
       try {
         await action();
-        if (context.mounted) {
-          ScaffoldMessenger.maybeOf(context)
-              ?.showSnackBar(SnackBar(content: Text('已$label')));
-        }
+        if (context.mounted) showFeedback(context, '已$label');
         await orderQuery.refetch();
         await eventsQuery.refetch();
       } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.maybeOf(context)
-              ?.showSnackBar(SnackBar(content: Text('失敗：$e')));
-        }
+        if (context.mounted) showFeedback(context, '失敗：$e');
       } finally {
         busy.value = false;
       }
