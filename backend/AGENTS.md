@@ -1,6 +1,6 @@
 # Backend Development Guidelines
 
-> Go 後端:ent + Connect-Go + Casbin/CASL + goose + Valkey。所有文件、註解、commit message 一律繁體中文。
+> Go 後端:ent + Connect-Go + OpenFGA + RLS + goose + Valkey。所有文件、註解、commit message 一律繁體中文。
 
 ## 1. 架構 Template:go8
 
@@ -20,14 +20,14 @@
 - `internal/services/`:Connect-RPC handler;每 service 提供 `Register*Services(mux *http.ServeMux, db *ent.Client)`,由 `internal/server` 的 `mountAuth` 掛進單一 `apiMux`(**禁止** chi `Mount` 掛重複 `/api/v1` 路徑,會 panic;用 `apiMux.Handle` + `http.StripPrefix`)。
 - `internal/domain/<name>/`:usecase + repository 介面;不反向依賴 services。
 - `internal/auth/`:JWT/refresh(旋轉採原子消耗,Lua/鎖,禁止先讀後刪)、session、token_version(DB 欄位為準)、OIDC。
-- `internal/authz/`:`authz` facade(`AccessibleFilter`/`Can`,開關 `CASL_ENFORCEMENT_ENABLED`)+ `authz/casl` 引擎(condition AST、evaluator、translate、FieldRegistry;與 @casl/ability golden 對賭,新增運算子必補 golden fixture)。
+- `internal/authz/`：`authz` facade（身分/DB ctx 注入、FieldRegistry 欄位白名單）＋ `authz/openfga`（授權決策引擎 Check/ListObjects，D32）＋ `authz/casl`（condition AST、evaluator、translate、FieldRegistry——僅供 role_permissions 條件解析/驗證，不做授權決策；與 /ability golden 對賭，新增運算子必補 golden fixture）
 - `ent/schema/`:ent schema;改動後 `go generate ./ent` 並新增 goose migration(`database/migrations/NNNNN_name.sql`,必含 Up/Down,加欄位用 `IF NOT EXISTS` 對齊既有先例)。
 - `internal/handlers/`:非 Connect 的純 HTTP handler(如 auth 回調;`Me`＝`GET /api/v1/me` 身分與公司品牌,前端唯一身分來源)。
 - REST 端點(`/api/v1` 下非 Connect 路徑)的錯誤回應一律經 `internal/resterr`(與 `server.writeConnectError` 同形:code/message/details＋trace_id),**不得**在 domain 內重寫 `writeErr`/`writeJSON`(`fileassets` 已委派為薄包裝)。connect code → HTTP 狀態的對映表以 `resterr.status` 為**全站唯一一份**,`server.writeConnectError` 委派給它;新增 code 只改該處(2026-09-22 修:先前的第二份複本漏了 `NotFound`,同一錯誤走 REST 是 404、走 middleware 是 500)。
 
 ## 3. 授權與安全(不可妥協)
 
-- 任何新 Connect 方法**必須**有授權門檻(Casbin `requireScope`/`requireRole` 模式),未登入 → `Unauthenticated`、越權 → `PermissionDenied`;前端守衛不算授權。
+- 任何新 Connect 方法**必須**有授權門檻(middleware OpenFGA Check 閘門 ＋ 服務層 `requireScope`/`requireRole` 純 Go ACL fallback),未登入 → `Unauthenticated`、越權 → `PermissionDenied`;前端守衛不算授權。
 - 跨租戶資料存取失敗的錯誤碼分兩層:**服務層 ACL 判定的越權** → `PermissionDenied`(碼 `SYS-4001`;非 `invalid_argument`,輸入驗證失敗才回 `InvalidArgument`);**被 RLS 過濾掉的目標**(查詢根本看不到該列)→ `NotFound`(碼 `SYS-4002`),不得回 `PermissionDenied` 洩漏「該資源存在」(見 §9-8、§10-5)。
 - `role_permissions` 異動前必跑條件驗證 + 防鎖死(含 `all`/`*` subject);company_admin 的 id 欄位值須為自身公司或佔位符(以 `casl.ParseConditions` 展開驗證)。
 - 設定密鑰(JWT_SECRET 等)production 下空值/預設值 → `Init()` fail-fast 拒絕啟動;驗證端對空密鑰 fail-closed。

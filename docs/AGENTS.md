@@ -15,7 +15,7 @@
 
 | 子專案 | 技術 | 用途 | 版本 |
 |--------|------|------|------|
-| `backend` | Go（`go 1.25.7`）；ent + Connect-RPC + Casbin/CASL + goose + Valkey | API 後端（Connect-RPC，前綴 `/api/v1`） | 見 `backend/go.mod` |
+| `backend` | Go（`go 1.25.7`）；ent + Connect-RPC + OpenFGA + RLS + goose + Valkey | API 後端（Connect-RPC，前綴 `/api/v1`） | 見 `backend/go.mod` |
 | `frontend` | SolidJS（`solid-js ^1.9.15`）+ TypeScript + Vite 8 + Tailwind CSS v4 | 網頁中台（SPA） | 見 `frontend/package.json` |
 | `app` | Flutter + Dart（sdk `^3.10.0`） | 跨平台行動 App（iOS／Android，雙 flavor） | `pubspec.yaml` `1.0.0+1`；Flutter 版本由 `.fvmrc`（`stable`）決定 |
 
@@ -36,7 +36,7 @@
 │   ├── android/ / ios/        # 平台專案（ios/setup_flavors.rb 為一次性注入腳本）
 │   ├── pubspec.yaml / pubspec.lock / analysis_options.yaml
 │   └── AGENTS.md / Taskfile.yml / .fvmrc
-├── backend/                   # Go 後端（ent + Connect-RPC + Casbin/CASL + goose + Valkey）
+├── backend/                   # Go 後端（ent + Connect-RPC + OpenFGA + RLS + goose + Valkey）
 │   ├── cmd/                   # 入口：server / migrate / seed
 │   ├── config/                # envconfig 逐檔設定（api、storage、observability…）
 │   ├── database/migrations/   # goose 遷移檔（NNNNN_name.sql，必含 Up/Down）
@@ -238,7 +238,7 @@ Flavor 分為 `dev` / `prod`，進入點分別為 `lib/main_dev.dart` / `lib/mai
 | sales-order-frontend | Vitest 3.2 + jsdom + `@solidjs/testing-library` | 目前無測試檔 | `pnpm run test` |
 | sales-order-app | `flutter_test`；整合測試用 Maestro | 目前無 `test/` 目錄；有 Maestro flow | `fvm flutter test` / `task test:maestro` |
 
-- 後端整合測試會啟動 PostgreSQL container，再建立 schema、session、Casbin enforcer。
+- 後端整合測試會啟動 PostgreSQL container，再建立 schema、session、OpenFGA engine。
 - App 的 Maestro flow 位於 `integration_test/.maestro/`，截圖 flow 需後端在線（預設檢查 `http://localhost:3080/`）。
 
 ---
@@ -310,12 +310,11 @@ cd ios && bundle exec fastlane ios beta
 
 ### 認證與授權
 
-- 後端支援兩種認證：
-  1. **Session Cookie**：透過 `scs` 管理，store 為自訂 Postgres session store；受保護路由使用 `middleware.Authenticate(session)`。
-  2. **API JWT Token**：`X-Sowinsoft-Token` header，用於中台與 Mobile App；SSE/WS 可透過 query `access_token` 傳入。
-- 後端授權使用 **Casbin** RBAC with domain（tenant）；例外路徑包括 `/version`、`/swagger`、`/api/v1/netsuite/*`、`/api/v1/casl_resources`、`/api/v1/permissions`。
-- 前端 `/admin` 路由 loader 會檢查認證，未通過則導向 `/signin`。
-- 前端 CASL ability 規則定義於 `src/constant/casl.ts`，角色包括 `super`、`admin`、`acct`、`sales`。
+- 後端支援兩種認證（皆由 `server.authzMiddleware` 逐請求驗證）：
+  1. **Session Cookie**：Web 中台，`scs` session。
+  2. **API JWT Token**：`Authorization: Bearer` header，用於 Mobile App 與 API 客戶端（access 1h／refresh 30d，使用時旋轉）。
+- 後端授權為 **OpenFGA + RLS**（D32）：受保護 RPC 由 middleware 做 OpenFGA `Check`（developer/super 逃生門、無引擎 fail-closed），`role_permissions` 為權限定義來源並同步 tuples；服務層 `requireScope`/`requireRole`（純 Go ACL）為 fallback；資料範圍由 RLS 兜底（32 張業務表 ENABLE+FORCE，`dbtenant`）。
+- 前端權限為權限集合查詢（`Can`／guards；@casl/ability 已於 2026-09-19 移除，集合由後端 `GetAbility` 投影載入）。
 
 ### 資料安全
 
