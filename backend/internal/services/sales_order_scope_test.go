@@ -64,3 +64,18 @@ func TestOrderScopeCustomerBranch(t *testing.T) {
 		t.Fatalf("應 permission_denied,got %v", err)
 	}
 }
+
+// TestIsCustomerIdentityUsesRawRole 迴歸測試(2026-09-24):判「客戶自行下單」必須用
+// 原始角色 —— 展開集讓每個後台角色都含 customer,用展開集會讓**業務代客下單被當成
+// 客戶自下**,於是 OnOrderCreated 走「客戶自下不推」分支,店家永遠收不到下單通知
+// (同 orderScope 的 1ee57cb 迴歸)。
+func TestIsCustomerIdentityUsesRawRole(t *testing.T) {
+	for _, role := range []string{"staff", "dept_admin", "company_admin", "super"} {
+		if isCustomerIdentity(role) {
+			t.Fatalf("%s 不應被當成客戶身分(傳入原始角色)", role)
+		}
+	}
+	if !isCustomerIdentity("customer") || !isCustomerIdentity("guest") {
+		t.Fatal("customer/guest 應判為客戶身分")
+	}
+}

@@ -199,7 +199,7 @@ func (s *SalesOrderService) CreateOrder(ctx context.Context, req *connect.Reques
 		return nil, errcode.SysInternal.Error(nil)
 	}
 	db := tx.Client()
-	isCustomer := isCustomerIdentity(id.Roles)
+	isCustomer := isCustomerIdentity(id.Role)
 	// 客戶守衛(4.2.3):客戶帳號強制為自己;守衛在取號之前,不消耗序號。
 	custID, err := orderCustomerGuard(req.Msg.GetCustomerId(), id.CustomerID, isCustomer)
 	if err != nil {
@@ -373,7 +373,7 @@ func (s *SalesOrderService) UpdateOrder(ctx context.Context, req *connect.Reques
 			SetDeletedAt(time.Now().UTC()).Save(ctx); err != nil {
 			return nil, toConnectError(err)
 		}
-		isCustomer := isCustomerIdentity(id.Roles)
+		isCustomer := isCustomerIdentity(id.Role)
 		for i, item := range items {
 			pid, display, baseQty, err := validateOrderItem(ctx, db, cid, isCustomer, item)
 			if err != nil {

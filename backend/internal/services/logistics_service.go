@@ -468,6 +468,13 @@ func (s *LogisticsService) AssignDelivery(ctx context.Context, req *connect.Requ
 			return nil, err
 		}
 	}
+	// 10.11 指派通知:推新任務給司機本人(該 driver 關聯的 users.id)。
+	if driverUserID > 0 {
+		if err := OnDeliveryAssigned(ctx, db, cid, deliveryDept, driverUserID,
+			saved.ID, routeRow.Name, routeRow.Code); err != nil {
+			return nil, err
+		}
+	}
 	return connect.NewResponse(&salesorderv1.AssignDeliveryResponse{
 		Delivery: logisticsDeliveryToProto(saved),
 	}), nil
@@ -663,7 +670,13 @@ func (s *LogisticsService) CompleteDelivery(ctx context.Context, req *connect.Re
 	if err := recordAuditBA(ctx, tx, "logistics_delivery", "update", saved.ID, cid, did, me,
 		map[string]any{"status": DeliveryStatusInProgress},
 		map[string]any{"status": DeliveryStatusCompleted, "proofs": len(proofs),
-			"delivered_orders": delivered}); err != nil {
+			"delivered_orders": len(delivered)}); err != nil {
+		return nil, err
+	}
+	// 10.11 送達通知:逐筆已送達訂單推店家(該客戶全部子帳號)/主責業務。
+	// 與其他觸發一致 —— 通知列在**同一交易**建立(status=pending),FCM 於提交後發送,
+	// 失敗只標 failed 不回滾(D16)。
+	if err := OnDeliveryCompleted(ctx, tx.Client(), cid, saved.DepartmentID, saved.RouteID, delivered); err != nil {
 		return nil, err
 	}
 	out := make([]*salesorderv1.LogisticsProof, 0, len(proofs))
@@ -847,9 +860,9 @@ func routeQ1(ctx context.Context, db *ent.Client, rid, cid int, did *int) (*ent.
 // 任一笔失敗即回傳錯誤 → 呼叫端交易回滾(10.9 錯誤處理:不留部分送達)。
 // 車次上沒有 processing 訂單(例如先建配送、後派車)不算錯誤:回寫 0 筆、配送照常完成。
 func (s *LogisticsService) writebackDeliveredOrders(ctx context.Context, db *ent.Client,
-	d *ent.LogisticsDelivery, actor int) (int, error) {
+	d *ent.LogisticsDelivery, actor int) ([]*ent.SalesOrder, error) {
 	if d.RouteID == 0 {
-		return 0, nil
+		return nil, nil
 	}
 	orders, err := db.SalesOrder.Query().Where(
 		salesorder.RouteIDEQ(d.RouteID),
@@ -858,23 +871,26 @@ func (s *LogisticsService) writebackDeliveredOrders(ctx context.Context, db *ent
 		salesorder.DeletedAtIsNil(),
 	).All(ctx)
 	if err != nil {
-		return 0, toConnectError(err)
+		return nil, toConnectError(err)
 	}
-	return markOrdersDelivered(ctx, db, orders, actor)
+	if err := markOrdersDelivered(ctx, db, orders, actor); err != nil {
+		return nil, err
+	}
+	return orders, nil
 }
 
 // markOrdersDelivered 逐筆標送達(失敗即返回,由呼叫端的交易回滾)。
 // 與查詢分開是為了讓「批次中任一筆失敗即整體回滾」可被直接測試(見
 // logistics_delivered_writeback_test.go:不需要併發插隊就能驗證 fail-fast)。
-func markOrdersDelivered(ctx context.Context, db *ent.Client, orders []*ent.SalesOrder, actor int) (int, error) {
+func markOrdersDelivered(ctx context.Context, db *ent.Client, orders []*ent.SalesOrder, actor int) error {
 	now := time.Now().UTC()
 	for _, o := range orders {
 		if err := TransitionOrder(ctx, db, OrderTransitionInput{
 			OrderID: o.ID, To: OrderStatusCompleted, ActorID: actor,
 			MarkDelivered: true, DeliveredAt: &now,
 		}); err != nil {
-			return 0, err
+			return err
 		}
 	}
-	return len(orders), nil
+	return nil
 }

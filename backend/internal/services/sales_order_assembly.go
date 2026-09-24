@@ -19,13 +19,14 @@ import (
 )
 
 // isCustomerIdentity 呼叫者是否為客戶帳號/customer 主帳號(守衛 4.2.3 用)。
-func isCustomerIdentity(roles []string) bool {
-	for _, r := range roles {
-		if r == "customer" || r == "guest" {
-			return true
-		}
-	}
-	return false
+//
+// 傳入的必須是**原始角色** authz.Identity.Role,不可傳展開後的 Roles:角色繼承是
+// company_admin → dept_admin → staff → customer,展開集對每個後台角色都含 customer,
+// 於是**業務代客下單會被誤判成客戶自行下單** —— 直接後果是 OnOrderCreated 走
+// 「客戶自下不推」分支,店家永遠收不到下單通知(2026-09-24 實機/整合測試發現;
+// 既有測試手動組 Roles 不含 customer 故未察覺,同 orderScope 的 1ee57cb 迴歸)。
+func isCustomerIdentity(role string) bool {
+	return role == "customer" || role == "guest"
 }
 
 // resolveBaseQty 依選用單位換算 base_qty(4.2.1):讀 product_units 找 unit 列,

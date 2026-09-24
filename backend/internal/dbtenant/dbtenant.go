@@ -77,12 +77,37 @@ func WithTenantTx(ctx context.Context, tx *ent.Tx) context.Context {
 // afterCommitKey 為請求交易內的 post-commit 掛鉤收集器（見 AfterCommit）。
 type afterCommitKey struct{}
 
+// postCommitClientKey 承載「提交後掛鉤可安全寫入的 client」（見 PostCommitClient）。
+type postCommitClientKey struct{}
+
+// PostCommitClient 回傳提交後掛鉤應該使用的 client：**基礎 client + 當前 ctx 的 RLS scope**
+// （裝飾器會在 client.Tx(ctx) 時自動套用 SET LOCAL），而不是請求交易本身的 client ——
+// 後者在掛鉤執行時已經提交，對它寫入只會得到 ErrTxDone。
+//
+// 為何不能沿用請求交易 client：通知的發送排在提交後（FCM 是外部 I/O，不得進交易），
+// 發送結果要把 pending 改 sent/failed —— 用已提交的 client 會靜默失敗（呼叫端忽略錯誤），
+// 通知就永遠停在 pending：使用者看不到「已發送」，MarkRead 的 sent 分支也永不生效
+// （2026-09-24 由 10.11 通知工作以真 PG 迴歸測試抓到）。
+//
+// 沒有請求交易（CLI／seed／單測直呼服務）→ 退回 fallback，維持原語意。
+func PostCommitClient(ctx context.Context, fallback *ent.Client) *ent.Client {
+	if c, ok := ctx.Value(postCommitClientKey{}).(*ent.Client); ok {
+		return c
+	}
+	return fallback
+}
+
 // pendingAfterCommit 收集「請求交易 commit 成功後才執行」的工作。
 type pendingAfterCommit struct{ fns []func(context.Context) error }
 
 // withAfterCommit 把收集器放進 ctx（僅 Interceptor 內部使用）。
 func withAfterCommit(ctx context.Context, p *pendingAfterCommit) context.Context {
 	return context.WithValue(ctx, afterCommitKey{}, p)
+}
+
+// withPostCommitClient 把基礎 client 放進 ctx（僅 Interceptor 內部使用）。
+func withPostCommitClient(ctx context.Context, c *ent.Client) context.Context {
+	return context.WithValue(ctx, postCommitClientKey{}, c)
 }
 
 // AfterCommit 註冊一項「請求交易 commit 成功後才執行」的工作（目前用於 OpenFGA tuple 同步）。
@@ -148,8 +173,11 @@ func Interceptor(client *ent.Client) connect.Interceptor {
 			}
 			// commit 成功後才執行掛鉤(列鎖已釋放、DB 已定案)。掛鉤失敗即回該錯誤 ——
 			// 與「handler 自行 commit 後同步失敗」的舊語意一致(DB 已提交,不回滾)。
+			// 掛鉤的 ctx 帶上基礎 client(PostCommitClient),讓掛鉤能另開受 RLS 約束的新交易
+			// 落庫其結果 —— 請求交易在此已提交,不可再寫。
+			hookCtx := withPostCommitClient(ctx, client)
 			for _, fn := range pending.fns {
-				if err := fn(ctx); err != nil {
+				if err := fn(hookCtx); err != nil {
 					return nil, err
 				}
 			}

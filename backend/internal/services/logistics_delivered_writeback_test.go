@@ -14,12 +14,17 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 )
 
-// mkOrder 在 fixture 公司/部門下建一筆訂單(status/route 由參數決定)。
+// mkOrder 在 fixture 公司/部門下建一筆訂單(status/route 由參數決定;客戶沿用預設佔位)。
 func mkOrder(t *testing.T, f *logisticsFixture, status string, routeID *int) int {
+	return mkOrderFor(t, f, status, routeID, 11)
+}
+
+// mkOrderFor 同 mkOrder,但指定客戶(10.11 送達通知需要真 customer 列才能解析收件者)。
+func mkOrderFor(t *testing.T, f *logisticsFixture, status string, routeID *int, custID int) int {
 	t.Helper()
 	build := f.db.SalesOrder.Create().
 		SetCompanyID(f.coID).SetDepartmentID(f.deptID).
-		SetOrderNo("W-" + status).SetCustomerID(11).
+		SetOrderNo("W-" + status).SetCustomerID(custID).
 		SetSource("W").SetStatus(status).SetVersion(1)
 	if routeID != nil {
 		build = build.SetRouteID(*routeID)
@@ -35,6 +40,19 @@ func orderByID(t *testing.T, f *logisticsFixture, id int) *ent.SalesOrder {
 		t.Fatalf("讀訂單 %d: %v", id, err)
 	}
 	return o
+}
+
+// mkCustomerWithSub 建一客戶 + 一子帳號（10.11 送達通知的收件者）。
+func mkCustomerWithSub(t *testing.T, f *logisticsFixture, code string) (custID, subID int) {
+	t.Helper()
+	ctx := context.Background()
+	c := f.db.Customer.Create().SetCompanyID(f.coID).SetDepartmentID(f.deptID).
+		SetCustomerCode(code).SetName("客戶" + code).SaveX(ctx)
+	u := f.db.User.Create().SetEmail("sub-" + code + "@t.com").SetName("子").
+		SetRole("customer").SetPasswordHash("x").SetCompanyID(f.coID).
+		SetDepartmentID(f.deptID).SetIsCustomer(true).SetCustomerID(c.ID).
+		SetIsPrimary(false).SetStatus("active").SaveX(ctx)
+	return c.ID, u.ID
 }
 
 // startAndComplete 走一次完整的「開始 → 完成」(交付單 id 固定為 1,由 setupAssignedDelivery 建立)。
@@ -61,12 +79,13 @@ func TestDeliveryCompleteWritesBackOrders(t *testing.T) {
 	_ = delID
 	rpc := f.newLogisticsServer(t, logisticsIdentity("staff", driverUID, f.coID, f.deptID))
 
-	o1 := mkOrder(t, f, OrderStatusProcessing, &f.routeID)
-	o2 := mkOrder(t, f, OrderStatusProcessing, &f.routeID)
+	custID, _ := mkCustomerWithSub(t, f, "WB1")
+	o1 := mkOrderFor(t, f, OrderStatusProcessing, &f.routeID, custID)
+	o2 := mkOrderFor(t, f, OrderStatusProcessing, &f.routeID, custID)
 	otherRoute := f.db.Route.Create().SetCode("R9").SetName("別線").
 		SetCompanyID(f.coID).SetDepartmentID(f.deptID).SaveX(ctx).ID
-	oOther := mkOrder(t, f, OrderStatusProcessing, &otherRoute)
-	oPending := mkOrder(t, f, OrderStatusPending, &f.routeID)
+	oOther := mkOrderFor(t, f, OrderStatusProcessing, &otherRoute, custID)
+	oPending := mkOrderFor(t, f, OrderStatusPending, &f.routeID, custID)
 
 	if err := startAndComplete(t, rpc); err != nil {
 		t.Fatalf("完成配送: %v", err)
@@ -163,7 +182,7 @@ func TestWritebackRollsBackWholeTransaction(t *testing.T) {
 		t.Fatalf("開交易: %v", err)
 	}
 	tctx := dbtenant.WithTenantTx(context.Background(), tx)
-	if _, err := markOrdersDelivered(tctx, tx.Client(), stale, 1); err == nil {
+	if err := markOrdersDelivered(tctx, tx.Client(), stale, 1); err == nil {
 		t.Fatal("回寫遇非法狀態應失敗(不得靜默跳過)")
 	}
 	if err := tx.Rollback(); err != nil {
@@ -193,12 +212,8 @@ func TestWritebackFailFastStopsAtFirstFailure(t *testing.T) {
 		t.Fatalf("開交易: %v", err)
 	}
 	tctx := dbtenant.WithTenantTx(context.Background(), tx)
-	name, err := markOrdersDelivered(tctx, tx.Client(), []*ent.SalesOrder{snap1, snap2}, 1)
-	if err == nil {
+	if err := markOrdersDelivered(tctx, tx.Client(), []*ent.SalesOrder{snap1, snap2}, 1); err == nil {
 		t.Fatal("應失敗")
-	}
-	if name != 0 {
-		t.Fatalf("失敗時回寫計數應為 0,got %d", name)
 	}
 	if err := tx.Rollback(); err != nil {
 		t.Fatalf("rollback: %v", err)
