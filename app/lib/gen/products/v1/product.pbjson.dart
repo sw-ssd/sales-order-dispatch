@@ -349,6 +349,24 @@ const UpdateProductRequest$json = {
       '6': '.products.v1.ProductProcessingSpec',
       '10': 'processingSpecs'
     },
+    {
+      '1': 'clear_units',
+      '3': 11,
+      '4': 1,
+      '5': 8,
+      '9': 7,
+      '10': 'clearUnits',
+      '17': true
+    },
+    {
+      '1': 'clear_processing_specs',
+      '3': 12,
+      '4': 1,
+      '5': 8,
+      '9': 8,
+      '10': 'clearProcessingSpecs',
+      '17': true
+    },
   ],
   '8': [
     {'1': '_code'},
@@ -358,6 +376,8 @@ const UpdateProductRequest$json = {
     {'1': '_picking_warehouse_id'},
     {'1': '_description'},
     {'1': '_is_active'},
+    {'1': '_clear_units'},
+    {'1': '_clear_processing_specs'},
   ],
 };
 
@@ -370,10 +390,12 @@ final $typed_data.Uint8List updateProductRequestDescriptor = $convert.base64Deco
     'a2luZ1dhcmVob3VzZUlkiAEBEiUKC2Rlc2NyaXB0aW9uGAcgASgJSAVSC2Rlc2NyaXB0aW9uiA'
     'EBEiAKCWlzX2FjdGl2ZRgIIAEoCEgGUghpc0FjdGl2ZYgBARIuCgV1bml0cxgJIAMoCzIYLnBy'
     'b2R1Y3RzLnYxLlByb2R1Y3RVbml0UgV1bml0cxJNChBwcm9jZXNzaW5nX3NwZWNzGAogAygLMi'
-    'IucHJvZHVjdHMudjEuUHJvZHVjdFByb2Nlc3NpbmdTcGVjUg9wcm9jZXNzaW5nU3BlY3NCBwoF'
-    'X2NvZGVCBwoFX25hbWVCDgoMX2NhdGVnb3J5X2lkQhkKF19pbnZlbnRvcnlfd2FyZWhvdXNlX2'
-    'lkQhcKFV9waWNraW5nX3dhcmVob3VzZV9pZEIOCgxfZGVzY3JpcHRpb25CDAoKX2lzX2FjdGl2'
-    'ZQ==');
+    'IucHJvZHVjdHMudjEuUHJvZHVjdFByb2Nlc3NpbmdTcGVjUg9wcm9jZXNzaW5nU3BlY3MSJAoL'
+    'Y2xlYXJfdW5pdHMYCyABKAhIB1IKY2xlYXJVbml0c4gBARI5ChZjbGVhcl9wcm9jZXNzaW5nX3'
+    'NwZWNzGAwgASgISAhSFGNsZWFyUHJvY2Vzc2luZ1NwZWNziAEBQgcKBV9jb2RlQgcKBV9uYW1l'
+    'Qg4KDF9jYXRlZ29yeV9pZEIZChdfaW52ZW50b3J5X3dhcmVob3VzZV9pZEIXChVfcGlja2luZ1'
+    '93YXJlaG91c2VfaWRCDgoMX2Rlc2NyaXB0aW9uQgwKCl9pc19hY3RpdmVCDgoMX2NsZWFyX3Vu'
+    'aXRzQhkKF19jbGVhcl9wcm9jZXNzaW5nX3NwZWNz');
 
 @$core.Deprecated('Use updateProductResponseDescriptor instead')
 const UpdateProductResponse$json = {

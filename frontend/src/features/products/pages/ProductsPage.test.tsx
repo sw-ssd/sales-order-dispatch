@@ -16,6 +16,7 @@ const {
   listProductCategoriesSpy,
   listWarehousesSpy,
   listOptionsSpy,
+  listProcessingSpecsSpy,
 } = vi.hoisted(() => ({
   listProductsSpy: vi.fn(),
   getProductSpy: vi.fn(),
@@ -26,6 +27,7 @@ const {
   listProductCategoriesSpy: vi.fn(),
   listWarehousesSpy: vi.fn(),
   listOptionsSpy: vi.fn(),
+  listProcessingSpecsSpy: vi.fn(),
 }));
 
 vi.mock("@connectrpc/connect", async (importOriginal) => ({
@@ -40,6 +42,7 @@ vi.mock("@connectrpc/connect", async (importOriginal) => ({
     listProductCategories: listProductCategoriesSpy,
     listWarehouses: listWarehousesSpy,
     listOptions: listOptionsSpy,
+    listProcessingSpecs: listProcessingSpecsSpy,
   }),
 }));
 
@@ -72,11 +75,21 @@ const EXISTING_PRODUCT = {
       sizeDesc: "1盒=5kg",
     },
   ],
-  processingSpecs: [],
+  processingSpecs: [
+    { processingSpecId: "spec-1", attributes: { cutWidth: 3, note: "去骨" } },
+    { processingSpecId: "spec-2" },
+  ],
   createdAt: "2026-09-22T10:00:00Z",
   updatedAt: "2026-09-22T10:00:00Z",
   deletedAt: "",
 };
+
+/** 部門分切規格主檔（編輯器的選項來源）；spec-1/spec-2 已被 EXISTING_PRODUCT 關聯。 */
+const PROCESSING_SPEC_OPTIONS = [
+  { id: "spec-1", code: "SP1", name: "切塊", isActive: true, deletedAt: "" },
+  { id: "spec-2", code: "SP2", name: "去骨", isActive: true, deletedAt: "" },
+  { id: "spec-3", code: "SP3", name: "切片", isActive: true, deletedAt: "" },
+];
 
 const DELETED_PRODUCT = {
   ...EXISTING_PRODUCT,
@@ -131,6 +144,10 @@ beforeEach(() => {
       { code: "G", displayName: "公克" },
       { code: "BOX", displayName: "盒" },
     ],
+  });
+  listProcessingSpecsSpy.mockResolvedValue({
+    processingSpecs: PROCESSING_SPEC_OPTIONS,
+    pagination: { total: PROCESSING_SPEC_OPTIONS.length },
   });
 });
 
@@ -269,6 +286,80 @@ describe("ProductsPage", () => {
     // 第一列維持既有基本單位（率恆 1），第二列換成新單位且非基本。
     expect(sent.units[0]).toMatchObject({ unitCode: "KG", conversionRate: "1", isBase: true });
     expect(sent.units[1]).toMatchObject({ unitCode: "G", isBase: false });
+  });
+
+  it("編輯分切規格：增減關聯後，仍被選取之規格的 attributes 原樣帶出", async () => {
+    await renderPage();
+    updateProductSpy.mockResolvedValue({ product: EXISTING_PRODUCT });
+    fireEvent.click(screen.getAllByRole("button", { name: "編輯" })[0]);
+    const dialog = await waitFor(() => screen.getByRole("dialog"));
+
+    // 既有兩筆關聯（spec-1 帶 attributes、spec-2 不帶）都應勾選。
+    // 無障礙名稱由 label 內文組成，`SP1` 與名稱之間會被插入空白 → 用 regex 比對。
+    const spec1 = (await within(dialog).findByRole("checkbox", {
+      name: /SP1/,
+    })) as HTMLInputElement;
+    const spec2 = within(dialog).getByRole("checkbox", { name: /SP2/ }) as HTMLInputElement;
+    await waitFor(() => expect(spec1.checked && spec2.checked).toBe(true));
+
+    // 減一筆、加一筆：spec-1 留著（attributes 必須原樣），spec-2 取消，spec-3 新增。
+    fireEvent.click(spec2);
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: /SP3/ }));
+    fireEvent.submit(dialog.querySelector("form")!);
+
+    await waitFor(() => expect(updateProductSpy).toHaveBeenCalledOnce());
+    const sent = updateProductSpy.mock.calls[0][0] as {
+      processingSpecs: { processingSpecId: string; attributes?: Record<string, unknown> }[];
+    };
+    // 整組替換語意：欄位必須「有送」，否則使用者的取消選取不會生效。
+    expect(Array.isArray(sent.processingSpecs)).toBe(true);
+    expect(sent.processingSpecs).toHaveLength(2);
+    // 核心風險點：保留項的配對層覆寫指令原樣帶回，新選項給空物件。
+    expect(sent.processingSpecs[0]).toEqual({
+      processingSpecId: "spec-1",
+      attributes: { cutWidth: 3, note: "去骨" },
+    });
+    expect(sent.processingSpecs[1]).toEqual({ processingSpecId: "spec-3", attributes: {} });
+  });
+
+  it("編輯時全部取消規格 → 帶 clearProcessingSpecs 旗標（空陣列清不掉）", async () => {
+    await renderPage();
+    updateProductSpy.mockResolvedValue({ product: EXISTING_PRODUCT });
+    fireEvent.click(screen.getAllByRole("button", { name: "編輯" })[0]);
+    const dialog = await waitFor(() => screen.getByRole("dialog"));
+
+    const spec1 = (await within(dialog).findByRole("checkbox", { name: /SP1/ })) as HTMLInputElement;
+    const spec2 = within(dialog).getByRole("checkbox", { name: /SP2/ }) as HTMLInputElement;
+    await waitFor(() => expect(spec1.checked && spec2.checked).toBe(true));
+
+    // 兩筆都取消 → 走旗標。proto3 repeated 無 presence，空陣列與「未提供」同義，
+    // 只送 [] 不會清掉既有關聯（後端維持現值），故必須帶旗標。
+    fireEvent.click(spec1);
+    fireEvent.click(spec2);
+    fireEvent.submit(dialog.querySelector("form")!);
+
+    await waitFor(() => expect(updateProductSpy).toHaveBeenCalledOnce());
+    const sent = updateProductSpy.mock.calls[0][0] as {
+      clearProcessingSpecs?: boolean;
+      processingSpecs?: unknown;
+    };
+    expect(sent.clearProcessingSpecs).toBe(true);
+    // 兩者互斥：帶旗標時不得同時帶非空陣列（後端會回 invalid_argument）。
+    expect(sent.processingSpecs ?? []).toHaveLength(0);
+  });
+
+  it("新增商品時未選規格 → 送空陣列（＝不關聯）", async () => {
+    await renderPage();
+    createProductSpy.mockResolvedValue({ product: EXISTING_PRODUCT });
+    const dialog = await openCreateDialog();
+    fireEvent.input(within(dialog).getByLabelText("商品代號 *"), { target: { value: "AP-002" } });
+    fireEvent.input(within(dialog).getByLabelText("商品名稱 *"), { target: { value: "香蕉" } });
+    fireEvent.change(within(dialog).getAllByLabelText("單位代碼 *")[0], { target: { value: "KG" } });
+    fireEvent.submit(dialog.querySelector("form")!);
+
+    await waitFor(() => expect(createProductSpy).toHaveBeenCalledOnce());
+    const sent = createProductSpy.mock.calls[0][0] as { processingSpecs: unknown[] };
+    expect(sent.processingSpecs).toEqual([]);
   });
 
   it("刪除先確認再呼叫並失效 products 前綴", async () => {

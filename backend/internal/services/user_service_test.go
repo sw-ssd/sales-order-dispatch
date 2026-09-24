@@ -17,6 +17,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
+	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
@@ -703,5 +704,79 @@ func TestDepartmentRowLockDialectGuard(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// TestDeactivatePrimaryCascadesToSubAccounts D22 連鎖(設計書 v1.0.31):
+// 停用客戶主帳號 → 同客戶全部子帳號一併停用(tv+1 使在途憑證失效),並逐筆留稽核。
+// 同時驗反面:停用**子帳號**不得影響主帳號或兄弟子帳號(需求規格 identity-access:72)。
+func TestDeactivatePrimaryCascadesToSubAccounts(t *testing.T) {
+	ctx := context.Background()
+	db := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared&_fk=1")
+	t.Cleanup(func() { _ = db.Close() })
+	coID, deptA, _ := seedUserCompany(t, db)
+	client := newUserTestServerWithDB(t,
+		authz.Identity{UserID: "9", CompanyID: uItoa(coID), DepartmentID: uItoa(deptA),
+			Role: "company_admin", Roles: []string{"company_admin", "dept_admin", "staff", "customer"}}, db)
+
+	cust := db.Customer.Create().SetCompanyID(coID).SetDepartmentID(deptA).
+		SetCustomerCode("CAS1").SetName("連鎖店").SaveX(ctx)
+	mk := func(code string, primary bool) *ent.User {
+		return db.User.Create().SetCompanyID(coID).SetDepartmentID(deptA).
+			SetEmail(code + "@t.com").SetName(code).SetRole("customer").
+			SetPasswordHash("x").SetIsCustomer(true).SetCustomerID(cust.ID).
+			SetIsPrimary(primary).SetStatus(user.StatusActive).SaveX(ctx)
+	}
+	pri := mk("pri", true)
+	sub1 := mk("sub1", false)
+	sub2 := mk("sub2", false)
+	// 別的客戶:不得被連帶。
+	otherCust := db.Customer.Create().SetCompanyID(coID).SetDepartmentID(deptA).
+		SetCustomerCode("CAS2").SetName("別店").SaveX(ctx)
+	other := db.User.Create().SetCompanyID(coID).SetDepartmentID(deptA).
+		SetEmail("other@t.com").SetName("other").SetRole("customer").SetPasswordHash("x").
+		SetIsCustomer(true).SetCustomerID(otherCust.ID).SetStatus(user.StatusActive).SaveX(ctx)
+
+	if _, err := client.Deactivate(ctx, connect.NewRequest(&v1.DeactivateRequest{
+		UserId: uItoa(pri.ID),
+	})); err != nil {
+		t.Fatalf("Deactivate(主帳號): %v", err)
+	}
+
+	reload := func(id int) *ent.User {
+		u, err := db.User.Query().Where(user.IDEQ(id)).Only(ctx)
+		if err != nil {
+			t.Fatalf("讀使用者 %d: %v", id, err)
+		}
+		return u
+	}
+	// 主帳號 + 兩個子帳號皆 inactive,且 tv 都 +1(在途 token 立即失效)。
+	for _, tc := range []struct {
+		name string
+		u    *ent.User
+	}{{"主帳號", pri}, {"子帳號1", sub1}, {"子帳號2", sub2}} {
+		got := reload(tc.u.ID)
+		if got.Status != user.StatusInactive {
+			t.Errorf("%s 應被停用,got %s", tc.name, got.Status)
+		}
+		if got.TokenVersion != tc.u.TokenVersion+1 {
+			t.Errorf("%s token_version 應 +1(%d→%d),got %d",
+				tc.name, tc.u.TokenVersion, tc.u.TokenVersion+1, got.TokenVersion)
+		}
+	}
+	// 別客戶不受影響。
+	if got := reload(other.ID); got.Status != user.StatusActive {
+		t.Errorf("別客戶帳號不得被連帶停用,got %s", got.Status)
+	}
+
+	// 反面:停用子帳號不影響主帳號與兄弟子帳號。
+	sub3 := mk("sub3", false)
+	if _, err := client.Deactivate(ctx, connect.NewRequest(&v1.DeactivateRequest{
+		UserId: uItoa(sub3.ID),
+	})); err != nil {
+		t.Fatalf("Deactivate(子帳號): %v", err)
+	}
+	if got := reload(pri.ID); got.Status != user.StatusInactive { // 主帳號在這個測試裡已被停用
+		t.Errorf("主帳號狀態不應被子帳號停用影響,got %s", got.Status)
 	}
 }

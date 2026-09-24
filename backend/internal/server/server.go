@@ -109,6 +109,36 @@ var protectedRPC = map[string]rpcAuth{
 	"/salesorder.v1.LogisticsService/StartDelivery":    {"logistics", "read"},
 	"/salesorder.v1.LogisticsService/CompleteDelivery": {"logistics", "read"},
 	"/salesorder.v1.LogisticsService/CancelDelivery":   {"logistics", "read"},
+	// 業務域(D22:客戶主帳號僅供帳號管理,下單/訂單歷史/退貨/通知/專屬商品的業務 API 一律 403
+	// —— 排除由 ability 的 primary_account 承載,見 third_party/openfga modelDSL 與 provision)。
+	//
+	// 為何要納入本表:ability 的 deny tuple 只有在請求真的經過 OpenFGA Check 時才生效。這四類是
+	// customer 角色**可達**的業務資源(見 auth.rolePolicy),故主帳號的排除必須落在這裡;
+	// 其餘業務資源(customer_product/device 等)對 customer 角色本就被服務層 deptScope 擋下,
+	// 不存在主帳號可繞過的破口。
+	"/salesorder.v1.SalesOrderService/ListOrders":          {"sales_order", "read"},
+	"/salesorder.v1.SalesOrderService/GetOrder":            {"sales_order", "read"},
+	"/salesorder.v1.SalesOrderService/ListOrderEvents":     {"sales_order", "read"},
+	"/salesorder.v1.SalesOrderService/CreateOrder":         {"sales_order", "write"},
+	"/salesorder.v1.SalesOrderService/UpdateOrder":         {"sales_order", "write"},
+	"/salesorder.v1.SalesOrderService/CancelOrder":         {"sales_order", "write"},
+	"/salesorder.v1.SalesOrderService/CompleteOrder":       {"sales_order", "write"},
+	"/salesorder.v1.SalesOrderService/VoidOrder":           {"sales_order", "write"},
+	"/salesorder.v1.SalesOrderService/DeleteOrder":         {"sales_order", "write"},
+	"/salesorder.v1.ReturnService/ListReturnRequests":      {"return_request", "read"},
+	"/salesorder.v1.ReturnService/GetReturnRequest":        {"return_request", "read"},
+	"/salesorder.v1.ReturnService/GetReturnCertificate":    {"return_request", "read"},
+	"/salesorder.v1.ReturnService/CreateReturnRequest":     {"return_request", "write"},
+	"/salesorder.v1.ReturnService/ReviewReturnRequest":     {"return_request", "write"},
+	"/salesorder.v1.NotificationService/ListNotifications": {"notification", "read"},
+	"/salesorder.v1.NotificationService/UnreadCount":       {"notification", "read"},
+	"/salesorder.v1.NotificationService/MarkRead":          {"notification", "write"},
+	"/products.v1.ProductService/ListProducts":             {"product", "read"},
+	"/products.v1.ProductService/GetProduct":               {"product", "read"},
+	"/products.v1.ProductService/CreateProduct":            {"product", "write"},
+	"/products.v1.ProductService/UpdateProduct":            {"product", "write"},
+	"/products.v1.ProductService/DeleteProduct":            {"product", "write"},
+	"/products.v1.ProductService/RestoreProduct":           {"product", "write"},
 }
 
 // SetOpenFGA 注入 OpenFGA 授權引擎(啟動組裝時;nil 則跳過 middleware 檢查)。

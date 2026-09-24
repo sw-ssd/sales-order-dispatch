@@ -86,8 +86,13 @@ message UpdateProductRequest {
   optional string picking_warehouse_id = 6;
   optional string description = 7;
   optional bool is_active = 8;
-  repeated ProductUnit units = 9;          // 提供即整組替換(空陣列 = 清空)
-  repeated ProductProcessingSpec processing_specs = 10;
+  repeated ProductUnit units = 9;          // 提供即整組替換(至少 1 項;見 clear_units)
+  repeated ProductProcessingSpec processing_specs = 10; // 提供即整組替換(至少 1 項;見 clear_processing_specs)
+  // 清空旗標:proto3 的 repeated **無 presence**——傳 `[]` 在線上等於未提供(實測 protojson 解為
+  // nil slice),故「取消全部關聯」無法用空陣列表達。要清空時把旗標設 true。
+  // (repeated 不可加 `optional`,buf 直接拒收:multiple modifiers)
+  optional bool clear_units = 11;
+  optional bool clear_processing_specs = 12;
 }
 message UpdateProductResponse { Product product = 1; }
 

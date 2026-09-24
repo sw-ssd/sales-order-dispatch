@@ -15,6 +15,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	productsv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/products/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/products/v1/productsv1connect"
+	"google.golang.org/protobuf/proto"
 )
 
 // newProductTestServer 於單一 enttest DB 掛上 ProductService,並以指定身分注入。
@@ -221,5 +222,61 @@ func TestProductCrossDeptIsolated(t *testing.T) {
 	_, err = clientA.GetProduct(ctx, connect.NewRequest(&productsv1.GetProductRequest{Id: pidB}))
 	if connect.CodeOf(err) != connect.CodeNotFound {
 		t.Fatalf("A 取 B 商品應 not_found,got %v", err)
+	}
+}
+
+// TestUpdateProductClearFlags 「取消全部關聯」的契約(2026-09-24)。
+//
+// 為何需要旗標:proto3 的 repeated **無 presence** —— 送 `[]` 在線上與「未提供」無法區分
+// (實測 protojson.Unmarshal(`{"processingSpecs":[]}`) 得到 nil slice),故空陣列清不掉既有關聯。
+// repeated 也不能加 `optional`(buf 拒收:multiple modifiers),因此以 clear_* 旗標表達清空。
+//
+// 同時帶旗標與非空陣列 = 自相矛盾 → invalid_argument,不默默擇一。
+func TestUpdateProductClearFlags(t *testing.T) {
+	ctx := context.Background()
+	db := enttest.Open(t, "sqlite3", "file:"+t.Name()+"?mode=memory&cache=shared&_fk=1")
+	t.Cleanup(func() { _ = db.Close() })
+	coID, deptID := seedMasterDept(t, db, t.Name())
+	catID, whID, specID := seedProductEnv(t, db, coID, deptID)
+	_, client := newProductTestServer(t, deptAdminID(coID, deptID))
+
+	created, err := client.CreateProduct(ctx, connect.NewRequest(validProductReq(catID, whID, specID)))
+	if err != nil {
+		t.Fatalf("CreateProduct: %v", err)
+	}
+	id := created.Msg.GetProduct().GetId()
+	if n := len(created.Msg.GetProduct().GetProcessingSpecs()); n != 1 {
+		t.Fatalf("建立後應有 1 筆規格關聯,got %d", n)
+	}
+
+	// 送空陣列(無旗標)= 線上等於未提供 → 維持現值(proto3 的既有限制,不是 bug)。
+	keep, err := client.UpdateProduct(ctx, connect.NewRequest(&productsv1.UpdateProductRequest{
+		Id: id, ProcessingSpecs: []*productsv1.ProductProcessingSpec{},
+	}))
+	if err != nil {
+		t.Fatalf("UpdateProduct(空陣列): %v", err)
+	}
+	if n := len(keep.Msg.GetProduct().GetProcessingSpecs()); n != 1 {
+		t.Fatalf("空陣列不應清空(線上等於未提供),應仍為 1 筆,got %d", n)
+	}
+
+	// 帶旗標 → 整組清空(這正是 Web 取消全部勾選時走的路徑)。
+	cleared, err := client.UpdateProduct(ctx, connect.NewRequest(&productsv1.UpdateProductRequest{
+		Id: id, ClearProcessingSpecs: proto.Bool(true),
+	}))
+	if err != nil {
+		t.Fatalf("UpdateProduct(clear): %v", err)
+	}
+	if n := len(cleared.Msg.GetProduct().GetProcessingSpecs()); n != 0 {
+		t.Fatalf("clear_processing_specs 應清空全部關聯,got %d", n)
+	}
+
+	// 自相矛盾:旗標 + 非空陣列 → invalid_argument。
+	_, err = client.UpdateProduct(ctx, connect.NewRequest(&productsv1.UpdateProductRequest{
+		Id: id, ClearProcessingSpecs: proto.Bool(true),
+		ProcessingSpecs: []*productsv1.ProductProcessingSpec{{ProcessingSpecId: uItoa(specID)}},
+	}))
+	if connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("同時帶 clear 旗標與非空陣列應為 invalid_argument,got %v", err)
 	}
 }

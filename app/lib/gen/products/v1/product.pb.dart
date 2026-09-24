@@ -928,6 +928,8 @@ class UpdateProductRequest extends $pb.GeneratedMessage {
     $core.bool? isActive,
     $core.Iterable<ProductUnit>? units,
     $core.Iterable<ProductProcessingSpec>? processingSpecs,
+    $core.bool? clearUnits,
+    $core.bool? clearProcessingSpecs,
   }) {
     final result = UpdateProductRequest._();
     if (id != null) result.id = id;
@@ -942,6 +944,9 @@ class UpdateProductRequest extends $pb.GeneratedMessage {
     if (isActive != null) result.isActive = isActive;
     if (units != null) result.units.addAll(units);
     if (processingSpecs != null) result.processingSpecs.addAll(processingSpecs);
+    if (clearUnits != null) result.clearUnits = clearUnits;
+    if (clearProcessingSpecs != null)
+      result.clearProcessingSpecs = clearProcessingSpecs;
     return result;
   }
 
@@ -970,6 +975,8 @@ class UpdateProductRequest extends $pb.GeneratedMessage {
         subBuilder: ProductUnit.$_createMessage)
     ..pPM<ProductProcessingSpec>(10, _omitFieldNames ? '' : 'processingSpecs',
         subBuilder: ProductProcessingSpec.$_createMessage)
+    ..aOB(11, _omitFieldNames ? '' : 'clearUnits')
+    ..aOB(12, _omitFieldNames ? '' : 'clearProcessingSpecs')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -1072,6 +1079,27 @@ class UpdateProductRequest extends $pb.GeneratedMessage {
 
   @$pb.TagNumber(10)
   $pb.PbList<ProductProcessingSpec> get processingSpecs => $_getList(9);
+
+  /// 清空旗標:proto3 的 repeated **無 presence**——傳 `[]` 在線上等於未提供(實測 protojson 解為
+  /// nil slice),故「取消全部關聯」無法用空陣列表達。要清空時把旗標設 true。
+  /// (repeated 不可加 `optional`,buf 直接拒收:multiple modifiers)
+  @$pb.TagNumber(11)
+  $core.bool get clearUnits => $_getBF(10);
+  @$pb.TagNumber(11)
+  set clearUnits($core.bool value) => $_setBool(10, value);
+  @$pb.TagNumber(11)
+  $core.bool hasClearUnits() => $_has(10);
+  @$pb.TagNumber(11)
+  void clearClearUnits() => $_clearField(11);
+
+  @$pb.TagNumber(12)
+  $core.bool get clearProcessingSpecs => $_getBF(11);
+  @$pb.TagNumber(12)
+  set clearProcessingSpecs($core.bool value) => $_setBool(11, value);
+  @$pb.TagNumber(12)
+  $core.bool hasClearProcessingSpecs() => $_has(11);
+  @$pb.TagNumber(12)
+  void clearClearProcessingSpecs() => $_clearField(12);
 }
 
 class UpdateProductResponse extends $pb.GeneratedMessage {

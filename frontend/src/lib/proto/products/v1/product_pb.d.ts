@@ -374,16 +374,32 @@ export declare type UpdateProductRequest = Message<"products.v1.UpdateProductReq
   isActive?: boolean | undefined;
 
   /**
-   * 提供即整組替換(空陣列 = 清空)
+   * 提供即整組替換(至少 1 項;見 clear_units)
    *
    * @generated from field: repeated products.v1.ProductUnit units = 9;
    */
   units: ProductUnit[];
 
   /**
+   * 提供即整組替換(至少 1 項;見 clear_processing_specs)
+   *
    * @generated from field: repeated products.v1.ProductProcessingSpec processing_specs = 10;
    */
   processingSpecs: ProductProcessingSpec[];
+
+  /**
+   * 清空旗標:proto3 的 repeated **無 presence**——傳 `[]` 在線上等於未提供(實測 protojson 解為
+   * nil slice),故「取消全部關聯」無法用空陣列表達。要清空時把旗標設 true。
+   * (repeated 不可加 `optional`,buf 直接拒收:multiple modifiers)
+   *
+   * @generated from field: optional bool clear_units = 11;
+   */
+  clearUnits?: boolean | undefined;
+
+  /**
+   * @generated from field: optional bool clear_processing_specs = 12;
+   */
+  clearProcessingSpecs?: boolean | undefined;
 };
 
 /**

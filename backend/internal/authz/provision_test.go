@@ -119,3 +119,54 @@ func TestProvisionUserRolesSkipsUnknownRole(t *testing.T) {
 		t.Error("未知角色使用者不應被指派至 staff role")
 	}
 }
+
+// TestProvisionPrimaryAccountDenyTuples D22(規格 4.2)主帳號排除:
+// 客戶主帳號須取得 ability primary_account 排除 tuple,使其 OpenFGA Check 對業務資源一律 deny,
+// 而同客戶的子帳號不受影響;帳號不再為主帳號時,reconcile 必須清掉殘留 deny。
+func TestProvisionPrimaryAccountDenyTuples(t *testing.T) {
+	e, db := newProvisionEnv(t)
+	ctx := context.Background()
+
+	// customer 角色的業務能力(主帳號要排除的目標)。
+	cr := db.Role.Create().SetCode("customer").SetName("客戶").
+		SetDataScope(role.DataScopeSelf).SetIsSystem(true).SaveX(ctx)
+	for _, res := range []string{"sales_order", "return_request"} {
+		db.RolePermission.Create().SetRoleID(cr.ID).SetResource(res).SetAction("read").SaveX(ctx)
+		db.RolePermission.Create().SetRoleID(cr.ID).SetResource(res).SetAction("write").SaveX(ctx)
+	}
+	co := db.Company.Create().SetName("C").SetIdentifier("c-" + t.Name()).
+		SetStatus("active").SaveX(ctx)
+	pri := db.User.Create().SetEmail("pri@t.com").SetName("主").SetRole("customer").
+		SetPasswordHash("x").SetIsCustomer(true).SetIsPrimary(true).
+		SetCompanyID(co.ID).SetStatus(user.StatusActive).SaveX(ctx)
+	sub := db.User.Create().SetEmail("sub@t.com").SetName("子").SetRole("customer").
+		SetPasswordHash("x").SetIsCustomer(true).SetIsPrimary(false).
+		SetCompanyID(co.ID).SetStatus(user.StatusActive).SaveX(ctx)
+
+	if err := authz.Provision(ctx, e, db); err != nil {
+		t.Fatalf("Provision: %v", err)
+	}
+	priObj, subObj := "user:"+itoa(pri.ID), "user:"+itoa(sub.ID)
+
+	// ① 子帳號照常可用業務能力。
+	if ok, _ := e.Check(ctx, subObj, "can_write", "ability:sales_order"); !ok {
+		t.Error("子帳號應保有 can_write(sales_order)")
+	}
+	// ② 主帳號被排除 —— read 與 write 都不行,且不限於單一資源。
+	for _, rel := range []string{"can_read", "can_write"} {
+		for _, res := range []string{"sales_order", "return_request"} {
+			if ok, _ := e.Check(ctx, priObj, rel, "ability:"+res); ok {
+				t.Errorf("主帳號不應有 %s(ability:%s)", rel, res)
+			}
+		}
+	}
+
+	// ③ 改為子帳號(後台把主帳號轉交他人)→ reconcile 必須清掉殘留 deny,能力恢復。
+	db.User.UpdateOneID(pri.ID).SetIsPrimary(false).SaveX(ctx)
+	if err := authz.Provision(ctx, e, db); err != nil {
+		t.Fatalf("二次 Provision: %v", err)
+	}
+	if ok, _ := e.Check(ctx, priObj, "can_write", "ability:sales_order"); !ok {
+		t.Error("不再為主帳號後,殘留 deny 應被 reconcile 清除(否則永久 403)")
+	}
+}

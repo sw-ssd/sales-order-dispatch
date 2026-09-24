@@ -14,7 +14,8 @@ import {
   type PaginationState,
 } from "@tanstack/solid-table";
 import { batch, createEffect, createMemo, createSignal, For, Index, Show, type JSX } from "solid-js";
-import type { ProductCategory } from "~/lib/proto/masters/v1/master_pb";
+import type { JsonObject } from "@bufbuild/protobuf";
+import type { ProcessingSpec, ProductCategory } from "~/lib/proto/masters/v1/master_pb";
 import type { Product } from "~/lib/proto/products/v1/product_pb";
 import {
   Badge,
@@ -50,6 +51,7 @@ import {
   unitOptionsQueryOptions,
   warehouseDropdownQueryOptions,
 } from "../queries";
+import { processingSpecsQueryOptions } from "../../masters/queries";
 import {
   baseUnitDraft,
   derivedUnitDraft,
@@ -71,6 +73,13 @@ const productColumnHelper = createColumnHelper<typeof PRODUCT_TABLE_FEATURES, Pr
 
 /** 沒有資料時的穩定空陣列（避免 row model 反覆重算）。 */
 const NO_PRODUCTS: Product[] = [];
+
+/**
+ * 分切規格選項一次載入的筆數＝後端 `maxPageSize`（100）。
+ * ponytail: 上限即「一頁全載」，部門規格超過 100 筆時編輯器只看得到前 100 筆；
+ * 真的超過就把 `processingSpecsQueryOptions` 換成累積式（比照倉別下拉器的 `fetchNextPage`）。
+ */
+const PROCESSING_SPEC_OPTION_LIMIT = 100;
 
 /** 新增／編輯 modal 的欄位預設值（`form.reset` 要求整份 values，理由見 CompaniesPage 檔頭）。 */
 const EMPTY_PRODUCT_VALUES = {
@@ -121,10 +130,16 @@ function errorMessage(err: unknown): string {
  * - 單位是動態陣列 → 放在 form 之外用 `units` signal 管理，送出前個別驗證
  *   （`validateProductUnits`），錯誤顯示在單位區塊而非欄位級。
  *
- * **刻意未做**：`processing_specs`（分切規格關聯）的編輯。該陣列在更新時是「提供即整組替換」，
- * 而規格列帶 `attributes`（配對層覆寫指令，任意 JSON）——本頁若以空值送出會覆掉既有屬性。
- * 建立時送空陣列＝不關聯、更新時省略該欄位＝維持現值（後端 `req.Msg.ProcessingSpecs != nil` 守衛），
- * 因此不編輯它不會造成資料損失，等規格頁有編輯器時再補。
+ * 分切規格關聯（`processing_specs`）與單位同型：動態陣列、form 之外以 signal 管理、更新時整組替換；
+ * 選項來自 `processingSpecsQueryOptions`（部門級，未軟刪除）。三個必須留在這裡的細節：
+ * - **規格列的 `attributes`（配對層覆寫指令，任意 JSON，後端不解析）必須原樣帶回**：編輯載入時
+ *   存進 `specAttributes`，送出時仍被勾選者原樣送回、新勾選者給 `{}`；否則整組替換會洗掉既有屬性。
+ * - **已軟刪除的規格不可重送**（後端 `validateSpecRefs` 要求同部門且未刪除）→ 清單載入完整
+ *   （`isSuccess` 且總數未超過載入上限）時才把不在清單中的已選項剔除並提示；清單未載入完成時一律
+ *   照送，讓後端大聲拒絕而不是靜默掉關聯。
+ * - **「全部取消」以 `clear_processing_specs` 旗標表達**：proto3 repeated 沒有 presence，空陣列在
+ *   JSON 傳輸與「省略該欄位」同義（protojson 解出 nil），故清空靠旗標（後端同交易整組刪除）。
+ *   有勾選時照常送 `processingSpecs` 陣列；兩者互斥（同時帶非空陣列 → 後端 invalid_argument）。
  */
 export default function ProductsPage() {
   // 篩選草稿：輸入過程只動這些 signal，不進 query key（D5：不得每按一鍵就查詢）。
@@ -144,6 +159,11 @@ export default function ProductsPage() {
   const categories = createInfiniteQuery(() => categoryDropdownQueryOptions());
   const warehouses = createInfiniteQuery(() => warehouseDropdownQueryOptions());
   const unitOptions = createQuery(() => unitOptionsQueryOptions());
+  // 分切規格選項：不篩 `is_active`（勾選清單才篩），否則已停用但仍有關聯的規格會從視圖消失，
+  // 使用者再也取消不掉它 —— 見送出前的核對與檔頭說明。
+  const specOptions = createQuery(() =>
+    processingSpecsQueryOptions({ page: 1, pageSize: PROCESSING_SPEC_OPTION_LIMIT })
+  );
 
   /** 分類 id → 名稱（清單顯示與表單選項共用同一份資料）。 */
   const categoryNameById = createMemo(() => {
@@ -270,8 +290,15 @@ export default function ProductsPage() {
   const [editing, setEditing] = createSignal<Product | null>(null);
   const [units, setUnits] = createSignal<ProductUnitDraft[]>([baseUnitDraft()]);
   const [unitError, setUnitError] = createSignal<string | undefined>();
+  const [specIds, setSpecIds] = createSignal<string[]>([]);
   const [serverError, setServerError] = createSignal<string | undefined>();
   const [actionError, setActionError] = createSignal<string | null>(null);
+
+  /**
+   * 編輯載入時保存的既有規格 `attributes`；**非 signal**：只在送出時讀，不參與渲染。
+   * 這份 map 是「整組替換語意下仍不洗掉配對層覆寫指令」的唯一依據（見檔頭）。
+   */
+  const specAttributes = new Map<string, JsonObject>();
 
   const bannerError = () => (query.error ? errorMessage(query.error) : actionError());
 
@@ -281,6 +308,55 @@ export default function ProductsPage() {
 
   const codeValidators = fieldValidators(productSchema.entries.code);
   const nameValidators = fieldValidators(productSchema.entries.name);
+
+  // —— 分切規格（選項、選取集、既有 attributes 保存） ——
+
+  /** 規格選項（成功前為空）；`specPayload`／UI 共用同一份讀取。 */
+  const specOptionsList = createMemo(
+    () => queryData(specOptions, (d) => d?.processingSpecs) ?? []
+  );
+
+  /**
+   * 規格清單是否載入完整（成功，且總數未超過一頁上限）。
+   * 只有完整時才能斷言「清單裡沒有＝該規格已刪除」；否則會把還沒載入的規格誤判成刪除。
+   */
+  const specOptionsComplete = createMemo(
+    () =>
+      specOptions.isSuccess &&
+      Number(queryData(specOptions, (d) => d?.pagination?.total) ?? 0) <=
+        PROCESSING_SPEC_OPTION_LIMIT
+  );
+
+  /** 已選但清單裡沒有的＝該規格已被軟刪除；後端 `validateSpecRefs` 會拒絕，故送出前剔除。 */
+  const removedSpecIds = createMemo(() => {
+    if (!specOptionsComplete()) return [];
+    // 選項集直接在 callback 內讀（不以 const 快照後閉包引用）：規格數少，O(n·m) 無妨，
+    // 而這樣寫對 reactive 來源的讀取位置正確（solid/reactivity）。
+    return specIds().filter((id) => !specOptionsList().some((s) => s.id === id));
+  });
+
+  /**
+   * 送出用的關聯陣列：整組替換語意下，既有規格的 `attributes` 必須原樣帶回（見檔頭），
+   * 新勾選者給空物件（後端只在非空時寫入）。
+   */
+  const specPayload = () => {
+    return specIds()
+      .filter((id) => !removedSpecIds().includes(id))
+      .map((id) => ({
+        processingSpecId: id,
+        attributes: specAttributes.get(id) ?? {},
+      }));
+  };
+
+  const toggleSpec = (id: string, checked: boolean) => {
+    setSpecIds((prev) =>
+      checked ? (prev.includes(id) ? prev : [...prev, id]) : prev.filter((x) => x !== id)
+    );
+  };
+
+  /** 選項清單只列未刪除者；已停用者僅在「本來就勾選著」時才出現，否則使用者再也取消不掉。 */
+  const visibleSpecs = () =>
+    specOptionsList().filter((s) => s.isActive || specIds().includes(s.id));
 
   /** 送出篩選：把草稿套進 query key 並回第 1 頁（同一個 `batch` 內，避免兩次 RPC）。 */
   const submitFilter: JSX.EventHandler<HTMLFormElement, SubmitEvent> = (e) => {
@@ -301,6 +377,11 @@ export default function ProductsPage() {
         return;
       }
       const payload = units().map(toProductUnitInput);
+      // 規格關聯是「提供即整組替換」:有勾選 → 帶陣列;全部取消 → 帶 clear 旗標
+      // (proto3 repeated 無 presence,空陣列表達不出「清空」,見檔頭)。
+      const specsPayload = specPayload();
+      const clearSpecs = specsPayload.length === 0;
+      const dropped = removedSpecIds();
       try {
         const current = editing();
         if (current) {
@@ -314,6 +395,9 @@ export default function ProductsPage() {
             inventoryWarehouseId: value.inventoryWarehouseId,
             pickingWarehouseId: value.pickingWarehouseId,
             units: payload,
+            ...(clearSpecs
+              ? { clearProcessingSpecs: true }
+              : { processingSpecs: specsPayload }),
           });
         } else {
           await productClient.createProduct({
@@ -325,10 +409,16 @@ export default function ProductsPage() {
             inventoryWarehouseId: value.inventoryWarehouseId,
             pickingWarehouseId: value.pickingWarehouseId,
             units: payload,
+            processingSpecs: specsPayload,
           });
         }
         setDialogOpen(false);
         await client.invalidateQueries({ queryKey: ["products"] });
+        // 提示放在失效之後：`invalidateQueries` 期間 `isFetching` 為真，上面的 effect 會清掉
+        // actionError，先寫就會被抹掉。
+        if (dropped.length > 0) {
+          setActionError(`${dropped.length} 個已刪除的分切規格已自動取消關聯`);
+        }
       } catch (err) {
         setServerError(errorMessage(err));
       }
@@ -342,6 +432,8 @@ export default function ProductsPage() {
     setServerError(undefined);
     setUnitError(undefined);
     setUnits([baseUnitDraft()]);
+    specAttributes.clear();
+    setSpecIds([]);
     form.reset({ ...EMPTY_PRODUCT_VALUES });
     setDialogOpen(true);
   };
@@ -372,6 +464,12 @@ export default function ProductsPage() {
         sizeDesc: u.sizeDesc,
       }));
       setUnits(loaded.length > 0 ? loaded : [baseUnitDraft()]);
+      // 既有規格關聯：id 進選取集，`attributes` 另存原值（送出時原樣帶回，見檔頭）。
+      specAttributes.clear();
+      for (const s of fresh.processingSpecs ?? []) {
+        if (s.attributes !== undefined) specAttributes.set(s.processingSpecId, s.attributes);
+      }
+      setSpecIds((fresh.processingSpecs ?? []).map((s) => s.processingSpecId));
       setDialogOpen(true);
     } catch (err) {
       setActionError(errorMessage(err));
@@ -772,6 +870,59 @@ export default function ProductsPage() {
                   </div>
                 )}
               </Index>
+            </section>
+
+            {/* 分切規格（動態多選，form 之外管理；選項來自部門級規格主檔） */}
+            <section class="space-y-3 border-t border-border pt-4">
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-foreground">分切規格</h3>
+                <span class="text-xs text-muted-foreground">
+                  已選 {specIds().length - removedSpecIds().length} 項
+                </span>
+              </div>
+
+              <Show when={removedSpecIds().length > 0}>
+                <p class="text-sm text-destructive" role="alert">
+                  已選 {removedSpecIds().length} 項規格已被刪除，儲存時會自動取消關聯。
+                </p>
+              </Show>
+
+
+              <Show when={specOptions.isError}>
+                <p class="text-sm text-destructive" role="alert">
+                  分切規格載入失敗,請關閉視窗後重試
+                </p>
+              </Show>
+
+              <Show when={!specOptions.isError && visibleSpecs().length === 0}>
+                <p class="text-sm text-muted-foreground">
+                  {specOptions.isPending
+                    ? "規格載入中…"
+                    : "本部門尚無分切規格,請先至「分切規格」主檔建立"}
+                </p>
+              </Show>
+
+              <div class="grid gap-2 sm:grid-cols-2">
+                <For each={visibleSpecs()}>
+                  {(s: ProcessingSpec) => (
+                    <label class="flex items-start gap-2 rounded-lg border border-border p-2 text-sm text-foreground">
+                      <input
+                        type="checkbox"
+                        class="mt-0.5"
+                        aria-label={`${s.code} ${s.name}`}
+                        checked={specIds().includes(s.id)}
+                        onChange={(e) => toggleSpec(s.id, e.currentTarget.checked)}
+                      />
+                      <span>
+                        <span class="font-medium">{s.code}</span>｜{s.name}
+                        <Show when={!s.isActive}>
+                          <span class="ml-1 text-muted-foreground">（已停用）</span>
+                        </Show>
+                      </span>
+                    </label>
+                  )}
+                </For>
+              </div>
             </section>
 
             <DialogFooter>

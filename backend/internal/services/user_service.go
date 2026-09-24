@@ -443,6 +443,13 @@ func (s *UserService) UpdateUser(ctx context.Context, req *connect.Request[v1.Up
 	if err := s.recordUserAudit(ctx, tx, id, target, "update", before, after); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("稽核寫入失敗: %w", err))
 	}
+	// 停用走 UpdateUser(status=inactive) 時同樣要連鎖 —— 否則同一狀態變更有兩條路,
+	// 只有 Deactivate 那條會停子帳號(葉角色/共享邏輯要收斂到單點)。
+	if req.Msg.Status != nil && req.Msg.GetStatus() == string(user.StatusInactive) {
+		if err := s.cascadeDeactivateSubAccounts(ctx, tx, id, target); err != nil {
+			return nil, err
+		}
+	}
 	u, err := dbtenant.Client(ctx, s.db).User.Query().WithCompany().WithDepartment().Where(user.ID(userID)).Only(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
@@ -595,7 +602,54 @@ func (s *UserService) Deactivate(ctx context.Context, req *connect.Request[v1.De
 	); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("稽核寫入失敗: %w", err))
 	}
+	// D22 連鎖(設計書 v1.0.31「後台停用主帳號連鎖停用子帳號」):
+	// 客戶主帳號被停用時,同客戶的**全部子帳號**一併停用(同一交易)。
+	if err := s.cascadeDeactivateSubAccounts(ctx, tx, id, target); err != nil {
+		return nil, err
+	}
 	return connect.NewResponse(&v1.DeactivateResponse{}), nil
+}
+
+// cascadeDeactivateSubAccounts 於停用**客戶主帳號**時,連鎖停用同客戶全部子帳號(同一交易)。
+//
+// 為何連鎖:主帳號是該客戶帳號體系的唯一管理者(App 帳號管理入口) —— 停用主帳號視同體系停用。
+// 若只停主帳號,子帳號仍可繼續登入下單,「停用」在營運上等於沒生效,而後台沒有任何地方能
+// 一次停掉整組帳號。(需求規格 identity-access:72 的「停用不影響其他帳號」指**個別帳號的
+// 停用/登出/密碼重置**,與本條的主帳號連鎖不衝突:子帳號被停用不影響其他子帳號。)
+//
+// tv+1 讓在途 token 立即失效(與單筆停用同語意);已在 inactive 的子帳號不重複遞增,
+// 免稽核流水與 tv 語意被連鎖行為污染。
+//
+// 本函式是**唯一**的連鎖入口:Deactivate 與 UpdateUser(status→inactive)皆呼叫它,
+// 否則走 UpdateUser 的使用者會繞過連鎖(同一狀態變更有兩條路)。
+func (s *UserService) cascadeDeactivateSubAccounts(ctx context.Context, tx *ent.Tx, actor authz.Identity, target *ent.User) error {
+	if !target.IsPrimary || !target.IsCustomer || target.CustomerID == nil {
+		return nil
+	}
+	db := tx.Client()
+	subs, err := db.User.Query().WithCompany().WithDepartment().Where(
+		user.CustomerIDEQ(*target.CustomerID),
+		user.IsPrimaryEQ(false),
+		user.StatusNEQ(user.StatusInactive),
+	).All(ctx)
+	if err != nil {
+		return toConnectError(err)
+	}
+	for _, sub := range subs {
+		if _, uerr := db.User.UpdateOneID(sub.ID).
+			SetStatus(user.StatusInactive).
+			AddTokenVersion(1).
+			Save(ctx); uerr != nil {
+			return toConnectError(uerr)
+		}
+		if aerr := s.recordUserAudit(ctx, tx, actor, sub, "update",
+			map[string]any{"status": string(sub.Status), "cascade_from_primary": true},
+			map[string]any{"status": string(user.StatusInactive), "cascade_from_primary": true},
+		); aerr != nil {
+			return errcode.SysInternal.Wrap(fmt.Errorf("稽核寫入失敗: %w", aerr))
+		}
+	}
+	return nil
 }
 
 // ForceLogout 強制登出(token_version+1,使在途憑證失效)。不可對自己呼叫。

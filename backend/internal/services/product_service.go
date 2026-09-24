@@ -457,15 +457,28 @@ func (s *ProductService) UpdateProduct(ctx context.Context, req *connect.Request
 		return nil, toConnectError(err)
 	}
 	// 有異動欄位才重驗參照;未提供欄位沿用現值。
+	//
+	// 清空語意:repeated 在線上無 presence(傳 `[]` 等於未提供),故「整組清空」由 clear_* 旗標表達。
+	// 同時帶旗標與非空陣列是自相矛盾的請求 → invalid_argument,不默默擇一。
 	var units []unitInput
-	if req.Msg.Units != nil {
+	if req.Msg.GetClearUnits() {
+		if len(req.Msg.GetUnits()) > 0 {
+			return nil, invalidArgField("clear_units")
+		}
+		units = []unitInput{}
+	} else if req.Msg.Units != nil {
 		units, err = s.validateUnits(ctx, req.Msg.GetUnits(), did)
 		if err != nil {
 			return nil, err
 		}
 	}
 	var specs []specInput
-	if req.Msg.ProcessingSpecs != nil {
+	if req.Msg.GetClearProcessingSpecs() {
+		if len(req.Msg.GetProcessingSpecs()) > 0 {
+			return nil, invalidArgField("clear_processing_specs")
+		}
+		specs = []specInput{}
+	} else if req.Msg.ProcessingSpecs != nil {
 		specs, err = s.validateSpecRefs(ctx, req.Msg.GetProcessingSpecs(), cid, did)
 		if err != nil {
 			return nil, err
@@ -543,12 +556,12 @@ func (s *ProductService) UpdateProduct(ctx context.Context, req *connect.Request
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	if req.Msg.Units != nil {
+	if req.Msg.Units != nil || req.Msg.GetClearUnits() {
 		if err := replaceUnits(ctx, tx, pid, units, actor); err != nil {
 			return nil, err
 		}
 	}
-	if req.Msg.ProcessingSpecs != nil {
+	if req.Msg.ProcessingSpecs != nil || req.Msg.GetClearProcessingSpecs() {
 		if err := replaceSpecs(ctx, tx, pid, specs, actor); err != nil {
 			return nil, err
 		}

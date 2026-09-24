@@ -687,8 +687,13 @@ type UpdateProductRequest struct {
 	PickingWarehouseId   *string                  `protobuf:"bytes,6,opt,name=picking_warehouse_id,json=pickingWarehouseId,proto3,oneof" json:"picking_warehouse_id,omitempty"`
 	Description          *string                  `protobuf:"bytes,7,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	IsActive             *bool                    `protobuf:"varint,8,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
-	Units                []*ProductUnit           `protobuf:"bytes,9,rep,name=units,proto3" json:"units,omitempty"` // 提供即整組替換(空陣列 = 清空)
-	ProcessingSpecs      []*ProductProcessingSpec `protobuf:"bytes,10,rep,name=processing_specs,json=processingSpecs,proto3" json:"processing_specs,omitempty"`
+	Units                []*ProductUnit           `protobuf:"bytes,9,rep,name=units,proto3" json:"units,omitempty"`                                             // 提供即整組替換(至少 1 項;見 clear_units)
+	ProcessingSpecs      []*ProductProcessingSpec `protobuf:"bytes,10,rep,name=processing_specs,json=processingSpecs,proto3" json:"processing_specs,omitempty"` // 提供即整組替換(至少 1 項;見 clear_processing_specs)
+	// 清空旗標:proto3 的 repeated **無 presence**——傳 `[]` 在線上等於未提供(實測 protojson 解為
+	// nil slice),故「取消全部關聯」無法用空陣列表達。要清空時把旗標設 true。
+	// (repeated 不可加 `optional`,buf 直接拒收:multiple modifiers)
+	ClearUnits           *bool `protobuf:"varint,11,opt,name=clear_units,json=clearUnits,proto3,oneof" json:"clear_units,omitempty"`
+	ClearProcessingSpecs *bool `protobuf:"varint,12,opt,name=clear_processing_specs,json=clearProcessingSpecs,proto3,oneof" json:"clear_processing_specs,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -791,6 +796,20 @@ func (x *UpdateProductRequest) GetProcessingSpecs() []*ProductProcessingSpec {
 		return x.ProcessingSpecs
 	}
 	return nil
+}
+
+func (x *UpdateProductRequest) GetClearUnits() bool {
+	if x != nil && x.ClearUnits != nil {
+		return *x.ClearUnits
+	}
+	return false
+}
+
+func (x *UpdateProductRequest) GetClearProcessingSpecs() bool {
+	if x != nil && x.ClearProcessingSpecs != nil {
+		return *x.ClearProcessingSpecs
+	}
+	return false
 }
 
 type UpdateProductResponse struct {
@@ -1717,7 +1736,7 @@ const file_products_v1_product_proto_rawDesc = "" +
 	"\x05units\x18\b \x03(\v2\x18.products.v1.ProductUnitR\x05units\x12M\n" +
 	"\x10processing_specs\x18\t \x03(\v2\".products.v1.ProductProcessingSpecR\x0fprocessingSpecs\"G\n" +
 	"\x15CreateProductResponse\x12.\n" +
-	"\aproduct\x18\x01 \x01(\v2\x14.products.v1.ProductR\aproduct\"\xac\x04\n" +
+	"\aproduct\x18\x01 \x01(\v2\x14.products.v1.ProductR\aproduct\"\xb8\x05\n" +
 	"\x14UpdateProductRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\x04code\x18\x02 \x01(\tH\x00R\x04code\x88\x01\x01\x12\x17\n" +
@@ -1730,7 +1749,10 @@ const file_products_v1_product_proto_rawDesc = "" +
 	"\tis_active\x18\b \x01(\bH\x06R\bisActive\x88\x01\x01\x12.\n" +
 	"\x05units\x18\t \x03(\v2\x18.products.v1.ProductUnitR\x05units\x12M\n" +
 	"\x10processing_specs\x18\n" +
-	" \x03(\v2\".products.v1.ProductProcessingSpecR\x0fprocessingSpecsB\a\n" +
+	" \x03(\v2\".products.v1.ProductProcessingSpecR\x0fprocessingSpecs\x12$\n" +
+	"\vclear_units\x18\v \x01(\bH\aR\n" +
+	"clearUnits\x88\x01\x01\x129\n" +
+	"\x16clear_processing_specs\x18\f \x01(\bH\bR\x14clearProcessingSpecs\x88\x01\x01B\a\n" +
 	"\x05_codeB\a\n" +
 	"\x05_nameB\x0e\n" +
 	"\f_category_idB\x19\n" +
@@ -1738,7 +1760,9 @@ const file_products_v1_product_proto_rawDesc = "" +
 	"\x15_picking_warehouse_idB\x0e\n" +
 	"\f_descriptionB\f\n" +
 	"\n" +
-	"_is_active\"G\n" +
+	"_is_activeB\x0e\n" +
+	"\f_clear_unitsB\x19\n" +
+	"\x17_clear_processing_specs\"G\n" +
 	"\x15UpdateProductResponse\x12.\n" +
 	"\aproduct\x18\x01 \x01(\v2\x14.products.v1.ProductR\aproduct\"&\n" +
 	"\x14DeleteProductRequest\x12\x0e\n" +

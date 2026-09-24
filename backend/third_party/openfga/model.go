@@ -29,8 +29,9 @@ type department
     define can_write: [role#assigned, department#admin, user]
 type ability
   relations
-    define can_read: [role#assigned, user]
-    define can_write: [role#assigned, user]
+    define primary_account: [user]
+    define can_read: [role#assigned, user] but not primary_account
+    define can_write: [role#assigned, user] but not primary_account
 
 type vehicle
   relations
