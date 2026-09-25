@@ -79,6 +79,13 @@ var rolePolicy = map[string]map[string][]string{
 		"product":        {"read"},
 		"return_request": {"read", "write"},
 		"notification":   {"read", "write"},
+		// 公告前台(spec announcements「前台展示與排序」):子帳號要在 App 首頁看公告。
+		// 只給 read —— 管理面(Create/Update/Delete)由公告服務的範圍守衛限 super/company_admin/dept_admin。
+		//
+		// 這一條同時使 `authz.PrimaryAccountDeniedResources()` 推導出 announcement,
+		// 故主帳號自動被排除在公告之外 —— 與規格 4.2「主帳號登入僅供帳號管理」一致,
+		// 不需要另外手寫排除。
+		"announcement": {"read"},
 		// 店家自助帳號管理(D22/規格 4.2):主帳號登入後**唯一**可用的功能面 ——
 		// 它的業務能力已被 OpenFGA 的 primary_account 排除(見 authz.PrimaryAccountDeniedResources,
 		// 該推導亦永久排除本資源)。子帳號雖同樣持有本資源(繼承自 customer 角色),

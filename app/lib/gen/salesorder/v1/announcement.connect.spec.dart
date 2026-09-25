@@ -22,6 +22,17 @@ abstract final class AnnouncementService {
     salesorderv1announcement.ListAnnouncementsResponse.new,
   );
 
+  /// ListActiveAnnouncements:前台列表(規格「上下架時間窗與啟用狀態」+「平台篩選投放」)
+  /// —— 只回**當下可見**的公告(is_active=true、publish_at<=now、(unpublish_at 空或 >now)、
+  /// deploy_web|deploy_app 依 platform 過濾),依 type 分組供輪播(banner)與列表(news/article)。
+  /// 可見範圍仍由 RLS 兜底(全系統 + 自己公司 + 自己部門);不帶 page(前台一次全取)。
+  static const listActiveAnnouncements = connect.Spec(
+    '/$name/ListActiveAnnouncements',
+    connect.StreamType.unary,
+    salesorderv1announcement.ListActiveAnnouncementsRequest.new,
+    salesorderv1announcement.ListActiveAnnouncementsResponse.new,
+  );
+
   /// CreateAnnouncement:建立公告(範圍依身分收斂;type 非法 → invalid_argument)。
   static const createAnnouncement = connect.Spec(
     '/$name/CreateAnnouncement',

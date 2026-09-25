@@ -89,6 +89,59 @@ final $typed_data.Uint8List listAnnouncementsResponseDescriptor = $convert.base6
     'xlc29yZGVyLnYxLkFubm91bmNlbWVudFINYW5ub3VuY2VtZW50cxIUCgV0b3RhbBgCIAEoBVIF'
     'dG90YWw=');
 
+@$core.Deprecated('Use listActiveAnnouncementsRequestDescriptor instead')
+const ListActiveAnnouncementsRequest$json = {
+  '1': 'ListActiveAnnouncementsRequest',
+  '2': [
+    {'1': 'platform', '3': 1, '4': 1, '5': 9, '10': 'platform'},
+  ],
+};
+
+/// Descriptor for `ListActiveAnnouncementsRequest`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listActiveAnnouncementsRequestDescriptor =
+    $convert.base64Decode(
+        'Ch5MaXN0QWN0aXZlQW5ub3VuY2VtZW50c1JlcXVlc3QSGgoIcGxhdGZvcm0YASABKAlSCHBsYX'
+        'Rmb3Jt');
+
+@$core.Deprecated('Use listActiveAnnouncementsResponseDescriptor instead')
+const ListActiveAnnouncementsResponse$json = {
+  '1': 'ListActiveAnnouncementsResponse',
+  '2': [
+    {
+      '1': 'banners',
+      '3': 1,
+      '4': 3,
+      '5': 11,
+      '6': '.salesorder.v1.Announcement',
+      '10': 'banners'
+    },
+    {
+      '1': 'news',
+      '3': 2,
+      '4': 3,
+      '5': 11,
+      '6': '.salesorder.v1.Announcement',
+      '10': 'news'
+    },
+    {
+      '1': 'articles',
+      '3': 3,
+      '4': 3,
+      '5': 11,
+      '6': '.salesorder.v1.Announcement',
+      '10': 'articles'
+    },
+  ],
+};
+
+/// Descriptor for `ListActiveAnnouncementsResponse`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List listActiveAnnouncementsResponseDescriptor =
+    $convert.base64Decode(
+        'Ch9MaXN0QWN0aXZlQW5ub3VuY2VtZW50c1Jlc3BvbnNlEjUKB2Jhbm5lcnMYASADKAsyGy5zYW'
+        'xlc29yZGVyLnYxLkFubm91bmNlbWVudFIHYmFubmVycxIvCgRuZXdzGAIgAygLMhsuc2FsZXNv'
+        'cmRlci52MS5Bbm5vdW5jZW1lbnRSBG5ld3MSNwoIYXJ0aWNsZXMYAyADKAsyGy5zYWxlc29yZG'
+        'VyLnYxLkFubm91bmNlbWVudFIIYXJ0aWNsZXM=');
+
 @$core.Deprecated('Use createAnnouncementRequestDescriptor instead')
 const CreateAnnouncementRequest$json = {
   '1': 'CreateAnnouncementRequest',
@@ -222,6 +275,11 @@ const $core.Map<$core.String, $core.dynamic> AnnouncementServiceBase$json = {
       '3': '.salesorder.v1.ListAnnouncementsResponse'
     },
     {
+      '1': 'ListActiveAnnouncements',
+      '2': '.salesorder.v1.ListActiveAnnouncementsRequest',
+      '3': '.salesorder.v1.ListActiveAnnouncementsResponse'
+    },
+    {
       '1': 'CreateAnnouncement',
       '2': '.salesorder.v1.CreateAnnouncementRequest',
       '3': '.salesorder.v1.CreateAnnouncementResponse'
@@ -245,6 +303,10 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
   '.salesorder.v1.ListAnnouncementsRequest': ListAnnouncementsRequest$json,
   '.salesorder.v1.ListAnnouncementsResponse': ListAnnouncementsResponse$json,
   '.salesorder.v1.Announcement': Announcement$json,
+  '.salesorder.v1.ListActiveAnnouncementsRequest':
+      ListActiveAnnouncementsRequest$json,
+  '.salesorder.v1.ListActiveAnnouncementsResponse':
+      ListActiveAnnouncementsResponse$json,
   '.salesorder.v1.CreateAnnouncementRequest': CreateAnnouncementRequest$json,
   '.salesorder.v1.CreateAnnouncementResponse': CreateAnnouncementResponse$json,
   '.salesorder.v1.UpdateAnnouncementRequest': UpdateAnnouncementRequest$json,
@@ -257,10 +319,12 @@ const $core.Map<$core.String, $core.Map<$core.String, $core.dynamic>>
 final $typed_data.Uint8List announcementServiceDescriptor = $convert.base64Decode(
     'ChNBbm5vdW5jZW1lbnRTZXJ2aWNlEmYKEUxpc3RBbm5vdW5jZW1lbnRzEicuc2FsZXNvcmRlci'
     '52MS5MaXN0QW5ub3VuY2VtZW50c1JlcXVlc3QaKC5zYWxlc29yZGVyLnYxLkxpc3RBbm5vdW5j'
-    'ZW1lbnRzUmVzcG9uc2USaQoSQ3JlYXRlQW5ub3VuY2VtZW50Eiguc2FsZXNvcmRlci52MS5Dcm'
-    'VhdGVBbm5vdW5jZW1lbnRSZXF1ZXN0Gikuc2FsZXNvcmRlci52MS5DcmVhdGVBbm5vdW5jZW1l'
-    'bnRSZXNwb25zZRJpChJVcGRhdGVBbm5vdW5jZW1lbnQSKC5zYWxlc29yZGVyLnYxLlVwZGF0ZU'
-    'Fubm91bmNlbWVudFJlcXVlc3QaKS5zYWxlc29yZGVyLnYxLlVwZGF0ZUFubm91bmNlbWVudFJl'
-    'c3BvbnNlEmkKEkRlbGV0ZUFubm91bmNlbWVudBIoLnNhbGVzb3JkZXIudjEuRGVsZXRlQW5ub3'
-    'VuY2VtZW50UmVxdWVzdBopLnNhbGVzb3JkZXIudjEuRGVsZXRlQW5ub3VuY2VtZW50UmVzcG9u'
-    'c2U=');
+    'ZW1lbnRzUmVzcG9uc2USeAoXTGlzdEFjdGl2ZUFubm91bmNlbWVudHMSLS5zYWxlc29yZGVyLn'
+    'YxLkxpc3RBY3RpdmVBbm5vdW5jZW1lbnRzUmVxdWVzdBouLnNhbGVzb3JkZXIudjEuTGlzdEFj'
+    'dGl2ZUFubm91bmNlbWVudHNSZXNwb25zZRJpChJDcmVhdGVBbm5vdW5jZW1lbnQSKC5zYWxlc2'
+    '9yZGVyLnYxLkNyZWF0ZUFubm91bmNlbWVudFJlcXVlc3QaKS5zYWxlc29yZGVyLnYxLkNyZWF0'
+    'ZUFubm91bmNlbWVudFJlc3BvbnNlEmkKElVwZGF0ZUFubm91bmNlbWVudBIoLnNhbGVzb3JkZX'
+    'IudjEuVXBkYXRlQW5ub3VuY2VtZW50UmVxdWVzdBopLnNhbGVzb3JkZXIudjEuVXBkYXRlQW5u'
+    'b3VuY2VtZW50UmVzcG9uc2USaQoSRGVsZXRlQW5ub3VuY2VtZW50Eiguc2FsZXNvcmRlci52MS'
+    '5EZWxldGVBbm5vdW5jZW1lbnRSZXF1ZXN0Gikuc2FsZXNvcmRlci52MS5EZWxldGVBbm5vdW5j'
+    'ZW1lbnRSZXNwb25zZQ==');

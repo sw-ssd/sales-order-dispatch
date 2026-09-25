@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"connectrpc.com/connect"
 	_ "github.com/mattn/go-sqlite3" // sqlite in-memory 測試驅動
@@ -306,4 +307,141 @@ func mustAnnID(t *testing.T, raw string) int {
 		t.Fatalf("id %q: %v", raw, err)
 	}
 	return v
+}
+
+// TestAnnouncementActiveListVisibility spec「上下架時間窗與啟用狀態」+「平台篩選投放」
+// +「前台展示與排序」:前台列表只回當下可見者,依 sort_order(同值依 id),並依型別分組。
+//
+// 這是管理列表**不能**取代的一條路徑:管理面看得到未上架/停用(要能預覽與編輯),
+// 前台只能看到已上架的 —— 少了前台過濾,未到時間或已停用的公告會直接曝光。
+func TestAnnouncementActiveListVisibility(t *testing.T) {
+	ctx := context.Background()
+	db := openAnnDB(t)
+	coA, _, _, _ := annSeed(t, db)
+
+	super := newAnnouncementClient(t, db, annIdentity("super", "", ""))
+	create := func(req *v1.CreateAnnouncementRequest) *v1.Announcement {
+		t.Helper()
+		resp, err := super.CreateAnnouncement(ctx, connect.NewRequest(req))
+		if err != nil {
+			t.Fatalf("create %+v: %v", req, err)
+		}
+		return resp.Msg.GetAnnouncement()
+	}
+	now := time.Now().UTC()
+
+	// 可見:已上架、在時間窗內、投放兩邊（sort_order=2,用來驗排序。
+	create(&v1.CreateAnnouncementRequest{
+		Type: "banner", Title: "可見輪播", SortOrder: 2,
+		PublishAt: now.Add(-time.Hour).Format(time.RFC3339),
+		IsActive:  true, DeployWeb: true, DeployApp: true, CompanyId: uItoa(coA),
+	})
+	visibleFirst := create(&v1.CreateAnnouncementRequest{
+		Type: "banner", Title: "排序在前", SortOrder: 1,
+		PublishAt: now.Add(-time.Hour).Format(time.RFC3339),
+		IsActive:  true, DeployWeb: true, DeployApp: true, CompanyId: uItoa(coA),
+	})
+	// 不可見:尚未到發佈時間。
+	create(&v1.CreateAnnouncementRequest{
+		Type: "banner", Title: "未來才發", SortOrder: 0,
+		PublishAt: now.Add(time.Hour).Format(time.RFC3339),
+		IsActive:  true, DeployWeb: true, DeployApp: true, CompanyId: uItoa(coA),
+	})
+	// 不可見:已過下架時間。
+	create(&v1.CreateAnnouncementRequest{
+		Type: "banner", Title: "已下架", SortOrder: 0,
+		PublishAt:   now.Add(-2 * time.Hour).Format(time.RFC3339),
+		UnpublishAt: now.Add(-time.Hour).Format(time.RFC3339),
+		IsActive:    true, DeployWeb: true, DeployApp: true, CompanyId: uItoa(coA),
+	})
+	// 不可見:停用。
+	create(&v1.CreateAnnouncementRequest{
+		Type: "banner", Title: "停用中", SortOrder: 0,
+		PublishAt: now.Add(-time.Hour).Format(time.RFC3339),
+		IsActive:  false, DeployWeb: true, DeployApp: true, CompanyId: uItoa(coA),
+	})
+	// 平台過濾:只投 Web。
+	webOnly := create(&v1.CreateAnnouncementRequest{
+		Type: "news", Title: "只投Web", SortOrder: 1,
+		PublishAt: now.Add(-time.Hour).Format(time.RFC3339),
+		IsActive:  true, DeployWeb: true, DeployApp: false, CompanyId: uItoa(coA),
+	})
+	// 平台過濾:只投 App。
+	appOnly := create(&v1.CreateAnnouncementRequest{
+		Type: "news", Title: "只投App", SortOrder: 1,
+		PublishAt: now.Add(-time.Hour).Format(time.RFC3339),
+		IsActive:  true, DeployWeb: false, DeployApp: true, CompanyId: uItoa(coA),
+	})
+
+	// customer 也看得到(前台):RLS 可見 + 角色有 announcement read。
+	cust := newAnnouncementClient(t, db, annIdentity("customer", uItoa(coA), ""))
+
+	webResp, err := cust.ListActiveAnnouncements(ctx, connect.NewRequest(
+		&v1.ListActiveAnnouncementsRequest{Platform: "web"}))
+	if err != nil {
+		t.Fatalf("customer ListActive(web): %v", err)
+	}
+	// 排序:sort_order 升冪,故 visibleFirst(1) 在 visible(2) 前。
+	if got := webResp.Msg.GetBanners(); len(got) != 2 {
+		titles := make([]string, 0, len(got))
+		for _, b := range got {
+			titles = append(titles, b.GetTitle())
+		}
+		t.Fatalf("web banner 應 2 筆(可見者),got %d: %v", len(got), titles)
+	} else if got[0].GetTitle() != visibleFirst.GetTitle() {
+		t.Fatalf("banner 應依 sort_order 排序,got 首位 %q", got[0].GetTitle())
+	}
+	// 平台過濾:web 只回 deploy_web=true → 只投 Web 的那筆在、只投 App 的不在。
+	webTitles := map[string]bool{}
+	for _, n := range webResp.Msg.GetNews() {
+		webTitles[n.GetTitle()] = true
+	}
+	if !webTitles[webOnly.GetTitle()] {
+		t.Fatal("web 列表應含只投 Web 的公告")
+	}
+	if webTitles[appOnly.GetTitle()] {
+		t.Fatal("web 列表不得含只投 App 的公告（spec「平台篩選投放」）")
+	}
+
+	appResp, err := cust.ListActiveAnnouncements(ctx, connect.NewRequest(
+		&v1.ListActiveAnnouncementsRequest{Platform: "app"}))
+	if err != nil {
+		t.Fatalf("customer ListActive(app): %v", err)
+	}
+	appTitles := map[string]bool{}
+	for _, n := range appResp.Msg.GetNews() {
+		appTitles[n.GetTitle()] = true
+	}
+	if !appTitles[appOnly.GetTitle()] {
+		t.Fatal("app 列表應含只投 App 的公告")
+	}
+	if appTitles[webOnly.GetTitle()] {
+		t.Fatal("app 列表不得含只投 Web 的公告（spec「平台篩選投放」）")
+	}
+
+	// 非法/未帶平台:不得靜默回全部(否則一邊會看到不該投放的公告)。
+	if _, err := cust.ListActiveAnnouncements(ctx, connect.NewRequest(
+		&v1.ListActiveAnnouncementsRequest{})); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("未帶 platform 應 invalid_argument,got %v", err)
+	}
+	if _, err := cust.ListActiveAnnouncements(ctx, connect.NewRequest(
+		&v1.ListActiveAnnouncementsRequest{Platform: "desktop"})); connect.CodeOf(err) != connect.CodeInvalidArgument {
+		t.Fatalf("非法 platform 應 invalid_argument,got %v", err)
+	}
+
+	// 軟刪除後不再出現(spec「軟刪除公告」:前台預設不再顯示)。
+	if _, err := super.DeleteAnnouncement(ctx, connect.NewRequest(
+		&v1.DeleteAnnouncementRequest{Id: visibleFirst.GetId()})); err != nil {
+		t.Fatalf("delete: %v", err)
+	}
+	after, err := cust.ListActiveAnnouncements(ctx, connect.NewRequest(
+		&v1.ListActiveAnnouncementsRequest{Platform: "web"}))
+	if err != nil {
+		t.Fatalf("ListActive after delete: %v", err)
+	}
+	for _, b := range after.Msg.GetBanners() {
+		if b.GetId() == visibleFirst.GetId() {
+			t.Fatal("軟刪除的公告不得出現在前台")
+		}
+	}
 }

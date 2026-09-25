@@ -23,6 +23,8 @@ export 'announcement.pb.dart';
 abstract class AnnouncementServiceBase extends $pb.GeneratedService {
   $async.Future<$0.ListAnnouncementsResponse> listAnnouncements(
       $pb.ServerContext ctx, $0.ListAnnouncementsRequest request);
+  $async.Future<$0.ListActiveAnnouncementsResponse> listActiveAnnouncements(
+      $pb.ServerContext ctx, $0.ListActiveAnnouncementsRequest request);
   $async.Future<$0.CreateAnnouncementResponse> createAnnouncement(
       $pb.ServerContext ctx, $0.CreateAnnouncementRequest request);
   $async.Future<$0.UpdateAnnouncementResponse> updateAnnouncement(
@@ -34,6 +36,8 @@ abstract class AnnouncementServiceBase extends $pb.GeneratedService {
     switch (methodName) {
       case 'ListAnnouncements':
         return $0.ListAnnouncementsRequest();
+      case 'ListActiveAnnouncements':
+        return $0.ListActiveAnnouncementsRequest();
       case 'CreateAnnouncement':
         return $0.CreateAnnouncementRequest();
       case 'UpdateAnnouncement':
@@ -50,6 +54,9 @@ abstract class AnnouncementServiceBase extends $pb.GeneratedService {
     switch (methodName) {
       case 'ListAnnouncements':
         return listAnnouncements(ctx, request as $0.ListAnnouncementsRequest);
+      case 'ListActiveAnnouncements':
+        return listActiveAnnouncements(
+            ctx, request as $0.ListActiveAnnouncementsRequest);
       case 'CreateAnnouncement':
         return createAnnouncement(ctx, request as $0.CreateAnnouncementRequest);
       case 'UpdateAnnouncement':

@@ -421,6 +421,147 @@ class ListAnnouncementsResponse extends $pb.GeneratedMessage {
   void clearTotal() => $_clearField(2);
 }
 
+/// ListActiveAnnouncementsRequest:前台列表請求。
+/// platform 決定平台投放過濾(規格「平台篩選投放」):web → 只回 deploy_web;app → 只回 deploy_app。
+/// 未帶/非法值 → invalid_argument(不預設平台:預設會讓一邊靜默看到不該投放的公告)。
+class ListActiveAnnouncementsRequest extends $pb.GeneratedMessage {
+  factory ListActiveAnnouncementsRequest({
+    $core.String? platform,
+  }) {
+    final result = ListActiveAnnouncementsRequest._();
+    if (platform != null) result.platform = platform;
+    return result;
+  }
+
+  ListActiveAnnouncementsRequest._();
+
+  factory ListActiveAnnouncementsRequest.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListActiveAnnouncementsRequest()..mergeFromBuffer(data, registry);
+  factory ListActiveAnnouncementsRequest.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListActiveAnnouncementsRequest()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListActiveAnnouncementsRequest',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: ListActiveAnnouncementsRequest.$_createMessage)
+    ..aOS(1, _omitFieldNames ? '' : 'platform')
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListActiveAnnouncementsRequest clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListActiveAnnouncementsRequest copyWith(
+          void Function(ListActiveAnnouncementsRequest) updates) =>
+      super.copyWith(
+              (message) => updates(message as ListActiveAnnouncementsRequest))
+          as ListActiveAnnouncementsRequest;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListActiveAnnouncementsRequest() / ListActiveAnnouncementsRequest.new instead')
+  static ListActiveAnnouncementsRequest create() =>
+      ListActiveAnnouncementsRequest._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      ListActiveAnnouncementsRequest._();
+  @$core.override
+  ListActiveAnnouncementsRequest createEmptyInstance() =>
+      ListActiveAnnouncementsRequest._();
+  @$core.pragma('dart2js:noInline')
+  static ListActiveAnnouncementsRequest getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListActiveAnnouncementsRequest>(
+          ListActiveAnnouncementsRequest.$_createMessage);
+  static ListActiveAnnouncementsRequest? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.String get platform => $_getSZ(0);
+  @$pb.TagNumber(1)
+  set platform($core.String value) => $_setString(0, value);
+  @$pb.TagNumber(1)
+  $core.bool hasPlatform() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearPlatform() => $_clearField(1);
+}
+
+/// ListActiveAnnouncementsResponse:前台列表結果。
+/// 分開回三型別,讓兩端的前台不必各自依 type 再篩一次 —— 輪播(banner)與列表(news/article)
+/// 的組成是一條規格(「前台展示與排序」),收斂在後端一處。
+class ListActiveAnnouncementsResponse extends $pb.GeneratedMessage {
+  factory ListActiveAnnouncementsResponse({
+    $core.Iterable<Announcement>? banners,
+    $core.Iterable<Announcement>? news,
+    $core.Iterable<Announcement>? articles,
+  }) {
+    final result = ListActiveAnnouncementsResponse._();
+    if (banners != null) result.banners.addAll(banners);
+    if (news != null) result.news.addAll(news);
+    if (articles != null) result.articles.addAll(articles);
+    return result;
+  }
+
+  ListActiveAnnouncementsResponse._();
+
+  factory ListActiveAnnouncementsResponse.fromBuffer($core.List<$core.int> data,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListActiveAnnouncementsResponse()..mergeFromBuffer(data, registry);
+  factory ListActiveAnnouncementsResponse.fromJson($core.String json,
+          [$pb.ExtensionRegistry registry = $pb.ExtensionRegistry.EMPTY]) =>
+      ListActiveAnnouncementsResponse()..mergeFromJson(json, registry);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(
+      _omitMessageNames ? '' : 'ListActiveAnnouncementsResponse',
+      package: const $pb.PackageName(_omitMessageNames ? '' : 'salesorder.v1'),
+      createEmptyInstance: ListActiveAnnouncementsResponse.$_createMessage)
+    ..pPM<Announcement>(1, _omitFieldNames ? '' : 'banners',
+        subBuilder: Announcement.$_createMessage)
+    ..pPM<Announcement>(2, _omitFieldNames ? '' : 'news',
+        subBuilder: Announcement.$_createMessage)
+    ..pPM<Announcement>(3, _omitFieldNames ? '' : 'articles',
+        subBuilder: Announcement.$_createMessage)
+    ..hasRequiredFields = false;
+
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListActiveAnnouncementsResponse clone() => deepCopy();
+  @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
+  ListActiveAnnouncementsResponse copyWith(
+          void Function(ListActiveAnnouncementsResponse) updates) =>
+      super.copyWith(
+              (message) => updates(message as ListActiveAnnouncementsResponse))
+          as ListActiveAnnouncementsResponse;
+
+  @$core.override
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  @$core.Deprecated(
+      'Use ListActiveAnnouncementsResponse() / ListActiveAnnouncementsResponse.new instead')
+  static ListActiveAnnouncementsResponse create() =>
+      ListActiveAnnouncementsResponse._();
+  static $pb.GeneratedMessage $_createMessage() =>
+      ListActiveAnnouncementsResponse._();
+  @$core.override
+  ListActiveAnnouncementsResponse createEmptyInstance() =>
+      ListActiveAnnouncementsResponse._();
+  @$core.pragma('dart2js:noInline')
+  static ListActiveAnnouncementsResponse getDefault() => _defaultInstance ??=
+      $pb.GeneratedMessage.$_defaultFor<ListActiveAnnouncementsResponse>(
+          ListActiveAnnouncementsResponse.$_createMessage);
+  static ListActiveAnnouncementsResponse? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $pb.PbList<Announcement> get banners => $_getList(0);
+
+  @$pb.TagNumber(2)
+  $pb.PbList<Announcement> get news => $_getList(1);
+
+  @$pb.TagNumber(3)
+  $pb.PbList<Announcement> get articles => $_getList(2);
+}
+
 /// CreateAnnouncementRequest:建立請求。**範圍欄位空值自動歸屬**(非 super):
 /// company_id 空 → 自己的公司;dept_admin 的 department_id 空 → 自己的部門
 /// (故 dept_admin 一律建部門層、company_admin 預設公司層,super 空 = 全系統)。
@@ -1083,6 +1224,19 @@ class AnnouncementServiceApi {
           $pb.ClientContext? ctx, ListAnnouncementsRequest request) =>
       _client.invoke<ListAnnouncementsResponse>(ctx, 'AnnouncementService',
           'ListAnnouncements', request, ListAnnouncementsResponse());
+
+  /// ListActiveAnnouncements:前台列表(規格「上下架時間窗與啟用狀態」+「平台篩選投放」)
+  /// —— 只回**當下可見**的公告(is_active=true、publish_at<=now、(unpublish_at 空或 >now)、
+  /// deploy_web|deploy_app 依 platform 過濾),依 type 分組供輪播(banner)與列表(news/article)。
+  /// 可見範圍仍由 RLS 兜底(全系統 + 自己公司 + 自己部門);不帶 page(前台一次全取)。
+  $async.Future<ListActiveAnnouncementsResponse> listActiveAnnouncements(
+          $pb.ClientContext? ctx, ListActiveAnnouncementsRequest request) =>
+      _client.invoke<ListActiveAnnouncementsResponse>(
+          ctx,
+          'AnnouncementService',
+          'ListActiveAnnouncements',
+          request,
+          ListActiveAnnouncementsResponse());
 
   /// CreateAnnouncement:建立公告(範圍依身分收斂;type 非法 → invalid_argument)。
   $async.Future<CreateAnnouncementResponse> createAnnouncement(

@@ -36,6 +36,9 @@ const (
 	// AnnouncementServiceListAnnouncementsProcedure is the fully-qualified name of the
 	// AnnouncementService's ListAnnouncements RPC.
 	AnnouncementServiceListAnnouncementsProcedure = "/salesorder.v1.AnnouncementService/ListAnnouncements"
+	// AnnouncementServiceListActiveAnnouncementsProcedure is the fully-qualified name of the
+	// AnnouncementService's ListActiveAnnouncements RPC.
+	AnnouncementServiceListActiveAnnouncementsProcedure = "/salesorder.v1.AnnouncementService/ListActiveAnnouncements"
 	// AnnouncementServiceCreateAnnouncementProcedure is the fully-qualified name of the
 	// AnnouncementService's CreateAnnouncement RPC.
 	AnnouncementServiceCreateAnnouncementProcedure = "/salesorder.v1.AnnouncementService/CreateAnnouncement"
@@ -51,6 +54,11 @@ const (
 type AnnouncementServiceClient interface {
 	// ListAnnouncements:管理列表(僅列可管理範圍;含未上架/停用;預設排除已刪除)。
 	ListAnnouncements(context.Context, *connect.Request[v1.ListAnnouncementsRequest]) (*connect.Response[v1.ListAnnouncementsResponse], error)
+	// ListActiveAnnouncements:前台列表(規格「上下架時間窗與啟用狀態」+「平台篩選投放」)
+	// —— 只回**當下可見**的公告(is_active=true、publish_at<=now、(unpublish_at 空或 >now)、
+	// deploy_web|deploy_app 依 platform 過濾),依 type 分組供輪播(banner)與列表(news/article)。
+	// 可見範圍仍由 RLS 兜底(全系統 + 自己公司 + 自己部門);不帶 page(前台一次全取)。
+	ListActiveAnnouncements(context.Context, *connect.Request[v1.ListActiveAnnouncementsRequest]) (*connect.Response[v1.ListActiveAnnouncementsResponse], error)
 	// CreateAnnouncement:建立公告(範圍依身分收斂;type 非法 → invalid_argument)。
 	CreateAnnouncement(context.Context, *connect.Request[v1.CreateAnnouncementRequest]) (*connect.Response[v1.CreateAnnouncementResponse], error)
 	// UpdateAnnouncement:全量替換(id 除外表所有欄位;布林無 present 語意,不採欄位式)。
@@ -77,6 +85,12 @@ func NewAnnouncementServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(announcementServiceMethods.ByName("ListAnnouncements")),
 			connect.WithClientOptions(opts...),
 		),
+		listActiveAnnouncements: connect.NewClient[v1.ListActiveAnnouncementsRequest, v1.ListActiveAnnouncementsResponse](
+			httpClient,
+			baseURL+AnnouncementServiceListActiveAnnouncementsProcedure,
+			connect.WithSchema(announcementServiceMethods.ByName("ListActiveAnnouncements")),
+			connect.WithClientOptions(opts...),
+		),
 		createAnnouncement: connect.NewClient[v1.CreateAnnouncementRequest, v1.CreateAnnouncementResponse](
 			httpClient,
 			baseURL+AnnouncementServiceCreateAnnouncementProcedure,
@@ -100,15 +114,21 @@ func NewAnnouncementServiceClient(httpClient connect.HTTPClient, baseURL string,
 
 // announcementServiceClient implements AnnouncementServiceClient.
 type announcementServiceClient struct {
-	listAnnouncements  *connect.Client[v1.ListAnnouncementsRequest, v1.ListAnnouncementsResponse]
-	createAnnouncement *connect.Client[v1.CreateAnnouncementRequest, v1.CreateAnnouncementResponse]
-	updateAnnouncement *connect.Client[v1.UpdateAnnouncementRequest, v1.UpdateAnnouncementResponse]
-	deleteAnnouncement *connect.Client[v1.DeleteAnnouncementRequest, v1.DeleteAnnouncementResponse]
+	listAnnouncements       *connect.Client[v1.ListAnnouncementsRequest, v1.ListAnnouncementsResponse]
+	listActiveAnnouncements *connect.Client[v1.ListActiveAnnouncementsRequest, v1.ListActiveAnnouncementsResponse]
+	createAnnouncement      *connect.Client[v1.CreateAnnouncementRequest, v1.CreateAnnouncementResponse]
+	updateAnnouncement      *connect.Client[v1.UpdateAnnouncementRequest, v1.UpdateAnnouncementResponse]
+	deleteAnnouncement      *connect.Client[v1.DeleteAnnouncementRequest, v1.DeleteAnnouncementResponse]
 }
 
 // ListAnnouncements calls salesorder.v1.AnnouncementService.ListAnnouncements.
 func (c *announcementServiceClient) ListAnnouncements(ctx context.Context, req *connect.Request[v1.ListAnnouncementsRequest]) (*connect.Response[v1.ListAnnouncementsResponse], error) {
 	return c.listAnnouncements.CallUnary(ctx, req)
+}
+
+// ListActiveAnnouncements calls salesorder.v1.AnnouncementService.ListActiveAnnouncements.
+func (c *announcementServiceClient) ListActiveAnnouncements(ctx context.Context, req *connect.Request[v1.ListActiveAnnouncementsRequest]) (*connect.Response[v1.ListActiveAnnouncementsResponse], error) {
+	return c.listActiveAnnouncements.CallUnary(ctx, req)
 }
 
 // CreateAnnouncement calls salesorder.v1.AnnouncementService.CreateAnnouncement.
@@ -130,6 +150,11 @@ func (c *announcementServiceClient) DeleteAnnouncement(ctx context.Context, req 
 type AnnouncementServiceHandler interface {
 	// ListAnnouncements:管理列表(僅列可管理範圍;含未上架/停用;預設排除已刪除)。
 	ListAnnouncements(context.Context, *connect.Request[v1.ListAnnouncementsRequest]) (*connect.Response[v1.ListAnnouncementsResponse], error)
+	// ListActiveAnnouncements:前台列表(規格「上下架時間窗與啟用狀態」+「平台篩選投放」)
+	// —— 只回**當下可見**的公告(is_active=true、publish_at<=now、(unpublish_at 空或 >now)、
+	// deploy_web|deploy_app 依 platform 過濾),依 type 分組供輪播(banner)與列表(news/article)。
+	// 可見範圍仍由 RLS 兜底(全系統 + 自己公司 + 自己部門);不帶 page(前台一次全取)。
+	ListActiveAnnouncements(context.Context, *connect.Request[v1.ListActiveAnnouncementsRequest]) (*connect.Response[v1.ListActiveAnnouncementsResponse], error)
 	// CreateAnnouncement:建立公告(範圍依身分收斂;type 非法 → invalid_argument)。
 	CreateAnnouncement(context.Context, *connect.Request[v1.CreateAnnouncementRequest]) (*connect.Response[v1.CreateAnnouncementResponse], error)
 	// UpdateAnnouncement:全量替換(id 除外表所有欄位;布林無 present 語意,不採欄位式)。
@@ -150,6 +175,12 @@ func NewAnnouncementServiceHandler(svc AnnouncementServiceHandler, opts ...conne
 		AnnouncementServiceListAnnouncementsProcedure,
 		svc.ListAnnouncements,
 		connect.WithSchema(announcementServiceMethods.ByName("ListAnnouncements")),
+		connect.WithHandlerOptions(opts...),
+	)
+	announcementServiceListActiveAnnouncementsHandler := connect.NewUnaryHandler(
+		AnnouncementServiceListActiveAnnouncementsProcedure,
+		svc.ListActiveAnnouncements,
+		connect.WithSchema(announcementServiceMethods.ByName("ListActiveAnnouncements")),
 		connect.WithHandlerOptions(opts...),
 	)
 	announcementServiceCreateAnnouncementHandler := connect.NewUnaryHandler(
@@ -174,6 +205,8 @@ func NewAnnouncementServiceHandler(svc AnnouncementServiceHandler, opts ...conne
 		switch r.URL.Path {
 		case AnnouncementServiceListAnnouncementsProcedure:
 			announcementServiceListAnnouncementsHandler.ServeHTTP(w, r)
+		case AnnouncementServiceListActiveAnnouncementsProcedure:
+			announcementServiceListActiveAnnouncementsHandler.ServeHTTP(w, r)
 		case AnnouncementServiceCreateAnnouncementProcedure:
 			announcementServiceCreateAnnouncementHandler.ServeHTTP(w, r)
 		case AnnouncementServiceUpdateAnnouncementProcedure:
@@ -191,6 +224,10 @@ type UnimplementedAnnouncementServiceHandler struct{}
 
 func (UnimplementedAnnouncementServiceHandler) ListAnnouncements(context.Context, *connect.Request[v1.ListAnnouncementsRequest]) (*connect.Response[v1.ListAnnouncementsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("salesorder.v1.AnnouncementService.ListAnnouncements is not implemented"))
+}
+
+func (UnimplementedAnnouncementServiceHandler) ListActiveAnnouncements(context.Context, *connect.Request[v1.ListActiveAnnouncementsRequest]) (*connect.Response[v1.ListActiveAnnouncementsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("salesorder.v1.AnnouncementService.ListActiveAnnouncements is not implemented"))
 }
 
 func (UnimplementedAnnouncementServiceHandler) CreateAnnouncement(context.Context, *connect.Request[v1.CreateAnnouncementRequest]) (*connect.Response[v1.CreateAnnouncementResponse], error) {

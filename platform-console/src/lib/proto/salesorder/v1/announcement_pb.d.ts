@@ -188,6 +188,64 @@ export declare type ListAnnouncementsResponse = Message<"salesorder.v1.ListAnnou
 export declare const ListAnnouncementsResponseSchema: GenMessage<ListAnnouncementsResponse>;
 
 /**
+ * ListActiveAnnouncementsRequest:前台列表請求。
+ * platform 決定平台投放過濾(規格「平台篩選投放」):web → 只回 deploy_web;app → 只回 deploy_app。
+ * 未帶/非法值 → invalid_argument(不預設平台:預設會讓一邊靜默看到不該投放的公告)。
+ *
+ * @generated from message salesorder.v1.ListActiveAnnouncementsRequest
+ */
+export declare type ListActiveAnnouncementsRequest = Message<"salesorder.v1.ListActiveAnnouncementsRequest"> & {
+  /**
+   * web | app
+   *
+   * @generated from field: string platform = 1;
+   */
+  platform: string;
+};
+
+/**
+ * Describes the message salesorder.v1.ListActiveAnnouncementsRequest.
+ * Use `create(ListActiveAnnouncementsRequestSchema)` to create a new message.
+ */
+export declare const ListActiveAnnouncementsRequestSchema: GenMessage<ListActiveAnnouncementsRequest>;
+
+/**
+ * ListActiveAnnouncementsResponse:前台列表結果。
+ * 分開回三型別,讓兩端的前台不必各自依 type 再篩一次 —— 輪播(banner)與列表(news/article)
+ * 的組成是一條規格(「前台展示與排序」),收斂在後端一處。
+ *
+ * @generated from message salesorder.v1.ListActiveAnnouncementsResponse
+ */
+export declare type ListActiveAnnouncementsResponse = Message<"salesorder.v1.ListActiveAnnouncementsResponse"> & {
+  /**
+   * banner:輪播,依 sort_order
+   *
+   * @generated from field: repeated salesorder.v1.Announcement banners = 1;
+   */
+  banners: Announcement[];
+
+  /**
+   * news:最新消息列表,依 sort_order
+   *
+   * @generated from field: repeated salesorder.v1.Announcement news = 2;
+   */
+  news: Announcement[];
+
+  /**
+   * article:圖文,依 sort_order
+   *
+   * @generated from field: repeated salesorder.v1.Announcement articles = 3;
+   */
+  articles: Announcement[];
+};
+
+/**
+ * Describes the message salesorder.v1.ListActiveAnnouncementsResponse.
+ * Use `create(ListActiveAnnouncementsResponseSchema)` to create a new message.
+ */
+export declare const ListActiveAnnouncementsResponseSchema: GenMessage<ListActiveAnnouncementsResponse>;
+
+/**
  * CreateAnnouncementRequest:建立請求。**範圍欄位空值自動歸屬**(非 super):
  * company_id 空 → 自己的公司;dept_admin 的 department_id 空 → 自己的部門
  * (故 dept_admin 一律建部門層、company_admin 預設公司層,super 空 = 全系統)。
@@ -431,6 +489,19 @@ export declare const AnnouncementService: GenService<{
     methodKind: "unary";
     input: typeof ListAnnouncementsRequestSchema;
     output: typeof ListAnnouncementsResponseSchema;
+  },
+  /**
+   * ListActiveAnnouncements:前台列表(規格「上下架時間窗與啟用狀態」+「平台篩選投放」)
+   * —— 只回**當下可見**的公告(is_active=true、publish_at<=now、(unpublish_at 空或 >now)、
+   * deploy_web|deploy_app 依 platform 過濾),依 type 分組供輪播(banner)與列表(news/article)。
+   * 可見範圍仍由 RLS 兜底(全系統 + 自己公司 + 自己部門);不帶 page(前台一次全取)。
+   *
+   * @generated from rpc salesorder.v1.AnnouncementService.ListActiveAnnouncements
+   */
+  listActiveAnnouncements: {
+    methodKind: "unary";
+    input: typeof ListActiveAnnouncementsRequestSchema;
+    output: typeof ListActiveAnnouncementsResponseSchema;
   },
   /**
    * CreateAnnouncement:建立公告(範圍依身分收斂;type 非法 → invalid_argument)。

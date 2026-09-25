@@ -308,6 +308,116 @@ func (x *ListAnnouncementsResponse) GetTotal() int32 {
 	return 0
 }
 
+// ListActiveAnnouncementsRequest:前台列表請求。
+// platform 決定平台投放過濾(規格「平台篩選投放」):web → 只回 deploy_web;app → 只回 deploy_app。
+// 未帶/非法值 → invalid_argument(不預設平台:預設會讓一邊靜默看到不該投放的公告)。
+type ListActiveAnnouncementsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Platform      string                 `protobuf:"bytes,1,opt,name=platform,proto3" json:"platform,omitempty"` // web | app
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListActiveAnnouncementsRequest) Reset() {
+	*x = ListActiveAnnouncementsRequest{}
+	mi := &file_salesorder_v1_announcement_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListActiveAnnouncementsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListActiveAnnouncementsRequest) ProtoMessage() {}
+
+func (x *ListActiveAnnouncementsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_announcement_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListActiveAnnouncementsRequest.ProtoReflect.Descriptor instead.
+func (*ListActiveAnnouncementsRequest) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_announcement_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ListActiveAnnouncementsRequest) GetPlatform() string {
+	if x != nil {
+		return x.Platform
+	}
+	return ""
+}
+
+// ListActiveAnnouncementsResponse:前台列表結果。
+// 分開回三型別,讓兩端的前台不必各自依 type 再篩一次 —— 輪播(banner)與列表(news/article)
+// 的組成是一條規格(「前台展示與排序」),收斂在後端一處。
+type ListActiveAnnouncementsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Banners       []*Announcement        `protobuf:"bytes,1,rep,name=banners,proto3" json:"banners,omitempty"`   // banner:輪播,依 sort_order
+	News          []*Announcement        `protobuf:"bytes,2,rep,name=news,proto3" json:"news,omitempty"`         // news:最新消息列表,依 sort_order
+	Articles      []*Announcement        `protobuf:"bytes,3,rep,name=articles,proto3" json:"articles,omitempty"` // article:圖文,依 sort_order
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListActiveAnnouncementsResponse) Reset() {
+	*x = ListActiveAnnouncementsResponse{}
+	mi := &file_salesorder_v1_announcement_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListActiveAnnouncementsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListActiveAnnouncementsResponse) ProtoMessage() {}
+
+func (x *ListActiveAnnouncementsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_announcement_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListActiveAnnouncementsResponse.ProtoReflect.Descriptor instead.
+func (*ListActiveAnnouncementsResponse) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_announcement_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ListActiveAnnouncementsResponse) GetBanners() []*Announcement {
+	if x != nil {
+		return x.Banners
+	}
+	return nil
+}
+
+func (x *ListActiveAnnouncementsResponse) GetNews() []*Announcement {
+	if x != nil {
+		return x.News
+	}
+	return nil
+}
+
+func (x *ListActiveAnnouncementsResponse) GetArticles() []*Announcement {
+	if x != nil {
+		return x.Articles
+	}
+	return nil
+}
+
 // CreateAnnouncementRequest:建立請求。**範圍欄位空值自動歸屬**(非 super):
 // company_id 空 → 自己的公司;dept_admin 的 department_id 空 → 自己的部門
 // (故 dept_admin 一律建部門層、company_admin 預設公司層,super 空 = 全系統)。
@@ -334,7 +444,7 @@ type CreateAnnouncementRequest struct {
 
 func (x *CreateAnnouncementRequest) Reset() {
 	*x = CreateAnnouncementRequest{}
-	mi := &file_salesorder_v1_announcement_proto_msgTypes[3]
+	mi := &file_salesorder_v1_announcement_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -346,7 +456,7 @@ func (x *CreateAnnouncementRequest) String() string {
 func (*CreateAnnouncementRequest) ProtoMessage() {}
 
 func (x *CreateAnnouncementRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_announcement_proto_msgTypes[3]
+	mi := &file_salesorder_v1_announcement_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -359,7 +469,7 @@ func (x *CreateAnnouncementRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAnnouncementRequest.ProtoReflect.Descriptor instead.
 func (*CreateAnnouncementRequest) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_announcement_proto_rawDescGZIP(), []int{3}
+	return file_salesorder_v1_announcement_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *CreateAnnouncementRequest) GetCompanyId() string {
@@ -463,7 +573,7 @@ type CreateAnnouncementResponse struct {
 
 func (x *CreateAnnouncementResponse) Reset() {
 	*x = CreateAnnouncementResponse{}
-	mi := &file_salesorder_v1_announcement_proto_msgTypes[4]
+	mi := &file_salesorder_v1_announcement_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -475,7 +585,7 @@ func (x *CreateAnnouncementResponse) String() string {
 func (*CreateAnnouncementResponse) ProtoMessage() {}
 
 func (x *CreateAnnouncementResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_announcement_proto_msgTypes[4]
+	mi := &file_salesorder_v1_announcement_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -488,7 +598,7 @@ func (x *CreateAnnouncementResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateAnnouncementResponse.ProtoReflect.Descriptor instead.
 func (*CreateAnnouncementResponse) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_announcement_proto_rawDescGZIP(), []int{4}
+	return file_salesorder_v1_announcement_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CreateAnnouncementResponse) GetAnnouncement() *Announcement {
@@ -522,7 +632,7 @@ type UpdateAnnouncementRequest struct {
 
 func (x *UpdateAnnouncementRequest) Reset() {
 	*x = UpdateAnnouncementRequest{}
-	mi := &file_salesorder_v1_announcement_proto_msgTypes[5]
+	mi := &file_salesorder_v1_announcement_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -534,7 +644,7 @@ func (x *UpdateAnnouncementRequest) String() string {
 func (*UpdateAnnouncementRequest) ProtoMessage() {}
 
 func (x *UpdateAnnouncementRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_announcement_proto_msgTypes[5]
+	mi := &file_salesorder_v1_announcement_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -547,7 +657,7 @@ func (x *UpdateAnnouncementRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAnnouncementRequest.ProtoReflect.Descriptor instead.
 func (*UpdateAnnouncementRequest) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_announcement_proto_rawDescGZIP(), []int{5}
+	return file_salesorder_v1_announcement_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *UpdateAnnouncementRequest) GetId() string {
@@ -644,7 +754,7 @@ type UpdateAnnouncementResponse struct {
 
 func (x *UpdateAnnouncementResponse) Reset() {
 	*x = UpdateAnnouncementResponse{}
-	mi := &file_salesorder_v1_announcement_proto_msgTypes[6]
+	mi := &file_salesorder_v1_announcement_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -656,7 +766,7 @@ func (x *UpdateAnnouncementResponse) String() string {
 func (*UpdateAnnouncementResponse) ProtoMessage() {}
 
 func (x *UpdateAnnouncementResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_announcement_proto_msgTypes[6]
+	mi := &file_salesorder_v1_announcement_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -669,7 +779,7 @@ func (x *UpdateAnnouncementResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateAnnouncementResponse.ProtoReflect.Descriptor instead.
 func (*UpdateAnnouncementResponse) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_announcement_proto_rawDescGZIP(), []int{6}
+	return file_salesorder_v1_announcement_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *UpdateAnnouncementResponse) GetAnnouncement() *Announcement {
@@ -689,7 +799,7 @@ type DeleteAnnouncementRequest struct {
 
 func (x *DeleteAnnouncementRequest) Reset() {
 	*x = DeleteAnnouncementRequest{}
-	mi := &file_salesorder_v1_announcement_proto_msgTypes[7]
+	mi := &file_salesorder_v1_announcement_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -701,7 +811,7 @@ func (x *DeleteAnnouncementRequest) String() string {
 func (*DeleteAnnouncementRequest) ProtoMessage() {}
 
 func (x *DeleteAnnouncementRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_announcement_proto_msgTypes[7]
+	mi := &file_salesorder_v1_announcement_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -714,7 +824,7 @@ func (x *DeleteAnnouncementRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAnnouncementRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAnnouncementRequest) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_announcement_proto_rawDescGZIP(), []int{7}
+	return file_salesorder_v1_announcement_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *DeleteAnnouncementRequest) GetId() string {
@@ -733,7 +843,7 @@ type DeleteAnnouncementResponse struct {
 
 func (x *DeleteAnnouncementResponse) Reset() {
 	*x = DeleteAnnouncementResponse{}
-	mi := &file_salesorder_v1_announcement_proto_msgTypes[8]
+	mi := &file_salesorder_v1_announcement_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -745,7 +855,7 @@ func (x *DeleteAnnouncementResponse) String() string {
 func (*DeleteAnnouncementResponse) ProtoMessage() {}
 
 func (x *DeleteAnnouncementResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_announcement_proto_msgTypes[8]
+	mi := &file_salesorder_v1_announcement_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -758,7 +868,7 @@ func (x *DeleteAnnouncementResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAnnouncementResponse.ProtoReflect.Descriptor instead.
 func (*DeleteAnnouncementResponse) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_announcement_proto_rawDescGZIP(), []int{8}
+	return file_salesorder_v1_announcement_proto_rawDescGZIP(), []int{10}
 }
 
 var File_salesorder_v1_announcement_proto protoreflect.FileDescriptor
@@ -798,7 +908,13 @@ const file_salesorder_v1_announcement_proto_rawDesc = "" +
 	"\x0finclude_deleted\x18\x04 \x01(\bR\x0eincludeDeleted\"t\n" +
 	"\x19ListAnnouncementsResponse\x12A\n" +
 	"\rannouncements\x18\x01 \x03(\v2\x1b.salesorder.v1.AnnouncementR\rannouncements\x12\x14\n" +
-	"\x05total\x18\x02 \x01(\x05R\x05total\"\x97\x03\n" +
+	"\x05total\x18\x02 \x01(\x05R\x05total\"<\n" +
+	"\x1eListActiveAnnouncementsRequest\x12\x1a\n" +
+	"\bplatform\x18\x01 \x01(\tR\bplatform\"\xc2\x01\n" +
+	"\x1fListActiveAnnouncementsResponse\x125\n" +
+	"\abanners\x18\x01 \x03(\v2\x1b.salesorder.v1.AnnouncementR\abanners\x12/\n" +
+	"\x04news\x18\x02 \x03(\v2\x1b.salesorder.v1.AnnouncementR\x04news\x127\n" +
+	"\barticles\x18\x03 \x03(\v2\x1b.salesorder.v1.AnnouncementR\barticles\"\x97\x03\n" +
 	"\x19CreateAnnouncementRequest\x12\x1d\n" +
 	"\n" +
 	"company_id\x18\x01 \x01(\tR\tcompanyId\x12#\n" +
@@ -843,9 +959,10 @@ const file_salesorder_v1_announcement_proto_rawDesc = "" +
 	"\fannouncement\x18\x01 \x01(\v2\x1b.salesorder.v1.AnnouncementR\fannouncement\"+\n" +
 	"\x19DeleteAnnouncementRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"\x1c\n" +
-	"\x1aDeleteAnnouncementResponse2\xbe\x03\n" +
+	"\x1aDeleteAnnouncementResponse2\xb8\x04\n" +
 	"\x13AnnouncementService\x12f\n" +
-	"\x11ListAnnouncements\x12'.salesorder.v1.ListAnnouncementsRequest\x1a(.salesorder.v1.ListAnnouncementsResponse\x12i\n" +
+	"\x11ListAnnouncements\x12'.salesorder.v1.ListAnnouncementsRequest\x1a(.salesorder.v1.ListAnnouncementsResponse\x12x\n" +
+	"\x17ListActiveAnnouncements\x12-.salesorder.v1.ListActiveAnnouncementsRequest\x1a..salesorder.v1.ListActiveAnnouncementsResponse\x12i\n" +
 	"\x12CreateAnnouncement\x12(.salesorder.v1.CreateAnnouncementRequest\x1a).salesorder.v1.CreateAnnouncementResponse\x12i\n" +
 	"\x12UpdateAnnouncement\x12(.salesorder.v1.UpdateAnnouncementRequest\x1a).salesorder.v1.UpdateAnnouncementResponse\x12i\n" +
 	"\x12DeleteAnnouncement\x12(.salesorder.v1.DeleteAnnouncementRequest\x1a).salesorder.v1.DeleteAnnouncementResponseBYZWgithub.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1b\x06proto3"
@@ -862,35 +979,42 @@ func file_salesorder_v1_announcement_proto_rawDescGZIP() []byte {
 	return file_salesorder_v1_announcement_proto_rawDescData
 }
 
-var file_salesorder_v1_announcement_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_salesorder_v1_announcement_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_salesorder_v1_announcement_proto_goTypes = []any{
-	(*Announcement)(nil),               // 0: salesorder.v1.Announcement
-	(*ListAnnouncementsRequest)(nil),   // 1: salesorder.v1.ListAnnouncementsRequest
-	(*ListAnnouncementsResponse)(nil),  // 2: salesorder.v1.ListAnnouncementsResponse
-	(*CreateAnnouncementRequest)(nil),  // 3: salesorder.v1.CreateAnnouncementRequest
-	(*CreateAnnouncementResponse)(nil), // 4: salesorder.v1.CreateAnnouncementResponse
-	(*UpdateAnnouncementRequest)(nil),  // 5: salesorder.v1.UpdateAnnouncementRequest
-	(*UpdateAnnouncementResponse)(nil), // 6: salesorder.v1.UpdateAnnouncementResponse
-	(*DeleteAnnouncementRequest)(nil),  // 7: salesorder.v1.DeleteAnnouncementRequest
-	(*DeleteAnnouncementResponse)(nil), // 8: salesorder.v1.DeleteAnnouncementResponse
+	(*Announcement)(nil),                    // 0: salesorder.v1.Announcement
+	(*ListAnnouncementsRequest)(nil),        // 1: salesorder.v1.ListAnnouncementsRequest
+	(*ListAnnouncementsResponse)(nil),       // 2: salesorder.v1.ListAnnouncementsResponse
+	(*ListActiveAnnouncementsRequest)(nil),  // 3: salesorder.v1.ListActiveAnnouncementsRequest
+	(*ListActiveAnnouncementsResponse)(nil), // 4: salesorder.v1.ListActiveAnnouncementsResponse
+	(*CreateAnnouncementRequest)(nil),       // 5: salesorder.v1.CreateAnnouncementRequest
+	(*CreateAnnouncementResponse)(nil),      // 6: salesorder.v1.CreateAnnouncementResponse
+	(*UpdateAnnouncementRequest)(nil),       // 7: salesorder.v1.UpdateAnnouncementRequest
+	(*UpdateAnnouncementResponse)(nil),      // 8: salesorder.v1.UpdateAnnouncementResponse
+	(*DeleteAnnouncementRequest)(nil),       // 9: salesorder.v1.DeleteAnnouncementRequest
+	(*DeleteAnnouncementResponse)(nil),      // 10: salesorder.v1.DeleteAnnouncementResponse
 }
 var file_salesorder_v1_announcement_proto_depIdxs = []int32{
-	0, // 0: salesorder.v1.ListAnnouncementsResponse.announcements:type_name -> salesorder.v1.Announcement
-	0, // 1: salesorder.v1.CreateAnnouncementResponse.announcement:type_name -> salesorder.v1.Announcement
-	0, // 2: salesorder.v1.UpdateAnnouncementResponse.announcement:type_name -> salesorder.v1.Announcement
-	1, // 3: salesorder.v1.AnnouncementService.ListAnnouncements:input_type -> salesorder.v1.ListAnnouncementsRequest
-	3, // 4: salesorder.v1.AnnouncementService.CreateAnnouncement:input_type -> salesorder.v1.CreateAnnouncementRequest
-	5, // 5: salesorder.v1.AnnouncementService.UpdateAnnouncement:input_type -> salesorder.v1.UpdateAnnouncementRequest
-	7, // 6: salesorder.v1.AnnouncementService.DeleteAnnouncement:input_type -> salesorder.v1.DeleteAnnouncementRequest
-	2, // 7: salesorder.v1.AnnouncementService.ListAnnouncements:output_type -> salesorder.v1.ListAnnouncementsResponse
-	4, // 8: salesorder.v1.AnnouncementService.CreateAnnouncement:output_type -> salesorder.v1.CreateAnnouncementResponse
-	6, // 9: salesorder.v1.AnnouncementService.UpdateAnnouncement:output_type -> salesorder.v1.UpdateAnnouncementResponse
-	8, // 10: salesorder.v1.AnnouncementService.DeleteAnnouncement:output_type -> salesorder.v1.DeleteAnnouncementResponse
-	7, // [7:11] is the sub-list for method output_type
-	3, // [3:7] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	0,  // 0: salesorder.v1.ListAnnouncementsResponse.announcements:type_name -> salesorder.v1.Announcement
+	0,  // 1: salesorder.v1.ListActiveAnnouncementsResponse.banners:type_name -> salesorder.v1.Announcement
+	0,  // 2: salesorder.v1.ListActiveAnnouncementsResponse.news:type_name -> salesorder.v1.Announcement
+	0,  // 3: salesorder.v1.ListActiveAnnouncementsResponse.articles:type_name -> salesorder.v1.Announcement
+	0,  // 4: salesorder.v1.CreateAnnouncementResponse.announcement:type_name -> salesorder.v1.Announcement
+	0,  // 5: salesorder.v1.UpdateAnnouncementResponse.announcement:type_name -> salesorder.v1.Announcement
+	1,  // 6: salesorder.v1.AnnouncementService.ListAnnouncements:input_type -> salesorder.v1.ListAnnouncementsRequest
+	3,  // 7: salesorder.v1.AnnouncementService.ListActiveAnnouncements:input_type -> salesorder.v1.ListActiveAnnouncementsRequest
+	5,  // 8: salesorder.v1.AnnouncementService.CreateAnnouncement:input_type -> salesorder.v1.CreateAnnouncementRequest
+	7,  // 9: salesorder.v1.AnnouncementService.UpdateAnnouncement:input_type -> salesorder.v1.UpdateAnnouncementRequest
+	9,  // 10: salesorder.v1.AnnouncementService.DeleteAnnouncement:input_type -> salesorder.v1.DeleteAnnouncementRequest
+	2,  // 11: salesorder.v1.AnnouncementService.ListAnnouncements:output_type -> salesorder.v1.ListAnnouncementsResponse
+	4,  // 12: salesorder.v1.AnnouncementService.ListActiveAnnouncements:output_type -> salesorder.v1.ListActiveAnnouncementsResponse
+	6,  // 13: salesorder.v1.AnnouncementService.CreateAnnouncement:output_type -> salesorder.v1.CreateAnnouncementResponse
+	8,  // 14: salesorder.v1.AnnouncementService.UpdateAnnouncement:output_type -> salesorder.v1.UpdateAnnouncementResponse
+	10, // 15: salesorder.v1.AnnouncementService.DeleteAnnouncement:output_type -> salesorder.v1.DeleteAnnouncementResponse
+	11, // [11:16] is the sub-list for method output_type
+	6,  // [6:11] is the sub-list for method input_type
+	6,  // [6:6] is the sub-list for extension type_name
+	6,  // [6:6] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_salesorder_v1_announcement_proto_init() }
@@ -904,7 +1028,7 @@ func file_salesorder_v1_announcement_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_salesorder_v1_announcement_proto_rawDesc), len(file_salesorder_v1_announcement_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

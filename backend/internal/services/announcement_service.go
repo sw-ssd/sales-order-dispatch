@@ -221,6 +221,76 @@ func (s *AnnouncementService) ListAnnouncements(ctx context.Context, req *connec
 	}), nil
 }
 
+// ListActiveAnnouncements 前台列表(spec「上下架時間窗與啟用狀態」+「平台篩選投放」+
+// 「前台展示與排序」):只回當下可見且投放到指定平台的公告,依型別分三組回傳。
+//
+// 與 ListAnnouncements(管理列表)的差別,刻意不共用同一個查詢:
+//   - 管理面要**看得到未上架/停用**(否則無法預覽與編輯),前台只能看到已上架的;
+//   - 管理面依角色範圍分層(company_admin 看不到別家公司),前台一律「RLS 可見即顯示」;
+//   - 管理面分頁(total 要算),前台一次全取(首頁輪播與消息區不會有幾百筆)。
+//
+// 平台過濾**不可省**:`deploy_web`/`deploy_app` 有寫入卻沒有讀取端,等於兩平台都看到
+// 全部公告(spec 兩個 Scenario 都要求互相不可見)。
+//
+// 排序為 `sort_order` 升冪(spec「依 sort_order 排序」),同值以 id 升冪當 tie-break
+// (否則同 sort_order 的順序由 DB 決定,前後兩次請求可能不同 → 輪播跳動)。
+func (s *AnnouncementService) ListActiveAnnouncements(ctx context.Context, req *connect.Request[salesorderv1.ListActiveAnnouncementsRequest]) (*connect.Response[salesorderv1.ListActiveAnnouncementsResponse], error) {
+	if _, err := requireAuth(ctx); err != nil {
+		return nil, err
+	}
+	if err := requireScope(ctx, "announcement", "read"); err != nil {
+		return nil, err
+	}
+	platform := strings.TrimSpace(req.Msg.GetPlatform())
+	// UTC 而非 time.Now()(本地時區):生產用 Postgres timestamptz,比對與時區無關;
+	// 但 sqlite 測試驅動把時間存成**字串**並以字串比較,混用偏移(+08:00 的參數 vs +00:00 的列)
+	// 會讓比較退化成字典序 —— 未來時間的公告會被誤判為已到 (實測)。
+	// 統一用 UTC 讓兩種驅動都得到同一結果,也讓「時間窗」邏輯在測試裡真的被驗到。
+	now := time.Now().UTC()
+	q := dbtenant.Client(ctx, s.db).Announcement.Query().
+		Where(
+			announcement.DeletedAtIsNil(),
+			announcement.IsActiveEQ(true),
+			announcement.PublishAtLTE(now),
+			// unpublish_at 空 = 不自動下架;有值則必須尚未到。
+			announcement.Or(
+				announcement.UnpublishAtIsNil(),
+				announcement.UnpublishAtGT(now),
+			),
+		)
+	switch platform {
+	case "web":
+		q = q.Where(announcement.DeployWebEQ(true))
+	case "app":
+		q = q.Where(announcement.DeployAppEQ(true))
+	default:
+		// 不預設平台:預設會讓一邊靜默看到不該投放的公告 —— 寧可讓呼叫端明確表態。
+		return nil, invalidArgField("platform")
+	}
+
+	rows, err := q.Order(ent.Asc(announcement.FieldSortOrder), ent.Asc(announcement.FieldID)).All(ctx)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	out := &salesorderv1.ListActiveAnnouncementsResponse{
+		Banners:  make([]*salesorderv1.Announcement, 0, len(rows)),
+		News:     make([]*salesorderv1.Announcement, 0),
+		Articles: make([]*salesorderv1.Announcement, 0),
+	}
+	for _, a := range rows {
+		p := announcementToProto(a)
+		switch a.Type {
+		case "banner":
+			out.Banners = append(out.Banners, p)
+		case "news":
+			out.News = append(out.News, p)
+		case "article":
+			out.Articles = append(out.Articles, p)
+		}
+	}
+	return connect.NewResponse(out), nil
+}
+
 // CreateAnnouncement 建立:範圍守衛 + 部門歸屬 + 型別/標題驗證,同一交易寫入。
 func (s *AnnouncementService) CreateAnnouncement(ctx context.Context, req *connect.Request[salesorderv1.CreateAnnouncementRequest]) (*connect.Response[salesorderv1.CreateAnnouncementResponse], error) {
 	id, err := requireAuth(ctx)
