@@ -62,8 +62,8 @@ void main() {
     await tester.tap(find.text('登入'));
     await tester.pumpAndSettle(const Duration(seconds: 10));
 
-    // 底欄四分頁（Material 與 Cupertino 皆以文字標籤呈現）。
-    for (final label in ['訂單', '退貨', '通知', '我的']) {
+    // 底欄五分頁（Material 與 Cupertino 皆以文字標籤呈現）；首頁＝公告（Task 49）。
+    for (final label in ['首頁', '訂單', '退貨', '通知', '我的']) {
       expect(find.text(label), findsWidgets, reason: '底欄缺少 $label');
     }
 
@@ -83,7 +83,26 @@ void main() {
       expect(find.byType(CupertinoTabScaffold), findsNothing);
     }
 
+    // 首頁分頁：公告（spec「前台展示與排序」）。選中首頁後 App 以 platform=app 查
+    // 當下可見的公告（後端已過濾時間窗、is_active、平台投放與 RLS）。
+    //
+    // 斷言刻意**不綁特定公告標題**（那要依賴 dev DB 的公告資料，換環境就紅）：
+    // 驗「查詢沒有失敗」＋「有內容或是明確空態」——查詢失敗時 empty 槽會顯示
+    // 「載入失敗：…」，這兩條就足以抓到接線壞掉（未帶 platform、權限被擋、RLS 讀 0 列）。
+    expect(find.textContaining('載入失敗'), findsNothing,
+        reason: '首頁公告查詢失敗（接線/權限/RLS 有問題）');
+    expect(
+      find.text('目前沒有公告').evaluate().isNotEmpty ||
+          find.byType(ExpansionTile).evaluate().isNotEmpty,
+      isTrue,
+      reason: '首頁既無公告內容亦無空態',
+    );
+    await shot('01_home_announcements');
+
     // 訂單分頁：種子單號 W0000xx 應可見（客戶自查範圍）。
+    // 起點是首頁（加了首頁 tab 之後），故必須先切過去。
+    await tester.tap(find.text('訂單').last);
+    await tester.pumpAndSettle(const Duration(seconds: 10));
     expect(find.textContaining('W0000'), findsWidgets,
         reason: '訂單清單未顯示自己的訂單');
     await shot('02_orders');
@@ -183,4 +202,5 @@ void main() {
     await tester.pumpAndSettle(const Duration(seconds: 10));
     expect(find.text('我是店家'), findsOneWidget, reason: '登出後應回身分選擇頁');
   });
+
 }

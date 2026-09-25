@@ -7,6 +7,7 @@ import 'package:fquery/fquery.dart';
 import '../../core/api.dart';
 import '../../gen/salesorder/v1/notifications.pb.dart';
 import '../../features/auth/auth_repository.dart';
+import '../../features/announcements/announcements_page.dart';
 import '../../features/notifications/notifications_page.dart';
 import '../../features/orders/orders_page.dart';
 import '../../features/returns/returns_page.dart';
@@ -43,6 +44,7 @@ class HomeShell extends HookWidget {
     final badge = unread.data?.count ?? 0;
 
     final pages = <Widget>[
+      AnnouncementsPage(api: api),
       OrdersPage(api: api),
       ReturnsPage(api: api),
       NotificationsPage(api: api),
@@ -55,6 +57,10 @@ class HomeShell extends HookWidget {
           currentIndex: tabIndex.value,
           onTap: (index) => tabIndex.value = index,
           items: [
+            const BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.house),
+              label: '首頁',
+            ),
             const BottomNavigationBarItem(
               icon: Icon(CupertinoIcons.doc_text),
               label: '訂單',
@@ -88,6 +94,10 @@ class HomeShell extends HookWidget {
         onTap: (index) => tabIndex.value = index,
         type: BottomNavigationBarType.fixed,
         items: [
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            label: '首頁',
+          ),
           const BottomNavigationBarItem(
             icon: Icon(Icons.receipt_long),
             label: '訂單',
@@ -133,6 +143,12 @@ class _ProfilePage extends StatelessWidget {
             Text('多公司訂出貨系統',
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 24),
+            AdaptiveButton(
+              onPressed: () =>
+                  context.router.pushPath('/change-password?forced=false'),
+              child: const Text('修改密碼'),
+            ),
+            const SizedBox(height: 12),
             AdaptiveButton(
               destructive: true,
               onPressed: () async {

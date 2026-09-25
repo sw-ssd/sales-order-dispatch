@@ -61,6 +61,8 @@ Future<void> _pumpAccountsPage(
       .build();
   final auth = AuthRepository(
     client: AuthServiceClient(transport),
+    // 測試的 fake transport 同時扮演未認證與已認證兩條(ChangePassword 走後者)。
+    authed: AuthServiceClient(transport),
     tokenStorage: _InMemoryTokenStorage(),
   );
   final api = Api(baseUrl: 'http://test', auth: auth, transport: transport);

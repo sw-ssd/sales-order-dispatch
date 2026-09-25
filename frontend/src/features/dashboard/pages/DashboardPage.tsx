@@ -14,6 +14,7 @@ import { useAbility } from "~/lib/ability/context";
 import { queryData } from "~/lib/query-data";
 import { hasPermission } from "~/lib/ability/permissions";
 import type { NavRoute } from "~/components/layout/Sidebar";
+import AnnouncementBoard from "~/features/announcements/components/AnnouncementBoard";
 import {
   pendingOrderCountQueryOptions,
   processingOrderCountQueryOptions,
@@ -169,6 +170,10 @@ export default function DashboardPage() {
           這不影響其他操作，請稍後重新整理。
         </p>
       </Show>
+
+      {/* 公告（spec「前台展示與排序」）：banner 輪播 ＋ 最新消息列表。
+         沒有公告時整塊不渲染，故不需額外的空態文案。 */}
+      <AnnouncementBoard />
 
       <section class="mt-8">
         <h2 class="mb-3 text-lg font-semibold text-foreground">快速連結</h2>

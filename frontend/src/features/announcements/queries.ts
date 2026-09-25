@@ -2,6 +2,7 @@ import { createClient } from "@connectrpc/connect";
 import { queryOptions } from "@tanstack/solid-query";
 import {
   AnnouncementService,
+  type ListActiveAnnouncementsResponse,
   type ListAnnouncementsResponse,
 } from "~/lib/proto/salesorder/v1/announcement_pb";
 import { transport } from "~/lib/transport";
@@ -45,4 +46,18 @@ export const announcementsQueryOptions = (params: AnnouncementListParams) =>
         type: params.type ?? "",
         includeDeleted: false,
       }),
+  });
+
+/**
+ * 前台公告查詢（spec「前台展示與排序」）：**只回當下可見**者（後端已套用
+ * is_active / 上下架時間窗 / 平台投放過濾），故與管理列表是兩支 RPC、兩組 queryKey。
+ *
+ * 不共用 `announcementsQueryOptions`：管理面要看得到未上架/停用（否則無法預覽編輯），
+ * 前台只能看到已上架的 —— 共用一個 queryKey 會讓首頁命中管理頁的快取而顯示未上架公告。
+ */
+export const activeAnnouncementsQueryOptions = (platform: "web" | "app") =>
+  queryOptions<ListActiveAnnouncementsResponse>({
+    // platform 進 queryKey：Web 與 App 的投放集合不同，快取不可互用。
+    queryKey: ["announcements", "active", platform],
+    queryFn: () => announcementClient.listActiveAnnouncements({ platform }),
   });
