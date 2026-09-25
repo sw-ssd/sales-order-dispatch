@@ -266,7 +266,7 @@ packages:
     source: hosted
     version: "7.0.1"
   firebase_core:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: firebase_core
       sha256: "2343710d8a164e3157a5e2fbb00663503c669be4aa06185311df48626760fdf1"

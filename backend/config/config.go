@@ -8,6 +8,7 @@ type Config struct {
 	Auth          Auth
 	Cache         Cache
 	Database      Database
+	FCM           FCM
 	Platform      Platform
 	Storage       Storage
 	Observability Observability
@@ -21,6 +22,7 @@ func New() *Config {
 	mustProcess(&c.Auth)
 	mustProcess(&c.Cache)
 	mustProcess(&c.Database)
+	mustProcess(&c.FCM)
 	mustProcess(&c.Platform)
 	mustProcess(&c.Storage)
 	mustProcess(&c.Observability)

@@ -45,6 +45,8 @@ dependencies:
   # PKCE(S256 code challenge)雜湊,供業務 Google 登入使用。
   crypto: ^3.0.0
   firebase_messaging: ^16.6.0
+  # firebase_messaging 的傳遞依賴,但我們直接 import 它(Firebase.initializeApp) → 明列。
+  firebase_core: ^4.14.0
   talker: ^5.1.20
 
   # The following adds the Cupertino Icons font to your application.

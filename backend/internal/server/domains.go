@@ -47,6 +47,41 @@ const entitlementCacheTTL = 60 * time.Second
 func (s *Server) InitDomains() {
 	s.mountAuth()
 	s.mountPlatformAuth()
+	s.mountNotificationSender()
+}
+
+// mountNotificationSender 依環境設定選定推播發送器（07 Task 4.4.5）。
+//
+// 為什麼要在組裝層明確選:notification_triggers 的 `triggerSender` 預設是 FakeSender
+// （測試友善、不觸外網）。若不在啟動時覆蓋，**正式環境會靜默地什麼都不推** —— 通知列
+// 照樣寫入、狀態照樣變 sent，只有手機永遠不會響。所以由 config 決定並在啟動時就斷言。
+//
+// 失敗即拒絕啟動（與 mountOpenFGA / mountEntitlements 同一立場）：
+//   - FCM_PROVIDER=fcm 但缺 project id / 憑證檔 → 設定錯誤，不該以假發送上線。
+//   - FCM_PROVIDER=fake 且 ENV=production → 上線不推播是產品決策，不該是部署疏漏；
+//     要嘛設 fcm，要嘛顯式接受（本專案選擇拒絕啟動，避免「以為有推播」）。
+func (s *Server) mountNotificationSender() {
+	cfg := s.cfg.FCM
+	if !cfg.UsesRealFCM() {
+		if s.cfg.API.Env == "production" {
+			log.Fatalf("fcm: ENV=production 且 FCM_PROVIDER=%q（未啟用真實推播），拒絕啟動；"+
+				"請設 FCM_PROVIDER=fcm 並提供 FCM_PROJECT_ID / FCM_CREDENTIALS_JSON", cfg.Provider)
+		}
+		// 開發/測試：維持 FakeSender（DB 狀態照常落，不觸外網）。
+		log.Printf("fcm: FCM_PROVIDER=%q → 使用假發送器（不觸外網）", cfg.Provider)
+		return
+	}
+	if !cfg.Configured() {
+		log.Fatalf("fcm: FCM_PROVIDER=fcm 但缺少設定（FCM_PROJECT_ID / FCM_CREDENTIALS_JSON），拒絕啟動")
+	}
+	sender, err := services.NewFCMSender(
+		cfg.ProjectID, cfg.CredentialsJSON, cfg.Endpoint,
+		time.Duration(cfg.TimeoutSeconds)*time.Second)
+	if err != nil {
+		log.Fatalf("fcm: 建立發送器失敗，拒絕啟動: %v", err)
+	}
+	services.SetTriggerSender(sender)
+	log.Printf("fcm: 已啟用真實推播（project=%s）", cfg.ProjectID)
 }
 
 // platformAdminDBOf 回共用的平台 admin 池：InitDomains 已建即共用，否則自開。
