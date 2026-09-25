@@ -2,6 +2,7 @@ import 'package:connectrpc/connect.dart' as connect;
 import 'package:connectrpc/test.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sales_order_app/core/error_info.dart';
 import 'package:sales_order_app/features/auth/auth_repository.dart';
 import 'package:sales_order_app/features/auth/token_storage.dart';
 import 'package:sales_order_app/gen/salesorder/v1/auth.connect.client.dart';
@@ -40,10 +41,12 @@ void main() {
     final storage = InMemoryTokenStorage();
     final repository = AuthRepository(
       client: AuthServiceClient(transport),
+      // 測試的 fake transport 同時扮演未認證與已認證兩條(ChangePassword 走後者)。
+      authed: AuthServiceClient(transport),
       tokenStorage: storage,
     );
 
-    final tokens = await repository.loginShop(
+    final result = await repository.loginShop(
       customerCode: 'C001',
       password: 'secret',
     );
@@ -51,8 +54,10 @@ void main() {
     expect(captured, isNotNull);
     expect(captured!.customerCode, 'C001');
     expect(captured!.password, 'secret');
-    expect(tokens.accessToken, 'access-123');
-    expect(tokens.refreshToken, 'refresh-456');
+    expect(result.tokens.accessToken, 'access-123');
+    expect(result.tokens.refreshToken, 'refresh-456');
+    expect(result.mustChangePassword, isFalse,
+        reason: '一般登入不應被判定為受限態（否則會被導去改密碼頁）');
     expect(storage.stored?.accessToken, 'access-123');
     expect(storage.stored?.refreshToken, 'refresh-456');
   });
@@ -68,6 +73,8 @@ void main() {
     final storage = InMemoryTokenStorage();
     final repository = AuthRepository(
       client: AuthServiceClient(transport),
+      // 測試的 fake transport 同時扮演未認證與已認證兩條(ChangePassword 走後者)。
+      authed: AuthServiceClient(transport),
       tokenStorage: storage,
     );
 

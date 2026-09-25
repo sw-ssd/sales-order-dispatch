@@ -222,6 +222,60 @@ func TestLoginSuccessWrongPasswordLockout(t *testing.T) {
 	}
 }
 
+// TestLoginExpiredTempPasswordRejected A3(1.5.2)spec「臨時密碼超過 24 小時失效」:
+// 密碼本身正確(must_change=true 且已過 temp_password_expires_at)→ **登入階段**即拒
+// (AUTH-3002),不是登入後才在改密碼頁被擋。須由 dept_admin 以上重置後才能再登入。
+func TestLoginExpiredTempPasswordRejected(t *testing.T) {
+	e := newTestEnv(t)
+	coID := mustCreateCompany(t, e, "co-exp")
+	hash, err := auth.HashPassword("temp-123456")
+	if err != nil {
+		t.Fatalf("HashPassword: %v", err)
+	}
+	u := e.db.User.Create().
+		SetEmail("exp@example.com").SetName("過期店家").SetStatus(user.StatusActive).
+		SetRole("customer").SetIsCustomer(true).SetAccountName("EXP-1").SetPasswordHash(hash).
+		SetCompanyID(coID).SetMustChangePassword(true).
+		SetTempPasswordExpiresAt(time.Now().Add(-time.Hour)).SaveX(e.ctx)
+
+	_, err = e.rpc.Login(e.ctx, connect.NewRequest(&v1.LoginRequest{CustomerCode: "EXP-1", Password: "temp-123456"}))
+	if err == nil {
+		t.Fatal("臨時密碼已過期仍登入成功 —— 應回 AUTH-3002")
+	}
+	// 碼而非僅 connect 碼:前端據 ErrorInfo.code 決定提示(connect 碼同為 failed_precondition,
+	// 只斷言 connect 碼的話,AUTH-3002/AUTH-3004/AUTH-3003 三者互換也測不出來)。
+	if code := authErrorInfo(t, err).GetCode(); code != errcode.AuthTempPasswordExpired.ID() {
+		t.Fatalf("應回 %s,got %q(connect=%v)", errcode.AuthTempPasswordExpired.ID(), code, connect.CodeOf(err))
+	}
+	// 憑證正確不算失敗:不該讓一次正常登入把帳號推向鎖定。
+	unlockAt, lerr := auth.NewLoginLock(e.kv).LockedUntil(e.ctx, "EXP-1")
+	if lerr != nil {
+		t.Fatalf("LockedUntil: %v", lerr)
+	}
+	if !unlockAt.IsZero() {
+		t.Fatalf("憑證正確的過期登入不應計入鎖定,got %v", unlockAt)
+	}
+
+	// 重置後(新臨時密碼、效期重新起算)即可登入,回到受限態而非被鎖死。
+	fresh, err := auth.GenerateTempPassword()
+	if err != nil {
+		t.Fatalf("GenerateTempPassword: %v", err)
+	}
+	freshHash, err := auth.HashPassword(fresh)
+	if err != nil {
+		t.Fatalf("HashPassword: %v", err)
+	}
+	e.db.User.UpdateOneID(u.ID).SetPasswordHash(freshHash).
+		SetTempPasswordExpiresAt(time.Now().Add(24 * time.Hour)).SaveX(e.ctx)
+	resp, err := e.rpc.Login(e.ctx, connect.NewRequest(&v1.LoginRequest{CustomerCode: "EXP-1", Password: fresh}))
+	if err != nil {
+		t.Fatalf("重置後應可登入: %v", err)
+	}
+	if !resp.Msg.GetMustChangePassword() {
+		t.Fatal("重置後登入應仍為受限態(must_change_password=true)")
+	}
+}
+
 func TestCallbackUnknownHDIssuesRegistrationToken(t *testing.T) {
 	// hd 無對應公司:不建帳號,派發 registration token 並回跳註冊完成頁(1.4.3)。
 	e := newTestEnv(t)

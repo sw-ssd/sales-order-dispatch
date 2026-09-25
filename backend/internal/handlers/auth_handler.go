@@ -187,6 +187,14 @@ func (h *AuthHandler) Login(ctx context.Context, req *connect.Request[v1.LoginRe
 		h.recordFailure(ctx, customerCode)
 		return nil, invalidCredentials()
 	}
+	// A3(1.5.2)臨時密碼效期:密碼本身正確但已過 24h → 拒絕登入、提示臨時密碼已過期
+	// (須由 dept_admin 以上重置)。**必須在這裡擋,不能只靠 ChangePassword 與受限態閘門**:
+	// 那兩道會讓使用者「登入成功 → 進改密碼頁 → 才被告知已過期」,與規格
+	// 「臨時密碼超過 24 小時失效」的 THEN「系統拒絕登入」相反。
+	// 憑證正確故不計失敗次數(與 ChangePassword 同一條判定,避免兩處語意分岐)。
+	if u.MustChangePassword && u.TempPasswordExpiresAt != nil && time.Now().After(*u.TempPasswordExpiresAt) {
+		return nil, errcode.AuthTempPasswordExpired.Error(nil)
+	}
 	if err := h.deps.Lockout.Clear(ctx, customerCode); err != nil {
 		return nil, internal(err)
 	}

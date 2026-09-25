@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/error_info.dart';
 import '../../../ui/adaptive.dart';
 import '../auth_repository.dart';
 
@@ -26,7 +27,7 @@ class _IdentitySelectPageState extends State<IdentitySelectPage> {
       showFeedback(context, '已取得 Google 授權,待後端端點上線後完成登入');
     } catch (e) {
       if (!mounted) return;
-      showFeedback(context, authErrorMessage(e));
+      showFeedback(context, localizedErrorMessage(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

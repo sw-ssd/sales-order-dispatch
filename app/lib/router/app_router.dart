@@ -3,6 +3,7 @@ import 'package:auto_route/auto_route.dart';
 import '../core/api.dart';
 import '../features/accounts/accounts_page.dart';
 import '../features/auth/auth_repository.dart';
+import '../features/auth/pages/change_password_page.dart';
 import '../features/auth/pages/identity_select_page.dart';
 import '../features/auth/pages/login_page.dart';
 import '../features/auth/pages/qr_login_page.dart';
@@ -68,6 +69,22 @@ class AppRouter extends RootStackRouter {
             builder: (context, _) => AccountsPage(
               api: _api,
               auth: _authRepository,
+            ),
+          ),
+        ),
+        // 改密碼頁（A3 1.5.2）。`mustChange` 走 query 參數而非兩個路由：
+        // 「首登強制」與「主動更改」是同一份表單、同一個後端 RPC，差別只在文案與
+        // 能不能返回 —— 拆成兩條路由會讓改文案時漏改一條。
+        // 預設（未帶參數）＝強制模式：這是安全的那一邊 —— 少帶參數時不給返回，
+        // 而不是誤給一個「取消」把使用者留在一個所有請求都失敗的殼裡。
+        AutoRoute(
+          path: '/change-password',
+          page: PageInfo.builder(
+            'ChangePasswordRoute',
+            builder: (context, routeData) => ChangePasswordPage(
+              authRepository: _authRepository,
+              mustChange:
+                  routeData.queryParams.getString('forced', 'true') != 'false',
             ),
           ),
         ),

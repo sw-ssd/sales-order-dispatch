@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/api.dart';
+import '../../../core/error_info.dart';
 import '../../../gen/customers/v1/customer.pb.dart';
 import '../../../ui/adaptive.dart';
 import '../auth_repository.dart';
@@ -50,18 +51,28 @@ class _LoginPageState extends State<LoginPage> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _busy = true);
     try {
-      await widget.authRepository.loginShop(
+      final result = await widget.authRepository.loginShop(
         customerCode: _customerCodeController.text.trim(),
         password: _passwordController.text,
       );
       if (!mounted) return;
+      // 首登/臨時密碼受限態（A3）：後端只放行 ChangePassword。
+      //
+      // **先判斷再分流**：受限態下 `ListCustomerAccounts` 也會被 middleware 閘門擋（AUTH-3004），
+      // 那個探測純屬白打一次必然失敗的請求。分流本身的結果不受影響（`_isPrimaryAccount`
+      // 吞掉所有例外 → 一律當「不是主帳號」），所以順序只影響多餘的往返與日誌噪音，
+      // 不影響落點 —— 別把它寫成「順序錯了會被丟進錯的頁」。
+      if (result.mustChangePassword) {
+        context.router.navigatePath('/change-password');
+        return;
+      }
       // 登入成功 → 依身分流（navigate 清掉登入棧，返回鍵不會退回登入頁）。
       final isPrimary = await _isPrimaryAccount();
       if (!mounted) return;
       context.router.navigatePath(isPrimary ? '/account' : '/home');
     } catch (e) {
       if (!mounted) return;
-      showFeedback(context, authErrorMessage(e));
+      showFeedback(context, localizedErrorMessage(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }

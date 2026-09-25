@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:fquery/fquery.dart';
 
+import '../../../core/error_info.dart';
 import '../../../gen/salesorder/v1/auth.pb.dart' as pb;
 import '../../../ui/adaptive.dart';
 import '../auth_repository.dart';
@@ -49,11 +50,16 @@ class QRLoginPage extends HookWidget {
       if (selected.value.isEmpty || password.text.isEmpty) return;
       busy.value = true;
       try {
-        await authRepository.loginShop(
+        final result = await authRepository.loginShop(
           customerCode: selected.value,
           password: password.text,
         );
         if (!context.mounted) return;
+        // 首登/臨時密碼受限態（A3）：後端只放行 ChangePassword，直接進主殼只會失敗。
+        if (result.mustChangePassword) {
+          context.router.navigatePath('/change-password');
+          return;
+        }
         if (onLoggedIn != null) {
           onLoggedIn!(selected.value);
         } else {
@@ -61,7 +67,7 @@ class QRLoginPage extends HookWidget {
         }
       } catch (e) {
         if (!context.mounted) return;
-        showFeedback(context, authErrorMessage(e));
+        showFeedback(context, localizedErrorMessage(e));
       } finally {
         busy.value = false;
       }
