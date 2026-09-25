@@ -29,6 +29,10 @@ import ReturnsPage from "~/features/returns/pages/ReturnsPage";
 import NotificationsPage from "~/features/notifications/pages/NotificationsPage";
 import AuditPage from "~/features/audit/pages/AuditPage";
 import { requireAbility } from "~/lib/ability/guards";
+import {
+  ManageDownloadPage,
+  QRDownloadPage,
+} from "~/features/appDownload/AppDownloadPage";
 import DashboardPage from "~/features/dashboard/pages/DashboardPage";
 
 // TanStack Router 程式化路由樹;root route component 承載 App 佈局,Outlet 渲染子路由。
@@ -56,6 +60,21 @@ const forbiddenRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/403",
   component: ForbiddenPage,
+});
+
+// 兩條 App Link 的**未安裝**落頁（規格 §4.2）：已安裝 App 時由作業系統攔截、不會走到這裡。
+// 刻意不掛能力守衛也不需登入 —— 它們只是把人送去商店。
+// 沒掛的話，未安裝的使用者會落到 SPA 的 404，連「去哪裡裝」都看不到。
+const qrDownloadRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/customer_account_qrcode/$token",
+  component: QRDownloadPage,
+});
+
+const manageDownloadRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/customer_account_manage",
+  component: ManageDownloadPage,
 });
 
 const companiesRoute = createRoute({
@@ -266,6 +285,8 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
   forbiddenRoute,
+  qrDownloadRoute,
+  manageDownloadRoute,
   companiesRoute,
   departmentsRoute,
   rolesRoute,

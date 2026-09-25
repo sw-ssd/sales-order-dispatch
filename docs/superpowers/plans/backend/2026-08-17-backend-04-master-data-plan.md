@@ -80,8 +80,13 @@ FileStore 本地儲存（白名單 + magic bytes）；跨 domain 共用（02 Log
 
 三道界線：只有**客戶主帳號**可呼叫（用原始 `id.Role` 判斷，不可用展開的 `Roles` —— 角色繼承讓每個後台角色都含 `customer`）；範圍僅限自己客戶（跨客戶回 `not_found`，不洩漏存在性）；權限資源 `customer_account` 納入 customer 角色但**永久排除**於主帳號的 deny 清單。
 
-**殘**：App「帳號管理」頁（`sales-order-app`）與 `customer_account_manage` 深層連結路由（Task 6.7 Step 4–5）尚未實作；後端 API 已就緒。
+**App 端已完成（2026-09-25）**：`app/lib/features/accounts/accounts_page.dart`（列表／新增／停用／重置，Material＋Cupertino 自適應；主帳號與業務子帳號灰化不可管理）＋兩條深層連結路徑（`app/lib/router/app_router.dart`）。分流方式：登入後試呼 `ListCustomerAccounts`，成功＝主帳號 → 導向帳號管理頁，否則進主殼（不為前端分流新增 proto 欄位）。原生設定：Android App Links（`AndroidManifest.xml` 的兩個 `autoVerify` intent-filter，host 由 `manifestPlaceholders["appLinkHost"]` 集中）＋ iOS Universal Links（`ios/Runner/Runner.entitlements` 的 `com.apple.developer.associated-domains`，9 個 build configuration 皆已連上）。未安裝 App 時的落頁在租戶中台（`/customer_account_qrcode/$token`、`/customer_account_manage`，chromeless）。
+
+**殘**：
+- 商店網址未定案 → 下載落頁在未設 `VITE_IOS_APP_URL` / `VITE_ANDROID_APP_URL` 時顯示「請聯絡業務」，不給死連結。
+- App 端**未**實作改密碼頁：臨時密碼登入會收到 `AUTH-3004`（見 01 計畫 Task 7），目前 App 顯示為一般錯誤。子帳號首次登入因此走不完 —— 需補 `ChangePassword` 頁。
+- 深層連結的網域（`app.salesorder.example.com`）與 `/.well-known/apple-app-site-association`、`/.well-known/assetlinks.json` 尚未部署；未部署前 iOS/Android 都不會攔截（靜默開瀏覽器）。
 
 ---
 
-*最後更新：2026-09-25（Task 6.7 後端落地、Task 3 分切規格關聯編輯落地；殘項：3.1.5 促銷連動、App 帳號管理頁）*
+*最後更新：2026-09-25（Task 6.7 **前後端皆落地**：後端 CustomerAccountService＋App 帳號管理頁與兩條深層連結；Task 3 分切規格關聯編輯落地。殘項：3.1.5 促銷連動、App 改密碼頁（AUTH-3004）、深層連結網域與 well-known 部署）*

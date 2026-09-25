@@ -24,6 +24,31 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- App Links（規格 §4.2 深層連結）：QR 登入與帳號管理。
+                 autoVerify 讓 Android 於**安裝時**向 /.well-known/assetlinks.json 驗證網域所有權，
+                 通過後此網域的連結直接開 App（不跳選擇器、也**不需要**自訂 scheme ——
+                 自訂 scheme 任何 App 都能宣告，不具網域歸屬保證）。
+
+                 兩個路徑分開宣告（而非共用一個 filter）：驗證失敗時的退化行為不同 ——
+                 QR 連結落到瀏覽器會看到下載頁（可接受），而帳號管理連結會落到登入頁。
+                 合併宣告則單一 filter 失敗即兩條一起失效，症狀較難歸因。
+
+                 host 佔位符由 `${appLinkHost}` 提供（見 build.gradle.kts 的 manifestPlaceholders）
+                 —— 真實網域未定案前集中一處，改一處即兩平台同步。 -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="${appLinkHost}"
+                      android:pathPrefix="/customer_account_qrcode/"/>
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="${appLinkHost}"
+                      android:pathPrefix="/customer_account_manage"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

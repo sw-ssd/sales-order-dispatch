@@ -15,6 +15,15 @@ android {
     }
 
     defaultConfig {
+        // App Links 的網域（規格 §4.2 深層連結）。真實網域未定案，故集中在此一處：
+        // 改這裡就同時更新 AndroidManifest 的兩個 intent-filter host，兩平台再各自對齊
+        // （iOS 的另一半在 `ios/Runner/Runner.entitlements`，部署面在 `/.well-known/`）。
+        //
+        // 為何要 host 而非自訂 scheme：任何 App 都能宣告 `salesorder://`，不具網域歸屬
+        // 保證；https + autoVerify 才由作業系統向網域驗證所有權（assetlinks.json）。
+        manifestPlaceholders["appLinkHost"] = providers.gradleProperty("appLinkHost")
+            .orElse("app.salesorder.example.com").get()
+
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.salesorder.sales_order_app"
         // You can update the following values to match your application needs.

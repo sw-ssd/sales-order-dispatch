@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Universal Links（規格 §4.2 深層連結）：`applinks:<host>` 由 iOS 於**安裝時**向
+	     該網域的 /.well-known/apple-app-site-association 驗證所有權，通過後此網域的連結
+	     直接開 App（不經瀏覽器、不跳選擇器）。
+
+	     網域未定案前先以佔位符集中：真實網域要與
+	     - `android/app/build.gradle.kts` 的 `appLinkHost`
+	     - 部署面的 /.well-known/apple-app-site-association（含 Team ID 3YU8K7FQ69）
+	     三者一致，否則 iOS 靜默不攔截（沒有錯誤訊息，只會開瀏覽器）。
+
+	     注意**不要**在提交的檔案裡加 `?mode=developer`：那會略過 Apple CDN 快取而讓正式版
+	     也走開發者查詢（本機測試需要時再臨時加上，測完移除）。 -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:app.salesorder.example.com</string>
+	</array>
+</dict>
+</plist>

@@ -146,16 +146,20 @@
 
 ## Task 7: 臨時密碼與首登強制修改（細部 1.5.2）
 
-**實際狀態：⬜ 未開始**
+**實際狀態：✅ 完成（2026-09-25 查證）**
 
-**說明**：`user.go` 無 `temp_password_expires_at` / `must_change_password` 欄位；無臨時密碼發放或首登強改流程。
+**實際產物：**
+- 欄位：`ent/schema/user.go` 的 `must_change_password`、`temp_password_expires_at`（migration 已含）。
+- 臨時密碼發放：`auth.GenerateTempPassword`（≥12 字元）＋`auth.HashPassword`；效期常數 `handlers.tempPasswordTTL`（now+24h）。建立客戶（`customer_service.buildCustomerAccount`）與新增子帳號（`customer_account_service`）皆產生臨時密碼並回傳**僅此一次**。
+- 首登強改：middleware 檢查 `Identity.MustChangePassword` —— 除了 `ChangePassword` 之外**所有** RPC 回 `AUTH-3004`（`errcode.AuthPasswordChangeRequired`）；`AuthService.ChangePassword` 為登入態唯一可用者，改完清除 `must_change_password` 並 `tv+1`。
+- proto：`ChangePassword`、`ResetCustomerPassword`（`auth.proto`）；`LoginResponse.must_change_password` 供客戶端導向。
 
-- [ ] **Step 1: 補 user 欄位** — `temp_password_expires_at`、`must_change_password`（先於 Task 1 Step 3 補齊）
-- [ ] **Step 2: 臨時密碼發放** — `issueTempPassword`（24h 效期）
-- [ ] **Step 3: 首登強制修改** — 登入時檢查 `must_change_password` 並導向修改流程
-- [ ] **Step 4: proto + 測試**
+- [x] **Step 1: 補 user 欄位**
+- [x] **Step 2: 臨時密碼發放**（24h 效期）
+- [x] **Step 3: 首登強制修改**（middleware 閘門 AUTH-3004）
+- [x] **Step 4: proto + 測試**（`auth_password.go` 相關測試）
 
-**待辦摘要**：完整未開始。
+**待辦摘要**：無。**注意**：App 端**未**實作改密碼頁 —— 臨時密碼登入後會收到 `AUTH-3004`，目前 App 把它當一般錯誤顯示。這是既有缺口（非本次變更），已記於 `04-master-data` 計畫的 Task 6.7 殘項。
 
 ---
 
@@ -265,16 +269,21 @@
 
 ## Task 14: developer 逃生門與 audit 介面（細部 1.11.1–1.11.3）
 
-**實際狀態：⬜ 未開始**
+**實際狀態：✅ 完成（2026-09-25 查證）**
 
-**說明**：未實作 `middleware.DeveloperBypass`、config `DeveloperAccountEnabled`/`Env`、`audit.Recorder` 介面/`NoopRecorder`、`SeedDeveloperRole`。亦無 audit 相關 code（`internal/` 無 audit package）。
-> **D32 衝突**：主計畫標頭指示授權改 OpenFGA + RLS；實際實作仍 Casbin。是否導入 OpenFGA 需決策定奪（見 10-logistics-execution.md §10.8 與決策 D32）。
+**實際產物：**
+- config：`config.API` 的 `Env`、`DeveloperAccountEnabled`（`DEVELOPER_ACCOUNT_ENABLED`）。
+- fail-fast：`server.Init` 於 `ENV=production && DeveloperAccountEnabled` 時拒絕啟動。
+- developer 繞過：`authzMiddleware` 的 `authorizeRPC` 對 `developer`/`super` 放行（`identityFor` 亦僅在開關開啟時接受 developer 帳號），且**稽核照寫**（不因繞權而省略）。
+- audit：`internal/audit` 套件（`Recorder` 介面語意由 `audit.Record` 承載，含 snapshot 淨化、trace 標記、`_actor_kind`）；`NoopRecorder` 未另立 —— 需要時以不注入 meta 表達（本專案無「無稽核」情境）。
 
-- [ ] **Step 1: config** — `DeveloperAccountEnabled`、`Env`、fail-fast 防護
-- [ ] **Step 2: developer bypass middleware** — `Authenticate` 之後的高權繞過
-- [ ] **Step 3: audit 介面** — `audit.Recorder` + `NoopRecorder`
-- [ ] **Step 4: 啟動防護手動驗證** — prod 誤開 fail-fast
+> D32 衝突已解：授權為 **OpenFGA + RLS**（Casbin 已移除），見 `2026-09-18-openfga-authz-backend-plan.md`。
+
+- [x] **Step 1: config** + fail-fast 防護
+- [x] **Step 2: developer bypass**（OpenFGA Check 與 RLS 皆放行）
+- [x] **Step 3: audit 介面**（`internal/audit` 已存在並廣泛使用）
+- [x] **Step 4: 啟動防護**（`Init()` 實作）
 
 ---
 
-*最後更新：2026-09-18（01-auth 現況對齊重建，作為九份重建範本）*
+*最後更新：2026-09-25（Task 7 臨時密碼/首登強改、Task 14 developer 逃生門與 audit 對齊實際實作；此前 2026-09-24 已對齊 Task 11 X-Api-Token）*

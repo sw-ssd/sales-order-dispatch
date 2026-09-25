@@ -116,6 +116,13 @@ class AuthRepository {
     await _tokenStorage.clear();
   }
 
+  /// QR token 兌換（規格 §4.2：公開端點，不需登入）。
+  ///
+  /// 回傳公司／客戶識別資訊與**可選的店家子帳號清單**（主帳號與業務子帳號由後端排除）。
+  /// 登入仍須子帳號帳密 —— 兌換本身不核發任何憑證（規格明訂）。
+  Future<QRLoginResponse> exchangeQR(String token) =>
+      _client.qRLogin(QRLoginRequest(token: token));
+
   /// 業務 Google 登入:開啟系統瀏覽器走 PKCE 授權。
   ///
   /// 回傳授權碼與 verifier(待後端端點上線後換票);使用者取消時回傳 null。

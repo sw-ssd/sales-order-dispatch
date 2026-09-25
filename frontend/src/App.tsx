@@ -6,8 +6,17 @@ import { abilityQueryOptions } from "~/lib/ability/service";
 import { AbilityProvider } from "~/lib/ability/context";
 import { queryData } from "~/lib/query-data";
 
-/** 不套 shell 的路徑：登入頁與 403 各自是完整頁面。 */
-const CHROMELESS_PATHS: readonly string[] = ["/login", "/403"];
+/**
+ * 不套 shell 的路徑：登入頁、403 與兩條 App Link 的下載落頁各自是完整頁面。
+ * 下載落頁尤其不能有 shell —— 它們是給**尚未登入**（甚至尚未安裝 App）的人看的，
+ * 側邊欄在那裡只會顯示一堆無權限的選單。
+ */
+const CHROMELESS_PATHS: readonly string[] = [
+  "/login",
+  "/403",
+  "/customer_account_manage",
+];
+const CHROMELESS_PREFIXES: readonly string[] = ["/customer_account_qrcode/"];
 
 /**
  * 權限集合的**唯一來源**（`Can` / `useAbility` 的 consumer 都讀這裡）。
@@ -30,7 +39,14 @@ export default function App(props: ParentProps) {
 
   return (
     <AbilityProvider ability={perms}>
-      <AppShell chromeless={CHROMELESS_PATHS.includes(pathname())}>{props.children}</AppShell>
+      <AppShell
+        chromeless={
+          CHROMELESS_PATHS.includes(pathname()) ||
+          CHROMELESS_PREFIXES.some((p) => pathname().startsWith(p))
+        }
+      >
+        {props.children}
+      </AppShell>
     </AbilityProvider>
   );
 }

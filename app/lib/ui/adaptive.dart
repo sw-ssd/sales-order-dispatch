@@ -286,6 +286,12 @@ Future<bool> confirmAdaptive(
 }
 
 /// 單行輸入對話框（原因/備註）：取消回 null、確認回輸入文字（可為空字串）。
+///
+/// controller 由**對話框自己**持有（[_PromptDialog] 的 State），不是外層函式建立後
+/// `finally` 丟掉 —— `showDialog` 的 Future 在 `pop()` 當下就 resolve，而對話框此時還在
+/// 播退場動畫並持續重建；外層若在此時 dispose controller，動畫期間就會擲
+/// 「A TextEditingController was used after being disposed」（Android 實機可見）。
+/// 擁有權跟著 widget 生命週期，動畫結束才釋放。
 Future<String?> promptAdaptive(
   BuildContext context, {
   required String title,
@@ -294,84 +300,126 @@ Future<String?> promptAdaptive(
   String initialText = '',
   String? hint,
   bool requireText = false,
-}) async {
-  final controller = TextEditingController(text: initialText);
-  Future<String?> showCupertinoPrompt() => showCupertinoDialog<String>(
-        context: context,
-        builder: (context) => CupertinoAlertDialog(
-          title: Text(title),
-          content: Column(
-            children: [
-              if (message != null) Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(message),
-              ),
+}) {
+  return showAdaptiveDialog<String>(
+    context: context,
+    builder: (context) => _PromptDialog(
+      title: title,
+      message: message,
+      confirmLabel: confirmLabel,
+      initialText: initialText,
+      hint: hint,
+      requireText: requireText,
+    ),
+  );
+}
+
+/// 依平台選對話框外殼（Cupertino / Material）。
+Future<T?> showAdaptiveDialog<T>({
+  required BuildContext context,
+  required WidgetBuilder builder,
+}) =>
+    isCupertinoTarget()
+        ? showCupertinoDialog<T>(context: context, builder: builder)
+        : showDialog<T>(context: context, builder: builder);
+
+/// 輸入對話框（兩平台共用同一份 State 邏輯，只有外觀不同）。
+class _PromptDialog extends StatefulWidget {
+  const _PromptDialog({
+    required this.title,
+    required this.message,
+    required this.confirmLabel,
+    required this.initialText,
+    required this.hint,
+    required this.requireText,
+  });
+
+  final String title;
+  final String? message;
+  final String confirmLabel;
+  final String initialText;
+  final String? hint;
+  final bool requireText;
+
+  @override
+  State<_PromptDialog> createState() => _PromptDialogState();
+}
+
+class _PromptDialogState extends State<_PromptDialog> {
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.initialText);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  /// 確認：`requireText` 且空白時**不關閉**（讓使用者繼續輸入，而不是把空字串當成答案）。
+  void _confirm() {
+    final text = _controller.text.trim();
+    if (widget.requireText && text.isEmpty) return;
+    Navigator.of(context).pop(text);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (isCupertinoTarget()) {
+      return CupertinoAlertDialog(
+        title: Text(widget.title),
+        content: Column(
+          children: [
+            if (widget.message != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child: CupertinoTextField(
-                  controller: controller,
-                  placeholder: hint,
-                  autofocus: true,
-                ),
+                child: Text(widget.message!),
               ),
-            ],
-          ),
-          actions: [
-            CupertinoDialogAction(
-              child: const Text('取消'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            CupertinoDialogAction(
-              isDefaultAction: true,
-              child: Text(confirmLabel),
-              onPressed: () {
-                final text = controller.text.trim();
-                if (requireText && text.isEmpty) return;
-                Navigator.of(context).pop(text);
-              },
-            ),
-          ],
-        ),
-      );
-
-  Future<String?> showMaterialPrompt() => showDialog<String>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(title),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (message != null) Text(message),
-              TextField(
-                controller: controller,
-                decoration: InputDecoration(hintText: hint),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: CupertinoTextField(
+                controller: _controller,
+                placeholder: widget.hint,
                 autofocus: true,
+                onSubmitted: (_) => _confirm(),
               ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('取消'),
-            ),
-            TextButton(
-              onPressed: () {
-                final text = controller.text.trim();
-                if (requireText && text.isEmpty) return;
-                Navigator.of(context).pop(text);
-              },
-              child: Text(confirmLabel),
             ),
           ],
         ),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            onPressed: _confirm,
+            child: Text(widget.confirmLabel),
+          ),
+        ],
       );
-
-  try {
-    return isCupertinoTarget()
-        ? await showCupertinoPrompt()
-        : await showMaterialPrompt();
-  } finally {
-    controller.dispose();
+    }
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (widget.message != null) Text(widget.message!),
+          TextField(
+            controller: _controller,
+            decoration: InputDecoration(hintText: widget.hint),
+            autofocus: true,
+            onSubmitted: (_) => _confirm(),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('取消'),
+        ),
+        TextButton(onPressed: _confirm, child: Text(widget.confirmLabel)),
+      ],
+    );
   }
 }
 
