@@ -308,7 +308,7 @@ func (s *PrintService) ListLogs(ctx context.Context, req *connect.Request[produc
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	rows, err := q.Order(ent.Desc(printlog.FieldPrintedAt)).
+	rows, err := q.Order(ent.Desc(printlog.FieldPrintedAt), ent.Desc(printlog.FieldID)).
 		Offset((page - 1) * pageSize).Limit(pageSize).All(ctx)
 	if err != nil {
 		return nil, toConnectError(err)

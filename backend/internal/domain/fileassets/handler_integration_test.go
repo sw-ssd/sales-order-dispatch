@@ -112,7 +112,7 @@ func TestIntegrationFileUploadDownload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("上傳: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("上傳應 201,got %d", resp.StatusCode)
 	}
@@ -134,7 +134,7 @@ func TestIntegrationFileUploadDownload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("下載: %v", err)
 	}
-	defer dl.Body.Close()
+	defer func() { _ = dl.Body.Close() }()
 	if dl.StatusCode != http.StatusOK || dl.Header.Get("Content-Type") != "image/png" {
 		t.Fatalf("下載應 200 + image/png,got %d %q", dl.StatusCode, dl.Header.Get("Content-Type"))
 	}
@@ -152,7 +152,7 @@ func TestIntegrationFileUploadDownload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("跨公司下載: %v", err)
 	}
-	defer dl2.Body.Close()
+	defer func() { _ = dl2.Body.Close() }()
 	if dl2.StatusCode != http.StatusNotFound {
 		t.Fatalf("跨公司應 404,got %d", dl2.StatusCode)
 	}
@@ -164,7 +164,7 @@ func TestIntegrationFileUploadDownload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("偽裝上傳: %v", err)
 	}
-	defer respBad.Body.Close()
+	defer func() { _ = respBad.Body.Close() }()
 	if respBad.StatusCode != http.StatusBadRequest {
 		t.Fatalf("偽裝檔應 400,got %d", respBad.StatusCode)
 	}
@@ -175,7 +175,7 @@ func TestIntegrationFileUploadDownload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("刪除: %v", err)
 	}
-	defer delResp.Body.Close()
+	defer func() { _ = delResp.Body.Close() }()
 	if delResp.StatusCode != http.StatusOK {
 		t.Fatalf("刪除應 200,got %d", delResp.StatusCode)
 	}
@@ -183,7 +183,7 @@ func TestIntegrationFileUploadDownload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("刪後下載: %v", err)
 	}
-	defer dl3.Body.Close()
+	defer func() { _ = dl3.Body.Close() }()
 	if dl3.StatusCode != http.StatusNotFound {
 		t.Fatalf("刪後下載應 404,got %d", dl3.StatusCode)
 	}

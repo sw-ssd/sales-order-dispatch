@@ -502,7 +502,7 @@ export default function UsersPage() {
           <form onSubmit={submit}>
             <form.Field name="name" validators={nameValidators}>
               {(field) => (
-                <Field>
+                <Field invalid={!field().state.meta.isValid}>
                   <FieldLabel for="user-name">姓名</FieldLabel>
                   <Input
                     id="user-name"
@@ -516,7 +516,7 @@ export default function UsersPage() {
             </form.Field>
             <form.Field name="email" validators={emailValidators}>
               {(field) => (
-                <Field>
+                <Field invalid={!field().state.meta.isValid}>
                   <FieldLabel for="user-email">Email</FieldLabel>
                   <Input
                     id="user-email"
@@ -530,7 +530,7 @@ export default function UsersPage() {
             </form.Field>
             <form.Field name="company" validators={companyValidators}>
               {(field) => (
-                <Field>
+                <Field invalid={!field().state.meta.isValid}>
                   <FieldLabel for="user-company">所屬公司</FieldLabel>
                   <select
                     id="user-company"
@@ -564,7 +564,7 @@ export default function UsersPage() {
             </form.Field>
             <form.Field name="role" validators={roleValidators}>
               {(field) => (
-                <Field>
+                <Field invalid={!field().state.meta.isValid}>
                   <FieldLabel for="user-role">角色</FieldLabel>
                   <select
                     id="user-role"

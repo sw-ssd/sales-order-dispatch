@@ -291,7 +291,7 @@ func (s *ReturnService) ListReturnRequests(ctx context.Context, req *connect.Req
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	rows, err := q.Order(ent.Desc(returnrequest.FieldCreatedAt)).
+	rows, err := q.Order(ent.Desc(returnrequest.FieldCreatedAt), ent.Desc(returnrequest.FieldID)).
 		Offset((page - 1) * pageSize).Limit(pageSize).All(ctx)
 	if err != nil {
 		return nil, toConnectError(err)

@@ -28,7 +28,7 @@ func TestIntegrationRLSPolicyCoverage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("連線: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	for _, table := range rlsPolicyTables {
 		t.Run(table, func(t *testing.T) {

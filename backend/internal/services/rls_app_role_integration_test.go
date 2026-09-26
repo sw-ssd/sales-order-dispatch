@@ -50,7 +50,7 @@ func TestIntegrationAppRolePrivileges(t *testing.T) {
 	if err != nil {
 		t.Fatalf("app_rw 連線: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	var user string
 	if err := db.QueryRow(`SELECT current_user`).Scan(&user); err != nil {
@@ -158,7 +158,7 @@ func grantedTables(t *testing.T, db *sql.DB) map[string]int {
 	if err != nil {
 		t.Fatalf("列舉授權: %v", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	granted := map[string]int{}
 	for rows.Next() {
 		var table string
@@ -198,7 +198,7 @@ func assertSequenceUsageGranted(t *testing.T, db *sql.DB) {
 	if err != nil {
 		t.Fatalf("列舉序列: %v", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	checked := 0
 	for rows.Next() {

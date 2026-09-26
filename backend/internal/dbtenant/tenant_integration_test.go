@@ -34,7 +34,7 @@ func TestIntegrationTenantTxCommitAndRollback(t *testing.T) {
 	if err != nil {
 		t.Fatalf("連線: %v", err)
 	}
-	defer sqlDB.Close()
+	defer func() { _ = sqlDB.Close() }()
 	if err := goose.RunContext(t.Context(), "up", sqlDB, "../../database/migrations"); err != nil {
 		t.Fatalf("套用遷移: %v", err)
 	}
@@ -59,7 +59,7 @@ func TestIntegrationTenantTxCommitAndRollback(t *testing.T) {
 		if err := tx.Query(t.Context(), "SELECT current_setting('app.current_user_id', true)", []any{}, &rows); err != nil {
 			t.Fatalf("查 GUC: %v", err)
 		}
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		if !rows.Next() {
 			t.Fatal("current_setting 應回一列")
 		}

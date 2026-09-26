@@ -76,7 +76,7 @@ func TestIntegrationFileEndpointsUnderAppRole(t *testing.T) {
 	if err != nil {
 		t.Fatalf("上傳: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	raw, _ := io.ReadAll(resp.Body)
 	// owner 驗證必須看得到公司列(app_rw 下交易外查詢會 0 列 → 這裡會拿到 400)。
 	if resp.StatusCode != http.StatusCreated {
@@ -95,7 +95,7 @@ func TestIntegrationFileEndpointsUnderAppRole(t *testing.T) {
 	if err != nil {
 		t.Fatalf("以 url 下載: %v", err)
 	}
-	defer byURL.Body.Close()
+	defer func() { _ = byURL.Body.Close() }()
 	if byURL.StatusCode != http.StatusOK {
 		t.Fatalf("app_rw 下以回傳 url 下載應 200(下載查詢須在租戶交易內),got %d", byURL.StatusCode)
 	}
@@ -105,7 +105,7 @@ func TestIntegrationFileEndpointsUnderAppRole(t *testing.T) {
 	if err != nil {
 		t.Fatalf("以 id 下載: %v", err)
 	}
-	defer byID.Body.Close()
+	defer func() { _ = byID.Body.Close() }()
 	if byID.StatusCode != http.StatusOK {
 		t.Fatalf("app_rw 下以數字 id 下載應 200,got %d", byID.StatusCode)
 	}
@@ -116,7 +116,7 @@ func TestIntegrationFileEndpointsUnderAppRole(t *testing.T) {
 	if err != nil {
 		t.Fatalf("刪除: %v", err)
 	}
-	defer delResp.Body.Close()
+	defer func() { _ = delResp.Body.Close() }()
 	if delResp.StatusCode != http.StatusOK {
 		t.Fatalf("app_rw 下軟刪除應 200,got %d", delResp.StatusCode)
 	}
@@ -124,7 +124,7 @@ func TestIntegrationFileEndpointsUnderAppRole(t *testing.T) {
 	if err != nil {
 		t.Fatalf("刪後下載: %v", err)
 	}
-	defer after.Body.Close()
+	defer func() { _ = after.Body.Close() }()
 	if after.StatusCode != http.StatusNotFound {
 		t.Fatalf("軟刪除後下載應 404,got %d", after.StatusCode)
 	}

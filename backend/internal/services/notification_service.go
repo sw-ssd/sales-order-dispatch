@@ -77,7 +77,7 @@ func (s *NotificationService) ListNotifications(ctx context.Context, req *connec
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	rows, err := q.Order(ent.Desc(notification.FieldCreatedAt)).
+	rows, err := q.Order(ent.Desc(notification.FieldCreatedAt), ent.Desc(notification.FieldID)).
 		Offset((page - 1) * pageSize).Limit(pageSize).All(ctx)
 	if err != nil {
 		return nil, toConnectError(err)

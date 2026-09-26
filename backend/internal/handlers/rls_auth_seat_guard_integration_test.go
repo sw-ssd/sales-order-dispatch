@@ -206,8 +206,7 @@ func TestIntegrationAuthSeatGuardUnderAppRole(t *testing.T) {
 		var logs string
 		var err error
 		logs = captureLog(t, func() {
-			var token string
-			token = env.newRegistrationToken(t, "new@nosub.example.com")
+			token := env.newRegistrationToken(t, "new@nosub.example.com")
 			_, err = env.registerComplete(t, token, noSub)
 		})
 		if err != nil {

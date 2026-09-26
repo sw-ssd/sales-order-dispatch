@@ -90,22 +90,22 @@ func TestIntegrationPlatformSchema(t *testing.T) {
 			var name string
 			var priv bool
 			if err := rows.Scan(&name, &priv); err != nil {
-				rows.Close()
+				_ = rows.Close()
 				t.Fatalf("掃描 platform %s: %v", kind.what, err)
 			}
 			if kind.relkind == "r" {
 				seen[name] = true
 			}
 			if priv {
-				rows.Close()
+				_ = rows.Close()
 				t.Fatalf("app_rw 不得對 platform.%s 這個%s有任何權限", name, kind.what)
 			}
 		}
 		if err := rows.Err(); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			t.Fatalf("列舉 platform %s: %v", kind.what, err)
 		}
-		rows.Close()
+		_ = rows.Close()
 	}
 	for _, table := range platformTables {
 		if !seen[table] {

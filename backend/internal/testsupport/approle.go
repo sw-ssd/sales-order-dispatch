@@ -17,7 +17,7 @@ func AppRoleDSN(t *testing.T, adminDSN string) string {
 	if err != nil {
 		t.Fatalf("開 admin 連線: %v", err)
 	}
-	defer admin.Close()
+	defer func() { _ = admin.Close() }()
 	if _, err := admin.Exec(`ALTER ROLE app_rw WITH PASSWORD 'app_rw'`); err != nil {
 		t.Fatalf("設定 app_rw 密碼: %v（migration 00022 是否已套用？）", err)
 	}

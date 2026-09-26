@@ -54,7 +54,7 @@ func TestIntegrationCompanyLogoUpload(t *testing.T) {
 		if err != nil {
 			t.Fatalf("上傳請求: %v", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		b, err := io.ReadAll(resp.Body)
 		if err != nil {
 			t.Fatalf("讀回應: %v", err)
@@ -147,7 +147,7 @@ func TestIntegrationCompanyLogoUpload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("以回傳 url 下載: %v", err)
 	}
-	defer dl.Body.Close()
+	defer func() { _ = dl.Body.Close() }()
 	if dl.StatusCode != http.StatusOK || dl.Header.Get("Content-Type") != "image/png" {
 		t.Fatalf("回傳 url 應可下載(200 + image/png),got %d %q", dl.StatusCode, dl.Header.Get("Content-Type"))
 	}

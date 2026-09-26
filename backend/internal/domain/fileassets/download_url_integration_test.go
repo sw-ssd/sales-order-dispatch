@@ -41,7 +41,7 @@ func TestIntegrationSavedURLIsDownloadable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("上傳: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("上傳應 201,got %d", resp.StatusCode)
 	}
@@ -61,7 +61,7 @@ func TestIntegrationSavedURLIsDownloadable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("以 url 下載: %v", err)
 	}
-	defer byURL.Body.Close()
+	defer func() { _ = byURL.Body.Close() }()
 	if byURL.StatusCode != http.StatusOK || byURL.Header.Get("Content-Type") != "image/png" {
 		t.Fatalf("以 DB 記錄的 url 下載應 200 + image/png,got %d %q(url=%s)",
 			byURL.StatusCode, byURL.Header.Get("Content-Type"), out.URL)
@@ -72,7 +72,7 @@ func TestIntegrationSavedURLIsDownloadable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("以 id 下載: %v", err)
 	}
-	defer byID.Body.Close()
+	defer func() { _ = byID.Body.Close() }()
 	if byID.StatusCode != http.StatusOK {
 		t.Fatalf("以數字 id 下載應 200,got %d", byID.StatusCode)
 	}
@@ -82,7 +82,7 @@ func TestIntegrationSavedURLIsDownloadable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("未知檔名下載: %v", err)
 	}
-	defer missing.Body.Close()
+	defer func() { _ = missing.Body.Close() }()
 	if missing.StatusCode != http.StatusNotFound {
 		t.Fatalf("未知檔名應 404,got %d", missing.StatusCode)
 	}

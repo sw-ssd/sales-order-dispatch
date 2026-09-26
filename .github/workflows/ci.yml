@@ -25,6 +25,19 @@ jobs:
         uses: golangci/golangci-lint-action@v8
         with:
           working-directory: backend
+      # 預設不載入 `//go:build integration` 的檔案（未帶 build tag = 整個檔案被排除），
+      # 故上面那步看不見整合測試；曾因此在多個套件無聲累積 22 個 errcheck/staticcheck 問題。
+      # 目前所有受 build tag 約束的檔案都只用 `integration` 一個 tag、且無 `!integration` 例外，
+      # 故此步為上面的**超集**（多跑一次是為了在有人新增 `!integration` 檔時仍有基準覆蓋）。
+      - name: Lint (integration-tagged files)
+        uses: golangci/golangci-lint-action@v8
+        with:
+          working-directory: backend
+          args: --build-tags integration
+      - name: Vet # 同上：未帶 tag 時整合測試完全不參與型別檢查
+        run: |
+          go vet ./...
+          go vet -tags integration ./...
       - name: Test # -count=1 關結果快取(未結項 #35:快取命中會假綠)
         run: go test -count=1 ./...
       # 產生檔（碼表與三端常數）必須與 registry 同步：跑完 go generate 後不得有 diff。

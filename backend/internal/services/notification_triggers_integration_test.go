@@ -62,23 +62,6 @@ func newCustomerProductServer(t *testing.T, db *ent.Client, id authz.Identity) p
 	return productsv1connect.NewCustomerProductServiceClient(http.DefaultClient, ts.URL)
 }
 
-// countPending 計某使用者的 pending 通知(系統範圍讀)。
-func countPending(t *testing.T, ctx context.Context, db *ent.Client, uid int) int {
-	t.Helper()
-	var n int
-	_ = dbtenant.SystemScopeTx(ctx, db, func(tx *ent.Tx) error {
-		c2 := dbtenant.WithTenantTx(ctx, tx)
-		c, err := tx.Client().Notification.Query().
-			Where(notification.UserIDEQ(uid), notification.StatusEQ("pending")).Count(c2)
-		if err != nil {
-			t.Fatalf("計通知: %v", err)
-		}
-		n = c
-		return nil
-	})
-	return n
-}
-
 // TestIntegrationOrderCreatedTrigger 業務下單推子帳號(2 通道 x N 子帳號);客戶自下不推。
 func TestIntegrationOrderCreatedTrigger(t *testing.T) {
 	testsupport.RequiresContainer(t)
