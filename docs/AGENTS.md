@@ -114,10 +114,13 @@ go generate ./ent          # Ent 產生碼（改 ent/schema 後）
 # 測試
 task backend:test                 # go test -count=1 ./...
 task backend:test:integration     # go test -tags integration -count=1 ./...
-task backend:check                # fmt + vet + golangci-lint + test（CI 同款閘門）
+task backend:check                # fmt + vet + golangci-lint + test（CI 同款閘門；vet/lint 皆含 integration tag）
 
-# 品質檢查（check 已含前三項；單獨跑時）
+# 品質檢查（check 已含全部；單獨跑時）
+# vet/lint 必須**兩次都跑**：未帶 tag 時 `//go:build integration` 的檔案整個被排除在建置外，
+# 只跑第一組會讓整合測試的問題**無聲通過**（2026-09-26 曾因此累積 22 個 errcheck/staticcheck 問題）。
 go fmt ./...  /  go vet ./...  /  golangci-lint run
+go vet -tags integration ./...  /  golangci-lint run --build-tags integration ./...
 
 # 平台排程（單趟執行；非長駐服務）
 task backend:platform:cron

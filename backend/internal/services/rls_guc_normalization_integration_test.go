@@ -174,9 +174,10 @@ func TestIntegrationRLSGucPlaceholderIsNormalized(t *testing.T) {
 		// department 範圍（shape 3）刻意**不**斷言列數：該 shape 本來就不設 department GUC，
 		// 「看不到別部門的列」是正確行為，斷言列數會變成在測 policy 語意而非本缺陷。
 		shapes := []struct {
-			name     string
-			stmts    []string
-			wantRows bool // true 時斷言看得到 fixture 自己的列
+			name      string // 僅供訊息顯示，**不得**用於分支判斷（改名不該改變斷言語意）
+			stmts     []string
+			wantRows  bool // true 時斷言看得到 fixture 自己的列
+			wantEmpty bool // true 時斷言 fail-closed 回 0 列
 		}{
 			{
 				// 完整三欄 scope：把四個 GUC placeholder 全部建立成 ''。
@@ -219,9 +220,11 @@ func TestIntegrationRLSGucPlaceholderIsNormalized(t *testing.T) {
 			},
 			{
 				// 完全沒有 scope：必須 fail-closed 成 0 列，而不是 22P02。
-				name:     "無 scope（應回 0 列）",
-				stmts:    nil,
-				wantRows: false,
+				// 本 shape 同時是**最強的偵測器**：缺 00051 時它在全部 5 張表都報 22P02
+				// （2026-09-26 實測；company/department shape 只各命中 1 張）。故不可刪。
+				name:      "無 scope（應回 0 列）",
+				stmts:     nil,
+				wantEmpty: true,
 			},
 		}
 
@@ -249,7 +252,7 @@ func TestIntegrationRLSGucPlaceholderIsNormalized(t *testing.T) {
 					}
 					t.Fatalf("%s → %s: 非預期錯誤: %v", sh.name, tbl, err)
 				}
-				if sh.name == "無 scope（應回 0 列）" && n != 0 {
+				if sh.wantEmpty && n != 0 {
 					t.Errorf("%s → %s：應 fail-closed 回 0 列，得到 %d", sh.name, tbl, n)
 				}
 				if sh.wantRows && n == 0 {
