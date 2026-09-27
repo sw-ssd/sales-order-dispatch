@@ -1,7 +1,6 @@
 import { createForm } from "@tanstack/solid-form";
 import { createQuery, useQueryClient } from "@tanstack/solid-query";
 import { batch, createSignal, For, Show, type JSX } from "solid-js";
-import { Code, ConnectError } from "@connectrpc/connect";
 import type {
   Customer,
   CustomerAddress,
@@ -28,11 +27,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  useConfirm,
 } from "~/components/ui";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import { addressesQueryOptions, contactsQueryOptions, customerClient } from "../queries";
 import { addressSchema, contactSchema } from "../schemas";
 import { queryData } from "~/lib/query-data";
+import { errorMessage } from "@/lib/error-message";
 
 /** 地址類型標籤（後端 `validAddressType` 只收這三個值）。 */
 const ADDRESS_TYPE_LABELS: Record<string, string> = {
@@ -40,35 +41,6 @@ const ADDRESS_TYPE_LABELS: Record<string, string> = {
   billing: "請款",
   other: "其他",
 };
-
-/**
- * 錯誤訊息對照；樣板 = `CustomersPage` 的同一份 switch（各頁各自一份是本 repo 既有慣例）。
- * `InvalidArgument` 原樣透傳：後端的「recipient_name 與 address_line 必填」「email 格式非法」
- * 都是給人看的中文說明，改寫會蓋掉唯一有辨識度的訊息。
- */
-function errorMessage(err: unknown): string {
-  if (err instanceof ConnectError) {
-    switch (err.code) {
-      case Code.NotFound:
-        return "資料不存在或已被刪除";
-      case Code.AlreadyExists:
-        return err.rawMessage || "資料已存在";
-      case Code.InvalidArgument:
-        return err.rawMessage || "輸入資料有誤,請檢查後再試";
-      case Code.FailedPrecondition:
-        return err.rawMessage || "資料狀態不允許此操作";
-      case Code.PermissionDenied:
-        return "沒有權限執行此操作";
-      case Code.Unauthenticated:
-        return "請先登入";
-      case Code.Unavailable:
-        return "無法連線至伺服器,請確認後端服務已啟動";
-      default:
-        return err.rawMessage || "操作失敗,請稍後再試";
-    }
-  }
-  return "無法連線至伺服器,請確認後端服務已啟動";
-}
 
 export interface AddressBookDialogProps {
   /** 目前選取的客戶（null＝關閉）。 */
@@ -124,6 +96,7 @@ const EMPTY_CONTACT_VALUES = {
  */
 export default function AddressBookDialog(props: AddressBookDialogProps) {
   const client = useQueryClient();
+  const confirm = useConfirm();
   // 表單層錯誤（訊息貼在該表單上方）；清單層錯誤（刪除失敗等）另放，避免互相覆蓋。
   const [addressFormError, setAddressFormError] = createSignal<string | undefined>();
   const [contactFormError, setContactFormError] = createSignal<string | undefined>();
@@ -269,7 +242,13 @@ export default function AddressBookDialog(props: AddressBookDialogProps) {
   };
 
   const removeAddress = async (address: CustomerAddress) => {
-    if (!window.confirm(`確定刪除地址「${address.recipientName}」?`)) return;
+    const ok = await confirm({
+      title: `刪除地址「${address.recipientName}」`,
+      description: "刪除後此地址不再出現在寄送選項，且無法復原。",
+      confirmLabel: "刪除",
+      variant: "destructive",
+    });
+    if (!ok) return;
     setListError(null);
     try {
       await customerClient.deleteAddress({ id: address.id });
@@ -280,7 +259,13 @@ export default function AddressBookDialog(props: AddressBookDialogProps) {
   };
 
   const removeContact = async (contact: CustomerContact) => {
-    if (!window.confirm(`確定刪除聯絡人「${contact.name}」?`)) return;
+    const ok = await confirm({
+      title: `刪除聯絡人「${contact.name}」`,
+      description: "刪除後此聯絡人不再出現在寄送選項，且無法復原。",
+      confirmLabel: "刪除",
+      variant: "destructive",
+    });
+    if (!ok) return;
     setListError(null);
     try {
       await customerClient.deleteContact({ id: contact.id });

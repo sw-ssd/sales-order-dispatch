@@ -38,7 +38,8 @@ export default function PlanCard() {
   return (
     <Card class="max-w-2xl">
       <CardHeader>
-        <CardTitle>方案與用量</CardTitle>
+        {/* 這張卡是頁面唯一的頂層區塊：`h1` 之後直接 `h3` 會跳級。 */}
+        <CardTitle as="h2">方案與用量</CardTitle>
         <CardDescription>唯讀資訊；變更方案或席位請洽營運。</CardDescription>
       </CardHeader>
 
@@ -80,8 +81,10 @@ export default function PlanCard() {
 
                 <Show when={trialEndsAtFor(entitlements().status, entitlements().trialEndsAt)}>
                   {(date) => (
+                    // 不標「（UTC）」：顯示的已是營業時區（UTC+8）的日期，標 UTC 是錯的；
+                    // 對店家而言時區名也是雜訊，只需要知道哪一天到期。
                     <p class="text-sm text-muted-foreground">
-                      試用到期：<span class="font-medium">{date()}</span>（UTC）
+                      試用到期：<span class="font-medium">{date()}</span>
                     </p>
                   )}
                 </Show>

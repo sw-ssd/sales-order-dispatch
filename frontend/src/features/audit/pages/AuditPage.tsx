@@ -1,4 +1,3 @@
-import { Code, ConnectError } from "@connectrpc/connect";
 import { createQuery } from "@tanstack/solid-query";
 import {
   createColumnHelper,
@@ -9,6 +8,7 @@ import {
   type PaginationState,
 } from "@tanstack/solid-table";
 import { batch, createEffect, createSignal, For, Show, type JSX } from "solid-js";
+import { formatDateTime } from "@/lib/datetime";
 import type { AuditLog } from "~/lib/proto/audit/v1/audit_pb";
 import {
   Badge,
@@ -34,6 +34,7 @@ import {
 import { ListPagination } from "../../users/components/ListPagination";
 import { AUDIT_PAGE_SIZE, auditLogsQueryOptions } from "../queries";
 import { queryData } from "~/lib/query-data";
+import { errorMessage } from "@/lib/error-message";
 
 /**
  * 稽核表格的 table 功能集：**只有分頁**。
@@ -78,30 +79,6 @@ const ACTION_VARIANTS: Record<string, "destructive" | "warning" | "info" | "seco
   logout: "secondary",
   print: "secondary",
 };
-
-/** 錯誤訊息對照；樣板 = `CustomersPage`/`PrintPage` 的同一份 switch。 */
-function errorMessage(err: unknown): string {
-  if (err instanceof ConnectError) {
-    switch (err.code) {
-      case Code.NotFound:
-        return "資料不存在或已被刪除";
-      case Code.InvalidArgument:
-        // 後端「無效的 from/to/action」都走這裡（訊息原樣透傳，改寫會蓋掉辨識度）。
-        return err.rawMessage || "輸入資料有誤,請檢查後再試";
-      case Code.FailedPrecondition:
-        return err.rawMessage || "資料狀態不允許此操作";
-      case Code.PermissionDenied:
-        return "沒有權限執行此操作";
-      case Code.Unauthenticated:
-        return "請先登入";
-      case Code.Unavailable:
-        return "無法連線至伺服器,請確認後端服務已啟動";
-      default:
-        return err.rawMessage || "操作失敗,請稍後再試";
-    }
-  }
-  return "無法連線至伺服器,請確認後端服務已啟動";
-}
 
 /** 快照是 JSON 字串；解析失敗就原樣顯示（快照由後端 marshal，失敗代表內容異常）。 */
 function prettyJson(raw: string): string {
@@ -158,11 +135,9 @@ export default function AuditPage() {
   const columns = auditColumnHelper.columns([
     auditColumnHelper.accessor("createdAt", {
       header: "時間",
-      cell: (info) => {
-        const value = info.getValue();
-        // RFC3339 的 `T` 換成空白、秒後切除（同 `PrintPage` 的列印時間）。
-        return <span class="text-muted-foreground">{value ? value.slice(0, 19).replace("T", " ") : "—"}</span>;
-      },
+      cell: (info) => (
+        <span class="text-muted-foreground">{formatDateTime(info.getValue())}</span>
+      ),
     }),
     auditColumnHelper.accessor("userName", {
       header: "操作者",
@@ -437,7 +412,7 @@ export default function AuditPage() {
                 <div class="grid gap-2 sm:grid-cols-2">
                   <div>
                     <span class="text-muted-foreground">時間：</span>
-                    {row().createdAt ? row().createdAt.slice(0, 19).replace("T", " ") : "—"}
+                    {formatDateTime(row().createdAt)}
                   </div>
                   <div>
                     <span class="text-muted-foreground">操作者：</span>

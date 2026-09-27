@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@solidjs/testing-library";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Code, ConnectError } from "@connectrpc/connect";
+import { ErrorInfoSchema } from "~/lib/proto/salesorder/v1/common_pb";
 import type * as ConnectRpc from "@connectrpc/connect";
 import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 
@@ -47,7 +48,7 @@ vi.mock("@connectrpc/connect", async (importOriginal) => ({
   }),
 }));
 
-import DispatchPage from "./DispatchPage";
+import DispatchPage, { boardDensity } from "./DispatchPage";
 
 const PENDING_UNASSIGNED = {
   id: "1",
@@ -193,6 +194,16 @@ describe("DispatchPage", () => {
     expect(texts).toEqual(["W000002", "W000003"]);
   });
 
+  it("密度門檻：comfortable 放得下就用，放不下降 compact", () => {
+    // 寬度未量到（ResizeObserver 尚未回報）→ 預設 comfortable，不縮欄。
+    expect(boardDensity(2, 0)).toBe("comfortable");
+    // 2 欄 = 2*288+16 = 592 剛好放得下 → comfortable；差 1px 就降 compact。
+    expect(boardDensity(2, 592)).toBe("comfortable");
+    expect(boardDensity(2, 591)).toBe("compact");
+    // 8 欄需 8*288+7*16 = 2416，2000px 放不下 → compact。
+    expect(boardDensity(8, 2000)).toBe("compact");
+  });
+
   it("退回未指派：assignRoute 帶空車次、讀取時的 version 與日期，並失效看板", async () => {
     await renderPage();
     const routeCol = screen.getByLabelText("一號路線");
@@ -212,9 +223,19 @@ describe("DispatchPage", () => {
   });
 
   it("樂觀鎖失敗：顯示後端訊息且仍重查看板", async () => {
-    // 後端樂觀鎖失敗回 errcode 訊息（rawMessage 優先透傳），前端不得改寫掉它。
+    // 後端樂觀鎖失敗是 errcode 錯誤：connect 碼 InvalidArgument、可行動的原因放在
+    // ErrorInfo.details.reason（訊息本體只有樣板「參數驗證失敗」）。前端必須顯示 reason。
     assignRouteSpy.mockRejectedValue(
-      new ConnectError("資料已變更，請重新載入", Code.FailedPrecondition)
+      new ConnectError("參數驗證失敗", Code.InvalidArgument, undefined, [
+        {
+          desc: ErrorInfoSchema,
+          value: {
+            code: "SYS-1001",
+            message: "參數驗證失敗",
+            details: { reason: "資料已變更，請重新載入" },
+          },
+        },
+      ])
     );
     await renderPage();
     const routeCol = screen.getByLabelText("一號路線");

@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
+import { fireEvent, screen, waitFor, within } from "@solidjs/testing-library";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type * as ConnectRpc from "@connectrpc/connect";
-import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
+import { QueryClient } from "@tanstack/solid-query";
+import { renderWithProviders } from "~/test-render";
 import type { Customer } from "~/lib/proto/customers/v1/customer_pb";
 
 // 地址簿/聯絡人 API 以 spy 取代：元件在模組層建立 connect client，
@@ -96,11 +97,10 @@ function newClient() {
 }
 
 async function renderDialog(client: QueryClient = newClient()) {
-  render(() => (
-    <QueryClientProvider client={client}>
-      <AddressBookDialog customer={CUSTOMER} open={true} onOpenChange={() => {}} />
-    </QueryClientProvider>
-  ));
+  renderWithProviders(
+    () => <AddressBookDialog customer={CUSTOMER} open={true} onOpenChange={() => {}} />,
+    client,
+  );
   // 兩段清單都要到位（dialog 內的表格）。
   await waitFor(() => expect(screen.getByText("王小明")).toBeTruthy());
   await waitFor(() => expect(screen.getByText("李小姐")).toBeTruthy());
@@ -182,17 +182,26 @@ describe("AddressBookDialog", () => {
 
   it("刪除地址要確認；拒絕確認就不打 API", async () => {
     await renderDialog();
-    const decline = vi.spyOn(window, "confirm").mockReturnValue(false);
     const delButtons = screen.getAllByRole("button", { name: "刪除" });
     fireEvent.click(delButtons[0]);
-    await Promise.resolve();
+    // 依 accessible name（＝標題）取確認框：元件自己的對話框關閉後仍留在 DOM。
+    const dialog = await waitFor(() =>
+      screen.getByRole("dialog", { name: /刪除地址「/ })
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "取消" }));
+    // 主體對話框本來就開著，只能斷言確認框消失。
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: /刪除地址「/ })).toBeNull()
+    );
     expect(deleteAddressSpy).not.toHaveBeenCalled();
 
-    decline.mockReturnValue(true);
     fireEvent.click(screen.getAllByRole("button", { name: "刪除" })[0]);
+    const confirmDialog = await waitFor(() =>
+      screen.getByRole("dialog", { name: /刪除地址「/ })
+    );
+    fireEvent.click(within(confirmDialog).getByRole("button", { name: "刪除" }));
     await waitFor(() => expect(deleteAddressSpy).toHaveBeenCalledWith({ id: "a1" }));
     await waitFor(() => expect(listAddressesSpy).toHaveBeenCalledTimes(2));
-    decline.mockRestore();
   });
 
   it("email 格式非法時前端先擋，不打 API", async () => {
@@ -233,11 +242,9 @@ describe("AddressBookDialog", () => {
   it("兩段皆空時顯示各自的空狀態", async () => {
     listAddressesSpy.mockResolvedValue({ addresses: [] });
     listContactsSpy.mockResolvedValue({ contacts: [] });
-    render(() => (
-      <QueryClientProvider client={newClient()}>
-        <AddressBookDialog customer={CUSTOMER} open={true} onOpenChange={() => {}} />
-      </QueryClientProvider>
-    ));
+    renderWithProviders(() => (
+      <AddressBookDialog customer={CUSTOMER} open={true} onOpenChange={() => {}} />
+    ), newClient());
     await waitFor(() => expect(screen.getByText("尚無地址")).toBeTruthy());
     expect(screen.getByText("尚無聯絡人")).toBeTruthy();
   });

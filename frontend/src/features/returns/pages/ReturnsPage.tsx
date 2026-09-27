@@ -1,4 +1,6 @@
 import { Code, ConnectError } from "@connectrpc/connect";
+import { errorMessage } from "@/lib/error-message";
+import { formatDateTime } from "@/lib/datetime";
 import { createQuery, useQueryClient } from "@tanstack/solid-query";
 import {
   createColumnHelper,
@@ -34,6 +36,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  useConfirm,
 } from "~/components/ui";
 import { ListPagination } from "../../users/components/ListPagination";
 import { queryData } from "~/lib/query-data";
@@ -81,38 +84,6 @@ const SOURCE_LABELS: Record<string, string> = {
 };
 
 /**
- * 錯誤訊息對照；樣板 = `CustomersPage`/`PrintPage` 的同一份 switch。
- * `InvalidArgument` 必須原樣透傳 `rawMessage`：版本衝突（「資料已變更，請重新載入」）
- * 與「僅待審核可審」都是後端給的中文說明，改寫會蓋掉唯一有辨識度的訊息。
- */
-function errorMessage(err: unknown): string {
-  if (err instanceof ConnectError) {
-    switch (err.code) {
-      case Code.NotFound:
-        return "資料不存在或已被刪除";
-      case Code.InvalidArgument:
-        return err.rawMessage || "輸入資料有誤,請檢查後再試";
-      case Code.FailedPrecondition:
-        return err.rawMessage || "資料狀態不允許此操作";
-      case Code.PermissionDenied:
-        return "沒有權限執行此操作";
-      case Code.Unauthenticated:
-        return "請先登入";
-      case Code.Unavailable:
-        return "無法連線至伺服器,請確認後端服務已啟動";
-      default:
-        return err.rawMessage || "操作失敗,請稍後再試";
-    }
-  }
-  return "無法連線至伺服器,請確認後端服務已啟動";
-}
-
-/** 日期時間顯示：RFC3339 的 `T` 換成空白、秒後切除（同 `PrintPage` 的列印時間）。 */
-function formatDateTime(value: string): string {
-  return value ? value.slice(0, 19).replace("T", " ") : "—";
-}
-
-/**
  * 退貨管理頁(/returns)。
  *
  * 版型同 `CustomersPage`/`PrintPage`（Page Headings + 篩選卡片色帶 + 表格 `Card`）。
@@ -120,7 +91,7 @@ function formatDateTime(value: string): string {
  * 員工與主帳號一律被後端拒絕 → 提供按鈕只會是必定失敗的陷阱，改以說明文字告知來源。
  *
  * 審核走樂觀鎖：`expectedVersion` 只能取自 `getReturnRequest` 剛讀到的 `version`
- * （寫死 `"0"` 會讓每次審核都撞鎖）。核准前以 `window.confirm` 確認（同 `CustomersPage`
+ * （寫死 `"0"` 會讓每次審核都撞鎖）。核准前以共用 `useConfirm` 對話框確認（同 `CustomersPage`
  * 刪除的破壞性操作慣例）；駁回則要求原因（後端 `reject_reason` 必填）。
  */
 export default function ReturnsPage() {
@@ -135,6 +106,7 @@ export default function ReturnsPage() {
   });
 
   const client = useQueryClient();
+  const confirm = useConfirm();
 
   const columns = returnColumnHelper.columns([
     returnColumnHelper.accessor("status", {
@@ -316,9 +288,14 @@ export default function ReturnsPage() {
     }
   };
 
-  /** 核准是破壞性操作 → 走 `window.confirm`（同 `CustomersPage` 刪除的慣例）。 */
+  /** 核准是不可逆的操作 → 走共用 `useConfirm` 對話框（同 `CustomersPage` 刪除的慣例）。 */
   const approve = async () => {
-    if (!window.confirm("確定核准此退貨申請？")) return;
+    const ok = await confirm({
+      title: "核准退貨申請",
+      description: "核准後即完成審核，不可再變更結果。",
+      confirmLabel: "核准",
+    });
+    if (!ok) return;
     await review("approved");
   };
 

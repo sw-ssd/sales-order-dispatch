@@ -1,7 +1,6 @@
 import { createForm } from "@tanstack/solid-form";
 import { createQuery, useQueryClient } from "@tanstack/solid-query";
 import { batch, createSignal, For, Show, type JSX } from "solid-js";
-import { Code, ConnectError } from "@connectrpc/connect";
 import type { Customer } from "~/lib/proto/customers/v1/customer_pb";
 import type { CustomerProduct } from "~/lib/proto/products/v1/product_pb";
 import {
@@ -24,6 +23,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  useConfirm,
 } from "~/components/ui";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import {
@@ -33,33 +33,7 @@ import {
 } from "../queries";
 import { customerProductSchema } from "../schemas";
 import { queryData } from "~/lib/query-data";
-
-/**
- * 錯誤訊息對照；樣板 = `AddressBookDialog` 的同一份 switch（各元件各自一份是本 repo 既有慣例）。
- */
-function errorMessage(err: unknown): string {
-  if (err instanceof ConnectError) {
-    switch (err.code) {
-      case Code.NotFound:
-        return "資料不存在或已被刪除";
-      case Code.AlreadyExists:
-        return err.rawMessage || "資料已存在";
-      case Code.InvalidArgument:
-        return err.rawMessage || "輸入資料有誤,請檢查後再試";
-      case Code.FailedPrecondition:
-        return err.rawMessage || "資料狀態不允許此操作";
-      case Code.PermissionDenied:
-        return "沒有權限執行此操作";
-      case Code.Unauthenticated:
-        return "請先登入";
-      case Code.Unavailable:
-        return "無法連線至伺服器,請確認後端服務已啟動";
-      default:
-        return err.rawMessage || "操作失敗,請稍後再試";
-    }
-  }
-  return "無法連線至伺服器,請確認後端服務已啟動";
-}
+import { errorMessage } from "@/lib/error-message";
 
 const EMPTY_VALUES = {
   productId: "",
@@ -93,6 +67,7 @@ export interface CustomerProductsDialogProps {
  */
 export default function CustomerProductsDialog(props: CustomerProductsDialogProps) {
   const client = useQueryClient();
+  const confirm = useConfirm();
   const [listError, setListError] = createSignal<string | null>(null);
   const [serverError, setServerError] = createSignal<string | undefined>();
   const [formOpen, setFormOpen] = createSignal(false);
@@ -174,7 +149,13 @@ export default function CustomerProductsDialog(props: CustomerProductsDialogProp
   };
 
   const remove = async (row: CustomerProduct) => {
-    if (!window.confirm(`確定移除專屬商品「${row.aliasName}」?`)) return;
+    const ok = await confirm({
+      title: `移除專屬商品「${row.aliasName}」`,
+      description: "移除後此商品不再出現在該客戶的專屬清單，且無法復原。",
+      confirmLabel: "移除",
+      variant: "destructive",
+    });
+    if (!ok) return;
     setListError(null);
     try {
       await customerProductClient.deleteCustomerProduct({ id: row.id });

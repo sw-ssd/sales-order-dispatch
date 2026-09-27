@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, waitFor, within } from "@solidjs/testing-library";
+import { fireEvent, screen, waitFor, within } from "@solidjs/testing-library";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type * as ConnectRpc from "@connectrpc/connect";
-import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
+import { QueryClient } from "@tanstack/solid-query";
+import { renderWithProviders } from "~/test-render";
 
 // 公告 API 以 spy 取代：頁面在模組層建立 connect client,
 // 以 createClient 的替身同時攔截（ConnectError/Code 保持真實,錯誤訊息對照才有效）。
@@ -55,11 +56,7 @@ const EXISTING_ANNOUNCEMENT = {
 function mountPage(
   client: QueryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 ) {
-  render(() => (
-    <QueryClientProvider client={client}>
-      <AnnouncementsPage />
-    </QueryClientProvider>
-  ));
+  renderWithProviders(() => <AnnouncementsPage />, client);
   return client;
 }
 
@@ -179,15 +176,26 @@ describe("AnnouncementsPage", () => {
 
   it("刪除先確認：拒絕不打 API,接受才呼叫 deleteAnnouncement({id})", async () => {
     await renderPage();
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
     deleteAnnouncementSpy.mockResolvedValue({});
+    // 破壞性操作一律走共用確認對話框（useConfirm）。
+    // 依 accessible name（＝標題）取框：頁面其餘對話框關閉後仍留在 DOM，只用 role 會誤取。
     fireEvent.click(screen.getByRole("button", { name: "刪除" }));
-    await Promise.resolve();
+    const dialog = await waitFor(() =>
+      screen.getByRole("dialog", { name: /刪除公告「/ })
+    );
+    // 公告沒有還原 RPC → 說明必須直說不可復原。
+    expect(within(dialog).getByText(/無法復原/)).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole("button", { name: "取消" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(deleteAnnouncementSpy).not.toHaveBeenCalled();
 
-    confirmSpy.mockReturnValue(true);
     fireEvent.click(screen.getByRole("button", { name: "刪除" }));
-    await waitFor(() => expect(deleteAnnouncementSpy).toHaveBeenCalledWith({ id: "a-1" }));
-    confirmSpy.mockRestore();
+    const confirmDialog = await waitFor(() =>
+      screen.getByRole("dialog", { name: /刪除公告「/ })
+    );
+    fireEvent.click(within(confirmDialog).getByRole("button", { name: "刪除" }));
+    await waitFor(() =>
+      expect(deleteAnnouncementSpy).toHaveBeenCalledWith({ id: "a-1" })
+    );
   });
 });

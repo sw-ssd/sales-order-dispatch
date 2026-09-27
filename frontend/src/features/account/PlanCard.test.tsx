@@ -126,6 +126,14 @@ describe("PlanCard", () => {
     expect(screen.getByText("12（不限）")).toBeTruthy();
   });
 
+  /**
+   * 期望值以**獨立的整數運算**算出營業時區（UTC+8）日期，不匯入被測模組——
+   * 用 `trialEndsAt.slice(0, 10)` 會是 UTC 日期，在 16:00–24:00 UTC 之間與 UTC+8 差一天，
+   * 那是**看執行時刻才失敗的 flake**。
+   */
+  const businessDate = (iso: string) =>
+    new Date(Date.parse(iso) + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
   it("試用 2 天後到期時提示，並顯示到期日", async () => {
     const trialEndsAt = new Date(Date.now() + 2 * DAY_MS).toISOString();
     loadMock.mockResolvedValue(entitlements({ status: "trialing", trialEndsAt }));
@@ -133,7 +141,7 @@ describe("PlanCard", () => {
     renderCard();
 
     await waitFor(() => expect(screen.getByText(/試用將於 2 天後到期/)).toBeTruthy());
-    expect(screen.getByText(trialEndsAt.slice(0, 10))).toBeTruthy();
+    expect(screen.getByText(businessDate(trialEndsAt))).toBeTruthy();
   });
 
   it("試用還有 10 天時不提示（卡片不吵）", async () => {
@@ -142,7 +150,7 @@ describe("PlanCard", () => {
 
     renderCard();
 
-    await waitFor(() => expect(screen.getByText(trialEndsAt.slice(0, 10))).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(businessDate(trialEndsAt))).toBeTruthy());
     expect(screen.queryByText(/試用將於/)).toBeNull();
   });
 

@@ -2,6 +2,7 @@ import { useRouterState } from "@tanstack/solid-router";
 import { createQuery } from "@tanstack/solid-query";
 import { createMemo, type ParentProps } from "solid-js";
 import AppShell from "~/components/layout/AppShell";
+import { ConfirmProvider } from "~/components/ui";
 import { abilityQueryOptions } from "~/lib/ability/service";
 import { AbilityProvider } from "~/lib/ability/context";
 import { queryData } from "~/lib/query-data";
@@ -39,14 +40,16 @@ export default function App(props: ParentProps) {
 
   return (
     <AbilityProvider ability={perms}>
-      <AppShell
-        chromeless={
-          CHROMELESS_PATHS.includes(pathname()) ||
-          CHROMELESS_PREFIXES.some((p) => pathname().startsWith(p))
-        }
-      >
-        {props.children}
-      </AppShell>
+      <ConfirmProvider>
+        <AppShell
+          chromeless={
+            CHROMELESS_PATHS.includes(pathname()) ||
+            CHROMELESS_PREFIXES.some((p) => pathname().startsWith(p))
+          }
+        >
+          {props.children}
+        </AppShell>
+      </ConfirmProvider>
     </AbilityProvider>
   );
 }

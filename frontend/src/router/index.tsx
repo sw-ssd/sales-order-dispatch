@@ -8,32 +8,33 @@ import {
 } from "@tanstack/solid-router";
 import App from "~/App";
 import RouteSkeleton from "~/components/layout/RouteSkeleton";
-import AccountPage from "~/features/account/AccountPage";
 import LoginPage from "~/features/auth/pages/LoginPage";
 import ForbiddenPage from "~/features/auth/pages/ForbiddenPage";
-import CompaniesPage from "~/features/users/pages/CompaniesPage";
-import DepartmentsPage from "~/features/users/pages/DepartmentsPage";
-import RolesPage from "~/features/users/pages/RolesPage";
-import UsersPage from "~/features/users/pages/UsersPage";
-import CustomersPage from "~/features/customers/pages/CustomersPage";
-import OrdersPage from "~/features/orders/pages/OrdersPage";
-import ProductsPage from "~/features/products/pages/ProductsPage";
-import DispatchPage from "~/features/dispatch/pages/DispatchPage";
-import RoutesPage from "~/features/masters/pages/RoutesPage";
-import WarehousesPage from "~/features/masters/pages/WarehousesPage";
-import ProductCategoriesPage from "~/features/masters/pages/ProductCategoriesPage";
-import ProcessingSpecsPage from "~/features/masters/pages/ProcessingSpecsPage";
-import PrintPage from "~/features/printing/pages/PrintPage";
-import AnnouncementsPage from "~/features/announcements/pages/AnnouncementsPage";
-import ReturnsPage from "~/features/returns/pages/ReturnsPage";
-import NotificationsPage from "~/features/notifications/pages/NotificationsPage";
-import AuditPage from "~/features/audit/pages/AuditPage";
 import { requireAbility } from "~/lib/ability/guards";
-import {
-  ManageDownloadPage,
-  QRDownloadPage,
-} from "~/features/appDownload/AppDownloadPage";
 import DashboardPage from "~/features/dashboard/pages/DashboardPage";
+
+// Code-splitting：除入口頁（login／dashboard／403）外，所有工作頁走 lazyRouteComponent，
+// 首包只載入口三頁；Register 型別由本檔 routeTree 推導，lazy 不影響 `to` 的字面量檢查。
+const AccountPage = lazyRouteComponent(() => import("~/features/account/AccountPage"));
+const CompaniesPage = lazyRouteComponent(() => import("~/features/users/pages/CompaniesPage"));
+const DepartmentsPage = lazyRouteComponent(() => import("~/features/users/pages/DepartmentsPage"));
+const RolesPage = lazyRouteComponent(() => import("~/features/users/pages/RolesPage"));
+const UsersPage = lazyRouteComponent(() => import("~/features/users/pages/UsersPage"));
+const CustomersPage = lazyRouteComponent(() => import("~/features/customers/pages/CustomersPage"));
+const OrdersPage = lazyRouteComponent(() => import("~/features/orders/pages/OrdersPage"));
+const ProductsPage = lazyRouteComponent(() => import("~/features/products/pages/ProductsPage"));
+const DispatchPage = lazyRouteComponent(() => import("~/features/dispatch/pages/DispatchPage"));
+const RoutesPage = lazyRouteComponent(() => import("~/features/masters/pages/RoutesPage"));
+const WarehousesPage = lazyRouteComponent(() => import("~/features/masters/pages/WarehousesPage"));
+const ProductCategoriesPage = lazyRouteComponent(() => import("~/features/masters/pages/ProductCategoriesPage"));
+const ProcessingSpecsPage = lazyRouteComponent(() => import("~/features/masters/pages/ProcessingSpecsPage"));
+const PrintPage = lazyRouteComponent(() => import("~/features/printing/pages/PrintPage"));
+const AnnouncementsPage = lazyRouteComponent(() => import("~/features/announcements/pages/AnnouncementsPage"));
+const ReturnsPage = lazyRouteComponent(() => import("~/features/returns/pages/ReturnsPage"));
+const NotificationsPage = lazyRouteComponent(() => import("~/features/notifications/pages/NotificationsPage"));
+const AuditPage = lazyRouteComponent(() => import("~/features/audit/pages/AuditPage"));
+const QRDownloadPage = lazyRouteComponent(() => import("~/features/appDownload/AppDownloadPage"), "QRDownloadPage");
+const ManageDownloadPage = lazyRouteComponent(() => import("~/features/appDownload/AppDownloadPage"), "ManageDownloadPage");
 
 // TanStack Router 程式化路由樹;root route component 承載 App 佈局,Outlet 渲染子路由。
 const rootRoute = createRootRoute({

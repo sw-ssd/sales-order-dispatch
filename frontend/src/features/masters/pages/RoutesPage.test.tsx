@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor, within } from "@solidjs/testing-library";
+import { fireEvent, screen, waitFor, within } from "@solidjs/testing-library";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type * as ConnectRpc from "@connectrpc/connect";
-import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
+import { QueryClient } from "@tanstack/solid-query";
+import { renderWithProviders } from "~/test-render";
 
 // 車次 API 以 spy 取代：頁面在模組層建立 connect client，
 // 以 createClient 的替身同時攔截（ConnectError/Code 保持真實，錯誤訊息對照才有效）。
@@ -61,12 +62,7 @@ function newClient() {
 }
 
 function mountPage(client: QueryClient = newClient()) {
-  render(() => (
-    <QueryClientProvider client={client}>
-      <RoutesPage />
-    </QueryClientProvider>
-  ));
-  return client;
+  return renderWithProviders(() => <RoutesPage />, client);
 }
 
 async function renderPage() {
@@ -191,29 +187,32 @@ describe("RoutesPage", () => {
   });
 
   it("刪除先確認再呼叫，並失效看板車次查詢", async () => {
-    const client = await (async () => {
-      const c = newClient();
-      mountPage(c);
-      return c;
-    })();
+    const client = newClient();
+    mountPage(client);
     await waitFor(() => expect(screen.getByText("R1")).toBeTruthy());
     const invalidate = vi.spyOn(client, "invalidateQueries");
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
     deleteRouteSpy.mockResolvedValue({});
+    // 破壞性操作一律走共用確認對話框（useConfirm）。
+    // 依 accessible name（＝標題）取框：頁面其餘對話框關閉後仍留在 DOM，只用 role 會誤取。
     fireEvent.click(screen.getByRole("button", { name: "刪除" }));
-    await Promise.resolve();
+    const dialog = await waitFor(() =>
+      screen.getByRole("dialog", { name: /刪除車次「/ })
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "取消" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     // 未確認 → 不得呼叫 API。
     expect(deleteRouteSpy).not.toHaveBeenCalled();
-    confirmSpy.mockRestore();
 
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     fireEvent.click(screen.getByRole("button", { name: "刪除" }));
+    const confirmDialog = await waitFor(() =>
+      screen.getByRole("dialog", { name: /刪除車次「/ })
+    );
+    fireEvent.click(within(confirmDialog).getByRole("button", { name: "刪除" }));
     await waitFor(() => expect(deleteRouteSpy).toHaveBeenCalledOnce());
     // 車次是看板的欄位來源 → 主檔變更要連帶讓看板重查。
     await waitFor(() =>
       expect(invalidate).toHaveBeenCalledWith({ queryKey: ["boardRoutes"] })
     );
-    (window.confirm as unknown as { mockRestore: () => void }).mockRestore();
   });
 
   it("已刪除的車次顯示還原而非刪除", async () => {

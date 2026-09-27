@@ -1,4 +1,3 @@
-import { Code, ConnectError } from "@connectrpc/connect";
 import { createForm } from "@tanstack/solid-form";
 import { createQuery, useQueryClient } from "@tanstack/solid-query";
 import {
@@ -33,6 +32,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  useConfirm,
 } from "~/components/ui";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import { toSortOrder } from "../../masters/schemas";
@@ -52,6 +52,15 @@ import {
   toRFC3339,
 } from "../schemas";
 import { queryData } from "~/lib/query-data";
+import { errorMessage } from "@/lib/error-message";
+import { formatDateTime } from "@/lib/datetime";
+
+/**
+ * 公告的 `PermissionDenied` 不是「角色不足」而是「這則公告的範圍不在你的管理範圍內」：
+ * 這是可修復的線索（換範圍或請對方改範圍），共用文案會把它蓋掉。此頁每一處錯誤顯示都
+ * 走同一個提示，因為整頁的失敗幾乎都源自範圍。
+ */
+const PERMISSION_HINT = "沒有權限執行此操作（公告範圍須在你的管理範圍內）";
 
 /** 公告表格的 table 功能集：**只有分頁**（`ListAnnouncementsRequest` 沒有 sort/desc）。 */
 const ANNOUNCEMENT_TABLE_FEATURES = tableFeatures({ rowPaginationFeature });
@@ -98,26 +107,6 @@ const EMPTY_ANNOUNCEMENT_VALUES: AnnouncementFormValues = {
   deployApp: true,
 };
 
-function errorMessage(err: unknown): string {
-  if (err instanceof ConnectError) {
-    switch (err.code) {
-      case Code.NotFound:
-        return "資料不存在或已被刪除";
-      case Code.InvalidArgument:
-        return err.rawMessage || "輸入資料有誤,請檢查後再試";
-      case Code.PermissionDenied:
-        return "沒有權限執行此操作（公告範圍須在你的管理範圍內）";
-      case Code.Unauthenticated:
-        return "請先登入";
-      case Code.Unavailable:
-        return "無法連線至伺服器,請確認後端服務已啟動";
-      default:
-        return err.rawMessage || "操作失敗,請稍後再試";
-    }
-  }
-  return "無法連線至伺服器,請確認後端服務已啟動";
-}
-
 /**
  * 公告管理頁(/announcements)。
  *
@@ -137,6 +126,8 @@ export default function AnnouncementsPage() {
   });
 
   const client = useQueryClient();
+
+  const confirm = useConfirm();
 
   const scopeText = (a: Announcement) => {
     if (!a.companyId) return "全系統";
@@ -180,7 +171,7 @@ export default function AnnouncementsPage() {
       header: "上架",
       cell: (info) => (
         <span class="text-muted-foreground">
-          {info.getValue() ? new Date(info.getValue()).toLocaleString() : "—"}
+          {info.getValue() ? formatDateTime(info.getValue()) : "—"}
         </span>
       ),
     }),
@@ -188,7 +179,7 @@ export default function AnnouncementsPage() {
       header: "下架",
       cell: (info) => (
         <span class="text-muted-foreground">
-          {info.getValue() ? new Date(info.getValue()).toLocaleString() : "手動"}
+          {info.getValue() ? formatDateTime(info.getValue()) : "手動"}
         </span>
       ),
     }),
@@ -319,7 +310,7 @@ export default function AnnouncementsPage() {
         setDialogOpen(false);
         await client.invalidateQueries({ queryKey: ["announcements"] });
       } catch (err) {
-        setServerError(errorMessage(err));
+        setServerError(errorMessage(err, { permissionHint: PERMISSION_HINT }));
       }
     },
   }));
@@ -372,13 +363,19 @@ export default function AnnouncementsPage() {
   };
 
   const remove = async (a: Announcement) => {
-    if (!window.confirm(`確定刪除公告「${a.title}」？（軟刪除,前台將不再顯示）`)) return;
+    const ok = await confirm({
+      title: `刪除公告「${a.title}」`,
+      description: "公告將從前台移除，且無法復原（後端未提供還原）。",
+      confirmLabel: "刪除",
+      variant: "destructive",
+    });
+    if (!ok) return;
     setActionError(null);
     try {
       await announcementClient.deleteAnnouncement({ id: a.id });
       await client.invalidateQueries({ queryKey: ["announcements"] });
     } catch (err) {
-      setActionError(errorMessage(err));
+      setActionError(errorMessage(err, { permissionHint: PERMISSION_HINT }));
     }
   };
 
@@ -396,7 +393,7 @@ export default function AnnouncementsPage() {
         </Button>
       </header>
 
-      <Show when={query.error ? errorMessage(query.error) : actionError()}>
+      <Show when={query.error ? errorMessage(query.error, { permissionHint: PERMISSION_HINT }) : actionError()}>
         {(message) => (
           <p
             class="mb-4 rounded-lg bg-destructive/15 px-3 py-2 text-sm font-medium text-destructive"

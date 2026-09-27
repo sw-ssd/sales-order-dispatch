@@ -102,7 +102,7 @@ describe("NotificationsPage", () => {
     // 通道標籤：UNREAD/READ 都是 in_app（2 個「站內」）、FAILED 是 fcm（1 個「推播」）。
     expect(within(table).getAllByText("站內")).toHaveLength(2);
     expect(within(table).getAllByText("推播")).toHaveLength(1);
-    expect(within(table).getByText("2026-09-20 10:00:00")).toBeTruthy();
+    expect(within(table).getByText("2026-09-20 18:00:00")).toBeTruthy();
   });
 
   it("送出只看未讀才進 query key 並回第 1 頁", async () => {

@@ -1,8 +1,10 @@
-import { fireEvent, render, screen, waitFor, within } from "@solidjs/testing-library";
+import { fireEvent, screen, waitFor, within } from "@solidjs/testing-library";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { Code, ConnectError } from "@connectrpc/connect";
+import { Code } from "@connectrpc/connect";
+import { apiError } from "@/test-api-error";
 import type * as ConnectRpc from "@connectrpc/connect";
-import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
+import { QueryClient } from "@tanstack/solid-query";
+import { renderWithProviders } from "~/test-render";
 
 // 退貨 API 以 spy 取代：ReturnsPage 在模組層建立 connect client，
 // 以 createClient 的替身同時攔截（ConnectError/Code 保持真實，錯誤訊息對照才有效）。
@@ -96,11 +98,7 @@ function newClient() {
 }
 
 function mountPage(client: QueryClient = newClient()) {
-  render(() => (
-    <QueryClientProvider client={client}>
-      <ReturnsPage />
-    </QueryClientProvider>
-  ));
+  renderWithProviders(() => <ReturnsPage />, client);
 }
 
 async function renderPage() {
@@ -113,6 +111,16 @@ async function openDetail() {
   fireEvent.click(screen.getByRole("button", { name: "查看" }));
   await waitFor(() => expect(getReturnRequestSpy).toHaveBeenCalledWith({ id: "rr-1" }));
   await waitFor(() => expect(screen.getByRole("button", { name: "核准" })).toBeTruthy());
+}
+
+/**
+ * 核准的確認框：明細框開著時兩者並存於 DOM，所以依 accessible name（＝標題）取，
+ * 不用 `getByRole("dialog")`（會同時命中兩個而拋錯）。
+ */
+async function confirmDialog() {
+  return await waitFor(() =>
+    screen.getByRole("dialog", { name: "核准退貨申請" })
+  );
 }
 
 beforeEach(() => {
@@ -143,7 +151,7 @@ describe("ReturnsPage", () => {
     const table = screen.getByRole("table");
     expect(within(table).getByText("待審核")).toBeTruthy();
     expect(within(table).getByText("外箱破損")).toBeTruthy();
-    expect(within(table).getByText("2026-09-20 10:00:00")).toBeTruthy();
+    expect(within(table).getByText("2026-09-20 18:00:00")).toBeTruthy();
     expect(within(table).getByText("#cu-1")).toBeTruthy();
   });
 
@@ -181,8 +189,11 @@ describe("ReturnsPage", () => {
   it("核准送出明細回應的 version 當 expectedVersion（不是寫死的 0）", async () => {
     await renderPage();
     await openDetail();
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    // 核准是不可逆的 → 走共用確認對話框（useConfirm），確認鈕是動詞「核准」。
     fireEvent.click(screen.getByRole("button", { name: "核准" }));
+    const dialog = await confirmDialog();
+    expect(within(dialog).getByText("核准退貨申請")).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole("button", { name: "核准" }));
     await waitFor(() => expect(reviewReturnRequestSpy).toHaveBeenCalledOnce());
     const arg = reviewReturnRequestSpy.mock.calls[0][0] as {
       id: string;
@@ -194,17 +205,16 @@ describe("ReturnsPage", () => {
       expect.objectContaining({ id: "rr-1", decision: "approved", expectedVersion: "7" })
     );
     expect(arg.expectedVersion).not.toBe("0");
-    confirmSpy.mockRestore();
   });
 
   it("核准前要確認；拒絕確認就不打 API", async () => {
     await renderPage();
     await openDetail();
-    const declineSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
     fireEvent.click(screen.getByRole("button", { name: "核准" }));
-    await Promise.resolve();
+    const dialog = await confirmDialog();
+    fireEvent.click(within(dialog).getByRole("button", { name: "取消" }));
+    await waitFor(() => expect(screen.getAllByRole("dialog")).toHaveLength(1));
     expect(reviewReturnRequestSpy).not.toHaveBeenCalled();
-    declineSpy.mockRestore();
   });
 
   it("駁回：空白原因不打 API 並顯示欄位錯誤，填了才送出原因", async () => {
@@ -233,10 +243,11 @@ describe("ReturnsPage", () => {
     await renderPage();
     await openDetail();
     reviewReturnRequestSpy.mockRejectedValue(
-      new ConnectError("denied", Code.PermissionDenied)
+      apiError("SYS-4001", "缺少權限", {}, Code.PermissionDenied)
     );
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     fireEvent.click(screen.getByRole("button", { name: "核准" }));
+    const dialog = await confirmDialog();
+    fireEvent.click(within(dialog).getByRole("button", { name: "核准" }));
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toContain("沒有權限執行此操作")
     );
@@ -248,10 +259,11 @@ describe("ReturnsPage", () => {
     // 清掉初次載入的呼叫，讓後面的斷言只對「衝突後的失效重取」成立。
     listReturnRequestsSpy.mockClear();
     reviewReturnRequestSpy.mockRejectedValue(
-      new ConnectError("資料已變更，請重新載入", Code.InvalidArgument)
+      apiError("SYS-1001", "參數驗證失敗", { reason: "資料已變更，請重新載入" }, Code.InvalidArgument)
     );
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     fireEvent.click(screen.getByRole("button", { name: "核准" }));
+    const dialog = await confirmDialog();
+    fireEvent.click(within(dialog).getByRole("button", { name: "核准" }));
     await waitFor(() =>
       expect(screen.getByRole("alert").textContent).toContain("資料已變更，請重新載入")
     );
@@ -280,7 +292,7 @@ describe("ReturnsPage", () => {
     fireEvent.click(certButton);
     await waitFor(() => expect(getReturnCertificateSpy).toHaveBeenCalledWith({ id: "rr-2" }));
     await waitFor(() => expect(screen.getByText("王大明")).toBeTruthy());
-    expect(screen.getByText("2026-09-19 08:00:00")).toBeTruthy();
+    expect(screen.getByText("2026-09-19 16:00:00")).toBeTruthy();
     expect(screen.getByText("C0001")).toBeTruthy();
     // 證明對話框開著時，明細對話框不該同時存在。
     expect(getReturnRequestSpy).not.toHaveBeenCalled();

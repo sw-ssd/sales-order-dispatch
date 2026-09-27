@@ -1,4 +1,3 @@
-import { Code, ConnectError } from "@connectrpc/connect";
 import { createForm } from "@tanstack/solid-form";
 import { createQuery, useQueryClient } from "@tanstack/solid-query";
 import {
@@ -33,6 +32,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  useConfirm,
 } from "~/components/ui";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import { ListPagination } from "../../users/components/ListPagination";
@@ -43,6 +43,7 @@ import {
 } from "../queries";
 import { productCategorySchema, toSortOrder } from "../schemas";
 import { queryData } from "~/lib/query-data";
+import { errorMessage } from "@/lib/error-message";
 
 /**
  * 分類表格的 table 功能集：**只有分頁**。
@@ -68,28 +69,6 @@ const EMPTY_PRODUCT_CATEGORY_VALUES = {
   isActive: true,
 };
 
-function errorMessage(err: unknown): string {
-  if (err instanceof ConnectError) {
-    switch (err.code) {
-      case Code.NotFound:
-        return "資料不存在或已被刪除";
-      case Code.AlreadyExists:
-        return err.rawMessage || "資料已存在";
-      case Code.InvalidArgument:
-        return err.rawMessage || "輸入資料有誤,請檢查後再試";
-      case Code.PermissionDenied:
-        return "沒有權限執行此操作";
-      case Code.Unauthenticated:
-        return "請先登入";
-      case Code.Unavailable:
-        return "無法連線至伺服器,請確認後端服務已啟動";
-      default:
-        return err.rawMessage || "操作失敗,請稍後再試";
-    }
-  }
-  return "無法連線至伺服器,請確認後端服務已啟動";
-}
-
 /**
  * 商品分類頁(/masters/categories)。
  *
@@ -114,6 +93,7 @@ export default function ProductCategoriesPage() {
   });
 
   const client = useQueryClient();
+  const confirm = useConfirm();
 
   const columns = productCategoryColumnHelper.columns([
     productCategoryColumnHelper.accessor("code", {
@@ -292,7 +272,13 @@ export default function ProductCategoriesPage() {
   };
 
   const remove = async (c: ProductCategory) => {
-    if (!window.confirm(`確定刪除分類「${c.name}」？刪除後可用「含已刪除」查回並還原。`)) return;
+    const ok = await confirm({
+      title: `刪除分類「${c.name}」`,
+      description: "刪除後可用「含已刪除」查回並還原。",
+      confirmLabel: "刪除",
+      variant: "destructive",
+    });
+    if (!ok) return;
     setActionError(null);
     try {
       await productCategoryClient.deleteProductCategory({ id: c.id });

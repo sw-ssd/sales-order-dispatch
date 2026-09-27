@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor, within } from "@solidjs/testing-library";
+import { fireEvent, screen, waitFor, within } from "@solidjs/testing-library";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type * as ConnectRpc from "@connectrpc/connect";
-import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
+import { QueryClient } from "@tanstack/solid-query";
+import { renderWithProviders } from "~/test-render";
 
 // 客戶 API 以 spy 取代：CustomersPage 在模組層建立 connect client，
 // 以 createClient 的替身同時攔截（ConnectError/Code 保持真實，錯誤訊息對照才有效）。
@@ -55,11 +56,7 @@ function newClient() {
 }
 
 function mountPage(client: QueryClient = newClient()) {
-  render(() => (
-    <QueryClientProvider client={client}>
-      <CustomersPage />
-    </QueryClientProvider>
-  ));
+  renderWithProviders(() => <CustomersPage />, client);
 }
 
 async function renderPage() {
@@ -115,20 +112,26 @@ describe("CustomersPage", () => {
 
   it("刪除先確認再呼叫並失效 customers 前綴", async () => {
     await renderPage();
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
     deleteCustomerSpy.mockResolvedValue({});
+    // 破壞性操作一律走共用確認對話框（useConfirm），取消鈕＝不執行。
+    // 依 accessible name（＝標題）取框：頁面其餘對話框關閉後仍留在 DOM，只用 role 會誤取。
     fireEvent.click(screen.getByRole("button", { name: "刪除" }));
-    await Promise.resolve();
+    const dialog = await waitFor(() =>
+      screen.getByRole("dialog", { name: /刪除客戶「/ })
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "取消" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     // 未確認 → 不得呼叫 API。
     expect(deleteCustomerSpy).not.toHaveBeenCalled();
-    confirmSpy.mockRestore();
 
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     listCustomersSpy.mockClear();
     fireEvent.click(screen.getByRole("button", { name: "刪除" }));
+    const confirmDialog = await waitFor(() =>
+      screen.getByRole("dialog", { name: /刪除客戶「/ })
+    );
+    fireEvent.click(within(confirmDialog).getByRole("button", { name: "刪除" }));
     await waitFor(() => expect(deleteCustomerSpy).toHaveBeenCalledOnce());
     await waitFor(() => expect(listCustomersSpy).toHaveBeenCalled());
-    (window.confirm as unknown as { mockRestore: () => void }).mockRestore();
   });
 
   it("已刪除的客戶顯示還原而非刪除", async () => {

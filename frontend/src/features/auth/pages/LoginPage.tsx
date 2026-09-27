@@ -18,26 +18,33 @@ import { transport } from "~/lib/transport";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import GoogleLoginButton from "../components/GoogleLoginButton";
 import { loginSchema } from "../schemas";
+import { errorMessage } from "@/lib/error-message";
 
 const authClient = createClient(AuthService, transport);
 
 type LoginTab = "employee" | "store";
 
-function errorMessage(err: unknown): string {
+/**
+ * 登入頁的錯誤文案：先處理登入專屬的碼，其餘交給共用 `errorMessage`。
+ *
+ * - `Unimplemented`：後端 AuthService 尚未實作，不是使用者做錯事。
+ * - `Unauthenticated`：登入頁的語意是「客戶編號或密碼錯誤」，不是共用的「請先登入」。
+ * - `Unknown`：後端未啟動時 vite proxy 回 HTTP 500，connect-web 對應 `Code.Unknown`，
+ *   共用表把它當未知失敗，這裡導向連線說明。
+ */
+function loginErrorMessage(err: unknown): string {
   if (err instanceof ConnectError) {
     if (err.code === Code.Unimplemented) {
-      return "後端尚未實作登入功能,請稍後再試";
+      return "後端尚未實作登入功能，請稍後再試";
     }
     if (err.code === Code.Unauthenticated) {
       return "客戶編號或密碼錯誤";
     }
-    if (err.code === Code.Unavailable || err.code === Code.Unknown) {
-      // 後端未啟動時,vite proxy 會回 HTTP 500,connect-web 對應 Code.Unknown
-      return "無法連線到伺服器,請確認後端服務已啟動";
+    if (err.code === Code.Unknown) {
+      return "無法連線至伺服器，請確認後端服務已啟動";
     }
-    return `登入失敗:${err.message}`;
   }
-  return "無法連線到伺服器,請確認後端服務已啟動";
+  return errorMessage(err);
 }
 
 /**
@@ -67,7 +74,7 @@ export default function LoginPage() {
         await authClient.login(value);
         navigate({ to: "/", replace: true });
       } catch (err) {
-        setServerError(errorMessage(err));
+        setServerError(loginErrorMessage(err));
       }
     },
   }));

@@ -1,3 +1,4 @@
+import { formatDate } from "~/lib/datetime";
 import type { GetTenantEntitlementsResponse, Usage } from "~/lib/proto/platform/v1/platform_pb";
 
 /**
@@ -128,15 +129,21 @@ export function featureListNote(entitlements: GetTenantEntitlementsResponse): st
 }
 
 /**
- * 試用到期日（UTC 日期）；後端傳 RFC3339，nil 為空字串。無法解析時照原字串顯示。
+ * 試用到期日（營業時區 UTC+8 的日曆日）；後端傳 RFC3339，nil 為空字串。
+ * 無法解析時照原字串顯示。
+ *
+ * **為什麼是 UTC+8 而不是 UTC**：到期是後端拿 `trial_ends_at < now` 比的**瞬間**，但使用者
+ * 問的是「我哪一天開始不能用」。若 operator 填入 `2026-12-31T20:00:00Z`，UTC 日期是
+ * 12/31、營業時區是 1/1 —— 顯示 UTC 日期會讓使用者在錯誤的那天停用。與 `lib/datetime.ts`
+ * 同一組規則。
  *
  * **只有 `trialing` 才顯示**：`trialing → active` 不會清 `trial_ends_at`
  * （billing 只改 status／grace_until），照顯示會讓訂閱中的租戶看到一行早就過期的日期。
  */
 export function trialEndsAtFor(status: string, trialEndsAt: string): string {
   if (status !== "trialing" || !trialEndsAt) return "";
-  const ms = Date.parse(trialEndsAt);
-  return Number.isNaN(ms) ? trialEndsAt : new Date(ms).toISOString().slice(0, 10);
+  if (Number.isNaN(Date.parse(trialEndsAt))) return trialEndsAt;
+  return formatDate(trialEndsAt);
 }
 
 /**

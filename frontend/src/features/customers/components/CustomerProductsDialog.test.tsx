@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
+import { fireEvent, screen, waitFor, within } from "@solidjs/testing-library";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type * as ConnectRpc from "@connectrpc/connect";
-import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
+import { QueryClient } from "@tanstack/solid-query";
+import { renderWithProviders } from "~/test-render";
 import type { Customer } from "~/lib/proto/customers/v1/customer_pb";
 
 // 同 AddressBookDialog.test：攔 createClient（三支 client 都在 queries.ts 模組層建立），
@@ -72,11 +73,10 @@ const ROW = {
 async function renderDialog(
   client: QueryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
 ) {
-  render(() => (
-    <QueryClientProvider client={client}>
-      <CustomerProductsDialog customer={CUSTOMER} open={true} onOpenChange={() => {}} />
-    </QueryClientProvider>
-  ));
+  renderWithProviders(
+    () => <CustomerProductsDialog customer={CUSTOMER} open={true} onOpenChange={() => {}} />,
+    client,
+  );
   await waitFor(() => expect(screen.getByText("牛肉片")).toBeTruthy());
 }
 
@@ -104,13 +104,10 @@ describe("CustomerProductsDialog", () => {
 
   it("清單為空時顯示尚無專屬商品", async () => {
     listCustomerProductsSpy.mockResolvedValue({ products: [], total: 0 });
-    render(() => (
-      <QueryClientProvider
-        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-      >
-        <CustomerProductsDialog customer={CUSTOMER} open={true} onOpenChange={() => {}} />
-      </QueryClientProvider>
-    ));
+    renderWithProviders(
+      () => <CustomerProductsDialog customer={CUSTOMER} open={true} onOpenChange={() => {}} />,
+      new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    );
     await waitFor(() => expect(screen.getByText("尚無專屬商品")).toBeTruthy());
   });
 
@@ -206,14 +203,23 @@ describe("CustomerProductsDialog", () => {
 
   it("移除要確認；拒絕確認不打 API，接受才刪", async () => {
     await renderDialog();
-    const decline = vi.spyOn(window, "confirm").mockReturnValue(false);
     fireEvent.click(screen.getByRole("button", { name: "移除" }));
-    // 同 AddressBookDialog.test：confirm 是同步分支，一個微任務足以證明沒打 API。
-    await Promise.resolve();
+    // 依 accessible name（＝標題）取確認框：元件自己的對話框關閉後仍留在 DOM。
+    const dialog = await waitFor(() =>
+      screen.getByRole("dialog", { name: /移除專屬商品「/ })
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "取消" }));
+    // 主體對話框本來就開著，只能斷言確認框消失。
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: /移除專屬商品「/ })).toBeNull()
+    );
     expect(deleteCustomerProductSpy).not.toHaveBeenCalled();
 
-    decline.mockReturnValue(true);
     fireEvent.click(screen.getByRole("button", { name: "移除" }));
+    const confirmDialog = await waitFor(() =>
+      screen.getByRole("dialog", { name: /移除專屬商品「/ })
+    );
+    fireEvent.click(within(confirmDialog).getByRole("button", { name: "移除" }));
     await waitFor(() => expect(deleteCustomerProductSpy).toHaveBeenCalledWith({ id: "cp1" }));
     // 刪後清單重載。
     await waitFor(() => expect(listCustomerProductsSpy).toHaveBeenCalledTimes(2));

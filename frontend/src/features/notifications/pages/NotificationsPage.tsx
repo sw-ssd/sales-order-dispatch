@@ -1,4 +1,5 @@
-import { Code, ConnectError } from "@connectrpc/connect";
+import { errorMessage } from "@/lib/error-message";
+import { formatDateTime } from "@/lib/datetime";
 import { createQuery, useQueryClient } from "@tanstack/solid-query";
 import {
   createColumnHelper,
@@ -54,11 +55,18 @@ const NO_NOTIFICATIONS: NotificationView[] = [];
  * `read` 已讀、`failed` 送達失敗。前端把前兩個合併顯示成「未讀」—— 它們對使用者的
  * 意義相同（我還沒看），而「待發送 vs 已發送」是後台內部進度，列在使用者頁面只是噪音；
  * `failed` 必須單獨顯示，因為那代表**對方沒收到**（且 `MarkRead` 刻意不讓它轉已讀）。
+ *
+ * 「已讀」用 `secondary` 而非 `success`：**已讀不是成就**，是這件事結束了、不需要再看
+ * （綠在此系統代表「已完成／已核准」的業務結果）。與同為終態的 `cancelled`（訂單）、
+ * `inactive`（使用者）一致 —— 終態一律中性，才不會讓列表整片發綠而稀釋真正的成功訊號。
  */
-const STATUS_META: Record<string, { label: string; variant: "warning" | "success" | "destructive" }> = {
+const STATUS_META: Record<
+  string,
+  { label: string; variant: "warning" | "secondary" | "destructive" }
+> = {
   pending: { label: "未讀", variant: "warning" },
   sent: { label: "未讀", variant: "warning" },
-  read: { label: "已讀", variant: "success" },
+  read: { label: "已讀", variant: "secondary" },
   failed: { label: "送達失敗", variant: "destructive" },
 };
 
@@ -73,29 +81,6 @@ const CHANNEL_LABELS: Record<string, string> = {
  * `failed` 不算未讀也**不可**轉已讀，`read` 已是終態。
  */
 const UNREAD_STATUSES = new Set(["pending", "sent"]);
-
-/** 錯誤訊息對照；樣板 = `CustomersPage`/`PrintPage` 的同一份 switch。 */
-function errorMessage(err: unknown): string {
-  if (err instanceof ConnectError) {
-    switch (err.code) {
-      case Code.NotFound:
-        return "資料不存在或已被刪除";
-      case Code.InvalidArgument:
-        return err.rawMessage || "輸入資料有誤,請檢查後再試";
-      case Code.FailedPrecondition:
-        return err.rawMessage || "資料狀態不允許此操作";
-      case Code.PermissionDenied:
-        return "沒有權限執行此操作";
-      case Code.Unauthenticated:
-        return "請先登入";
-      case Code.Unavailable:
-        return "無法連線至伺服器,請確認後端服務已啟動";
-      default:
-        return err.rawMessage || "操作失敗,請稍後再試";
-    }
-  }
-  return "無法連線至伺服器,請確認後端服務已啟動";
-}
 
 /** 日期時間顯示已在 createdAt 欄位內聯（單一使用點，不另立包裝函式）。 */
 
@@ -160,11 +145,9 @@ export default function NotificationsPage() {
     }),
     notificationColumnHelper.accessor("createdAt", {
       header: "建立時間",
-      cell: (info) => {
-        const value = info.getValue();
-        // RFC3339 的 `T` 換成空白、秒後切除（同 `PrintPage` 的列印時間）。
-        return <span class="text-muted-foreground">{value ? value.slice(0, 19).replace("T", " ") : "—"}</span>;
-      },
+      cell: (info) => (
+        <span class="text-muted-foreground">{formatDateTime(info.getValue())}</span>
+      ),
     }),
     notificationColumnHelper.display({
       id: "actions",

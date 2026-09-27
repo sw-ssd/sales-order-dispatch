@@ -1,4 +1,3 @@
-import { Code, ConnectError } from "@connectrpc/connect";
 import { createForm } from "@tanstack/solid-form";
 import { createQuery, useQueryClient } from "@tanstack/solid-query";
 import {
@@ -35,6 +34,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  useConfirm,
 } from "~/components/ui";
 import { queryData } from "~/lib/query-data";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
@@ -45,6 +45,8 @@ import { customerClient, customersQueryOptions } from "../queries";
 import { customerSchema } from "../schemas";
 import AddressBookDialog from "../components/AddressBookDialog";
 import CustomerProductsDialog from "../components/CustomerProductsDialog";
+import { errorMessage } from "@/lib/error-message";
+import { formatDateTime } from "@/lib/datetime";
 
 /**
  * 客戶表格的 table 功能集：分頁 ＋ 排序（`manualSorting`，見下方 table）。
@@ -60,30 +62,6 @@ const NO_CUSTOMERS: Customer[] = [];
 
 /** 新增／編輯 modal 的欄位預設值（`form.reset` 要求整份 values，理由見 CompaniesPage 檔頭）。 */
 const EMPTY_CUSTOMER_VALUES = { name: "", taxId: "" };
-
-function errorMessage(err: unknown): string {
-  if (err instanceof ConnectError) {
-    switch (err.code) {
-      case Code.NotFound:
-        return "資料不存在或已被刪除";
-      case Code.AlreadyExists:
-        return err.rawMessage || "客戶已存在";
-      case Code.InvalidArgument:
-        return err.rawMessage || "輸入資料有誤,請檢查後再試";
-      case Code.FailedPrecondition:
-        return err.rawMessage || "資料狀態不允許此操作";
-      case Code.PermissionDenied:
-        return "沒有權限執行此操作";
-      case Code.Unauthenticated:
-        return "請先登入";
-      case Code.Unavailable:
-        return "無法連線至伺服器,請確認後端服務已啟動";
-      default:
-        return err.rawMessage || "操作失敗,請稍後再試";
-    }
-  }
-  return "無法連線至伺服器,請確認後端服務已啟動";
-}
 
 /**
  * 建檔連動帳號交付的警示區（D22/§9.4）：
@@ -129,6 +107,8 @@ export default function CustomersPage() {
   const client = useQueryClient();
   const sortableHeader = createSortableHeaders();
 
+  const confirm = useConfirm();
+
   const columns = customerColumnHelper.columns([
     customerColumnHelper.accessor("name", {
       header: (ctx) => sortableHeader(ctx.column, "客戶名稱"),
@@ -154,7 +134,7 @@ export default function CustomersPage() {
     }),
     customerColumnHelper.accessor("createdAt", {
       header: (ctx) => sortableHeader(ctx.column, "建立時間"),
-      cell: (info) => <span class="text-muted-foreground">{info.getValue() || "—"}</span>,
+      cell: (info) => <span class="text-muted-foreground">{formatDateTime(info.getValue())}</span>,
     }),
     customerColumnHelper.display({
       id: "actions",
@@ -374,7 +354,13 @@ export default function CustomersPage() {
   };
 
   const remove = async (c: Customer) => {
-    if (!window.confirm(`確定刪除客戶「${c.name}」?`)) return;
+    const ok = await confirm({
+      title: `刪除客戶「${c.name}」`,
+      description: "刪除後可用「含已刪除」查回並還原。",
+      confirmLabel: "刪除",
+      variant: "destructive",
+    });
+    if (!ok) return;
     setDeleteError(null);
     try {
       await customerClient.deleteCustomer({ id: c.id });

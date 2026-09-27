@@ -1,6 +1,6 @@
-import { Code, ConnectError } from "@connectrpc/connect";
 import { createInfiniteQuery, createQuery, useQueryClient } from "@tanstack/solid-query";
 import { createEffect, createMemo, createSignal, For, onCleanup, Show, type JSX } from "solid-js";
+import { cn } from "~/lib/cn";
 import type { Route } from "~/lib/proto/masters/v1/master_pb";
 import type { SalesOrder } from "~/lib/proto/salesorder/v1/salesorder_pb";
 import {
@@ -20,32 +20,10 @@ import {
 } from "~/components/ui";
 import { boardOrdersQueryOptions, boardRoutesQueryOptions, dispatchClient } from "../queries";
 import { queryData } from "~/lib/query-data";
+import { errorMessage } from "@/lib/error-message";
 
 /** 看板只處理這兩個狀態（dispatch spec：看板僅顯示 pending 或 processing 的訂單）。 */
 const BOARD_STATUSES = new Set(["pending", "processing"]);
-
-function errorMessage(err: unknown): string {
-  if (err instanceof ConnectError) {
-    switch (err.code) {
-      case Code.NotFound:
-        return "資料不存在或已被刪除";
-      case Code.InvalidArgument:
-        return err.rawMessage || "輸入資料有誤,請檢查後再試";
-      case Code.FailedPrecondition:
-        // 樂觀鎖衝突與狀態衝突都走這裡；後端訊息已含「資料已變更，請重新載入」。
-        return err.rawMessage || "資料已被他人變更，請重新整理看板";
-      case Code.PermissionDenied:
-        return "沒有權限執行此操作";
-      case Code.Unauthenticated:
-        return "請先登入";
-      case Code.Unavailable:
-        return "無法連線至伺服器,請確認後端服務已啟動";
-      default:
-        return err.rawMessage || "操作失敗,請稍後再試";
-    }
-  }
-  return "無法連線至伺服器,請確認後端服務已啟動";
-}
 
 /** 今天（本地時區）的 YYYY-MM-DD；看板預設落在今天。 */
 function today(): string {
@@ -53,6 +31,15 @@ function today(): string {
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
+/**
+ * 看板欄密度（欄數 × 可用寬度驅動）：comfortable（288px 欄＋16px gap）放得下就用，
+ * 放不下降 compact（224px 欄＋12px gap）；compact 也塞不下則維持橫捲——欄數再多仍是看板，只是更密。
+ */
+export function boardDensity(columns: number, width: number): "comfortable" | "compact" {
+  if (width <= 0 || columns <= 0) return "comfortable";
+  return width >= columns * 288 + (columns - 1) * 16 ? "comfortable" : "compact";
 }
 
 /**
@@ -81,6 +68,20 @@ export default function DispatchPage() {
     { successCount: number; failures: { orderId: string; reason: string }[] } | null
   >(null);
 
+  // 看板容器實測寬度：密度門檻用實際欄位空間，不用視窗推估（側欄收合會改可用寬）。
+  // 容器在 `<Show when={!pending}>` 內，掛載晚於元件本身——不能用 onMount（那時元素還不存在，
+  // observer 會永遠掛不上、boardWidth 永遠是 0）。ref callback 在元素建立當下執行，且其
+  // onCleanup 綁在 Show 分支的 owner 上，分支卸載即斷開。
+  const [boardWidth, setBoardWidth] = createSignal(0);
+  const observeBoard = (el: HTMLDivElement) => {
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) setBoardWidth(entry.contentRect.width);
+    });
+    observer.observe(el);
+    onCleanup(() => observer.disconnect());
+  };
+
   const client = useQueryClient();
 
   const orders = createInfiniteQuery(() => boardOrdersQueryOptions(date()));
@@ -108,6 +109,14 @@ export default function DispatchPage() {
   const activeRoutes = createMemo(
     () => (queryData(routes, (d) => d?.routes) ?? []).filter((r) => r.isActive && !r.deletedAt)
   );
+
+  /** 密度：comfortable 欄寬放不下全部欄時降 compact（見 boardDensity）。 */
+  const compact = createMemo(() => boardDensity(activeRoutes().length + 1, boardWidth()) === "compact");
+
+  const columnClass = (extra: string) =>
+    cn("shrink rounded-lg border", compact() ? "min-w-[10rem] basis-56 p-2" : "min-w-[12rem] basis-72 p-3", extra);
+  const cardClass = (extra: string) =>
+    cn("cursor-grab rounded-md border border-border", compact() ? "p-1.5 text-xs" : "p-2 text-sm", extra);
 
   /** 未指派欄：pending 且未綁車次。 */
   const unassigned = createMemo(() =>
@@ -362,21 +371,21 @@ export default function DispatchPage() {
         when={!orders.isPending && !routes.isPending}
         fallback={<p class="text-sm text-muted-foreground">看板載入中…</p>}
       >
-        <div class="flex gap-4 overflow-x-auto pb-4">
+        <div ref={observeBoard} class={cn("flex overflow-x-auto pb-4", compact() ? "gap-3" : "gap-4")}>
           {/* 未指派欄：pending 且未綁車次（spec：獨立的「未指派」區域）。 */}
           <section
-            class="w-72 shrink-0 rounded-lg border border-dashed border-border bg-muted/50 p-3"
+            class={columnClass("border-dashed border-border bg-muted/50")}
             aria-label="未指派"
             {...dropTarget(dropUnassigned)}
           >
-            <h2 class="mb-3 flex items-center justify-between text-sm font-semibold text-foreground">
+            <h2 class={cn("flex items-center justify-between font-semibold text-foreground", compact() ? "mb-2 text-xs" : "mb-3 text-sm")}>
               未指派
               <Badge variant="secondary">{unassigned().length}</Badge>
             </h2>
             <div class="space-y-2">
               <For each={unassigned()}>
                 {(o) => (
-                  <div class="cursor-grab rounded-md border border-border bg-card p-2 text-sm" {...cardAttrs(o)}>
+                  <div class={cardClass("bg-card")} {...cardAttrs(o)}>
                     <div class="font-medium text-foreground">{o.orderNo}</div>
                     <div class="text-xs text-muted-foreground">
                       出貨日 {o.expectedDeliveryDate || "—"}
@@ -420,11 +429,11 @@ export default function DispatchPage() {
               const canConfirm = () => cards().some((o) => o.status === "pending");
               return (
                 <section
-                  class="w-72 shrink-0 rounded-lg border border-border bg-card p-3"
+                  class={columnClass("border-border bg-card")}
                   aria-label={route.name}
                   {...dropTarget(() => dropAtEnd(route.id))}
                 >
-                  <h2 class="mb-3 flex items-center justify-between text-sm font-semibold text-foreground">
+                  <h2 class={cn("flex items-center justify-between font-semibold text-foreground", compact() ? "mb-2 text-xs" : "mb-3 text-sm")}>
                     <span class="truncate">
                       {route.name}
                       <span class="ml-1 font-normal text-muted-foreground">({route.code})</span>
@@ -434,7 +443,7 @@ export default function DispatchPage() {
                   <div class="space-y-2">
                     <For each={cards()}>
                       {(o) => (
-                        <div class="cursor-grab rounded-md border border-border bg-background p-2 text-sm" {...cardAttrs(o)}>
+                        <div class={cardClass("bg-background")} {...cardAttrs(o)}>
                           <div class="flex items-center justify-between gap-2">
                             <span class="font-medium text-foreground">{o.orderNo}</span>
                             <Badge variant={o.status === "processing" ? "success" : "info"}>

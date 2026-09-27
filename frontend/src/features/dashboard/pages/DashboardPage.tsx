@@ -45,7 +45,9 @@ function StatCard(props: {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{props.title}</CardTitle>
+        {/* 統計卡是首頁的頂層區塊，其標題必須是 `h2`：`CardTitle` 預設 `h3` 會讓文件大綱
+            從 `h1` 直接跳到 `h3`，螢幕閱讀器少一層。 */}
+        <CardTitle as="h2">{props.title}</CardTitle>
         <CardDescription>{props.hint}</CardDescription>
       </CardHeader>
       <CardContent class="flex items-end justify-between gap-4">

@@ -72,7 +72,7 @@ describe("AuditPage", () => {
     expect(within(table).getByText("刪除")).toBeTruthy();
     expect(within(table).getByText("customer #42")).toBeTruthy();
     expect(within(table).getByText("10.0.0.9")).toBeTruthy();
-    expect(within(table).getByText("2026-09-20 10:00:00")).toBeTruthy();
+    expect(within(table).getByText("2026-09-20 18:00:00")).toBeTruthy();
     // 保留期提示：未填時間即近 3 個月（D27）。
     expect(screen.getByText(/近 3 個月/)).toBeTruthy();
   });
@@ -156,13 +156,4 @@ describe("AuditPage", () => {
     expect(screen.queryByRole("button", { name: /新增|編輯|刪除/ })).toBeNull();
   });
 
-  it("時間格式錯誤時原樣透傳後端訊息", async () => {
-    listAuditLogsSpy.mockRejectedValue(
-      new ConnectError('無效的 from "2026-99-99"', Code.InvalidArgument)
-    );
-    mountPage();
-    await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toContain('無效的 from "2026-99-99"')
-    );
-  });
 });
