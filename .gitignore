@@ -7,6 +7,9 @@ dist
 build
 .DS_Store
 
+# 後端 build 產物與一次性工具（mksession 等）：每次 build 都不同，不入庫。
+backend/tmp/
+
 # Runtime file storage (config.Storage.StorageRoot 預設 ./data/files)：
 # 伺服器上傳與示範 seeder 的 PDF 都落在這裡，屬執行期產物。
 data/
