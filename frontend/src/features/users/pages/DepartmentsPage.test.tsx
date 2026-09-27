@@ -1,8 +1,10 @@
-import { fireEvent, render, screen, waitFor, within } from "@solidjs/testing-library";
+import { fireEvent, screen, waitFor, within } from "@solidjs/testing-library";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { Code, ConnectError } from "@connectrpc/connect";
+import { Code } from "@connectrpc/connect";
 import type * as ConnectRpc from "@connectrpc/connect";
-import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
+import { QueryClient } from "@tanstack/solid-query";
+import { renderWithProviders } from "~/test-render";
+import { bareConnectError } from "@/test-api-error";
 
 // 部門／公司 API 以 spy 取代：DepartmentsPage 在模組層建立兩個 connect client，
 // 因此以 createClient 的替身同時攔截（ConnectError/Code 保持真實，錯誤訊息對照才有效）。
@@ -54,11 +56,7 @@ function newClient() {
 
 /** 在 provider 內掛載頁面（部門清單與公司下拉一律經 query client 取得）。 */
 function mountPage(client: QueryClient = newClient()) {
-  render(() => (
-    <QueryClientProvider client={client}>
-      <DepartmentsPage />
-    </QueryClientProvider>
-  ));
+  renderWithProviders(() => <DepartmentsPage />, client);
 }
 
 /** 渲染頁面並等列表載入完成（modal 的測試都要先有列表可點）。 */
@@ -234,7 +232,7 @@ describe("<DepartmentsPage> 部門 modal 表單", () => {
   });
 
   it("伺服器錯誤：以 role=alert 的表單層 banner 呈現，欄位不被誤掛錯誤", async () => {
-    createDepartmentSpy.mockRejectedValue(new ConnectError("部門名稱重複", Code.AlreadyExists));
+    createDepartmentSpy.mockRejectedValue(bareConnectError("部門名稱不可為空", Code.InvalidArgument));
     await renderPage();
     const modal = await openDialog("新增部門");
 
@@ -242,7 +240,7 @@ describe("<DepartmentsPage> 部門 modal 表單", () => {
     fireEvent.submit(modal.form);
 
     await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toContain("部門名稱重複")
+      expect(screen.getByRole("alert").textContent).toContain("部門名稱不可為空")
     );
     expect(modal.name.getAttribute("aria-invalid")).toBeNull();
     expect(modal.company.getAttribute("aria-invalid")).toBeNull();
@@ -250,14 +248,14 @@ describe("<DepartmentsPage> 部門 modal 表單", () => {
   });
 
   it("客戶端驗證失敗時清掉前一次留下的伺服器錯誤 banner", async () => {
-    createDepartmentSpy.mockRejectedValue(new ConnectError("部門名稱重複", Code.AlreadyExists));
+    createDepartmentSpy.mockRejectedValue(bareConnectError("部門名稱不可為空", Code.InvalidArgument));
     await renderPage();
     const modal = await openDialog("新增部門");
 
     fillDepartment(modal, { name: "業務部" });
     fireEvent.submit(modal.form);
     await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toContain("部門名稱重複")
+      expect(screen.getByRole("alert").textContent).toContain("部門名稱不可為空")
     );
     await settle();
 
@@ -269,7 +267,7 @@ describe("<DepartmentsPage> 部門 modal 表單", () => {
   });
 
   it("關閉再開：欄位錯誤、touched 與伺服器錯誤 banner 皆已重設", async () => {
-    createDepartmentSpy.mockRejectedValue(new ConnectError("部門名稱重複", Code.AlreadyExists));
+    createDepartmentSpy.mockRejectedValue(bareConnectError("部門名稱不可為空", Code.InvalidArgument));
     await renderPage();
     const modal = await openDialog("新增部門");
 
@@ -282,7 +280,7 @@ describe("<DepartmentsPage> 部門 modal 表單", () => {
     fillDepartment(modal, { name: "業務部", company: "c-1" });
     fireEvent.submit(modal.form);
     await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toContain("部門名稱重複")
+      expect(screen.getByRole("alert").textContent).toContain("部門名稱不可為空")
     );
     await settle();
 
@@ -481,10 +479,10 @@ describe("<DepartmentsPage> 部門清單與公司下拉查詢", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "第 2 頁" }));
     await waitFor(() => expect(listDepartmentsSpy).toHaveBeenCalledTimes(2));
-    failure.reject(new ConnectError("伺服器暫時無法使用", Code.Internal));
+    failure.reject(bareConnectError("缺少租戶交易(context)", Code.Internal));
 
     await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toBe("伺服器暫時無法使用")
+      expect(screen.getByRole("alert").textContent).toBe("伺服器暫時無法使用，請稍後再試")
     );
     // ……但清單不得被誤判成空的：畫面上不得出現 placeholder 列（＝載入列或空狀態列）。
     expect(placeholderRows()).toHaveLength(0);
@@ -796,9 +794,9 @@ describe("<DepartmentsPage> 表格（TanStack Table，manual 分頁）", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "第 2 頁" }));
     await waitFor(() => expect(listDepartmentsSpy).toHaveBeenCalledTimes(2));
-    failure.reject(new ConnectError("伺服器暫時無法使用", Code.Internal));
+    failure.reject(bareConnectError("缺少租戶交易(context)", Code.Internal));
 
-    await waitFor(() => expect(screen.getByRole("alert").textContent).toBe("伺服器暫時無法使用"));
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toBe("伺服器暫時無法使用，請稍後再試"));
 
     // 錯誤沒有 placeholder 可保留 → `query.data` 為 undefined，`total()` 會算成 0；
     // 若據以夾頁碼就會多打一次 page 1 的請求（移除守衛時本斷言變紅）。

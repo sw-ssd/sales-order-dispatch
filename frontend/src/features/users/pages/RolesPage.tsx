@@ -1,4 +1,4 @@
-import { Code, ConnectError } from "@connectrpc/connect";
+import { errorMessage } from "@/lib/error-message";
 import { createQuery, useQueryClient } from "@tanstack/solid-query";
 import {
   createColumnHelper,
@@ -53,23 +53,6 @@ const DATA_SCOPE_LABELS: Record<string, string> = {
   department: "部門",
   self: "本人",
 };
-
-function errorMessage(err: unknown): string {
-  if (err instanceof ConnectError) {
-    switch (Code[err.code]) {
-      case "Unauthenticated":
-        return "請先登入";
-      case "PermissionDenied":
-        return "無角色權限管理權限(僅 super / company_admin)";
-      case "NotFound":
-        return "角色不存在";
-      case "InvalidArgument":
-        return err.rawMessage || "請求參數錯誤";
-    }
-    return err.rawMessage || "請求失敗";
-  }
-  return "無法連線至伺服器,請確認後端服務已啟動";
-}
 
 /**
  * 角色權限設置頁(/users/roles;T19):角色清單 + 權限矩陣(resource × action)。

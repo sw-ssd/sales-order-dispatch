@@ -1,8 +1,10 @@
-import { fireEvent, render, screen, waitFor, within } from "@solidjs/testing-library";
+import { fireEvent, screen, waitFor, within } from "@solidjs/testing-library";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Code, ConnectError } from "@connectrpc/connect";
+import { Code } from "@connectrpc/connect";
+import { apiError, bareConnectError } from "@/test-api-error";
 import type * as ConnectRpc from "@connectrpc/connect";
-import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
+import { QueryClient } from "@tanstack/solid-query";
+import { renderWithProviders } from "~/test-render";
 
 // 公司 API 以 spy 取代：CompaniesPage 在模組層建立 connect client，
 // 因此以 createClient 的替身攔截（ConnectError/Code 保持真實，錯誤訊息對照才有效）。
@@ -47,11 +49,7 @@ function newClient() {
 
 /** 在 provider 內掛載頁面（頁面的清單資料一律經 query client 取得）。 */
 function mountPage(client: QueryClient = newClient()) {
-  render(() => (
-    <QueryClientProvider client={client}>
-      <CompaniesPage />
-    </QueryClientProvider>
-  ));
+  renderWithProviders(() => <CompaniesPage />, client);
 }
 
 /** 渲染頁面並等列表載入完成（modal 的測試都要先有列表可點）。 */
@@ -249,7 +247,7 @@ describe("<CompaniesPage> 公司 modal 表單", () => {
   });
 
   it("伺服器錯誤：以 role=alert 的表單層 banner 呈現，欄位不被誤掛錯誤", async () => {
-    createCompanySpy.mockRejectedValue(new ConnectError("already exists", Code.AlreadyExists));
+    createCompanySpy.mockRejectedValue(apiError("SYS-2001", "資料衝突，請確認識別碼是否已被使用", { identifier: "C-002" }, Code.AlreadyExists));
     await renderPage();
     const modal = await openDialog("新增公司");
 
@@ -257,7 +255,7 @@ describe("<CompaniesPage> 公司 modal 表單", () => {
     fireEvent.submit(modal.form);
 
     await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toContain("識別碼(identifier)已存在")
+      expect(screen.getByRole("alert").textContent).toContain("資料衝突，請確認識別碼是否已被使用")
     );
     expect(modal.name.getAttribute("aria-invalid")).toBeNull();
     expect(modal.identifier.getAttribute("aria-invalid")).toBeNull();
@@ -265,14 +263,14 @@ describe("<CompaniesPage> 公司 modal 表單", () => {
   });
 
   it("客戶端驗證失敗時清掉前一次留下的伺服器錯誤 banner", async () => {
-    createCompanySpy.mockRejectedValue(new ConnectError("already exists", Code.AlreadyExists));
+    createCompanySpy.mockRejectedValue(apiError("SYS-2001", "資料衝突，請確認識別碼是否已被使用", { identifier: "C-002" }, Code.AlreadyExists));
     await renderPage();
     const modal = await openDialog("新增公司");
 
     fillCompany(modal, { name: "新公司", identifier: "C-002" });
     fireEvent.submit(modal.form);
     await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toContain("識別碼(identifier)已存在")
+      expect(screen.getByRole("alert").textContent).toContain("資料衝突，請確認識別碼是否已被使用")
     );
     await settle();
 
@@ -284,7 +282,7 @@ describe("<CompaniesPage> 公司 modal 表單", () => {
   });
 
   it("關閉再開：欄位錯誤、touched 與伺服器錯誤 banner 皆已重設", async () => {
-    createCompanySpy.mockRejectedValue(new ConnectError("already exists", Code.AlreadyExists));
+    createCompanySpy.mockRejectedValue(apiError("SYS-2001", "資料衝突，請確認識別碼是否已被使用", { identifier: "C-002" }, Code.AlreadyExists));
     await renderPage();
     const modal = await openDialog("新增公司");
 
@@ -297,7 +295,7 @@ describe("<CompaniesPage> 公司 modal 表單", () => {
     fillCompany(modal, { name: "新公司", identifier: "C-002", taxId: "87654321", status: "inactive" });
     fireEvent.submit(modal.form);
     await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toContain("識別碼(identifier)已存在")
+      expect(screen.getByRole("alert").textContent).toContain("資料衝突，請確認識別碼是否已被使用")
     );
     await settle();
 
@@ -489,11 +487,11 @@ describe("<CompaniesPage> 公司清單查詢", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "第 2 頁" }));
     await waitFor(() => expect(listCompaniesSpy).toHaveBeenCalledTimes(2));
-    failure.reject(new ConnectError("伺服器暫時無法使用", Code.Internal));
+    failure.reject(bareConnectError("缺少租戶交易(context)", Code.Internal));
 
     // 失敗要看得到（banner）……
     await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toBe("伺服器暫時無法使用")
+      expect(screen.getByRole("alert").textContent).toBe("伺服器暫時無法使用，請稍後再試")
     );
     // ……但清單不得被誤判成空的：畫面上不得出現 placeholder 列（＝載入列或空狀態列）。
     expect(placeholderRows()).toHaveLength(0);
@@ -566,7 +564,6 @@ describe("<CompaniesPage> 公司清單查詢", () => {
     createCompanySpy.mockResolvedValue({});
     updateCompanySpy.mockResolvedValue({});
     deleteCompanySpy.mockResolvedValue({});
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     await renderPage();
     expect(listCompaniesSpy).toHaveBeenCalledTimes(1);
 
@@ -580,16 +577,23 @@ describe("<CompaniesPage> 公司清單查詢", () => {
     fireEvent.submit(editing.form);
     await waitFor(() => expect(listCompaniesSpy).toHaveBeenCalledTimes(3));
 
+    // 刪除走共用確認對話框（useConfirm）：確認鈕是動詞「刪除」。
     fireEvent.click(screen.getByRole("button", { name: "刪除" }));
+    // 依 accessible name（＝標題）取確認框：頁面自己的對話框即使關閉仍留在 DOM，
+    // 只用 role 會在兩者間誤取。
+    const dialog = await waitFor(() =>
+      screen.getByRole("dialog", { name: /刪除公司「/ })
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "刪除" }));
     await waitFor(() => expect(listCompaniesSpy).toHaveBeenCalledTimes(4));
   });
 
   it("清單載入失敗：錯誤由 query 狀態驅動，顯示在頁面層 banner", async () => {
-    listCompaniesSpy.mockRejectedValue(new ConnectError("查詢被拒", Code.PermissionDenied));
+    listCompaniesSpy.mockRejectedValue(apiError("SYS-4001", "缺少權限", {}, Code.PermissionDenied));
 
     mountPage();
 
-    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("查詢被拒"));
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("沒有權限執行此操作"));
     // 載入失敗不得退回載入列，也不得誤顯示空狀態列。
     expect(placeholderRows()).toHaveLength(0);
     expect(listCompaniesSpy).toHaveBeenCalledTimes(1);
@@ -741,9 +745,9 @@ describe("<CompaniesPage> 表格（TanStack Table，manual 分頁）", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "第 2 頁" }));
     await waitFor(() => expect(listCompaniesSpy).toHaveBeenCalledTimes(2));
-    failure.reject(new ConnectError("伺服器暫時無法使用", Code.Internal));
+    failure.reject(bareConnectError("缺少租戶交易(context)", Code.Internal));
 
-    await waitFor(() => expect(screen.getByRole("alert").textContent).toBe("伺服器暫時無法使用"));
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toBe("伺服器暫時無法使用，請稍後再試"));
 
     // 錯誤沒有 placeholder 可保留 → `query.data` 為 undefined，`total()` 會算成 0；
     // 若據以夾頁碼就會多打一次 page 1 的請求（移除守衛時本斷言變紅）。

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@solidjs/testing-library";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { Code, ConnectError } from "@connectrpc/connect";
+import { Code } from "@connectrpc/connect";
+import { bareConnectError } from "@/test-api-error";
 import type * as ConnectRpc from "@connectrpc/connect";
 import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 import { abilityQueryOptions } from "~/lib/ability/service";
@@ -195,10 +196,10 @@ describe("<RolesPage> 角色清單查詢", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "第 2 頁" }));
     await waitFor(() => expect(listRolesSpy).toHaveBeenCalledTimes(2));
-    failure.reject(new ConnectError("伺服器暫時無法使用", Code.Internal));
+    failure.reject(bareConnectError("缺少租戶交易(context)", Code.Internal));
 
     await waitFor(() =>
-      expect(screen.getByRole("alert").textContent).toBe("伺服器暫時無法使用")
+      expect(screen.getByRole("alert").textContent).toBe("伺服器暫時無法使用，請稍後再試")
     );
     // 清單不得被誤判成空的：畫面上不得出現 placeholder 列（＝載入列或空狀態列）。
     expect(placeholderRows()).toHaveLength(0);
@@ -488,9 +489,9 @@ describe("<RolesPage> 角色清單表格（TanStack Table，manual 分頁）", (
 
     fireEvent.click(screen.getByRole("button", { name: "第 2 頁" }));
     await waitFor(() => expect(listRolesSpy).toHaveBeenCalledTimes(2));
-    failure.reject(new ConnectError("伺服器暫時無法使用", Code.Internal));
+    failure.reject(bareConnectError("缺少租戶交易(context)", Code.Internal));
 
-    await waitFor(() => expect(screen.getByRole("alert").textContent).toBe("伺服器暫時無法使用"));
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toBe("伺服器暫時無法使用，請稍後再試"));
 
     // 錯誤狀態沒有 placeholder 可保留（`placeholderData` 只在 status==="pending" 且
     // data===undefined 時套用）→ `total()` 會算成 0；若據以夾頁碼就會把頁碼改寫成第 1 頁

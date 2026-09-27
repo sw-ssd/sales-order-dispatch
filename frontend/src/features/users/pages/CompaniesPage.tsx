@@ -1,4 +1,4 @@
-import { Code, ConnectError } from "@connectrpc/connect";
+import { errorMessage } from "@/lib/error-message";
 import { createForm } from "@tanstack/solid-form";
 import { createQuery, useQueryClient } from "@tanstack/solid-query";
 import {
@@ -33,6 +33,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  useConfirm,
 } from "~/components/ui";
 import { batch, createEffect, createSignal, For, Show, type JSX } from "solid-js";
 import type { Company } from "~/lib/proto/salesorder/v1/company_pb";
@@ -95,26 +96,6 @@ const STATUS_VARIANTS: Record<string, "success" | "warning" | "secondary"> = {
 const SELECT_CLASS =
   "block w-full rounded-lg border border-border bg-card py-2 pr-10 pl-3 text-sm text-foreground focus:border-primary focus:ring-3 focus:ring-primary/50 focus:outline-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground";
 
-function errorMessage(err: unknown): string {
-  if (err instanceof ConnectError) {
-    switch (err.code) {
-      case Code.AlreadyExists:
-        return "識別碼(identifier)已存在,請換一個";
-      case Code.FailedPrecondition:
-        return err.rawMessage || "無法刪除:仍被其他資料參照";
-      case Code.NotFound:
-        return "資料不存在或已被刪除";
-      case Code.InvalidArgument:
-        return err.rawMessage || "輸入資料有誤,請檢查後再試";
-      case Code.Unavailable:
-        return "無法連線至伺服器,請確認後端服務已啟動";
-      default:
-        return err.rawMessage || "操作失敗,請稍後再試";
-    }
-  }
-  return "無法連線至伺服器,請確認後端服務已啟動";
-}
-
 /**
  * 公司主檔 CRUD 頁(/users/companies)。
  * 版型照 Tailkit（Page Headings + In Card 表格）：標題區塊帶下框線、篩選列為卡片色帶、
@@ -145,6 +126,8 @@ export default function CompaniesPage() {
   const [sorting, setSorting] = createSignal<SortingState>([]);
 
   const client = useQueryClient();
+
+  const confirm = useConfirm();
 
   /**
    * 六個欄位（名稱／識別碼／統一編號／狀態／ID／操作）。
@@ -496,7 +479,13 @@ export default function CompaniesPage() {
   };
 
   const remove = async (c: Company) => {
-    if (!window.confirm(`確定刪除公司「${c.name}」?`)) return;
+    const ok = await confirm({
+      title: `刪除公司「${c.name}」`,
+      description: "公司及其資料將不再出現在清單，且無法復原。",
+      confirmLabel: "刪除",
+      variant: "destructive",
+    });
+    if (!ok) return;
     setDeleteError(null);
     try {
       await companyClient.deleteCompany({ companyId: c.id });

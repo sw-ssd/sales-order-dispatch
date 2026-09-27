@@ -1,5 +1,5 @@
 import { useFieldContext } from "@ark-ui/solid/field";
-import { Code, ConnectError } from "@connectrpc/connect";
+import { errorMessage } from "@/lib/error-message";
 import { createForm } from "@tanstack/solid-form";
 import { createInfiniteQuery, createQuery, useQueryClient } from "@tanstack/solid-query";
 import {
@@ -33,6 +33,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  useConfirm,
 } from "~/components/ui";
 import { batch, createEffect, createSignal, For, Show, type Component, type JSX } from "solid-js";
 import { type Company, type Department } from "~/lib/proto/salesorder/v1/company_pb";
@@ -114,24 +115,6 @@ const SelectControl: Component<JSX.SelectHTMLAttributes<HTMLSelectElement>> = (p
   return <select class={SELECT_CLASS} {...controlA11y()} {...props} />;
 };
 
-function errorMessage(err: unknown): string {
-  if (err instanceof ConnectError) {
-    switch (err.code) {
-      case Code.NotFound:
-        return "資料不存在或已被刪除";
-      case Code.FailedPrecondition:
-        return err.rawMessage || "無法刪除:仍被其他資料參照";
-      case Code.InvalidArgument:
-        return err.rawMessage || "輸入資料有誤,請檢查後再試";
-      case Code.Unavailable:
-        return "無法連線至伺服器,請確認後端服務已啟動";
-      default:
-        return err.rawMessage || "操作失敗,請稍後再試";
-    }
-  }
-  return "無法連線至伺服器,請確認後端服務已啟動";
-}
-
 /**
  * 部門主檔 CRUD 頁(/users/departments)。
  * 版型同 `CompaniesPage`（Page Headings + In Card）：兩組篩選表單收在同一條卡片色帶內，
@@ -174,6 +157,8 @@ export default function DepartmentsPage() {
    */
   // 表頭控制項產生器（每欄只建一次節點；理由見 createSortableHeaders 的註解）。
   const sortableHeader = createSortableHeaders();
+
+  const confirm = useConfirm();
 
   const columns = departmentColumnHelper.columns([
     departmentColumnHelper.accessor("name", {
@@ -435,7 +420,13 @@ export default function DepartmentsPage() {
   };
 
   const remove = async (d: Department) => {
-    if (!window.confirm(`確定刪除部門「${d.name}」?`)) return;
+    const ok = await confirm({
+      title: `刪除部門「${d.name}」`,
+      description: "部門將不再出現在清單，且無法復原。",
+      confirmLabel: "刪除",
+      variant: "destructive",
+    });
+    if (!ok) return;
     setDeleteError(null);
     try {
       await departmentClient.deleteDepartment({ departmentId: d.id });
