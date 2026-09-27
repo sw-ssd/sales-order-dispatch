@@ -32,6 +32,14 @@ func (_c *PrintLogCreate) SetDepartmentID(v int) *PrintLogCreate {
 	return _c
 }
 
+// SetNillableDepartmentID sets the "department_id" field if the given value is not nil.
+func (_c *PrintLogCreate) SetNillableDepartmentID(v *int) *PrintLogCreate {
+	if v != nil {
+		_c.SetDepartmentID(*v)
+	}
+	return _c
+}
+
 // SetDocumentType sets the "document_type" field.
 func (_c *PrintLogCreate) SetDocumentType(v string) *PrintLogCreate {
 	_c.mutation.SetDocumentType(v)
@@ -182,9 +190,6 @@ func (_c *PrintLogCreate) check() error {
 	if _, ok := _c.mutation.CompanyID(); !ok {
 		return &ValidationError{Name: "company_id", err: errors.New(`ent: missing required field "PrintLog.company_id"`)}
 	}
-	if _, ok := _c.mutation.DepartmentID(); !ok {
-		return &ValidationError{Name: "department_id", err: errors.New(`ent: missing required field "PrintLog.department_id"`)}
-	}
 	if _, ok := _c.mutation.DocumentType(); !ok {
 		return &ValidationError{Name: "document_type", err: errors.New(`ent: missing required field "PrintLog.document_type"`)}
 	}
@@ -243,7 +248,7 @@ func (_c *PrintLogCreate) createSpec() (*PrintLog, *sqlgraph.CreateSpec) {
 	}
 	if value, ok := _c.mutation.DepartmentID(); ok {
 		_spec.SetField(printlog.FieldDepartmentID, field.TypeInt, value)
-		_node.DepartmentID = value
+		_node.DepartmentID = &value
 	}
 	if value, ok := _c.mutation.DocumentType(); ok {
 		_spec.SetField(printlog.FieldDocumentType, field.TypeString, value)

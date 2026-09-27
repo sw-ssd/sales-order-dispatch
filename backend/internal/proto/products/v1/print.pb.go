@@ -406,11 +406,14 @@ type LogEntry struct {
 	DocumentType  string                 `protobuf:"bytes,2,opt,name=document_type,json=documentType,proto3" json:"document_type,omitempty"`
 	RouteId       string                 `protobuf:"bytes,3,opt,name=route_id,json=routeId,proto3" json:"route_id,omitempty"`
 	TargetDate    string                 `protobuf:"bytes,4,opt,name=target_date,json=targetDate,proto3" json:"target_date,omitempty"` // YYYY-MM-DD
-	PrintedBy     string                 `protobuf:"bytes,5,opt,name=printed_by,json=printedBy,proto3" json:"printed_by,omitempty"`
-	PrintedAt     string                 `protobuf:"bytes,6,opt,name=printed_at,json=printedAt,proto3" json:"printed_at,omitempty"` // RFC3339
+	PrintedBy     string                 `protobuf:"bytes,5,opt,name=printed_by,json=printedBy,proto3" json:"printed_by,omitempty"`    // users.id(數字字串)
+	PrintedAt     string                 `protobuf:"bytes,6,opt,name=printed_at,json=printedAt,proto3" json:"printed_at,omitempty"`    // RFC3339
 	IsReprint     bool                   `protobuf:"varint,7,opt,name=is_reprint,json=isReprint,proto3" json:"is_reprint,omitempty"`
 	ReprintReason string                 `protobuf:"bytes,8,opt,name=reprint_reason,json=reprintReason,proto3" json:"reprint_reason,omitempty"` // 可空
 	DownloadUrl   string                 `protobuf:"bytes,9,opt,name=download_url,json=downloadUrl,proto3" json:"download_url,omitempty"`
+	// printed_by_name:操作者顯示名稱(使用者姓名)。查不到(帳號已刪除)時為空,
+	// 前端據此退回顯示 printed_by。與 audit.v1.AuditLog.user_name 同法。
+	PrintedByName string `protobuf:"bytes,10,opt,name=printed_by_name,json=printedByName,proto3" json:"printed_by_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -504,6 +507,13 @@ func (x *LogEntry) GetReprintReason() string {
 func (x *LogEntry) GetDownloadUrl() string {
 	if x != nil {
 		return x.DownloadUrl
+	}
+	return ""
+}
+
+func (x *LogEntry) GetPrintedByName() string {
+	if x != nil {
+		return x.PrintedByName
 	}
 	return ""
 }
@@ -617,7 +627,7 @@ const file_products_v1_print_proto_rawDesc = "" +
 	"\rdocument_type\x18\x03 \x01(\tR\fdocumentType\x12\x19\n" +
 	"\broute_id\x18\x04 \x01(\tR\arouteId\x12\x12\n" +
 	"\x04page\x18\x05 \x01(\x05R\x04page\x12\x1b\n" +
-	"\tpage_size\x18\x06 \x01(\x05R\bpageSize\"\xa2\x02\n" +
+	"\tpage_size\x18\x06 \x01(\x05R\bpageSize\"\xca\x02\n" +
 	"\bLogEntry\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
 	"\rdocument_type\x18\x02 \x01(\tR\fdocumentType\x12\x19\n" +
@@ -631,7 +641,9 @@ const file_products_v1_print_proto_rawDesc = "" +
 	"\n" +
 	"is_reprint\x18\a \x01(\bR\tisReprint\x12%\n" +
 	"\x0ereprint_reason\x18\b \x01(\tR\rreprintReason\x12!\n" +
-	"\fdownload_url\x18\t \x01(\tR\vdownloadUrl\"\x8a\x01\n" +
+	"\fdownload_url\x18\t \x01(\tR\vdownloadUrl\x12&\n" +
+	"\x0fprinted_by_name\x18\n" +
+	" \x01(\tR\rprintedByName\"\x8a\x01\n" +
 	"\x10ListLogsResponse\x12/\n" +
 	"\aentries\x18\x01 \x03(\v2\x15.products.v1.LogEntryR\aentries\x12\x12\n" +
 	"\x04page\x18\x02 \x01(\x05R\x04page\x12\x1b\n" +

@@ -16905,7 +16905,7 @@ func (m *NotificationMutation) DepartmentID() (r int, exists bool) {
 // OldDepartmentID returns the old "department_id" field's value of the Notification entity.
 // If the Notification object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *NotificationMutation) OldDepartmentID(ctx context.Context) (v int, err error) {
+func (m *NotificationMutation) OldDepartmentID(ctx context.Context) (v *int, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldDepartmentID is only allowed on UpdateOne operations")
 	}
@@ -16937,10 +16937,24 @@ func (m *NotificationMutation) AddedDepartmentID() (r int, exists bool) {
 	return *v, true
 }
 
+// ClearDepartmentID clears the value of the "department_id" field.
+func (m *NotificationMutation) ClearDepartmentID() {
+	m.department_id = nil
+	m.adddepartment_id = nil
+	m.clearedFields[notification.FieldDepartmentID] = struct{}{}
+}
+
+// DepartmentIDCleared returns if the "department_id" field was cleared in this mutation.
+func (m *NotificationMutation) DepartmentIDCleared() bool {
+	_, ok := m.clearedFields[notification.FieldDepartmentID]
+	return ok
+}
+
 // ResetDepartmentID resets all changes to the "department_id" field.
 func (m *NotificationMutation) ResetDepartmentID() {
 	m.department_id = nil
 	m.adddepartment_id = nil
+	delete(m.clearedFields, notification.FieldDepartmentID)
 }
 
 // SetUserID sets the "user_id" field.
@@ -17769,6 +17783,9 @@ func (m *NotificationMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *NotificationMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(notification.FieldDepartmentID) {
+		fields = append(fields, notification.FieldDepartmentID)
+	}
 	if m.FieldCleared(notification.FieldTemplateID) {
 		fields = append(fields, notification.FieldTemplateID)
 	}
@@ -17798,6 +17815,9 @@ func (m *NotificationMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *NotificationMutation) ClearField(name string) error {
 	switch name {
+	case notification.FieldDepartmentID:
+		m.ClearDepartmentID()
+		return nil
 	case notification.FieldTemplateID:
 		m.ClearTemplateID()
 		return nil
@@ -19809,7 +19829,7 @@ func (m *PrintLogMutation) DepartmentID() (r int, exists bool) {
 // OldDepartmentID returns the old "department_id" field's value of the PrintLog entity.
 // If the PrintLog object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *PrintLogMutation) OldDepartmentID(ctx context.Context) (v int, err error) {
+func (m *PrintLogMutation) OldDepartmentID(ctx context.Context) (v *int, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldDepartmentID is only allowed on UpdateOne operations")
 	}
@@ -19841,10 +19861,24 @@ func (m *PrintLogMutation) AddedDepartmentID() (r int, exists bool) {
 	return *v, true
 }
 
+// ClearDepartmentID clears the value of the "department_id" field.
+func (m *PrintLogMutation) ClearDepartmentID() {
+	m.department_id = nil
+	m.adddepartment_id = nil
+	m.clearedFields[printlog.FieldDepartmentID] = struct{}{}
+}
+
+// DepartmentIDCleared returns if the "department_id" field was cleared in this mutation.
+func (m *PrintLogMutation) DepartmentIDCleared() bool {
+	_, ok := m.clearedFields[printlog.FieldDepartmentID]
+	return ok
+}
+
 // ResetDepartmentID resets all changes to the "department_id" field.
 func (m *PrintLogMutation) ResetDepartmentID() {
 	m.department_id = nil
 	m.adddepartment_id = nil
+	delete(m.clearedFields, printlog.FieldDepartmentID)
 }
 
 // SetDocumentType sets the "document_type" field.
@@ -20694,6 +20728,9 @@ func (m *PrintLogMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *PrintLogMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(printlog.FieldDepartmentID) {
+		fields = append(fields, printlog.FieldDepartmentID)
+	}
 	if m.FieldCleared(printlog.FieldCustomerID) {
 		fields = append(fields, printlog.FieldCustomerID)
 	}
@@ -20717,6 +20754,9 @@ func (m *PrintLogMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *PrintLogMutation) ClearField(name string) error {
 	switch name {
+	case printlog.FieldDepartmentID:
+		m.ClearDepartmentID()
+		return nil
 	case printlog.FieldCustomerID:
 		m.ClearCustomerID()
 		return nil
@@ -21023,7 +21063,7 @@ func (m *PrintPreviewMutation) DepartmentID() (r int, exists bool) {
 // OldDepartmentID returns the old "department_id" field's value of the PrintPreview entity.
 // If the PrintPreview object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *PrintPreviewMutation) OldDepartmentID(ctx context.Context) (v int, err error) {
+func (m *PrintPreviewMutation) OldDepartmentID(ctx context.Context) (v *int, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldDepartmentID is only allowed on UpdateOne operations")
 	}
@@ -21055,10 +21095,24 @@ func (m *PrintPreviewMutation) AddedDepartmentID() (r int, exists bool) {
 	return *v, true
 }
 
+// ClearDepartmentID clears the value of the "department_id" field.
+func (m *PrintPreviewMutation) ClearDepartmentID() {
+	m.department_id = nil
+	m.adddepartment_id = nil
+	m.clearedFields[printpreview.FieldDepartmentID] = struct{}{}
+}
+
+// DepartmentIDCleared returns if the "department_id" field was cleared in this mutation.
+func (m *PrintPreviewMutation) DepartmentIDCleared() bool {
+	_, ok := m.clearedFields[printpreview.FieldDepartmentID]
+	return ok
+}
+
 // ResetDepartmentID resets all changes to the "department_id" field.
 func (m *PrintPreviewMutation) ResetDepartmentID() {
 	m.department_id = nil
 	m.adddepartment_id = nil
+	delete(m.clearedFields, printpreview.FieldDepartmentID)
 }
 
 // SetDocumentType sets the "document_type" field.
@@ -21795,6 +21849,9 @@ func (m *PrintPreviewMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *PrintPreviewMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(printpreview.FieldDepartmentID) {
+		fields = append(fields, printpreview.FieldDepartmentID)
+	}
 	if m.FieldCleared(printpreview.FieldCustomerID) {
 		fields = append(fields, printpreview.FieldCustomerID)
 	}
@@ -21815,6 +21872,9 @@ func (m *PrintPreviewMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *PrintPreviewMutation) ClearField(name string) error {
 	switch name {
+	case printpreview.FieldDepartmentID:
+		m.ClearDepartmentID()
+		return nil
 	case printpreview.FieldCustomerID:
 		m.ClearCustomerID()
 		return nil

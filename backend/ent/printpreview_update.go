@@ -70,6 +70,12 @@ func (_u *PrintPreviewUpdate) AddDepartmentID(v int) *PrintPreviewUpdate {
 	return _u
 }
 
+// ClearDepartmentID clears the value of the "department_id" field.
+func (_u *PrintPreviewUpdate) ClearDepartmentID() *PrintPreviewUpdate {
+	_u.mutation.ClearDepartmentID()
+	return _u
+}
+
 // SetDocumentType sets the "document_type" field.
 func (_u *PrintPreviewUpdate) SetDocumentType(v string) *PrintPreviewUpdate {
 	_u.mutation.SetDocumentType(v)
@@ -295,6 +301,9 @@ func (_u *PrintPreviewUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if value, ok := _u.mutation.AddedDepartmentID(); ok {
 		_spec.AddField(printpreview.FieldDepartmentID, field.TypeInt, value)
 	}
+	if _u.mutation.DepartmentIDCleared() {
+		_spec.ClearField(printpreview.FieldDepartmentID, field.TypeInt)
+	}
 	if value, ok := _u.mutation.DocumentType(); ok {
 		_spec.SetField(printpreview.FieldDocumentType, field.TypeString, value)
 	}
@@ -399,6 +408,12 @@ func (_u *PrintPreviewUpdateOne) SetNillableDepartmentID(v *int) *PrintPreviewUp
 // AddDepartmentID adds value to the "department_id" field.
 func (_u *PrintPreviewUpdateOne) AddDepartmentID(v int) *PrintPreviewUpdateOne {
 	_u.mutation.AddDepartmentID(v)
+	return _u
+}
+
+// ClearDepartmentID clears the value of the "department_id" field.
+func (_u *PrintPreviewUpdateOne) ClearDepartmentID() *PrintPreviewUpdateOne {
+	_u.mutation.ClearDepartmentID()
 	return _u
 }
 
@@ -656,6 +671,9 @@ func (_u *PrintPreviewUpdateOne) sqlSave(ctx context.Context) (_node *PrintPrevi
 	}
 	if value, ok := _u.mutation.AddedDepartmentID(); ok {
 		_spec.AddField(printpreview.FieldDepartmentID, field.TypeInt, value)
+	}
+	if _u.mutation.DepartmentIDCleared() {
+		_spec.ClearField(printpreview.FieldDepartmentID, field.TypeInt)
 	}
 	if value, ok := _u.mutation.DocumentType(); ok {
 		_spec.SetField(printpreview.FieldDocumentType, field.TypeString, value)

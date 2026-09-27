@@ -32,6 +32,14 @@ func (_c *PrintPreviewCreate) SetDepartmentID(v int) *PrintPreviewCreate {
 	return _c
 }
 
+// SetNillableDepartmentID sets the "department_id" field if the given value is not nil.
+func (_c *PrintPreviewCreate) SetNillableDepartmentID(v *int) *PrintPreviewCreate {
+	if v != nil {
+		_c.SetDepartmentID(*v)
+	}
+	return _c
+}
+
 // SetDocumentType sets the "document_type" field.
 func (_c *PrintPreviewCreate) SetDocumentType(v string) *PrintPreviewCreate {
 	_c.mutation.SetDocumentType(v)
@@ -150,9 +158,6 @@ func (_c *PrintPreviewCreate) check() error {
 	if _, ok := _c.mutation.CompanyID(); !ok {
 		return &ValidationError{Name: "company_id", err: errors.New(`ent: missing required field "PrintPreview.company_id"`)}
 	}
-	if _, ok := _c.mutation.DepartmentID(); !ok {
-		return &ValidationError{Name: "department_id", err: errors.New(`ent: missing required field "PrintPreview.department_id"`)}
-	}
 	if _, ok := _c.mutation.DocumentType(); !ok {
 		return &ValidationError{Name: "document_type", err: errors.New(`ent: missing required field "PrintPreview.document_type"`)}
 	}
@@ -208,7 +213,7 @@ func (_c *PrintPreviewCreate) createSpec() (*PrintPreview, *sqlgraph.CreateSpec)
 	}
 	if value, ok := _c.mutation.DepartmentID(); ok {
 		_spec.SetField(printpreview.FieldDepartmentID, field.TypeInt, value)
-		_node.DepartmentID = value
+		_node.DepartmentID = &value
 	}
 	if value, ok := _c.mutation.DocumentType(); ok {
 		_spec.SetField(printpreview.FieldDocumentType, field.TypeString, value)

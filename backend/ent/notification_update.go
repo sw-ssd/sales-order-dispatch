@@ -70,6 +70,12 @@ func (_u *NotificationUpdate) AddDepartmentID(v int) *NotificationUpdate {
 	return _u
 }
 
+// ClearDepartmentID clears the value of the "department_id" field.
+func (_u *NotificationUpdate) ClearDepartmentID() *NotificationUpdate {
+	_u.mutation.ClearDepartmentID()
+	return _u
+}
+
 // SetUserID sets the "user_id" field.
 func (_u *NotificationUpdate) SetUserID(v int) *NotificationUpdate {
 	_u.mutation.ResetUserID()
@@ -341,6 +347,9 @@ func (_u *NotificationUpdate) sqlSave(ctx context.Context) (_node int, err error
 	if value, ok := _u.mutation.AddedDepartmentID(); ok {
 		_spec.AddField(notification.FieldDepartmentID, field.TypeInt, value)
 	}
+	if _u.mutation.DepartmentIDCleared() {
+		_spec.ClearField(notification.FieldDepartmentID, field.TypeInt)
+	}
 	if value, ok := _u.mutation.UserID(); ok {
 		_spec.SetField(notification.FieldUserID, field.TypeInt, value)
 	}
@@ -454,6 +463,12 @@ func (_u *NotificationUpdateOne) SetNillableDepartmentID(v *int) *NotificationUp
 // AddDepartmentID adds value to the "department_id" field.
 func (_u *NotificationUpdateOne) AddDepartmentID(v int) *NotificationUpdateOne {
 	_u.mutation.AddDepartmentID(v)
+	return _u
+}
+
+// ClearDepartmentID clears the value of the "department_id" field.
+func (_u *NotificationUpdateOne) ClearDepartmentID() *NotificationUpdateOne {
+	_u.mutation.ClearDepartmentID()
 	return _u
 }
 
@@ -757,6 +772,9 @@ func (_u *NotificationUpdateOne) sqlSave(ctx context.Context) (_node *Notificati
 	}
 	if value, ok := _u.mutation.AddedDepartmentID(); ok {
 		_spec.AddField(notification.FieldDepartmentID, field.TypeInt, value)
+	}
+	if _u.mutation.DepartmentIDCleared() {
+		_spec.ClearField(notification.FieldDepartmentID, field.TypeInt)
 	}
 	if value, ok := _u.mutation.UserID(); ok {
 		_spec.SetField(notification.FieldUserID, field.TypeInt, value)

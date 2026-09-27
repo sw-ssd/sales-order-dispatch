@@ -252,6 +252,8 @@ export declare type LogEntry = Message<"products.v1.LogEntry"> & {
   targetDate: string;
 
   /**
+   * users.id(數字字串)
+   *
    * @generated from field: string printed_by = 5;
    */
   printedBy: string;
@@ -279,6 +281,14 @@ export declare type LogEntry = Message<"products.v1.LogEntry"> & {
    * @generated from field: string download_url = 9;
    */
   downloadUrl: string;
+
+  /**
+   * printed_by_name:操作者顯示名稱(使用者姓名)。查不到(帳號已刪除)時為空,
+   * 前端據此退回顯示 printed_by。與 audit.v1.AuditLog.user_name 同法。
+   *
+   * @generated from field: string printed_by_name = 10;
+   */
+  printedByName: string;
 };
 
 /**

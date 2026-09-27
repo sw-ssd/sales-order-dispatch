@@ -12,6 +12,8 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
+	"github.com/salesorder/sales-order-1.0/backend/ent/printlog"
+	"github.com/salesorder/sales-order-1.0/backend/ent/printpreview"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
@@ -173,6 +175,56 @@ func assertDownloadURLMatchesStored(t *testing.T, ctx context.Context, db *ent.C
 	}
 	if gotURL == "" {
 		t.Fatal("download_url 不得為空")
+	}
+}
+
+// TestIntegrationPrintAsCompanyScopeRole 公司層角色（無部門）的列印／預覽。
+//
+// 迴歸：deptScope 對 company_admin / super 回 (cid, nil)，而 print_logs / print_previews 的
+// department_id 曾是 NOT NULL、ent 也在 client 端檢查 required —— 於是**整個列印功能對公司層
+// 角色 400 SYS-1001，detail 為空**，前端只看得到「參數驗證失敗」。dept_admin 同一請求正常，
+// 所以既有測試（全部用 dept_admin）全綠也照樣漏掉。
+//
+// 本測試釘住兩件事：公司層角色能列印，且寫出的記錄 department_id 為 NULL（公司層）。
+func TestIntegrationPrintAsCompanyScopeRole(t *testing.T) {
+	testsupport.RequiresContainer(t)
+	dsn := testsupport.Postgres(t)
+	migrateBusinessUp(t, dsn)
+	_, db := openPGEntClientFromGoose(t, dsn)
+	ctx := context.Background()
+	coID, deptID, _, actorID, routeID := seedPrintOrder(t, ctx, db)
+	root := t.TempDir()
+	fc := &fakePrintConv{}
+	// DepartmentID 刻意留空：company_admin 的身分就是這樣（無所屬部門）。
+	id := authz.Identity{UserID: uItoa(actorID), CompanyID: uItoa(coID),
+		Role: "company_admin", Roles: []string{"company_admin", "dept_admin", "staff", "customer"}}
+	rpc := newPrintServer(t, db, id, root, fc)
+
+	if _, err := rpc.Preview(ctx, connect.NewRequest(newPreviewReq(routeID))); err != nil {
+		t.Fatalf("公司層角色的 Preview 不得因缺少部門而失敗: %v", err)
+	}
+	if _, err := rpc.Print(ctx, connect.NewRequest(newPrintReq(routeID, ""))); err != nil {
+		t.Fatalf("公司層角色的 Print 不得因缺少部門而失敗: %v", err)
+	}
+
+	// 記錄的部門必須是 NULL（公司層），不是被塞 0 或別人的部門。
+	pv, err := db.PrintPreview.Query().Order(ent.Desc(printpreview.FieldID)).First(ctx)
+	if err != nil {
+		t.Fatalf("讀 print_previews: %v", err)
+	}
+	if pv.DepartmentID != nil {
+		t.Fatalf("公司層預覽的 department_id 應為 NULL,got %d", *pv.DepartmentID)
+	}
+	pl, err := db.PrintLog.Query().Order(ent.Desc(printlog.FieldID)).First(ctx)
+	if err != nil {
+		t.Fatalf("讀 print_logs: %v", err)
+	}
+	if pl.DepartmentID != nil {
+		t.Fatalf("公司層列印的 department_id 應為 NULL,got %d", *pl.DepartmentID)
+	}
+	// deptID 不是 0，確保上面的 NULL 不是「本來就沒有部門」這種巧合。
+	if deptID == 0 {
+		t.Fatal("測試前提失效:seed 應提供非零部門")
 	}
 }
 

@@ -17,7 +17,12 @@ type Notification struct {
 func (Notification) Fields() []ent.Field {
 	return []ent.Field{
 		field.Int("company_id"),
-		field.Int("department_id"),
+		// 可空：公司層角色（company_admin / super / developer）沒有部門，deptScope 回 nil。
+		// 寫入端一律 `if did != nil`（notification_triggers.go），NOT NULL 會讓「有子帳號的
+		// 客戶收到下單通知」這條路徑整筆失敗 —— 詳見 00052 的說明。
+		field.Int("department_id").
+			Optional().
+			Nillable(),
 		field.Int("user_id"), // 接收者
 		field.Int("template_id").
 			Optional().

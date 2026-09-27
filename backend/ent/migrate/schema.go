@@ -456,7 +456,7 @@ var (
 	NotificationsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "company_id", Type: field.TypeInt},
-		{Name: "department_id", Type: field.TypeInt},
+		{Name: "department_id", Type: field.TypeInt, Nullable: true},
 		{Name: "user_id", Type: field.TypeInt},
 		{Name: "template_id", Type: field.TypeInt, Nullable: true},
 		{Name: "channel", Type: field.TypeString},
@@ -537,7 +537,7 @@ var (
 	PrintLogsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "company_id", Type: field.TypeInt},
-		{Name: "department_id", Type: field.TypeInt},
+		{Name: "department_id", Type: field.TypeInt, Nullable: true},
 		{Name: "document_type", Type: field.TypeString},
 		{Name: "route_id", Type: field.TypeInt},
 		{Name: "customer_id", Type: field.TypeInt, Nullable: true},
@@ -571,7 +571,7 @@ var (
 	PrintPreviewsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "company_id", Type: field.TypeInt},
-		{Name: "department_id", Type: field.TypeInt},
+		{Name: "department_id", Type: field.TypeInt, Nullable: true},
 		{Name: "document_type", Type: field.TypeString},
 		{Name: "route_id", Type: field.TypeInt},
 		{Name: "customer_id", Type: field.TypeInt, Nullable: true},

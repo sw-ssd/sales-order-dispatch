@@ -194,6 +194,16 @@ func DepartmentIDLTE(v int) predicate.Notification {
 	return predicate.Notification(sql.FieldLTE(FieldDepartmentID, v))
 }
 
+// DepartmentIDIsNil applies the IsNil predicate on the "department_id" field.
+func DepartmentIDIsNil() predicate.Notification {
+	return predicate.Notification(sql.FieldIsNull(FieldDepartmentID))
+}
+
+// DepartmentIDNotNil applies the NotNil predicate on the "department_id" field.
+func DepartmentIDNotNil() predicate.Notification {
+	return predicate.Notification(sql.FieldNotNull(FieldDepartmentID))
+}
+
 // UserIDEQ applies the EQ predicate on the "user_id" field.
 func UserIDEQ(v int) predicate.Notification {
 	return predicate.Notification(sql.FieldEQ(FieldUserID, v))

@@ -21,7 +21,7 @@ type Notification struct {
 	// CompanyID holds the value of the "company_id" field.
 	CompanyID int `json:"company_id,omitempty"`
 	// DepartmentID holds the value of the "department_id" field.
-	DepartmentID int `json:"department_id,omitempty"`
+	DepartmentID *int `json:"department_id,omitempty"`
 	// UserID holds the value of the "user_id" field.
 	UserID int `json:"user_id,omitempty"`
 	// TemplateID holds the value of the "template_id" field.
@@ -91,7 +91,8 @@ func (_m *Notification) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field department_id", values[i])
 			} else if value.Valid {
-				_m.DepartmentID = int(value.Int64)
+				_m.DepartmentID = new(int)
+				*_m.DepartmentID = int(value.Int64)
 			}
 		case notification.FieldUserID:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -203,8 +204,10 @@ func (_m *Notification) String() string {
 	builder.WriteString("company_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.CompanyID))
 	builder.WriteString(", ")
-	builder.WriteString("department_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.DepartmentID))
+	if v := _m.DepartmentID; v != nil {
+		builder.WriteString("department_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("user_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.UserID))

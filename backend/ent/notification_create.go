@@ -32,6 +32,14 @@ func (_c *NotificationCreate) SetDepartmentID(v int) *NotificationCreate {
 	return _c
 }
 
+// SetNillableDepartmentID sets the "department_id" field if the given value is not nil.
+func (_c *NotificationCreate) SetNillableDepartmentID(v *int) *NotificationCreate {
+	if v != nil {
+		_c.SetDepartmentID(*v)
+	}
+	return _c
+}
+
 // SetUserID sets the "user_id" field.
 func (_c *NotificationCreate) SetUserID(v int) *NotificationCreate {
 	_c.mutation.SetUserID(v)
@@ -196,9 +204,6 @@ func (_c *NotificationCreate) check() error {
 	if _, ok := _c.mutation.CompanyID(); !ok {
 		return &ValidationError{Name: "company_id", err: errors.New(`ent: missing required field "Notification.company_id"`)}
 	}
-	if _, ok := _c.mutation.DepartmentID(); !ok {
-		return &ValidationError{Name: "department_id", err: errors.New(`ent: missing required field "Notification.department_id"`)}
-	}
 	if _, ok := _c.mutation.UserID(); !ok {
 		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "Notification.user_id"`)}
 	}
@@ -269,7 +274,7 @@ func (_c *NotificationCreate) createSpec() (*Notification, *sqlgraph.CreateSpec)
 	}
 	if value, ok := _c.mutation.DepartmentID(); ok {
 		_spec.SetField(notification.FieldDepartmentID, field.TypeInt, value)
-		_node.DepartmentID = value
+		_node.DepartmentID = &value
 	}
 	if value, ok := _c.mutation.UserID(); ok {
 		_spec.SetField(notification.FieldUserID, field.TypeInt, value)

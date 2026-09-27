@@ -67,11 +67,14 @@ message LogEntry {
   string document_type = 2;
   string route_id = 3;
   string target_date = 4;    // YYYY-MM-DD
-  string printed_by = 5;
+  string printed_by = 5;     // users.id(數字字串)
   string printed_at = 6;     // RFC3339
   bool is_reprint = 7;
   string reprint_reason = 8; // 可空
   string download_url = 9;
+  // printed_by_name:操作者顯示名稱(使用者姓名)。查不到(帳號已刪除)時為空,
+  // 前端據此退回顯示 printed_by。與 audit.v1.AuditLog.user_name 同法。
+  string printed_by_name = 10;
 }
 
 // ListLogsResponse:列印記錄列表。

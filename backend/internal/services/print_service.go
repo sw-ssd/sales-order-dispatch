@@ -15,6 +15,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/printlog"
 	"github.com/salesorder/sales-order-1.0/backend/ent/printpreview"
+	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
@@ -316,6 +317,22 @@ func (s *PrintService) ListLogs(ctx context.Context, req *connect.Request[produc
 	resp := &productsv1.ListLogsResponse{
 		Page: int32(page), PageSize: int32(pageSize), Total: int32(total),
 	}
+	// 列印人顯示名稱:依結果 printed_by 一次查 users(避免 N+1、欄位留給前端退回)。
+	// 與 audit_service 的 names 做法相同:查不到(帳號已刪除)就留空,前端退回顯示 id。
+	names := map[int]string{}
+	if len(rows) > 0 {
+		ids := make([]int, 0, len(rows))
+		for _, r := range rows {
+			ids = append(ids, r.PrintedBy)
+		}
+		us, err := db.User.Query().Where(user.IDIn(ids...)).All(ctx)
+		if err != nil {
+			return nil, toConnectError(err)
+		}
+		for _, u := range us {
+			names[u.ID] = u.Name
+		}
+	}
 	for _, r := range rows {
 		var faURL string
 		if fa, err := printFileURL(ctx, db, r.FileAssetID); err == nil {
@@ -326,7 +343,7 @@ func (s *PrintService) ListLogs(ctx context.Context, req *connect.Request[produc
 			RouteId: strconv.Itoa(r.RouteID), TargetDate: r.TargetDate.Format("2006-01-02"),
 			PrintedBy: strconv.Itoa(r.PrintedBy), PrintedAt: r.PrintedAt.Format(time.RFC3339),
 			IsReprint: r.IsReprint, ReprintReason: r.ReprintReason,
-			DownloadUrl: faURL,
+			DownloadUrl: faURL, PrintedByName: names[r.PrintedBy],
 		})
 	}
 	return connect.NewResponse(resp), nil

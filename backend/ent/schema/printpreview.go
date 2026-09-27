@@ -16,7 +16,10 @@ type PrintPreview struct {
 func (PrintPreview) Fields() []ent.Field {
 	return []ent.Field{
 		field.Int("company_id"),
-		field.Int("department_id"),
+		// 可空：同 print_logs（見 00052）。公司層角色列印／預覽時沒有部門可填。
+		field.Int("department_id").
+			Optional().
+			Nillable(),
 		field.String("document_type").
 			NotEmpty(),
 		field.Int("route_id"),

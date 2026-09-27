@@ -194,6 +194,16 @@ func DepartmentIDLTE(v int) predicate.PrintLog {
 	return predicate.PrintLog(sql.FieldLTE(FieldDepartmentID, v))
 }
 
+// DepartmentIDIsNil applies the IsNil predicate on the "department_id" field.
+func DepartmentIDIsNil() predicate.PrintLog {
+	return predicate.PrintLog(sql.FieldIsNull(FieldDepartmentID))
+}
+
+// DepartmentIDNotNil applies the NotNil predicate on the "department_id" field.
+func DepartmentIDNotNil() predicate.PrintLog {
+	return predicate.PrintLog(sql.FieldNotNull(FieldDepartmentID))
+}
+
 // DocumentTypeEQ applies the EQ predicate on the "document_type" field.
 func DocumentTypeEQ(v string) predicate.PrintLog {
 	return predicate.PrintLog(sql.FieldEQ(FieldDocumentType, v))

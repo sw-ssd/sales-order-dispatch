@@ -20,7 +20,7 @@ type PrintLog struct {
 	// CompanyID holds the value of the "company_id" field.
 	CompanyID int `json:"company_id,omitempty"`
 	// DepartmentID holds the value of the "department_id" field.
-	DepartmentID int `json:"department_id,omitempty"`
+	DepartmentID *int `json:"department_id,omitempty"`
 	// DocumentType holds the value of the "document_type" field.
 	DocumentType string `json:"document_type,omitempty"`
 	// RouteID holds the value of the "route_id" field.
@@ -88,7 +88,8 @@ func (_m *PrintLog) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field department_id", values[i])
 			} else if value.Valid {
-				_m.DepartmentID = int(value.Int64)
+				_m.DepartmentID = new(int)
+				*_m.DepartmentID = int(value.Int64)
 			}
 		case printlog.FieldDocumentType:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -191,8 +192,10 @@ func (_m *PrintLog) String() string {
 	builder.WriteString("company_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.CompanyID))
 	builder.WriteString(", ")
-	builder.WriteString("department_id=")
-	builder.WriteString(fmt.Sprintf("%v", _m.DepartmentID))
+	if v := _m.DepartmentID; v != nil {
+		builder.WriteString("department_id=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("document_type=")
 	builder.WriteString(_m.DocumentType)

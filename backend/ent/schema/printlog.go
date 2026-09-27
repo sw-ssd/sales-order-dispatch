@@ -18,7 +18,11 @@ type PrintLog struct {
 func (PrintLog) Fields() []ent.Field {
 	return []ent.Field{
 		field.Int("company_id"),
-		field.Int("department_id"),
+		// 可空：公司層角色沒有部門（deptScope 回 nil），寫入端一律 `if did != nil`。
+		// NOT NULL 會讓 company_admin 的列印整筆失敗（ent 的 required 檢查先於 DB）；見 00052。
+		field.Int("department_id").
+			Optional().
+			Nillable(),
 		field.String("document_type").
 			NotEmpty(),
 		field.Int("route_id"),
