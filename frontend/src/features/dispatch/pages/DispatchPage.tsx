@@ -25,6 +25,24 @@ import { errorMessage } from "@/lib/error-message";
 /** 看板只處理這兩個狀態（dispatch spec：看板僅顯示 pending 或 processing 的訂單）。 */
 const BOARD_STATUSES = new Set(["pending", "processing"]);
 
+/**
+ * 看板即時訂閱的韌性參數（spec Task 5.2 Step 4）。
+ *
+ * 事件串流只是**失效提示**，看板的正確性來自重查；但串流若靜靜死掉，看板就再也不動、
+ * 使用者只能自己按重新整理。所以斷線要重連、重連要補一次全量重查，連續失敗到一定次數
+ * 再降級成輪詢——降級**不是停止重連**，兩者並存：輪詢撐住新鮮度，重連成功就自動回到即時。
+ */
+const STREAM_FAILURE_THRESHOLD = 3;
+const STREAM_RETRY_BASE_MS = 1_000;
+const STREAM_RETRY_CAP_MS = 30_000;
+/** 降級後的輪詢間隔（spec：30 秒輪詢）。 */
+const STREAM_POLL_INTERVAL_MS = 30_000;
+
+/** 第 n 次連續失敗後要等多久再連：指數退避，封頂 30s。 */
+export function streamRetryDelay(failures: number): number {
+  return Math.min(STREAM_RETRY_BASE_MS * 2 ** (failures - 1), STREAM_RETRY_CAP_MS);
+}
+
 /** 今天（本地時區）的 YYYY-MM-DD；看板預設落在今天。 */
 function today(): string {
   const d = new Date();
@@ -54,6 +72,8 @@ export function boardDensity(columns: number, width: number): "comfortable" | "c
  * - **樂觀鎖**：每次指派都帶讀取時的 `version`；失敗一律重查看板（spec：衝突後重新整理至最新狀態）。
  * - **事件僅失效提示**：`WatchBoard` 收到非 heartbeat 事件就使 `["boardOrders"]` 失效並全量重查，
  *   事件內容本身不進 UI 快取（spec：狀態正確性以重查結果為準）。
+ * - **串流斷線要能自己站回來**：指數退避重連、重連後全量重查，連續失敗降級 30 秒輪詢並在
+ *   頁首說出來（見檔頭的韌性參數）；降級期間仍持續重連，連上就自動收回提示。
  */
 export default function DispatchPage() {
   const [date, setDate] = createSignal(today());
@@ -67,6 +87,9 @@ export default function DispatchPage() {
   const [confirmResult, setConfirmResult] = createSignal<
     { successCount: number; failures: { orderId: string; reason: string }[] } | null
   >(null);
+  // 即時串流連續失敗而降級輪詢（見檔頭韌性參數）：true 時畫面必須說出來，
+  // 否則使用者以為看板是即時的、實際上一次更新都沒有。
+  const [streamDegraded, setStreamDegraded] = createSignal(false);
 
   // 看板容器實測寬度：密度門檻用實際欄位空間，不用視窗推估（側欄收合會改可用寬）。
   // 容器在 `<Show when={!pending}>` 內，掛載晚於元件本身——不能用 onMount（那時元素還不存在，
@@ -84,7 +107,13 @@ export default function DispatchPage() {
 
   const client = useQueryClient();
 
-  const orders = createInfiniteQuery(() => boardOrdersQueryOptions(date()));
+  const orders = createInfiniteQuery(() => ({
+    ...boardOrdersQueryOptions(date()),
+    // 串流連續失敗降級後改由輪詢撐住新鮮度（見檔頭的韌性參數）。
+    // TanStack 預設**不在視窗隱藏時**輪詢、且視窗重新聚焦會重查——正好就是 spec 要的
+    // 「視窗隱藏暫停、聚焦重查」，不必自己寫 visibilitychange。
+    refetchInterval: streamDegraded() ? STREAM_POLL_INTERVAL_MS : (false as const),
+  }));
   const routes = createQuery(() => boardRoutesQueryOptions());
 
   /**
@@ -255,31 +284,59 @@ export default function DispatchPage() {
   /**
    * 看板訂閱：日期變更即重新訂閱；收到非 heartbeat 事件就使看板失效並全量重查。
    *
-   * 斷線不重試（spec：事件僅失效提示、不保證補發；狀態正確性以重查結果為準），
-   * 看板仍由查詢驅動，斷線期間的變更會在下次查詢帶回。
+   * 斷線（正常關閉、網路失敗、伺服器重啟）走指數退避重連，**重連成功先補一次全量重查**
+   * 再回到事件模式——斷線期間的事件不補發（spec：事件僅失效提示），所以重查才是正確性來源。
+   * 連續失敗達 `STREAM_FAILURE_THRESHOLD` 就降級輪詢並在畫面上說出來；降級期間仍持續重連，
+   * 一旦連上就自動收回提示（見檔頭的韌性參數）。
+   *
+   * 「連上」的判定是**收到第一則訊息**，不是連線建立：HTTP 串流只有在後端送資料時才觀測得到，
+   * 而後端訂閱後不立即送（第一個位元組是事件或 25 秒 heartbeat）。所以在收到 heartbeat 之前，
+   * 提示與輪詢都維持——那段時間輪詢照跑，畫面上寫的仍是事實，不是殘留的錯誤狀態。
    */
   createEffect(() => {
     // 訂閱日期是本輪的快照:串流必須綁單一日期,翻日由本 effect 重跑改訂閱(不可在迴圈內再讀 date)。
     const staticSubscribedDate = date();
     const ac = new AbortController();
     let stopped = false;
-    void (async () => {
+    let failures = 0;
+    let retryTimer: number | undefined;
+
+    /** 重連/降級後的全量重查：看板的唯一新鮮度來源。 */
+    const refresh = () => void client.invalidateQueries({ queryKey: ["boardOrders"] });
+
+    /** 一次訂閱。正常結束與丟出例外都算斷線——兩者都會讓看板停止跟隨。 */
+    const watch = async () => {
       try {
         for await (const ev of dispatchClient.watchBoard(
           { expectedDeliveryDate: staticSubscribedDate },
           { signal: ac.signal }
         )) {
-          if (stopped) break;
+          if (stopped) return;
+          if (failures > 0) {
+            // 重連成功：先補回斷線期間的變更，再收回降級提示。
+            failures = 0;
+            setStreamDegraded(false);
+            refresh();
+          }
           if (ev.type === "heartbeat") continue;
           void client.invalidateQueries({ queryKey: ["boardOrders"] });
         }
       } catch {
-        // 連線中止或伺服器關閉：非錯誤路徑（看板以查詢為準），刻意不提示。
+        // 連線中止、伺服器關閉或網路失敗：一律當成斷線處理（下方統一退避重連）。
       }
-    })();
+      if (stopped || ac.signal.aborted) return;
+      failures += 1;
+      if (failures >= STREAM_FAILURE_THRESHOLD) setStreamDegraded(true);
+      // 每一次斷線都先重查一次：串流不可用時，這段就是唯一把畫面追上現實的動作。
+      refresh();
+      retryTimer = window.setTimeout(() => void watch(), streamRetryDelay(failures));
+    };
+
+    void watch();
     onCleanup(() => {
       stopped = true;
       ac.abort();
+      clearTimeout(retryTimer);
     });
   });
 
@@ -307,6 +364,15 @@ export default function DispatchPage() {
           <h1 class="text-2xl font-bold text-foreground">派車看板</h1>
           <p class="mt-1 text-sm text-muted-foreground">
             {date()}・待派 {unassigned().length} 筆、車次內 {boardable().length - unassigned().length} 筆
+            {/* 只在降級時說話：連線正常時不加任何指示燈，與 PlanBanner 的「不吵」契約一致。
+                但降級一定要講——不然使用者會以為看板是即時的，實際上一次更新都沒有。
+                用「不可用」而非「中斷」：無部門身分（company_admin 等）後端一律拒訂閱，
+                那不是斷線、重連也不會成功，訊息不該把責任推給網路。 */}
+            <Show when={streamDegraded()}>
+              <span class="text-warning">
+                ・即時更新不可用，已改為每 {STREAM_POLL_INTERVAL_MS / 1000} 秒自動重整
+              </span>
+            </Show>
           </p>
         </div>
         <div class="flex items-end gap-3">

@@ -141,7 +141,7 @@ flowchart TB
 | Kanban 拖放 | AssignRoute 樂觀鎖 + 順位重排 | Web/後端 | ✅（Web `e3ed769`） |
 | 批次確認 | 車次 Confirm（部分失敗語義） | Web/後端 | ✅（Web `e3ed769`） |
 | 取消派車 | dept_admin + 原因 + 重印警告 | Web/後端 | ✅（Web `e3ed769`） |
-| WatchBoard 串流 | Connect server streaming + Valkey pub/sub + 輪詢降級（D14） | Web/後端 | 🟡（串流兩端已接：Web 訂閱＋收到事件即重查；跨 replica Valkey pub/sub 與輪詢降級待） |
+| WatchBoard 串流 | Connect server streaming + Valkey pub/sub + 輪詢降級（D14） | Web/後端 | ✅（後端 `EnableBoardFanout` 跨 replica pub/sub；Web 訂閱＋收到事件即重查＋指數退避重連＋連續失敗降級 30s 輪詢並在頁首示警） |
 
 ### 4.6 單據列印（D15）
 
@@ -200,7 +200,7 @@ flowchart TB
 | 檔案資產 | ✅（API） | ⬜ | ⬜ |
 | 銷售訂單 | ✅（API） | ✅（`6953b02`） | ⬜ |
 | 退貨 | ✅（API） | ✅（`549933c`） | ⬜ |
-| 派車看板 | 🟡（4 RPC＋WatchBoard 串流已落地；跨 replica Valkey pub/sub 與輪詢降級待） | ✅（`e3ed769`） | — |
+| 派車看板 | ✅（4 RPC＋WatchBoard 串流跨 replica pub/sub＋前端退避重連與輪詢降級） | ✅（`e3ed769`） | — |
 | 列印 | ✅（API） | ✅（`13c76f4`） | — |
 | 通知 / 公告 | 🟡（通知後端約 85%；公告待） | ✅（通知中心 `b193544`；公告待） | ⬜ |
 | 稽核 | ✅（查詢 API） | ✅（`834f575`） | — |

@@ -48,7 +48,7 @@ vi.mock("@connectrpc/connect", async (importOriginal) => ({
   }),
 }));
 
-import DispatchPage, { boardDensity } from "./DispatchPage";
+import DispatchPage, { boardDensity, streamRetryDelay } from "./DispatchPage";
 
 const PENDING_UNASSIGNED = {
   id: "1",
@@ -330,6 +330,67 @@ describe("DispatchPage", () => {
     );
     // 事件 yield → invalidate → 重查。
     await waitFor(() => expect(listOrdersSpy.mock.calls.length).toBeGreaterThan(1));
+  });
+
+  it("重連退避有上限（spec Task 5.2 Step 4：指數退避＋降級輪詢）", () => {
+    // 沒有上限的指數退避會在幾分鐘內把間隔撐到小時級，等於實質停止重連。
+    expect(streamRetryDelay(1)).toBe(1_000);
+    expect(streamRetryDelay(2)).toBe(2_000);
+    expect(streamRetryDelay(5)).toBe(16_000);
+    expect(streamRetryDelay(6)).toBe(30_000);
+    expect(streamRetryDelay(50)).toBe(30_000);
+  });
+
+  it("串流連續失敗後降級輪詢，並在頁首說明（不讓看板靜靜變舊）", async () => {
+    // 假時鐘驅動退避（1s→2s→4s），真時鐘要等 7 秒才到降級。
+    // 這裡不用 `waitFor`：它在假時鐘下與 TanStack 的計時器互相等待，改成自己推進時鐘。
+    vi.useFakeTimers();
+    try {
+      watchBoardSpy.mockImplementation(async function* () {
+        throw new Error("watch board down");
+      });
+      mountPage();
+      await vi.advanceTimersByTimeAsync(0); // 首批查詢（純微任務）落地
+      // 尚未達門檻：單次斷線由重連處理，不該驚動使用者。
+      expect(screen.queryByText(/即時更新不可用/)).toBeNull();
+      for (const backoff of [1_000, 2_000, 4_000]) await vi.advanceTimersByTimeAsync(backoff);
+      expect(screen.getByText(/即時更新不可用/)).toBeTruthy();
+      // 降級後仍持續重連（不因降級而停止嘗試回到即時）。
+      expect(watchBoardSpy.mock.calls.length).toBeGreaterThanOrEqual(4);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("重連成功收到訊息後自動收回降級提示", async () => {
+    vi.useFakeTimers();
+    try {
+      let attempts = 0;
+      watchBoardSpy.mockImplementation(async function* () {
+        attempts += 1;
+        if (attempts <= 3) throw new Error("watch board down");
+        // 第 4 次連上：後端訂閱後第一個位元組是事件或 heartbeat，收到即算恢復。
+        yield {
+          type: "heartbeat",
+          salesOrderId: "",
+          routeId: "",
+          deliverySequence: "",
+          version: "",
+          departmentId: "68",
+        };
+      });
+      mountPage();
+      await vi.advanceTimersByTimeAsync(0);
+      // t=0 失敗、t=1s 失敗、t=3s 第三次失敗 → 降級（第 4 次重連排在 t=7s）。
+      await vi.advanceTimersByTimeAsync(1_000);
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(screen.getByText(/即時更新不可用/)).toBeTruthy();
+      // t=7s 第 4 次連上並收到 heartbeat → 提示收回、恢復即時模式。
+      await vi.advanceTimersByTimeAsync(4_000);
+      expect(screen.queryByText(/即時更新不可用/)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("非拖曳指派：未指派卡片的下拉選車次即指派到該欄尾", async () => {
