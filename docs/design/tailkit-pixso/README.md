@@ -1,7 +1,7 @@
 # Tailkit → Pixso 元件庫管線
 
 把 Tailkit MCP 的 646 個元件（3 個 package）轉成 Pixso 設計檔內的設計資源。
-本目錄只放**工具腳本**；Tailkit 原始 HTML 為付費授權產物，**不得入庫**（見 `frontend/AGENTS.md` §2）。
+本目錄只放**工具腳本**；Tailkit 原始 HTML 為**已付費授權**，可入庫（見 `frontend/AGENTS.md` §2 對「前端元件庫不得原樣 vendoring」的另立規則）。
 
 ## 產出
 

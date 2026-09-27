@@ -62,10 +62,10 @@ tailkit browse_catalog（offset 分頁）→ catalog.json（646）
 
 ## 5. 授權邊界
 
-Tailkit 為付費授權產品（`frontend/AGENTS.md` §2：不得把 Tailkit 產物原樣入庫、不得寫進 `package.json`）。
-因此：
+Tailkit 為**已付費授權**產品，原文與衍生檔可入庫。
+`frontend/AGENTS.md` §2 的「不得把 Tailkit 產物原樣入庫」是**前端元件庫的實作規則**（前端要改寫成 SolidJS 元件、不把它當 npm 依賴），不是授權限制。
 
-- **不進版控**：`raw/`、`scan/`、`out3.css`、`manifest.json`（Tailkit 原文與衍生 CSS）
+- **可進版控**：`raw/`、`scan/`、`out3.css`、`manifest.json`、`preview/`（Tailkit 原文與衍生 CSS）
 - **進版控**：`docs/design/tailkit-pixso/` 的**工具腳本**與本文件（我方撰寫的管線程式碼）
 - 產出物落在 Pixso 檔內，屬設計稿用途，與程式碼庫的 npm 依賴無關
 

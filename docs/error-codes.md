@@ -29,8 +29,8 @@
 | PLAT-5002 | PLAT | `PlatformFeatureNotInPlan` | failed_precondition | 目前方案未包含此功能，請升級方案 | — | 使用中 |
 | SYS-1001 | SYS | `SysInvalidArgument` | invalid_argument | 參數驗證失敗 | — | 使用中 |
 | SYS-2001 | SYS | `SysConflict` | already_exists | 資料衝突，請確認識別碼是否已被使用 | — | 使用中 |
-| SYS-3001 | SYS | `SysScopeViolation` | failed_precondition | 資料超出目前的存取範圍,無法完成此操作 | — | 使用中 |
-| SYS-3002 | SYS | `SysConstraintViolation` | failed_precondition | 資料違反資料庫約束,無法完成此操作(請確認識別碼是否已被使用、參照對象是否仍存在) | — | 使用中 |
+| SYS-3001 | SYS | `SysScopeViolation` | failed_precondition | 資料超出目前的存取範圍，無法完成此操作 | — | 使用中 |
+| SYS-3002 | SYS | `SysConstraintViolation` | failed_precondition | 資料違反資料庫約束，無法完成此操作（請確認識別碼是否已被使用、參照對象是否仍存在） | — | 使用中 |
 | SYS-4001 | SYS | `SysPermissionDenied` | permission_denied | 缺少權限 | — | 使用中 |
 | SYS-4002 | SYS | `SysNotFound` | not_found | 資源不存在或無權存取 | — | 使用中 |
 | SYS-9000 | SYS | `SysInternal` | internal | 系統忙碌，請稍後再試 | — | 使用中 |

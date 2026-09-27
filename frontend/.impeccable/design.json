@@ -1,0 +1,463 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-26T04:25:22Z",
+  "title": "Design System: 多公司訂出貨系統 — Web 中台",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "托盤陶土 Pallet Clay",
+        "canonical": "oklch(0.53 0.18 70)",
+        "darkValue": "oklch(0.75 0.16 70)",
+        "tonalRamp": [
+          "#140800",
+          "#321c00",
+          "#533200",
+          "#774a00",
+          "#9d6300",
+          "#c57d00",
+          "#ee9800",
+          "#ffc075",
+          "#ffebd5"
+        ]
+      },
+      "primary-foreground": {
+        "role": "primary",
+        "displayName": "近白字",
+        "canonical": "oklch(0.9850 0 0)",
+        "tonalRamp": [
+          "#0a0a0a",
+          "#171717",
+          "#262626",
+          "#404040",
+          "#6c6c6c",
+          "#a1a1a1",
+          "#cecece",
+          "#e5e5e5",
+          "#f5f5f5"
+        ]
+      },
+      "destructive": {
+        "role": "danger",
+        "displayName": "退貨紅",
+        "canonical": "oklch(0.505 0.213 27.5)",
+        "darkValue": "oklch(0.7040 0.1910 22.2160)",
+        "tonalRamp": [
+          "#1f0000",
+          "#470002",
+          "#730005",
+          "#a3000b",
+          "#d11a1d",
+          "#f6473e",
+          "#ff8578",
+          "#ffbab1",
+          "#ffe9e5"
+        ]
+      },
+      "success": {
+        "role": "success",
+        "displayName": "出貨綠",
+        "canonical": "oklch(0.48 0.13 155)",
+        "darkValue": "oklch(0.80 0.13 155)",
+        "tonalRamp": [
+          "#001005",
+          "#002a14",
+          "#004725",
+          "#006738",
+          "#14874e",
+          "#3fa66b",
+          "#62c689",
+          "#83e7a8",
+          "#c5ffd8"
+        ]
+      },
+      "warning": {
+        "role": "warning",
+        "displayName": "備料黃",
+        "canonical": "oklch(0.50 0.13 95)",
+        "darkValue": "oklch(0.82 0.13 95)",
+        "tonalRamp": [
+          "#0f0b00",
+          "#292100",
+          "#463a00",
+          "#655400",
+          "#867000",
+          "#a88d10",
+          "#c8ad3f",
+          "#e8cd62",
+          "#ffefb2"
+        ]
+      },
+      "info": {
+        "role": "info",
+        "displayName": "調度藍",
+        "canonical": "oklch(0.50 0.13 250)",
+        "darkValue": "oklch(0.80 0.13 250)",
+        "tonalRamp": [
+          "#000c1d",
+          "#002242",
+          "#003c6c",
+          "#005798",
+          "#2a75ba",
+          "#4a94db",
+          "#6ab3fd",
+          "#a8d2ff",
+          "#e2f0ff"
+        ]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "淨白",
+        "canonical": "oklch(1 0 0)",
+        "darkValue": "oklch(0.1450 0 0)",
+        "tonalRamp": [
+          "#0a0a0a",
+          "#171717",
+          "#262626",
+          "#404040",
+          "#6c6c6c",
+          "#a1a1a1",
+          "#cecece",
+          "#e5e5e5",
+          "#f5f5f5"
+        ]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "墨黑",
+        "canonical": "oklch(0.1450 0 0)",
+        "darkValue": "oklch(0.9850 0 0)",
+        "tonalRamp": [
+          "#0a0a0a",
+          "#171717",
+          "#262626",
+          "#404040",
+          "#6c6c6c",
+          "#a1a1a1",
+          "#cecece",
+          "#e5e5e5",
+          "#f5f5f5"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "灰面板",
+        "canonical": "oklch(0.9700 0 0)",
+        "darkValue": "oklch(0.2690 0 0)",
+        "tonalRamp": [
+          "#0a0a0a",
+          "#171717",
+          "#262626",
+          "#404040",
+          "#6c6c6c",
+          "#a1a1a1",
+          "#cecece",
+          "#e5e5e5",
+          "#f5f5f5"
+        ]
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "說明灰",
+        "canonical": "oklch(0.53 0 0)",
+        "darkValue": "oklch(0.7080 0 0)",
+        "tonalRamp": [
+          "#0a0a0a",
+          "#171717",
+          "#262626",
+          "#404040",
+          "#6c6c6c",
+          "#a1a1a1",
+          "#cecece",
+          "#e5e5e5",
+          "#f5f5f5"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "格線灰",
+        "canonical": "oklch(0.9220 0 0)",
+        "darkValue": "oklch(0.2750 0 0)",
+        "tonalRamp": [
+          "#0a0a0a",
+          "#171717",
+          "#262626",
+          "#404040",
+          "#6c6c6c",
+          "#a1a1a1",
+          "#cecece",
+          "#e5e5e5",
+          "#f5f5f5"
+        ]
+      },
+      "ring": {
+        "role": "neutral",
+        "displayName": "焦點環",
+        "canonical": "oklch(0.58 0 0)",
+        "darkValue": "oklch(0.60 0 0)",
+        "tonalRamp": [
+          "#0a0a0a",
+          "#171717",
+          "#262626",
+          "#404040",
+          "#6c6c6c",
+          "#a1a1a1",
+          "#cecece",
+          "#e5e5e5",
+          "#f5f5f5"
+        ]
+      },
+      "sidebar": {
+        "role": "neutral",
+        "displayName": "側欄面板",
+        "canonical": "oklch(0.9850 0 0)",
+        "darkValue": "oklch(0.2050 0 0)",
+        "tonalRamp": [
+          "#0a0a0a",
+          "#171717",
+          "#262626",
+          "#404040",
+          "#6c6c6c",
+          "#a1a1a1",
+          "#cecece",
+          "#e5e5e5",
+          "#f5f5f5"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "頁面標題",
+        "purpose": "頁面 h1，每頁唯一（1.5rem/700）。"
+      },
+      "title": {
+        "displayName": "卡片標題",
+        "purpose": "CardTitle 實作為 <h3>（1.125rem/600）。"
+      },
+      "body": {
+        "displayName": "內文",
+        "purpose": "表格內容、說明文（0.875rem/400）。"
+      },
+      "label": {
+        "displayName": "表單標籤／按鈕",
+        "purpose": "FieldLabel 0.875rem/500；按鈕同級但 600。"
+      },
+      "caption": {
+        "displayName": "分組標籤／Badge",
+        "purpose": "側欄分組（大寫 tracking-wider）與 Badge 文字（0.75rem/600）。"
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-2xs / xs",
+        "value": "0 1px 3px 0px hsl(0 0% 0% / 0.05)",
+        "purpose": "卡片與 hover 的 outline/secondary 按鈕——全站唯一的靜止陰影。"
+      },
+      {
+        "name": "shadow-sm",
+        "value": "0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10)",
+        "purpose": "已定義但未使用；不得為了「有層次」啟用。"
+      },
+      {
+        "name": "dialog scrim",
+        "value": "bg-foreground/75 + backdrop-blur-sm",
+        "purpose": "對話框與行動抽屜的唯一深度手法。"
+      }
+    ],
+    "motion": [
+      {
+        "name": "sidebar width",
+        "value": "transition-[width] 200ms ease-linear",
+        "purpose": "側欄展開／收斂。"
+      },
+      {
+        "name": "state color",
+        "value": "transition-colors（Tailwind 預設 150ms）",
+        "purpose": "hover / focus / 選中底色變化。"
+      },
+      {
+        "name": "skeleton pulse",
+        "value": "animate-pulse",
+        "purpose": "路由載入骨架的唯一動畫。"
+      },
+      {
+        "name": "spinner",
+        "value": "animate-spin（CSS 預設 1s linear）",
+        "purpose": "載入指示。"
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "shell JS breakpoint",
+        "value": "768px（matchMedia max-width: 767px）",
+        "purpose": "側欄改為 Ark drawer；不用 md:/lg: class 切換版面。"
+      },
+      {
+        "name": "sm",
+        "value": "640px",
+        "purpose": "篩選列與頁首由直排轉橫排（sm:flex-row）。"
+      },
+      {
+        "name": "lg",
+        "value": "1024px",
+        "purpose": "外框內距 p-4 → lg:p-6；頂列 px-4 → lg:px-6。"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "主要按鈕 Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "畫面唯一的主要動作；托盤陶土實底，hover 為同色 95%（不是 90%，白字需 4.5:1）。",
+      "html": "<button class=\"ds-btn-primary\">建立訂單</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;height:2.25rem;padding:0 .1rem 0 1rem;padding:0 1rem;border:1px solid var(--primary);border-radius:var(--radius-lg,.625rem);background:var(--primary);color:var(--primary-foreground);font-size:.875rem;font-weight:600;line-height:1;white-space:nowrap;cursor:pointer;transition:background-color .15s}.ds-btn-primary:hover{background:color-mix(in oklch,var(--primary) 95%,transparent)}.ds-btn-primary:focus-visible{outline:none;box-shadow:0 0 0 3px var(--ring)}.ds-btn-primary:disabled{opacity:.5;pointer-events:none}"
+    },
+    {
+      "name": "次要按鈕 Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "非主要動作；白底 + 1px 格線框，hover 換灰底並加最低一階陰影。",
+      "html": "<button class=\"ds-btn-outline\">取消</button>",
+      "css": ".ds-btn-outline{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;height:2.25rem;padding:0 1rem;border:1px solid var(--border);border-radius:var(--radius-lg,.625rem);background:var(--card);color:var(--foreground);font-size:.875rem;font-weight:600;cursor:pointer;transition:background-color .15s,box-shadow .15s}.ds-btn-outline:hover{background:var(--muted);box-shadow:0 1px 3px 0 hsl(0 0% 0% /.05)}.ds-btn-outline:focus-visible{outline:none;box-shadow:0 0 0 3px var(--ring)}"
+    },
+    {
+      "name": "危險按鈕 Destructive Button",
+      "kind": "button",
+      "refersTo": "button-destructive",
+      "description": "作廢、刪除、拒絕。退貨紅實底。",
+      "html": "<button class=\"ds-btn-destructive\">作廢訂單</button>",
+      "css": ".ds-btn-destructive{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;height:2.25rem;padding:0 1rem;border:1px solid var(--destructive);border-radius:var(--radius-lg,.625rem);background:var(--destructive);color:var(--destructive-foreground);font-size:.875rem;font-weight:600;cursor:pointer;transition:background-color .15s}.ds-btn-destructive:hover{background:color-mix(in oklch,var(--destructive) 90%,transparent)}.ds-btn-destructive:focus-visible{outline:none;box-shadow:0 0 0 3px var(--ring)}"
+    },
+    {
+      "name": "文字動作 Link Action",
+      "kind": "button",
+      "refersTo": "button-link",
+      "description": "表格列內的行內動作（編輯／刪除）。純文字連結，維持 45px 列高。",
+      "html": "<span class=\"ds-actions\"><button class=\"ds-action\">編輯</button><button class=\"ds-action ds-action-danger\">刪除</button></span>",
+      "css": ".ds-actions{display:flex;justify-content:flex-end;gap:.75rem;white-space:nowrap}.ds-action{border:0;background:none;padding:0;font-size:.875rem;font-weight:500;color:var(--primary);cursor:pointer}.ds-action:hover{text-decoration:underline}.ds-action-danger{color:var(--destructive)}"
+    },
+    {
+      "name": "輸入框 Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "白底 + 1px 格線框；focus 邊框轉主色 + 3px 半透明環，錯誤態轉危險紅。",
+      "html": "<input class=\"ds-input\" placeholder=\"輸入客戶編號或名稱\" />",
+      "css": ".ds-input{display:block;width:100%;height:2.5rem;padding:.5rem .75rem;border:1px solid var(--border);border-radius:var(--radius-lg,.625rem);background:var(--card);color:var(--foreground);font-size:.875rem;transition:border-color .15s,box-shadow .15s}.ds-input::placeholder{color:var(--muted-foreground)}.ds-input:focus-visible{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in oklch,var(--primary) 50%,transparent)}"
+    },
+    {
+      "name": "狀態標籤 Badge",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "唯讀狀態。淡底 + 同色深字；顏色永遠搭配同義繁中字。",
+      "html": "<span class=\"ds-badges\"><span class=\"ds-badge\">待處理</span><span class=\"ds-badge ds-badge-success\">已完成</span><span class=\"ds-badge ds-badge-warning\">處理中</span><span class=\"ds-badge ds-badge-danger\">已作廢</span></span>",
+      "css": ".ds-badges{display:inline-flex;gap:.5rem}.ds-badge{display:inline-flex;align-items:center;border-radius:var(--radius-sm,.375rem);padding:.25rem .5rem;font-size:.75rem;line-height:1rem;font-weight:600;background:var(--muted);color:var(--muted-foreground)}.ds-badge-success{background:color-mix(in oklch,var(--success) 15%,transparent);color:var(--success)}.ds-badge-warning{background:color-mix(in oklch,var(--warning) 15%,transparent);color:var(--warning)}.ds-badge-danger{background:color-mix(in oklch,var(--destructive) 15%,transparent);color:var(--destructive)}"
+    },
+    {
+      "name": "卡片 Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "唯一的資訊容器；標題帶與頁腳用 bg-muted 形成色帶，靜止只有最低一階陰影。",
+      "html": "<section class=\"ds-card\"><header class=\"ds-card-head\"><h3 class=\"ds-card-title\">今日待出貨</h3><p class=\"ds-card-desc\">統計截至本次載入</p></header><div class=\"ds-card-body\"><p class=\"ds-card-text\">共 24 筆訂單待派車。</p></div><footer class=\"ds-card-foot\">最後更新 09:42</footer></section>",
+      "css": ".ds-card{display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--border);border-radius:var(--radius-lg,.625rem);background:var(--card);color:var(--card-foreground);box-shadow:0 1px 3px 0 hsl(0 0% 0% /.05)}.ds-card-head{display:flex;flex-direction:column;gap:.375rem;background:var(--muted);padding:1rem 1.25rem}.ds-card-title{margin:0;font-size:1.125rem;font-weight:600;line-height:1;letter-spacing:-.01em}.ds-card-desc{margin:0;font-size:.875rem;color:var(--muted-foreground)}.ds-card-body{padding:1.25rem}.ds-card-text{margin:0;font-size:.875rem}.ds-card-foot{display:flex;align-items:center;gap:.5rem;background:var(--muted);padding:1rem 1.25rem;font-size:.875rem;color:var(--muted-foreground)}"
+    },
+    {
+      "name": "表格 Table",
+      "kind": "custom",
+      "refersTo": "table-head",
+      "description": "中台最核心元件。不換行的密集表格：表頭灰帶、列 hover 半透明、行內動作為文字連結。",
+      "html": "<table class=\"ds-table\"><thead><tr><th>訂單編號</th><th>客戶</th><th>狀態</th><th class=\"ds-th-right\">動作</th></tr></thead><tbody><tr><td>A01000042</td><td>永和豆漿</td><td><span class=\"ds-badge\">待處理</span></td><td><span class=\"ds-actions\"><button class=\"ds-action\">編輯</button></span></td></tr><tr><td>A01000043</td><td>主廚商行</td><td><span class=\"ds-badge ds-badge-success\">已完成</span></td><td><span class=\"ds-actions\"><button class=\"ds-action\">檢視</button></span></td></tr></tbody></table>",
+      "css": ".ds-table{width:100%;min-width:100%;border-collapse:collapse;font-size:.875rem;white-space:nowrap;align-middle}.ds-table th{background:var(--muted);padding:1rem .75rem;text-align:left;font-weight:600;color:var(--foreground);border-bottom:1px solid var(--border)}.ds-table .ds-th-right{text-align:right}.ds-table td{padding:.75rem;border-bottom:1px solid var(--border)}.ds-table tbody tr:last-child td{border-bottom:0}.ds-table tbody tr:hover{background:color-mix(in oklch,var(--muted) 50%,transparent)}"
+    },
+    {
+      "name": "導覽項目 Nav Item",
+      "kind": "nav",
+      "refersTo": "button-ghost",
+      "description": "側欄項目。選中由 data-active 驅動（灰底 + 半粗 + aria-current），比對是精確相等。",
+      "html": "<nav class=\"ds-nav\"><span class=\"ds-nav-label\">營運</span><a class=\"ds-nav-item\" href=\"#\" aria-current=\"page\">訂單管理</a><a class=\"ds-nav-item\" href=\"#\">退貨管理</a></nav>",
+      "css": "@property --x{syntax:'*';inherits:false;initial-value:0}.ds-nav{display:flex;flex-direction:column;gap:.25rem;padding:.5rem;background:var(--sidebar);color:var(--sidebar-foreground);border-right:1px solid var(--sidebar-border);width:16rem}.ds-nav-label{padding:.5rem .5rem .25rem;font-size:.75rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:color-mix(in oklch,var(--sidebar-foreground) 70%,transparent)}.ds-nav-item{display:flex;align-items:center;gap:.5rem;border-radius:var(--radius-md,.5rem);padding:.375rem .5rem;font-size:.875rem;font-weight:500;color:var(--sidebar-foreground);text-decoration:none;transition:background-color .15s}.ds-nav-item:hover{background:var(--sidebar-accent)}.ds-nav-item[aria-current=page]{background:var(--sidebar-accent);font-weight:600}.ds-nav-item:focus-visible{outline:none;box-shadow:0 0 0 3px var(--sidebar-ring)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Control Room（控制室）",
+    "overview": "中台是一間控制室：多路訊號（訂單、派車、庫別、退貨）同時進場，使用者的工作是判斷，不是瀏覽。畫面的第一責任是讓狀態可掃視、異常可定位，裝飾性的漸層、插圖、動效在這裡都是雜訊；節奏來自表格的行高、標題的層級與留白的一致性。系統自帶一套完整語意 token（oklch，淺／深兩套），元件只消費 token、不持有顏色，深色因此是同一套值的翻轉而不是第二套設計。形狀語言平整且克制：1px 邊框定義形狀，圓角 10px 統一，靜止狀態只用最低一階陰影，深度靠層級與底色差表達。",
+    "keyCharacteristics": [
+      "高資訊密度：表格列高約 45px、表頭 52px，內容區無 max-width，寬度全給資料",
+      "單一強調色：托盤陶土只出現在主要動作、選中與焦點環",
+      "邊框優先：卡片、輸入框、表格、側欄都以 1px border 分隔",
+      "深色是同一組 token 的覆寫（.dark），元件內禁止顏色的 dark: 變體",
+      "狀態一律有文字，顏色只是加速判讀"
+    ],
+    "rules": [
+      {
+        "name": "The One Accent Rule",
+        "body": "托盤陶土在任一畫面的覆蓋面積不超過一成。它的稀有性就是它的作用——主色一多，主要動作就不再可辨。",
+        "section": "colors"
+      },
+      {
+        "name": "The Token-Only Rule",
+        "body": "元件內只准寫語意 token。禁寫色階字面值，也禁寫顏色相關的 dark: 變體；深色由 .dark 覆寫同一組 token 達成。",
+        "section": "colors"
+      },
+      {
+        "name": "The Contrast-Carrying Rule",
+        "body": "白字疊主色的 hover 用 /95 而非 /90（90% 只有 4.36:1 不合格、95% 為 4.75:1）；焦點環 --ring 定在不透明 L 0.58（對白底 4.29:1）。",
+        "section": "colors"
+      },
+      {
+        "name": "The Two-Weights Rule",
+        "body": "每一段文字只用 400 與 600 兩級（標題 700 為唯一例外）。連續三種字重會讓密集表格看起來像在喊叫。",
+        "section": "typography"
+      },
+      {
+        "name": "The Monospace-Is-Evidence Rule",
+        "body": "等寬字只用於需要逐位對齊的數字（分頁摘要、編號），不用來營造技術感。",
+        "section": "typography"
+      },
+      {
+        "name": "The Full-Bleed Content Rule",
+        "body": "內容柱不設 max-width。資料是主體，把它收成置中窄欄只是為了美觀而犧牲掃視寬度。",
+        "section": "layout"
+      },
+      {
+        "name": "The Shell-Owns-Padding Rule",
+        "body": "頁面不得自帶外距；間距只由外框的 p-4 lg:p-6 與元件自身內距產生。",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "表面靜止時不投影；陰影只作為狀態反應或最低限度的卡片分界。",
+        "section": "elevation"
+      },
+      {
+        "name": "The No-Shadow-Stacking Rule",
+        "body": "同一畫面不得同時出現兩階以上的陰影；要再分層就用底色或邊框。",
+        "section": "elevation"
+      },
+      {
+        "name": "The 10px Rule",
+        "body": "容器與控件都用 rounded-lg（10px）；小元件降一階到 6–8px。沒有第五種圓角。",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do 只寫語意 token（bg-card、text-muted-foreground、border-border），並在深色模式驗證一次。",
+      "Do 把顏色改動當成對比度改動：任何亮度調整都要實測 4.5:1（文字）與 3:1（非文字）。",
+      "Do 讓狀態有文字；Badge 的語意色永遠搭配同義的繁中字。",
+      "Do 用 data-state／data-active 表達狀態，讓元件與頁面各司其職。",
+      "Do 在表格內把列動作寫成文字連結，維持 45px 列高的密度。",
+      "Do 讓頁面沿用固定順序：頁首 → 錯誤帶 → 一張卡片（篩選／表格／分頁）→ 對話框。",
+      "Do 把表單放進對話框時同時傳 invalid，否則錯誤訊息與 aria-invalid 都不會出現。"
+    ],
+    "donts": [
+      "Don't 寫色階字面值（zinc-*、orange-*、emerald-*）或顏色相關的 dark: 變體。",
+      "Don't 在內容柱上追加 max-width／置中容器。",
+      "Don't 疊加陰影，也不要給靜止卡片加 shadow-md 以上。",
+      "Don't 引入第五種圓角或膠囊形大按鈕。",
+      "Don't 自己刻 ARIA 或 role，也不要在元件外層改寫它的 data-* 契約。",
+      "Don't 把 Badge 當可點元件，也別把 Card 當可點區塊（要就放真正的 <a>/<button>）。",
+      "Don't 在元件內硬編訊息字串；錯誤一律走 ErrorInfo。",
+      "Don't 用動畫補足層級——進入動畫一律不做。"
+    ]
+  }
+}
