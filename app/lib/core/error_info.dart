@@ -33,9 +33,26 @@ String? errorCodeOf(Object error) => errorInfoOf(error)?.code;
 /// 再退回 [authErrorMessage] 的連線層對照。
 ///
 /// `details` 的佔位符（如 AUTH-3003 的 `{until}`）以 detail 帶入的參數渲染。
+///
+/// ## 為什麼要讀 `details['reason']`（與 Web 的 `error-message.ts` 同一組規則）
+///
+/// 後端 `errcode.Code.Render` **只替換樣板裡出現過的 `{佔位符}`**。`SYS-1001` 的樣板是
+/// 「參數驗證失敗」、裡面沒有任何佔位符，所以像
+/// `errcode.SysInvalidArgument.Error({"reason": "無可列印資料"})` 這種呼叫
+/// （print/dispatch/customer_account 等服務大量使用）渲染出來的 `message` 就是那句無用的
+/// 樣板 —— 可行動的原因只留在 `details`。不讀它，等於後端那句話從未送出。
+///
+/// 但 `reason` 不全是文案：`customer_account_service` 用 `primary_account`／
+/// `system_generated`／`not_manageable` 這類**英文代號**當 reason，那是給程式判斷用的。
+/// 故只在內容含中文時採用（與 Web 的 `CJK.test` 同條件）。
 String localizedErrorMessage(Object error) {
   final info = errorInfoOf(error);
   if (info == null) return authErrorMessage(error);
+
+  // ① 可行動的原因（後端放這裡，樣板吃不到 —— 見上方說明）。
+  final reason = info.details['reason'] ?? '';
+  if (_hasCJK(reason)) return reason;
+
   final template = errCodeMessages[info.code];
   if (template == null) {
     return info.message.isNotEmpty ? info.message : authErrorMessage(error);
@@ -44,8 +61,17 @@ String localizedErrorMessage(Object error) {
   for (final e in info.details.entries) {
     out = out.replaceAll('{${e.key}}', e.value);
   }
+  // 佔位符沒填滿（`{used}` 會原樣印給使用者）→ 寧可退回後端訊息或連線層文案，
+  // 也不要讓畫面出現大括號。
+  if (out.contains('{')) {
+    if (info.message.isNotEmpty && !info.message.contains('{')) return info.message;
+    return authErrorMessage(error);
+  }
   return out;
 }
+
+/// 是否含 CJK 字元（用來分辨「後端寫給使用者的中文」與「內部英文代號」）。
+bool _hasCJK(String s) => RegExp(r'[\u4e00-\u9fff]').hasMatch(s);
 
 /// 連線層錯誤訊息（無 `ErrorInfo` 時的最後一道）。
 ///

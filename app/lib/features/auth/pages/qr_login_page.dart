@@ -1,4 +1,5 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:connectrpc/connect.dart' as connect;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -209,8 +210,28 @@ class _QRError extends StatelessWidget {
   }
 }
 
-/// QR 兌換錯誤訊息（繁體中文）：失效／已用一律請使用者重新取得 QR。
+/// QR 兌換錯誤訊息（繁體中文）。
+///
+/// 這一頁的領域錯誤**刻意保留頁面專屬文案**：token 失效／已使用／客戶不存在都會是
+/// `SYS-1001`（`details.field=token`），碼表那句「參數驗證失敗」對拿著 QR 的業務毫無意義，
+/// 而「請向業務重新取得」正是他下一步該做的事。
+///
+/// 但**連線層失敗必須分辨出來**：先前這裡不看 connect 碼，於是斷網、伺服器掛掉、逾時
+/// 全都顯示「此 QR Code 已失效或已使用過」—— 把「你的網路有問題」說成「這張 QR 壞了」，
+/// 使用者會白跑一趟找業務重印。這與 Web 的 `errorMessage` 是同一條規則（先分類、再取文案）。
 String qrErrorMessage(Object error) {
   if (error is StateError) return error.message;
+  if (error is connect.ConnectException) {
+    switch (error.code) {
+      case connect.Code.unavailable:
+      case connect.Code.deadlineExceeded:
+        return '無法連線至伺服器，請確認網路後再重試。';
+      case connect.Code.permissionDenied:
+      case connect.Code.unauthenticated:
+        return '此 QR Code 已失效或已使用過，請向業務重新取得。';
+      default:
+        break;
+    }
+  }
   return '此 QR Code 已失效或已使用過，請向業務重新取得。';
 }

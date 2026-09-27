@@ -333,6 +333,20 @@ export declare type ListOrdersRequest = Message<"salesorder.v1.ListOrdersRequest
    * @generated from field: string expected_delivery_date = 8;
    */
   expectedDeliveryDate: string;
+
+  /**
+   * 白名單:order_no | expected_delivery_date | created_at | id(空 = 預設排序)
+   *
+   * @generated from field: string sort = 9;
+   */
+  sort: string;
+
+  /**
+   * 是否降冪(sort 空時忽略)
+   *
+   * @generated from field: bool desc = 10;
+   */
+  desc: boolean;
 };
 
 /**

@@ -203,6 +203,8 @@ class ListUsersRequest extends $pb.GeneratedMessage {
     $core.String? departmentId,
     $core.String? role,
     $core.String? status,
+    $core.String? sort,
+    $core.bool? desc,
   }) {
     final result = ListUsersRequest._();
     if (page != null) result.page = page;
@@ -211,6 +213,8 @@ class ListUsersRequest extends $pb.GeneratedMessage {
     if (departmentId != null) result.departmentId = departmentId;
     if (role != null) result.role = role;
     if (status != null) result.status = status;
+    if (sort != null) result.sort = sort;
+    if (desc != null) result.desc = desc;
     return result;
   }
 
@@ -233,6 +237,8 @@ class ListUsersRequest extends $pb.GeneratedMessage {
     ..aOS(4, _omitFieldNames ? '' : 'departmentId')
     ..aOS(5, _omitFieldNames ? '' : 'role')
     ..aOS(6, _omitFieldNames ? '' : 'status')
+    ..aOS(7, _omitFieldNames ? '' : 'sort')
+    ..aOB(8, _omitFieldNames ? '' : 'desc')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -310,6 +316,24 @@ class ListUsersRequest extends $pb.GeneratedMessage {
   $core.bool hasStatus() => $_has(5);
   @$pb.TagNumber(6)
   void clearStatus() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.String get sort => $_getSZ(6);
+  @$pb.TagNumber(7)
+  set sort($core.String value) => $_setString(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasSort() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearSort() => $_clearField(7);
+
+  @$pb.TagNumber(8)
+  $core.bool get desc => $_getBF(7);
+  @$pb.TagNumber(8)
+  set desc($core.bool value) => $_setBool(7, value);
+  @$pb.TagNumber(8)
+  $core.bool hasDesc() => $_has(7);
+  @$pb.TagNumber(8)
+  void clearDesc() => $_clearField(8);
 }
 
 class ListUsersResponse extends $pb.GeneratedMessage {

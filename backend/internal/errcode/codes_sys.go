@@ -18,14 +18,14 @@ var (
 	// 為什麼是 FailedPrecondition 而非 Internal：這是「身分／範圍與該列不匹配」，不是伺服器故障
 	// （用 Internal 會讓監控誤判 5xx 並誤導客戶）；SQLSTATE 與 policy 原文只進 log。
 	SysScopeViolation = MustRegister(Code{id: "SYS-3001", domain: DomainSys,
-		connectCode: connect.CodeFailedPrecondition, message: "資料超出目前的存取範圍,無法完成此操作"})
+		connectCode: connect.CodeFailedPrecondition, message: "資料超出目前的存取範圍，無法完成此操作"})
 
 	// SysConstraintViolation 為資料庫約束類錯誤（識別碼重複、FK 阻擋、CHECK 失敗）——無法分辨是哪一種。
 	// 為什麼不是 AlreadyExists：P2-A 的原始缺陷正是「FK 阻擋被當成識別碼重複回 AlreadyExists」，
 	// 且 ent 給的 constraint 錯誤無法區分兩者；訊息刻意保留可行動指引但不揭露 DB 細節。
 	SysConstraintViolation = MustRegister(Code{id: "SYS-3002", domain: DomainSys,
 		connectCode: connect.CodeFailedPrecondition,
-		message:     "資料違反資料庫約束,無法完成此操作(請確認識別碼是否已被使用、參照對象是否仍存在)"})
+		message:     "資料違反資料庫約束，無法完成此操作（請確認識別碼是否已被使用、參照對象是否仍存在）"})
 
 	// SysPermissionDenied 為授權檢查失敗（角色／資料範圍不足）。前端應導向「請管理員開權」。
 	SysPermissionDenied = MustRegister(Code{id: "SYS-4001", domain: DomainSys,

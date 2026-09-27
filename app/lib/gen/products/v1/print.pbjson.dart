@@ -120,6 +120,7 @@ const LogEntry$json = {
     {'1': 'is_reprint', '3': 7, '4': 1, '5': 8, '10': 'isReprint'},
     {'1': 'reprint_reason', '3': 8, '4': 1, '5': 9, '10': 'reprintReason'},
     {'1': 'download_url', '3': 9, '4': 1, '5': 9, '10': 'downloadUrl'},
+    {'1': 'printed_by_name', '3': 10, '4': 1, '5': 9, '10': 'printedByName'},
   ],
 };
 
@@ -130,7 +131,7 @@ final $typed_data.Uint8List logEntryDescriptor = $convert.base64Decode(
     'Ugp0YXJnZXREYXRlEh0KCnByaW50ZWRfYnkYBSABKAlSCXByaW50ZWRCeRIdCgpwcmludGVkX2'
     'F0GAYgASgJUglwcmludGVkQXQSHQoKaXNfcmVwcmludBgHIAEoCFIJaXNSZXByaW50EiUKDnJl'
     'cHJpbnRfcmVhc29uGAggASgJUg1yZXByaW50UmVhc29uEiEKDGRvd25sb2FkX3VybBgJIAEoCV'
-    'ILZG93bmxvYWRVcmw=');
+    'ILZG93bmxvYWRVcmwSJgoPcHJpbnRlZF9ieV9uYW1lGAogASgJUg1wcmludGVkQnlOYW1l');
 
 @$core.Deprecated('Use listLogsResponseDescriptor instead')
 const ListLogsResponse$json = {

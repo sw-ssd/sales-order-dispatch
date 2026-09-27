@@ -66,3 +66,30 @@ describe("describeError(PLAT-3002)", () => {
     }
   });
 });
+
+/**
+ * 契約：`SYS-1001`（參數驗證失敗）在平台寫入路徑**一定**帶 `details.field`，指出哪個欄位被拒。
+ * 碼表那句「參數驗證失敗」對 operator 沒有行動資訊 —— 不讀 `field` 的話，他只看得到
+ * 「SYS-1001：參數驗證失敗」然後自己猜是哪一格。
+ */
+describe("describeError(SYS-1001)", () => {
+  it("帶已知 field → 說出是哪個欄位（顯示中文標籤，不是後端欄位名）", () => {
+    const text = describeError(
+      connectErrorWithInfo("SYS-1001", { message: "參數驗證失敗", details: { field: "seat_count" } }),
+    );
+
+    expect(text).toContain("席位數");
+    // 內部欄位名不得攤到 operator 面前。
+    expect(text).not.toContain("seat_count");
+  });
+
+  it("帶未知 field → 通用說法，不硬湊翻譯也不吞掉訊息", () => {
+    const text = describeError(
+      connectErrorWithInfo("SYS-1001", { message: "參數驗證失敗", details: { field: "zzz_unknown" } }),
+    );
+
+    expect(text).toContain("SYS-1001");
+    expect(text).toContain("參數驗證失敗");
+    expect(text).toContain("請檢查送出的欄位內容");
+  });
+});

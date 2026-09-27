@@ -196,6 +196,20 @@ export declare type ListProductsRequest = Message<"products.v1.ListProductsReque
    * @generated from field: bool include_deleted = 5;
    */
   includeDeleted: boolean;
+
+  /**
+   * 白名單:code | name | created_at | id(空 = 預設排序)
+   *
+   * @generated from field: string sort = 6;
+   */
+  sort: string;
+
+  /**
+   * 是否降冪(sort 空時忽略)
+   *
+   * @generated from field: bool desc = 7;
+   */
+  desc: boolean;
 };
 
 /**

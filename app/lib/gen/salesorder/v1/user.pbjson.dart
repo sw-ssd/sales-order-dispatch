@@ -54,6 +54,8 @@ const ListUsersRequest$json = {
     {'1': 'department_id', '3': 4, '4': 1, '5': 9, '10': 'departmentId'},
     {'1': 'role', '3': 5, '4': 1, '5': 9, '10': 'role'},
     {'1': 'status', '3': 6, '4': 1, '5': 9, '10': 'status'},
+    {'1': 'sort', '3': 7, '4': 1, '5': 9, '10': 'sort'},
+    {'1': 'desc', '3': 8, '4': 1, '5': 8, '10': 'desc'},
   ],
 };
 
@@ -62,7 +64,7 @@ final $typed_data.Uint8List listUsersRequestDescriptor = $convert.base64Decode(
     'ChBMaXN0VXNlcnNSZXF1ZXN0EhIKBHBhZ2UYASABKAVSBHBhZ2USGwoJcGFnZV9zaXplGAIgAS'
     'gFUghwYWdlU2l6ZRIdCgpjb21wYW55X2lkGAMgASgJUgljb21wYW55SWQSIwoNZGVwYXJ0bWVu'
     'dF9pZBgEIAEoCVIMZGVwYXJ0bWVudElkEhIKBHJvbGUYBSABKAlSBHJvbGUSFgoGc3RhdHVzGA'
-    'YgASgJUgZzdGF0dXM=');
+    'YgASgJUgZzdGF0dXMSEgoEc29ydBgHIAEoCVIEc29ydBISCgRkZXNjGAggASgIUgRkZXNj');
 
 @$core.Deprecated('Use listUsersResponseDescriptor instead')
 const ListUsersResponse$json = {

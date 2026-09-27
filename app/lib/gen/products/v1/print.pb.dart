@@ -547,6 +547,7 @@ class LogEntry extends $pb.GeneratedMessage {
     $core.bool? isReprint,
     $core.String? reprintReason,
     $core.String? downloadUrl,
+    $core.String? printedByName,
   }) {
     final result = LogEntry._();
     if (id != null) result.id = id;
@@ -558,6 +559,7 @@ class LogEntry extends $pb.GeneratedMessage {
     if (isReprint != null) result.isReprint = isReprint;
     if (reprintReason != null) result.reprintReason = reprintReason;
     if (downloadUrl != null) result.downloadUrl = downloadUrl;
+    if (printedByName != null) result.printedByName = printedByName;
     return result;
   }
 
@@ -583,6 +585,7 @@ class LogEntry extends $pb.GeneratedMessage {
     ..aOB(7, _omitFieldNames ? '' : 'isReprint')
     ..aOS(8, _omitFieldNames ? '' : 'reprintReason')
     ..aOS(9, _omitFieldNames ? '' : 'downloadUrl')
+    ..aOS(10, _omitFieldNames ? '' : 'printedByName')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -685,6 +688,17 @@ class LogEntry extends $pb.GeneratedMessage {
   $core.bool hasDownloadUrl() => $_has(8);
   @$pb.TagNumber(9)
   void clearDownloadUrl() => $_clearField(9);
+
+  /// printed_by_name:操作者顯示名稱(使用者姓名)。查不到(帳號已刪除)時為空,
+  /// 前端據此退回顯示 printed_by。與 audit.v1.AuditLog.user_name 同法。
+  @$pb.TagNumber(10)
+  $core.String get printedByName => $_getSZ(9);
+  @$pb.TagNumber(10)
+  set printedByName($core.String value) => $_setString(9, value);
+  @$pb.TagNumber(10)
+  $core.bool hasPrintedByName() => $_has(9);
+  @$pb.TagNumber(10)
+  void clearPrintedByName() => $_clearField(10);
 }
 
 /// ListLogsResponse:列印記錄列表。

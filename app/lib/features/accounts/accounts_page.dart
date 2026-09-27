@@ -7,6 +7,7 @@ import 'package:fquery/fquery.dart';
 import 'package:fquery_core/fquery_core.dart';
 
 import '../../core/api.dart';
+import '../../core/error_info.dart';
 import '../../gen/customers/v1/customer.pb.dart';
 import '../../ui/adaptive.dart';
 import '../../ui/format.dart';
@@ -317,17 +318,21 @@ Future<void> _showTempPassword(
           '請立即轉交，關閉後無法再次查看。',
     );
 
-/// 帳號管理錯誤訊息（繁體中文）。
+/// 帳號管理錯誤訊息：**委派** [localizedErrorMessage]（App 的單一來源），只覆寫
+/// 「權限不足」這一碼。
+///
+/// 為什麼不再自己列一整張表：先前這裡用 `connect` 碼硬編訊息，於是
+/// `connect.Code.alreadyExists` 一律說成「已有同名帳號，請換一個名稱」—— 但停用路徑上
+/// **唯一**會回 `AlreadyExists` 的是「該帳號已停用」（後端 `SYS-2001` + reason
+/// `already_inactive`），對使用者是完全無關的句子。委派後由後端碼表與 `reason` 決定，
+/// 這種「同一個 connect 碼其實是不同原因」的誤譯不會再發生。
+///
+/// 保留的覆寫是**這一頁獨有**的資訊：`permissionDenied` 在此頁的實際成因只有一個
+/// （子帳號無帳號管理權限，規格 4.2），單說「沒有權限」等於沒說要找誰。
 String accountErrorMessage(Object error) {
-  if (error is connect.ConnectException) {
-    return switch (error.code) {
-      connect.Code.permissionDenied => '此帳號沒有帳號管理權限（僅店家主帳號可管理）',
-      connect.Code.unauthenticated => '登入狀態已失效，請重新登入',
-      connect.Code.invalidArgument => '操作不允許：此帳號不可停用或重置',
-      connect.Code.alreadyExists => '已有同名帳號，請換一個名稱',
-      connect.Code.unavailable => '無法連線至伺服器，請檢查網路後再試',
-      _ => '操作失敗（${error.code.name}），請稍後再試',
-    };
+  if (error is connect.ConnectException &&
+      error.code == connect.Code.permissionDenied) {
+    return '此帳號沒有帳號管理權限（僅店家主帳號可管理）';
   }
-  return '操作失敗，請稍後再試';
+  return localizedErrorMessage(error);
 }

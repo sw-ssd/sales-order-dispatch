@@ -138,6 +138,8 @@ const ListOrdersRequest$json = {
       '5': 9,
       '10': 'expectedDeliveryDate'
     },
+    {'1': 'sort', '3': 9, '4': 1, '5': 9, '10': 'sort'},
+    {'1': 'desc', '3': 10, '4': 1, '5': 8, '10': 'desc'},
   ],
 };
 
@@ -147,7 +149,8 @@ final $typed_data.Uint8List listOrdersRequestDescriptor = $convert.base64Decode(
     'EoBVIIcGFnZVNpemUSFgoGc3RhdHVzGAMgASgJUgZzdGF0dXMSHwoLY3VzdG9tZXJfaWQYBCAB'
     'KAlSCmN1c3RvbWVySWQSFgoGc291cmNlGAUgASgJUgZzb3VyY2USGAoHa2V5d29yZBgGIAEoCV'
     'IHa2V5d29yZBInCg9pbmNsdWRlX2RlbGV0ZWQYByABKAhSDmluY2x1ZGVEZWxldGVkEjQKFmV4'
-    'cGVjdGVkX2RlbGl2ZXJ5X2RhdGUYCCABKAlSFGV4cGVjdGVkRGVsaXZlcnlEYXRl');
+    'cGVjdGVkX2RlbGl2ZXJ5X2RhdGUYCCABKAlSFGV4cGVjdGVkRGVsaXZlcnlEYXRlEhIKBHNvcn'
+    'QYCSABKAlSBHNvcnQSEgoEZGVzYxgKIAEoCFIEZGVzYw==');
 
 @$core.Deprecated('Use listOrdersResponseDescriptor instead')
 const ListOrdersResponse$json = {

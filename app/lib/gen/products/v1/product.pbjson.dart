@@ -137,6 +137,8 @@ const ListProductsRequest$json = {
     {'1': 'keyword', '3': 3, '4': 1, '5': 9, '10': 'keyword'},
     {'1': 'category_id', '3': 4, '4': 1, '5': 9, '10': 'categoryId'},
     {'1': 'include_deleted', '3': 5, '4': 1, '5': 8, '10': 'includeDeleted'},
+    {'1': 'sort', '3': 6, '4': 1, '5': 9, '10': 'sort'},
+    {'1': 'desc', '3': 7, '4': 1, '5': 8, '10': 'desc'},
   ],
 };
 
@@ -145,7 +147,7 @@ final $typed_data.Uint8List listProductsRequestDescriptor = $convert.base64Decod
     'ChNMaXN0UHJvZHVjdHNSZXF1ZXN0EhIKBHBhZ2UYASABKAVSBHBhZ2USGwoJcGFnZV9zaXplGA'
     'IgASgFUghwYWdlU2l6ZRIYCgdrZXl3b3JkGAMgASgJUgdrZXl3b3JkEh8KC2NhdGVnb3J5X2lk'
     'GAQgASgJUgpjYXRlZ29yeUlkEicKD2luY2x1ZGVfZGVsZXRlZBgFIAEoCFIOaW5jbHVkZURlbG'
-    'V0ZWQ=');
+    'V0ZWQSEgoEc29ydBgGIAEoCVIEc29ydBISCgRkZXNjGAcgASgIUgRkZXNj');
 
 @$core.Deprecated('Use listProductsResponseDescriptor instead')
 const ListProductsResponse$json = {

@@ -424,6 +424,8 @@ class ListProductsRequest extends $pb.GeneratedMessage {
     $core.String? keyword,
     $core.String? categoryId,
     $core.bool? includeDeleted,
+    $core.String? sort,
+    $core.bool? desc,
   }) {
     final result = ListProductsRequest._();
     if (page != null) result.page = page;
@@ -431,6 +433,8 @@ class ListProductsRequest extends $pb.GeneratedMessage {
     if (keyword != null) result.keyword = keyword;
     if (categoryId != null) result.categoryId = categoryId;
     if (includeDeleted != null) result.includeDeleted = includeDeleted;
+    if (sort != null) result.sort = sort;
+    if (desc != null) result.desc = desc;
     return result;
   }
 
@@ -452,6 +456,8 @@ class ListProductsRequest extends $pb.GeneratedMessage {
     ..aOS(3, _omitFieldNames ? '' : 'keyword')
     ..aOS(4, _omitFieldNames ? '' : 'categoryId')
     ..aOB(5, _omitFieldNames ? '' : 'includeDeleted')
+    ..aOS(6, _omitFieldNames ? '' : 'sort')
+    ..aOB(7, _omitFieldNames ? '' : 'desc')
     ..hasRequiredFields = false;
 
   @$core.Deprecated('See https://github.com/google/protobuf.dart/issues/998.')
@@ -521,6 +527,24 @@ class ListProductsRequest extends $pb.GeneratedMessage {
   $core.bool hasIncludeDeleted() => $_has(4);
   @$pb.TagNumber(5)
   void clearIncludeDeleted() => $_clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get sort => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set sort($core.String value) => $_setString(5, value);
+  @$pb.TagNumber(6)
+  $core.bool hasSort() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearSort() => $_clearField(6);
+
+  @$pb.TagNumber(7)
+  $core.bool get desc => $_getBF(6);
+  @$pb.TagNumber(7)
+  set desc($core.bool value) => $_setBool(6, value);
+  @$pb.TagNumber(7)
+  $core.bool hasDesc() => $_has(6);
+  @$pb.TagNumber(7)
+  void clearDesc() => $_clearField(7);
 }
 
 class ListProductsResponse extends $pb.GeneratedMessage {

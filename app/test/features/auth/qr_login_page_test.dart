@@ -149,4 +149,20 @@ void main() {
 
     await _drain(tester);
   });
+
+  testWidgets('連線失敗不得說成「QR 已失效」（否則使用者白跑一趟找業務重印）',
+      (tester) async {
+    await _pump(
+      tester,
+      onExchange: (_, _) => throw connect.ConnectException(
+        connect.Code.unavailable,
+        'connection refused',
+      ),
+    );
+
+    expect(find.textContaining('無法連線至伺服器'), findsOneWidget);
+    expect(find.textContaining('已失效或已使用過'), findsNothing);
+
+    await _drain(tester);
+  });
 }

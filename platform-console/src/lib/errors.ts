@@ -1,5 +1,10 @@
 import { ConnectError } from "@connectrpc/connect";
-import { CODE_MESSAGES, ERR_PLATFORM_PAYMENT_CONFLICT, ERR_SYS_PERMISSION_DENIED } from "./errcode";
+import {
+  CODE_MESSAGES,
+  ERR_PLATFORM_PAYMENT_CONFLICT,
+  ERR_SYS_INVALID_ARGUMENT,
+  ERR_SYS_PERMISSION_DENIED,
+} from "./errcode";
 import { ErrorInfoSchema } from "./proto/salesorder/v1/common_pb";
 
 /**
@@ -49,8 +54,32 @@ function actionHint(info: { code: string; details: { [key: string]: string } }):
   if (info.code === ERR_PLATFORM_PAYMENT_CONFLICT) {
     return paymentConflictHint(info.details);
   }
+  // SYS-1001（參數驗證失敗）：碼表那句沒有任何行動資訊，而平台的每個寫入路徑都帶
+  // `details.field` 指出**哪個欄位**被拒（plan_code／seat_count／amount／trial_ends_at…）。
+  // 先前這裡不讀它，於是 operator 只看到「SYS-1001：參數驗證失敗」，得自己猜是哪一格。
+  if (info.code === ERR_SYS_INVALID_ARGUMENT) {
+    const field = FIELD_LABELS[info.details["field"] ?? ""];
+    return field ? `請檢查「${field}」欄位` : "請檢查送出的欄位內容";
+  }
   return "";
 }
+
+/**
+ * `details.field` → 表單上的中文欄位名。
+ *
+ * 後端送的是資料庫／proto 的欄位名（`plan_code`），直接顯示等於把內部命名攤給 operator。
+ * 沒列到的欄位回退成通用說法（不硬湊翻譯）。
+ */
+const FIELD_LABELS: Record<string, string> = {
+  plan_code: "方案",
+  seat_count: "席位數",
+  amount: "金額",
+  trial_ends_at: "試用到期",
+  billing_cycle: "計費週期",
+  company_id: "公司",
+  transaction_ref: "交易號",
+  reason: "原因",
+};
 
 /**
  * PLAT-3002 由 `billing.RecordPayment` 產生，**同一個碼承載三種語意**：
