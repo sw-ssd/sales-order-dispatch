@@ -495,12 +495,12 @@ export interface SidebarInsetProps extends JSX.HTMLAttributes<HTMLDivElement> {
   class?: string;
 }
 
-/** 主要內容區：接在側邊欄旁邊，吃掉剩餘寬度。 */
+/** 主要內容區：接在側邊欄旁邊，吃掉剩餘寬度。不設 bg-background：body 的圖紙格線要透出。 */
 export const SidebarInset: ParentComponent<SidebarInsetProps> = (props) => {
   const [local, rest] = splitProps(props, ["class"]);
   return (
     <div
-      class={cn("flex min-w-0 grow flex-col bg-background text-foreground", local.class)}
+      class={cn("flex min-w-0 grow flex-col text-foreground", local.class)}
       {...rest}
     >
       {props.children}

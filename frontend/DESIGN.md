@@ -21,6 +21,7 @@ colors:
   warning-foreground: "oklch(0.985 0 0)"
   info: "oklch(0.50 0.13 250)"
   border: "oklch(0.9220 0 0)"
+  grid-line: "oklch(0.9220 0 0 / 0.75)"
   input: "oklch(0.9220 0 0)"
   ring: "oklch(0.58 0 0)"
   sidebar: "oklch(0.9850 0 0)"
@@ -120,7 +121,7 @@ components:
 
 **Creative North Star: "The Control Room"（控制室）**
 
-中台是一間控制室：多路訊號（訂單、派車、庫別、退貨）同時進場，使用者的工作是**判斷**，不是瀏覽。因此畫面的第一責任是讓狀態可掃視、異常可定位，其次才是任何形式的愉悅。裝飾性的漸層、插圖、動效在這裡都是雜訊；節奏來自表格的行高、標題的層級與留白的一致性。
+中台是一間控制室：多路訊號（訂單、派車、庫別、退貨）同時進場，使用者的工作是**判斷**，不是瀏覽。因此畫面的第一責任是讓狀態可掃視、異常可定位，其次才是任何形式的愉悅。裝飾性的漸層、插圖、動效在這裡都是雜訊；節奏來自表格的行高、標題的層級與留白的一致性。（唯一的例外是 `body` 的圖紙格線——它是底材，不是內容：不搶對比、不進資料區，見 Layout 的底層與 The Paper-Under-Glass Rule。）
 
 系統自帶一套完整語意 token（oklch，淺／深兩套），元件只消費 token，不持有顏色。這規則讓深色模式是同一套值的翻轉，而不是第二套設計——也讓平台營運主控台能直接以路徑別名共用同一份樣式而不分裂。
 
@@ -130,6 +131,7 @@ components:
 - 高資訊密度：表格列高約 45px、表頭 52px，內容區無 `max-width`，寬度全給資料
 - 單一強調色：托盤陶土（Pallet Clay）只出現在主要動作、選中狀態與焦點環
 - 邊框優先：卡片、輸入框、表格、側欄都以 1px `--border` 分隔
+- 唯一的裝飾是 body 的 24px 圖紙格線（`--grid-line`）：它是「紙」，不是內容——所有承載內容的表面都不透明地壓在它上面
 - 深色是同一組 token 的覆寫（`.dark`），元件內禁止顏色的 `dark:` 變體
 - 狀態一律有文字，顏色只是加速判讀
 
@@ -148,7 +150,8 @@ components:
 - **中性灰（secondary／muted）**: **終態與靜止態**一律中性——`cancelled`（訂單）、`inactive`（使用者）、`read`（通知）。綠代表「這件事有個好結果」，灰代表「這件事結束了、不需要再看」；把後者塗綠會讓列表整片發綠，稀釋真正該注意的成功訊號。
 
 ### Neutral
-- **淨白（background / card / popover）** (`oklch(1 0 0)`): 頁面底、卡片底、浮層底。三者同值，靠邊框與陰影分層。
+- **淨白（background / card / popover）** (`oklch(1 0 0)`): 頁面底、卡片底、浮層底。三者同值，靠邊框與陰影分層；差別在**頁面底疊了格線**，卡片與浮層維持不透明的白，格線只從間距裡透出來。
+- **圖紙格線（grid-line）** (`oklch(0.9220 0 0 / 0.75)`): 頁面底紋專用，值刻意取 `--border` 疊 75% 透明度——畫面上的**實線**（表格列、卡片外框、側欄分隔）必須永遠比底紋強，否則資料格線與裝飾格線會打架。只鋪在 `body`，不得挪去畫分隔線。深色沿用同一條 75% 推導（`--border` 在 `.dark` 較亮），所以深色下會比淺色顯眼一些——這是同一條規則的結果，不是兩套值，不要為了「看起來一樣」去改其中一邊。
 - **墨黑（foreground / card-foreground）** (`oklch(0.1450 0 0)`): 主要文字，全站唯一的主文色。
 - **灰面板（muted / secondary / accent）** (`oklch(0.9700 0 0)`): 表頭色帶、卡片標題帶、篩選列、hover 底、`Badge` secondary。
 - **說明灰（muted-foreground）** (`oklch(0.53 0 0)`): 說明文字、次要標籤、表格空狀態。與 `muted` 底的對比依 4.5:1 定案。
@@ -190,7 +193,8 @@ components:
 
 **空間模型是「側欄 + 單一內容柱」，內容柱沒有 `max-width`。**
 
-- 外框：`flex h-dvh w-full min-w-80 overflow-hidden`；桌機是 Ark Splitter 兩面板（側欄 12–30rem 可拖、內容最小 20rem）。
+- 外框：`flex h-dvh w-full min-w-80 overflow-hidden`（**不設** `bg-background`，見下）；桌機是 Ark Splitter 兩面板（側欄 12–30rem 可拖、內容最小 20rem）。
+- 底層：格線鋪在 `body` 上（`background-size: 24px 24px`，兩條 1px `linear-gradient`），隨 viewport canvas 固定、不跟著內容捲動——內容是從紙上滑過去的。因此**殼層、`SidebarInset` 與頁面 `main` 都不得自帶不透明底色**：加了就把底紋蓋掉，整片變成死白。側欄（`bg-sidebar`）、頂列（`bg-card`）、卡片與表格仍是不透明表面，格線只出現在它們之間的間距。
 - 側欄寬：展開 **16rem**、收斂成 icon rail **3rem**、行動抽屜 **18rem**；寬度以 CSS 變數 `--sidebar-width*` 注入，過場 `200ms ease-linear`。
 - 頂列：`sticky top-0 z-30 h-16`，`bg-card` + 下緣 1px 邊框；標題是 `<p>`（頁面自己持有唯一 `h1`）。
 - 內容柱：`h-dvh overflow-y-auto`，**外框是唯一的 padding 擁有者**（`p-4 lg:p-6`），頁面本身不加上下留白。
@@ -213,6 +217,8 @@ components:
 **The Full-Bleed Content Rule.** 內容柱不設 `max-width`。資料是主體，把它收成 1200px 的置中欄只是為了美觀而犧牲掃視寬度。
 
 **The Shell-Owns-Padding Rule.** 頁面不得自帶外距；間距只由外框的 `p-4 lg:p-6` 與元件自身的內距產生。
+
+**The Paper-Under-Glass Rule.** 底紋只在間距裡出現。任何承載內容的表面——卡片、表格、篩選列、頂列、側欄、輸入框、對話框——都必須是不透明底色；格線若穿過某個內容區塊，那個區塊就是漏了一層底。反過來說，殼層與頁面不得再補 `bg-background`：紙已經在 body 上了。
 
 ## Elevation & Depth
 
@@ -307,6 +313,7 @@ components:
 ### Don't:
 - **Don't** 寫色階字面值（`zinc-*`、`orange-*`、`emerald-*`）或顏色相關的 `dark:` 變體。
 - **Don't** 在內容柱上追加 `max-width`／置中容器——資料寬度就是版型寬度。
+- **Don't** 在殼層（`AppShell`／`SidebarInset`）或頁面 `main` 補 `bg-background`——那會蓋掉 `body` 的圖紙格線，讓底層變成死白；承載內容的表面才需要不透明底色。
 - **Don't** 疊加陰影；也不要為了「有層次」給靜止的卡片加 `shadow-md` 以上。
 - **Don't** 引入第五種圓角或膠囊形大按鈕。
 - **Don't** 自己刻 ARIA 或 `role`（Ark 已提供），也不要在元件外層改寫它的 `data-*` 契約。

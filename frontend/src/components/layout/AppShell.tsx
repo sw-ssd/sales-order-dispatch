@@ -73,7 +73,8 @@ function ShellChrome(props: ParentProps) {
   });
 
   return (
-    <div class="flex h-dvh w-full min-w-80 overflow-hidden bg-background text-foreground">
+    // 不設 bg-background：body 的圖紙格線要透到頁面最底層（見 index.css base body）。
+    <div class="flex h-dvh w-full min-w-80 overflow-hidden text-foreground">
       <Show
         when={!isMobile()}
         fallback={

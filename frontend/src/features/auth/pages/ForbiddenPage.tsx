@@ -7,7 +7,7 @@ import { buttonVariants } from "~/components/ui";
  */
 export default function ForbiddenPage() {
   return (
-    <main class="relative flex min-h-dvh items-center overflow-hidden bg-card text-card-foreground">
+    <main class="relative flex min-h-dvh items-center overflow-hidden text-card-foreground">
       <div
         class="absolute top-0 bottom-0 left-0 -ml-44 w-48 bg-primary/10 md:-ml-28 md:skew-x-6"
         aria-hidden="true"

@@ -385,6 +385,7 @@
       "高資訊密度：表格列高約 45px、表頭 52px，內容區無 max-width，寬度全給資料",
       "單一強調色：托盤陶土只出現在主要動作、選中與焦點環",
       "邊框優先：卡片、輸入框、表格、側欄都以 1px border 分隔",
+      "唯一的裝飾是 body 的 24px 圖紙格線（--grid-line）：它是「紙」不是內容，所有承載內容的表面都不透明地壓在它上面",
       "深色是同一組 token 的覆寫（.dark），元件內禁止顏色的 dark: 變體",
       "狀態一律有文字，顏色只是加速判讀"
     ],
@@ -425,6 +426,11 @@
         "section": "layout"
       },
       {
+        "name": "The Paper-Under-Glass Rule",
+        "body": "底紋只在間距裡出現。任何承載內容的表面（卡片、表格、篩選列、頂列、側欄、輸入框、對話框）都必須是不透明底色；格線若穿過某個內容區塊，那個區塊就是漏了一層底。殼層與頁面不得再補 bg-background：紙已經在 body 上了。",
+        "section": "layout"
+      },
+      {
         "name": "The Flat-By-Default Rule",
         "body": "表面靜止時不投影；陰影只作為狀態反應或最低限度的卡片分界。",
         "section": "elevation"
@@ -452,6 +458,7 @@
     "donts": [
       "Don't 寫色階字面值（zinc-*、orange-*、emerald-*）或顏色相關的 dark: 變體。",
       "Don't 在內容柱上追加 max-width／置中容器。",
+      "Don't 在殼層（AppShell／SidebarInset）或頁面 main 補 bg-background——會蓋掉 body 的圖紙格線，讓底層變成死白。",
       "Don't 疊加陰影，也不要給靜止卡片加 shadow-md 以上。",
       "Don't 引入第五種圓角或膠囊形大按鈕。",
       "Don't 自己刻 ARIA 或 role，也不要在元件外層改寫它的 data-* 契約。",

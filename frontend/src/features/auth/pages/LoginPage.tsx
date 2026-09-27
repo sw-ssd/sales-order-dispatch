@@ -49,7 +49,7 @@ function loginErrorMessage(err: unknown): string {
 
 /**
  * 登入頁(/login)：Tailkit Boxed Sign In 版面(a-p-sign-in-01)——
- * 頁底 `bg-muted`、置中單欄卡片、頁首標題＋副標。
+ * 頁底透出 body 的圖紙格線（原 bg-muted 已移除）、置中單欄卡片、頁首標題＋副標。
  * 卡片內沿用 T6 的 Tabs;顏色一律語意 token(不含 Tailkit 的色階字面值與深色變體)。
  *
  * 「店家」表單的欄位值、欄位驗證與提交狀態由 `createForm` 持有：
@@ -92,7 +92,7 @@ export default function LoginPage() {
   };
 
   return (
-    <main class="flex min-h-dvh w-full flex-col items-center justify-center bg-muted p-4 lg:p-8">
+    <main class="flex min-h-dvh w-full flex-col items-center justify-center p-4 lg:p-8">
       <section class="w-full max-w-lg py-6">
         <header class="mb-8 text-center">
           <h1 class="text-2xl font-bold text-foreground">登入</h1>

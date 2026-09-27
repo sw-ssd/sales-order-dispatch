@@ -37,7 +37,7 @@ function AppDownloadPrompt(props: { title: string; description: string }) {
     .sort((a, b) => Number(b.primary) - Number(a.primary));
 
   return (
-    <main class="flex min-h-dvh items-center justify-center bg-card px-6 py-16 text-card-foreground">
+    <main class="flex min-h-dvh items-center justify-center px-6 py-16 text-card-foreground">
       <div class="w-full max-w-lg space-y-6 text-center">
         <h1 class="text-2xl font-extrabold text-foreground md:text-3xl">{props.title}</h1>
         <p class="font-medium text-muted-foreground">{props.description}</p>
