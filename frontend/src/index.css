@@ -307,3 +307,36 @@ table tbody button::after {
     inset-block: -12px;
   }
 }
+
+/**
+ * 橫向捲動容器的捲軸必須看得見（`.scroll-x`）。
+ *
+ * 密集表格與派車看板都用 `overflow-x: auto` 換取列高與欄位對齊，代價是窄視窗會漏欄位；
+ * 而 macOS 預設的**覆蓋式捲軸在不捲動時完全隱形**，使用者於是不知道右邊還有東西——
+ * `PRODUCT.md` 因此把「讓捲動可被發現」寫成明確承諾（捲軸或邊緣提示）。
+ *
+ * 任何 `::-webkit-scrollbar` 樣式都會讓 WebKit/Blink 關掉覆蓋模式、改用常駐捲軸；
+ * Firefox 忽略那組偽元素，走 `scrollbar-width`／`scrollbar-color`。**兩邊都要寫**，
+ * 只寫一邊，另一個引擎的捲軸就還是隱形的。沒有內容溢出時仍然不佔位、不畫軸。
+ *
+ * 顏色用 `--border`：它比底紋（`--grid-line`）強、比文字弱，是一支儀表而不是內容。
+ */
+.scroll-x {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.scroll-x::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.scroll-x::-webkit-scrollbar-track,
+.scroll-x::-webkit-scrollbar-corner {
+  background: transparent;
+}
+.scroll-x::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 9999px;
+}
+.scroll-x::-webkit-scrollbar-thumb:hover {
+  background-color: var(--muted-foreground);
+}

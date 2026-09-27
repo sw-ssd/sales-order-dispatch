@@ -371,7 +371,7 @@ export default function DispatchPage() {
         when={!orders.isPending && !routes.isPending}
         fallback={<p class="text-sm text-muted-foreground">看板載入中…</p>}
       >
-        <div ref={observeBoard} class={cn("flex overflow-x-auto pb-4", compact() ? "gap-3" : "gap-4")}>
+        <div ref={observeBoard} class={cn("scroll-x flex overflow-x-auto pb-4", compact() ? "gap-3" : "gap-4")}>
           {/* 未指派欄：pending 且未綁車次（spec：獨立的「未指派」區域）。 */}
           <section
             class={columnClass("border-dashed border-border bg-muted/50")}

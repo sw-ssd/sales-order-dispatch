@@ -272,7 +272,8 @@ components:
 
 ### Tables
 中台最核心的元件，密度與對齊即是它的設計。
-- **Style:** 外層 `overflow-x-auto`，`<table class="min-w-full align-middle text-sm whitespace-nowrap">`——**不換行**，長內容靠橫向捲動。
+- **Style:** 外層 `scroll-x overflow-x-auto`，`<table class="min-w-full align-middle text-sm whitespace-nowrap">`——**不換行**，長內容靠橫向捲動。
+- **橫向捲動要看得見:** 捲動容器一律掛 `.scroll-x`（`index.css`）。macOS 的覆蓋式捲軸在靜止時**完全隱形**，使用者因此不知道右邊還有欄位；`::-webkit-scrollbar` 樣式讓 WebKit/Blink 改用常駐捲軸，Firefox 走 `scrollbar-width: thin` + `scrollbar-color`，兩邊都要寫。沒有溢出時不佔位、不畫軸，所以桌機不會平白多一條灰線。派車看板與 `PermissionMatrix` 用的是同一條規則——`PRODUCT.md` 的「讓捲動可被發現」就落在這裡。
 - **Head:** `bg-muted px-3 py-4 text-left font-semibold`，下緣 1px 框；色帶是唯一的表頭裝飾。
 - **Row:** `border-b border-border`，hover 為 `bg-muted/50`（半透明，不破壞選中態），選中態 `bg-muted`。
 - **Cell:** `p-3 align-middle`。

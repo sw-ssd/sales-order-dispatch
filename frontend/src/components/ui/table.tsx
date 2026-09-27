@@ -20,7 +20,7 @@ export const Table: Component<TableProps> = (props) => {
   const [local, rest] = splitProps(props, ["class"]);
 
   return (
-    <div class="relative w-full overflow-x-auto">
+    <div class="scroll-x relative w-full overflow-x-auto">
       <table
         class={cn("min-w-full align-middle text-sm whitespace-nowrap", local.class)}
         {...rest}
