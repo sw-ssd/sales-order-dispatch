@@ -316,6 +316,8 @@ type ListProductsRequest struct {
 	Keyword        string                 `protobuf:"bytes,3,opt,name=keyword,proto3" json:"keyword,omitempty"`
 	CategoryId     string                 `protobuf:"bytes,4,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"` // 精確篩選分類
 	IncludeDeleted bool                   `protobuf:"varint,5,opt,name=include_deleted,json=includeDeleted,proto3" json:"include_deleted,omitempty"`
+	Sort           string                 `protobuf:"bytes,6,opt,name=sort,proto3" json:"sort,omitempty"`  // 白名單:code | name | created_at | id(空 = 預設排序)
+	Desc           bool                   `protobuf:"varint,7,opt,name=desc,proto3" json:"desc,omitempty"` // 是否降冪(sort 空時忽略)
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -381,6 +383,20 @@ func (x *ListProductsRequest) GetCategoryId() string {
 func (x *ListProductsRequest) GetIncludeDeleted() bool {
 	if x != nil {
 		return x.IncludeDeleted
+	}
+	return false
+}
+
+func (x *ListProductsRequest) GetSort() string {
+	if x != nil {
+		return x.Sort
+	}
+	return ""
+}
+
+func (x *ListProductsRequest) GetDesc() bool {
+	if x != nil {
+		return x.Desc
 	}
 	return false
 }
@@ -1707,14 +1723,16 @@ const file_products_v1_product_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\x0e \x01(\tR\tupdatedAt\x12\x1d\n" +
 	"\n" +
-	"deleted_at\x18\x0f \x01(\tR\tdeletedAt\"\xaa\x01\n" +
+	"deleted_at\x18\x0f \x01(\tR\tdeletedAt\"\xd2\x01\n" +
 	"\x13ListProductsRequest\x12\x12\n" +
 	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x18\n" +
 	"\akeyword\x18\x03 \x01(\tR\akeyword\x12\x1f\n" +
 	"\vcategory_id\x18\x04 \x01(\tR\n" +
 	"categoryId\x12'\n" +
-	"\x0finclude_deleted\x18\x05 \x01(\bR\x0eincludeDeleted\"\x83\x01\n" +
+	"\x0finclude_deleted\x18\x05 \x01(\bR\x0eincludeDeleted\x12\x12\n" +
+	"\x04sort\x18\x06 \x01(\tR\x04sort\x12\x12\n" +
+	"\x04desc\x18\a \x01(\bR\x04desc\"\x83\x01\n" +
 	"\x14ListProductsResponse\x120\n" +
 	"\bproducts\x18\x01 \x03(\v2\x14.products.v1.ProductR\bproducts\x129\n" +
 	"\n" +

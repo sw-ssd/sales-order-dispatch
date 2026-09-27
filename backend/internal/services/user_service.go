@@ -194,19 +194,51 @@ func (s *UserService) ListUsers(ctx context.Context, req *connect.Request[v1.Lis
 		q = q.Where(user.StatusEQ(user.Status(status)))
 	}
 
-	list, pg, err := pageList(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), userListSource{q}, userToProto)
+	field, desc, err := userSortField(req.Msg.GetSort(), req.Msg.GetDesc())
+	if err != nil {
+		return nil, err
+	}
+
+	list, pg, err := pageList(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), userListSource{q, field, desc}, userToProto)
 	if err != nil {
 		return nil, err
 	}
 	return connect.NewResponse(&v1.ListUsersResponse{Users: list, Pagination: pg}), nil
 }
 
-// userListSource 為 pageList 的 ent 查詢橋接(帶 Company/Department eager-load 供 proto 展開)。
-type userListSource struct{ q *ent.UserQuery }
+// userListSource 為 pageList 的 ent 查詢橋接(帶 Company/Department eager-load 供 proto 展開;
+// 排序白名單已先解析為 field/desc)。
+type userListSource struct {
+	q     *ent.UserQuery
+	field string
+	desc  bool
+}
 
 func (s userListSource) Count(ctx context.Context) (int, error) { return s.q.Count(ctx) }
 func (s userListSource) Page(ctx context.Context, off, lim int) ([]*ent.User, error) {
-	return s.q.Clone().WithCompany().WithDepartment().Order(ent.Asc(user.FieldID)).Offset(off).Limit(lim).All(ctx)
+	order := ent.Asc(s.field)
+	if s.desc {
+		order = ent.Desc(s.field)
+	}
+	// 排序鍵非唯一(name/email 可重)時以 id 為次序鍵收斂全序,避免逐頁 LIMIT/OFFSET 重複或遺漏。
+	return s.q.Clone().WithCompany().WithDepartment().Order(order, ent.Asc(user.FieldID)).Offset(off).Limit(lim).All(ctx)
+}
+
+// userSortField 解析排序參數(比照 customerSortField 的白名單樣板)。
+// sort 空 → 預設 id 升冪(現行行為)並忽略 desc;白名單外 → InvalidArgument。
+func userSortField(sort string, desc bool) (string, bool, error) {
+	switch strings.TrimSpace(sort) {
+	case "":
+		return user.FieldID, false, nil
+	case "name":
+		return user.FieldName, desc, nil
+	case "email":
+		return user.FieldEmail, desc, nil
+	case "id":
+		return user.FieldID, desc, nil
+	default:
+		return "", false, errcode.SysInvalidArgument.Error(map[string]string{"field": "sort"})
+	}
 }
 
 // GetUser 取得單一使用者(不含 password_hash)。

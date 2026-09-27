@@ -215,6 +215,10 @@ export const userClient = createClient(UserService, transport);
 export interface UserListParams {
   page: number;
   pageSize: number;
+  /** 排序白名單欄位名（`name`/`email`/`id`）；**空字串＝服務預設排序**。 */
+  sort: string;
+  /** 是否降冪；後端在 `sort` 為空時忽略（仍照送，見檔頭契約）。 */
+  desc: boolean;
   companyId?: string;
   departmentId?: string;
   role?: string;
@@ -229,6 +233,8 @@ export const usersQueryOptions = (params: UserListParams) =>
       {
         page: params.page,
         pageSize: params.pageSize,
+        sort: params.sort,
+        desc: params.desc,
         companyId: params.companyId,
         departmentId: params.departmentId,
         role: params.role,
@@ -240,6 +246,8 @@ export const usersQueryOptions = (params: UserListParams) =>
       userClient.listUsers({
         page: params.page,
         pageSize: params.pageSize,
+        sort: params.sort,
+        desc: params.desc,
         companyId: params.companyId ?? "",
         departmentId: params.departmentId ?? "",
         role: params.role ?? "",

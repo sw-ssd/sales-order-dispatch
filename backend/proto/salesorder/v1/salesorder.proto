@@ -87,6 +87,8 @@ message ListOrdersRequest {
   string keyword = 6;                // 模糊比對 order_no/note
   bool include_deleted = 7;
   string expected_delivery_date = 8; // 可空(YYYY-MM-DD;派車看板依日篩選,見 dispatch spec)
+  string sort = 9;                   // 白名單:order_no | expected_delivery_date | created_at | id(空 = 預設排序)
+  bool desc = 10;                    // 是否降冪(sort 空時忽略)
 }
 
 message ListOrdersResponse {

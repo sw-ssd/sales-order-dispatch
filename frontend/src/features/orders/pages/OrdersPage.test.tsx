@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor, within } from "@solidjs/testing-library";
+import { fireEvent, screen, waitFor, within } from "@solidjs/testing-library";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type * as ConnectRpc from "@connectrpc/connect";
-import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
+import { QueryClient } from "@tanstack/solid-query";
+import { renderWithProviders } from "~/test-render";
 
 // 訂單／客戶／商品／字典 API 以 spy 取代：頁面在模組層建立 connect client，
 // 以 createClient 的替身同時攔截（ConnectError/Code 保持真實，錯誤訊息對照才有效）。
@@ -78,11 +79,7 @@ function newClient() {
 }
 
 function mountPage(client: QueryClient = newClient()) {
-  render(() => (
-    <QueryClientProvider client={client}>
-      <OrdersPage />
-    </QueryClientProvider>
-  ));
+  renderWithProviders(() => <OrdersPage />, client);
 }
 
 async function renderPage() {
@@ -115,16 +112,13 @@ beforeEach(() => {
 });
 
 describe("OrdersPage", () => {
-  it("清單載入：以 total 推總筆數，且不送 sort/desc（proto 沒有這兩個參數）", async () => {
+  it("清單載入：以 total 推總筆數，未排序時送 sort 空字串／desc false", async () => {
     await renderPage();
     expect(listOrdersSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ page: 1, pageSize: 20, status: "", customerId: "", source: "", keyword: "", includeDeleted: false })
+      expect.objectContaining({ page: 1, pageSize: 20, status: "", customerId: "", source: "", keyword: "", includeDeleted: false, sort: "", desc: false })
     );
     // `共 {total()} 筆` 被 JSX 拆成多個文字節點，整段以正則比對。
     expect(screen.getByText(/銷售訂單\(共 4 筆\)/)).toBeTruthy();
-    const sent = listOrdersSpy.mock.calls[0][0] as Record<string, unknown>;
-    expect("sort" in sent).toBe(false);
-    expect("desc" in sent).toBe(false);
   });
 
   it("動作依狀態開關：pending 可編輯/取消/刪除、processing 可完成、completed 可作廢、voided 無動作", async () => {
@@ -215,30 +209,53 @@ describe("OrdersPage", () => {
 
   it("取消先確認再呼叫並失效 orders 前綴", async () => {
     await renderPage();
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
     cancelOrderSpy.mockResolvedValue({});
+    // 破壞性操作一律走共用確認對話框（useConfirm）；取消鈕＝不執行。
+    // 依 accessible name（＝標題）取框：頁面其餘對話框關閉後仍留在 DOM，只用 role 會誤取。
     fireEvent.click(screen.getByRole("button", { name: "取消" }));
-    await Promise.resolve();
+    const dialog = await waitFor(() =>
+      screen.getByRole("dialog", { name: /取消訂單「/ })
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "取消" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(cancelOrderSpy).not.toHaveBeenCalled();
-    confirmSpy.mockRestore();
 
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     listOrdersSpy.mockClear();
     fireEvent.click(screen.getByRole("button", { name: "取消" }));
+    const confirmDialog = await waitFor(() =>
+      screen.getByRole("dialog", { name: /取消訂單「/ })
+    );
+    fireEvent.click(within(confirmDialog).getByRole("button", { name: "取消訂單" }));
     await waitFor(() => expect(cancelOrderSpy).toHaveBeenCalledOnce());
     await waitFor(() => expect(listOrdersSpy).toHaveBeenCalled());
-    (window.confirm as unknown as { mockRestore: () => void }).mockRestore();
   });
 
-  it("作廢空原因不打 API", async () => {
+  it("作廢空原因不打 API，且錯誤落在對話框內（不是被遮罩蓋住的頁面橫幅）", async () => {
     await renderPage();
     voidOrderSpy.mockResolvedValue({});
     fireEvent.click(screen.getByRole("button", { name: "作廢" }));
     const dialog = await waitFor(() => screen.getByRole("dialog"));
     // 作廢對話框的確認是 button（沒有 <form>），直接點。
     fireEvent.click(within(dialog).getByRole("button", { name: "確認作廢" }));
-    await waitFor(() => expect(screen.getByText("作廢需填原因")).toBeTruthy());
+    // 必須收斂在對話框內：對話框開著時遮罩（bg-foreground/75）蓋住整頁，
+    // 寫進頁面 banner 的訊息使用者看不到。用 screen.getByText 會兩邊都命中而漏掉這個 bug。
+    await waitFor(() => expect(within(dialog).getByText("作廢需填原因")).toBeTruthy());
     expect(voidOrderSpy).not.toHaveBeenCalled();
+  });
+
+  it("作廢 API 失敗：錯誤顯示在對話框內且對話框不關閉（終態操作的失敗必須當場可見）", async () => {
+    await renderPage();
+    voidOrderSpy.mockRejectedValue(new ConnectError("已作廢", Code.FailedPrecondition));
+    fireEvent.click(screen.getByRole("button", { name: "作廢" }));
+    const dialog = await waitFor(() => screen.getByRole("dialog"));
+    fireEvent.input(within(dialog).getByLabelText("作廢原因 *"), {
+      target: { value: "客戶取消" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "確認作廢" }));
+
+    await waitFor(() => expect(voidOrderSpy).toHaveBeenCalledOnce());
+    await waitFor(() => expect(within(dialog).getByRole("alert")).toBeTruthy());
+    expect(screen.getByRole("dialog")).toBeTruthy();
   });
 
   it("詳情框顯示明細與事件軌跡", async () => {

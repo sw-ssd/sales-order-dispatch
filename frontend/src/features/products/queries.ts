@@ -25,8 +25,7 @@ import { transport } from "~/lib/transport";
 /**
  * 商品查詢契約；樣板 = `features/users/queries.ts` 檔頭契約（不另發明）。
  *
- * `ListProductsRequest` **沒有 `sort`/`desc`**（見 proto），所以這裡刻意沒有排序參數 ——
- * 送了後端也不會解析。失效前綴 `["products"]`。
+ * 失效前綴 `["products"]`。
  */
 export const productClient = createClient(ProductService, transport);
 
@@ -90,6 +89,10 @@ export const PRODUCT_PAGE_SIZE = 20;
 export interface ProductListParams {
   page: number;
   pageSize: number;
+  /** 排序白名單欄位名（`code`/`name`/`created_at`/`id`）；**空字串＝服務預設排序**。 */
+  sort: string;
+  /** 是否降冪；後端在 `sort` 為空時忽略（仍照送，見檔頭契約）。 */
+  desc: boolean;
   keyword?: string;
   categoryId?: string;
   includeDeleted?: boolean;
@@ -98,7 +101,7 @@ export interface ProductListParams {
 /**
  * 商品清單查詢選項；`createQuery(() => productsQueryOptions(params))`。
  *
- * 總數在 `pagination.total`（與訂單頁的 `total` 不同）；無排序參數（見檔頭）。
+ * 總數在 `pagination.total`（與訂單頁的 `total` 不同）。
  */
 export const productsQueryOptions = (params: ProductListParams) =>
   queryOptions({
@@ -108,6 +111,8 @@ export const productsQueryOptions = (params: ProductListParams) =>
       {
         page: params.page,
         pageSize: params.pageSize,
+        sort: params.sort,
+        desc: params.desc,
         keyword: params.keyword,
         categoryId: params.categoryId,
         includeDeleted: params.includeDeleted,
@@ -118,6 +123,8 @@ export const productsQueryOptions = (params: ProductListParams) =>
       productClient.listProducts({
         page: params.page,
         pageSize: params.pageSize,
+        sort: params.sort,
+        desc: params.desc,
         keyword: params.keyword ?? "",
         categoryId: params.categoryId ?? "",
         includeDeleted: params.includeDeleted ?? false,

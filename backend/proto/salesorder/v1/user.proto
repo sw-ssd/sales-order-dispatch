@@ -48,6 +48,8 @@ message ListUsersRequest {
   string department_id = 4; // 篩選:部門 ID
   string role = 5;       // 篩選:角色 code
   string status = 6;     // 篩選:active | inactive | pending(空 = 全部)
+  string sort = 7;       // 白名單:name | email | id(空 = 預設排序)
+  bool desc = 8;         // 是否降冪(sort 空時忽略)
 }
 
 message ListUsersResponse {

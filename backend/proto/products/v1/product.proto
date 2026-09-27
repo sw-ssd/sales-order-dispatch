@@ -58,6 +58,8 @@ message ListProductsRequest {
   string keyword = 3;
   string category_id = 4; // 精確篩選分類
   bool include_deleted = 5;
+  string sort = 6;          // 白名單:code | name | created_at | id(空 = 預設排序)
+  bool desc = 7;            // 是否降冪(sort 空時忽略)
 }
 message ListProductsResponse { repeated Product products = 1; salesorder.v1.Pagination pagination = 2; }
 

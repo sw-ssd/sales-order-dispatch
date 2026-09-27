@@ -146,6 +146,20 @@ export declare type ListUsersRequest = Message<"salesorder.v1.ListUsersRequest">
    * @generated from field: string status = 6;
    */
   status: string;
+
+  /**
+   * 白名單:name | email | created_at | id(空 = 預設排序)
+   *
+   * @generated from field: string sort = 7;
+   */
+  sort: string;
+
+  /**
+   * 是否降冪(sort 空時忽略)
+   *
+   * @generated from field: bool desc = 8;
+   */
+  desc: boolean;
 };
 
 /**

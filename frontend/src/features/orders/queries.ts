@@ -28,6 +28,10 @@ export const ORDER_PAGE_SIZE = 20;
 export interface OrderListParams {
   page: number;
   pageSize: number;
+  /** 排序白名單欄位名（`order_no`/`expected_delivery_date`/`created_at`/`id`）；**空字串＝服務預設排序**。 */
+  sort: string;
+  /** 是否降冪；後端在 `sort` 為空時忽略（仍照送，見檔頭契約）。 */
+  desc: boolean;
   status?: string;
   customerId?: string;
   source?: string;
@@ -43,6 +47,8 @@ export const ordersQueryOptions = (params: OrderListParams) =>
       {
         page: params.page,
         pageSize: params.pageSize,
+        sort: params.sort,
+        desc: params.desc,
         status: params.status,
         customerId: params.customerId,
         source: params.source,
@@ -55,6 +61,8 @@ export const ordersQueryOptions = (params: OrderListParams) =>
       orderClient.listOrders({
         page: params.page,
         pageSize: params.pageSize,
+        sort: params.sort,
+        desc: params.desc,
         status: params.status ?? "",
         customerId: params.customerId ?? "",
         source: params.source ?? "",

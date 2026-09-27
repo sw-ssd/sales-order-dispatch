@@ -36,8 +36,9 @@ func TestToConnectErrorMapsToRegisteredCodes(t *testing.T) {
 			Code:    "42501",
 			Message: `new row violates row-level security policy for table "customers"`,
 		}, "SYS-3001", connect.CodeFailedPrecondition,
-			// Plan A(T11)的對外固定訊息:與改動前的字面逐字相同,前端與維運手冊已依此描述。
-			"資料超出目前的存取範圍,無法完成此操作"},
+			// Plan A(T11)的對外固定訊息:重點是「固定且不含 SQLSTATE/policy 原文」,
+			// 標點形式(全形)與 registry 一致即可,不逐字凍結排版細節。
+			"資料超出目前的存取範圍，無法完成此操作"},
 		{"多列單值", &ent.NotSingularError{}, "SYS-9000", connect.CodeInternal, ""},
 		{"未知錯誤", errors.New("boom"), "SYS-9000", connect.CodeInternal, ""},
 	}

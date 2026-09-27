@@ -25,6 +25,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/productunit"
 	"github.com/salesorder/sales-order-1.0/backend/ent/warehouse"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
+	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
 	domainproducts "github.com/salesorder/sales-order-1.0/backend/internal/domain/products"
 	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
@@ -286,15 +287,42 @@ func (s *ProductService) fetchNested(ctx context.Context, pr *productsv1.Product
 	return nil
 }
 
-// productListSource 為 pageList 的 ent 查詢橋接。
-type productListSource struct{ q *ent.ProductQuery }
+// productListSource 為 pageList 的 ent 查詢橋接(排序白名單已先解析為 field/desc)。
+type productListSource struct {
+	q     *ent.ProductQuery
+	field string
+	desc  bool
+}
 
 func (s productListSource) Count(ctx context.Context) (int, error) { return s.q.Count(ctx) }
 func (s productListSource) Page(ctx context.Context, off, lim int) ([]*ent.Product, error) {
+	primary := ent.Asc(s.field)
+	if s.desc {
+		primary = ent.Desc(s.field)
+	}
 	// F2(與 F1 同型):code 的唯一性是 (department_id, code),公司層可見範圍(跨部門)內同值 ——
 	// 排序鍵非唯一時 PostgreSQL 對同值群的順序不保證一致,逐頁 LIMIT/OFFSET 會重複與遺漏資料,
 	// 故以 id 為次序鍵收斂成全序。
-	return s.q.Clone().Order(ent.Asc(product.FieldCode), ent.Asc(product.FieldID)).Offset(off).Limit(lim).All(ctx)
+	return s.q.Clone().Order(primary, ent.Asc(product.FieldID)).Offset(off).Limit(lim).All(ctx)
+}
+
+// productSortField 解析排序參數(比照 customerSortField 的白名單樣板)。
+// sort 空 → 預設 code 升冪(現行行為)並忽略 desc;白名單外 → InvalidArgument。
+func productSortField(sort string, desc bool) (string, bool, error) {
+	switch strings.TrimSpace(sort) {
+	case "":
+		return product.FieldCode, false, nil
+	case "code":
+		return product.FieldCode, desc, nil
+	case "name":
+		return product.FieldName, desc, nil
+	case "created_at":
+		return product.FieldCreatedAt, desc, nil
+	case "id":
+		return product.FieldID, desc, nil
+	default:
+		return "", false, errcode.SysInvalidArgument.Error(map[string]string{"field": "sort"})
+	}
 }
 
 // ---- RPC ----
@@ -322,7 +350,11 @@ func (s *ProductService) ListProducts(ctx context.Context, req *connect.Request[
 		}
 		q = q.Where(product.CategoryIDEQ(cid_))
 	}
-	list, pg, err := pageList(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), productListSource{q}, productToProto)
+	field, desc, err := productSortField(req.Msg.GetSort(), req.Msg.GetDesc())
+	if err != nil {
+		return nil, err
+	}
+	list, pg, err := pageList(ctx, req.Msg.GetPage(), req.Msg.GetPageSize(), productListSource{q, field, desc}, productToProto)
 	if err != nil {
 		return nil, err
 	}

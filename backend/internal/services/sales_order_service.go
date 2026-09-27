@@ -130,12 +130,21 @@ func (s *SalesOrderService) ListOrders(ctx context.Context, req *connect.Request
 		}
 		q = q.Where(salesorder.ExpectedDeliveryDateEQ(day))
 	}
+	field, desc, err := orderSortField(req.Msg.GetSort(), req.Msg.GetDesc())
+	if err != nil {
+		return nil, err
+	}
 	total, err := q.Clone().Count(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
 	page, pageSize := normalizePage(req.Msg.GetPage(), req.Msg.GetPageSize())
-	orders, err := q.Order(ent.Desc(salesorder.FieldID)).
+	primary := ent.Asc(field)
+	if desc {
+		primary = ent.Desc(field)
+	}
+	// 排序鍵非唯一(order_no 以外的欄位可重)時以 id 為次序鍵收斂全序,避免逐頁重複或遺漏。
+	orders, err := q.Order(primary, ent.Asc(salesorder.FieldID)).
 		Offset((page - 1) * pageSize).Limit(pageSize).All(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
@@ -147,6 +156,25 @@ func (s *SalesOrderService) ListOrders(ctx context.Context, req *connect.Request
 	return connect.NewResponse(&salesorderv1.ListOrdersResponse{
 		Orders: out, Total: int32(total),
 	}), nil
+}
+
+// orderSortField 解析排序參數(比照 customerSortField 的白名單樣板)。
+// sort 空 → 預設 id 降冪(現行行為)並忽略 desc;白名單外 → InvalidArgument。
+func orderSortField(sort string, desc bool) (string, bool, error) {
+	switch strings.TrimSpace(sort) {
+	case "":
+		return salesorder.FieldID, true, nil
+	case "order_no":
+		return salesorder.FieldOrderNo, desc, nil
+	case "expected_delivery_date":
+		return salesorder.FieldExpectedDeliveryDate, desc, nil
+	case "created_at":
+		return salesorder.FieldCreatedAt, desc, nil
+	case "id":
+		return salesorder.FieldID, desc, nil
+	default:
+		return "", false, errcode.SysInvalidArgument.Error(map[string]string{"field": "sort"})
+	}
 }
 
 // GetOrder 以 id 取單筆(含明細)。不可見或已軟刪除 → not_found(不洩漏存在性)。

@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor, within } from "@solidjs/testing-library";
+import { fireEvent, screen, waitFor, within } from "@solidjs/testing-library";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type * as ConnectRpc from "@connectrpc/connect";
-import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
+import { QueryClient } from "@tanstack/solid-query";
+import { renderWithProviders } from "~/test-render";
 
 // 商品／分類／倉別／字典 API 以 spy 取代：頁面在模組層建立 connect client，
 // 以 createClient 的替身同時攔截（ConnectError/Code 保持真實，錯誤訊息對照才有效）。
@@ -105,11 +106,7 @@ function newClient() {
 }
 
 function mountPage(client: QueryClient = newClient()) {
-  render(() => (
-    <QueryClientProvider client={client}>
-      <ProductsPage />
-    </QueryClientProvider>
-  ));
+  renderWithProviders(() => <ProductsPage />, client);
 }
 
 async function renderPage() {
@@ -152,15 +149,12 @@ beforeEach(() => {
 });
 
 describe("ProductsPage", () => {
-  it("清單載入：以 pagination.total 推總筆數，且不送 sort/desc（proto 沒有這兩個參數）", async () => {
+  it("清單載入：以 pagination.total 推總筆數，未排序時送 sort 空字串／desc false", async () => {
     await renderPage();
     expect(listProductsSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ page: 1, pageSize: 20, keyword: "", categoryId: "", includeDeleted: false })
+      expect.objectContaining({ page: 1, pageSize: 20, keyword: "", categoryId: "", includeDeleted: false, sort: "", desc: false })
     );
     expect(screen.getByText(/商品主檔\(共 1 筆\)/)).toBeTruthy();
-    const sent = listProductsSpy.mock.calls[0][0] as Record<string, unknown>;
-    expect("sort" in sent).toBe(false);
-    expect("desc" in sent).toBe(false);
   });
 
   it("分類欄由分類下拉解析名稱（收斂到表格，篩選下拉也有同名選項）", async () => {
@@ -364,19 +358,25 @@ describe("ProductsPage", () => {
 
   it("刪除先確認再呼叫並失效 products 前綴", async () => {
     await renderPage();
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
     deleteProductSpy.mockResolvedValue({});
+    // 破壞性操作一律走共用確認對話框（useConfirm）。
+    // 依 accessible name（＝標題）取框：頁面其餘對話框關閉後仍留在 DOM，只用 role 會誤取。
     fireEvent.click(screen.getAllByRole("button", { name: "刪除" })[0]);
-    await Promise.resolve();
+    const dialog = await waitFor(() =>
+      screen.getByRole("dialog", { name: /刪除商品「/ })
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "取消" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(deleteProductSpy).not.toHaveBeenCalled();
-    confirmSpy.mockRestore();
 
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     listProductsSpy.mockClear();
     fireEvent.click(screen.getAllByRole("button", { name: "刪除" })[0]);
+    const confirmDialog = await waitFor(() =>
+      screen.getByRole("dialog", { name: /刪除商品「/ })
+    );
+    fireEvent.click(within(confirmDialog).getByRole("button", { name: "刪除" }));
     await waitFor(() => expect(deleteProductSpy).toHaveBeenCalledOnce());
     await waitFor(() => expect(listProductsSpy).toHaveBeenCalled());
-    (window.confirm as unknown as { mockRestore: () => void }).mockRestore();
   });
 
   it("已刪除的商品顯示還原而非刪除", async () => {

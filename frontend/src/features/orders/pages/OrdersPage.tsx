@@ -1,4 +1,5 @@
-import { Code, ConnectError } from "@connectrpc/connect";
+import { errorMessage } from "@/lib/error-message";
+import { formatDateTime } from "@/lib/datetime";
 import { createForm } from "@tanstack/solid-form";
 import {
   createInfiniteQuery,
@@ -10,8 +11,10 @@ import {
   createTable,
   flexRender,
   rowPaginationFeature,
+  rowSortingFeature,
   tableFeatures,
   type PaginationState,
+  type SortingState,
 } from "@tanstack/solid-table";
 import { batch, createEffect, createMemo, createSignal, For, Index, Show, type JSX } from "solid-js";
 import type { Customer } from "~/lib/proto/customers/v1/customer_pb";
@@ -39,11 +42,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  useConfirm,
 } from "~/components/ui";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import { customerDropdownQueryOptions } from "../../customers/queries";
 import { productDropdownQueryOptions } from "../../products/queries";
 import { ListPagination } from "../../users/components/ListPagination";
+import { createSortableHeaders } from "../../users/components/SortableHeader";
 import { queryData } from "~/lib/query-data";
 import {
   ORDER_PAGE_SIZE,
@@ -62,12 +67,10 @@ import {
 } from "../schemas";
 
 /**
- * 訂單表格的 table 功能集：**只有分頁**。
- *
- * `ListOrdersRequest` 沒有 `sort`/`desc`（見 proto），所以這頁刻意不開排序、欄位一律
- * `enableSorting: false`——開了排序就會送後端不解析的參數（樣板 = `UsersPage`，同理同因）。
+ * 訂單表格的 table 功能集：分頁 ＋ 排序（`manualSorting`,見下方 table）。
+ * features 必須是穩定的靜態值——每個元件都自己 `tableFeatures({...})` 會多一份無用的定義。
  */
-const ORDER_TABLE_FEATURES = tableFeatures({ rowPaginationFeature });
+const ORDER_TABLE_FEATURES = tableFeatures({ rowPaginationFeature, rowSortingFeature });
 
 const orderColumnHelper = createColumnHelper<typeof ORDER_TABLE_FEATURES, SalesOrder>();
 
@@ -113,31 +116,6 @@ const EMPTY_ORDER_VALUES = {
   note: "",
 };
 
-function errorMessage(err: unknown): string {
-  if (err instanceof ConnectError) {
-    switch (err.code) {
-      case Code.NotFound:
-        return "資料不存在或已被刪除";
-      case Code.AlreadyExists:
-        return err.rawMessage || "資料已存在";
-      case Code.InvalidArgument:
-        return err.rawMessage || "輸入資料有誤,請檢查後再試";
-      case Code.FailedPrecondition:
-        // 狀態機拒絕（非 pending 不能取消、非 processing 不能完成…）走這裡。
-        return err.rawMessage || "目前狀態不允許此操作";
-      case Code.PermissionDenied:
-        return "沒有權限執行此操作";
-      case Code.Unauthenticated:
-        return "請先登入";
-      case Code.Unavailable:
-        return "無法連線至伺服器,請確認後端服務已啟動";
-      default:
-        return err.rawMessage || "操作失敗,請稍後再試";
-    }
-  }
-  return "無法連線至伺服器,請確認後端服務已啟動";
-}
-
 /**
  * 訂單管理頁(/orders)。
  *
@@ -168,13 +146,16 @@ export default function OrdersPage() {
     customerId: "",
     source: "",
   });
-  // 頁碼與每頁筆數的唯一真相＝table 的 pagination state（受控；後端無排序參數故無 sorting）。
+  // 頁碼與每頁筆數的唯一真相＝table 的 pagination state（受控）。
   const [pagination, setPagination] = createSignal<PaginationState>({
     pageIndex: 0,
     pageSize: ORDER_PAGE_SIZE,
   });
+  // 排序狀態的唯一真相＝table 的 sorting state（受控）：空陣列＝未排序＝後端預設排序。
+  const [sorting, setSorting] = createSignal<SortingState>([]);
 
   const client = useQueryClient();
+  const sortableHeader = createSortableHeaders();
 
   /** 客戶名稱解析：從客戶下拉（本頁篩選也用它）的已載入頁攤平成 id → 名稱。 */
   const customerOptions = createInfiniteQuery(() =>
@@ -192,7 +173,7 @@ export default function OrdersPage() {
 
   const columns = orderColumnHelper.columns([
     orderColumnHelper.accessor("orderNo", {
-      header: "訂單編號",
+      header: (ctx) => sortableHeader(ctx.column, "訂單編號"),
       cell: (info) => <span class="font-medium text-foreground">{info.getValue()}</span>,
     }),
     orderColumnHelper.accessor("customerId", {
@@ -201,7 +182,14 @@ export default function OrdersPage() {
     }),
     orderColumnHelper.accessor("source", {
       header: "來源",
-      cell: (info) => <span class="text-muted-foreground">{info.getValue() || "—"}</span>,
+      // 顯示字典的 `displayName`（「Web 中台」／「App」）而不是裸代碼：同一個值在篩選下拉
+      // 是顯示名稱，在表格卻是 `W`／`A`，等於要使用者自己記住對照表（內部代碼不該出現在
+      // 作業語言裡）。字典拿不到時才退回原值，不靜默顯示空白。
+      cell: (info) => (
+        <span class="text-muted-foreground">
+          {info.getValue() ? (sourceLabelByCode().get(info.getValue()) ?? info.getValue()) : "—"}
+        </span>
+      ),
     }),
     orderColumnHelper.accessor("status", {
       header: "狀態",
@@ -211,13 +199,13 @@ export default function OrdersPage() {
       },
     }),
     orderColumnHelper.accessor("expectedDeliveryDate", {
-      header: "出貨日",
+      header: (ctx) => sortableHeader(ctx.column, "出貨日"),
       cell: (info) => <span class="text-muted-foreground">{info.getValue() || "—"}</span>,
     }),
     orderColumnHelper.accessor("createdAt", {
-      header: "建立時間",
+      header: (ctx) => sortableHeader(ctx.column, "建立時間"),
       cell: (info) => (
-        <span class="text-muted-foreground">{info.getValue().slice(0, 19).replace("T", " ")}</span>
+        <span class="text-muted-foreground">{formatDateTime(info.getValue())}</span>
       ),
     }),
     orderColumnHelper.display({
@@ -287,6 +275,8 @@ export default function OrdersPage() {
     ordersQueryOptions({
       page: pagination().pageIndex + 1,
       pageSize: pagination().pageSize,
+      sort: sorting()[0]?.id ?? "",
+      desc: sorting()[0]?.desc ?? false,
       status: filter().status || undefined,
       customerId: filter().customerId || undefined,
       source: filter().source || undefined,
@@ -307,10 +297,19 @@ export default function OrdersPage() {
       return total();
     },
     manualPagination: true,
+    manualSorting: true,
+    // 白名單欄位一律從「升冪」起算(v9 的第一方向預設依資料推測,空資料時會變降冪)。
+    sortDescFirst: false,
+    enableMultiSort: false,
     get state() {
-      return { pagination: pagination() };
+      return { pagination: pagination(), sorting: sorting() };
     },
     onPaginationChange: setPagination,
+    onSortingChange: (updater) =>
+      batch(() => {
+        setSorting((prev) => (typeof updater === "function" ? updater(prev) : updater));
+        table.setPageIndex(0);
+      }),
   });
 
   /** 超頁退回：total 讓目前頁碼超界時把頁碼夾到合法值（`page` 在 key 內 → 夾了就重取）。 */
@@ -327,6 +326,11 @@ export default function OrdersPage() {
   const [itemError, setItemError] = createSignal<string | undefined>();
   const [serverError, setServerError] = createSignal<string | undefined>();
   const [actionError, setActionError] = createSignal<string | null>(null);
+  // 作廢對話框的錯誤**必須在對話框內**：對話框開著時遮罩（bg-foreground/75）蓋住整頁，
+  // 寫進頁面 banner 的訊息使用者看不到，會以為按鈕沒反應而重複點擊或誤關（作廢是終態操作）。
+  const [voidError, setVoidError] = createSignal<string | undefined>();
+
+  const confirm = useConfirm();
 
   // —— 詳情（唯讀） ——
   const [detailId, setDetailId] = createSignal<string | null>(null);
@@ -336,6 +340,14 @@ export default function OrdersPage() {
   const [voidReason, setVoidReason] = createSignal("");
 
   const sourceOptions = createQuery(() => orderSourceOptionsQueryOptions());
+
+  /** 來源代碼 → 顯示名稱（表格與篩選下拉共用同一份字典，避免兩處各寫一份對照）。 */
+  const sourceLabelByCode = createMemo(
+    () =>
+      new Map(
+        (queryData(sourceOptions, (d) => d?.options) ?? []).map((o) => [o.code, o.displayName])
+      )
+  );
   const productOptions = createInfiniteQuery(() => productDropdownQueryOptions({}));
 
   /** 商品 id → 商品（明細顯示名與單位選項來源）。 */
@@ -474,8 +486,24 @@ export default function OrdersPage() {
 
   /** 狀態轉移（取消／完成）：只帶 id；失敗（狀態不符、跨租戶）顯示在頁面 banner。 */
   const transition = async (o: SalesOrder, kind: "cancel" | "complete") => {
-    const label = kind === "cancel" ? "取消" : "完成";
-    if (!window.confirm(`確定${label}訂單「${o.orderNo}」?`)) return;
+    if (kind === "cancel") {
+      // 取消是終態（規格 §5.1：`cancelled` 與 `voided` 為終態，且沒有還原路徑），
+      // 所以說明要直說不可復原 —— 這與原生 confirm 的一句「確定嗎」差在這裡。
+      const ok = await confirm({
+        title: `取消訂單「${o.orderNo}」`,
+        description: "取消後不可復原，也不會退回待處理；如需重新出貨，請另開新單。",
+        confirmLabel: "取消訂單",
+        variant: "destructive",
+      });
+      if (!ok) return;
+    } else {
+      const ok = await confirm({
+        title: `完成訂單「${o.orderNo}」`,
+        description: "標記為已出貨完成後，將不可再編輯。",
+        confirmLabel: "完成",
+      });
+      if (!ok) return;
+    }
     setActionError(null);
     try {
       if (kind === "cancel") await orderClient.cancelOrder({ id: o.id });
@@ -490,7 +518,7 @@ export default function OrdersPage() {
   const openVoid = (o: SalesOrder) => {
     setVoidTarget(o);
     setVoidReason("");
-    setActionError(null);
+    setVoidError(undefined);
   };
 
   const submitVoid = async () => {
@@ -498,22 +526,28 @@ export default function OrdersPage() {
     if (!target) return;
     const reason = voidReason().trim();
     if (reason === "") {
-      setActionError("作廢需填原因");
+      setVoidError("作廢需填原因");
       return;
     }
-    setActionError(null);
+    setVoidError(undefined);
     try {
       await orderClient.voidOrder({ id: target.id, reason });
       setVoidTarget(null);
       await client.invalidateQueries({ queryKey: ["orders"] });
       await client.invalidateQueries({ queryKey: ["order"] });
     } catch (err) {
-      setActionError(errorMessage(err));
+      setVoidError(errorMessage(err));
     }
   };
 
   const remove = async (o: SalesOrder) => {
-    if (!window.confirm(`確定刪除訂單「${o.orderNo}」?`)) return;
+    const ok = await confirm({
+      title: `刪除訂單「${o.orderNo}」`,
+      description: "刪除後訂單不再出現在列表；此操作不可復原。",
+      confirmLabel: "刪除",
+      variant: "destructive",
+    });
+    if (!ok) return;
     setActionError(null);
     try {
       await orderClient.deleteOrder({ id: o.id });
@@ -951,14 +985,12 @@ export default function OrdersPage() {
                   <div>
                     <dt class="text-muted-foreground">送達時間</dt>
                     <dd>
-                      {o.deliveredAt
-                        ? o.deliveredAt.slice(0, 19).replace("T", " ")
-                        : "—"}
+                      {o.deliveredAt ? formatDateTime(o.deliveredAt) : "—"}
                     </dd>
                   </div>
                   <div>
                     <dt class="text-muted-foreground">建立時間</dt>
-                    <dd>{o.createdAt.slice(0, 19).replace("T", " ")}</dd>
+                    <dd>{formatDateTime(o.createdAt)}</dd>
                   </div>
                   <div>
                     <dt class="text-muted-foreground">備註</dt>
@@ -1009,7 +1041,7 @@ export default function OrdersPage() {
                             <span class="text-foreground">
                               {EVENT_LABELS[ev.eventType] ?? ev.eventType}
                             </span>
-                            <span>{ev.createdAt.slice(0, 19).replace("T", " ")}</span>
+                            <span>{formatDateTime(ev.createdAt)}</span>
                             <Show when={ev.reason}>
                               <span>原因：{ev.reason}</span>
                             </Show>
@@ -1041,6 +1073,16 @@ export default function OrdersPage() {
             <DialogTitle>作廢訂單</DialogTitle>
             <DialogDescription>{voidTarget()?.orderNo}</DialogDescription>
           </DialogHeader>
+          <Show when={voidError()}>
+            {(message) => (
+              <p
+                class="rounded-lg bg-destructive/15 px-3 py-2 text-sm font-medium text-destructive"
+                role="alert"
+              >
+                {message()}
+              </p>
+            )}
+          </Show>
           <Field>
             <FieldLabel for="void-reason">作廢原因 *</FieldLabel>
             <Input

@@ -422,6 +422,8 @@ type ListOrdersRequest struct {
 	Keyword              string                 `protobuf:"bytes,6,opt,name=keyword,proto3" json:"keyword,omitempty"`                         // 模糊比對 order_no/note
 	IncludeDeleted       bool                   `protobuf:"varint,7,opt,name=include_deleted,json=includeDeleted,proto3" json:"include_deleted,omitempty"`
 	ExpectedDeliveryDate string                 `protobuf:"bytes,8,opt,name=expected_delivery_date,json=expectedDeliveryDate,proto3" json:"expected_delivery_date,omitempty"` // 可空(YYYY-MM-DD;派車看板依日篩選,見 dispatch spec)
+	Sort                 string                 `protobuf:"bytes,9,opt,name=sort,proto3" json:"sort,omitempty"`                                                               // 白名單:order_no | expected_delivery_date | created_at | id(空 = 預設排序)
+	Desc                 bool                   `protobuf:"varint,10,opt,name=desc,proto3" json:"desc,omitempty"`                                                             // 是否降冪(sort 空時忽略)
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -510,6 +512,20 @@ func (x *ListOrdersRequest) GetExpectedDeliveryDate() string {
 		return x.ExpectedDeliveryDate
 	}
 	return ""
+}
+
+func (x *ListOrdersRequest) GetSort() string {
+	if x != nil {
+		return x.Sort
+	}
+	return ""
+}
+
+func (x *ListOrdersRequest) GetDesc() bool {
+	if x != nil {
+		return x.Desc
+	}
+	return false
 }
 
 type ListOrdersResponse struct {
@@ -1535,7 +1551,7 @@ const file_salesorder_v1_salesorder_proto_rawDesc = "" +
 	"\x06reason\x18\x04 \x01(\tR\x06reason\x12\x18\n" +
 	"\apayload\x18\x05 \x01(\tR\apayload\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\tR\tcreatedAt\"\x8e\x02\n" +
+	"created_at\x18\x06 \x01(\tR\tcreatedAt\"\xb6\x02\n" +
 	"\x11ListOrdersRequest\x12\x12\n" +
 	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x16\n" +
@@ -1545,7 +1561,10 @@ const file_salesorder_v1_salesorder_proto_rawDesc = "" +
 	"\x06source\x18\x05 \x01(\tR\x06source\x12\x18\n" +
 	"\akeyword\x18\x06 \x01(\tR\akeyword\x12'\n" +
 	"\x0finclude_deleted\x18\a \x01(\bR\x0eincludeDeleted\x124\n" +
-	"\x16expected_delivery_date\x18\b \x01(\tR\x14expectedDeliveryDate\"]\n" +
+	"\x16expected_delivery_date\x18\b \x01(\tR\x14expectedDeliveryDate\x12\x12\n" +
+	"\x04sort\x18\t \x01(\tR\x04sort\x12\x12\n" +
+	"\x04desc\x18\n" +
+	" \x01(\bR\x04desc\"]\n" +
 	"\x12ListOrdersResponse\x121\n" +
 	"\x06orders\x18\x01 \x03(\v2\x19.salesorder.v1.SalesOrderR\x06orders\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x05R\x05total\"!\n" +

@@ -154,6 +154,8 @@ type ListUsersRequest struct {
 	DepartmentId  string                 `protobuf:"bytes,4,opt,name=department_id,json=departmentId,proto3" json:"department_id,omitempty"` // 篩選:部門 ID
 	Role          string                 `protobuf:"bytes,5,opt,name=role,proto3" json:"role,omitempty"`                                     // 篩選:角色 code
 	Status        string                 `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`                                 // 篩選:active | inactive | pending(空 = 全部)
+	Sort          string                 `protobuf:"bytes,7,opt,name=sort,proto3" json:"sort,omitempty"`                                     // 白名單:name | email | created_at | id(空 = 預設排序)
+	Desc          bool                   `protobuf:"varint,8,opt,name=desc,proto3" json:"desc,omitempty"`                                    // 是否降冪(sort 空時忽略)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -228,6 +230,20 @@ func (x *ListUsersRequest) GetStatus() string {
 		return x.Status
 	}
 	return ""
+}
+
+func (x *ListUsersRequest) GetSort() string {
+	if x != nil {
+		return x.Sort
+	}
+	return ""
+}
+
+func (x *ListUsersRequest) GetDesc() bool {
+	if x != nil {
+		return x.Desc
+	}
+	return false
 }
 
 type ListUsersResponse struct {
@@ -918,7 +934,7 @@ const file_salesorder_v1_user_proto_rawDesc = "" +
 	"\vis_customer\x18\n" +
 	" \x01(\bR\n" +
 	"isCustomer\x12!\n" +
-	"\faccount_name\x18\v \x01(\tR\vaccountName\"\xb3\x01\n" +
+	"\faccount_name\x18\v \x01(\tR\vaccountName\"\xdb\x01\n" +
 	"\x10ListUsersRequest\x12\x12\n" +
 	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
@@ -926,7 +942,9 @@ const file_salesorder_v1_user_proto_rawDesc = "" +
 	"company_id\x18\x03 \x01(\tR\tcompanyId\x12#\n" +
 	"\rdepartment_id\x18\x04 \x01(\tR\fdepartmentId\x12\x12\n" +
 	"\x04role\x18\x05 \x01(\tR\x04role\x12\x16\n" +
-	"\x06status\x18\x06 \x01(\tR\x06status\"y\n" +
+	"\x06status\x18\x06 \x01(\tR\x06status\x12\x12\n" +
+	"\x04sort\x18\a \x01(\tR\x04sort\x12\x12\n" +
+	"\x04desc\x18\b \x01(\bR\x04desc\"y\n" +
 	"\x11ListUsersResponse\x12)\n" +
 	"\x05users\x18\x01 \x03(\v2\x13.salesorder.v1.UserR\x05users\x129\n" +
 	"\n" +

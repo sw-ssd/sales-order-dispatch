@@ -1,8 +1,9 @@
-import { render, screen, waitFor } from "@solidjs/testing-library";
+import { fireEvent, screen, waitFor, within } from "@solidjs/testing-library";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Code, ConnectError } from "@connectrpc/connect";
 import type * as ConnectRpc from "@connectrpc/connect";
-import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
+import { QueryClient } from "@tanstack/solid-query";
+import { renderWithProviders } from "~/test-render";
 
 // 使用者 API 以 spy 取代：UsersPage 在模組層建立 connect client，
 // 以 createClient 的替身同時攔截（錯誤訊息對照保持真實）。
@@ -50,11 +51,7 @@ function newClient() {
 }
 
 function mountPage(client: QueryClient = newClient()) {
-  render(() => (
-    <QueryClientProvider client={client}>
-      <UsersPage />
-    </QueryClientProvider>
-  ));
+  renderWithProviders(() => <UsersPage />, client);
 }
 
 beforeEach(() => {
@@ -95,16 +92,19 @@ describe("UsersPage", () => {
   it("停用後失效 users 前綴", async () => {
     mountPage();
     await waitFor(() => expect(screen.getByText("王小明")).toBeTruthy());
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     deactivateSpy.mockResolvedValue({});
     listUsersSpy.mockClear();
     const buttons = screen.getAllByRole("button", { name: "停用" });
     buttons[0].click();
+    // 依 accessible name（＝標題）取確認框：頁面其餘對話框關閉後仍留在 DOM。
+    const dialog = await waitFor(() =>
+      screen.getByRole("dialog", { name: /停用使用者「/ })
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "停用" }));
     await waitFor(() => expect(deactivateSpy).toHaveBeenCalledOnce());
     await waitFor(() =>
       expect(listUsersSpy).toHaveBeenCalledWith(expect.objectContaining({ page: 1 }))
     );
-    (window.confirm as unknown as { mockRestore: () => void }).mockRestore();
   });
 
   it("無權限時顯示 banner", async () => {

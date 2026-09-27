@@ -1,4 +1,5 @@
-import { Code, ConnectError } from "@connectrpc/connect";
+import { errorMessage } from "@/lib/error-message";
+import { formatDateTime } from "@/lib/datetime";
 import { createForm } from "@tanstack/solid-form";
 import {
   createInfiniteQuery,
@@ -10,8 +11,10 @@ import {
   createTable,
   flexRender,
   rowPaginationFeature,
+  rowSortingFeature,
   tableFeatures,
   type PaginationState,
+  type SortingState,
 } from "@tanstack/solid-table";
 import { batch, createEffect, createMemo, createSignal, For, Index, Show, type JSX } from "solid-js";
 import type { JsonObject } from "@bufbuild/protobuf";
@@ -39,9 +42,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  useConfirm,
 } from "~/components/ui";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import { ListPagination } from "../../users/components/ListPagination";
+import { createSortableHeaders } from "../../users/components/SortableHeader";
 import { queryData } from "~/lib/query-data";
 import {
   PRODUCT_PAGE_SIZE,
@@ -62,12 +67,10 @@ import {
 } from "../schemas";
 
 /**
- * 商品表格的 table 功能集：**只有分頁**。
- *
- * `ListProductsRequest` 沒有 `sort`/`desc`（見 proto）→ 這頁刻意不開排序、欄位一律
- * 非可排序表頭（同 `UsersPage`／`OrdersPage`：送了後端也不解析）。
+ * 商品表格的 table 功能集：分頁 ＋ 排序（`manualSorting`,見下方 table）。
+ * features 必須是穩定的靜態值——每個元件都自己 `tableFeatures({...})` 會多一份無用的定義。
  */
-const PRODUCT_TABLE_FEATURES = tableFeatures({ rowPaginationFeature });
+const PRODUCT_TABLE_FEATURES = tableFeatures({ rowPaginationFeature, rowSortingFeature });
 
 const productColumnHelper = createColumnHelper<typeof PRODUCT_TABLE_FEATURES, Product>();
 
@@ -91,31 +94,6 @@ const EMPTY_PRODUCT_VALUES = {
   inventoryWarehouseId: "",
   pickingWarehouseId: "",
 };
-
-function errorMessage(err: unknown): string {
-  if (err instanceof ConnectError) {
-    switch (err.code) {
-      case Code.NotFound:
-        return "資料不存在或已被刪除";
-      case Code.AlreadyExists:
-        return err.rawMessage || "資料已存在";
-      case Code.InvalidArgument:
-        return err.rawMessage || "輸入資料有誤,請檢查後再試";
-      case Code.FailedPrecondition:
-        // 配額上限（PLAT-5001）與狀態衝突都走這裡，後端訊息已帶用量。
-        return err.rawMessage || "目前狀態不允許此操作";
-      case Code.PermissionDenied:
-        return "沒有權限執行此操作";
-      case Code.Unauthenticated:
-        return "請先登入";
-      case Code.Unavailable:
-        return "無法連線至伺服器,請確認後端服務已啟動";
-      default:
-        return err.rawMessage || "操作失敗,請稍後再試";
-    }
-  }
-  return "無法連線至伺服器,請確認後端服務已啟動";
-}
 
 /**
  * 商品主檔頁(/products)。
@@ -156,6 +134,8 @@ export default function ProductsPage() {
 
   const client = useQueryClient();
 
+  const confirm = useConfirm();
+
   const categories = createInfiniteQuery(() => categoryDropdownQueryOptions());
   const warehouses = createInfiniteQuery(() => warehouseDropdownQueryOptions());
   const unitOptions = createQuery(() => unitOptionsQueryOptions());
@@ -175,14 +155,16 @@ export default function ProductsPage() {
   });
   const categoryLabel = (id: string) =>
     categoryNameById().get(id) ?? (id === "" ? "—" : `#${id}`);
+  const sortableHeader = createSortableHeaders();
+  const [sorting, setSorting] = createSignal<SortingState>([]);
 
   const columns = productColumnHelper.columns([
     productColumnHelper.accessor("code", {
-      header: "商品代號",
+      header: (ctx) => sortableHeader(ctx.column, "商品代號"),
       cell: (info) => <span class="font-medium text-foreground">{info.getValue()}</span>,
     }),
     productColumnHelper.accessor("name", {
-      header: "商品名稱",
+      header: (ctx) => sortableHeader(ctx.column, "商品名稱"),
       cell: (info) => <span class="text-foreground">{info.getValue()}</span>,
     }),
     productColumnHelper.accessor("categoryId", {
@@ -205,9 +187,9 @@ export default function ProductsPage() {
         ),
     }),
     productColumnHelper.accessor("createdAt", {
-      header: "建立時間",
+      header: (ctx) => sortableHeader(ctx.column, "建立時間"),
       cell: (info) => (
-        <span class="text-muted-foreground">{info.getValue().slice(0, 19).replace("T", " ")}</span>
+        <span class="text-muted-foreground">{formatDateTime(info.getValue())}</span>
       ),
     }),
     productColumnHelper.display({
@@ -254,6 +236,8 @@ export default function ProductsPage() {
     productsQueryOptions({
       page: pagination().pageIndex + 1,
       pageSize: pagination().pageSize,
+      sort: sorting()[0]?.id ?? "",
+      desc: sorting()[0]?.desc ?? false,
       keyword: filter().keyword || undefined,
       categoryId: filter().categoryId || undefined,
       includeDeleted: includeDeleted() || undefined,
@@ -272,10 +256,19 @@ export default function ProductsPage() {
       return total();
     },
     manualPagination: true,
+    manualSorting: true,
+    // 白名單欄位一律從「升冪」起算(v9 的第一方向預設依資料推測,空資料時會變降冪)。
+    sortDescFirst: false,
+    enableMultiSort: false,
     get state() {
-      return { pagination: pagination() };
+      return { pagination: pagination(), sorting: sorting() };
     },
     onPaginationChange: setPagination,
+    onSortingChange: (updater) =>
+      batch(() => {
+        setSorting((prev) => (typeof updater === "function" ? updater(prev) : updater));
+        table.setPageIndex(0);
+      }),
   });
 
   /** 超頁退回：total 讓目前頁碼超界時把頁碼夾到合法值（`page` 在 key 內 → 夾了就重取）。 */
@@ -510,7 +503,13 @@ export default function ProductsPage() {
   };
 
   const remove = async (p: Product) => {
-    if (!window.confirm(`確定刪除商品「${p.name}」?`)) return;
+    const ok = await confirm({
+      title: `刪除商品「${p.name}」`,
+      description: "刪除後可用「含已刪除」查回並還原。",
+      confirmLabel: "刪除",
+      variant: "destructive",
+    });
+    if (!ok) return;
     setActionError(null);
     try {
       await productClient.deleteProduct({ id: p.id });
@@ -886,7 +885,6 @@ export default function ProductsPage() {
                   已選 {removedSpecIds().length} 項規格已被刪除，儲存時會自動取消關聯。
                 </p>
               </Show>
-
 
               <Show when={specOptions.isError}>
                 <p class="text-sm text-destructive" role="alert">

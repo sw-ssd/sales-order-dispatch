@@ -1,4 +1,4 @@
-import { Code, ConnectError } from "@connectrpc/connect";
+import { errorMessage } from "@/lib/error-message";
 import { createForm } from "@tanstack/solid-form";
 import { createInfiniteQuery, createQuery, useQueryClient } from "@tanstack/solid-query";
 import {
@@ -9,6 +9,7 @@ import {
   rowSortingFeature,
   tableFeatures,
   type PaginationState,
+  type SortingState,
 } from "@tanstack/solid-table";
 import { batch, createEffect, createSignal, For, Show, type JSX } from "solid-js";
 import type { Company } from "~/lib/proto/salesorder/v1/company_pb";
@@ -36,9 +37,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  useConfirm,
 } from "~/components/ui";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import { ListPagination } from "../components/ListPagination";
+import { createSortableHeaders } from "../components/SortableHeader";
 import {
   PAGE_SIZE,
   companyDropdownQueryOptions,
@@ -78,24 +81,6 @@ const ROLE_OPTIONS = [
   "guest",
 ];
 
-function errorMessage(err: unknown): string {
-  if (err instanceof ConnectError) {
-    switch (err.code) {
-      case Code.NotFound:
-        return "資料不存在或已被刪除";
-      case Code.PermissionDenied:
-        return "沒有權限執行此操作";
-      case Code.InvalidArgument:
-        return err.rawMessage || "輸入資料有誤,請檢查後再試";
-      case Code.Unavailable:
-        return "無法連線至伺服器,請確認後端服務已啟動";
-      default:
-        return err.rawMessage || "操作失敗,請稍後再試";
-    }
-  }
-  return "無法連線至伺服器,請確認後端服務已啟動";
-}
-
 /**
  * 使用者管理頁(/users/users)。
  * 版型同 `DepartmentsPage`（篩選卡片色帶＋表格 `Card`）。差異：
@@ -118,27 +103,29 @@ export default function UsersPage() {
   const [departments, setDepartments] = createSignal<Department[]>([]);
 
   const client = useQueryClient();
-  const sortableOff = (_c: unknown, label: string) => label;
+  const sortableHeader = createSortableHeaders();
+  const [sorting, setSorting] = createSignal<SortingState>([]);
+
+  const confirm = useConfirm();
 
   const columns = userColumnHelper.columns([
     userColumnHelper.accessor("name", {
-      enableSorting: false,
-      header: (ctx) => sortableOff(ctx.column, "姓名"),
+      header: (ctx) => sortableHeader(ctx.column, "姓名"),
       cell: (info) => <span class="font-medium text-foreground">{info.getValue()}</span>,
     }),
     userColumnHelper.accessor("email", {
-      enableSorting: false,
-      header: (ctx) => sortableOff(ctx.column, "Email"),
+      enableSorting: true,
+      header: (ctx) => sortableHeader(ctx.column, "Email"),
       cell: (info) => <span class="text-muted-foreground">{info.getValue()}</span>,
     }),
     userColumnHelper.accessor("role", {
       enableSorting: false,
-      header: (ctx) => sortableOff(ctx.column, "角色"),
+      header: "角色",
       cell: (info) => <span>{info.getValue()}</span>,
     }),
     userColumnHelper.accessor("status", {
       enableSorting: false,
-      header: (ctx) => sortableOff(ctx.column, "狀態"),
+      header: "狀態",
       cell: (info) => {
         const s = info.getValue();
         return (
@@ -177,6 +164,8 @@ export default function UsersPage() {
       companyId: filter().company || undefined,
       role: filter().role || undefined,
       status: filter().status || undefined,
+      sort: sorting()[0]?.id ?? "",
+      desc: sorting()[0]?.desc ?? false,
     })
   );
 
@@ -192,10 +181,19 @@ export default function UsersPage() {
       return total();
     },
     manualPagination: true,
+    manualSorting: true,
+    // 白名單欄位一律從「升冪」起算(v9 的第一方向預設依資料推測,空資料時會變降冪)。
+    sortDescFirst: false,
+    enableMultiSort: false,
     get state() {
-      return { pagination: pagination() };
+      return { pagination: pagination(), sorting: sorting() };
     },
     onPaginationChange: setPagination,
+    onSortingChange: (updater) =>
+      batch(() => {
+        setSorting((prev) => (typeof updater === "function" ? updater(prev) : updater));
+        table.setPageIndex(0);
+      }),
   });
 
   const companyOptions = createInfiniteQuery(() =>
@@ -339,7 +337,13 @@ export default function UsersPage() {
   };
 
   const deactivate = async (u: User) => {
-    if (!window.confirm(`確定停用使用者「${u.name}」?`)) return;
+    const ok = await confirm({
+      title: `停用使用者「${u.name}」`,
+      description: "停用後該帳號立即無法登入，在途登入狀態一併失效；可再以編輯改回啟用。",
+      confirmLabel: "停用",
+      variant: "destructive",
+    });
+    if (!ok) return;
     setDeleteError(null);
     try {
       await userClient.deactivate({ userId: u.id });
