@@ -550,6 +550,9 @@ export default function DispatchPage() {
                     <Button
                       type="button"
                       size="sm"
+                      // 沒東西可確認時降為 outline：主色是「現在該按的就是這個」的訊號，
+                      // 讓它在多數時間以禁用狀態佔著欄裡最顯眼的位置，等於把訊號磨掉。
+                      variant={canConfirm() ? "default" : "outline"}
                       class="w-full"
                       disabled={!canConfirm()}
                       onClick={() => void confirmRoute(route.id)}
