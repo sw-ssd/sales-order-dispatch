@@ -1,4 +1,5 @@
-import { Code, ConnectError } from "@connectrpc/connect";
+import { errorMessage } from "@/lib/error-message";
+import { formatDateTime } from "@/lib/datetime";
 import { createForm } from "@tanstack/solid-form";
 import { createQuery, useQueryClient } from "@tanstack/solid-query";
 import {
@@ -9,7 +10,7 @@ import {
   tableFeatures,
   type PaginationState,
 } from "@tanstack/solid-table";
-import { batch, createEffect, createSignal, For, Show, type JSX } from "solid-js";
+import { batch, createEffect, createMemo, createSignal, For, Show, type JSX } from "solid-js";
 import type { LogEntry } from "~/lib/proto/products/v1/print_pb";
 import {
   Badge,
@@ -36,7 +37,14 @@ import {
 } from "~/components/ui";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import { ListPagination } from "../../users/components/ListPagination";
-import { PRINT_LOG_PAGE_SIZE, printClient, printLogsQueryOptions } from "../queries";
+import {
+  PRINT_LOG_PAGE_SIZE,
+  printClient,
+  printCustomerOptionsQueryOptions,
+  printLogsQueryOptions,
+  printRoutesQueryOptions,
+  printWarehouseOptionsQueryOptions,
+} from "../queries";
 import { queryData } from "~/lib/query-data";
 import {
   DOC_TYPES,
@@ -65,29 +73,6 @@ const EMPTY_PRINT_VALUES = {
   customerId: "",
   warehouseId: "",
 };
-
-function errorMessage(err: unknown): string {
-  if (err instanceof ConnectError) {
-    switch (err.code) {
-      case Code.NotFound:
-        return "資料不存在或已被刪除";
-      case Code.InvalidArgument:
-        // 後端「無可列印資料」「非 processing」「重印缺原因」都走這裡，訊息原樣透傳。
-        return err.rawMessage || "輸入資料有誤,請檢查後再試";
-      case Code.FailedPrecondition:
-        return err.rawMessage || "目前狀態不允許此操作";
-      case Code.PermissionDenied:
-        return "沒有權限執行此操作";
-      case Code.Unauthenticated:
-        return "請先登入";
-      case Code.Unavailable:
-        return "無法連線至伺服器,請確認後端服務已啟動";
-      default:
-        return err.rawMessage || "操作失敗,請稍後再試";
-    }
-  }
-  return "無法連線至伺服器,請確認後端服務已啟動";
-}
 
 /**
  * 單據列印頁(/printing)。
@@ -127,6 +112,22 @@ export default function PrintPage() {
 
   const client = useQueryClient();
 
+  /**
+   * 車次清單：**選擇**用未刪除的（只能對現存車次列印），**顯示／篩選**用含已刪除的
+   * （`print_logs` 是歷史，車次可能已停用）。原本這頁要使用者手打「車次 ID」，
+   * 而全站無處可查那個 id——現在表格顯示名稱（代碼），表單直接選車次。
+   */
+  const selectableRoutes = createQuery(() => printRoutesQueryOptions(false));
+  const allRoutes = createQuery(() => printRoutesQueryOptions(true));
+  const customers = createQuery(() => printCustomerOptionsQueryOptions());
+  const warehouses = createQuery(() => printWarehouseOptionsQueryOptions());
+
+  /** id → 「名稱（代碼）」。含已刪除車次，舊紀錄才查得到名字；查不到時退回裸 id（不假裝）。 */
+  const routeNameById = createMemo(
+    () => new Map((queryData(allRoutes, (d) => d?.routes) ?? []).map((r) => [r.id, `${r.name}（${r.code}）`]))
+  );
+  const routeName = (routeId: string) => routeNameById().get(routeId) ?? `#${routeId}`;
+
   const columns = logColumnHelper.columns([
     logColumnHelper.accessor("documentType", {
       header: "單據類型",
@@ -137,7 +138,9 @@ export default function PrintPage() {
     logColumnHelper.accessor("routeId", {
       header: "車次",
       cell: (info) => (
-        <span class="text-muted-foreground">{info.getValue() ? `#${info.getValue()}` : "—"}</span>
+        <span class="text-muted-foreground">
+          {info.getValue() ? routeName(info.getValue()) : "—"}
+        </span>
       ),
     }),
     logColumnHelper.accessor("targetDate", {
@@ -147,7 +150,7 @@ export default function PrintPage() {
     logColumnHelper.accessor("printedAt", {
       header: "列印時間",
       cell: (info) => (
-        <span class="text-muted-foreground">{info.getValue().slice(0, 19).replace("T", " ")}</span>
+        <span class="text-muted-foreground">{formatDateTime(info.getValue())}</span>
       ),
     }),
     logColumnHelper.accessor("isReprint", {
@@ -161,9 +164,16 @@ export default function PrintPage() {
     }),
     logColumnHelper.accessor("printedBy", {
       header: "列印人",
-      cell: (info) => (
-        <span class="text-muted-foreground">{info.getValue() ? `#${info.getValue()}` : "—"}</span>
-      ),
+      // 顯示姓名而不是 `#8`：內部 id 對使用者沒有意義。後端查不到（帳號已刪除）時
+      // printedByName 為空 → 退回 id，避免整欄空白（同 AuditPage 的 userName 處理）。
+      cell: (info) => {
+        const name = info.row.original.printedByName;
+        return (
+          <span class="text-muted-foreground">
+            {name || (info.getValue() ? `#${info.getValue()}` : "—")}
+          </span>
+        );
+      },
     }),
     logColumnHelper.display({
       id: "actions",
@@ -322,7 +332,7 @@ export default function PrintPage() {
         <div>
           <h1 class="text-2xl font-bold text-foreground">單據列印</h1>
           <p class="mt-1 text-sm text-muted-foreground">
-            預覽不限狀態；正式列印限 processing（共 {total()} 筆列印紀錄）
+            預覽不限狀態；正式列印限「處理中」的訂單（共 {total()} 筆列印紀錄）
           </p>
         </div>
         <Button type="button" onClick={openPrint}>
@@ -380,14 +390,20 @@ export default function PrintPage() {
               </For>
             </select>
           </Field>
-          <Field class="w-full sm:w-40">
+          <Field class="w-full sm:w-56">
             <FieldLabel for="log-route">車次</FieldLabel>
-            <Input
+            <select
               id="log-route"
               value={filterDraft().routeId}
-              onInput={(e) => setFilterDraft({ ...filterDraft(), routeId: e.currentTarget.value })}
-              placeholder="車次 ID"
-            />
+              onChange={(e) =>
+                setFilterDraft({ ...filterDraft(), routeId: e.currentTarget.value })
+              }
+            >
+              <option value="">全部車次</option>
+              <For each={queryData(allRoutes, (d) => d?.routes) ?? []}>
+                {(r) => <option value={r.id}>{r.name}（{r.code}）</option>}
+              </For>
+            </select>
           </Field>
           <Field class="w-full sm:w-40">
             <FieldLabel for="log-from">起日</FieldLabel>
@@ -467,7 +483,7 @@ export default function PrintPage() {
           <DialogHeader>
             <DialogTitle>列印單據</DialogTitle>
             <DialogDescription>
-              預覽不限狀態；正式列印僅限 processing，已列印過則需填重印原因
+              預覽不限狀態；正式列印僅限「處理中」的訂單，已列印過則需填重印原因
             </DialogDescription>
           </DialogHeader>
 
@@ -508,13 +524,17 @@ export default function PrintPage() {
                 {(field) => (
                   <Field invalid={!field().state.meta.isValid}>
                     <FieldLabel for="print-route">車次 *</FieldLabel>
-                    <Input
+                    <select
                       id="print-route"
                       value={field().state.value}
                       onBlur={field().handleBlur}
-                      onInput={(e) => field().handleChange(e.currentTarget.value)}
-                      placeholder="車次 ID"
-                    />
+                      onChange={(e) => field().handleChange(e.currentTarget.value)}
+                    >
+                      <option value="">請選擇</option>
+                      <For each={queryData(selectableRoutes, (d) => d?.routes) ?? []}>
+                        {(r) => <option value={r.id}>{r.name}（{r.code}）</option>}
+                      </For>
+                    </select>
                     <FieldError>{firstMessage(field().state.meta.errors)}</FieldError>
                   </Field>
                 )}
@@ -546,6 +566,9 @@ export default function PrintPage() {
                       onChange={(e) => field().handleChange(e.currentTarget.value)}
                     >
                       <option value="">不指定</option>
+                      <For each={queryData(customers, (d) => d?.customers) ?? []}>
+                        {(c) => <option value={c.id}>{c.name}（{c.customerCode}）</option>}
+                      </For>
                     </select>
                   </Field>
                 )}
@@ -561,6 +584,9 @@ export default function PrintPage() {
                       onChange={(e) => field().handleChange(e.currentTarget.value)}
                     >
                       <option value="">不指定</option>
+                      <For each={queryData(warehouses, (d) => d?.warehouses) ?? []}>
+                        {(w) => <option value={w.id}>{w.name}（{w.code}）</option>}
+                      </For>
                     </select>
                   </Field>
                 )}

@@ -12,12 +12,14 @@ const {
   printSpy,
   listRoutesSpy,
   listWarehousesSpy,
+  listCustomersSpy,
 } = vi.hoisted(() => ({
   listLogsSpy: vi.fn(),
   previewSpy: vi.fn(),
   printSpy: vi.fn(),
   listRoutesSpy: vi.fn(),
   listWarehousesSpy: vi.fn(),
+  listCustomersSpy: vi.fn(),
 }));
 
 vi.mock("@connectrpc/connect", async (importOriginal) => ({
@@ -28,6 +30,7 @@ vi.mock("@connectrpc/connect", async (importOriginal) => ({
     print: printSpy,
     listRoutes: listRoutesSpy,
     listWarehouses: listWarehousesSpy,
+    listCustomers: listCustomersSpy,
   }),
 }));
 
@@ -43,6 +46,20 @@ const ENTRY = {
   isReprint: false,
   reprintReason: "",
   downloadUrl: "/api/v1/files/dispatch_summary_2026-09-22.pdf/download",
+};
+
+const ROUTE = {
+  id: "r-1",
+  companyId: "1",
+  departmentId: "1",
+  code: "R01",
+  name: "1車",
+  description: "",
+  sortOrder: 1,
+  isActive: true,
+  createdAt: "",
+  updatedAt: "",
+  deletedAt: "",
 };
 
 /** 每個測試一份全新的 `QueryClient`：快取不跨測試殘留（retry 關閉，理由同 CustomersPage）。 */
@@ -84,8 +101,36 @@ beforeEach(() => {
     downloadUrl: ENTRY.downloadUrl,
     isReprint: false,
   });
-  listRoutesSpy.mockResolvedValue({ routes: [], pagination: { total: 0 } });
-  listWarehousesSpy.mockResolvedValue({ warehouses: [], pagination: { total: 0 } });
+  listRoutesSpy.mockResolvedValue({ routes: [ROUTE], pagination: { total: 1 } });
+  listWarehousesSpy.mockResolvedValue({
+    warehouses: [
+      {
+        id: "w-1",
+        companyId: "1",
+        departmentId: "1",
+        code: "W1",
+        name: "冷藏倉",
+        address: "",
+        isActive: true,
+        createdAt: "",
+        updatedAt: "",
+        deletedAt: "",
+      },
+    ],
+    pagination: { total: 1 },
+  });
+  listCustomersSpy.mockResolvedValue({
+    customers: [
+      {
+        id: "cu-1",
+        companyId: "1",
+        departmentId: "1",
+        customerCode: "C-1",
+        name: "永和豆漿",
+      },
+    ],
+    pagination: { total: 1 },
+  });
 });
 
 describe("PrintPage", () => {
@@ -162,7 +207,7 @@ describe("PrintPage", () => {
     fireEvent.change(within(dialog).getByLabelText("單據類型 *"), {
       target: { value: "delivery_note" },
     });
-    fireEvent.input(within(dialog).getByLabelText("車次 *"), {
+    fireEvent.change(within(dialog).getByLabelText("車次 *"), {
       target: { value: "r-1" },
     });
     fireEvent.change(within(dialog).getByLabelText("出貨日期 *"), {
@@ -184,7 +229,7 @@ describe("PrintPage", () => {
     fireEvent.change(within(dialog).getByLabelText("單據類型 *"), {
       target: { value: "dispatch_summary" },
     });
-    fireEvent.input(within(dialog).getByLabelText("車次 *"), {
+    fireEvent.change(within(dialog).getByLabelText("車次 *"), {
       target: { value: "r-1" },
     });
     fireEvent.change(within(dialog).getByLabelText("出貨日期 *"), {
@@ -215,7 +260,7 @@ describe("PrintPage", () => {
     fireEvent.change(within(dialog).getByLabelText("單據類型 *"), {
       target: { value: "dispatch_summary" },
     });
-    fireEvent.input(within(dialog).getByLabelText("車次 *"), {
+    fireEvent.change(within(dialog).getByLabelText("車次 *"), {
       target: { value: "r-1" },
     });
     fireEvent.change(within(dialog).getByLabelText("出貨日期 *"), {
@@ -248,7 +293,7 @@ describe("PrintPage", () => {
     fireEvent.change(within(dialog).getByLabelText("單據類型 *"), {
       target: { value: "dispatch_summary" },
     });
-    fireEvent.input(within(dialog).getByLabelText("車次 *"), {
+    fireEvent.change(within(dialog).getByLabelText("車次 *"), {
       target: { value: "r-1" },
     });
     fireEvent.change(within(dialog).getByLabelText("出貨日期 *"), {
@@ -270,5 +315,35 @@ describe("PrintPage", () => {
     mountPage();
     await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
     expect(screen.getByRole("alert").textContent).toContain("沒有權限");
+  });
+
+  it("車次是下拉、選項來自車次主檔（名稱＋代碼），且紀錄表格顯示名稱而非內部 id", async () => {
+    mountPage();
+    await waitFor(() => expect(screen.getByRole("link", { name: "下載" })).toBeTruthy());
+
+    // 篩選列的車次必須是 <select>：內部 id 全站無處可查，自由輸入框等於要求使用者背誦。
+    const filterRoute = screen.getByLabelText("車次") as HTMLSelectElement;
+    expect(filterRoute.tagName).toBe("SELECT");
+    await waitFor(() => expect(screen.getByRole("option", { name: "1車（R01）" })).toBeTruthy());
+
+    // 紀錄表格的車次欄顯示「名稱（代碼）」；查不到車次時才退回裸 id（不靜默假裝不存在）。
+    const rows = screen.getAllByRole("row");
+    expect(rows.some((r) => r.textContent?.includes("1車（R01）"))).toBe(true);
+
+    const dialog = await openPrintDialog();
+    const printRoute = within(dialog).getByLabelText("車次 *") as HTMLSelectElement;
+    expect(printRoute.tagName).toBe("SELECT");
+    expect(within(dialog).getByRole("option", { name: "1車（R01）" })).toBeTruthy();
+  });
+
+  it("店家與倉別下拉有實際選項（對點單／揀貨單否則永遠送不出合法請求）", async () => {
+    mountPage();
+    await waitFor(() => expect(screen.getByRole("link", { name: "下載" })).toBeTruthy());
+    const dialog = await openPrintDialog();
+
+    // 這兩個 <select> 曾是空殼（只有「不指定」）：有標籤、有 FieldLabel，
+    // 卻沒有任何 <For>，於是對點單／揀貨單在 UI 上永遠印不出來。
+    expect(within(dialog).getByRole("option", { name: "永和豆漿（C-1）" })).toBeTruthy();
+    expect(within(dialog).getByRole("option", { name: "冷藏倉（W1）" })).toBeTruthy();
   });
 });
