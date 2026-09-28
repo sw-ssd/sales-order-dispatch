@@ -1,4 +1,4 @@
-package casl
+package scopecond
 
 import (
 	"testing"

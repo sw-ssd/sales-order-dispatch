@@ -266,6 +266,7 @@
 - **已考慮 alternative**：立即納入 `protectedRPC` — 拒絕（需同步 `role_permissions` seed 才能避免 fail-closed，且必須一次性涵蓋所有 business 域，成本與風險不成比例）；完全廢除閘門僅靠服務層 — 拒絕（管理面 role/company/department/user 的資源級能力仍宜由 OpenFGA 單一來源承擔）。
 - **與 D32 之關係**：D32 述「middleware 對受保護 RPC 做 Check」為機制描述；本決定**界定受保護 RPC 的範圍**（管理面納入、business 面分階段），為 D32 的補充而非修訂。
 - **修訂來源**：2026-09-19 04 Task 3.4 複審 Minor 2。
+- **收尾（2026-09-29）**：①`protectedRPC` 已收錄全部業務域 RPC（announcement／product／sales_order／return_request／notification／customer_account 等；未收錄者為 AuthService 公開端點、`GetAbility`、以及 dispatch／device —— 後兩者由服務層 `requireAuth`＋角色判斷承擔）。②服務層逐動作檢查的角色來源**改為 DB**（`authz.PermissionGrantedTx` 查 `role_permissions`，走請求交易以滿足 RLS）＋ `auth.EnforceAny` 內建 ACL 後備；此改動關閉「自訂角色在服務層一律被拒」的缺口。③**二元閘門不可取代逐動作檢查**（實測）：`company_admin` 持有 `company/update` 而無 `create\|delete`，閘門的 `can_write` 會把 update 當成 create／delete 的授權 —— 故服務層檢查**不可**為求單一來源而移除。④`authz/casl` 套件更名為 `authz/scopecond`（內容為條件 AST／驗證，CASL 已於 D32 移除，名稱是誤導）。
 
 ## Risks / Trade-offs
 

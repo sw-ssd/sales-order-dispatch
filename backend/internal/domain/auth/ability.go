@@ -1,5 +1,5 @@
 // Package auth 提供 GetAbility RPC:以 OpenFGA ListObjects 列舉目前身分可用的
-// (資源, 動作)能力集合,供前端選單/守衛驅動(D32 取代 CASL ability 下發)。
+// (資源, 動作)能力集合,供前端選單/守衛驅動(D32:取代原 CASL ability 下發)。
 // developer 逃生門(開關啟用)直接回 manage:all。物件狀態條件由 domain 狀態機處理,
 // 不進 GetAbility(OpenFGA 只管關係性/角色/租戶範圍)。
 package auth

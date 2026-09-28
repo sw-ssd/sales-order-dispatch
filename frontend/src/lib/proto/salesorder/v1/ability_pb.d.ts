@@ -11,7 +11,7 @@ import type { JsonObject, Message } from "@bufbuild/protobuf";
 export declare const file_salesorder_v1_ability: GenFile;
 
 /**
- * AbilityRule:單條 CASL 能力規則(前端 @casl/ability 直接消費)。
+ * AbilityRule:單條能力規則(以 OpenFGA ListObjects 推導;前端權限集合直接消費)。
  *
  * @generated from message salesorder.v1.AbilityRule
  */
@@ -84,7 +84,7 @@ export declare const GetAbilityResponseSchema: GenMessage<GetAbilityResponse>;
  */
 export declare const AbilityService: GenService<{
   /**
-   * GetAbility:以 ctx 身分查詢規則表,輸出 CASL JSON 規則。
+   * GetAbility:以 ctx 身分列舉可讀/可寫資源,輸出 (action, resource) 規則。
    *
    * @generated from rpc salesorder.v1.AbilityService.GetAbility
    */

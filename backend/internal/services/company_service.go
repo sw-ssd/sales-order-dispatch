@@ -87,8 +87,12 @@ func RegisterCompanyServices(mux *http.ServeMux, db *ent.Client, entSvc entitlem
 	mux.Handle(departmentPath, departmentHandler)
 }
 
-// requireScope 檢查 ctx 身分具備 resource 資源的指定動作(純 Go ACL EnforceAny,T14)。
+// requireScope 檢查 ctx 身分具備 resource 資源的指定動作(D33;來源為 role_permissions 表)。
 // 未登入 → AUTH-4001(Unauthenticated);無權 → SYS-4001(PermissionDenied)。
+//
+// 為何 middleware 的 OpenFGA 閘門不足:閘門只判 can_read/can_write(二元),而同一資源的
+// 不同動作可能由不同角色持有 —— company_admin 有 company/update 卻無 company/create|delete,
+// 二元關係會讓「update」授權放行「create」。故服務層保留逐動作檢查(見 authz.PermissionGrantedTx)。
 //
 // SYS-4001 的訊息樣板只有「缺少權限」,資源／動作用 details 帶(resource／action):
 // 前端要顯示「缺 company 的 delete 權限」靠 details,樣板文字不為個別呼叫點改動。
@@ -97,9 +101,18 @@ func requireScope(ctx context.Context, resource, action string) error {
 	if err != nil {
 		return err
 	}
-	ok, err := auth.EnforceAny(id.Roles, resource, action, id.CompanyID)
+	// 來源順序:role_permissions 表(自訂角色只存在於此)優先;DB 無該列或未注入時,
+	// 回退內建角色 ACL(內建角色的答案與 DB 種子同源,見 auth.BuiltinRolePermissions)。
+	// 這個順序讓自訂角色在服務層生效,同時保住 company_admin 不得 create/delete company。
+	ok, err := authz.PermissionGrantedTx(ctx, id.Roles, resource, action)
 	if err != nil {
-		return connect.NewError(connect.CodeInternal, err)
+		return toConnectError(err)
+	}
+	if !ok {
+		ok, err = auth.EnforceAny(id.Roles, resource, action, id.CompanyID)
+		if err != nil {
+			return toConnectError(err)
+		}
 	}
 	if !ok {
 		return errcode.SysPermissionDenied.Error(map[string]string{"resource": resource, "action": action})

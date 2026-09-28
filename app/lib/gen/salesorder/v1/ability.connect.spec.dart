@@ -11,7 +11,7 @@ abstract final class AbilityService {
   /// Fully-qualified name of the AbilityService service.
   static const name = 'salesorder.v1.AbilityService';
 
-  /// GetAbility:以 ctx 身分查詢規則表,輸出 CASL JSON 規則。
+  /// GetAbility:以 ctx 身分列舉可讀/可寫資源,輸出 (action, resource) 規則。
   static const getAbility = connect.Spec(
     '/$name/GetAbility',
     connect.StreamType.unary,

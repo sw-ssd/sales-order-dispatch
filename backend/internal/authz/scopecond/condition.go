@@ -1,6 +1,8 @@
-// Package casl 為 CASL JSON 規則的 Go 評估器與 SQL 翻譯器(D30-3)。
-// 語意對齊 @casl/ability,由 testdata/cases.json golden fixture 對賭。
-package casl
+// Package scopecond 為 role_permissions.conditions 的條件 AST、Go 評估器與欄位白名單。
+// 原始設計(D30-3)以 CASL JSON 為格式並與 @casl/ability 對賭;CASL 已於 D32 移除,
+// 本套件現只服務角色權限的寫入驗證、company 範圍驗證與防鎖死判斷(不再參與授權決策)。
+// 條件語意在唯讀端仍與 golden fixture testdata/cases.json 對賭。
+package scopecond
 
 import (
 	"fmt"
@@ -57,13 +59,13 @@ func ParseConditions(raw map[string]any) ([]FieldCondition, error) {
 			for _, op := range ops {
 				o := Op(op)
 				if !validOps[o] {
-					return nil, fmt.Errorf("casl: unknown operator %q on field %q", op, f)
+					return nil, fmt.Errorf("scopecond: unknown operator %q on field %q", op, f)
 				}
 				val := v[op]
 				if o == OpIn || o == OpNin {
 					arr, ok := val.([]any)
 					if !ok {
-						return nil, fmt.Errorf("casl: %s on field %q requires array value", op, f)
+						return nil, fmt.Errorf("scopecond: %s on field %q requires array value", op, f)
 					}
 					val = arr
 				}

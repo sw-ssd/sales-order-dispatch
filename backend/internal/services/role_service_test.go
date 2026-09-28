@@ -17,7 +17,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/ent/rolepermission"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	"github.com/salesorder/sales-order-1.0/backend/internal/authz/casl"
+	"github.com/salesorder/sales-order-1.0/backend/internal/authz/scopecond"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
 
@@ -56,7 +56,7 @@ func mustStruct(t *testing.T, m map[string]any) *structpb.Struct {
 }
 
 // staffEvaluator 依 DB 內 staff 角色規則建立 CASL evaluator(模擬 authz 規則載入)。
-func staffEvaluator(t *testing.T, db *ent.Client, ctx context.Context) *casl.Evaluator {
+func staffEvaluator(t *testing.T, db *ent.Client, ctx context.Context) *scopecond.Evaluator {
 	t.Helper()
 	rows, err := db.RolePermission.Query().
 		Where(rolepermission.HasRoleWith(role.CodeEQ("staff"))).
@@ -65,15 +65,15 @@ func staffEvaluator(t *testing.T, db *ent.Client, ctx context.Context) *casl.Eva
 	if err != nil {
 		t.Fatalf("載入 staff 規則: %v", err)
 	}
-	rules := make([]casl.Rule, 0, len(rows))
+	rules := make([]scopecond.Rule, 0, len(rows))
 	for _, rp := range rows {
-		conds, err := casl.ParseConditions(rp.Conditions)
+		conds, err := scopecond.ParseConditions(rp.Conditions)
 		if err != nil {
 			t.Fatalf("ParseConditions(%#v): %v", rp.Conditions, err)
 		}
-		rules = append(rules, casl.Rule{Action: rp.Action, Subject: rp.Resource, Conditions: conds, Inverted: rp.Inverted})
+		rules = append(rules, scopecond.Rule{Action: rp.Action, Subject: rp.Resource, Conditions: conds, Inverted: rp.Inverted})
 	}
-	return casl.NewEvaluator(rules, casl.Identity{UserID: "u1", CompanyID: "c1", DepartmentID: "d1"})
+	return scopecond.NewEvaluator(rules, scopecond.Identity{UserID: "u1", CompanyID: "c1", DepartmentID: "d1"})
 }
 
 // TestRolePermissionCRUD 驗收 brief Step 4:更新權限後新規則生效(經 CASL evaluator 強制)。

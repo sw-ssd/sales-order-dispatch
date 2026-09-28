@@ -5,7 +5,7 @@ option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/prot
 
 import "google/protobuf/struct.proto";
 
-// AbilityRule:單條 CASL 能力規則(前端 @casl/ability 直接消費)。
+// AbilityRule:單條能力規則(以 OpenFGA ListObjects 推導;前端權限集合直接消費)。
 message AbilityRule {
   string action = 1;
   string subject = 2;
@@ -23,6 +23,6 @@ message GetAbilityResponse {
 
 // AbilityService:能力規則下發。
 service AbilityService {
-  // GetAbility:以 ctx 身分查詢規則表,輸出 CASL JSON 規則。
+  // GetAbility:以 ctx 身分列舉可讀/可寫資源,輸出 (action, resource) 規則。
   rpc GetAbility(GetAbilityRequest) returns (GetAbilityResponse);
 }

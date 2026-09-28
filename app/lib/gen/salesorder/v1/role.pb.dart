@@ -136,7 +136,7 @@ class Role extends $pb.GeneratedMessage {
   void clearIsActive() => $_clearField(6);
 }
 
-/// Permission:單一功能權限(resource × action;CASL ability 規則來源,對齊 role_permissions 表)。
+/// Permission:單一功能權限(resource × action;角色→權限來源,對齊 role_permissions 表)。
 class Permission extends $pb.GeneratedMessage {
   factory Permission({
     $core.String? resource,

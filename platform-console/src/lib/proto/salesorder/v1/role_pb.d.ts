@@ -65,7 +65,7 @@ export declare type Role = Message<"salesorder.v1.Role"> & {
 export declare const RoleSchema: GenMessage<Role>;
 
 /**
- * Permission:單一功能權限(resource × action;CASL ability 規則來源,對齊 role_permissions 表)。
+ * Permission:單一功能權限(resource × action;角色→權限來源,對齊 role_permissions 表)。
  *
  * @generated from message salesorder.v1.Permission
  */
@@ -85,14 +85,14 @@ export declare type Permission = Message<"salesorder.v1.Permission"> & {
   action: string;
 
   /**
-   * CASL 條件(無條件為 null)
+   * 條件式(無條件為 null;寫入前經驗證,不參與授權決策)
    *
    * @generated from field: google.protobuf.Struct conditions = 3;
    */
   conditions?: JsonObject | undefined;
 
   /**
-   * cannot 規則
+   * 拒絕規則(cannot;不轉為 OpenFGA allow tuple)
    *
    * @generated from field: bool inverted = 4;
    */

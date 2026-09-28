@@ -66,7 +66,6 @@
 │   │   ├── components/layout/ # AppShell / Sidebar / Topbar
 │   │   ├── lib/               # transport、query-client、ability、proto 生成碼
 │   │   └── router/ App.tsx main.tsx index.css test-setup.ts
-│   ├── scripts/               # （casl-golden-gen.mjs 已失效：CASL 已移除，見下方註）
 │   ├── index.html / vite.config.ts / vitest.config.ts / tsconfig.json / eslint.config.js
 │   └── package.json / AGENTS.md / Taskfile.yml
 ├── .superpowers/sdd/          # SDD 工作區（各波計畫、報告與複審紀錄）

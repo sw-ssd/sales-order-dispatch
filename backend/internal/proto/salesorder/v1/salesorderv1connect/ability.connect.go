@@ -40,7 +40,7 @@ const (
 
 // AbilityServiceClient is a client for the salesorder.v1.AbilityService service.
 type AbilityServiceClient interface {
-	// GetAbility:以 ctx 身分查詢規則表,輸出 CASL JSON 規則。
+	// GetAbility:以 ctx 身分列舉可讀/可寫資源,輸出 (action, resource) 規則。
 	GetAbility(context.Context, *connect.Request[v1.GetAbilityRequest]) (*connect.Response[v1.GetAbilityResponse], error)
 }
 
@@ -76,7 +76,7 @@ func (c *abilityServiceClient) GetAbility(ctx context.Context, req *connect.Requ
 
 // AbilityServiceHandler is an implementation of the salesorder.v1.AbilityService service.
 type AbilityServiceHandler interface {
-	// GetAbility:以 ctx 身分查詢規則表,輸出 CASL JSON 規則。
+	// GetAbility:以 ctx 身分列舉可讀/可寫資源,輸出 (action, resource) 規則。
 	GetAbility(context.Context, *connect.Request[v1.GetAbilityRequest]) (*connect.Response[v1.GetAbilityResponse], error)
 }
 

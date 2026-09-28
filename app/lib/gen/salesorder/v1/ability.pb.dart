@@ -18,7 +18,7 @@ import 'package:protobuf/well_known_types/google/protobuf/struct.pb.dart' as $0;
 
 export 'package:protobuf/protobuf.dart' show GeneratedMessageGenericExtensions;
 
-/// AbilityRule:單條 CASL 能力規則(前端 @casl/ability 直接消費)。
+/// AbilityRule:單條能力規則(以 OpenFGA ListObjects 推導;前端權限集合直接消費)。
 class AbilityRule extends $pb.GeneratedMessage {
   factory AbilityRule({
     $core.String? action,
@@ -216,7 +216,7 @@ class AbilityServiceApi {
 
   AbilityServiceApi(this._client);
 
-  /// GetAbility:以 ctx 身分查詢規則表,輸出 CASL JSON 規則。
+  /// GetAbility:以 ctx 身分列舉可讀/可寫資源,輸出 (action, resource) 規則。
   $async.Future<GetAbilityResponse> getAbility(
           $pb.ClientContext? ctx, GetAbilityRequest request) =>
       _client.invoke<GetAbilityResponse>(

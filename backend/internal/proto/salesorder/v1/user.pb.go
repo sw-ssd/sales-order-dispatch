@@ -154,7 +154,7 @@ type ListUsersRequest struct {
 	DepartmentId  string                 `protobuf:"bytes,4,opt,name=department_id,json=departmentId,proto3" json:"department_id,omitempty"` // 篩選:部門 ID
 	Role          string                 `protobuf:"bytes,5,opt,name=role,proto3" json:"role,omitempty"`                                     // 篩選:角色 code
 	Status        string                 `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`                                 // 篩選:active | inactive | pending(空 = 全部)
-	Sort          string                 `protobuf:"bytes,7,opt,name=sort,proto3" json:"sort,omitempty"`                                     // 白名單:name | email | created_at | id(空 = 預設排序)
+	Sort          string                 `protobuf:"bytes,7,opt,name=sort,proto3" json:"sort,omitempty"`                                     // 白名單:name | email | id(空 = 預設排序)
 	Desc          bool                   `protobuf:"varint,8,opt,name=desc,proto3" json:"desc,omitempty"`                                    // 是否降冪(sort 空時忽略)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

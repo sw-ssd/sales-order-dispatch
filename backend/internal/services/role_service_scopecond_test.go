@@ -130,7 +130,7 @@ func TestUpdateRolePermissionsCaslValidation(t *testing.T) {
 }
 
 // TestUpdateRolePermissionsCompanyAdminOperatorForm P2-3 驗收:validateOwnCompany 以
-// casl.ParseConditions 展開後驗證,接受運算子形(如 {"$eq": "c1"} / {"$in": [...]}),
+// scopecond.ParseConditions 展開後驗證,接受運算子形(如 {"$eq": "c1"} / {"$in": [...]}),
 // 但僅限自身公司或佔位符;$ne/$nin 等可能涵蓋其他公司 → 拒絕。
 func TestUpdateRolePermissionsCompanyAdminOperatorForm(t *testing.T) {
 	ctx := context.Background()

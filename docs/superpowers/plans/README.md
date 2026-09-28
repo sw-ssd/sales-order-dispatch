@@ -97,8 +97,9 @@ graph TD
 | U22 | 任何只回報「全綠」而不帶 `-count=1` 的守門指令都可能命中快取 | `task test:integration` 已修 | 全 repo Taskfile／CI 慣例 |
 | U23 | 平台側沒有第二道防線（`platform` 表不套 RLS，授權全靠服務層） | 緩解：`app_rw` 零權限 | 每次新增平台 RPC 都要有服務層檢查與測試 |
 | U24 | `money.YearlyFromMonthly` 無生產呼叫端 | 價目尚未有 `discount_bps`；函式保留並註明 | 價目加折扣時由它負責算，勿另寫一份 |
-| U25 | `trial_ends_at IS NULL` 的 `trialing` 訂閱 | 排程摘要 `StuckTrialing` 計數已加 | 可考慮 `CHECK` 約束 |
-| U26 | `frontend/scripts/casl-golden-gen.mjs` 已失效（CASL 已移除） | 待刪 | frontend |
+| U25b | **`role_permissions.conditions`／`inverted` 是無生產者的子系統**：seed 一律寫 NULL／false、前端 `PermissionMatrix.tsx` 不讀、`ListConditionFields` 無呼叫端、`authz.Provision` 對 `inverted` 直接略過、`conditions` 完全不進 OpenFGA。現僅用於寫入驗證與 `ruleExcludesActor` 防鎖死 | 半死資料 | 三選一：①刪除（需改 proto：保留 3／4 欄位號＋三端重產＋重寫防鎖死，**觸及安全守衛，須獨立一輪**）②明確保留並註記用途 ③補上真實需求（D30 條件式權限） |
+| U25 |
+ `trial_ends_at IS NULL` 的 `trialing` 訂閱 | 排程摘要 `StuckTrialing` 計數已加 | 可考慮 `CHECK` 約束 |
 
 ## 狀態定義
 

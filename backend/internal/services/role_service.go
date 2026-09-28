@@ -18,7 +18,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/rolepermission"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	"github.com/salesorder/sales-order-1.0/backend/internal/authz/casl"
+	"github.com/salesorder/sales-order-1.0/backend/internal/authz/scopecond"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
@@ -30,7 +30,7 @@ import (
 // RoleService 實作 salesorder.v1.RoleService(角色權限管理,T18)。
 // 權限檢查(T14 純 Go ACL):role 資源僅 super / company_admin(含 g 繼承)可管理;
 // company_admin 限管理自訂(非 is_system)角色,且規則條件不得引用他人公司(限自己公司)。
-// role_permissions 為 CASL ability 來源(前端權限矩陣與 AbilityService 共用)。
+// role_permissions 為角色→功能權限來源(前端權限矩陣與 OpenFGA provision 共用)。
 type RoleService struct {
 	db *ent.Client
 	salesorderv1connect.UnimplementedRoleServiceHandler
@@ -48,16 +48,23 @@ func RegisterRoleServices(mux *http.ServeMux, db *ent.Client) {
 	mux.Handle(path, handler)
 }
 
-// requireRole 檢查 ctx 身分具備 role 資源的指定動作(純 Go ACL EnforceAny,T14)。
+// requireRole 檢查 ctx 身分具備 role 資源的指定動作(D33;來源為 role_permissions 表)。
 // 未登入 → Unauthenticated;無權 → PermissionDenied。
 func requireRole(ctx context.Context, action string) error {
 	id, err := requireAuth(ctx)
 	if err != nil {
 		return err
 	}
-	ok, err := auth.EnforceAny(id.Roles, "role", action, id.CompanyID)
+	// 同 requireScope:DB(role_permissions)優先,未命中則回退內建 ACL。
+	ok, err := authz.PermissionGrantedTx(ctx, id.Roles, "role", action)
 	if err != nil {
-		return connect.NewError(connect.CodeInternal, err)
+		return toConnectError(err)
+	}
+	if !ok {
+		ok, err = auth.EnforceAny(id.Roles, "role", action, id.CompanyID)
+		if err != nil {
+			return toConnectError(err)
+		}
 	}
 	if !ok {
 		return connect.NewError(connect.CodePermissionDenied, errors.New("無角色權限管理權限"))
@@ -203,7 +210,7 @@ func (s *RoleService) UpdateRolePermissions(ctx context.Context, req *connect.Re
 	if err != nil {
 		return nil, err
 	}
-	// T10:寫入前 CASL 條件驗證(未知欄位/非法運算子/非法 enum 值 → invalid_argument)
+	// T10:寫入前條件驗證(未知欄位/非法運算子/非法 enum 值 → invalid_argument)
 	// 與防鎖死(操作者自身角色的權限管理規則排除操作者 → failed_precondition)。
 	if err := s.validateConditions(ctx, perms); err != nil {
 		return nil, err
@@ -257,7 +264,7 @@ func (s *RoleService) UpdateRolePermissions(ctx context.Context, req *connect.Re
 	return connect.NewResponse(&v1.UpdateRolePermissionsResponse{Permissions: out}), nil
 }
 
-// ListConditionFields 回傳資源的條件欄位白名單(供前端條件建構器;由 casl FieldRegistry 提供)。
+// ListConditionFields 回傳資源的條件欄位白名單(供前端條件建構器;由 scopecond FieldRegistry 提供)。
 // 未知資源回空陣列。
 func (s *RoleService) ListConditionFields(ctx context.Context, req *connect.Request[v1.ListConditionFieldsRequest]) (*connect.Response[v1.ListConditionFieldsResponse], error) {
 	if err := requireRole(ctx, "read"); err != nil {
@@ -480,7 +487,7 @@ func validatePermissions(in []*v1.Permission) ([]permission, error) {
 }
 
 // validateOwnCompany 非 super 身分(company_admin)僅可寫自己公司範圍的規則:
-// conditions 若含 company_id,以 casl.ParseConditions 展開(接受運算子形,如
+// conditions 若含 company_id,以 scopecond.ParseConditions 展開(接受運算子形,如
 // {"$eq": "c1"} / {"$in": ["c1", "${user.company_id}"]})後逐條件驗證——$eq/$in 的值
 // 必須等於自身 company_id 或 ${user.company_id} 佔位符;其餘運算子($ne/$nin 等)無法
 // 保證限自己公司 → 拒絕(不允許指向其他公司或涵蓋其他公司)。
@@ -493,7 +500,7 @@ func validateOwnCompany(id authz.Identity, in []*v1.Permission) error {
 		if _, hasCompany := conds["company_id"]; !hasCompany {
 			continue
 		}
-		parsed, err := casl.ParseConditions(conds)
+		parsed, err := scopecond.ParseConditions(conds)
 		if err != nil {
 			continue // 結構/運算子錯誤由 validateConditions 處理
 		}
@@ -512,15 +519,15 @@ func validateOwnCompany(id authz.Identity, in []*v1.Permission) error {
 // ownCompanyValue 判斷單一 company_id 條件是否僅限操作者自身公司:
 // $eq 值須為自身 company_id 或 ${user.company_id} 佔位符;$in 須全部元素皆然;
 // 其餘運算子($ne/$nin/$lt/$lte/$gt/$gte)可能涵蓋其他公司 → false(拒絕)。
-func ownCompanyValue(op casl.Op, v any, ownCompanyID string) bool {
+func ownCompanyValue(op scopecond.Op, v any, ownCompanyID string) bool {
 	allowed := func(s string) bool {
 		return s == ownCompanyID || s == companyIDPlaceholder
 	}
 	switch op {
-	case casl.OpEq:
+	case scopecond.OpEq:
 		s, ok := v.(string)
 		return ok && allowed(s)
-	case casl.OpIn:
+	case scopecond.OpIn:
 		arr, ok := v.([]any)
 		if !ok {
 			return false
@@ -543,12 +550,12 @@ const companyIDPlaceholder = "${user.company_id}"
 // errLockout 為防鎖死錯誤:異動會排除操作者自身的權限管理能力。
 var errLockout = errors.New("此異動會排除操作者自身的權限管理能力,已拒絕(防鎖死)")
 
-// validateConditions 寫入前 CASL 條件驗證(T10):每條規則的條件欄位/運算子/值型別必須
-// 通過 casl FieldRegistry 白名單;未知欄位、非法運算子、非法 enum 值 → invalid_argument。
+// validateConditions 寫入前條件驗證(T10):每條規則的條件欄位/運算子/值型別必須
+// 通過 scopecond FieldRegistry 白名單;未知欄位、非法運算子、非法 enum 值 → invalid_argument。
 func (s *RoleService) validateConditions(ctx context.Context, perms []permission) error {
 	reg := authz.Registry(ctx)
 	for i, p := range perms {
-		conds, err := casl.ParseConditions(p.conditions)
+		conds, err := scopecond.ParseConditions(p.conditions)
 		if err != nil {
 			return connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("第 %d 筆權限(resource=%q)conditions 格式無效: %w", i+1, p.resource, err))
 		}
@@ -588,12 +595,12 @@ func isPrivilegeRule(resource string) bool {
 // company/department 代入評估;規則不命中操作者(含 inverted 命中) → 操作者喪失該資源
 // 能力 → 視為排除(條件解析失敗 fail-closed)。
 func ruleExcludesActor(p permission, actor authz.Identity) bool {
-	conds, err := casl.ParseConditions(p.conditions)
+	conds, err := scopecond.ParseConditions(p.conditions)
 	if err != nil {
 		return true // fail-closed
 	}
-	e := casl.NewEvaluator([]casl.Rule{{Action: p.action, Subject: p.resource, Conditions: conds, Inverted: p.inverted}},
-		casl.Identity{UserID: actor.UserID, CompanyID: actor.CompanyID, DepartmentID: actor.DepartmentID, CustomerID: actor.CustomerID})
+	e := scopecond.NewEvaluator([]scopecond.Rule{{Action: p.action, Subject: p.resource, Conditions: conds, Inverted: p.inverted}},
+		scopecond.Identity{UserID: actor.UserID, CompanyID: actor.CompanyID, DepartmentID: actor.DepartmentID, CustomerID: actor.CustomerID})
 	inst := map[string]any{"company_id": actor.CompanyID, "department_id": actor.DepartmentID}
 	return !e.Can(p.action, p.resource, inst)
 }

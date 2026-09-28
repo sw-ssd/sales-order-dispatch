@@ -158,7 +158,7 @@ func (s *Server) mountAuth() {
 	authPath, authHandler := salesorderv1connect.NewAuthServiceHandler(h, connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(entClient)))
 	apiMux.Handle(authPath, authHandler)
 	handlers.RegisterRoleHandler(apiMux, entClient) // RoleService(T18)
-	// AbilityService(T9/D30):CASL 規則下發給前端 @casl/ability 初始化。
+	// AbilityService(T9/D30/D32):以 OpenFGA ListObjects 列舉身分能力,供前端權限集合初始化。
 	abilityPath, abilityHandler := salesorderv1connect.NewAbilityServiceHandler(domainauth.NewAbilityHandler(entClient, domainauth.Config{DeveloperAccountEnabled: s.cfg.API.DeveloperAccountEnabled}), connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(entClient)))
 	apiMux.Handle(abilityPath, abilityHandler)
 	services.RegisterCompanyServices(apiMux, entClient, entSvc)                                   // CompanyService/DepartmentService(T20)

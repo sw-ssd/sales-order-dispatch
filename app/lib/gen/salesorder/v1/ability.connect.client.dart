@@ -9,7 +9,7 @@ import "ability.connect.spec.dart" as specs;
 
 /// AbilityService:能力規則下發。
 extension type AbilityServiceClient (connect.Transport _transport) {
-  /// GetAbility:以 ctx 身分查詢規則表,輸出 CASL JSON 規則。
+  /// GetAbility:以 ctx 身分列舉可讀/可寫資源,輸出 (action, resource) 規則。
   Future<salesorderv1ability.GetAbilityResponse> getAbility(
     salesorderv1ability.GetAbilityRequest input, {
     connect.Headers? headers,

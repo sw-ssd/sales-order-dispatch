@@ -20,16 +20,17 @@
 - `internal/services/`:Connect-RPC handler;每 service 提供 `Register*Services(mux *http.ServeMux, db *ent.Client)`,由 `internal/server` 的 `mountAuth` 掛進單一 `apiMux`(**禁止** chi `Mount` 掛重複 `/api/v1` 路徑,會 panic;用 `apiMux.Handle` + `http.StripPrefix`)。
 - `internal/domain/<name>/`:usecase + repository 介面;不反向依賴 services。
 - `internal/auth/`:JWT/refresh(旋轉採原子消耗,Lua/鎖,禁止先讀後刪)、session、token_version(DB 欄位為準)、OIDC。
-- `internal/authz/`：`authz` facade（身分/DB ctx 注入、FieldRegistry 欄位白名單）＋ `authz/openfga`（授權決策引擎 Check/ListObjects，D32）＋ `authz/casl`（condition AST、evaluator、translate、FieldRegistry——僅供 role_permissions 條件解析/驗證，不做授權決策；與 /ability golden 對賭，新增運算子必補 golden fixture）
+- `internal/authz/`：`authz` facade（身分/DB ctx 注入、FieldRegistry 欄位白名單）＋ `authz/openfga`（授權決策引擎 Check/ListObjects，D32）＋ `authz/scopecond`（condition AST、evaluator、FieldRegistry——僅供 role_permissions 條件解析/驗證，不做授權決策；與 golden fixture 對賭，新增運算子必補 golden fixture）。服務層逐動作授權走 `authz.PermissionGrantedTx`（DB role_permissions 優先）＋ `auth.EnforceAny` 內建 ACL 後備
 - `ent/schema/`:ent schema;改動後 `go generate ./ent` 並新增 goose migration(`database/migrations/NNNNN_name.sql`,必含 Up/Down,加欄位用 `IF NOT EXISTS` 對齊既有先例)。
 - `internal/handlers/`:非 Connect 的純 HTTP handler(如 auth 回調;`Me`＝`GET /api/v1/me` 身分與公司品牌,前端唯一身分來源)。
 - REST 端點(`/api/v1` 下非 Connect 路徑)的錯誤回應一律經 `internal/resterr`(與 `server.writeConnectError` 同形:code/message/details＋trace_id),**不得**在 domain 內重寫 `writeErr`/`writeJSON`(`fileassets` 已委派為薄包裝)。connect code → HTTP 狀態的對映表以 `resterr.status` 為**全站唯一一份**,`server.writeConnectError` 委派給它;新增 code 只改該處(2026-09-22 修:先前的第二份複本漏了 `NotFound`,同一錯誤走 REST 是 404、走 middleware 是 500)。
 
 ## 3. 授權與安全(不可妥協)
 
-- 任何新 Connect 方法**必須**有授權門檻(middleware OpenFGA Check 閘門 ＋ 服務層 `requireScope`/`requireRole` 純 Go ACL fallback),未登入 → `Unauthenticated`、越權 → `PermissionDenied`;前端守衛不算授權。
+- 任何新 Connect 方法**必須**有授權門檻(middleware OpenFGA Check 閘門 ＋ 服務層 `requireScope`/`requireRole`),未登入 → `Unauthenticated`、越權 → `PermissionDenied`;前端守衛不算授權。
+- **兩層分工與各自的盲點（D33 收尾，2026-09-29）**：middleware 的 OpenFGA 閘門只判二元的 `can_read`/`can_write`，**無法區分同一資源的不同動作**（`company_admin` 有 `company/update` 卻無 `create|delete`，二元關係會讓 update 放行 create）。因此服務層的逐動作檢查**不可省**；其角色來源為 `authz.PermissionGrantedTx`（查 `role_permissions` 表，**自訂角色只存在於此**），未命中時回退 `auth.EnforceAny` 的內建 ACL（內建角色的答案與 DB 種子同源，故不引入新的放行面；缺 DB 的單元測試路徑靠它運作）。`protectedRPC` 收錄範圍見 `server.go`（業務域 RPC 多已收錄，dispatch/device 由服務層 `requireAuth`＋角色判斷承擔）。
 - 跨租戶資料存取失敗的錯誤碼分兩層:**服務層 ACL 判定的越權** → `PermissionDenied`(碼 `SYS-4001`;非 `invalid_argument`,輸入驗證失敗才回 `InvalidArgument`);**被 RLS 過濾掉的目標**(查詢根本看不到該列)→ `NotFound`(碼 `SYS-4002`),不得回 `PermissionDenied` 洩漏「該資源存在」(見 §9-8、§10-5)。
-- `role_permissions` 異動前必跑條件驗證 + 防鎖死(含 `all`/`*` subject);company_admin 的 id 欄位值須為自身公司或佔位符(以 `casl.ParseConditions` 展開驗證)。
+- `role_permissions` 異動前必跑條件驗證 + 防鎖死(含 `all`/`*` subject);company_admin 的 id 欄位值須為自身公司或佔位符(以 `scopecond.ParseConditions` 展開驗證)。
 - 設定密鑰(JWT_SECRET 等)production 下空值/預設值 → `Init()` fail-fast 拒絕啟動;驗證端對空密鑰 fail-closed。
 - **平台側授權只有一層（G15，2026-09-20）**：`platform` schema 的表**不套 RLS**（設計如此；`app_rw` 對其為零權限，這是唯一的 DB 層緩解）。因此 console／平台 RPC 的 operator 授權**全靠服務層檢查**：任何新增的平台路徑都**必須**有服務層授權檢查與對應測試，沒有第二道防線會在事後擋下來。
 - **憑證種類與優先序（01 1.6.6，2026-09-25）**：`authzMiddleware` 依序認三種憑證 —— scs session → `Authorization: Bearer` JWT → `X-Api-Token`（靜態、server-to-server）。**使用者憑證一律優先**，同時帶多種時不得降級成機器身分。`X-Api-Token` 的設定（`API_TOKENS`）**只存 SHA-256**、綁**真實使用者**（稽核 `user_id` 有 FK 到 `users`），且每 token 有 `rpc_prefixes` 白名單並**只對 `protectedRPC` 內的路徑生效**（公開端點不受限；空白名單 fail-closed）。機器代打的稽核以 `after_snapshot._actor_kind = "api-token:<name>"` 標記，人為操作不寫該鍵。
@@ -281,7 +282,7 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
 2. **錯誤一律 `%w`，不用 `%v`／`%s`**（實案例 `services/product_service.go:99`）。`errcode` 的 `Message()` 另有硬規則（§10-7：cause 文字不進對外訊息），兩者不衝突。
 3. **活變數不得留 `_ =` 殘骸**。2026-09-23 已清 6 處：`customer_product_service.go:154/:236/:276`、`dispatch_service.go:189`、`dispatch_watch.go:86`、`device_service.go:160`、`print/service.go:293`、`auth_qr.go:129`。其中 `EnsureCustomerProduct` 的查詢**本身是必要的存在性守衛**，只有變數綁定多餘 → 改成 `if _, err := …; err != nil`。
    另有兩處「註解與事實不符」一併修掉：`device_service.go` 的 `PurgeInvalidTokens` doc 聲稱「逐筆寫稽核」但函式內沒有任何稽核呼叫；`dispatch_service.go` 的 `shared := time.Now().UTC()` 從未被使用。
-4. **exported 識別碼補 godoc**：`platform/store`（`Store`／`New`／`NewFake`／`NewFakeBilling`）、`internal/audit.Record`、`authz/casl.NewFieldRegistry` 與其 receiver 方法。
+4. **exported 識別碼補 godoc**：`platform/store`（`Store`／`New`／`NewFake`／`NewFakeBilling`）、`internal/audit.Record`、`authz/scopecond.NewFieldRegistry` 與其 receiver 方法。
    刻意**不**補的：`auth/stores.go` 的 16 個 `KVStore` 實作、`dbtenant` 的 `Exec/Query/Close/Dialect`、`consumer` 的 driver 轉呼叫 —— 三者都是逐字轉呼叫，godoc 只會複述介面上已有的契約（指南自己說註解不該重述顯而易見的機制）。
 5. **表格化測試與靜默全綠禁止**（§4 已有本專案的更嚴版本）：skip 必須附可行動訊息，且要能區分「容器環境不可用」與「設定壞掉」——後者 `t.Fatalf`（樣板 `internal/testsupport/postgres.go:129-145`）。
 

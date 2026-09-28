@@ -25,7 +25,6 @@ internal/services/company_service.go:DepartmentService.UpdateDepartment:1
 internal/services/company_service.go:companySortField:1
 internal/services/company_service.go:departmentSortField:1
 internal/services/company_service.go:parseID:1
-internal/services/company_service.go:requireScope:1
 internal/services/customer_address_service.go:CustomerService.AddAddress:4
 internal/services/customer_address_service.go:CustomerService.DeleteAddress:2
 internal/services/customer_address_service.go:CustomerService.ListAddresses:1
@@ -72,7 +71,7 @@ internal/services/productcategory_service.go:ProductCategoryService.UpdateProduc
 internal/services/role_service.go:RoleService.GetRolePermissions:1
 internal/services/role_service.go:RoleService.UpdateRolePermissions:4
 internal/services/role_service.go:RoleService.validateConditions:2
-internal/services/role_service.go:requireRole:2
+internal/services/role_service.go:requireRole:1
 internal/services/role_service.go:roleSortField:1
 internal/services/role_service.go:validateNoLockout:1
 internal/services/role_service.go:validateOwnCompany:1

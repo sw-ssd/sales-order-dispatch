@@ -22,7 +22,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// AbilityRule:單條 CASL 能力規則(前端 @casl/ability 直接消費)。
+// AbilityRule:單條能力規則(以 OpenFGA ListObjects 推導;前端權限集合直接消費)。
 type AbilityRule struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Action        string                 `protobuf:"bytes,1,opt,name=action,proto3" json:"action,omitempty"`

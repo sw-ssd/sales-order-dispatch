@@ -1,4 +1,4 @@
-package casl
+package scopecond
 
 import (
 	"fmt"
@@ -50,11 +50,11 @@ func (r *FieldRegistry) Register(subject string, def SubjectDef) {
 func (r *FieldRegistry) Field(subject, field string) (FieldDef, error) {
 	sd, ok := r.subjects[subject]
 	if !ok {
-		return FieldDef{}, fmt.Errorf("casl: unknown subject %q", subject)
+		return FieldDef{}, fmt.Errorf("scopecond: unknown subject %q", subject)
 	}
 	fd, ok := sd.Fields[field]
 	if !ok {
-		return FieldDef{}, fmt.Errorf("casl: unknown field %q on subject %q", field, subject)
+		return FieldDef{}, fmt.Errorf("scopecond: unknown field %q on subject %q", field, subject)
 	}
 	return fd, nil
 }
@@ -111,7 +111,7 @@ func (r *FieldRegistry) ValidateRuleConditions(subject string, conds []FieldCond
 			return err
 		}
 		if !opAllowed(fd, c.Op) {
-			return fmt.Errorf("casl: op %s not allowed on %s.%s", c.Op, subject, c.Field)
+			return fmt.Errorf("scopecond: op %s not allowed on %s.%s", c.Op, subject, c.Field)
 		}
 		if fd.Type == TypeEnum {
 			vals, _ := c.Value.([]any)
@@ -121,7 +121,7 @@ func (r *FieldRegistry) ValidateRuleConditions(subject string, conds []FieldCond
 			for _, v := range vals {
 				s, ok := v.(string)
 				if !ok || !slices.Contains(fd.Enum, s) {
-					return fmt.Errorf("casl: invalid enum value %v on %s.%s", v, subject, c.Field)
+					return fmt.Errorf("scopecond: invalid enum value %v on %s.%s", v, subject, c.Field)
 				}
 			}
 		}
