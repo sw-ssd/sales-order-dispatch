@@ -1,7 +1,7 @@
 # Backend Phase 1–5 細部實作計畫 — 總覽
 
 > 版本:v1.0.0(2026-08-17)
-> 依據:執行計畫 `docs/superpowers/plans/reference/2026-07-17-sales-order-1-0-tasks.md`(v2.9.0)、規格書 v1.0.34、決策記錄 D1–D32。
+> 依據:執行計畫 `docs/superpowers/plans/backend/detail/`(v2.9.0)、規格書 v1.0.34、決策記錄 D1–D32。
 > 定位:本目錄為原計畫 **backend 部分(Task 導向)的細部分解**,將每個 Task 拆成可獨立驗收的子功能,並補上實作邏輯與錯誤處理。**不取代、不修改原計畫**;原計畫仍為進度勾選基準,本目錄為實作時的邏輯依據。
 > 範圍:Phase 1–5 的 backend 工作。Phase 0(基礎建設)、Phase 6(App)、Phase 7(公告/UI)、Phase 8(部署)不在本目錄;混合 Task(含前端/App)僅拆後端部分並於文中註明。
 
@@ -127,8 +127,8 @@ flowchart LR
 
 1. 實作某 Task 前,先讀本目錄對應文件的該 Task 區段。
 2. 依子功能順序實作;每完成一個子功能,其「驗收」欄即為該單元的 done 定義。
-3. 原計畫 Task 全部子功能完成且整合測試通過後,回原計畫勾選該 Task。
-4. 需求變更流程依 `docs/PLANNING_OVERVIEW.md` §7:先升規格書版本,再同步本目錄對應子功能。
+3. 原計畫 Task 全部子功能完成且整合測試通過後，**該計畫 `git rm`**（完成即歸檔，git history 就是檔案庫），現況以本目錄為準。
+4. 需求變更流程：先升 `docs/superpowers/specs/1.0-contract.md` 版本，再同步本目錄對應子功能與 `docs/AGENTS.md` 的系統現況。
 
 ---
 

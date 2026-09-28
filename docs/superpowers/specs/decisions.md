@@ -1,7 +1,7 @@
-# 多公司訂出貨系統 1.0 — 決策記錄（D1–D32）
+# 多公司訂出貨系統 1.0 — 決策記錄（D1–D33）
 
 > 來源：原 `openspec/changes/sales-order-1-0/design.md`（OpenSpec 工作流已於 2026-08-03 停用，本檔為遷移後的**決策層 single source of truth**）。
-> 細節權威：`docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（v1.0.34，18 章完整設計規格，為細節欄位與流程的唯一權威參考）；執行計畫：`docs/superpowers/plans/reference/2026-07-17-sales-order-1-0-tasks.md`（v2.9.0）。
+> 細節權威：`docs/superpowers/specs/1.0-contract.md`（v1.0.35，18 章完整設計規格，為細節欄位與流程的唯一權威參考）；執行計畫：`docs/superpowers/plans/backend/detail/`（v2.9.0）。
 > 本檔為決策層；資料模型逐欄位定義、頁面清單、單據排版等細節以客戶版規格書為準，本檔不重複抄錄。
 
 ## Context
@@ -38,7 +38,7 @@
 - 獨立會計角色（`staff` 兼任）、自建 IdP（Authelia/Authentik 延後）。
 - MCP / ACP / A2A 完整協定（僅預留 `capabilities` / `public_info` 欄位與公開發現端點）。
 - 電子發票開立（僅保留 `customers.invoice_type_id` 欄位）、App 強制更新、通知失敗重試佇列、上傳病毒掃描、多語 UI、Cmd+K 全域搜尋。
-- 1.1 AI 輔助功能（拍照建客戶、業務語音下單）為獨立迭代，見 `docs/superpowers/specs/2026-07-18-app-ai-assist-1.1-design.md`。
+- 1.1 AI 輔助功能（拍照建客戶、業務語音下單）為獨立迭代，見 `docs/superpowers/specs/1.1-ai-assist.md`。
 
 ## Decisions
 
@@ -227,7 +227,7 @@
 - **D30-4 前端**：`@casl/ability` + 自寫 Solid binding（`@casl/solid` 不存在於 npm）；修正 `2026-08-05-subproject-implementation-plan.md` Task 4 錯誤依賴。
 - **理由**：Casbin/RLS 無法表達屬性/狀態級條件（如「staff 僅能取消 pending 訂單」）；前後端各一份權限來源有分歧風險。CASL JSON 為 isomorphic 格式，天然可跨端共享。
 - **已考慮 alternative**：goja 內嵌 JS runtime（效能/部署成本）；Ent interceptor 全域自動套用（難表達 action 語意、隱式難測）；獨立 casl_rules 表（兩份來源分歧）；欄位級遮罩 fields/rulesToFields（1.0 YAGNI）。
-- **修訂來源**：2026-08-24 設計文件 `docs/superpowers/specs/2026-08-24-casl-integration-design.md`。D3 三層分工隨之改為四參與者：Casbin（進入點）/ CASL 執行層（屬性條件）/ RLS（資料範圍）/ 前端 CASL（UI）。
+- **修訂來源**：2026-08-24 設計文件 `docs/superpowers/specs/decisions.md`。D3 三層分工隨之改為四參與者：Casbin（進入點）/ CASL 執行層（屬性條件）/ RLS（資料範圍）/ 前端 CASL（UI）。
 - **修訂（2026-09-17, D32）**：CASL 移除（本決策 D30 及其設計作廢）；前端 UI 權限改由 OpenFGA `Check` / `list-objects` 驅動，不引入第二權限模型。屬性/狀態條件以 OpenFGA `condition` 表達。
 
 ### D31：後端結構慣例對齊 go8（集中 DI / cmd 拆分 / config 逐檔 / third_party）
@@ -236,7 +236,7 @@
 - **D31-2 工具鏈**：air hot reload（`.air.toml`）；Taskfile 增 `dev`/`check`（fmt+vet+lint+test）/`vuln`（govulncheck）/`migrate`/`seed`；CI Go job 加 govulncheck。
 - **不採納**：e2e 臨時容器 harness（D21 整合測試 + Phase 8 驗收已覆蓋）；OTel traces/logs（D19 已定 metrics-only）；protovalidate/validator（proto 強型別 + usecase 驗證承擔）；sqlx（與 Ent 重疊）；go8 REST/DB-session 風格（衝突 D4/D5）；`cmd/route`（API 面由 proto 定義）；go8 介面子套件分層（對既有計畫 churn 過大）。
 - **理由**：集中 DI 讓啟動依賴與 fail-fast 檢查一目瞭然；cmd 拆分讓 migrate/seed 不依賴 server 啟動；config 逐檔有 code completion 且新增 key 有明確歸檔流程。
-- 修訂來源：2026-08-24 設計文件 `docs/superpowers/specs/2026-08-24-backend-go8-structure-design.md`；參考 https://github.com/sowiner/go8。（插入位置依編號排序；D29/D30 條目由其各自計畫執行時補入本節。）
+- 修訂來源：2026-08-24 設計文件 `docs/superpowers/specs/architecture/backend-go8-structure.md`；參考 https://github.com/sowiner/go8。（插入位置依編號排序；D29/D30 條目由其各自計畫執行時補入本節。）
 
 ### D32：整合 Fleetbase 物流「執行層」— 授權改 OpenFGA + RLS、logistics 部門級、Connect-RPC、後台指派、NetSuite 不接
 
@@ -296,7 +296,7 @@
 |---|---|---|
 | Noto Sans CJK TC 生產環境字體授權與安裝方式（Gotenberg 容器） | 單據列印 | 待確認（優先級低，上線前必答） |
 | `audit_logs` 時間分區啟動時機 | 維運 | 觀察指標已定（單月百萬列或查詢變慢），上線後 3–6 個月評估 |
-| 複合索引細節 | 效能 | 各 Phase Ent schema 建立時依 `docs/superpowers/specs/2026-07-17-sales-order-1.0-suggestions.md` §3 一併處理 |
+| 複合索引細節 | 效能 | 各 Phase Ent schema 建立時依 `docs/superpowers/specs/1.0-contract.md` §3 一併處理 |
 | 1.1 AI 供應商選型 POC（名片 20 張、語音 20 句） | 1.1 | 1.1 啟動前完成，不擋 1.0 |
 | 退貨品項來源 UX（歷史訂單 vs 專屬商品清單） | 退貨 | 1.0 兩者並存，試用回饋後收斂 |
 | 專屬商品新增推播是否需業務檢核 | 通知 | 待定（v1.0.28） |

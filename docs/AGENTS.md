@@ -1,8 +1,8 @@
 # 訂出貨系統 — AI Agent 專案導覽
 
-> 本文件位於 `docs/`，是**多公司訂出貨系統 1.0**（monorepo，`backend`／`frontend`／`app` 三個子專案同倉）的導覽。各子專案的 `AGENTS.md` 是該子專案的權威指引，修改前請一併參閱。
+> 本文件位於 `docs/`，是**多公司訂出貨系統 1.0**（monorepo，`backend`／`frontend`／`platform-console`／`app` 同倉）的導覽。各子專案的 `AGENTS.md` 是該子專案的權威指引，修改前請一併參閱。
 >
-> **規劃文件**：整體規劃整合於 `docs/PLANNING_OVERVIEW.md`，決策層為 `docs/superpowers/specs/2026-07-19-sales-order-1.0-decisions.md`（D1–D32），計畫現況見 `docs/superpowers/plans/README.md`，規劃細節請先讀 `docs/PLANNING_OVERVIEW.md`。
+> **現役權威**：本文件是「系統現在長怎樣」的權威。其餘分層：範圍與凍結合約 → `docs/superpowers/specs/1.0-contract.md`；決策 D1–D33 → `docs/superpowers/specs/decisions.md`；可驗證行為 → `docs/superpowers/specs/1.0-requirements/`；各分域實作規格 → `docs/superpowers/plans/backend/detail/`；未完成項 → `docs/superpowers/plans/README.md`。產品敘事以根目錄 `PRODUCT.md` 為準。
 > - `backend/AGENTS.md`：Go 後端詳細指引
 > - `frontend/AGENTS.md`：SolidJS 前端詳細指引
 > - `app/AGENTS.md`：Flutter App 詳細指引
@@ -52,11 +52,10 @@
 │   ├── AGENTS.md / Taskfile.yml / go.mod / go.sum
 │   └── buf.yaml / buf.gen.yaml / .air.toml / .env.example
 ├── docs/                      # 規劃、規範與報告
-│   ├── AGENTS.md              # 本文件（導覽層級）
-│   ├── PLANNING_OVERVIEW.md / FUNCTION_LIST.md
-│   ├── superpowers/           # specs/（設計書與決策 D1–D32）、plans/（backend 01~09…）、reports/
-│   ├── design/                # 版面與設計進度存檔
-│   └── archive/               # 歸檔（docs.zip）
+│   ├── AGENTS.md              # 本文件（導覽層級＋系統現況權威）
+│   ├── error-codes.md         # 錯誤碼表（由 go generate 產生，勿手改）
+│   ├── superpowers/           # specs/（契約、決策、需求、設計）、plans/（未完成計畫＋detail/ 分域規格）
+│   └── design/                # 版面美化與設計工具（tailkit-pixso 管線）
 ├── platform-console/          # 平台營運後台（SolidJS + Vite；獨立於租戶端，有自己的 proto 生成碼）
 │   ├── src/                   # pages/、lib/api.ts、lib/proto/
 │   └── package.json / Taskfile.yml
@@ -261,7 +260,7 @@ Flavor 分 `dev` / `prod`，入口 `lib/main_dev.dart` / `lib/main_prod.dart`（
 | `platform-console` | typecheck／lint／test／build |
 | `flutter` | `flutter pub get` + `flutter analyze`（**不建置 App**） |
 
-repo 內也無 `firebase.json`／Dockerfile／fastlane 設定。部署方式待補（規劃見 `docs/PLANNING_OVERVIEW.md`）。知名取捨：`flutter` job 只做 `pub get` + `analyze`，**不建置 App**，故 Android／iOS 的原生建置問題（如 `app/android/gradle/wrapper` 變更）在 CI 不會被驗到 —— 需在本機以 `--flavor dev` 實機測試把關。
+repo 內也無 `firebase.json`／Dockerfile／fastlane 設定。部署方式待補（規劃見 `docs/superpowers/plans/README.md` 未完成項 U1）。知名取捨：`flutter` job 只做 `pub get` + `analyze`，**不建置 App**，故 Android／iOS 的原生建置問題（如 `app/android/gradle/wrapper` 變更）在 CI 不會被驗到 —— 需在本機以 `--flavor dev` 實機測試把關。
 
 ---
 
@@ -334,7 +333,23 @@ protobuf 為唯一型別來源：改 `backend/proto/**` 後執行 `task backend:
 
 ---
 
-## 9. 給 AI Agent 的快速檢查清單
+## 9. 系統現況（唯一一份）
+
+> 這一節是「哪些東西已經能用」的**唯一**落點。不要再另開狀態文件；各計畫完成即 `git rm`，未完成項集中在 `docs/superpowers/plans/README.md`。
+
+**後端**（Go）：AuthService（OIDC／帳密／refresh／logout／ChangePassword／ResetCustomerPassword／QR 兌換）、AbilityService（OpenFGA proxy）、Company／Department／Role／User（含 D22 主帳號連鎖、Logo）、Metadict、Audit.List、Customer（含地址／聯絡人／QR 簽章）、Product（含單位換算）、部門級四主檔（Warehouse／Route／ProcessingSpec／ProductCategory）、CustomerProduct、SalesOrder（CRUD＋狀態機＋取號＋事件軌跡）、Return（Create／List／Get／Review／GetCertificate）、Dispatch（4 RPC＋WatchBoard 跨 replica 串流）、Print（Preview／Print／ListLogs）、Announcement（三型別×三層範圍＋前台過濾）、Notification（四表＋渲染＋通知中心＋Device＋FCM／fake 環境控制）、Logistics（司機／配送／狀態機／POD／送達回寫）、FileStore（驗證＋儲存＋REST＋可下載）、`GET /api/v1/me`。平台域：`internal/platform/**`＋`platform` schema（10 表，`app_rw` 零權限）、權益判定（fail-closed＋TTL 快取）、六個配額守衛、收款與生命週期排程、`cmd/platform-cron`、12 支平台寫入 RPC。授權：OpenFGA 內嵌（`Check` 閘門＋Provision＋tuple 提交後同步）＋ **RLS 38 張業務表 `ENABLE`+`FORCE`**（請求層租戶交易 `dbtenant`）。錯誤碼：22 碼／19 落點，碼表由 `go generate` 產生。密碼 Argon2id＋`token_version` 撤銷＋`X-Api-Token`（M2M 預備，尚無呼叫方）。
+
+**frontend**（SolidJS 租戶中台，`/`）：auth（登入雙 tab／403／OIDC）、users（公司／部門／角色／使用者＋PermissionMatrix）、customers（含地址簿／聯絡人／專屬商品對話框）、orders、products、masters（車次／倉別／商品分類／分切規格）、dispatch（看板＋DnD＋串流）、printing、returns、notifications、audit、announcements（管理頁＋首頁前台輪播）、account（權益卡片）。UI 元件庫：Ark UI × Tailkit（14 元件＋registry＋demo）、深色模式三態。資料層：solid-query＋TanStack Table（伺服器端排序）。權限：`hasPermission` 權限集合（CASL 已移除）。
+
+**platform-console**（SolidJS，掛 `/platform/`）：六頁——Tenants／TenantDetail／Plans／Receivables／Entitlements／Audit，只走 `platform/v1`。
+
+**app**（Flutter，雙 flavor）：登入／身分選擇／改密碼（A3 首登強改）、訂單／退貨／通知／公告（Material＋Cupertino 同一份頁面碼）、帳號管理、QR 深層連結、`PushRegistration`（缺 Firebase 原生設定檔時靜默跳過）。未落地：Sembast 離線鏡像、core/config 全套。
+
+**維運**：**無部署管線**（CI 只有驗證 job，見 §6）；`cmd/platform-cron` 尚無自動執行環境。
+
+---
+
+## 10. 給 AI Agent 的快速檢查清單
 
 開始修改前，建議確認：
 
@@ -350,4 +365,4 @@ protobuf 為唯一型別來源：改 `backend/proto/**` 後執行 `task backend:
 
 ---
 
-*最後更新：2026-09-25（修正舊版殘留：目錄名、任務名、認證機制、測試框架與部署段落；以實際 repo 狀態逐項查證）*
+*最後更新：2026-09-29（文件重整：刪除已完成的計畫與作廢文件、specs 去日期化並分層、新增 §9 系統現況成為狀態的唯一落點）。*

@@ -2,7 +2,7 @@
 
 > **性質**：新增計畫（原無 frontend 專屬計畫檔；Web 端工作散見於主計畫）。經 2026-09-18 以實際程式碼盤點建立，為**反映現況的執行計畫**。
 >
-> **對應設計**：`docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（v1.0.34）、決策 `D4/D5/D9`
+> **對應設計**：`docs/superpowers/specs/1.0-contract.md`（v1.0.34）、決策 `D4/D5/D9`
 > **狀態基準**：2026-09-18 盤點（frontend 實際 code + package.json）
 > **前置依賴**：backend proto（`*_pb` GenService）、backend 01/02（auth / role / ability API）
 

@@ -47,7 +47,7 @@ web
 - 平台維運一律走獨立的營運主控台（`platform-console/`，只走 `platform/v1`），不經租戶身分；租戶 SPA 不掛任何 `platform.*` 能力、也沒有平台路由。營運主控台與租戶 Web 共用同一套 UI 元件庫與設計 token。
 - 訂閱與權益是營運面與租戶面共用的判準：權益決策單點、fail-closed；租戶端看到的是自己公司權益的投影，且「尚未訂閱」必須與「方案不含」可辨識。
 - 介面語言為繁體中文（`zh-Hant`）；文件、註解、commit message 一律繁體中文；多語 UI 不在範圍內。
-- 既有 UI 設計稿在 Pixso（`多公司訂出貨系統` UI 稿；來源存檔 `docs/design/2026-09-18-pixso-版面美化-進度存檔.md`）。
+- 既有 UI 設計稿在 Pixso（`多公司訂出貨系統` UI 稿，15 畫面 = Web 9 + App 6）。
 
 ## Capabilities and Constraints
 
@@ -72,13 +72,13 @@ web
 
 ## Evidence on Hand
 
-- 凍結規格書 `docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（v1.0.35，18 章）：欄位與流程的唯一權威。
-- 決策記錄 `docs/superpowers/specs/2026-07-19-sales-order-1.0-decisions.md`（D1–D33）。
+- 凍結規格書 `docs/superpowers/specs/1.0-contract.md`（v1.0.35，18 章）：欄位與流程的唯一權威。
+- 決策記錄 `docs/superpowers/specs/decisions.md`（D1–D33）。
 - 需求規格 13 份 `docs/superpowers/specs/1.0-requirements/`（announcements、audit-compliance、authorization、dispatch、file-assets、identity-access、logistics-execution、master-data、multi-tenancy、notifications、ops-deployment、printing、sales-orders）。
-- SaaS 化設計 `docs/superpowers/specs/2026-09-20-saas-billing-entitlements-design.md`（決策 S1–S11）。
-- 規劃總覽 `docs/PLANNING_OVERVIEW.md`（範圍 In / Out of Scope 與 D1–D33 摘要）、功能現況對照 `docs/FUNCTION_LIST.md`、錯誤碼表 `docs/error-codes.md`。
+- SaaS 化設計 `docs/superpowers/specs/architecture/saas-billing-entitlements.md`（決策 S1–S11）。
+- 規劃文件的權威分層：系統現況 `docs/AGENTS.md`、凍結合約與範圍 `docs/superpowers/specs/1.0-contract.md`、決策 `docs/superpowers/specs/decisions.md`、未完成項 `docs/superpowers/plans/README.md`、分域實作規格 `docs/superpowers/plans/backend/detail/`、錯誤碼表 `docs/error-codes.md`。
 - 客戶原始需求 `docs/客戶需求.txt`、`docs/需求備忘_2026-08-03.txt`。
-- Pixso UI 稿（15 畫面 = Web 9 + App 6）與 `docs/design/2026-09-18-pixso-版面美化-進度存檔.md`。
+- Pixso UI 稿（15 畫面 = Web 9 + App 6）。
 
 不存在、未來工作不得捏造：真實客戶名單與推薦語、營收或用戶數數據、品牌 logo、字體授權憑證、上線時程承諾、對外 SLA。
 

@@ -42,7 +42,7 @@ adaptive
 - 店家以主帳號自助管理子帳號（self 範圍）；管理端保留移交與救援路徑。
 - QR 登入是店家的第一哩路：管理端（或 App 內的帳號頁）產生 QR／深層連結，子帳號點開即進入選擇帳號並登入。
 - 介面語言為繁體中文（`zh-Hant`）；文件、註解、commit message 一律繁體中文；多語 UI 不在範圍。
-- 既有 UI 設計稿在 Pixso（`多公司訂出貨系統` UI 稿的 App 六畫面；來源存檔 `docs/design/2026-09-18-pixso-版面美化-進度存檔.md`）。
+- 既有 UI 設計稿在 Pixso（`多公司訂出貨系統` UI 稿的 App 六畫面）。
 
 ## Capabilities and Constraints
 
@@ -63,7 +63,7 @@ adaptive
 - 認證：App 用 access JWT 1 小時 + refresh 30 天旋轉；停用／強制登出／改密碼／角色變更以 `token_version` 全數失效。店家子帳號另有 QR Code 登入。
 - 通知失敗只標記失敗、不重試（重試佇列不在範圍）；App 強制更新、多語 UI、上傳病毒掃描皆不在範圍。
 - 工程約束：一律以 `fvm` 執行；雙 flavor（dev / prod）＋ `--dart-define` 注入組態；`salesorder://` 或深層連結路徑的異動必須同步 AndroidManifest、Info.plist 與 AuthConfig；不新增相依套件除非現有套件明確不足。
-- 1.1 是獨立迭代（拍照建客戶、語音下單，`docs/superpowers/specs/2026-07-18-app-ai-assist-1.1-design.md`），不得混入 1.0 範圍。
+- 1.1 是獨立迭代（拍照建客戶、語音下單，`docs/superpowers/specs/1.1-ai-assist.md`），不得混入 1.0 範圍。
 - 錯誤顯示一律經 `core/error_info.dart` 的 `localizedErrorMessage`：優先後端 `ErrorInfo` 的 `details['reason']`（若含中文）與碼表樣板，再退回連線層文案；各頁不得自建 `connect` 碼 → 訊息對照表（同一個 connect 碼在不同路徑是不同原因，硬編必然誤譯），頁面專屬覆寫只保留該頁獨有的成因。
 
 ## Brand Commitments
@@ -74,13 +74,13 @@ adaptive
 
 ## Evidence on Hand
 
-- 凍結規格書 `docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（v1.0.35，18 章）：欄位與流程的唯一權威。
-- 決策記錄 `docs/superpowers/specs/2026-07-19-sales-order-1.0-decisions.md`（D1–D33）。
+- 凍結規格書 `docs/superpowers/specs/1.0-contract.md`（v1.0.35，18 章）：欄位與流程的唯一權威。
+- 決策記錄 `docs/superpowers/specs/decisions.md`（D1–D33）。
 - 需求規格 13 份 `docs/superpowers/specs/1.0-requirements/`。
-- 規劃總覽 `docs/PLANNING_OVERVIEW.md`、功能現況對照 `docs/FUNCTION_LIST.md`（**實作現況一律以該檔為準，本檔不記載進度**）、錯誤碼表 `docs/error-codes.md`。
+- 規劃總覽 `docs/AGENTS.md`、功能現況對照 `docs/AGENTS.md`（**實作現況一律以該檔為準，本檔不記載進度**）、錯誤碼表 `docs/error-codes.md`。
 - 客戶原始需求 `docs/客戶需求.txt`、`docs/需求備忘_2026-08-03.txt`。
-- Flutter 技術棧與 App 規範 `docs/superpowers/specs/2026-08-04-app-flutter-stack-design.md`、`app/AGENTS.md`。
-- Pixso App 稿（六畫面）與 `docs/design/2026-09-18-pixso-版面美化-進度存檔.md`。
+- Flutter 技術棧與 App 規範 `docs/superpowers/specs/architecture/app-flutter-stack.md`、`app/AGENTS.md`。
+- Pixso App 稿（六畫面）。
 
 不存在、未來工作不得捏造：真實客戶名單與推薦語、營收或用戶數、品牌 logo、字體授權憑證、App Store / Play 上架狀態與評分。
 

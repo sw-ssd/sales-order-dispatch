@@ -4,7 +4,7 @@
 >
 > **狀態基準**：**2026-09-22 更新**（原 2026-09-18 盤點時本領域全未實作）。2026-09-18~22 已分批落地 3.1–3.6、3.8（含 3.5 客戶專屬商品後端＋Web、3.6 檔案資產後端、3.8 QR 後端）；下表為現況。
 >
-> **對應設計**：`docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（v1.0.34）、決策 `D7/D10/D12/D22`
+> **對應設計**：`docs/superpowers/specs/1.0-contract.md`（v1.0.34）、決策 `D7/D10/D12/D22`
 > **細部文件**：`docs/superpowers/plans/backend/detail/04-master-data.md`、共通規則 `detail/00-index.md` §3
 > **前置依賴**：01-auth（`issueTempPassword`、RLS、testutil）、02（軟刪除/範圍慣例）
 
@@ -24,7 +24,7 @@
 | 8 | 檔案資產（細部 3.6.1–3.6.3） | ✅ 完成（2026-09-22；後端 `1bb4c76`＋00035／00036、09-printing 已消費；02 Logo 消費面同日補齊：`fileassets.logo` REST＋`GET /me`＋Web 上傳對話框/側邊欄顯示）|
 | 9 | QR 簽章 token 與兌換端點（細部 3.8.1–3.8.2） | ✅ 完成（2026-09-22；`67ab31d` qrcode 簽章＋`QRLogin` 兌換＋`GetCustomerQRCode`；Web/App QR 畫面另案）|
 
-**實作範圍**：約 90%（Task 1–2、4–9 完成；3 部分——殘：3.1.5 完整驗證與促銷連動（07-promo_tags））。殘項與後續見 `2026-09-19-backend-04-task34-dept-masters-plan.md` §已知缺口。
+**實作範圍**：約 90%（Task 1–2、4–9 完成；3 部分——殘：3.1.5 完整驗證與促銷連動（07-promo_tags））。殘項與後續見 `docs/superpowers/plans/README.md` 未完成項。
 
 ---
 
@@ -47,7 +47,7 @@
 
 ### Task 3: 建檔連動主帳號 + 業務子帳號 + 偏好欄位（細部 3.1.4–3.1.5，D22）
 建立客戶自動附帶「業務子帳號」（專供所屬業務）；主帳號管理；`preferred_delivery_days` 偏好欄位；重用 `issueTempPassword`。
-> ✅ 3.1.4（D22 建檔連動主/業務子帳號＋臨時密碼交付）已落地（2026-09-18）：users 增 `customer_id/is_primary/system_generated`（migration 00014）；`CreateCustomer` 同交易建兩帳號＋24h 臨時密碼＋`must_change_password`；`CreateCustomerResponse` 回傳交付欄位與 `account_manage_url`；`default_sales_rep_id` 改必填。執行計畫見 `2026-09-18-backend-04-customers-d22-plan.md`。
+> ✅ 3.1.4（D22 建檔連動主/業務子帳號＋臨時密碼交付）已落地（2026-09-18）：users 增 `customer_id/is_primary/system_generated`（migration 00014）；`CreateCustomer` 同交易建兩帳號＋24h 臨時密碼＋`must_change_password`；`CreateCustomerResponse` 回傳交付欄位與 `account_manage_url`；`default_sales_rep_id` 改必填。現況見 `detail/04-master-data.md`。
 > 🟡 3.1.5（偏好欄位）部分：儲存/預設（D26 全 false ×6、D24 陣列）已於核心批落地；「長度==6 拒絕」與 `promo_tag_ids` 對同部門 `promo_tags` 交叉驗證待補（依賴 07-notifications 的 promo_tags 表）。
 
 ### Task 4: 地址簿與聯絡人（細部 3.2.1–3.2.2）

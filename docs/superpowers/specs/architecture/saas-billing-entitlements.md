@@ -3,7 +3,7 @@
 > **狀態**：設計定案（2026-09-20），待實作計畫
 > **範圍**：`backend/`（主）＋ `frontend/`（營運後台、租戶端權益投影）；`app/` 不在本次範圍
 > **目標變更**：本專案由「單一企業自建部署（Big Bang）」改為「多租戶 SaaS 收費應用」
-> **前置閱讀**：`docs/PLANNING_OVERVIEW.md`、`docs/superpowers/plans/README.md`、`backend/AGENTS.md` §8
+> **前置閱讀**：`docs/AGENTS.md`、`docs/superpowers/plans/README.md`、`backend/AGENTS.md` §8
 > **參考輸入**：兩份外部 SaaS 控管架構整理（計量/權益分離、OpenFGA SaaS 授權建模）；本設計採納其「計費與權益分離」與「權限繼承」原則，**不採納**「功能即關係／webhook 寫 tuple」與「Stripe 直接照抄」（理由見 §8）
 
 ---
@@ -167,7 +167,7 @@ type Counter interface {
 | 授權**檢查**失敗（角色／範圍不足） | `SYS-4001` `SysPermissionDenied` → `permission_denied`（前端導向「請管理員開權」） |
 | 跨租戶／不存在（含 RLS 過濾，防 oracle 探測） | `SYS-4002` `SysNotFound` → `not_found` |
 
-**配額與權限必須可區分**：前端要據碼導向升級方案或收款處理，那不是「缺權限」；因此額度問題**不得**用 `PermissionDenied` 表示（`PLAT-*` 的 details 供前端顯示用量）。`PLAT-*` 四碼已註冊、落地點見 `docs/superpowers/plans/2026-09-20-error-codes-plan.md` 的 **Task 5b**（`errcode` 已可用）。
+**配額與權限必須可區分**：前端要據碼導向升級方案或收款處理，那不是「缺權限」；因此額度問題**不得**用 `PermissionDenied` 表示（`PLAT-*` 的 details 供前端顯示用量）。`PLAT-*` 四碼已註冊、已落點（碼表：`docs/error-codes.md`）。
 
 > **更正（2026-09-21 補記，Plan C Task 14）：`PLAT-3002` 承載多種語意，不得據此放棄重試。**
 >
@@ -257,8 +257,7 @@ Valkey key `ent:{companyID}`；方案變更／override／訂閱狀態異動即 *
 > 另註：`cancelled` 的 G7 掃描（`CancelledSubscriptionsPastPeriodEnd`，`postgres/billing.go:334`）**不**比對期別狀態——取消是期末終止，期末前照算、
 > 期末後才凍結，那是刻意的不對稱。
 >
-> 舊謂詞（`s.status='active' AND cur.period_end < $1`）以字面出現在本計畫的任務樣板碼
-> （`docs/superpowers/plans/2026-09-20-platform-lifecycle-console-plan.md` 的 Task 5 段），**該樣板已被實作取代**
+> 舊謂詞（`s.status='active' AND cur.period_end < $1`）曾出現在計畫樣板碼中，**該樣板已被實作取代**
 > ——本 spec 的 §3.2／§4.5 經 `grep -n "period_end" ` 查證**不含**任何排程 SQL（只有 §5.2／§5.4／§5.5／§5.6 描述此行為）。
 
 ### 5.2.1 排程事件的 `reason` 契約（Plan C Task 5 落地、Task 15 修正輪補第五個；**每個事件必帶 `company_id`**）
@@ -370,7 +369,7 @@ spec 內建表（§4.5）「RPC → 需要的 feature/限額 → 對應測試」
 
 ## 8. 決策與文件變更
 
-### 8.1 決策記錄（`2026-07-19-sales-order-1.0-decisions.md`）
+### 8.1 決策記錄（`docs/superpowers/specs/decisions.md`）
 
 - **新增** D34：SaaS 商業模式（共用部署＋RLS、方案階梯×席位、不按量計費）
 - **新增** D35：platform 域邏輯分離（介面跨服務、實體不拆）
@@ -391,7 +390,7 @@ spec 內建表（§4.5）「RPC → 需要的 feature/限額 → 對應測試」
 
 ### 8.3 規格書
 
-`docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md` 升版 **v1.0.34 → v1.1.0**：新增平台域章節、租戶生命週期、計費與權益。
+`docs/superpowers/specs/1.0-contract.md` 升版 **v1.0.34 → v1.1.0**：新增平台域章節、租戶生命週期、計費與權益。
 
 ---
 

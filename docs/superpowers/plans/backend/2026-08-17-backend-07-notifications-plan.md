@@ -4,7 +4,7 @@
 >
 > **狀態基準**：2026-09-22 實作對齊。後端已落地：四表 schema（00041）＋渲染＋通知中心（List／MarkRead／UnreadCount）＋DeviceService＋Sender／Failmark（FakeSender；FCM 實裝另案）＋三路觸發（下單／專屬／退貨審核）＋00042 RLS ENABLE＋FORCE；派車 adapter 待 08（`DispatchNotifier` 介面未定）；Web 通知中心 `b193544` 已落地；App 畫面待。以下保留目標架構供追溯。
 >
-> **對應設計**：`docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（v1.0.34）、決策 `D16/D23/D24`
+> **對應設計**：`docs/superpowers/specs/1.0-contract.md`（v1.0.34）、決策 `D16/D23/D24`
 > **細部文件**：`docs/superpowers/plans/backend/detail/07-notifications.md`、共通規則 `detail/00-index.md` §3
 > **前置依賴**：01-auth（RLS、audit.Recorder）、05（下單）、04（專屬商品）、08（派車通知 adapter）
 

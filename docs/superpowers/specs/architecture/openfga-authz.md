@@ -2,7 +2,7 @@
 
 > 狀態：✅ 已定案（2026-09-18）
 > 性質：本波子專案（backend + frontend 一起切）；對齊決策 **D32**（2026-09-17：Casbin 與 CASL 移除，授權改 OpenFGA + RLS）。
-> 稽核基準：`docs/superpowers/specs/1.0-requirements/`（12 份）、決策 D1–D32、設計書 v1.0.34。
+> 稽核基準：`docs/superpowers/specs/1.0-requirements/`（12 份）、決策 D1–D33、設計書 v1.0.35。
 
 ---
 

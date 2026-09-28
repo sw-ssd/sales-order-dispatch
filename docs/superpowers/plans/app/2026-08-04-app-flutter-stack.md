@@ -2,7 +2,7 @@
 
 > **性質**：原為「App Flutter 技術棧基礎（D29）」目標型執行計畫（含內嵌目標程式碼，10 Tasks 描述 solidart/disco/auto_route/fquery/Sembast 完整落地）。經 2026-09-18 以實際程式碼盤點重建，為**反映現況的執行計畫**。
 >
-> **對應設計**：`docs/superpowers/specs/2026-08-04-app-flutter-stack-design.md`（D29）、決策 `D5/D29`
+> **對應設計**：`docs/superpowers/specs/architecture/app-flutter-stack.md`（D29）、決策 `D5/D29`
 > **狀態基準**：2026-09-18 盤點（app 實際 code + pubspec）
 
 ---

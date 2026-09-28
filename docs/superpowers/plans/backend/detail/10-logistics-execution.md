@@ -1,9 +1,9 @@
 # Backend Detail — logistics 執行層（10-logistics-execution）
 
 > 版本：v0.1.0（2026-09-17）
-> 依據：決策 **D32**、需求規格 `docs/superpowers/specs/1.0-requirements/logistics-execution/spec.md`、規劃整合 `docs/PLANNING_OVERVIEW.md`。
+> 依據：決策 **D32**、需求規格 `docs/superpowers/specs/1.0-requirements/logistics-execution/spec.md`、系統現況 `docs/AGENTS.md` §9。
 > 定位：本文件為 logistics 執行層的細部分解；新增到 `plans/backend/detail/00-index.md` 的地圖。授權引擎採 **OpenFGA + RLS**（D32，取代本目錄其他文件對 Casbin/CASL 的描述；凡與 D32 衝突處以 D32 為準）。
-> 編號：`10.x`。對應參考計畫 **Phase 5.5（Task 5.8–5.24,1.0）**（已補入 `plans/reference/2026-07-17-sales-order-1-0-tasks.md`）。
+> 編號：`10.x`。對應主計畫 **Phase 5.5（Task 5.8–5.24，1.0）**。
 
 > **執行狀態（2026-09-24,D32 授權首批落地）**：
 > - **已落地（10.11 通知接 D16,2026-09-24）**：指派 → 推該車次司機本人（單人，任務是個人責任，不做部門廣播）；送達 → 逐客戶推店家（該客戶全部子帳號）與主責業務（無則同部門 `dept_admin`），同一客戶多筆訂單**合併為一則**（payload 帶全部 `order_ids`，不洗版）。沿用 D16：同交易建 `notifications`（`pending`）＋提交後經 `AfterCommit` 發送，失敗只標 `failed` 不回滾（不重試）。範本 code：`logistics_assigned`／`logistics_delivered`／`logistics_delivered_rep`（缺席則用內建文案）。

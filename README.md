@@ -21,5 +21,12 @@ task backend:dev         # 開發模式（backend air hot reload 等）
 
 ## 文件
 
-- 計畫總索引：`docs/superpowers/plans/README.md`
-- 設計規格書：`docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`
+分層權威（詳見 `docs/AGENTS.md` 首段）：
+
+- 系統現況與操作導覽：`docs/AGENTS.md`（各子專案另有自己的 `AGENTS.md`）
+- 產品敘事：`PRODUCT.md`
+- 凍結合約（範圍／欄位／流程）：`docs/superpowers/specs/1.0-contract.md`
+- 決策記錄 D1–D33：`docs/superpowers/specs/decisions.md`
+- 可驗證行為：`docs/superpowers/specs/1.0-requirements/`
+- 各分域實作規格：`docs/superpowers/plans/backend/detail/`
+- 未完成項與計畫索引：`docs/superpowers/plans/README.md`

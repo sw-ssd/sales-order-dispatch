@@ -66,7 +66,7 @@ web
 - `platform-console/README.md`：邊界、認證、部署前提、路由表、元件庫 alias 與已知缺口的權威說明。
 - `platform-console/src/router.tsx`（路由與守衛）、`src/lib/guard.ts`、`src/lib/session.ts`（session 探針）、`src/pages/*.tsx`（六頁實際功能）、`src/components/{write,status,page,pagination,select,labelled-checkbox}.tsx`（工具自身的元件）。
 - 後端能力與契約：`backend/proto/platform/v1/platform.proto`、`backend/internal/platform/**`。
-- SaaS 設計脈絡：`docs/superpowers/specs/2026-09-20-saas-billing-entitlements-design.md`（S7 定義本工具的存在理由與邊界）。
+- SaaS 設計脈絡：`docs/superpowers/specs/architecture/saas-billing-entitlements.md`（S7 定義本工具的存在理由與邊界）。
 
 不存在、未來工作不得捏造：operator 的姓名與頭像、租戶的真實名稱或合約、營運 KPI 或 SLA 數字、對外說明文件。
 

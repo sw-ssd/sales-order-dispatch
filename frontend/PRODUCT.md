@@ -65,13 +65,13 @@ web
 
 ## Evidence on Hand
 
-- 凍結規格書 `docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（v1.0.35，18 章）：欄位與流程的唯一權威。
-- 決策記錄 `docs/superpowers/specs/2026-07-19-sales-order-1.0-decisions.md`（D1–D33）。
+- 凍結規格書 `docs/superpowers/specs/1.0-contract.md`（v1.0.35，18 章）：欄位與流程的唯一權威。
+- 決策記錄 `docs/superpowers/specs/decisions.md`（D1–D33）。
 - 需求規格 13 份 `docs/superpowers/specs/1.0-requirements/`。
-- SaaS 化設計 `docs/superpowers/specs/2026-09-20-saas-billing-entitlements-design.md`（S1–S11）。
-- 規劃總覽 `docs/PLANNING_OVERVIEW.md`、功能現況對照 `docs/FUNCTION_LIST.md`、錯誤碼表 `docs/error-codes.md`。
+- SaaS 化設計 `docs/superpowers/specs/architecture/saas-billing-entitlements.md`（S1–S11）。
+- 規劃總覽 `docs/AGENTS.md`、功能現況對照 `docs/AGENTS.md`、錯誤碼表 `docs/error-codes.md`。
 - 客戶原始需求 `docs/客戶需求.txt`、`docs/需求備忘_2026-08-03.txt`。
-- Pixso UI 稿（Web 9 畫面）與 `docs/design/2026-09-18-pixso-版面美化-進度存檔.md`、`docs/design/2026-09-23-tailkit-pixso-元件庫.md`。
+- Pixso UI 稿（Web 9 畫面）與 `docs/design/2026-09-23-tailkit-pixso-元件庫.md`。
 - 前端自身規範 `frontend/AGENTS.md`（Solid 反應性規則、Ark UI × Tailkit 分工、token 規則、測試門檻）。
 
 不存在、未來工作不得捏造：真實客戶名單與推薦語、營收或用戶數數據、品牌 logo、字體授權憑證、上線時程承諾。

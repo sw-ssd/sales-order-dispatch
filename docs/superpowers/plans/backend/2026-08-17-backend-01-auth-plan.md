@@ -2,7 +2,7 @@
 
 > **性質**：本文件原為「目標型」執行計畫（v 初版，含內嵌目標程式碼）。經 2026-09-18 以實際程式碼盤點重建，改為**反映現況的執行計畫**：每個 Task 標示實際實作狀態、對應真實產物檔案路徑，未完成部分保留為待辦。
 >
-> **對應設計**：`docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（v1.0.34）、決策 `D5/D6/D7/D8/D9`
+> **對應設計**：`docs/superpowers/specs/1.0-contract.md`（v1.0.34）、決策 `D5/D6/D7/D8/D9`
 > **細部文件**：`docs/superpowers/plans/backend/detail/01-auth.md`
 > **狀態基準**：2026-09-18 盤點（git + backend code）
 > **覆寫備註**：D32 於主計畫標頭指示「Task 14 改 OpenFGA + RLS」，但**實際實作仍為 Casbin**（`internal/auth/casbin.go` 註解亦採 Casbin）。本文件以實際 code 為準，OpenFGA 遷移列為待辦（見 Task 14）。
@@ -277,7 +277,7 @@
 - developer 繞過：`authzMiddleware` 的 `authorizeRPC` 對 `developer`/`super` 放行（`identityFor` 亦僅在開關開啟時接受 developer 帳號），且**稽核照寫**（不因繞權而省略）。
 - audit：`internal/audit` 套件（`Recorder` 介面語意由 `audit.Record` 承載，含 snapshot 淨化、trace 標記、`_actor_kind`）；`NoopRecorder` 未另立 —— 需要時以不注入 meta 表達（本專案無「無稽核」情境）。
 
-> D32 衝突已解：授權為 **OpenFGA + RLS**（Casbin 已移除），見 `2026-09-18-openfga-authz-backend-plan.md`。
+> D32 衝突已解：授權為 **OpenFGA + RLS**（Casbin 已移除），見 `docs/superpowers/specs/architecture/openfga-authz.md`。
 
 - [x] **Step 1: config** + fail-fast 防護
 - [x] **Step 2: developer bypass**（OpenFGA Check 與 RLS 皆放行）

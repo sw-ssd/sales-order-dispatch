@@ -2,7 +2,7 @@
 
 > **性質**：原為目標型執行計畫（含內嵌目標程式碼）。經 2026-09-18 以實際程式碼盤點（codebase-memory 知識圖譜 + git）重建，改為**反映現況的執行計畫**。
 >
-> **對應設計**：`docs/superpowers/specs/2026-07-16-sales-order-1.0-design.md`（v1.0.34）、決策 `D3/D6/D9/D22/D28`
+> **對應設計**：`docs/superpowers/specs/1.0-contract.md`（v1.0.34）、決策 `D3/D6/D9/D22/D28`
 > **細部文件**：`docs/superpowers/plans/backend/detail/02-tenancy-users.md`
 > **狀態基準**：2026-09-18 盤點（知識圖譜 + git + backend code）
 
