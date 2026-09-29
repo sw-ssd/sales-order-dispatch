@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
@@ -124,7 +125,7 @@ func (b *Billing) EnsureNextPeriod(ctx context.Context, companyID int, now time.
 		}); err != nil {
 			return errcode.SysInternal.Wrap(err)
 		}
-		if err := b.emit(ctx, tx, sub.ID, "period.opened", map[string]any{
+		if err := b.emit(ctx, tx, sub.InternalID, "period.opened", map[string]any{
 			"company_id":    companyID,
 			"period_no":     nextNo,
 			"amount_cents":  amount,
@@ -184,7 +185,7 @@ func (b *Billing) ExpireTrials(ctx context.Context, now time.Time, graceDays int
 				}
 				return errcode.SysInternal.Wrap(err)
 			}
-			if err := b.emit(ctx, tx, sub.ID, "subscription.trial_ended", map[string]any{
+			if err := b.emit(ctx, tx, sub.InternalID, "subscription.trial_ended", map[string]any{
 				"company_id":  sub.CompanyID,
 				"grace_until": grace.UTC().Format(time.RFC3339),
 				"reason":      "trial_expired",
@@ -243,7 +244,7 @@ func (b *Billing) MarkPastDue(ctx context.Context, now time.Time, graceDays int)
 				}
 				return errcode.SysInternal.Wrap(err)
 			}
-			if err := b.emit(ctx, tx, sub.ID, "subscription.past_due", map[string]any{
+			if err := b.emit(ctx, tx, sub.InternalID, "subscription.past_due", map[string]any{
 				"company_id":  sub.CompanyID,
 				"grace_until": grace.UTC().Format(time.RFC3339),
 				"reason":      "period_end_passed_unpaid",
@@ -288,7 +289,7 @@ func (b *Billing) SuspendOverdue(ctx context.Context, now time.Time) (int, error
 				}
 				return errcode.SysInternal.Wrap(err)
 			}
-			if err := b.emit(ctx, tx, sub.ID, "subscription.suspended", map[string]any{
+			if err := b.emit(ctx, tx, sub.InternalID, "subscription.suspended", map[string]any{
 				"company_id": sub.CompanyID,
 				"reason":     "overdue",
 			}); err != nil {
@@ -331,9 +332,9 @@ func (b *Billing) ExpireCancelled(ctx context.Context, now time.Time) (int, erro
 		for _, sub := range expired {
 			// payload 帶足識別欄位：consumer 不得為了補一個欄位再查一次 DB
 			// （事件與查詢之間狀態可能已經變了）。
-			if err := b.emit(ctx, tx, sub.ID, "subscription.expired", map[string]any{
+			if err := b.emit(ctx, tx, sub.InternalID, "subscription.expired", map[string]any{
 				"company_id":      sub.CompanyID,
-				"subscription_id": sub.ID,
+				"subscription_id": strconv.FormatInt(sub.ID, 10),
 				"reason":          "cancelled_at_period_end",
 			}); err != nil {
 				return errcode.SysInternal.Wrap(err)

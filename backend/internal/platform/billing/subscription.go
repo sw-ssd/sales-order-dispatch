@@ -134,7 +134,7 @@ func (b *Billing) CreateSubscription(ctx context.Context, in CreateSubscriptionI
 		if err != nil {
 			return errcode.SysInternal.Wrap(err)
 		}
-		subID, err := b.st.CreateSubscriptionTx(ctx, tx, store.CreateSubscriptionInput{
+		sub, err := b.st.CreateSubscriptionTx(ctx, tx, store.CreateSubscriptionInput{
 			CompanyID: in.CompanyID, PlanID: planID, SeatCount: in.SeatCount,
 			BillingCycle: in.BillingCycle, Status: status, TrialEnds: in.TrialEnds,
 		})
@@ -147,7 +147,7 @@ func (b *Billing) CreateSubscription(ctx context.Context, in CreateSubscriptionI
 			return errcode.SysInternal.Wrap(err)
 		}
 		first, err := b.st.OpenPeriodTx(ctx, tx, store.OpenPeriodInput{
-			SubscriptionID: subID, PeriodNo: 1, PeriodStart: now, PeriodEnd: periodEnd,
+			SubscriptionID: sub.ID, PeriodNo: 1, PeriodStart: now, PeriodEnd: periodEnd,
 			PlanID: planID, UnitPriceCents: price.BaseCents, SeatPriceCents: price.SeatCents,
 			SeatCount: in.SeatCount, AmountCents: amount, Currency: price.Currency,
 		})
@@ -155,7 +155,7 @@ func (b *Billing) CreateSubscription(ctx context.Context, in CreateSubscriptionI
 			return errcode.SysInternal.Wrap(err)
 		}
 		out = CreatedSubscription{
-			SubscriptionID: subID, Status: status, PlanCode: planCode,
+			SubscriptionID: sub.ID, Status: status, PlanCode: planCode,
 			BillingCycle: in.BillingCycle, SeatCount: in.SeatCount,
 			TrialEnds: in.TrialEnds, FirstPeriod: first,
 		}
@@ -164,14 +164,14 @@ func (b *Billing) CreateSubscription(ctx context.Context, in CreateSubscriptionI
 		// suspended／expired／reactivated)→ 會被認領而無副作用,安全。
 		// 未結項 #38:事件流的價值只剩審計 —— 日後要在產品域對開通做事時,
 		// 於 consumer 的 `actions` 明列語意(不得在 billing 側另起第二個 consumer)。
-		if err := b.emit(ctx, tx, subID, "subscription.created", map[string]any{
+		if err := b.emit(ctx, tx, sub.InternalID, "subscription.created", map[string]any{
 			"company_id":      in.CompanyID,
-			"subscription_id": subID,
+			"subscription_id": strconv.FormatInt(sub.ID, 10),
 			"reason":          in.Reason,
 		}); err != nil {
 			return errcode.SysInternal.Wrap(err)
 		}
-		return b.audit(ctx, tx, in.ActorOperatorID, "subscription.create", subID, in.Reason, nil,
+		return b.audit(ctx, tx, in.ActorOperatorID, "subscription.create", sub.ID, in.Reason, nil,
 			map[string]any{
 				"company_id":    in.CompanyID,
 				"plan_code":     planCode,
@@ -358,7 +358,7 @@ func (b *Billing) CancelSubscription(ctx context.Context, in CancelSubscriptionI
 		out.CancelledAt = b.now()
 		// 事件的 payload 必須自帶足以動手的欄位(reason 亦在其中):consumer 不得為了補一個欄位
 		// 再查一次 DB —— 事件與查詢之間狀態可能已經變了。
-		if err := b.emit(ctx, tx, sub.ID, "subscription.cancelled", map[string]any{
+		if err := b.emit(ctx, tx, sub.InternalID, "subscription.cancelled", map[string]any{
 			"company_id":    in.CompanyID,
 			"from":          sub.Status,
 			"service_until": out.ServiceUntil.UTC().Format(time.RFC3339),

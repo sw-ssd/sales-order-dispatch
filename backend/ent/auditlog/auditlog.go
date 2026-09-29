@@ -76,16 +76,17 @@ type Action string
 
 // Action values.
 const (
-	ActionCreate         Action = "create"
-	ActionUpdate         Action = "update"
-	ActionDelete         Action = "delete"
-	ActionLogin          Action = "login"
-	ActionLogout         Action = "logout"
-	ActionPrint          Action = "print"
-	ActionForceLogout    Action = "force_logout"
-	ActionRoleChange     Action = "role_change"
-	ActionDispatchCancel Action = "dispatch_cancel"
-	ActionVoid           Action = "void"
+	ActionCreate           Action = "create"
+	ActionUpdate           Action = "update"
+	ActionDelete           Action = "delete"
+	ActionLogin            Action = "login"
+	ActionLogout           Action = "logout"
+	ActionPrint            Action = "print"
+	ActionForceLogout      Action = "force_logout"
+	ActionRoleChange       Action = "role_change"
+	ActionDispatchCancel   Action = "dispatch_cancel"
+	ActionVoid             Action = "void"
+	ActionRotateExternalID Action = "rotate_external_id"
 )
 
 func (a Action) String() string {
@@ -95,7 +96,7 @@ func (a Action) String() string {
 // ActionValidator is a validator for the "action" field enum values. It is called by the builders before save.
 func ActionValidator(a Action) error {
 	switch a {
-	case ActionCreate, ActionUpdate, ActionDelete, ActionLogin, ActionLogout, ActionPrint, ActionForceLogout, ActionRoleChange, ActionDispatchCancel, ActionVoid:
+	case ActionCreate, ActionUpdate, ActionDelete, ActionLogin, ActionLogout, ActionPrint, ActionForceLogout, ActionRoleChange, ActionDispatchCancel, ActionVoid, ActionRotateExternalID:
 		return nil
 	default:
 		return fmt.Errorf("auditlog: invalid enum value for action field: %q", a)

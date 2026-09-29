@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/predicate"
@@ -180,6 +181,34 @@ func (_u *CompanyUpdate) SetNillableDeletedAt(v *time.Time) *CompanyUpdate {
 // ClearDeletedAt clears the value of the "deleted_at" field.
 func (_u *CompanyUpdate) ClearDeletedAt() *CompanyUpdate {
 	_u.mutation.ClearDeletedAt()
+	return _u
+}
+
+// SetInternalID sets the "internal_id" field.
+func (_u *CompanyUpdate) SetInternalID(v uuid.UUID) *CompanyUpdate {
+	_u.mutation.SetInternalID(v)
+	return _u
+}
+
+// SetNillableInternalID sets the "internal_id" field if the given value is not nil.
+func (_u *CompanyUpdate) SetNillableInternalID(v *uuid.UUID) *CompanyUpdate {
+	if v != nil {
+		_u.SetInternalID(*v)
+	}
+	return _u
+}
+
+// SetExternalID sets the "external_id" field.
+func (_u *CompanyUpdate) SetExternalID(v uuid.UUID) *CompanyUpdate {
+	_u.mutation.SetExternalID(v)
+	return _u
+}
+
+// SetNillableExternalID sets the "external_id" field if the given value is not nil.
+func (_u *CompanyUpdate) SetNillableExternalID(v *uuid.UUID) *CompanyUpdate {
+	if v != nil {
+		_u.SetExternalID(*v)
+	}
 	return _u
 }
 
@@ -368,6 +397,12 @@ func (_u *CompanyUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.DeletedAtCleared() {
 		_spec.ClearField(company.FieldDeletedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.InternalID(); ok {
+		_spec.SetField(company.FieldInternalID, field.TypeUUID, value)
+	}
+	if value, ok := _u.mutation.ExternalID(); ok {
+		_spec.SetField(company.FieldExternalID, field.TypeUUID, value)
 	}
 	if _u.mutation.DepartmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -631,6 +666,34 @@ func (_u *CompanyUpdateOne) ClearDeletedAt() *CompanyUpdateOne {
 	return _u
 }
 
+// SetInternalID sets the "internal_id" field.
+func (_u *CompanyUpdateOne) SetInternalID(v uuid.UUID) *CompanyUpdateOne {
+	_u.mutation.SetInternalID(v)
+	return _u
+}
+
+// SetNillableInternalID sets the "internal_id" field if the given value is not nil.
+func (_u *CompanyUpdateOne) SetNillableInternalID(v *uuid.UUID) *CompanyUpdateOne {
+	if v != nil {
+		_u.SetInternalID(*v)
+	}
+	return _u
+}
+
+// SetExternalID sets the "external_id" field.
+func (_u *CompanyUpdateOne) SetExternalID(v uuid.UUID) *CompanyUpdateOne {
+	_u.mutation.SetExternalID(v)
+	return _u
+}
+
+// SetNillableExternalID sets the "external_id" field if the given value is not nil.
+func (_u *CompanyUpdateOne) SetNillableExternalID(v *uuid.UUID) *CompanyUpdateOne {
+	if v != nil {
+		_u.SetExternalID(*v)
+	}
+	return _u
+}
+
 // AddDepartmentIDs adds the "departments" edge to the Department entity by IDs.
 func (_u *CompanyUpdateOne) AddDepartmentIDs(ids ...int) *CompanyUpdateOne {
 	_u.mutation.AddDepartmentIDs(ids...)
@@ -846,6 +909,12 @@ func (_u *CompanyUpdateOne) sqlSave(ctx context.Context) (_node *Company, err er
 	}
 	if _u.mutation.DeletedAtCleared() {
 		_spec.ClearField(company.FieldDeletedAt, field.TypeTime)
+	}
+	if value, ok := _u.mutation.InternalID(); ok {
+		_spec.SetField(company.FieldInternalID, field.TypeUUID, value)
+	}
+	if value, ok := _u.mutation.ExternalID(); ok {
+		_spec.SetField(company.FieldExternalID, field.TypeUUID, value)
 	}
 	if _u.mutation.DepartmentsCleared() {
 		edge := &sqlgraph.EdgeSpec{

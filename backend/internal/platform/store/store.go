@@ -11,6 +11,8 @@ import (
 	"context"
 	"database/sql"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // Feature 為可賣的功能／限額定義(platform.features);Type 決定 enabled 還是 limit 有意義。
@@ -51,6 +53,7 @@ type Subscription struct {
 	// ID 為訂閱列主鍵:期別(Period.SubscriptionID)與狀態變更(SetSubscriptionStatusTx)都以它
 	// 為鍵,故 BillingStore 的取列與唯讀的 Store.Subscription 都會帶出它。
 	ID        int64
+	InternalID uuid.UUID // 多產品軸:platform 引用鍵(對應 companies.internal_id),替代裸 company_id。
 	CompanyID int
 	PlanCode  string
 	// PlanName 為方案名(JOIN platform.plans.name):租戶端投影要顯示它,不帶出來前端只能顯示 code。
@@ -148,7 +151,7 @@ type Price struct {
 type Event struct {
 	ID            int64
 	AggregateType string
-	AggregateID   int64
+	AggregateID   uuid.UUID
 	EventType     string
 	Payload       []byte
 }
@@ -168,7 +171,7 @@ type BillingStore interface {
 	// subscriptions_active_company_unique)—— 不得讓 23505 冒上去變成 SYS-9000:那是
 	// operator 的輸入情境(這家公司已經有合約),console 要顯示得出來、也才擋得住雙擊。
 	// 已取消的訂閱不佔這條唯一鍵:要再服務是**新合約**(見 CancelSubscription)。
-	CreateSubscriptionTx(ctx context.Context, tx *sql.Tx, in CreateSubscriptionInput) (int64, error)
+	CreateSubscriptionTx(ctx context.Context, tx *sql.Tx, in CreateSubscriptionInput) (*Subscription, error)
 	// OpenSubscriptionTx 取該租戶的現行訂閱並以 FOR UPDATE 鎖住該列(併發的收款／逾期轉移必須互斥)。
 	// 無訂閱回 (nil, nil)。**不得**預先濾掉 cancelled:只有一筆已取消合約的租戶要拿得到它,
 	// 判定層才分得出「已取消」與「從未訂閱」(F-8;取法與平台投影同源)。
@@ -235,7 +238,7 @@ type BillingStore interface {
 	// ActiveOrTrialingSubscriptions 回仍在服務中的訂閱(排程逐租戶產生下一期用)。
 	ActiveOrTrialingSubscriptions(ctx context.Context) ([]Subscription, error)
 	// EmitEventTx 寫入 outbox 事件(與期別／狀態同一個交易)。
-	EmitEventTx(ctx context.Context, tx *sql.Tx, aggregateType string, aggregateID int64, eventType string, payload []byte) error
+	EmitEventTx(ctx context.Context, tx *sql.Tx, aggregateType string, aggregateID uuid.UUID, eventType string, payload []byte) error
 	// UndispatchedEvents 取未派送事件(依 id 排序,consumer 用)。
 	UndispatchedEvents(ctx context.Context, limit int) ([]Event, error)
 	// MarkEventDispatchedTx 標記事件已派送(重試次數記在 attempts)。

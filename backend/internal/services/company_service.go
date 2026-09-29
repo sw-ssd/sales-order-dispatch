@@ -23,6 +23,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/predicate"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
+	"github.com/google/uuid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
@@ -347,6 +348,43 @@ func (s *CompanyService) UpdateCompany(ctx context.Context, req *connect.Request
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&v1.UpdateCompanyResponse{Company: p}), nil
+}
+// RotateCompanyExternalID 輪換公司的 external_id(第三方整合暴露值;不改 id/internal_id)。
+// 權限與 UpdateCompany 同級(super / company_admin)。同筆租戶交易內更新 + 寫業務稽核(D18)。
+func (s *CompanyService) RotateCompanyExternalID(ctx context.Context, req *connect.Request[v1.RotateCompanyExternalIDRequest]) (*connect.Response[v1.RotateCompanyExternalIDResponse], error) {
+	if err := requireScope(ctx, "company", "update"); err != nil {
+		return nil, err
+	}
+	id, err := parseID(req.Msg.GetCompanyId())
+	if err != nil {
+		return nil, err
+	}
+	tx, ok := dbtenant.TxFrom(ctx)
+	if !ok {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
+	}
+	db := tx.Client()
+	exists, err := db.Company.Query().Where(company.ID(id), company.DeletedAtIsNil()).Only(ctx)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	newExt := uuid.New()
+	updated, err := db.Company.UpdateOneID(id).SetExternalID(newExt).Save(ctx)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	act := authz.IdentityFrom(ctx)
+	actor, _ := parseID(act.UserID)
+	before := map[string]any{"external_id": exists.ExternalID.String()}
+	after := map[string]any{"external_id": newExt.String()}
+	if err := recordAuditBA(ctx, tx, "company", "rotate_external_id", id, id, nil, actor, before, after); err != nil {
+		return nil, toConnectError(err)
+	}
+	p, err := companyToProto(updated)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	return connect.NewResponse(&v1.RotateCompanyExternalIDResponse{Company: p}), nil
 }
 
 // DeleteCompany 軟刪除公司(P2-A):標記 deleted_at 而非刪列,同一交易寫 action=delete 稽核。
@@ -724,6 +762,8 @@ func companyToProto(c *ent.Company) (*v1.Company, error) {
 		PublicInfo:   publicInfo,
 		Capabilities: c.Capabilities,
 		LogoUrl:      c.LogoURL,
+		ExternalId:   c.ExternalID.String(),
+		InternalId:   c.InternalID.String(),
 	}, nil
 }
 

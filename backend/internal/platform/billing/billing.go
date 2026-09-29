@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
 	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
@@ -231,14 +232,14 @@ func (b *Billing) RecordPayment(ctx context.Context, in RecordPaymentInput) (*st
 			if err := b.st.SetSubscriptionStatusTx(ctx, tx, sub.ID, "active", nil); err != nil {
 				return errcode.SysInternal.Wrap(err)
 			}
-			if err := b.emit(ctx, tx, sub.ID, "subscription.reactivated", map[string]any{
+			if err := b.emit(ctx, tx, sub.InternalID, "subscription.reactivated", map[string]any{
 				"company_id": in.CompanyID,
 				"from":       sub.Status,
 			}); err != nil {
 				return errcode.SysInternal.Wrap(err)
 			}
 		}
-		if err := b.emit(ctx, tx, sub.ID, "period.payment_recorded", map[string]any{
+		if err := b.emit(ctx, tx, sub.InternalID, "period.payment_recorded", map[string]any{
 			"company_id":   in.CompanyID,
 			"period_no":    period.PeriodNo,
 			"amount_cents": period.AmountCents,
@@ -327,7 +328,7 @@ func (b *Billing) periodForPayment(ctx context.Context, tx *sql.Tx, subID int64,
 
 // emit 把 outbox 事件寫在同一交易內。payload 必須帶足以讓 consumer 動手的欄位（例如
 // company_id）：consumer 不得為了補一個欄位再查一次 DB —— 事件與查詢之間狀態可能已經變了。
-func (b *Billing) emit(ctx context.Context, tx *sql.Tx, subID int64, eventType string, payload map[string]any) error {
+func (b *Billing) emit(ctx context.Context, tx *sql.Tx, subID uuid.UUID, eventType string, payload map[string]any) error {
 	raw, err := json.Marshal(payload)
 	if err != nil {
 		return err

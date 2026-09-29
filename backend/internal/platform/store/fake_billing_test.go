@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
 )
 
@@ -200,8 +201,8 @@ func TestFakeBillingAuditPriceAndDueQueries(t *testing.T) {
 	if _, err := f.CurrentPriceTx(ctx, nil, 1, "yearly"); err == nil {
 		t.Fatal("方案沒有該週期價目時必須回錯誤")
 	}
-
-	due := f.PutSubscription(store.Subscription{CompanyID: 11, PlanID: 1, Status: "active"})
+	dueSub := store.Subscription{InternalID: uuid.MustParse("00000000-0000-0000-0000-00000000000B"), CompanyID: 11, PlanID: 1, Status: "active"}
+	due := f.PutSubscription(dueSub)
 	f.PutPeriod(store.Period{SubscriptionID: due, PeriodNo: 1, PeriodEnd: now.Add(-time.Hour)})
 	future := f.PutSubscription(store.Subscription{CompanyID: 12, PlanID: 1, Status: "active"})
 	f.PutPeriod(store.Period{SubscriptionID: future, PeriodNo: 1, PeriodEnd: now.Add(time.Hour)})
@@ -217,8 +218,8 @@ func TestFakeBillingAuditPriceAndDueQueries(t *testing.T) {
 	grace := now.Add(-time.Hour)
 	pastDue := f.PutSubscription(store.Subscription{CompanyID: 13, PlanID: 1, Status: "past_due", GraceUntil: &grace})
 	// 14 是只設狀態、沒有寬限期的 past_due:它的作用是證明「無寬限期不算已到期」。
-	f.PutSubscription(store.Subscription{CompanyID: 14, PlanID: 1, Status: "past_due"})
-	gone := f.PutSubscription(store.Subscription{CompanyID: 15, PlanID: 1, Status: "cancelled"})
+	goneSub := store.Subscription{InternalID: uuid.MustParse("00000000-0000-0000-0000-00000000000F"), CompanyID: 15, PlanID: 1, Status: "cancelled"}
+	gone := f.PutSubscription(goneSub)
 	f.PutPeriod(store.Period{SubscriptionID: gone, PeriodNo: 1, PeriodEnd: now.Add(-time.Hour)})
 
 	subs, err := f.ActiveSubscriptionsWithDueOpenPeriod(ctx, nil, now)
@@ -234,8 +235,7 @@ func TestFakeBillingAuditPriceAndDueQueries(t *testing.T) {
 	if err != nil || len(subs) != 1 || subs[0].ID != gone {
 		t.Fatalf("已取消且期末已過應只含 15,got %+v err=%v", subs, err)
 	}
-	// 排程可重跑:發過 subscription.expired 之後不得再被選中。
-	if err := f.EmitEventTx(ctx, nil, "subscription", gone, "subscription.expired", []byte(`{}`)); err != nil {
+	if err := f.EmitEventTx(ctx, nil, "subscription", goneSub.InternalID, "subscription.expired", []byte(`{}`)); err != nil {
 		t.Fatalf("EmitEventTx: %v", err)
 	}
 	if subs, _ := f.CancelledSubscriptionsPastPeriodEnd(ctx, nil, now); len(subs) != 0 {
@@ -255,16 +255,16 @@ func TestFakeBillingAuditPriceAndDueQueries(t *testing.T) {
 	} else if err := f.MarkEventDispatchedTx(ctx, nil, pending[0].ID); err != nil {
 		t.Fatalf("MarkEventDispatchedTx: %v", err)
 	}
-	if err := f.EmitEventTx(ctx, nil, "subscription", due, "subscription.past_due", []byte(`{}`)); err != nil {
+	if err := f.EmitEventTx(ctx, nil, "subscription", dueSub.InternalID, "subscription.past_due", []byte(`{}`)); err != nil {
 		t.Fatalf("EmitEventTx: %v", err)
 	}
 	// 無 payload（nil）的事件在真 store 會被存成 '{}'（''::jsonb 會 22P02），假實作必須一致,
 	// 否則 consumer 的單元測試拿到的 payload 與真環境不同。
-	if err := f.EmitEventTx(ctx, nil, "subscription", due, "subscription.suspended", nil); err != nil {
+	if err := f.EmitEventTx(ctx, nil, "subscription", dueSub.InternalID, "subscription.suspended", nil); err != nil {
 		t.Fatalf("EmitEventTx(nil payload): %v", err)
 	}
 	events, err := f.UndispatchedEvents(ctx, 1)
-	if err != nil || len(events) != 1 || events[0].AggregateID != due ||
+	if err != nil || len(events) != 1 || events[0].AggregateID != dueSub.InternalID ||
 		events[0].EventType != "subscription.past_due" || events[0].ID != 2 {
 		t.Fatalf("UndispatchedEvents 應照 id 序回一筆(且 limit 生效),got %+v err=%v", events, err)
 	}
@@ -285,7 +285,8 @@ func TestFakeBillingWithTxRollsBackOnError(t *testing.T) {
 	ctx := context.Background()
 	f := store.NewFakeBilling()
 	f.PutSetting("lead_days", "14")
-	subID := f.PutSubscription(store.Subscription{CompanyID: 7, Status: "active"})
+	subSub := store.Subscription{InternalID: uuid.MustParse("00000000-0000-0000-0000-000000000007"), CompanyID: 7, Status: "active"}
+	subID := f.PutSubscription(subSub)
 	before := f.PutPeriod(store.Period{SubscriptionID: subID, PeriodNo: 1, Status: "open"})
 	paidAt := time.Now()
 
@@ -296,7 +297,7 @@ func TestFakeBillingWithTxRollsBackOnError(t *testing.T) {
 		}); err != nil {
 			return err
 		}
-		if err := f.EmitEventTx(ctx, nil, "subscription", subID, "period.opened", []byte(`{}`)); err != nil {
+		if err := f.EmitEventTx(ctx, nil, "subscription", subSub.InternalID, "period.opened", []byte(`{}`)); err != nil {
 			return err
 		}
 		if err := f.MarkPeriodPaidTx(ctx, nil, before, paidAt, "INV", "", "", "", "manual", "REF", "溢收"); err != nil {

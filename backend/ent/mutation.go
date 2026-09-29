@@ -11,6 +11,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/google/uuid"
 	"github.com/salesorder/sales-order-1.0/backend/ent/announcement"
 	"github.com/salesorder/sales-order-1.0/backend/ent/auditlog"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
@@ -2667,6 +2668,8 @@ type CompanyMutation struct {
 	logo_url             *string
 	customer_code_prefix *string
 	deleted_at           *time.Time
+	internal_id          *uuid.UUID
+	external_id          *uuid.UUID
 	clearedFields        map[string]struct{}
 	departments          map[int]struct{}
 	removeddepartments   map[int]struct{}
@@ -3195,6 +3198,78 @@ func (m *CompanyMutation) ResetDeletedAt() {
 	delete(m.clearedFields, company.FieldDeletedAt)
 }
 
+// SetInternalID sets the "internal_id" field.
+func (m *CompanyMutation) SetInternalID(u uuid.UUID) {
+	m.internal_id = &u
+}
+
+// InternalID returns the value of the "internal_id" field in the mutation.
+func (m *CompanyMutation) InternalID() (r uuid.UUID, exists bool) {
+	v := m.internal_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInternalID returns the old "internal_id" field's value of the Company entity.
+// If the Company object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CompanyMutation) OldInternalID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInternalID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInternalID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInternalID: %w", err)
+	}
+	return oldValue.InternalID, nil
+}
+
+// ResetInternalID resets all changes to the "internal_id" field.
+func (m *CompanyMutation) ResetInternalID() {
+	m.internal_id = nil
+}
+
+// SetExternalID sets the "external_id" field.
+func (m *CompanyMutation) SetExternalID(u uuid.UUID) {
+	m.external_id = &u
+}
+
+// ExternalID returns the value of the "external_id" field in the mutation.
+func (m *CompanyMutation) ExternalID() (r uuid.UUID, exists bool) {
+	v := m.external_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExternalID returns the old "external_id" field's value of the Company entity.
+// If the Company object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CompanyMutation) OldExternalID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExternalID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExternalID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExternalID: %w", err)
+	}
+	return oldValue.ExternalID, nil
+}
+
+// ResetExternalID resets all changes to the "external_id" field.
+func (m *CompanyMutation) ResetExternalID() {
+	m.external_id = nil
+}
+
 // AddDepartmentIDs adds the "departments" edge to the Department entity by ids.
 func (m *CompanyMutation) AddDepartmentIDs(ids ...int) {
 	if m.departments == nil {
@@ -3337,7 +3412,7 @@ func (m *CompanyMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CompanyMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 11)
 	if m.name != nil {
 		fields = append(fields, company.FieldName)
 	}
@@ -3365,6 +3440,12 @@ func (m *CompanyMutation) Fields() []string {
 	if m.deleted_at != nil {
 		fields = append(fields, company.FieldDeletedAt)
 	}
+	if m.internal_id != nil {
+		fields = append(fields, company.FieldInternalID)
+	}
+	if m.external_id != nil {
+		fields = append(fields, company.FieldExternalID)
+	}
 	return fields
 }
 
@@ -3391,6 +3472,10 @@ func (m *CompanyMutation) Field(name string) (ent.Value, bool) {
 		return m.CustomerCodePrefix()
 	case company.FieldDeletedAt:
 		return m.DeletedAt()
+	case company.FieldInternalID:
+		return m.InternalID()
+	case company.FieldExternalID:
+		return m.ExternalID()
 	}
 	return nil, false
 }
@@ -3418,6 +3503,10 @@ func (m *CompanyMutation) OldField(ctx context.Context, name string) (ent.Value,
 		return m.OldCustomerCodePrefix(ctx)
 	case company.FieldDeletedAt:
 		return m.OldDeletedAt(ctx)
+	case company.FieldInternalID:
+		return m.OldInternalID(ctx)
+	case company.FieldExternalID:
+		return m.OldExternalID(ctx)
 	}
 	return nil, fmt.Errorf("unknown Company field %s", name)
 }
@@ -3489,6 +3578,20 @@ func (m *CompanyMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetDeletedAt(v)
+		return nil
+	case company.FieldInternalID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInternalID(v)
+		return nil
+	case company.FieldExternalID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExternalID(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Company field %s", name)
@@ -3604,6 +3707,12 @@ func (m *CompanyMutation) ResetField(name string) error {
 		return nil
 	case company.FieldDeletedAt:
 		m.ResetDeletedAt()
+		return nil
+	case company.FieldInternalID:
+		m.ResetInternalID()
+		return nil
+	case company.FieldExternalID:
+		m.ResetExternalID()
 		return nil
 	}
 	return fmt.Errorf("unknown Company field %s", name)

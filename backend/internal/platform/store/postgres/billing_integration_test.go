@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
@@ -194,9 +195,10 @@ func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 	}
 	trialEnds := now.Add(48 * time.Hour)
 	var subID int64
+	var subIDInternal uuid.UUID
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO platform.subscriptions (company_id, plan_id, status, seat_count, trial_ends_at)
-		VALUES (42, $1, 'active', 3, $2) RETURNING id`, planID, trialEnds).Scan(&subID); err != nil {
+		VALUES (42, $1, 'active', 3, $2) RETURNING id, internal_id`, planID, trialEnds).Scan(&subID, &subIDInternal); err != nil {
 		t.Fatalf("subscription: %v", err)
 	}
 	// 43 的唯一一列就是 cancelled（F-8 的形狀）；42 另有一列已取消的舊約（partial unique index
@@ -280,7 +282,7 @@ func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 		!period.PeriodStart.Equal(periodStart) || !period.PeriodEnd.Equal(periodEnd) {
 		t.Fatalf("期別的金額／期間／欄位快照不對，got %+v", *period)
 	}
-	if err := st.EmitEventTx(ctx, tx, "subscription", sub.ID, "period.opened", []byte(`{"amount":"1950"}`)); err != nil {
+	if err := st.EmitEventTx(ctx, tx, "subscription", subIDInternal, "period.opened", []byte(`{"amount":"1950"}`)); err != nil {
 		t.Fatalf("EmitEventTx: %v", err)
 	}
 	if err := st.RecordAuditTx(ctx, tx, opID, "open_period", "subscription", "42", "測試", nil, nil); err != nil {
@@ -293,7 +295,7 @@ func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 	// 同一交易內可讀：三者確實落在 fn 拿到的那個 tx 上。
 	var inTx int
 	if err := tx.QueryRowContext(ctx,
-		`SELECT count(*) FROM platform.events WHERE aggregate_id = $1`, sub.ID).Scan(&inTx); err != nil || inTx != 1 {
+		`SELECT count(*) FROM platform.events WHERE aggregate_id = $1`, subIDInternal).Scan(&inTx); err != nil || inTx != 1 {
 		t.Fatalf("同一交易內應讀到剛寫的事件，got %d err=%v", inTx, err)
 	}
 	if err := tx.QueryRowContext(ctx,
@@ -320,7 +322,7 @@ func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 	// WithTx 的錯誤路徑同樣不留半成品，且**回傳 fn 的錯誤**（呼叫端要能分辨原因）。
 	sentinel := errors.New("收款的業務規則拒絕")
 	if err := st.WithTx(ctx, func(tx *sql.Tx) error {
-		if err := st.EmitEventTx(ctx, tx, "subscription", subID, "period.opened", []byte(`{}`)); err != nil {
+		if err := st.EmitEventTx(ctx, tx, "subscription", subIDInternal, "period.opened", []byte(`{}`)); err != nil {
 			return err
 		}
 		return sentinel
@@ -627,14 +629,15 @@ func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 	}
 	// 50 逾期未付、51 期末未到、52 寬限已過、53 寬限未到、54 past_due 無寬限期、
 	// 55 已取消且期末已過（未發過 expired）、56 已取消但期末未到、57 試用中年繳。
-	seedSub := func(company int, status, billingCycle string, graceUntil *time.Time) int64 {
+	seedSub := func(company int, status, billingCycle string, graceUntil *time.Time) (int64, uuid.UUID) {
 		var id int64
+		var internalID uuid.UUID
 		if err := db.QueryRowContext(ctx, `
 			INSERT INTO platform.subscriptions (company_id, plan_id, status, seat_count, billing_cycle, grace_until)
-			VALUES ($1,$2,$3,2,$4,$5) RETURNING id`, company, planID, status, billingCycle, graceUntil).Scan(&id); err != nil {
+			VALUES ($1,$2,$3,2,$4,$5) RETURNING id, internal_id`, company, planID, status, billingCycle, graceUntil).Scan(&id, &internalID); err != nil {
 			t.Fatalf("subscription(company %d): %v", company, err)
 		}
-		return id
+		return id, internalID
 	}
 	seedPeriod := func(id int64, no int, end time.Time, status ...string) {
 		// 期別狀態預設 open；已付款／作廢的期別要能種得出來（C-1：當期已付款不算逾期）。
@@ -648,31 +651,31 @@ func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 				 unit_price, seat_price, seat_count, amount, status)
 			VALUES ($1,$2,$3,$4,$5,1500.00,150.00,2,1800.00,$6)`,
 			id, no, end.Add(-720*time.Hour), end, planID, periodStatus); err != nil {
+			t.Logf("seedPeriod FAIL sub=%d: %v", id, err)
 			t.Fatalf("period(sub %d): %v", id, err)
 		}
 	}
 	pastGrace := now.Add(-24 * time.Hour)
-	// 排程 fixture 的訂閱 id 逐一留存：PeriodsByStatus 只按狀態過濾（無租戶條件），
-	// 這裡的斷言一律針對自己的列，不用全表計數 —— 下一次新增 fixture 才不會又紅（F-1）。
-	dueSub := seedSub(50, "active", "monthly", nil)
-	seedPeriod(dueSub, 1, now.Add(-24*time.Hour))
-	futureSub := seedSub(51, "active", "monthly", nil)
-	seedPeriod(futureSub, 3, now.Add(24*time.Hour))
-	gracePastSub := seedSub(52, "past_due", "yearly", &pastGrace)
-	seedPeriod(gracePastSub, 1, now.Add(-24*time.Hour))
 	graceFuture := now.Add(24 * time.Hour)
-	graceFutureSub := seedSub(53, "past_due", "yearly", &graceFuture)
+	// 排程 fixture 的訂閱 id 逐一留存：PeriodsByStatus 只按狀態過濾（無租戶條件），
+	dueSub, _ := seedSub(50, "active", "monthly", nil)
+	seedPeriod(dueSub, 1, now.Add(-24*time.Hour))
+	futureSub, _ := seedSub(51, "active", "monthly", nil)
+	seedPeriod(futureSub, 3, now.Add(24*time.Hour))
+	gracePastSub, _ := seedSub(52, "past_due", "yearly", &pastGrace)
+	seedPeriod(gracePastSub, 1, now.Add(-24*time.Hour))
+	graceFutureSub, _ := seedSub(53, "past_due", "yearly", &graceFuture)
 	seedPeriod(graceFutureSub, 1, now.Add(-24*time.Hour))
-	noGraceSub := seedSub(54, "past_due", "monthly", nil)
+	noGraceSub, _ := seedSub(54, "past_due", "monthly", nil)
 	seedPeriod(noGraceSub, 1, now.Add(-24*time.Hour))
-	cancelledSub := seedSub(55, "cancelled", "yearly", nil)
+	cancelledSub, cancelledSubID := seedSub(55, "cancelled", "yearly", nil)
 	seedPeriod(cancelledSub, 1, now.Add(-24*time.Hour))
-	cancelledFutureSub := seedSub(56, "cancelled", "monthly", nil)
+	cancelledFutureSub, _ := seedSub(56, "cancelled", "monthly", nil)
 	seedPeriod(cancelledFutureSub, 1, now.Add(24*time.Hour))
-	trialingSub := seedSub(57, "trialing", "yearly", nil)
+	trialingSub, _ := seedSub(57, "trialing", "yearly", nil)
 	// 58／59：期末已過但當期已付款／已作廢 —— 逾期後才繳清的客戶不得被再次催收（C-1）。
-	seedPeriod(seedSub(58, "active", "monthly", nil), 1, now.Add(-24*time.Hour), "paid")
-	seedPeriod(seedSub(59, "active", "monthly", nil), 1, now.Add(-24*time.Hour), "void")
+	seedPeriod(func() int64 { id, _ := seedSub(58, "active", "monthly", nil); return id }(), 1, now.Add(-24*time.Hour), "paid")
+	seedPeriod(func() int64 { id, _ := seedSub(59, "active", "monthly", nil); return id }(), 1, now.Add(-24*time.Hour), "void")
 
 	due := withTx(t, db, func(tx *sql.Tx) ([]store.Subscription, error) {
 		return st.ActiveSubscriptionsWithDueOpenPeriod(ctx, tx, now)
@@ -708,14 +711,14 @@ func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 	}
 	// 排程可重跑：已發過 subscription.expired 者不得再被選中。
 	if err := st.WithTx(ctx, func(tx *sql.Tx) error {
-		return st.EmitEventTx(ctx, tx, "subscription", cancelledSub, "subscription.expired", []byte(`{}`))
+		return st.EmitEventTx(ctx, tx, "subscription", cancelledSubID, "subscription.expired", []byte(`{}`))
 	}); err != nil {
 		t.Fatalf("EmitEventTx(expired): %v", err)
 	}
 	// 不帶資料的事件（nil／空 payload，例：subscription.suspended）必須寫得進去：送 ''::jsonb 會
 	// 22P02，而表的 DEFAULT '{}' 永遠不會生效 —— 單元測試（假實作）擋不住這一條，只有真 store 會炸。
 	if err := st.WithTx(ctx, func(tx *sql.Tx) error {
-		return st.EmitEventTx(ctx, tx, "subscription", cancelledSub, "subscription.suspended", nil)
+		return st.EmitEventTx(ctx, tx, "subscription", cancelledSubID, "subscription.suspended", nil)
 	}); err != nil {
 		t.Fatalf("無 payload 的事件必須寫得進去（payload 為 '{}'），got %v", err)
 	}
@@ -849,7 +852,7 @@ func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UndispatchedEvents: %v", err)
 	}
-	if len(events) != 2 || events[0].AggregateType != "subscription" || events[0].AggregateID != cancelledSub ||
+	if len(events) != 2 || events[0].AggregateType != "subscription" || events[0].AggregateID != cancelledSubID ||
 		events[0].EventType != "subscription.expired" || events[1].EventType != "subscription.suspended" {
 		t.Fatalf("未派送事件應照 id 序為 expired→suspended（WithTx 回錯誤者已回滾），got %+v", events)
 	}

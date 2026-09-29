@@ -6,6 +6,7 @@ import (
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
+	"github.com/google/uuid"
 )
 
 // Company holds the schema definition for the Company entity.
@@ -38,6 +39,12 @@ func (Company) Fields() []ent.Field {
 		field.Time("deleted_at").
 			Optional().
 			Nillable(), // 軟刪除(P2-A)
+		// internal_id: 跨系統穩定引用(不可變;platform 多產品路由用)。00053 已建 raw 欄(DEFAULT gen_random_uuid),此處補 ent 認知;無 setter 故天然不可變,不須 Immutable(Immutable 會強迫 Create 必填,與 DB DEFAULT 衝突)。
+		field.UUID("internal_id", uuid.UUID{}).
+			Default(uuid.New),
+		// external_id: 第三方整合暴露值(可輪換,不改 id/internal_id)。00053 已建 raw 欄,此處補 ent 認知。
+		field.UUID("external_id", uuid.UUID{}).
+			Default(uuid.New),
 	}
 }
 

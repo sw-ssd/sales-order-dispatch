@@ -7,6 +7,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/google/uuid"
 	"github.com/salesorder/sales-order-1.0/backend/ent/predicate"
 )
 
@@ -83,6 +84,16 @@ func CustomerCodePrefix(v string) predicate.Company {
 // DeletedAt applies equality check predicate on the "deleted_at" field. It's identical to DeletedAtEQ.
 func DeletedAt(v time.Time) predicate.Company {
 	return predicate.Company(sql.FieldEQ(FieldDeletedAt, v))
+}
+
+// InternalID applies equality check predicate on the "internal_id" field. It's identical to InternalIDEQ.
+func InternalID(v uuid.UUID) predicate.Company {
+	return predicate.Company(sql.FieldEQ(FieldInternalID, v))
+}
+
+// ExternalID applies equality check predicate on the "external_id" field. It's identical to ExternalIDEQ.
+func ExternalID(v uuid.UUID) predicate.Company {
+	return predicate.Company(sql.FieldEQ(FieldExternalID, v))
 }
 
 // NameEQ applies the EQ predicate on the "name" field.
@@ -528,6 +539,86 @@ func DeletedAtIsNil() predicate.Company {
 // DeletedAtNotNil applies the NotNil predicate on the "deleted_at" field.
 func DeletedAtNotNil() predicate.Company {
 	return predicate.Company(sql.FieldNotNull(FieldDeletedAt))
+}
+
+// InternalIDEQ applies the EQ predicate on the "internal_id" field.
+func InternalIDEQ(v uuid.UUID) predicate.Company {
+	return predicate.Company(sql.FieldEQ(FieldInternalID, v))
+}
+
+// InternalIDNEQ applies the NEQ predicate on the "internal_id" field.
+func InternalIDNEQ(v uuid.UUID) predicate.Company {
+	return predicate.Company(sql.FieldNEQ(FieldInternalID, v))
+}
+
+// InternalIDIn applies the In predicate on the "internal_id" field.
+func InternalIDIn(vs ...uuid.UUID) predicate.Company {
+	return predicate.Company(sql.FieldIn(FieldInternalID, vs...))
+}
+
+// InternalIDNotIn applies the NotIn predicate on the "internal_id" field.
+func InternalIDNotIn(vs ...uuid.UUID) predicate.Company {
+	return predicate.Company(sql.FieldNotIn(FieldInternalID, vs...))
+}
+
+// InternalIDGT applies the GT predicate on the "internal_id" field.
+func InternalIDGT(v uuid.UUID) predicate.Company {
+	return predicate.Company(sql.FieldGT(FieldInternalID, v))
+}
+
+// InternalIDGTE applies the GTE predicate on the "internal_id" field.
+func InternalIDGTE(v uuid.UUID) predicate.Company {
+	return predicate.Company(sql.FieldGTE(FieldInternalID, v))
+}
+
+// InternalIDLT applies the LT predicate on the "internal_id" field.
+func InternalIDLT(v uuid.UUID) predicate.Company {
+	return predicate.Company(sql.FieldLT(FieldInternalID, v))
+}
+
+// InternalIDLTE applies the LTE predicate on the "internal_id" field.
+func InternalIDLTE(v uuid.UUID) predicate.Company {
+	return predicate.Company(sql.FieldLTE(FieldInternalID, v))
+}
+
+// ExternalIDEQ applies the EQ predicate on the "external_id" field.
+func ExternalIDEQ(v uuid.UUID) predicate.Company {
+	return predicate.Company(sql.FieldEQ(FieldExternalID, v))
+}
+
+// ExternalIDNEQ applies the NEQ predicate on the "external_id" field.
+func ExternalIDNEQ(v uuid.UUID) predicate.Company {
+	return predicate.Company(sql.FieldNEQ(FieldExternalID, v))
+}
+
+// ExternalIDIn applies the In predicate on the "external_id" field.
+func ExternalIDIn(vs ...uuid.UUID) predicate.Company {
+	return predicate.Company(sql.FieldIn(FieldExternalID, vs...))
+}
+
+// ExternalIDNotIn applies the NotIn predicate on the "external_id" field.
+func ExternalIDNotIn(vs ...uuid.UUID) predicate.Company {
+	return predicate.Company(sql.FieldNotIn(FieldExternalID, vs...))
+}
+
+// ExternalIDGT applies the GT predicate on the "external_id" field.
+func ExternalIDGT(v uuid.UUID) predicate.Company {
+	return predicate.Company(sql.FieldGT(FieldExternalID, v))
+}
+
+// ExternalIDGTE applies the GTE predicate on the "external_id" field.
+func ExternalIDGTE(v uuid.UUID) predicate.Company {
+	return predicate.Company(sql.FieldGTE(FieldExternalID, v))
+}
+
+// ExternalIDLT applies the LT predicate on the "external_id" field.
+func ExternalIDLT(v uuid.UUID) predicate.Company {
+	return predicate.Company(sql.FieldLT(FieldExternalID, v))
+}
+
+// ExternalIDLTE applies the LTE predicate on the "external_id" field.
+func ExternalIDLTE(v uuid.UUID) predicate.Company {
+	return predicate.Company(sql.FieldLTE(FieldExternalID, v))
 }
 
 // HasDepartments applies the HasEdge predicate on the "departments" edge.

@@ -18,6 +18,8 @@ message Company {
   google.protobuf.Struct public_info = 6; // 公開資訊(JSON,可空)
   repeated string capabilities = 7;       // 能力旗標清單(可空)
   string logo_url = 8;          // Logo 網址(可空)
+  string external_id = 9;       // 第三方整合暴露值(可輪換,不改 id/internal_id)
+  string internal_id = 10;      // 跨系統穩定引用(不可變;platform 多產品路由用)
 }
 
 // CompanyService:公司主檔 CRUD。
@@ -32,6 +34,8 @@ service CompanyService {
   rpc UpdateCompany(UpdateCompanyRequest) returns (UpdateCompanyResponse);
   // DeleteCompany:刪除公司。
   rpc DeleteCompany(DeleteCompanyRequest) returns (DeleteCompanyResponse);
+  // RotateCompanyExternalID:輪換公司的 external_id(第三方整合暴露值)。限 super / company_admin。
+  rpc RotateCompanyExternalID(RotateCompanyExternalIDRequest) returns (RotateCompanyExternalIDResponse);
 }
 
 message ListCompaniesRequest {
@@ -83,8 +87,15 @@ message UpdateCompanyResponse {
 message DeleteCompanyRequest {
   string company_id = 1;
 }
-
 message DeleteCompanyResponse {}
+
+message RotateCompanyExternalIDRequest {
+  string company_id = 1;
+}
+
+message RotateCompanyExternalIDResponse {
+  Company company = 1;
+}
 
 // Department:部門主檔(屬於單一公司)。
 message Department {

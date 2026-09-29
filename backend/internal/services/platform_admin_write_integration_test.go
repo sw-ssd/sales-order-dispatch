@@ -891,7 +891,7 @@ func TestIntegrationCreateSubscription(t *testing.T) {
 		SELECT count(*), COALESCE(max(payload->>'company_id'),''),
 		       COALESCE(max(payload->>'subscription_id'),''), COALESCE(max(payload->>'reason'),'')
 		  FROM platform.events
-		 WHERE event_type = 'subscription.created' AND aggregate_id = $1`, subID).
+		 WHERE event_type = 'subscription.created' AND aggregate_id = (SELECT internal_id FROM platform.subscriptions WHERE id = $1)`, subID).
 		Scan(&events, &payloadCompany, &payloadSub, &payloadReason); err != nil {
 		t.Fatalf("查事件: %v", err)
 	}
@@ -1081,7 +1081,7 @@ func TestIntegrationExpireTrial(t *testing.T) {
 	var payloadCompany, payloadReason string
 	if err := rig.admin.QueryRowContext(ctx, `
 		SELECT count(*), COALESCE(max(payload->>'company_id'),''), COALESCE(max(payload->>'reason'),'')
-		  FROM platform.events WHERE event_type = 'subscription.trial_ended' AND aggregate_id = $1`,
+		  FROM platform.events WHERE event_type = 'subscription.trial_ended' AND aggregate_id = (SELECT internal_id FROM platform.subscriptions WHERE id = $1)`,
 		subID).Scan(&trialEvents, &payloadCompany, &payloadReason); err != nil {
 		t.Fatalf("查事件: %v", err)
 	}
@@ -1100,7 +1100,7 @@ func TestIntegrationExpireTrial(t *testing.T) {
 	}
 	if err := rig.admin.QueryRowContext(ctx, `
 		SELECT count(*) FROM platform.events
-		 WHERE event_type = 'subscription.trial_ended' AND aggregate_id = $1`, subID).
+		 WHERE event_type = 'subscription.trial_ended' AND aggregate_id = (SELECT internal_id FROM platform.subscriptions WHERE id = $1)`, subID).
 		Scan(&trialEvents); err != nil {
 		t.Fatalf("重跑後查事件: %v", err)
 	}

@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/money"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
 )
@@ -35,22 +36,23 @@ var _ store.BillingStore = (*Store)(nil)
 // —— 只有一份 cancelled 合約的公司可以再開一份新合約(與 CancelSubscription 的「要再服務是新
 // 合約」同一個語意)。trial_ends_at 為 NULL 即非試用。
 func (s *Store) CreateSubscriptionTx(ctx context.Context, tx *sql.Tx,
-	in store.CreateSubscriptionInput) (int64, error) {
-	var id int64
+	in store.CreateSubscriptionInput) (*store.Subscription, error) {
+	var sub store.Subscription
 	err := tx.QueryRowContext(ctx, `
 		INSERT INTO platform.subscriptions
 			(company_id, plan_id, seat_count, billing_cycle, status, trial_ends_at)
 		VALUES ($1,$2,$3,$4,$5,$6)
 		ON CONFLICT (company_id) WHERE status <> 'cancelled' DO NOTHING
-		RETURNING id`,
-		in.CompanyID, in.PlanID, in.SeatCount, in.BillingCycle, in.Status, in.TrialEnds).Scan(&id)
+		RETURNING id, internal_id`,
+		in.CompanyID, in.PlanID, in.SeatCount, in.BillingCycle, in.Status, in.TrialEnds).
+		Scan(&sub.ID, &sub.InternalID)
 	if errors.Is(err, sql.ErrNoRows) { // DO NOTHING 沒有 RETURNING 列 = 已有未取消的訂閱
-		return 0, store.ErrConflict
+		return nil, store.ErrConflict
 	}
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return id, nil
+	return &sub, nil
 }
 
 // OpenSubscriptionTx 取該租戶的現行訂閱並以 FOR UPDATE 鎖住該列:併發的收款／逾期轉移必須互斥,
@@ -64,7 +66,7 @@ func (s *Store) CreateSubscriptionTx(ctx context.Context, tx *sql.Tx,
 // 保證未取消者至多一筆,故 LIMIT 1 不會少算。
 func (s *Store) OpenSubscriptionTx(ctx context.Context, tx *sql.Tx, companyID int) (*store.Subscription, error) {
 	row := tx.QueryRowContext(ctx, `
-		SELECT s.id, s.company_id, p.code, p.name, s.status, p.id, s.seat_count,
+		SELECT s.id, s.internal_id, s.company_id, p.code, p.name, s.status, p.id, s.seat_count,
 		       s.billing_cycle, s.trial_ends_at, s.grace_until
 		  FROM platform.subscriptions s
 		  JOIN platform.plans p ON p.id = s.plan_id
@@ -74,7 +76,7 @@ func (s *Store) OpenSubscriptionTx(ctx context.Context, tx *sql.Tx, companyID in
 		 FOR UPDATE OF s`, companyID)
 	var sub store.Subscription
 	var trial, grace sql.NullTime
-	err := row.Scan(&sub.ID, &sub.CompanyID, &sub.PlanCode, &sub.PlanName, &sub.Status, &sub.PlanID,
+	err := row.Scan(&sub.ID, &sub.InternalID, &sub.CompanyID, &sub.PlanCode, &sub.PlanName, &sub.Status, &sub.PlanID,
 		&sub.SeatCount, &sub.BillingCycle, &trial, &grace)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -381,7 +383,7 @@ func (s *Store) OverdueReceivablePeriods(ctx context.Context, now time.Time) ([]
 // 漏帶等於 G1**(年繳被當月繳、只加一個月 → 少收 11 個月);store 這端少帶,呼叫端只會拿到空字串。
 func (s *Store) ActiveSubscriptionsWithDueOpenPeriod(ctx context.Context, tx *sql.Tx, now time.Time) ([]store.Subscription, error) {
 	return s.scanSubscriptions(ctx, tx, `
-		SELECT s.id, s.company_id, s.status, s.plan_id, s.seat_count, s.billing_cycle
+		SELECT s.id, s.internal_id, s.company_id, s.status, s.plan_id, s.seat_count, s.billing_cycle
 		  FROM platform.subscriptions s
 		  JOIN LATERAL (
 			SELECT period_end, status FROM platform.subscription_periods p
@@ -396,7 +398,7 @@ func (s *Store) ActiveSubscriptionsWithDueOpenPeriod(ctx context.Context, tx *sq
 // grace_until IS NULL 不算「已過」:沒有設定寬限期不等於寬限期已到期。
 func (s *Store) PastDueSubscriptionsExpiredGrace(ctx context.Context, tx *sql.Tx, now time.Time) ([]store.Subscription, error) {
 	return s.scanSubscriptions(ctx, tx, `
-		SELECT id, company_id, status, plan_id, seat_count, billing_cycle
+		SELECT id, internal_id, company_id, status, plan_id, seat_count, billing_cycle
 		  FROM platform.subscriptions
 		 WHERE status = 'past_due' AND grace_until IS NOT NULL AND grace_until < $1`, now)
 }
@@ -410,7 +412,7 @@ func (s *Store) PastDueSubscriptionsExpiredGrace(ctx context.Context, tx *sql.Tx
 // 且必須帶出 plan_id／seat_count／billing_cycle。
 func (s *Store) TrialingSubscriptionsExpiredTrial(ctx context.Context, tx *sql.Tx, now time.Time) ([]store.Subscription, error) {
 	return s.scanSubscriptions(ctx, tx, `
-		SELECT id, company_id, status, plan_id, seat_count, billing_cycle
+		SELECT id, internal_id, company_id, status, plan_id, seat_count, billing_cycle
 		  FROM platform.subscriptions
 		 WHERE status = 'trialing' AND trial_ends_at IS NOT NULL AND trial_ends_at < $1`, now)
 }
@@ -444,7 +446,7 @@ func (s *Store) TrialingSubscriptionsWithoutTrialEnd(ctx context.Context) ([]sto
 // EXISTS 排除「已發過 subscription.expired」者 → 排程可重跑且不重複發事件。
 func (s *Store) CancelledSubscriptionsPastPeriodEnd(ctx context.Context, tx *sql.Tx, now time.Time) ([]store.Subscription, error) {
 	return s.scanSubscriptions(ctx, tx, `
-		SELECT s.id, s.company_id, s.status, s.plan_id, s.seat_count, s.billing_cycle
+		SELECT s.id, s.internal_id, s.company_id, s.status, s.plan_id, s.seat_count, s.billing_cycle
 		  FROM platform.subscriptions s
 		  JOIN LATERAL (
 			SELECT period_end FROM platform.subscription_periods p
@@ -455,7 +457,7 @@ func (s *Store) CancelledSubscriptionsPastPeriodEnd(ctx context.Context, tx *sql
 		 WHERE s.status = 'cancelled' AND cur.period_end < $1
 		   AND NOT EXISTS (
 			SELECT 1 FROM platform.events e
-			 WHERE e.aggregate_type = 'subscription' AND e.aggregate_id = s.id
+			 WHERE e.aggregate_type = 'subscription' AND e.aggregate_id = s.internal_id
 			   AND e.event_type = 'subscription.expired'
 		   )`, now)
 }
@@ -495,7 +497,7 @@ func (s *Store) scanSubscriptions(ctx context.Context, tx *sql.Tx, query string,
 	var out []store.Subscription
 	for rows.Next() {
 		var sub store.Subscription
-		if err := rows.Scan(&sub.ID, &sub.CompanyID, &sub.Status,
+		if err := rows.Scan(&sub.ID, &sub.InternalID, &sub.CompanyID, &sub.Status,
 			&sub.PlanID, &sub.SeatCount, &sub.BillingCycle); err != nil {
 			return nil, err
 		}
@@ -510,10 +512,10 @@ func (s *Store) scanSubscriptions(ctx context.Context, tx *sql.Tx, query string,
 // 空的 payload(nil／空切片,例:不帶資料的 subscription.expired)寫成 '{}':直接送 ”::jsonb
 // 會被 PostgreSQL 以 22P02 拒絕,而欄位的 DEFAULT '{}' 對「有給值但值是空字串」不生效。
 func (s *Store) EmitEventTx(ctx context.Context, tx *sql.Tx, aggregateType string,
-	aggregateID int64, eventType string, payload []byte) error {
+	aggregateID uuid.UUID, eventType string, payload []byte) error {
 	_, err := tx.ExecContext(ctx, `
-		INSERT INTO platform.events (aggregate_type, aggregate_id, event_type, payload)
-		VALUES ($1,$2,$3,$4::jsonb)`, aggregateType, aggregateID, eventType, jsonOrEmptyObject(payload))
+		INSERT INTO platform.events (aggregate_type, aggregate_id, event_type, payload, product_id)
+		VALUES ($1,$2,$3,$4::jsonb,'sales-order')`, aggregateType, aggregateID, eventType, jsonOrEmptyObject(payload))
 	return err
 }
 

@@ -50,6 +50,9 @@ const (
 	// CompanyServiceDeleteCompanyProcedure is the fully-qualified name of the CompanyService's
 	// DeleteCompany RPC.
 	CompanyServiceDeleteCompanyProcedure = "/salesorder.v1.CompanyService/DeleteCompany"
+	// CompanyServiceRotateCompanyExternalIDProcedure is the fully-qualified name of the
+	// CompanyService's RotateCompanyExternalID RPC.
+	CompanyServiceRotateCompanyExternalIDProcedure = "/salesorder.v1.CompanyService/RotateCompanyExternalID"
 	// DepartmentServiceListDepartmentsProcedure is the fully-qualified name of the DepartmentService's
 	// ListDepartments RPC.
 	DepartmentServiceListDepartmentsProcedure = "/salesorder.v1.DepartmentService/ListDepartments"
@@ -79,6 +82,8 @@ type CompanyServiceClient interface {
 	UpdateCompany(context.Context, *connect.Request[v1.UpdateCompanyRequest]) (*connect.Response[v1.UpdateCompanyResponse], error)
 	// DeleteCompany:刪除公司。
 	DeleteCompany(context.Context, *connect.Request[v1.DeleteCompanyRequest]) (*connect.Response[v1.DeleteCompanyResponse], error)
+	// RotateCompanyExternalID:輪換公司的 external_id(第三方整合暴露值)。限 super / company_admin。
+	RotateCompanyExternalID(context.Context, *connect.Request[v1.RotateCompanyExternalIDRequest]) (*connect.Response[v1.RotateCompanyExternalIDResponse], error)
 }
 
 // NewCompanyServiceClient constructs a client for the salesorder.v1.CompanyService service. By
@@ -122,16 +127,23 @@ func NewCompanyServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(companyServiceMethods.ByName("DeleteCompany")),
 			connect.WithClientOptions(opts...),
 		),
+		rotateCompanyExternalID: connect.NewClient[v1.RotateCompanyExternalIDRequest, v1.RotateCompanyExternalIDResponse](
+			httpClient,
+			baseURL+CompanyServiceRotateCompanyExternalIDProcedure,
+			connect.WithSchema(companyServiceMethods.ByName("RotateCompanyExternalID")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // companyServiceClient implements CompanyServiceClient.
 type companyServiceClient struct {
-	listCompanies *connect.Client[v1.ListCompaniesRequest, v1.ListCompaniesResponse]
-	getCompany    *connect.Client[v1.GetCompanyRequest, v1.GetCompanyResponse]
-	createCompany *connect.Client[v1.CreateCompanyRequest, v1.CreateCompanyResponse]
-	updateCompany *connect.Client[v1.UpdateCompanyRequest, v1.UpdateCompanyResponse]
-	deleteCompany *connect.Client[v1.DeleteCompanyRequest, v1.DeleteCompanyResponse]
+	listCompanies           *connect.Client[v1.ListCompaniesRequest, v1.ListCompaniesResponse]
+	getCompany              *connect.Client[v1.GetCompanyRequest, v1.GetCompanyResponse]
+	createCompany           *connect.Client[v1.CreateCompanyRequest, v1.CreateCompanyResponse]
+	updateCompany           *connect.Client[v1.UpdateCompanyRequest, v1.UpdateCompanyResponse]
+	deleteCompany           *connect.Client[v1.DeleteCompanyRequest, v1.DeleteCompanyResponse]
+	rotateCompanyExternalID *connect.Client[v1.RotateCompanyExternalIDRequest, v1.RotateCompanyExternalIDResponse]
 }
 
 // ListCompanies calls salesorder.v1.CompanyService.ListCompanies.
@@ -159,6 +171,11 @@ func (c *companyServiceClient) DeleteCompany(ctx context.Context, req *connect.R
 	return c.deleteCompany.CallUnary(ctx, req)
 }
 
+// RotateCompanyExternalID calls salesorder.v1.CompanyService.RotateCompanyExternalID.
+func (c *companyServiceClient) RotateCompanyExternalID(ctx context.Context, req *connect.Request[v1.RotateCompanyExternalIDRequest]) (*connect.Response[v1.RotateCompanyExternalIDResponse], error) {
+	return c.rotateCompanyExternalID.CallUnary(ctx, req)
+}
+
 // CompanyServiceHandler is an implementation of the salesorder.v1.CompanyService service.
 type CompanyServiceHandler interface {
 	// ListCompanies:分頁列出公司,可依 status / keyword(name、identifier 模糊)篩選。
@@ -171,6 +188,8 @@ type CompanyServiceHandler interface {
 	UpdateCompany(context.Context, *connect.Request[v1.UpdateCompanyRequest]) (*connect.Response[v1.UpdateCompanyResponse], error)
 	// DeleteCompany:刪除公司。
 	DeleteCompany(context.Context, *connect.Request[v1.DeleteCompanyRequest]) (*connect.Response[v1.DeleteCompanyResponse], error)
+	// RotateCompanyExternalID:輪換公司的 external_id(第三方整合暴露值)。限 super / company_admin。
+	RotateCompanyExternalID(context.Context, *connect.Request[v1.RotateCompanyExternalIDRequest]) (*connect.Response[v1.RotateCompanyExternalIDResponse], error)
 }
 
 // NewCompanyServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -210,6 +229,12 @@ func NewCompanyServiceHandler(svc CompanyServiceHandler, opts ...connect.Handler
 		connect.WithSchema(companyServiceMethods.ByName("DeleteCompany")),
 		connect.WithHandlerOptions(opts...),
 	)
+	companyServiceRotateCompanyExternalIDHandler := connect.NewUnaryHandler(
+		CompanyServiceRotateCompanyExternalIDProcedure,
+		svc.RotateCompanyExternalID,
+		connect.WithSchema(companyServiceMethods.ByName("RotateCompanyExternalID")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/salesorder.v1.CompanyService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case CompanyServiceListCompaniesProcedure:
@@ -222,6 +247,8 @@ func NewCompanyServiceHandler(svc CompanyServiceHandler, opts ...connect.Handler
 			companyServiceUpdateCompanyHandler.ServeHTTP(w, r)
 		case CompanyServiceDeleteCompanyProcedure:
 			companyServiceDeleteCompanyHandler.ServeHTTP(w, r)
+		case CompanyServiceRotateCompanyExternalIDProcedure:
+			companyServiceRotateCompanyExternalIDHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -249,6 +276,10 @@ func (UnimplementedCompanyServiceHandler) UpdateCompany(context.Context, *connec
 
 func (UnimplementedCompanyServiceHandler) DeleteCompany(context.Context, *connect.Request[v1.DeleteCompanyRequest]) (*connect.Response[v1.DeleteCompanyResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("salesorder.v1.CompanyService.DeleteCompany is not implemented"))
+}
+
+func (UnimplementedCompanyServiceHandler) RotateCompanyExternalID(context.Context, *connect.Request[v1.RotateCompanyExternalIDRequest]) (*connect.Response[v1.RotateCompanyExternalIDResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("salesorder.v1.CompanyService.RotateCompanyExternalID is not implemented"))
 }
 
 // DepartmentServiceClient is a client for the salesorder.v1.DepartmentService service.

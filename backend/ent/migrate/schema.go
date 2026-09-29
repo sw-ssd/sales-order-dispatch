@@ -54,7 +54,7 @@ var (
 		{Name: "company_id", Type: field.TypeInt},
 		{Name: "department_id", Type: field.TypeInt, Nullable: true},
 		{Name: "user_id", Type: field.TypeInt},
-		{Name: "action", Type: field.TypeEnum, Enums: []string{"create", "update", "delete", "login", "logout", "print", "force_logout", "role_change", "dispatch_cancel", "void"}},
+		{Name: "action", Type: field.TypeEnum, Enums: []string{"create", "update", "delete", "login", "logout", "print", "force_logout", "role_change", "dispatch_cancel", "void", "rotate_external_id"}},
 		{Name: "resource_type", Type: field.TypeString},
 		{Name: "resource_id", Type: field.TypeString, Nullable: true},
 		{Name: "before_snapshot", Type: field.TypeJSON, Nullable: true},
@@ -81,6 +81,8 @@ var (
 		{Name: "logo_url", Type: field.TypeString, Nullable: true},
 		{Name: "customer_code_prefix", Type: field.TypeString, Nullable: true},
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "internal_id", Type: field.TypeUUID},
+		{Name: "external_id", Type: field.TypeUUID},
 	}
 	// CompaniesTable holds the schema information for the "companies" table.
 	CompaniesTable = &schema.Table{

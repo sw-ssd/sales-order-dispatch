@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib" // pgx database/sql driver
 	"github.com/pressly/goose/v3"
 
@@ -62,7 +63,7 @@ func TestIntegrationDispatchOutboxEvents(t *testing.T) {
 	var expiredID, unmappedID int64
 	if err := adminDB.QueryRowContext(ctx, `
 		INSERT INTO platform.events (aggregate_type, aggregate_id, event_type, payload)
-		VALUES ('subscription', 3, 'subscription.expired',
+		VALUES ('subscription', '00000000-0000-0000-0000-000000000003', 'subscription.expired',
 		        jsonb_build_object('company_id', $1::bigint, 'subscription_id', 3,
 		                           'reason', 'cancelled_at_period_end'))
 		RETURNING id`, companyID).Scan(&expiredID); err != nil {
@@ -70,7 +71,7 @@ func TestIntegrationDispatchOutboxEvents(t *testing.T) {
 	}
 	if err := adminDB.QueryRowContext(ctx, `
 		INSERT INTO platform.events (aggregate_type, aggregate_id, event_type, payload)
-		VALUES ('subscription', 4, 'period.opened', jsonb_build_object('company_id', $1::bigint))
+		VALUES ('subscription', '00000000-0000-0000-0000-000000000004', 'period.opened', jsonb_build_object('company_id', $1::bigint))
 		RETURNING id`, companyID).Scan(&unmappedID); err != nil {
 		t.Fatalf("寫未對應型別事件: %v", err)
 	}
@@ -156,7 +157,7 @@ func TestIntegrationDispatchOutboxEvents(t *testing.T) {
 	}
 	stale := consumer.New(
 		&staleEvents{events: []store.Event{{ID: expiredID, AggregateType: "subscription",
-			AggregateID: 3, EventType: "subscription.expired", Payload: payload}}, actor: actorID},
+			AggregateID: uuid.MustParse("00000000-0000-0000-0000-000000000003"), EventType: "subscription.expired", Payload: payload}}, actor: actorID},
 		consumer.NewDBSystemTx(adminDB), consumer.ProductDomain{})
 	if n, err := stale.DispatchOnce(ctx, 100); err != nil {
 		t.Fatalf("被搶先認領不得算失敗: %v", err)
@@ -216,7 +217,7 @@ func TestIntegrationDispatchContinuesPastPermanentlyFailingEvent(t *testing.T) {
 	var stuckID, victimEventID int64
 	if err := adminDB.QueryRowContext(ctx, `
 		INSERT INTO platform.events (aggregate_type, aggregate_id, event_type, payload)
-		VALUES ('subscription', 1, 'subscription.expired',
+		VALUES ('subscription', '00000000-0000-0000-0000-000000000001', 'subscription.expired',
 		        jsonb_build_object('company_id', $1::bigint, 'subscription_id', 1,
 		                           'reason', 'cancelled_at_period_end'))
 		RETURNING id`, gone).Scan(&stuckID); err != nil {
@@ -224,7 +225,7 @@ func TestIntegrationDispatchContinuesPastPermanentlyFailingEvent(t *testing.T) {
 	}
 	if err := adminDB.QueryRowContext(ctx, `
 		INSERT INTO platform.events (aggregate_type, aggregate_id, event_type, payload)
-		VALUES ('subscription', 2, 'subscription.expired',
+		VALUES ('subscription', '00000000-0000-0000-0000-000000000002', 'subscription.expired',
 		        jsonb_build_object('company_id', $1::bigint, 'subscription_id', 2,
 		                           'reason', 'cancelled_at_period_end'))
 		RETURNING id`, victim).Scan(&victimEventID); err != nil {

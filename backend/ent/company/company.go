@@ -7,6 +7,7 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/google/uuid"
 )
 
 const (
@@ -32,6 +33,10 @@ const (
 	FieldCustomerCodePrefix = "customer_code_prefix"
 	// FieldDeletedAt holds the string denoting the deleted_at field in the database.
 	FieldDeletedAt = "deleted_at"
+	// FieldInternalID holds the string denoting the internal_id field in the database.
+	FieldInternalID = "internal_id"
+	// FieldExternalID holds the string denoting the external_id field in the database.
+	FieldExternalID = "external_id"
 	// EdgeDepartments holds the string denoting the departments edge name in mutations.
 	EdgeDepartments = "departments"
 	// EdgeUsers holds the string denoting the users edge name in mutations.
@@ -66,6 +71,8 @@ var Columns = []string{
 	FieldLogoURL,
 	FieldCustomerCodePrefix,
 	FieldDeletedAt,
+	FieldInternalID,
+	FieldExternalID,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -83,6 +90,10 @@ var (
 	NameValidator func(string) error
 	// IdentifierValidator is a validator for the "identifier" field. It is called by the builders before save.
 	IdentifierValidator func(string) error
+	// DefaultInternalID holds the default value on creation for the "internal_id" field.
+	DefaultInternalID func() uuid.UUID
+	// DefaultExternalID holds the default value on creation for the "external_id" field.
+	DefaultExternalID func() uuid.UUID
 )
 
 // Status defines the type for the "status" enum field.
@@ -153,6 +164,16 @@ func ByCustomerCodePrefix(opts ...sql.OrderTermOption) OrderOption {
 // ByDeletedAt orders the results by the deleted_at field.
 func ByDeletedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDeletedAt, opts...).ToFunc()
+}
+
+// ByInternalID orders the results by the internal_id field.
+func ByInternalID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldInternalID, opts...).ToFunc()
+}
+
+// ByExternalID orders the results by the external_id field.
+func ByExternalID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldExternalID, opts...).ToFunc()
 }
 
 // ByDepartmentsCount orders the results by departments count.

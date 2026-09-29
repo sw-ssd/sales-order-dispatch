@@ -29,10 +29,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"slices"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"connectrpc.com/connect"
 
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/billing"
@@ -815,11 +817,11 @@ func TestExpireCancelledEmitsEventWithoutChangingStatus(t *testing.T) {
 	// payload 契約：consumer 不得為了補欄位再查一次 DB，故兩個識別碼都要帶。
 	var p struct {
 		CompanyID      int    `json:"company_id"`
-		SubscriptionID int64  `json:"subscription_id"`
+		SubscriptionID string `json:"subscription_id"`
 		Reason         string `json:"reason"`
 	}
 	eventPayload(t, f, "subscription.expired", &p)
-	if p.CompanyID != 42 || p.SubscriptionID != 5 || p.Reason == "" {
+	if p.CompanyID != 42 || p.SubscriptionID != fmt.Sprint(readSub(t, f, 42).ID) || p.Reason == "" {
 		t.Fatalf("payload 需帶得出公司、訂閱與原因: %+v", p)
 	}
 	if sub := readSub(t, f, 42); sub.Status != "cancelled" {
@@ -862,8 +864,8 @@ func TestExpireCancelledWaitsForPeriodEnd(t *testing.T) {
 func TestExpireCancelledOnlyTouchesPastPeriodEnd(t *testing.T) {
 	now := at(2026, time.November, 1, 3)
 	f := store.NewFakeBilling()
-	f.PutSubscription(store.Subscription{ID: 5, CompanyID: 42, Status: "cancelled",
-		PlanID: 1, BillingCycle: "monthly"})
+	f.PutSubscription(store.Subscription{ID: 5, InternalID: uuid.MustParse("00000000-0000-0000-0000-000000000005"),
+		CompanyID: 42, Status: "cancelled", PlanID: 1, BillingCycle: "monthly"})
 	f.PutPeriod(store.Period{ID: 9, SubscriptionID: 5, PeriodNo: 1, Status: "open",
 		PeriodEnd: now.Add(-time.Hour)})
 	f.PutSubscription(store.Subscription{ID: 6, CompanyID: 43, Status: "cancelled",
@@ -875,13 +877,13 @@ func TestExpireCancelledOnlyTouchesPastPeriodEnd(t *testing.T) {
 	if err != nil || n != 1 {
 		t.Fatalf("應只處理期末已過的那一家: n=%d err=%v", n, err)
 	}
-	var expired []int64
+	var expired []uuid.UUID
 	for _, e := range f.Events() {
 		if e.EventType == "subscription.expired" {
 			expired = append(expired, e.AggregateID)
 		}
 	}
-	if !slices.Equal(expired, []int64{5}) {
+	if !slices.Equal(expired, []uuid.UUID{uuid.MustParse("00000000-0000-0000-0000-000000000005")}) {
 		t.Fatalf("應只對訂閱 5 發 expired，got %v", expired)
 	}
 }

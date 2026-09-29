@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // FakeBilling 為 BillingStore 的記憶體實作:供帳務(收款)、排程與 outbox consumer 的**單元測試**
@@ -172,25 +174,27 @@ func (f *FakeBilling) Events() []Event {
 // CreateSubscriptionTx 建立一筆訂閱。同一公司已有未取消的訂閱 → ErrConflict
 // (00029 的 subscriptions_active_company_unique:已取消的訂閱不佔這條鍵)。
 func (f *FakeBilling) CreateSubscriptionTx(_ context.Context, _ *sql.Tx,
-	in CreateSubscriptionInput) (int64, error) {
+	in CreateSubscriptionInput) (*Subscription, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	for i := range f.subs {
 		if f.subs[i].CompanyID == in.CompanyID && f.subs[i].Status != "cancelled" {
-			return 0, ErrConflict
+			return nil, ErrConflict
 		}
 	}
 	f.nextSubID++
-	f.subs = append(f.subs, Subscription{
+	sub := &Subscription{
 		ID:           f.nextSubID,
+		InternalID:   uuid.New(),
 		CompanyID:    in.CompanyID,
 		PlanID:       in.PlanID,
 		SeatCount:    in.SeatCount,
 		BillingCycle: in.BillingCycle,
 		Status:       in.Status,
 		TrialEnds:    clonePtr(in.TrialEnds),
-	})
-	return f.nextSubID, nil
+	}
+	f.subs = append(f.subs, *sub)
+	return sub, nil
 }
 
 // OpenSubscriptionTx 取該公司的現行訂閱(見型別說明:不預先濾掉 cancelled)。
@@ -508,7 +512,7 @@ func (f *FakeBilling) CancelledSubscriptionsPastPeriodEnd(_ context.Context, _ *
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return f.filterSubs(func(s Subscription) bool {
-		if s.Status != "cancelled" || f.expiredEmitted(s.ID) {
+		if s.Status != "cancelled" || f.expiredEmitted(s.InternalID) {
 			return false
 		}
 		cur, ok := f.latestPeriod(s.ID)
@@ -530,7 +534,7 @@ func (f *FakeBilling) ActiveOrTrialingSubscriptions(context.Context) ([]Subscrip
 // EmitEventTx 寫入 outbox 事件(未派送)。空 payload(nil／空切片)存成 '{}':真 store 的
 // jsonb 欄位不接受空字串,不這樣對齊的話 consumer 的單元測試拿到的 payload 會與真環境不同。
 func (f *FakeBilling) EmitEventTx(_ context.Context, _ *sql.Tx, aggregateType string,
-	aggregateID int64, eventType string, payload []byte) error {
+	aggregateID uuid.UUID, eventType string, payload []byte) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if len(payload) == 0 {
@@ -672,7 +676,7 @@ func (f *FakeBilling) latestPeriod(subID int64) (Period, bool) {
 }
 
 // expiredEmitted 回報該訂閱是否已發過 subscription.expired(對應 SQL 的 NOT EXISTS)。
-func (f *FakeBilling) expiredEmitted(subID int64) bool {
+func (f *FakeBilling) expiredEmitted(subID uuid.UUID) bool {
 	return slices.ContainsFunc(f.events, func(e Event) bool {
 		return e.AggregateType == "subscription" && e.AggregateID == subID &&
 			e.EventType == "subscription.expired"

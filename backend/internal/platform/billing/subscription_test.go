@@ -473,15 +473,14 @@ func TestCreateSubscriptionOpensFirstPeriodAndAudits(t *testing.T) {
 	if created.FirstPeriod == nil || created.FirstPeriod.PeriodNo != 1 || created.FirstPeriod.AmountCents != 160000 {
 		t.Fatalf("回傳值必須帶第一期（金額是已落地的快照）: %+v", created.FirstPeriod)
 	}
-
 	// 事件：consumer 不得為了補欄位再查一次 DB
 	var payload struct {
 		CompanyID      int    `json:"company_id"`
-		SubscriptionID int64  `json:"subscription_id"`
+		SubscriptionID string `json:"subscription_id"`
 		Reason         string `json:"reason"`
 	}
 	eventPayload(t, f, "subscription.created", &payload)
-	if payload.CompanyID != 42 || payload.SubscriptionID != sub.ID || payload.Reason != "客戶簽約開通" {
+	if payload.CompanyID != 42 || payload.SubscriptionID != strconv.FormatInt(sub.ID, 10) || payload.Reason != "客戶簽約開通" {
 		t.Fatalf("subscription.created 的 payload 不符: %+v", payload)
 	}
 	if types := eventTypes(f); len(types) != 1 {

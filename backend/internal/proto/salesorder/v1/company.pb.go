@@ -25,14 +25,16 @@ const (
 // Company:公司(租戶)主檔。
 type Company struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                   // 公司 ID(現行 ent 自增 ID 字串化;D31 遷移 UUID 後格式不變)
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                               // 公司名稱
-	TaxId         string                 `protobuf:"bytes,3,opt,name=tax_id,json=taxId,proto3" json:"tax_id,omitempty"`                // 統一編號(可空)
-	Identifier    string                 `protobuf:"bytes,4,opt,name=identifier,proto3" json:"identifier,omitempty"`                   // 唯一識別碼(建立後不可修改)
-	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`                           // active | inactive | suspended
-	PublicInfo    *structpb.Struct       `protobuf:"bytes,6,opt,name=public_info,json=publicInfo,proto3" json:"public_info,omitempty"` // 公開資訊(JSON,可空)
-	Capabilities  []string               `protobuf:"bytes,7,rep,name=capabilities,proto3" json:"capabilities,omitempty"`               // 能力旗標清單(可空)
-	LogoUrl       string                 `protobuf:"bytes,8,opt,name=logo_url,json=logoUrl,proto3" json:"logo_url,omitempty"`          // Logo 網址(可空)
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                    // 公司 ID(現行 ent 自增 ID 字串化;D31 遷移 UUID 後格式不變)
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                                // 公司名稱
+	TaxId         string                 `protobuf:"bytes,3,opt,name=tax_id,json=taxId,proto3" json:"tax_id,omitempty"`                 // 統一編號(可空)
+	Identifier    string                 `protobuf:"bytes,4,opt,name=identifier,proto3" json:"identifier,omitempty"`                    // 唯一識別碼(建立後不可修改)
+	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`                            // active | inactive | suspended
+	PublicInfo    *structpb.Struct       `protobuf:"bytes,6,opt,name=public_info,json=publicInfo,proto3" json:"public_info,omitempty"`  // 公開資訊(JSON,可空)
+	Capabilities  []string               `protobuf:"bytes,7,rep,name=capabilities,proto3" json:"capabilities,omitempty"`                // 能力旗標清單(可空)
+	LogoUrl       string                 `protobuf:"bytes,8,opt,name=logo_url,json=logoUrl,proto3" json:"logo_url,omitempty"`           // Logo 網址(可空)
+	ExternalId    string                 `protobuf:"bytes,9,opt,name=external_id,json=externalId,proto3" json:"external_id,omitempty"`  // 第三方整合暴露值(可輪換,不改 id/internal_id)
+	InternalId    string                 `protobuf:"bytes,10,opt,name=internal_id,json=internalId,proto3" json:"internal_id,omitempty"` // 跨系統穩定引用(不可變;platform 多產品路由用)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -119,6 +121,20 @@ func (x *Company) GetCapabilities() []string {
 func (x *Company) GetLogoUrl() string {
 	if x != nil {
 		return x.LogoUrl
+	}
+	return ""
+}
+
+func (x *Company) GetExternalId() string {
+	if x != nil {
+		return x.ExternalId
+	}
+	return ""
+}
+
+func (x *Company) GetInternalId() string {
+	if x != nil {
+		return x.InternalId
 	}
 	return ""
 }
@@ -660,6 +676,94 @@ func (*DeleteCompanyResponse) Descriptor() ([]byte, []int) {
 	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{10}
 }
 
+type RotateCompanyExternalIDRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	CompanyId     string                 `protobuf:"bytes,1,opt,name=company_id,json=companyId,proto3" json:"company_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RotateCompanyExternalIDRequest) Reset() {
+	*x = RotateCompanyExternalIDRequest{}
+	mi := &file_salesorder_v1_company_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RotateCompanyExternalIDRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RotateCompanyExternalIDRequest) ProtoMessage() {}
+
+func (x *RotateCompanyExternalIDRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_company_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RotateCompanyExternalIDRequest.ProtoReflect.Descriptor instead.
+func (*RotateCompanyExternalIDRequest) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *RotateCompanyExternalIDRequest) GetCompanyId() string {
+	if x != nil {
+		return x.CompanyId
+	}
+	return ""
+}
+
+type RotateCompanyExternalIDResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Company       *Company               `protobuf:"bytes,1,opt,name=company,proto3" json:"company,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RotateCompanyExternalIDResponse) Reset() {
+	*x = RotateCompanyExternalIDResponse{}
+	mi := &file_salesorder_v1_company_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RotateCompanyExternalIDResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RotateCompanyExternalIDResponse) ProtoMessage() {}
+
+func (x *RotateCompanyExternalIDResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_salesorder_v1_company_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RotateCompanyExternalIDResponse.ProtoReflect.Descriptor instead.
+func (*RotateCompanyExternalIDResponse) Descriptor() ([]byte, []int) {
+	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *RotateCompanyExternalIDResponse) GetCompany() *Company {
+	if x != nil {
+		return x.Company
+	}
+	return nil
+}
+
 // Department:部門主檔(屬於單一公司)。
 type Department struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -673,7 +777,7 @@ type Department struct {
 
 func (x *Department) Reset() {
 	*x = Department{}
-	mi := &file_salesorder_v1_company_proto_msgTypes[11]
+	mi := &file_salesorder_v1_company_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -685,7 +789,7 @@ func (x *Department) String() string {
 func (*Department) ProtoMessage() {}
 
 func (x *Department) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_company_proto_msgTypes[11]
+	mi := &file_salesorder_v1_company_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -698,7 +802,7 @@ func (x *Department) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Department.ProtoReflect.Descriptor instead.
 func (*Department) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{11}
+	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *Department) GetId() string {
@@ -742,7 +846,7 @@ type ListDepartmentsRequest struct {
 
 func (x *ListDepartmentsRequest) Reset() {
 	*x = ListDepartmentsRequest{}
-	mi := &file_salesorder_v1_company_proto_msgTypes[12]
+	mi := &file_salesorder_v1_company_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -754,7 +858,7 @@ func (x *ListDepartmentsRequest) String() string {
 func (*ListDepartmentsRequest) ProtoMessage() {}
 
 func (x *ListDepartmentsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_company_proto_msgTypes[12]
+	mi := &file_salesorder_v1_company_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -767,7 +871,7 @@ func (x *ListDepartmentsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDepartmentsRequest.ProtoReflect.Descriptor instead.
 func (*ListDepartmentsRequest) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{12}
+	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ListDepartmentsRequest) GetPage() int32 {
@@ -815,7 +919,7 @@ type ListDepartmentsResponse struct {
 
 func (x *ListDepartmentsResponse) Reset() {
 	*x = ListDepartmentsResponse{}
-	mi := &file_salesorder_v1_company_proto_msgTypes[13]
+	mi := &file_salesorder_v1_company_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -827,7 +931,7 @@ func (x *ListDepartmentsResponse) String() string {
 func (*ListDepartmentsResponse) ProtoMessage() {}
 
 func (x *ListDepartmentsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_company_proto_msgTypes[13]
+	mi := &file_salesorder_v1_company_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -840,7 +944,7 @@ func (x *ListDepartmentsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDepartmentsResponse.ProtoReflect.Descriptor instead.
 func (*ListDepartmentsResponse) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{13}
+	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ListDepartmentsResponse) GetDepartments() []*Department {
@@ -866,7 +970,7 @@ type GetDepartmentRequest struct {
 
 func (x *GetDepartmentRequest) Reset() {
 	*x = GetDepartmentRequest{}
-	mi := &file_salesorder_v1_company_proto_msgTypes[14]
+	mi := &file_salesorder_v1_company_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -878,7 +982,7 @@ func (x *GetDepartmentRequest) String() string {
 func (*GetDepartmentRequest) ProtoMessage() {}
 
 func (x *GetDepartmentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_company_proto_msgTypes[14]
+	mi := &file_salesorder_v1_company_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -891,7 +995,7 @@ func (x *GetDepartmentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDepartmentRequest.ProtoReflect.Descriptor instead.
 func (*GetDepartmentRequest) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{14}
+	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *GetDepartmentRequest) GetDepartmentId() string {
@@ -910,7 +1014,7 @@ type GetDepartmentResponse struct {
 
 func (x *GetDepartmentResponse) Reset() {
 	*x = GetDepartmentResponse{}
-	mi := &file_salesorder_v1_company_proto_msgTypes[15]
+	mi := &file_salesorder_v1_company_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -922,7 +1026,7 @@ func (x *GetDepartmentResponse) String() string {
 func (*GetDepartmentResponse) ProtoMessage() {}
 
 func (x *GetDepartmentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_company_proto_msgTypes[15]
+	mi := &file_salesorder_v1_company_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -935,7 +1039,7 @@ func (x *GetDepartmentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDepartmentResponse.ProtoReflect.Descriptor instead.
 func (*GetDepartmentResponse) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{15}
+	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *GetDepartmentResponse) GetDepartment() *Department {
@@ -955,7 +1059,7 @@ type CreateDepartmentRequest struct {
 
 func (x *CreateDepartmentRequest) Reset() {
 	*x = CreateDepartmentRequest{}
-	mi := &file_salesorder_v1_company_proto_msgTypes[16]
+	mi := &file_salesorder_v1_company_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -967,7 +1071,7 @@ func (x *CreateDepartmentRequest) String() string {
 func (*CreateDepartmentRequest) ProtoMessage() {}
 
 func (x *CreateDepartmentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_company_proto_msgTypes[16]
+	mi := &file_salesorder_v1_company_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -980,7 +1084,7 @@ func (x *CreateDepartmentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateDepartmentRequest.ProtoReflect.Descriptor instead.
 func (*CreateDepartmentRequest) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{16}
+	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *CreateDepartmentRequest) GetCompanyId() string {
@@ -1006,7 +1110,7 @@ type CreateDepartmentResponse struct {
 
 func (x *CreateDepartmentResponse) Reset() {
 	*x = CreateDepartmentResponse{}
-	mi := &file_salesorder_v1_company_proto_msgTypes[17]
+	mi := &file_salesorder_v1_company_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1018,7 +1122,7 @@ func (x *CreateDepartmentResponse) String() string {
 func (*CreateDepartmentResponse) ProtoMessage() {}
 
 func (x *CreateDepartmentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_company_proto_msgTypes[17]
+	mi := &file_salesorder_v1_company_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1031,7 +1135,7 @@ func (x *CreateDepartmentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateDepartmentResponse.ProtoReflect.Descriptor instead.
 func (*CreateDepartmentResponse) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{17}
+	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *CreateDepartmentResponse) GetDepartment() *Department {
@@ -1051,7 +1155,7 @@ type UpdateDepartmentRequest struct {
 
 func (x *UpdateDepartmentRequest) Reset() {
 	*x = UpdateDepartmentRequest{}
-	mi := &file_salesorder_v1_company_proto_msgTypes[18]
+	mi := &file_salesorder_v1_company_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1063,7 +1167,7 @@ func (x *UpdateDepartmentRequest) String() string {
 func (*UpdateDepartmentRequest) ProtoMessage() {}
 
 func (x *UpdateDepartmentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_company_proto_msgTypes[18]
+	mi := &file_salesorder_v1_company_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1076,7 +1180,7 @@ func (x *UpdateDepartmentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateDepartmentRequest.ProtoReflect.Descriptor instead.
 func (*UpdateDepartmentRequest) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{18}
+	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *UpdateDepartmentRequest) GetDepartmentId() string {
@@ -1102,7 +1206,7 @@ type UpdateDepartmentResponse struct {
 
 func (x *UpdateDepartmentResponse) Reset() {
 	*x = UpdateDepartmentResponse{}
-	mi := &file_salesorder_v1_company_proto_msgTypes[19]
+	mi := &file_salesorder_v1_company_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1114,7 +1218,7 @@ func (x *UpdateDepartmentResponse) String() string {
 func (*UpdateDepartmentResponse) ProtoMessage() {}
 
 func (x *UpdateDepartmentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_company_proto_msgTypes[19]
+	mi := &file_salesorder_v1_company_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1127,7 +1231,7 @@ func (x *UpdateDepartmentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateDepartmentResponse.ProtoReflect.Descriptor instead.
 func (*UpdateDepartmentResponse) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{19}
+	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *UpdateDepartmentResponse) GetDepartment() *Department {
@@ -1146,7 +1250,7 @@ type DeleteDepartmentRequest struct {
 
 func (x *DeleteDepartmentRequest) Reset() {
 	*x = DeleteDepartmentRequest{}
-	mi := &file_salesorder_v1_company_proto_msgTypes[20]
+	mi := &file_salesorder_v1_company_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1158,7 +1262,7 @@ func (x *DeleteDepartmentRequest) String() string {
 func (*DeleteDepartmentRequest) ProtoMessage() {}
 
 func (x *DeleteDepartmentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_company_proto_msgTypes[20]
+	mi := &file_salesorder_v1_company_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1171,7 +1275,7 @@ func (x *DeleteDepartmentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteDepartmentRequest.ProtoReflect.Descriptor instead.
 func (*DeleteDepartmentRequest) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{20}
+	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *DeleteDepartmentRequest) GetDepartmentId() string {
@@ -1189,7 +1293,7 @@ type DeleteDepartmentResponse struct {
 
 func (x *DeleteDepartmentResponse) Reset() {
 	*x = DeleteDepartmentResponse{}
-	mi := &file_salesorder_v1_company_proto_msgTypes[21]
+	mi := &file_salesorder_v1_company_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1201,7 +1305,7 @@ func (x *DeleteDepartmentResponse) String() string {
 func (*DeleteDepartmentResponse) ProtoMessage() {}
 
 func (x *DeleteDepartmentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_salesorder_v1_company_proto_msgTypes[21]
+	mi := &file_salesorder_v1_company_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1214,14 +1318,14 @@ func (x *DeleteDepartmentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteDepartmentResponse.ProtoReflect.Descriptor instead.
 func (*DeleteDepartmentResponse) Descriptor() ([]byte, []int) {
-	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{21}
+	return file_salesorder_v1_company_proto_rawDescGZIP(), []int{23}
 }
 
 var File_salesorder_v1_company_proto protoreflect.FileDescriptor
 
 const file_salesorder_v1_company_proto_rawDesc = "" +
 	"\n" +
-	"\x1bsalesorder/v1/company.proto\x12\rsalesorder.v1\x1a\x1asalesorder/v1/common.proto\x1a\x1cgoogle/protobuf/struct.proto\"\xf5\x01\n" +
+	"\x1bsalesorder/v1/company.proto\x12\rsalesorder.v1\x1a\x1asalesorder/v1/common.proto\x1a\x1cgoogle/protobuf/struct.proto\"\xb7\x02\n" +
 	"\aCompany\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x15\n" +
@@ -1233,7 +1337,12 @@ const file_salesorder_v1_company_proto_rawDesc = "" +
 	"\vpublic_info\x18\x06 \x01(\v2\x17.google.protobuf.StructR\n" +
 	"publicInfo\x12\"\n" +
 	"\fcapabilities\x18\a \x03(\tR\fcapabilities\x12\x19\n" +
-	"\blogo_url\x18\b \x01(\tR\alogoUrl\"\xa1\x01\n" +
+	"\blogo_url\x18\b \x01(\tR\alogoUrl\x12\x1f\n" +
+	"\vexternal_id\x18\t \x01(\tR\n" +
+	"externalId\x12\x1f\n" +
+	"\vinternal_id\x18\n" +
+	" \x01(\tR\n" +
+	"internalId\"\xa1\x01\n" +
 	"\x14ListCompaniesRequest\x12\x12\n" +
 	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x16\n" +
@@ -1277,7 +1386,12 @@ const file_salesorder_v1_company_proto_rawDesc = "" +
 	"\x14DeleteCompanyRequest\x12\x1d\n" +
 	"\n" +
 	"company_id\x18\x01 \x01(\tR\tcompanyId\"\x17\n" +
-	"\x15DeleteCompanyResponse\"r\n" +
+	"\x15DeleteCompanyResponse\"?\n" +
+	"\x1eRotateCompanyExternalIDRequest\x12\x1d\n" +
+	"\n" +
+	"company_id\x18\x01 \x01(\tR\tcompanyId\"S\n" +
+	"\x1fRotateCompanyExternalIDResponse\x120\n" +
+	"\acompany\x18\x01 \x01(\v2\x16.salesorder.v1.CompanyR\acompany\"r\n" +
 	"\n" +
 	"Department\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
@@ -1321,14 +1435,15 @@ const file_salesorder_v1_company_proto_rawDesc = "" +
 	"department\">\n" +
 	"\x17DeleteDepartmentRequest\x12#\n" +
 	"\rdepartment_id\x18\x01 \x01(\tR\fdepartmentId\"\x1a\n" +
-	"\x18DeleteDepartmentResponse2\xd3\x03\n" +
+	"\x18DeleteDepartmentResponse2\xcd\x04\n" +
 	"\x0eCompanyService\x12Z\n" +
 	"\rListCompanies\x12#.salesorder.v1.ListCompaniesRequest\x1a$.salesorder.v1.ListCompaniesResponse\x12Q\n" +
 	"\n" +
 	"GetCompany\x12 .salesorder.v1.GetCompanyRequest\x1a!.salesorder.v1.GetCompanyResponse\x12Z\n" +
 	"\rCreateCompany\x12#.salesorder.v1.CreateCompanyRequest\x1a$.salesorder.v1.CreateCompanyResponse\x12Z\n" +
 	"\rUpdateCompany\x12#.salesorder.v1.UpdateCompanyRequest\x1a$.salesorder.v1.UpdateCompanyResponse\x12Z\n" +
-	"\rDeleteCompany\x12#.salesorder.v1.DeleteCompanyRequest\x1a$.salesorder.v1.DeleteCompanyResponse2\x80\x04\n" +
+	"\rDeleteCompany\x12#.salesorder.v1.DeleteCompanyRequest\x1a$.salesorder.v1.DeleteCompanyResponse\x12x\n" +
+	"\x17RotateCompanyExternalID\x12-.salesorder.v1.RotateCompanyExternalIDRequest\x1a..salesorder.v1.RotateCompanyExternalIDResponse2\x80\x04\n" +
 	"\x11DepartmentService\x12`\n" +
 	"\x0fListDepartments\x12%.salesorder.v1.ListDepartmentsRequest\x1a&.salesorder.v1.ListDepartmentsResponse\x12Z\n" +
 	"\rGetDepartment\x12#.salesorder.v1.GetDepartmentRequest\x1a$.salesorder.v1.GetDepartmentResponse\x12c\n" +
@@ -1348,70 +1463,75 @@ func file_salesorder_v1_company_proto_rawDescGZIP() []byte {
 	return file_salesorder_v1_company_proto_rawDescData
 }
 
-var file_salesorder_v1_company_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_salesorder_v1_company_proto_msgTypes = make([]protoimpl.MessageInfo, 24)
 var file_salesorder_v1_company_proto_goTypes = []any{
-	(*Company)(nil),                  // 0: salesorder.v1.Company
-	(*ListCompaniesRequest)(nil),     // 1: salesorder.v1.ListCompaniesRequest
-	(*ListCompaniesResponse)(nil),    // 2: salesorder.v1.ListCompaniesResponse
-	(*GetCompanyRequest)(nil),        // 3: salesorder.v1.GetCompanyRequest
-	(*GetCompanyResponse)(nil),       // 4: salesorder.v1.GetCompanyResponse
-	(*CreateCompanyRequest)(nil),     // 5: salesorder.v1.CreateCompanyRequest
-	(*CreateCompanyResponse)(nil),    // 6: salesorder.v1.CreateCompanyResponse
-	(*UpdateCompanyRequest)(nil),     // 7: salesorder.v1.UpdateCompanyRequest
-	(*UpdateCompanyResponse)(nil),    // 8: salesorder.v1.UpdateCompanyResponse
-	(*DeleteCompanyRequest)(nil),     // 9: salesorder.v1.DeleteCompanyRequest
-	(*DeleteCompanyResponse)(nil),    // 10: salesorder.v1.DeleteCompanyResponse
-	(*Department)(nil),               // 11: salesorder.v1.Department
-	(*ListDepartmentsRequest)(nil),   // 12: salesorder.v1.ListDepartmentsRequest
-	(*ListDepartmentsResponse)(nil),  // 13: salesorder.v1.ListDepartmentsResponse
-	(*GetDepartmentRequest)(nil),     // 14: salesorder.v1.GetDepartmentRequest
-	(*GetDepartmentResponse)(nil),    // 15: salesorder.v1.GetDepartmentResponse
-	(*CreateDepartmentRequest)(nil),  // 16: salesorder.v1.CreateDepartmentRequest
-	(*CreateDepartmentResponse)(nil), // 17: salesorder.v1.CreateDepartmentResponse
-	(*UpdateDepartmentRequest)(nil),  // 18: salesorder.v1.UpdateDepartmentRequest
-	(*UpdateDepartmentResponse)(nil), // 19: salesorder.v1.UpdateDepartmentResponse
-	(*DeleteDepartmentRequest)(nil),  // 20: salesorder.v1.DeleteDepartmentRequest
-	(*DeleteDepartmentResponse)(nil), // 21: salesorder.v1.DeleteDepartmentResponse
-	(*structpb.Struct)(nil),          // 22: google.protobuf.Struct
-	(*Pagination)(nil),               // 23: salesorder.v1.Pagination
+	(*Company)(nil),                         // 0: salesorder.v1.Company
+	(*ListCompaniesRequest)(nil),            // 1: salesorder.v1.ListCompaniesRequest
+	(*ListCompaniesResponse)(nil),           // 2: salesorder.v1.ListCompaniesResponse
+	(*GetCompanyRequest)(nil),               // 3: salesorder.v1.GetCompanyRequest
+	(*GetCompanyResponse)(nil),              // 4: salesorder.v1.GetCompanyResponse
+	(*CreateCompanyRequest)(nil),            // 5: salesorder.v1.CreateCompanyRequest
+	(*CreateCompanyResponse)(nil),           // 6: salesorder.v1.CreateCompanyResponse
+	(*UpdateCompanyRequest)(nil),            // 7: salesorder.v1.UpdateCompanyRequest
+	(*UpdateCompanyResponse)(nil),           // 8: salesorder.v1.UpdateCompanyResponse
+	(*DeleteCompanyRequest)(nil),            // 9: salesorder.v1.DeleteCompanyRequest
+	(*DeleteCompanyResponse)(nil),           // 10: salesorder.v1.DeleteCompanyResponse
+	(*RotateCompanyExternalIDRequest)(nil),  // 11: salesorder.v1.RotateCompanyExternalIDRequest
+	(*RotateCompanyExternalIDResponse)(nil), // 12: salesorder.v1.RotateCompanyExternalIDResponse
+	(*Department)(nil),                      // 13: salesorder.v1.Department
+	(*ListDepartmentsRequest)(nil),          // 14: salesorder.v1.ListDepartmentsRequest
+	(*ListDepartmentsResponse)(nil),         // 15: salesorder.v1.ListDepartmentsResponse
+	(*GetDepartmentRequest)(nil),            // 16: salesorder.v1.GetDepartmentRequest
+	(*GetDepartmentResponse)(nil),           // 17: salesorder.v1.GetDepartmentResponse
+	(*CreateDepartmentRequest)(nil),         // 18: salesorder.v1.CreateDepartmentRequest
+	(*CreateDepartmentResponse)(nil),        // 19: salesorder.v1.CreateDepartmentResponse
+	(*UpdateDepartmentRequest)(nil),         // 20: salesorder.v1.UpdateDepartmentRequest
+	(*UpdateDepartmentResponse)(nil),        // 21: salesorder.v1.UpdateDepartmentResponse
+	(*DeleteDepartmentRequest)(nil),         // 22: salesorder.v1.DeleteDepartmentRequest
+	(*DeleteDepartmentResponse)(nil),        // 23: salesorder.v1.DeleteDepartmentResponse
+	(*structpb.Struct)(nil),                 // 24: google.protobuf.Struct
+	(*Pagination)(nil),                      // 25: salesorder.v1.Pagination
 }
 var file_salesorder_v1_company_proto_depIdxs = []int32{
-	22, // 0: salesorder.v1.Company.public_info:type_name -> google.protobuf.Struct
+	24, // 0: salesorder.v1.Company.public_info:type_name -> google.protobuf.Struct
 	0,  // 1: salesorder.v1.ListCompaniesResponse.companies:type_name -> salesorder.v1.Company
-	23, // 2: salesorder.v1.ListCompaniesResponse.pagination:type_name -> salesorder.v1.Pagination
+	25, // 2: salesorder.v1.ListCompaniesResponse.pagination:type_name -> salesorder.v1.Pagination
 	0,  // 3: salesorder.v1.GetCompanyResponse.company:type_name -> salesorder.v1.Company
 	0,  // 4: salesorder.v1.CreateCompanyResponse.company:type_name -> salesorder.v1.Company
 	0,  // 5: salesorder.v1.UpdateCompanyResponse.company:type_name -> salesorder.v1.Company
-	11, // 6: salesorder.v1.ListDepartmentsResponse.departments:type_name -> salesorder.v1.Department
-	23, // 7: salesorder.v1.ListDepartmentsResponse.pagination:type_name -> salesorder.v1.Pagination
-	11, // 8: salesorder.v1.GetDepartmentResponse.department:type_name -> salesorder.v1.Department
-	11, // 9: salesorder.v1.CreateDepartmentResponse.department:type_name -> salesorder.v1.Department
-	11, // 10: salesorder.v1.UpdateDepartmentResponse.department:type_name -> salesorder.v1.Department
-	1,  // 11: salesorder.v1.CompanyService.ListCompanies:input_type -> salesorder.v1.ListCompaniesRequest
-	3,  // 12: salesorder.v1.CompanyService.GetCompany:input_type -> salesorder.v1.GetCompanyRequest
-	5,  // 13: salesorder.v1.CompanyService.CreateCompany:input_type -> salesorder.v1.CreateCompanyRequest
-	7,  // 14: salesorder.v1.CompanyService.UpdateCompany:input_type -> salesorder.v1.UpdateCompanyRequest
-	9,  // 15: salesorder.v1.CompanyService.DeleteCompany:input_type -> salesorder.v1.DeleteCompanyRequest
-	12, // 16: salesorder.v1.DepartmentService.ListDepartments:input_type -> salesorder.v1.ListDepartmentsRequest
-	14, // 17: salesorder.v1.DepartmentService.GetDepartment:input_type -> salesorder.v1.GetDepartmentRequest
-	16, // 18: salesorder.v1.DepartmentService.CreateDepartment:input_type -> salesorder.v1.CreateDepartmentRequest
-	18, // 19: salesorder.v1.DepartmentService.UpdateDepartment:input_type -> salesorder.v1.UpdateDepartmentRequest
-	20, // 20: salesorder.v1.DepartmentService.DeleteDepartment:input_type -> salesorder.v1.DeleteDepartmentRequest
-	2,  // 21: salesorder.v1.CompanyService.ListCompanies:output_type -> salesorder.v1.ListCompaniesResponse
-	4,  // 22: salesorder.v1.CompanyService.GetCompany:output_type -> salesorder.v1.GetCompanyResponse
-	6,  // 23: salesorder.v1.CompanyService.CreateCompany:output_type -> salesorder.v1.CreateCompanyResponse
-	8,  // 24: salesorder.v1.CompanyService.UpdateCompany:output_type -> salesorder.v1.UpdateCompanyResponse
-	10, // 25: salesorder.v1.CompanyService.DeleteCompany:output_type -> salesorder.v1.DeleteCompanyResponse
-	13, // 26: salesorder.v1.DepartmentService.ListDepartments:output_type -> salesorder.v1.ListDepartmentsResponse
-	15, // 27: salesorder.v1.DepartmentService.GetDepartment:output_type -> salesorder.v1.GetDepartmentResponse
-	17, // 28: salesorder.v1.DepartmentService.CreateDepartment:output_type -> salesorder.v1.CreateDepartmentResponse
-	19, // 29: salesorder.v1.DepartmentService.UpdateDepartment:output_type -> salesorder.v1.UpdateDepartmentResponse
-	21, // 30: salesorder.v1.DepartmentService.DeleteDepartment:output_type -> salesorder.v1.DeleteDepartmentResponse
-	21, // [21:31] is the sub-list for method output_type
-	11, // [11:21] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	0,  // 6: salesorder.v1.RotateCompanyExternalIDResponse.company:type_name -> salesorder.v1.Company
+	13, // 7: salesorder.v1.ListDepartmentsResponse.departments:type_name -> salesorder.v1.Department
+	25, // 8: salesorder.v1.ListDepartmentsResponse.pagination:type_name -> salesorder.v1.Pagination
+	13, // 9: salesorder.v1.GetDepartmentResponse.department:type_name -> salesorder.v1.Department
+	13, // 10: salesorder.v1.CreateDepartmentResponse.department:type_name -> salesorder.v1.Department
+	13, // 11: salesorder.v1.UpdateDepartmentResponse.department:type_name -> salesorder.v1.Department
+	1,  // 12: salesorder.v1.CompanyService.ListCompanies:input_type -> salesorder.v1.ListCompaniesRequest
+	3,  // 13: salesorder.v1.CompanyService.GetCompany:input_type -> salesorder.v1.GetCompanyRequest
+	5,  // 14: salesorder.v1.CompanyService.CreateCompany:input_type -> salesorder.v1.CreateCompanyRequest
+	7,  // 15: salesorder.v1.CompanyService.UpdateCompany:input_type -> salesorder.v1.UpdateCompanyRequest
+	9,  // 16: salesorder.v1.CompanyService.DeleteCompany:input_type -> salesorder.v1.DeleteCompanyRequest
+	11, // 17: salesorder.v1.CompanyService.RotateCompanyExternalID:input_type -> salesorder.v1.RotateCompanyExternalIDRequest
+	14, // 18: salesorder.v1.DepartmentService.ListDepartments:input_type -> salesorder.v1.ListDepartmentsRequest
+	16, // 19: salesorder.v1.DepartmentService.GetDepartment:input_type -> salesorder.v1.GetDepartmentRequest
+	18, // 20: salesorder.v1.DepartmentService.CreateDepartment:input_type -> salesorder.v1.CreateDepartmentRequest
+	20, // 21: salesorder.v1.DepartmentService.UpdateDepartment:input_type -> salesorder.v1.UpdateDepartmentRequest
+	22, // 22: salesorder.v1.DepartmentService.DeleteDepartment:input_type -> salesorder.v1.DeleteDepartmentRequest
+	2,  // 23: salesorder.v1.CompanyService.ListCompanies:output_type -> salesorder.v1.ListCompaniesResponse
+	4,  // 24: salesorder.v1.CompanyService.GetCompany:output_type -> salesorder.v1.GetCompanyResponse
+	6,  // 25: salesorder.v1.CompanyService.CreateCompany:output_type -> salesorder.v1.CreateCompanyResponse
+	8,  // 26: salesorder.v1.CompanyService.UpdateCompany:output_type -> salesorder.v1.UpdateCompanyResponse
+	10, // 27: salesorder.v1.CompanyService.DeleteCompany:output_type -> salesorder.v1.DeleteCompanyResponse
+	12, // 28: salesorder.v1.CompanyService.RotateCompanyExternalID:output_type -> salesorder.v1.RotateCompanyExternalIDResponse
+	15, // 29: salesorder.v1.DepartmentService.ListDepartments:output_type -> salesorder.v1.ListDepartmentsResponse
+	17, // 30: salesorder.v1.DepartmentService.GetDepartment:output_type -> salesorder.v1.GetDepartmentResponse
+	19, // 31: salesorder.v1.DepartmentService.CreateDepartment:output_type -> salesorder.v1.CreateDepartmentResponse
+	21, // 32: salesorder.v1.DepartmentService.UpdateDepartment:output_type -> salesorder.v1.UpdateDepartmentResponse
+	23, // 33: salesorder.v1.DepartmentService.DeleteDepartment:output_type -> salesorder.v1.DeleteDepartmentResponse
+	23, // [23:34] is the sub-list for method output_type
+	12, // [12:23] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_salesorder_v1_company_proto_init() }
@@ -1421,14 +1541,14 @@ func file_salesorder_v1_company_proto_init() {
 	}
 	file_salesorder_v1_common_proto_init()
 	file_salesorder_v1_company_proto_msgTypes[7].OneofWrappers = []any{}
-	file_salesorder_v1_company_proto_msgTypes[18].OneofWrappers = []any{}
+	file_salesorder_v1_company_proto_msgTypes[20].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_salesorder_v1_company_proto_rawDesc), len(file_salesorder_v1_company_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   22,
+			NumMessages:   24,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

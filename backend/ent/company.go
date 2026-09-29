@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/google/uuid"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 )
 
@@ -36,6 +37,10 @@ type Company struct {
 	CustomerCodePrefix string `json:"customer_code_prefix,omitempty"`
 	// DeletedAt holds the value of the "deleted_at" field.
 	DeletedAt *time.Time `json:"deleted_at,omitempty"`
+	// InternalID holds the value of the "internal_id" field.
+	InternalID uuid.UUID `json:"internal_id,omitempty"`
+	// ExternalID holds the value of the "external_id" field.
+	ExternalID uuid.UUID `json:"external_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the CompanyQuery when eager-loading is set.
 	Edges        CompanyEdges `json:"edges"`
@@ -84,6 +89,8 @@ func (*Company) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case company.FieldDeletedAt:
 			values[i] = new(sql.NullTime)
+		case company.FieldInternalID, company.FieldExternalID:
+			values[i] = new(uuid.UUID)
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -164,6 +171,18 @@ func (_m *Company) assignValues(columns []string, values []any) error {
 				_m.DeletedAt = new(time.Time)
 				*_m.DeletedAt = value.Time
 			}
+		case company.FieldInternalID:
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field internal_id", values[i])
+			} else if value != nil {
+				_m.InternalID = *value
+			}
+		case company.FieldExternalID:
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field external_id", values[i])
+			} else if value != nil {
+				_m.ExternalID = *value
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -238,6 +257,12 @@ func (_m *Company) String() string {
 		builder.WriteString("deleted_at=")
 		builder.WriteString(v.Format(time.ANSIC))
 	}
+	builder.WriteString(", ")
+	builder.WriteString("internal_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.InternalID))
+	builder.WriteString(", ")
+	builder.WriteString("external_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ExternalID))
 	builder.WriteByte(')')
 	return builder.String()
 }

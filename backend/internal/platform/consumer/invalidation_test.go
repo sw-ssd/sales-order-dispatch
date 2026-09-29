@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
 )
 
@@ -33,7 +34,7 @@ func (c *recordingCache) Delete(_ context.Context, key string) error {
 
 // subscription.suspended（凍結）→ 交易提交後失效該租戶的快取。
 func TestDispatchInvalidatesCacheForSuspendedEvent(t *testing.T) {
-	c, _, _, _ := newConsumer(t, store.Event{ID: 1, AggregateType: "subscription", AggregateID: 5,
+	c, _, _, _ := newConsumer(t, store.Event{ID: 1, AggregateType: "subscription", AggregateID: uuid.MustParse("00000000-0000-0000-0000-000000000005"),
 		EventType: "subscription.suspended", Payload: []byte(`{"company_id":42}`)})
 	cache := &recordingCache{}
 	c.WithCache(cache)
@@ -46,7 +47,7 @@ func TestDispatchInvalidatesCacheForSuspendedEvent(t *testing.T) {
 
 // subscription.expired（G7：取消且期末已過 → 凍結）同樣要失效。
 func TestDispatchInvalidatesCacheForExpiredEvent(t *testing.T) {
-	c, _, _, _ := newConsumer(t, store.Event{ID: 1, AggregateType: "subscription", AggregateID: 5,
+	c, _, _, _ := newConsumer(t, store.Event{ID: 1, AggregateType: "subscription", AggregateID: uuid.MustParse("00000000-0000-0000-0000-000000000005"),
 		EventType: "subscription.expired", Payload: []byte(`{"company_id":43}`)})
 	cache := &recordingCache{}
 	c.WithCache(cache)
@@ -62,7 +63,7 @@ func TestDispatchInvalidatesCacheForExpiredEvent(t *testing.T) {
 // 為什麼要擋：這類事件每期每租戶都會產生，若也失效，等於每開一期就把該租戶的快取清一次 ——
 // 快取被自己的副作用打穿，而 log 看起來完全正常。
 func TestDispatchDoesNotInvalidateForUnmappedEvent(t *testing.T) {
-	c, _, _, _ := newConsumer(t, store.Event{ID: 1, AggregateType: "subscription", AggregateID: 5,
+	c, _, _, _ := newConsumer(t, store.Event{ID: 1, AggregateType: "subscription", AggregateID: uuid.MustParse("00000000-0000-0000-0000-000000000005"),
 		EventType: "period.opened", Payload: []byte(`{"company_id":42}`)})
 	cache := &recordingCache{}
 	c.WithCache(cache)
@@ -78,7 +79,7 @@ func TestDispatchDoesNotInvalidateForUnmappedEvent(t *testing.T) {
 // 產品域失敗（整筆回滾、事件未被認領）→ 不得失效；且要能重試。
 func TestDispatchFailureDoesNotInvalidateCache(t *testing.T) {
 	c, _, _, setter := newConsumer(t, store.Event{ID: 1, AggregateType: "subscription",
-		AggregateID: 5, EventType: "subscription.suspended", Payload: []byte(`{"company_id":42}`)})
+		AggregateID: uuid.MustParse("00000000-0000-0000-0000-000000000005"), EventType: "subscription.suspended", Payload: []byte(`{"company_id":42}`)})
 	setter.err = errors.New("模擬產品域失敗")
 	cache := &recordingCache{}
 	c.WithCache(cache)
@@ -94,7 +95,7 @@ func TestDispatchFailureDoesNotInvalidateCache(t *testing.T) {
 // 沒接上快取（cache=nil）時照常派送：可選依賴的意義。
 func TestConsumerWorksWithoutCache(t *testing.T) {
 	c, _, _, setter := newConsumer(t, store.Event{ID: 1, AggregateType: "subscription",
-		AggregateID: 5, EventType: "subscription.suspended", Payload: []byte(`{"company_id":42}`)})
+		AggregateID: uuid.MustParse("00000000-0000-0000-0000-000000000005"), EventType: "subscription.suspended", Payload: []byte(`{"company_id":42}`)})
 
 	if n, err := c.DispatchOnce(context.Background(), 10); err != nil || n != 1 {
 		t.Fatalf("未接快取時派送應照常運作: n=%d err=%v", n, err)

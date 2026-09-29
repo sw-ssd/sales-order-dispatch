@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"connectrpc.com/connect"
 
 	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
@@ -735,7 +736,7 @@ func TestRecordPaymentConflictsOnDifferentExternalRef(t *testing.T) {
 // —— 期別已 paid、訂閱已 active 卻沒有事件與稽核，帳就對不起來。
 type failEvents struct{ *store.FakeBilling }
 
-func (failEvents) EmitEventTx(context.Context, *sql.Tx, string, int64, string, []byte) error {
+func (failEvents) EmitEventTx(context.Context, *sql.Tx, string, uuid.UUID, string, []byte) error {
 	return errors.New("模擬事件寫入失敗")
 }
 

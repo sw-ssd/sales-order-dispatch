@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
@@ -116,6 +117,34 @@ func (_c *CompanyCreate) SetNillableDeletedAt(v *time.Time) *CompanyCreate {
 	return _c
 }
 
+// SetInternalID sets the "internal_id" field.
+func (_c *CompanyCreate) SetInternalID(v uuid.UUID) *CompanyCreate {
+	_c.mutation.SetInternalID(v)
+	return _c
+}
+
+// SetNillableInternalID sets the "internal_id" field if the given value is not nil.
+func (_c *CompanyCreate) SetNillableInternalID(v *uuid.UUID) *CompanyCreate {
+	if v != nil {
+		_c.SetInternalID(*v)
+	}
+	return _c
+}
+
+// SetExternalID sets the "external_id" field.
+func (_c *CompanyCreate) SetExternalID(v uuid.UUID) *CompanyCreate {
+	_c.mutation.SetExternalID(v)
+	return _c
+}
+
+// SetNillableExternalID sets the "external_id" field if the given value is not nil.
+func (_c *CompanyCreate) SetNillableExternalID(v *uuid.UUID) *CompanyCreate {
+	if v != nil {
+		_c.SetExternalID(*v)
+	}
+	return _c
+}
+
 // AddDepartmentIDs adds the "departments" edge to the Department entity by IDs.
 func (_c *CompanyCreate) AddDepartmentIDs(ids ...int) *CompanyCreate {
 	_c.mutation.AddDepartmentIDs(ids...)
@@ -185,6 +214,14 @@ func (_c *CompanyCreate) defaults() {
 		v := company.DefaultStatus
 		_c.mutation.SetStatus(v)
 	}
+	if _, ok := _c.mutation.InternalID(); !ok {
+		v := company.DefaultInternalID()
+		_c.mutation.SetInternalID(v)
+	}
+	if _, ok := _c.mutation.ExternalID(); !ok {
+		v := company.DefaultExternalID()
+		_c.mutation.SetExternalID(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -212,6 +249,12 @@ func (_c *CompanyCreate) check() error {
 		if err := company.IdentifierValidator(v); err != nil {
 			return &ValidationError{Name: "identifier", err: fmt.Errorf(`ent: validator failed for field "Company.identifier": %w`, err)}
 		}
+	}
+	if _, ok := _c.mutation.InternalID(); !ok {
+		return &ValidationError{Name: "internal_id", err: errors.New(`ent: missing required field "Company.internal_id"`)}
+	}
+	if _, ok := _c.mutation.ExternalID(); !ok {
+		return &ValidationError{Name: "external_id", err: errors.New(`ent: missing required field "Company.external_id"`)}
 	}
 	return nil
 }
@@ -274,6 +317,14 @@ func (_c *CompanyCreate) createSpec() (*Company, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.DeletedAt(); ok {
 		_spec.SetField(company.FieldDeletedAt, field.TypeTime, value)
 		_node.DeletedAt = &value
+	}
+	if value, ok := _c.mutation.InternalID(); ok {
+		_spec.SetField(company.FieldInternalID, field.TypeUUID, value)
+		_node.InternalID = value
+	}
+	if value, ok := _c.mutation.ExternalID(); ok {
+		_spec.SetField(company.FieldExternalID, field.TypeUUID, value)
+		_node.ExternalID = value
 	}
 	if nodes := _c.mutation.DepartmentsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

@@ -5,6 +5,7 @@ package ent
 import (
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/salesorder/sales-order-1.0/backend/ent/announcement"
 	"github.com/salesorder/sales-order-1.0/backend/ent/auditlog"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
@@ -110,6 +111,14 @@ func init() {
 	companyDescIdentifier := companyFields[3].Descriptor()
 	// company.IdentifierValidator is a validator for the "identifier" field. It is called by the builders before save.
 	company.IdentifierValidator = companyDescIdentifier.Validators[0].(func(string) error)
+	// companyDescInternalID is the schema descriptor for internal_id field.
+	companyDescInternalID := companyFields[9].Descriptor()
+	// company.DefaultInternalID holds the default value on creation for the internal_id field.
+	company.DefaultInternalID = companyDescInternalID.Default.(func() uuid.UUID)
+	// companyDescExternalID is the schema descriptor for external_id field.
+	companyDescExternalID := companyFields[10].Descriptor()
+	// company.DefaultExternalID holds the default value on creation for the external_id field.
+	company.DefaultExternalID = companyDescExternalID.Default.(func() uuid.UUID)
 	customerFields := schema.Customer{}.Fields()
 	_ = customerFields
 	// customerDescCustomerCode is the schema descriptor for customer_code field.

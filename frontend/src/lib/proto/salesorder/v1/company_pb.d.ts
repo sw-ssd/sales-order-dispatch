@@ -72,6 +72,20 @@ export declare type Company = Message<"salesorder.v1.Company"> & {
    * @generated from field: string logo_url = 8;
    */
   logoUrl: string;
+
+  /**
+   * 第三方整合暴露值(可輪換,不改 id/internal_id)
+   *
+   * @generated from field: string external_id = 9;
+   */
+  externalId: string;
+
+  /**
+   * 跨系統穩定引用(不可變;platform 多產品路由用)
+   *
+   * @generated from field: string internal_id = 10;
+   */
+  internalId: string;
 };
 
 /**
@@ -330,6 +344,38 @@ export declare type DeleteCompanyResponse = Message<"salesorder.v1.DeleteCompany
  * Use `create(DeleteCompanyResponseSchema)` to create a new message.
  */
 export declare const DeleteCompanyResponseSchema: GenMessage<DeleteCompanyResponse>;
+
+/**
+ * @generated from message salesorder.v1.RotateCompanyExternalIDRequest
+ */
+export declare type RotateCompanyExternalIDRequest = Message<"salesorder.v1.RotateCompanyExternalIDRequest"> & {
+  /**
+   * @generated from field: string company_id = 1;
+   */
+  companyId: string;
+};
+
+/**
+ * Describes the message salesorder.v1.RotateCompanyExternalIDRequest.
+ * Use `create(RotateCompanyExternalIDRequestSchema)` to create a new message.
+ */
+export declare const RotateCompanyExternalIDRequestSchema: GenMessage<RotateCompanyExternalIDRequest>;
+
+/**
+ * @generated from message salesorder.v1.RotateCompanyExternalIDResponse
+ */
+export declare type RotateCompanyExternalIDResponse = Message<"salesorder.v1.RotateCompanyExternalIDResponse"> & {
+  /**
+   * @generated from field: salesorder.v1.Company company = 1;
+   */
+  company?: Company | undefined;
+};
+
+/**
+ * Describes the message salesorder.v1.RotateCompanyExternalIDResponse.
+ * Use `create(RotateCompanyExternalIDResponseSchema)` to create a new message.
+ */
+export declare const RotateCompanyExternalIDResponseSchema: GenMessage<RotateCompanyExternalIDResponse>;
 
 /**
  * Department:部門主檔(屬於單一公司)。
@@ -634,6 +680,16 @@ export declare const CompanyService: GenService<{
     methodKind: "unary";
     input: typeof DeleteCompanyRequestSchema;
     output: typeof DeleteCompanyResponseSchema;
+  },
+  /**
+   * RotateCompanyExternalID:輪換公司的 external_id(第三方整合暴露值)。限 super / company_admin。
+   *
+   * @generated from rpc salesorder.v1.CompanyService.RotateCompanyExternalID
+   */
+  rotateCompanyExternalID: {
+    methodKind: "unary";
+    input: typeof RotateCompanyExternalIDRequestSchema;
+    output: typeof RotateCompanyExternalIDResponseSchema;
   },
 }>;
 

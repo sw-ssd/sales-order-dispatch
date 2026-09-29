@@ -29,7 +29,8 @@ func (AuditLog) Fields() []ent.Field {
 		field.Int("user_id"),
 		field.Enum("action").
 			Values("create", "update", "delete", "login", "logout", "print",
-				"force_logout", "role_change", "dispatch_cancel", "void"), // §5.2 action 列舉
+				"force_logout", "role_change", "dispatch_cancel", "void",
+				"rotate_external_id"), // §5.2 action 列舉 + 第三方鍵輪換
 		field.String("resource_type"),
 		field.String("resource_id").
 			Optional(),

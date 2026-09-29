@@ -199,7 +199,7 @@ var platformIndexes = []struct {
 	unique            bool
 }{
 	{"plan_prices_plan_effective_idx", "plan_prices", "", false},
-	{"subscriptions_active_company_unique", "subscriptions", `(status <> 'cancelled'::text)`, true},
+	{"subscriptions_active_unique", "subscriptions", `(status <> 'cancelled'::text)`, true},
 	{"periods_provider_ref_unique", "subscription_periods", `(external_ref IS NOT NULL)`, true},
 	{"tenant_overrides_active_unique", "tenant_overrides", `(revoked_at IS NULL)`, true},
 	{"events_undispatched_idx", "events", `(dispatched_at IS NULL)`, false},
