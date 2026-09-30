@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
+	"github.com/google/uuid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
 )
 
@@ -312,4 +313,20 @@ func (s *Service) CheckLimit(ctx context.Context, companyID int, feature string,
 		})
 	}
 	return nil
+}
+
+// CheckLimitRPC 為 CheckLimit 的 RPC 包裝核心(Task 1.2,phase-2 獨立 HTTP 服務)。
+// 邊界鍵一律用 company_internal_id(uuid),不洩漏業務 companies.id;product_id 單產品場景
+// 預設 'sales-order'。內部解析為 companyID 後呼叫既有 CheckLimit(簽章用 int 主鍵),
+// 錯誤碼(PLAT-3001/5002/5001)由既有實作原樣透傳。Connect handler 在 internal/platform/server
+// 包(該處才 import proto 傳輸層),本方法保持 entitlements 為純判定邏輯、不依賴傳輸層。
+func (s *Service) CheckLimitRPC(ctx context.Context, internalID uuid.UUID, productID, feature string, delta int) error {
+	if productID == "" {
+		productID = "sales-order"
+	}
+	companyID, err := s.st.ResolveCompanyID(ctx, internalID)
+	if err != nil {
+		return err
+	}
+	return s.CheckLimit(ctx, companyID, feature, delta)
 }

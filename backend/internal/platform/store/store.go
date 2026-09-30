@@ -95,6 +95,10 @@ type Store interface {
 	Overrides(ctx context.Context, companyID int) ([]Override, error)
 	// Subscription 回傳某租戶未取消的訂閱;無則回 (nil, nil)。
 	Subscription(ctx context.Context, companyID int) (*Subscription, error)
+	// ResolveCompanyID 將平台通用鍵 company_internal_id(uuid)反查業務 companies.id。
+	// 平台服務經此取得 companyID 以呼叫既有 CheckLimit(簽章用 int 主鍵);
+	// 單產品場景下 internal_id ↔ id 為 1:1,多產品需伴 product_id 維度(本階段未做)。
+	ResolveCompanyID(ctx context.Context, internalID uuid.UUID) (int, error)
 }
 
 // Period 為一期帳(platform.subscription_periods)。金額欄位一律是**分**(int64):DB 存

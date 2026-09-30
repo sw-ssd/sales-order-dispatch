@@ -3,6 +3,9 @@ package store
 import (
 	"context"
 	"sync"
+
+	"github.com/google/uuid"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
 )
 
 // Fake 為記憶體實作:供判定層的單元測試與平台 CLI 使用,不進 production 路徑。
@@ -101,6 +104,19 @@ func (f *Fake) Subscription(_ context.Context, companyID int) (*Subscription, er
 	}
 	s = cloneSubscription(s)
 	return &s, nil
+}
+
+// ResolveCompanyID 將平台通用鍵 company_internal_id(uuid)反查 companyID。
+// 假實作遍歷 subs(其 InternalID 已於 PutSubscription 時種入);多產品下需伴 product_id 維度。
+func (f *Fake) ResolveCompanyID(_ context.Context, internalID uuid.UUID) (int, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for id, s := range f.subs {
+		if s.InternalID == internalID {
+			return id, nil
+		}
+	}
+	return 0, errcode.SysInternal.Error(nil)
 }
 
 // 以下為深拷貝:PG 實作的每一列都是掃描出來的新配置,呼叫端與 store 之間沒有共享記憶體;

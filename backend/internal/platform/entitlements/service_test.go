@@ -11,6 +11,8 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/google/uuid"
+
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
 	commonv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
@@ -619,6 +621,32 @@ func TestMemoryCacheRoundTrip(t *testing.T) {
 	}
 	if _, ok, _ := c.Get(ctx, "ent:2"); ok {
 		t.Fatal("ttl<=0 不得入庫")
+	}
+}
+
+// TestCheckLimitRPC 驗收 phase-2 的 CheckLimitRPC 包裝:以 company_internal_id(uuid)跨邊界、
+// 解析為 companyID 後呼叫既有 CheckLimit(錯誤碼原樣透傳)。
+func TestCheckLimitRPC(t *testing.T) {
+	f := store.NewFake()
+	internalID := uuid.MustParse("00000000-0000-0000-0000-000000000042")
+	f.PutSubscription(store.Subscription{
+		CompanyID: 42, InternalID: internalID, PlanCode: "std", Status: "active",
+	})
+	f.PutFeature(store.Feature{Code: seats, Type: "integer", Unit: "席"})
+	f.PutPlan("std", []store.Entitlement{{FeatureCode: seats, Enabled: true, Limit: ptr(int64(2))}})
+	svc := newSvc(f, map[string]int{seats: 1}) // Counter 回 1
+
+	// 未超額:1 + 1 = 2 不超上限 2。
+	if err := svc.CheckLimitRPC(context.Background(), internalID, "sales-order", seats, 1); err != nil {
+		t.Fatalf("未超額應通過,卻: %v", err)
+	}
+	// 超額:1 + 2 = 3 > 2 → PLAT-5001。
+	if err := svc.CheckLimitRPC(context.Background(), internalID, "sales-order", seats, 2); err == nil {
+		t.Fatal("超額應回 PLAT-5001")
+	}
+	// product_id 可空:服務端預設 'sales-order'。
+	if err := svc.CheckLimitRPC(context.Background(), internalID, "", seats, 1); err != nil {
+		t.Fatalf("空 product_id 應預設 sales-order 且通過,卻: %v", err)
 	}
 }
 

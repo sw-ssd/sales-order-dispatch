@@ -10,6 +10,8 @@ import (
 	"database/sql"
 	"errors"
 
+	"github.com/google/uuid"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
 )
 
@@ -146,4 +148,19 @@ func (s *Store) Subscription(ctx context.Context, companyID int) (*store.Subscri
 		sub.GraceUntil = &v
 	}
 	return &sub, nil
+}
+
+// ResolveCompanyID 將平台通用鍵 company_internal_id(uuid)反查業務 companies.id。
+// 單產品場景 internal_id ↔ id 為 1:1;多產品需伴 product_id 維度(本階段未做)。
+func (s *Store) ResolveCompanyID(ctx context.Context, internalID uuid.UUID) (int, error) {
+	var id int
+	if err := s.db.QueryRowContext(ctx,
+		`SELECT id FROM companies WHERE internal_id = $1`, internalID,
+	).Scan(&id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, errcode.SysInternal.Error(nil) // 未知租戶鍵
+		}
+		return 0, err
+	}
+	return id, nil
 }
