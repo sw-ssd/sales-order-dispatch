@@ -40,7 +40,7 @@ func (s *TenantEntitlementService) CheckLimit(
 	if err != nil {
 		return nil, errcode.SysInvalidArgument.Error(map[string]string{"field": "company_internal_id"})
 	}
-	if err := s.ent.CheckLimitRPC(ctx, internalID, req.Msg.GetProductId(), req.Msg.GetFeature(), int(req.Msg.GetDelta())); err != nil {
+	if err := s.ent.CheckLimitRPC(ctx, internalID, req.Msg.GetProductId(), req.Msg.GetFeature(), int(req.Msg.GetCurrentUsed()), int(req.Msg.GetDelta())); err != nil {
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&platformv1.CheckLimitResponse{}), nil

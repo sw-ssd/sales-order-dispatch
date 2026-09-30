@@ -16,20 +16,23 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	platformv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1"
 	platformv1connect "github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1/platformv1connect"
 )
 
 // Client 實作 internal/services.entitlementChecker 介面(CheckLimit + CheckLimitRPC)。
 type Client struct {
-	rpc platformv1connect.TenantEntitlementServiceClient
-	ent *ent.Client
+	rpc     platformv1connect.TenantEntitlementServiceClient
+	ent     *ent.Client
+	counter entitlements.Counter
 }
 
-// New 建立配額客戶端。rpc 為 platform TenantEntitlementService 的 connect client;ent 為
-// 產品側 ent client(同一請求交易內反查 company_internal_id)。
-func New(rpc platformv1connect.TenantEntitlementServiceClient, ent *ent.Client) *Client {
-	return &Client{rpc: rpc, ent: ent}
+// New 建立配額客戶端。rpc 為 platform TenantEntitlementService 的 connect client;
+// ent 為產品側 ent client(同一請求交易內反查 company_internal_id 與計數 current_used);
+// counter 為產品側計數器(同請求交易內數業務表,零漂移,見 services.NewEntitlementCounter)。
+func New(rpc platformv1connect.TenantEntitlementServiceClient, ent *ent.Client, counter entitlements.Counter) *Client {
+	return &Client{rpc: rpc, ent: ent, counter: counter}
 }
 
 // CheckLimit 為舊介面方法(productID 預設 'sales-order',單產品場景):維持 8 個 guardQuota 呼叫點
@@ -38,17 +41,24 @@ func (c *Client) CheckLimit(ctx context.Context, companyID int, feature string, 
 	return c.CheckLimitRPC(ctx, companyID, "sales-order", feature, delta)
 }
 
-// CheckLimitRPC 為 phase-2 寫路徑配額預約:反查 internal_id 後呼叫 platform CheckLimit RPC。
+// CheckLimitRPC 為 phase-2 寫路徑配額預約:反查 internal_id、同請求交易內計數 current_used 後
+// 帶往 platform CheckLimit RPC。計數在 product 側(零漂移、same-tx);platform 只做運算與訂閱狀態判定。
 func (c *Client) CheckLimitRPC(ctx context.Context, companyID int, productID, feature string, delta int) error {
 	internalID, err := c.resolveInternalID(ctx, companyID)
 	if err != nil {
 		return err
+	}
+	cur, err := c.counter.Count(ctx, companyID, feature)
+	if err != nil {
+		// 計數失敗一律 fail-closed(不得當 0 放行)。
+		return errcode.SysInternal.Wrap(err)
 	}
 	_, err = c.rpc.CheckLimit(ctx, connect.NewRequest(&platformv1.CheckLimitRequest{
 		ProductId:         productID,
 		CompanyInternalId: internalID.String(),
 		Feature:           feature,
 		Delta:             int32(delta),
+		CurrentUsed:       int32(cur),
 	}))
 	return fromConnectError(err)
 }

@@ -47,8 +47,8 @@ func main() {
 		entCache = entitlements.NewValkeyCache(valkeyClient)
 	}
 
-	// 本階段 Counter 用 nil 占位(CheckLimit 會回 SysInternal);Task 2.4 注入 platform.usage_counters
-	// 真實計數器。entCache 為 nil 時 entitlements.New 不快取(見 entitlements.Service 註解)。
+	// 本階段 Counter 不需注入:CheckLimit 由 product 側帶入 current_used(見 platformquota.Client),
+	// platform 不再數業務表;Snapshot 暫未經此服務暴露,nil 無副作用。
 	ent := entitlements.New(st, nil, entCache, 0)
 
 	mux := http.NewServeMux()

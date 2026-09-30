@@ -26,7 +26,7 @@ func TestCheckLimitHandler(t *testing.T) {
 	})
 	f.PutFeature(store.Feature{Code: entitlements.LimitSeats, Type: "integer", Unit: "席"})
 	f.PutPlan("std", []store.Entitlement{{FeatureCode: entitlements.LimitSeats, Enabled: true, Limit: ptr(int64(2))}})
-	svc := entitlements.New(f, counting{entitlements.LimitSeats: 1}, nil, 0)
+	svc := entitlements.New(f, nil, nil, 0)
 
 	h := server.NewTenantEntitlementService(svc)
 
@@ -36,6 +36,7 @@ func TestCheckLimitHandler(t *testing.T) {
 		CompanyInternalId: internalID.String(),
 		Feature:           entitlements.LimitSeats,
 		Delta:             2,
+		CurrentUsed:       1, // 超額:1 + 2 > limit 2 → PLAT-5001
 	})
 	if _, err := h.CheckLimit(context.Background(), req); err == nil {
 		t.Fatal("超額應回 PLAT-5001")
@@ -53,8 +54,3 @@ func TestCheckLimitHandler(t *testing.T) {
 	}
 }
 
-type counting map[string]int
-
-func (c counting) Count(_ context.Context, _ int, feature string) (int, error) {
-	return c[feature], nil
-}

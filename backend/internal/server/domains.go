@@ -248,7 +248,7 @@ func (s *Server) mountEntitlements(db *ent.Client) *entitlements.Service {
 // (見 platformquota.fromConnectError);開發環境需一併啟動 cmd/platform-server。
 func (s *Server) mountQuotaClient(entClient *ent.Client) *platformquota.Client {
 	rpcClient := platformv1connect.NewTenantEntitlementServiceClient(http.DefaultClient, s.cfg.Platform.ServiceURL)
-	return platformquota.New(rpcClient, entClient)
+	return platformquota.New(rpcClient, entClient, services.NewEntitlementCounter(entClient))
 }
 
 // openEntitlementCache 選用權益快取：Valkey 可用即用，否則退回行程內記憶體。

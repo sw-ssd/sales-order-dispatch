@@ -421,6 +421,7 @@ message CheckLimitRequest {
   string company_internal_id = 2; // uuid,平台通用鍵
   string feature = 3;             // 如 limit.seats
   int32  delta = 4;               // 預約增量(通常 +1)
+  int32  current_used = 5;        // 當前用量(product 側同請求交易計數後帶入;platform 不再數業務表)
 }
 
 message CheckLimitResponse {}

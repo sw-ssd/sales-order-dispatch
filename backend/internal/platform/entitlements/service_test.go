@@ -634,18 +634,18 @@ func TestCheckLimitRPC(t *testing.T) {
 	})
 	f.PutFeature(store.Feature{Code: seats, Type: "integer", Unit: "席"})
 	f.PutPlan("std", []store.Entitlement{{FeatureCode: seats, Enabled: true, Limit: ptr(int64(2))}})
-	svc := newSvc(f, map[string]int{seats: 1}) // Counter 回 1
+	svc := newSvc(f, nil)
 
-	// 未超額:1 + 1 = 2 不超上限 2。
-	if err := svc.CheckLimitRPC(context.Background(), internalID, "sales-order", seats, 1); err != nil {
+	// 未超額:currentUsed=1 + delta=1 = 2 不超上限 2。
+	if err := svc.CheckLimitRPC(context.Background(), internalID, "sales-order", seats, 1, 1); err != nil {
 		t.Fatalf("未超額應通過,卻: %v", err)
 	}
-	// 超額:1 + 2 = 3 > 2 → PLAT-5001。
-	if err := svc.CheckLimitRPC(context.Background(), internalID, "sales-order", seats, 2); err == nil {
+	// 超額:currentUsed=1 + delta=2 = 3 > 2 → PLAT-5001。
+	if err := svc.CheckLimitRPC(context.Background(), internalID, "sales-order", seats, 1, 2); err == nil {
 		t.Fatal("超額應回 PLAT-5001")
 	}
 	// product_id 可空:服務端預設 'sales-order'。
-	if err := svc.CheckLimitRPC(context.Background(), internalID, "", seats, 1); err != nil {
+	if err := svc.CheckLimitRPC(context.Background(), internalID, "", seats, 1, 1); err != nil {
 		t.Fatalf("空 product_id 應預設 sales-order 且通過,卻: %v", err)
 	}
 }

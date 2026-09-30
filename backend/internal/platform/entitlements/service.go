@@ -304,12 +304,19 @@ func (s *Service) CheckLimit(ctx context.Context, companyID int, feature string,
 	if err != nil {
 		return errcode.SysInternal.Wrap(err)
 	}
-	if cur+delta > int(*r.limit) {
+	return compareUsed(feature, cur, delta, int(*r.limit))
+}
+
+// compareUsed 在已知 used(當前用量)+delta 與 limit 間做上限判定。
+// 寫路徑(phase-2 RPC)由 product 側帶入 current_used(同請求交易計數,見 platformquota.Client),
+// platform 不再數業務表;讀投影(Snapshot)仍走 in-process counters.Count。
+func compareUsed(feature string, used, delta, limit int) error {
+	if used+delta > limit {
 		// PLAT-5001：已達上限；used／limit 進 details 供前端顯示用量。
 		return errcode.PlatformLimitExceeded.Error(map[string]string{
 			"feature": feature,
-			"used":    strconv.Itoa(cur),
-			"limit":   strconv.FormatInt(*r.limit, 10),
+			"used":    strconv.Itoa(used),
+			"limit":   strconv.Itoa(limit),
 		})
 	}
 	return nil
@@ -320,7 +327,7 @@ func (s *Service) CheckLimit(ctx context.Context, companyID int, feature string,
 // 預設 'sales-order'。內部解析為 companyID 後呼叫既有 CheckLimit(簽章用 int 主鍵),
 // 錯誤碼(PLAT-3001/5002/5001)由既有實作原樣透傳。Connect handler 在 internal/platform/server
 // 包(該處才 import proto 傳輸層),本方法保持 entitlements 為純判定邏輯、不依賴傳輸層。
-func (s *Service) CheckLimitRPC(ctx context.Context, internalID uuid.UUID, productID, feature string, delta int) error {
+func (s *Service) CheckLimitRPC(ctx context.Context, internalID uuid.UUID, productID, feature string, currentUsed, delta int) error {
 	if s.unlimited {
 		return nil
 	}
@@ -331,5 +338,22 @@ func (s *Service) CheckLimitRPC(ctx context.Context, internalID uuid.UUID, produ
 	if err != nil {
 		return err
 	}
-	return s.CheckLimit(ctx, companyID, feature, delta)
+	st, err := s.state(ctx, companyID)
+	if err != nil {
+		return errcode.SysInternal.Wrap(err)
+	}
+	if st.Status == statusNone {
+		return nil
+	}
+	if !usable(st.Status) {
+		return errcode.PlatformSubscriptionInactive.Error(nil)
+	}
+	r, known := resolveFeature(st, feature, s.now())
+	if !known || !r.enabled {
+		return errcode.PlatformFeatureNotInPlan.Error(map[string]string{"feature": feature})
+	}
+	if r.limit == nil {
+		return nil
+	}
+	return compareUsed(feature, currentUsed, delta, int(*r.limit))
 }

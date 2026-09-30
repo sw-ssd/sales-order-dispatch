@@ -3534,6 +3534,7 @@ type CheckLimitRequest struct {
 	CompanyInternalId string                 `protobuf:"bytes,2,opt,name=company_internal_id,json=companyInternalId,proto3" json:"company_internal_id,omitempty"` // uuid,平台通用鍵
 	Feature           string                 `protobuf:"bytes,3,opt,name=feature,proto3" json:"feature,omitempty"`                                                // 如 limit.seats
 	Delta             int32                  `protobuf:"varint,4,opt,name=delta,proto3" json:"delta,omitempty"`                                                   // 預約增量(通常 +1)
+	CurrentUsed       int32                  `protobuf:"varint,5,opt,name=current_used,json=currentUsed,proto3" json:"current_used,omitempty"`                    // 當前用量(product 側同請求交易計數後帶入;platform 不再數業務表)
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -3592,6 +3593,13 @@ func (x *CheckLimitRequest) GetFeature() string {
 func (x *CheckLimitRequest) GetDelta() int32 {
 	if x != nil {
 		return x.Delta
+	}
+	return 0
+}
+
+func (x *CheckLimitRequest) GetCurrentUsed() int32 {
+	if x != nil {
+		return x.CurrentUsed
 	}
 	return 0
 }
@@ -3928,13 +3936,14 @@ const file_platform_v1_platform_proto_rawDesc = "" +
 	"\tlimit_set\x18\x03 \x01(\bR\blimitSet\x12\x1f\n" +
 	"\vlimit_value\x18\x04 \x01(\x03R\n" +
 	"limitValue\x12\x12\n" +
-	"\x04used\x18\x05 \x01(\x03R\x04used\"\x92\x01\n" +
+	"\x04used\x18\x05 \x01(\x03R\x04used\"\xb5\x01\n" +
 	"\x11CheckLimitRequest\x12\x1d\n" +
 	"\n" +
 	"product_id\x18\x01 \x01(\tR\tproductId\x12.\n" +
 	"\x13company_internal_id\x18\x02 \x01(\tR\x11companyInternalId\x12\x18\n" +
 	"\afeature\x18\x03 \x01(\tR\afeature\x12\x14\n" +
-	"\x05delta\x18\x04 \x01(\x05R\x05delta\"\x14\n" +
+	"\x05delta\x18\x04 \x01(\x05R\x05delta\x12!\n" +
+	"\fcurrent_used\x18\x05 \x01(\x05R\vcurrentUsed\"\x14\n" +
 	"\x12CheckLimitResponse2\xf0\x0f\n" +
 	"\x14PlatformAdminService\x12P\n" +
 	"\vListTenants\x12\x1f.platform.v1.ListTenantsRequest\x1a .platform.v1.ListTenantsResponse\x12J\n" +
