@@ -321,6 +321,9 @@ func (s *Service) CheckLimit(ctx context.Context, companyID int, feature string,
 // 錯誤碼(PLAT-3001/5002/5001)由既有實作原樣透傳。Connect handler 在 internal/platform/server
 // 包(該處才 import proto 傳輸層),本方法保持 entitlements 為純判定邏輯、不依賴傳輸層。
 func (s *Service) CheckLimitRPC(ctx context.Context, internalID uuid.UUID, productID, feature string, delta int) error {
+	if s.unlimited {
+		return nil
+	}
 	if productID == "" {
 		productID = "sales-order"
 	}

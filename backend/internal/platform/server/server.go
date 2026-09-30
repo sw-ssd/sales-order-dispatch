@@ -6,11 +6,13 @@ package server
 
 import (
 	"context"
+	"net/http"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 
 	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	platformv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1"
 	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1/platformv1connect"
@@ -54,4 +56,15 @@ func toConnectError(err error) error {
 		return ce
 	}
 	return errcode.SysInternal.Error(nil)
+}
+
+// Register 把 TenantEntitlementService 掛到 mux(phase-2 獨立 HTTP 服務)。平台層 RPC 只需要
+// requestid interceptor(填 ErrorInfo.trace_id);不掛 dbtenant(平台 schema 不受 RLS 約束,見
+// AGENTS §17)。opts 可注入額外 interceptor(如 auth)。
+func Register(mux *http.ServeMux, ent *entitlements.Service, opts ...connect.HandlerOption) {
+	path, handler := platformv1connect.NewTenantEntitlementServiceHandler(
+		NewTenantEntitlementService(ent),
+		append([]connect.HandlerOption{connect.WithInterceptors(requestid.Interceptor())}, opts...)...,
+	)
+	mux.Handle(path, handler)
 }
