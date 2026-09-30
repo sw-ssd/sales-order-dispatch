@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package salesorder.v1;
-option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1";
+option go_package = "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1;salesorderv1";
 
 // LogisticsService:logistics 執行層首批(D32/10.1/10.4/10.12)。
 // 建檔(司機/車輛)與指派為後台動作(dept_admin 以上;rolePolicy logistics);

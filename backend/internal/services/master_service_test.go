@@ -14,8 +14,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	mastersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/masters/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/masters/v1/mastersv1connect"
+	mastersv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/masters/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/masters/v1/mastersv1connect"
 )
 
 // newMasterServer 於單一 enttest DB 掛上四個部門級主檔 service,並以指定身分注入。

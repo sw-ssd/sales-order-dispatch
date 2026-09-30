@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // 本檔守門「RLS policy 的 GUC 取值必須是 NULLIF 形式」這個不變式（2026-09-26 修，00051）。

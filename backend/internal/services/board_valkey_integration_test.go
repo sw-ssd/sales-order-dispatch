@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
-	"github.com/salesorder/sales-order-1.0/backend/third_party/cache"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/cache"
 )
 
 // TestIntegrationBoardValkeyCrossReplica 跨 replica 送達(08 5.2.2):

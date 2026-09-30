@@ -17,13 +17,13 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
-	auditv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/audit/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/audit/v1/auditv1connect"
-	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1/customersv1connect"
-	metadictv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/metadict/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/metadict/v1/metadictv1connect"
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	auditv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/audit/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/audit/v1/auditv1connect"
+	customersv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1/customersv1connect"
+	metadictv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/metadict/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/metadict/v1/metadictv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // metadictAuditRLSTables 是字典/稽核兩表(00027 必須 ENABLE + FORCE 者)。

@@ -16,7 +16,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/auditlog"
 	"github.com/salesorder/sales-order-1.0/backend/ent/fileasset"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // logoIdentity 組指定角色的身分(同 newFileMux 的注入形狀)。

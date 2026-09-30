@@ -24,11 +24,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/pressly/goose/v3"
 
+
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store/postgres"
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
 )
 
 // TestIntegrationBillingMigrationSettings 驗證 00030 的兩件事：回滾完整（只帶走 settings）、
@@ -37,17 +37,13 @@ import (
 // 而排程讀不到 system_actor_user_id 就 Fatal（G5 的原始缺陷原樣回來）。
 func TestIntegrationBillingMigrationSettings(t *testing.T) {
 	testsupport.RequiresContainer(t)
-	db, err := sql.Open("pgx", testsupport.Postgres(t))
+	dsn := testsupport.Postgres(t)
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		t.Fatalf("連線: %v", err)
 	}
 	defer func() { _ = db.Close() }()
-	if err := goose.SetDialect("postgres"); err != nil {
-		t.Fatalf("goose dialect: %v", err)
-	}
-	if err := goose.RunContext(t.Context(), "up", db, platformMigrationsDir); err != nil {
-		t.Fatalf("goose up: %v", err)
-	}
+	testsupport.MigrateUp(t, dsn)
 	ctx := t.Context()
 
 	// settings 的形狀：key 是唯一衝突目標（seed 用 ON CONFLICT (key)）、value 為非空文字、
@@ -138,9 +134,7 @@ func TestIntegrationBillingMigrationSettings(t *testing.T) {
 	// 不是「回滾該版本」—— 要執行 00030 的 Down 必須停在 29。00031＋ 的訂單／清單表
 	// 在本測試的庫上游（up 跑全量目錄），故一併被帶走；本測試只斷言 00030/00029 的語意，
 	// 不斷言訂單表去留（訂單表的 Down 由 sales_order_schema_test 覆蓋）。
-	if err := goose.RunContext(ctx, "down-to", db, platformMigrationsDir, "29"); err != nil {
-		t.Fatalf("goose down-to 29: %v", err)
-	}
+	testsupport.MigrateUpDown(t, dsn, "down-to", "29")
 	var settings, subscriptions sql.NullString
 	if err := db.QueryRowContext(ctx, `
 		SELECT to_regclass('platform.settings')::text, to_regclass('platform.subscriptions')::text`,
@@ -153,9 +147,7 @@ func TestIntegrationBillingMigrationSettings(t *testing.T) {
 	if !subscriptions.Valid {
 		t.Fatal("00030 回滾不得動到 00029 的表（platform.subscriptions 應留著）")
 	}
-	if err := goose.RunContext(ctx, "up", db, platformMigrationsDir); err != nil {
-		t.Fatalf("回滾後重新 up: %v", err)
-	}
+	testsupport.MigrateUp(t, dsn)
 	var n int
 	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM platform.settings`).Scan(&n); err != nil {
 		t.Fatalf("重新 up 後查 settings: %v", err)
@@ -168,17 +160,13 @@ func TestIntegrationBillingMigrationSettings(t *testing.T) {
 // TestIntegrationPlatformBillingStoreTx 驗證寫入路徑的交易語意、期別冪等鍵與取列邊界。
 func TestIntegrationPlatformBillingStoreTx(t *testing.T) {
 	testsupport.RequiresContainer(t)
-	db, err := sql.Open("pgx", testsupport.Postgres(t))
+	dsn := testsupport.Postgres(t)
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		t.Fatalf("連線: %v", err)
 	}
 	defer func() { _ = db.Close() }()
-	if err := goose.SetDialect("postgres"); err != nil {
-		t.Fatalf("goose dialect: %v", err)
-	}
-	if err := goose.RunContext(t.Context(), "up", db, platformMigrationsDir); err != nil {
-		t.Fatalf("goose up: %v", err)
-	}
+	testsupport.MigrateUp(t, dsn)
 	ctx := t.Context()
 	now := time.Now().UTC().Truncate(time.Microsecond)
 

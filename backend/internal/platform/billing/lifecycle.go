@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/money"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
 )

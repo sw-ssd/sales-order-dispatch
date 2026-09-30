@@ -17,8 +17,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
+	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
 )
 
 // annDBSeq 讓每個測試拿到獨立的記憶體庫(同 dsn 會共用同一顆,seed 會互相汙染)。

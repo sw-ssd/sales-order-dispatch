@@ -12,7 +12,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	authzopenfga "github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
 	auth "github.com/salesorder/sales-order-1.0/backend/internal/domain/auth"
-	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
+	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
 	ofga "github.com/salesorder/sales-order-1.0/backend/third_party/openfga"
 )
 

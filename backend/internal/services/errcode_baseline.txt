@@ -11,7 +11,6 @@ internal/handlers/auth_handler.go:internal:1
 internal/handlers/auth_password.go:AuthHandler.ChangePassword:3
 internal/handlers/auth_password.go:AuthHandler.ResetCustomerPassword:3
 internal/handlers/auth_password.go:AuthHandler.resetScopeOK:3
-internal/obs/requestid/requestid.go:stampTraceID:1
 internal/server/server.go:Server.authorizeRPC:2
 internal/server/server.go:Server.authzMiddleware:1
 internal/services/audit_service.go:AuditService.ListAuditLogs:6

@@ -37,8 +37,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // TestIntegrationDepartmentDeleteRace D1:掛載交易持有部門列鎖期間,刪除必須被擋住,且提交後

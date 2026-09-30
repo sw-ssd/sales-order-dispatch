@@ -17,9 +17,9 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
-	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1/customersv1connect"
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	customersv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1/customersv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // TestIntegrationRLSCustomersIsolation 以 app_rw 直連驗證客戶域隔離（00024 ENABLE + FORCE）：

@@ -9,7 +9,7 @@ import (
 
 	"github.com/pressly/goose/v3"
 
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // TestIntegrationNotificationsSchemaUpDown 驗證 00041:四表存在 + 部分唯一索引 +
@@ -100,9 +100,7 @@ func TestIntegrationNotificationsSchemaUpDown(t *testing.T) {
 			t.Fatalf("down-to 41 後 %s 的 RLS 應已 DISABLE", tbl)
 		}
 	}
-	if err := goose.RunContext(ctx, "up", db, "../../database/migrations"); err != nil {
-		t.Fatalf("重上: %v", err)
-	}
+	testsupport.MigrateUp(t, dsn)
 	var n int
 	if err := db.QueryRow(`SELECT count(*) FROM notifications`).Scan(&n); err != nil {
 		t.Fatalf("重上後 notifications 應存在: %v", err)
@@ -112,17 +110,5 @@ func TestIntegrationNotificationsSchemaUpDown(t *testing.T) {
 // migrateNotificationsUp 以 goose 全量 up。
 func migrateNotificationsUp(t *testing.T, dsn string) {
 	t.Helper()
-	db, err := sql.Open("pgx", dsn)
-	if err != nil {
-		t.Fatalf("sql.Open(pgx): %v", err)
-	}
-	defer func() { _ = db.Close() }()
-	if err := goose.SetDialect("postgres"); err != nil {
-		t.Fatalf("dialect: %v", err)
-	}
-	goose.SetTableName("goose_db_version")
-	goose.SetBaseFS(nil)
-	if err := goose.RunContext(t.Context(), "up", db, "../../database/migrations"); err != nil {
-		t.Fatalf("goose up: %v", err)
-	}
+	testsupport.MigrateUp(t, dsn)
 }

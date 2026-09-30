@@ -17,9 +17,9 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/processingspec"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
-	mastersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/masters/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/masters/v1/mastersv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
+	mastersv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/masters/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/masters/v1/mastersv1connect"
 )
 
 // ProcessingSpecService 實作 masters.v1.ProcessingSpecService。

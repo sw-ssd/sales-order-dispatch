@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
 )
 
 // 大小上限(3.6.1):圖片 5 MB,PDF 10 MB。

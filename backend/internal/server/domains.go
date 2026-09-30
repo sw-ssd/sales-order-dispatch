@@ -9,6 +9,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/coreos/go-oidc/v3/oidc"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 	"connectrpc.com/connect"
 
 	"github.com/go-chi/chi/v5"
@@ -21,15 +24,15 @@ import (
 	domainauth "github.com/salesorder/sales-order-1.0/backend/internal/domain/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/domain/fileassets"
 	"github.com/salesorder/sales-order-1.0/backend/internal/handlers"
-	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/billing"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
 	postgresstore "github.com/salesorder/sales-order-1.0/backend/internal/platform/store/postgres"
 	"github.com/salesorder/sales-order-1.0/backend/internal/print"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/internal/services"
-	"github.com/salesorder/sales-order-1.0/backend/third_party/cache"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/cache"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/database"
 	ofga "github.com/salesorder/sales-order-1.0/backend/third_party/openfga"
 )
@@ -314,8 +317,16 @@ func (s *Server) mountPlatformAuth() {
 		log.Printf("platform: 平台登入端點回 503（Google discovery: %v）", err)
 		return
 	}
-	oauthCfg := auth.NewGoogleOAuthConfig(clientID, s.cfg.Auth.GoogleClientSecret, redirectURL)
-	opAuth.WithOIDC(oauthCfg, auth.NewGoogleOAuthExchanger(oauthCfg), verifier)
+	oauthCfg := &oauth2.Config{
+		ClientID:     clientID,
+		ClientSecret: s.cfg.Auth.GoogleClientSecret,
+		RedirectURL:  redirectURL,
+		Scopes:       []string{oidc.ScopeOpenID, "email", "profile"},
+		Endpoint:     google.Endpoint,
+	}
+	// 兩者的 VerifyIDToken 回傳型別不同（auth.OIDCIdentity vs operatorauth.OIDCIdentity），
+	// 用 adapter 轉換；Exchange 方法集相同，auth.OAuthExchanger 可直接滿足 operatorauth.OAuthExchanger。
+	opAuth.WithOIDC(oauthCfg, auth.NewGoogleOAuthExchanger(oauthCfg), googleVerifierAdapter{verifier})
 	log.Println("platform: 平台操作者認證已掛載（OIDC ＋ operator JWT ＋ cookie）")
 }
 
@@ -355,4 +366,22 @@ func (s *Server) mountOpenFGA(db *ent.Client) {
 		log.Fatalf("openfga: 授權資料供給失敗(拒絕以零 tuple 啟動,否則全站將被擋在 /403): %v", err)
 	}
 	log.Println("openfga: 內嵌授權引擎已掛載(D32)")
+}
+
+// googleVerifierAdapter 把 auth.GoogleVerifier 轉成 operatorauth.OIDCVerifier：
+// 兩者的 VerifyIDToken 回傳型別不同，此處做欄位對映（operatorauth 不得反向依賴 internal/auth）。
+type googleVerifierAdapter struct {
+	v *auth.GoogleVerifier
+}
+
+func (a googleVerifierAdapter) VerifyIDToken(ctx context.Context, rawIDToken string) (*operatorauth.OIDCIdentity, error) {
+	ident, err := a.v.VerifyIDToken(ctx, rawIDToken)
+	if err != nil {
+		return nil, err
+	}
+	return &operatorauth.OIDCIdentity{
+		Email:        ident.Email,
+		Name:         ident.Name,
+		HostedDomain: ident.HostedDomain,
+	}, nil
 }

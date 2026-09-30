@@ -21,7 +21,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
 )
 
 const notice = "由 `go generate ./internal/errcode` 產生（來源：backend/internal/errcode/codes_*.go），請勿手改。"
@@ -38,7 +38,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	names, err := constNames(filepath.Join(root, "backend", "internal", "errcode"))
+	names, err := constNames(filepath.Join(root, "backend", "contracts", "errcode"))
 	if err != nil {
 		return err
 	}

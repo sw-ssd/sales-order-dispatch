@@ -24,12 +24,12 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/billing"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
 	platformstore "github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
-	platformv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/platform/v1"
+	platformv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1"
 )
 
 // recordingCache 記錄失效呼叫;其餘 Cache 方法為 no-op。

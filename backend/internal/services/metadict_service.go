@@ -18,9 +18,9 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/metadict"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
-	metadictv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/metadict/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/metadict/v1/metadictv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
+	metadictv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/metadict/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/metadict/v1/metadictv1connect"
 )
 
 // validMetadictTypes 為字典 type 合法值(細部 2.5.4 / Global Constraints)。

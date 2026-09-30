@@ -25,7 +25,6 @@ import (
 	"golang.org/x/oauth2"
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
 )
 
@@ -315,21 +314,27 @@ type fakeExchanger struct {
 func (f fakeExchanger) Exchange(context.Context, string) (string, error) { return f.raw, f.err }
 
 type fakeVerifier struct {
-	ident *auth.OIDCIdentity
+	ident *operatorauth.OIDCIdentity
 	err   error
 }
 
-func (f fakeVerifier) VerifyIDToken(context.Context, string) (*auth.OIDCIdentity, error) {
+func (f fakeVerifier) VerifyIDToken(context.Context, string) (*operatorauth.OIDCIdentity, error) {
 	return f.ident, f.err
 }
 
 func testOAuthConfig() *oauth2.Config {
-	return auth.NewGoogleOAuthConfig("client-id", "client-secret", "https://api.example.com/platform/auth/google/callback")
+	return &oauth2.Config{
+		ClientID:     "client-id",
+		ClientSecret: "client-secret",
+		RedirectURL:  "https://api.example.com/platform/auth/google/callback",
+		Scopes:       []string{"openid", "email", "profile"},
+		Endpoint:     oauth2.Endpoint{AuthURL: "https://accounts.google.com/o/oauth2/auth", TokenURL: "https://oauth2.googleapis.com/token"},
+	}
 }
 
 // newOIDCService 建立含 OIDC 依賴的 Service；cfg 由呼叫端補（測試 cookie 旗標需要變化）。
 // ident 為 fake verifier 回傳的 Google 身分（網域限制的受測輸入）。
-func newOIDCService(t *testing.T, st *fakeStore, cfg operatorauth.Config, ident *auth.OIDCIdentity) *operatorauth.Service {
+func newOIDCService(t *testing.T, st *fakeStore, cfg operatorauth.Config, ident *operatorauth.OIDCIdentity) *operatorauth.Service {
 	t.Helper()
 	cfg.Secret = testSecret
 	cfg.AllowedDomain = "example.com"
@@ -356,7 +361,7 @@ func TestLoginSetsStateCookieFlags(t *testing.T) {
 	for _, secure := range []bool{true, false} {
 		st := activeStore()
 		svc := newOIDCService(t, st, operatorauth.Config{CookieSecure: secure, CookieDomain: "example.com"},
-			&auth.OIDCIdentity{Email: "ops@example.com", Name: "Ops"})
+			&operatorauth.OIDCIdentity{Email: "ops@example.com", Name: "Ops"})
 		resp := httptest.NewRecorder()
 		svc.Login(resp, httptest.NewRequest(http.MethodGet, "/platform/auth/google", nil))
 
@@ -380,7 +385,7 @@ func TestLoginSetsStateCookieFlags(t *testing.T) {
 func TestCallbackSuccess(t *testing.T) {
 	st := activeStore()
 	svc := newOIDCService(t, st, operatorauth.Config{CookieSecure: true, CookieDomain: "example.com"},
-		&auth.OIDCIdentity{Email: "ops@example.com", Name: "Ops"})
+		&operatorauth.OIDCIdentity{Email: "ops@example.com", Name: "Ops"})
 
 	req := httptest.NewRequest(http.MethodGet, "/platform/auth/google/callback?state=st-1&code=code-1", nil)
 	req.AddCookie(&http.Cookie{Name: operatorauth.StateCookieName, Value: "st-1"})
@@ -414,24 +419,24 @@ func TestCallbackRejections(t *testing.T) {
 	cases := []struct {
 		name     string
 		op       *operatorauth.Operator
-		ident    *auth.OIDCIdentity
+		ident    *operatorauth.OIDCIdentity
 		state    string // 請求帶的 state；"" = 不帶 state cookie
 		query    string
 		want     int
 		auditErr error
 	}{
-		{name: "缺 state cookie", op: activeStore().op, ident: &auth.OIDCIdentity{Email: "ops@example.com"},
+		{name: "缺 state cookie", op: activeStore().op, ident: &operatorauth.OIDCIdentity{Email: "ops@example.com"},
 			query: "?state=st-1&code=c", want: http.StatusBadRequest},
-		{name: "state 不符", op: activeStore().op, ident: &auth.OIDCIdentity{Email: "ops@example.com"},
+		{name: "state 不符", op: activeStore().op, ident: &operatorauth.OIDCIdentity{Email: "ops@example.com"},
 			state: "other", query: "?state=st-1&code=c", want: http.StatusBadRequest},
-		{name: "網域不符", op: activeStore().op, ident: &auth.OIDCIdentity{Email: "ops@evil.com"},
+		{name: "網域不符", op: activeStore().op, ident: &operatorauth.OIDCIdentity{Email: "ops@evil.com"},
 			state: "st-1", query: "?state=st-1&code=c", want: http.StatusForbidden},
-		{name: "非白名單", op: nil, ident: &auth.OIDCIdentity{Email: "someone@example.com"},
+		{name: "非白名單", op: nil, ident: &operatorauth.OIDCIdentity{Email: "someone@example.com"},
 			state: "st-1", query: "?state=st-1&code=c", want: http.StatusForbidden},
 		{name: "已停用", op: &operatorauth.Operator{ID: 1, Email: "ops@example.com", Role: "admin", Status: "disabled"},
-			ident: &auth.OIDCIdentity{Email: "ops@example.com"}, state: "st-1", query: "?state=st-1&code=c",
+			ident: &operatorauth.OIDCIdentity{Email: "ops@example.com"}, state: "st-1", query: "?state=st-1&code=c",
 			want: http.StatusForbidden},
-		{name: "稽核寫入失敗則不發 cookie", op: activeStore().op, ident: &auth.OIDCIdentity{Email: "ops@example.com"},
+		{name: "稽核寫入失敗則不發 cookie", op: activeStore().op, ident: &operatorauth.OIDCIdentity{Email: "ops@example.com"},
 			state: "st-1", query: "?state=st-1&code=c", want: http.StatusInternalServerError,
 			auditErr: errors.New("db down")},
 	}

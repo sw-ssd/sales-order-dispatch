@@ -20,10 +20,10 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
-	auditv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/audit/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/audit/v1/auditv1connect"
-	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
+	auditv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/audit/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/audit/v1/auditv1connect"
+	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
 )
 
 // validAuditActions 為 audit_logs.action 合法值(對齊 §5.2 / auditlog schema)。

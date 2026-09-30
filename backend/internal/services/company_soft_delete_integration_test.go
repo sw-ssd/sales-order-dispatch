@@ -32,12 +32,12 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib" // pgx database/sql driver
 	"github.com/pressly/goose/v3"
 
+	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
-	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
 )
 
 const (
@@ -362,19 +362,7 @@ func isUniqueViolation(err error) bool {
 // migrateBusinessUp 以 cmd/migrate 相同路徑套用業務遷移(同 dialect、同目錄、同版本表)。
 func migrateBusinessUp(t *testing.T, dsn string) {
 	t.Helper()
-	db, err := sql.Open("pgx", dsn)
-	if err != nil {
-		t.Fatalf("sql.Open(pgx): %v", err)
-	}
-	defer func() { _ = db.Close() }()
-	if err := goose.SetDialect("postgres"); err != nil {
-		t.Fatalf("設定 dialect: %v", err)
-	}
-	goose.SetTableName(p2aGooseTable)
-	goose.SetBaseFS(nil)
-	if err := goose.RunContext(t.Context(), "up", db, p2aMigrationsDir); err != nil {
-		t.Fatalf("goose up: %v(00019 必須能套用於全新空庫)", err)
-	}
+	testsupport.MigrateUp(t, dsn)
 }
 
 // migrateBusinessDownTo 以 cmd/migrate 相同路徑回退至指定版本(`goose down-to` 語意:**該版本

@@ -22,9 +22,9 @@ import (
 	authzopenfga "github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
-	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 	ofga "github.com/salesorder/sales-order-1.0/backend/third_party/openfga"
 )
 

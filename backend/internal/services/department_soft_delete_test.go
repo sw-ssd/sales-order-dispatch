@@ -26,7 +26,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/auditlog"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
+	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
 )
 
 // TestDeleteDepartmentSoftDelete 00020:刪除部門為軟刪除 —— 列保留(稽核 FK 永遠有主可依、

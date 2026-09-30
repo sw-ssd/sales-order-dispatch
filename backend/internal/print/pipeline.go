@@ -13,7 +13,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
 )
 
 // Pipeline 為產線依賴(轉換器 + 儲存根目錄)。

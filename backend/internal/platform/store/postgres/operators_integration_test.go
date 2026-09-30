@@ -9,10 +9,10 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/pressly/goose/v3"
 
+
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store/postgres"
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
 )
 
 // TestIntegrationOperators 以真 PostgreSQL 驗證 operatorauth 的存取層:
@@ -23,17 +23,12 @@ import (
 func TestIntegrationOperators(t *testing.T) {
 	testsupport.RequiresContainer(t)
 	dsn := testsupport.Postgres(t)
-	if err := goose.SetDialect("postgres"); err != nil {
-		t.Fatalf("goose dialect: %v", err)
-	}
+	testsupport.MigrateUp(t, dsn)
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		t.Fatalf("連線: %v", err)
 	}
 	defer func() { _ = db.Close() }()
-	if err := goose.RunContext(t.Context(), "up", db, platformMigrationsDir); err != nil {
-		t.Fatalf("goose up: %v", err)
-	}
 
 	ctx := t.Context()
 	var opID int64

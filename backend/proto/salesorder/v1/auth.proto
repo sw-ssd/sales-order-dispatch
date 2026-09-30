@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package salesorder.v1;
-option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1";
+option go_package = "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1;salesorderv1";
 
 // 認證服務(v1):客戶密碼登入、token 換發/撤銷、員工註冊完成、QR 登入兌換。
 

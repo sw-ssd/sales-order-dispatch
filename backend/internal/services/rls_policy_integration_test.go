@@ -6,7 +6,7 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // rlsPolicyTables 為本波要求「有 FOR ALL policy 且 WITH CHECK 非空」的租戶表。

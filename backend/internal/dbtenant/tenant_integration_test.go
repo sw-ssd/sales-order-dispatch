@@ -13,11 +13,11 @@ import (
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/pressly/goose/v3"
+
 
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // TestIntegrationTenantTxCommitAndRollback 驗證 interceptor 的交易語意：
@@ -27,17 +27,12 @@ func TestIntegrationTenantTxCommitAndRollback(t *testing.T) {
 	testsupport.RequiresContainer(t)
 	dsn := testsupport.Postgres(t)
 
-	if err := goose.SetDialect("postgres"); err != nil {
-		t.Fatalf("goose dialect: %v", err)
-	}
 	sqlDB, err := sql.Open("pgx", dsn)
 	if err != nil {
 		t.Fatalf("連線: %v", err)
 	}
 	defer func() { _ = sqlDB.Close() }()
-	if err := goose.RunContext(t.Context(), "up", sqlDB, "../../database/migrations"); err != nil {
-		t.Fatalf("套用遷移: %v", err)
-	}
+	testsupport.MigrateUp(t, dsn)
 
 	// 業務 client 必須經 dbtenant.NewClient 建立(RLS 裝飾器才生效):本測試同時驗裝飾器本身。
 	client := dbtenant.NewClient(sqlDB)

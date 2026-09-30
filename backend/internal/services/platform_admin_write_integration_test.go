@@ -28,9 +28,9 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/money"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
 	platformstore "github.com/salesorder/sales-order-1.0/backend/internal/platform/store/postgres"
-	platformv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/platform/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
-	"github.com/salesorder/sales-order-1.0/backend/third_party/cache"
+	platformv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/cache"
 )
 
 // integrationSeatCounter 為席位用量的固定計數器:本檔要驗的是 RPC 的寫入路徑(欄位、交易、

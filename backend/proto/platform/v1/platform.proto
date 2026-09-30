@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package platform.v1;
-option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/proto/platform/v1;platformv1";
+option go_package = "github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1;platformv1";
 
 // 平台域(v1;D34–D39):平台營運工具(operator 身分)與租戶端權益投影。
 // 硬規則:platform.* 能力不得出現在租戶 GetAbility(S11);租戶身分不得呼叫 PlatformAdminService。

@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // openRawDBFile 開 admin 直連(RLS 探針的 fixture 寫入用)。

@@ -14,7 +14,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/logisticsdelivery"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
 )
 
 // 配送執行狀態(10.6)。

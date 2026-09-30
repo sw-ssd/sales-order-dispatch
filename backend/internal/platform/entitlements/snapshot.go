@@ -7,7 +7,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
 )
 
 // FeatureUsage 為單一 feature 的判定結果與用量（供租戶端投影；boolean 的 Used 為 0）。

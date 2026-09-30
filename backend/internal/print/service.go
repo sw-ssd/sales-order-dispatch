@@ -22,7 +22,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/salesorderitem"
 	"github.com/salesorder/sales-order-1.0/backend/ent/warehouse"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
 )
 
 // AssembleInput 為組合輸入:單據類型 + 車次 + 出貨日期 + 選用選擇器。

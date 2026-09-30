@@ -16,10 +16,10 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/config"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
-	platformv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/platform/v1"
-	platformv1connect "github.com/salesorder/sales-order-1.0/backend/internal/proto/platform/v1/platformv1connect"
-	commonv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	platformv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1"
+	platformv1connect "github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1/platformv1connect"
+	commonv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // TestIntegrationPlatformAdminMount 驗平台 RPC 的**掛載契約**：走 InitDomains() 的真 router

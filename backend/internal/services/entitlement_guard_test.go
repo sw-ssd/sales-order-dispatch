@@ -38,12 +38,12 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
-	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1/customersv1connect"
-	productsv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/products/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/products/v1/productsv1connect"
-	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
+	customersv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1/customersv1connect"
+	productsv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/products/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/products/v1/productsv1connect"
+	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
 )
 
 // guardCases 為 spec §4.5 的守衛清單：RPC → feature。**已登錄的** case 漏掛／掛錯 feature／

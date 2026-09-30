@@ -13,7 +13,7 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
-	commonv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
+	commonv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
 )
 
 const seats = entitlements.LimitSeats

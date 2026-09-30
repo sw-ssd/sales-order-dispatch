@@ -25,12 +25,12 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/productunit"
 	"github.com/salesorder/sales-order-1.0/backend/ent/warehouse"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
 	domainproducts "github.com/salesorder/sales-order-1.0/backend/internal/domain/products"
-	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
-	productsv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/products/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/products/v1/productsv1connect"
+	productsv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/products/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/products/v1/productsv1connect"
 )
 
 // ProductService 實作 products.v1.ProductService。

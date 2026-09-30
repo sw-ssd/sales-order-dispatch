@@ -15,8 +15,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	auditv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/audit/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/audit/v1/auditv1connect"
+	auditv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/audit/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/audit/v1/auditv1connect"
 )
 
 // newAuditTestServer 建立 AuditService client 並注入身分。

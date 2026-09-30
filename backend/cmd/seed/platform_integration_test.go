@@ -23,7 +23,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/config"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // platformTestConfig 為測試用 seed 設定：email 一律用 example.com（**不得**用版控裡的真實 email）。

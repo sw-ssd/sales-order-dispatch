@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
-	"github.com/salesorder/sales-order-1.0/backend/third_party/cache"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/cache"
 )
 
 func TestIntegrationValkeyCacheRoundTrip(t *testing.T) {

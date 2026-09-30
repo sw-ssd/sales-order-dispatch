@@ -17,8 +17,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/products/v1/productsv1connect"
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/products/v1/productsv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // fakePrintConv 為假 Gotenberg(回固定 PDF,計次)。

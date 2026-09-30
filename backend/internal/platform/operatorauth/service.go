@@ -10,7 +10,9 @@ package operatorauth
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/subtle"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
@@ -21,8 +23,6 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/oauth2"
-
-	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 )
 
 // CookieName 為 operator session cookie;Path 限定 /platform,與租戶 session 不重疊。
@@ -48,6 +48,35 @@ const (
 	LoginPath    = "/platform/auth/google"
 	CallbackPath = "/platform/auth/google/callback"
 )
+
+// StateTTL 為 OIDC state 的效期(一次性 CSRF token)。
+const StateTTL = 10 * time.Minute
+
+// OIDCIdentity 為 ID token 驗證通過後的身分。
+type OIDCIdentity struct {
+	Email        string
+	Name         string
+	HostedDomain string // hd claim;可對應 companies.identifier 解析所屬公司
+}
+
+// OIDCVerifier 抽象 ID token 驗證,供測試以 fake 替換。產品側以 auth.GoogleVerifier 適配。
+type OIDCVerifier interface {
+	VerifyIDToken(ctx context.Context, rawIDToken string) (*OIDCIdentity, error)
+}
+
+// OAuthExchanger 抽象授權碼交換(回傳 raw ID token),供測試以 fake 替換。
+type OAuthExchanger interface {
+	Exchange(ctx context.Context, code string) (rawIDToken string, err error)
+}
+
+// NewState 產生隨機 CSRF state(一次性)。
+func NewState() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("operatorauth: 產生 state: %w", err)
+	}
+	return hex.EncodeToString(b), nil
+}
 
 // errSecretMissing 為密鑰未設定:一律 fail-closed(空 HMAC key 等於人人可簽)。
 var errSecretMissing = errors.New("operator 密鑰未設定")
@@ -106,9 +135,9 @@ type Service struct {
 	cfg   Config
 	store Store
 	oauth *oauth2.Config
-	// exchanger／verifier 為既有 OIDC 封裝(internal/auth),可注入 fake。
-	exchanger auth.OAuthExchanger
-	verifier  auth.OIDCVerifier
+	// exchanger／verifier 為 OIDC 抽象(由產品側以 auth.GoogleVerifier 等適配),可注入 fake。
+	exchanger OAuthExchanger
+	verifier  OIDCVerifier
 }
 
 // New 建立 Service(interceptor 與 IssueToken 只需 cfg 與 store)。
@@ -120,7 +149,7 @@ func New(cfg Config, st Store) *Service {
 }
 
 // WithOIDC 補上登入端點所需依賴;未設定時 Login／Callback 回 503(不掛載即可,不 panic)。
-func (s *Service) WithOIDC(cfg *oauth2.Config, ex auth.OAuthExchanger, v auth.OIDCVerifier) *Service {
+func (s *Service) WithOIDC(cfg *oauth2.Config, ex OAuthExchanger, v OIDCVerifier) *Service {
 	s.oauth, s.exchanger, s.verifier = cfg, ex, v
 	return s
 }
@@ -207,12 +236,12 @@ func (s *Service) Login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "平台登入未設定", http.StatusServiceUnavailable)
 		return
 	}
-	state, err := auth.NewState()
+	state, err := NewState()
 	if err != nil {
 		http.Error(w, "無法產生 OIDC state", http.StatusInternalServerError)
 		return
 	}
-	s.setStateCookie(w, state, int(auth.StateTTL.Seconds()))
+	s.setStateCookie(w, state, int(StateTTL.Seconds()))
 	http.Redirect(w, r, s.oauth.AuthCodeURL(state), http.StatusFound)
 }
 

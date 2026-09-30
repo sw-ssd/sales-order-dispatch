@@ -16,7 +16,7 @@ import (
 	"github.com/alexedwards/scs/v2/memstore"
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/pressly/goose/v3"
+
 
 	"github.com/salesorder/sales-order-1.0/backend/config"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
@@ -27,10 +27,10 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/handlers"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
-	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
+	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/internal/services"
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 	ofga "github.com/salesorder/sales-order-1.0/backend/third_party/openfga"
 )
 
@@ -52,20 +52,11 @@ import (
 // coreMigrationsDir 與 cmd/migrate 同路徑(go test 以套件目錄為 cwd)。
 const coreMigrationsDir = "../../database/migrations"
 
-// migrateCoreUp 以 cmd/migrate 相同路徑套用全部遷移(含 00024~00028 的 ENABLE)。
+
+// migrateCoreUp 套用全部遷移(業務 + 平台,同 testsupport.MigrateUp)。
 func migrateCoreUp(t *testing.T, dsn string) {
 	t.Helper()
-	db, err := sql.Open("pgx", dsn)
-	if err != nil {
-		t.Fatalf("sql.Open(pgx): %v", err)
-	}
-	defer func() { _ = db.Close() }()
-	if err := goose.SetDialect("postgres"); err != nil {
-		t.Fatalf("設定 dialect: %v", err)
-	}
-	if err := goose.RunContext(t.Context(), "up", db, coreMigrationsDir); err != nil {
-		t.Fatalf("goose up: %v", err)
-	}
+	testsupport.MigrateUp(t, dsn)
 }
 
 // coreOpenDB 開一條 database/sql 連線(admin/owner:superuser 不受 RLS 約束,供夾具與真值查詢)。

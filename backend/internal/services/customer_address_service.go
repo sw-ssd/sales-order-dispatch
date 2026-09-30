@@ -16,7 +16,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/customer"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customeraddress"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
+	customersv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1"
 )
 
 // validAddressType 判斷地址類型是否為合法列舉值。

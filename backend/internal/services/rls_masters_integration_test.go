@@ -16,9 +16,9 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	mastersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/masters/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/masters/v1/mastersv1connect"
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	mastersv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/masters/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/masters/v1/mastersv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // mastersRLSTables 是本域四張主檔表的 fixture 寫入語句(company_id 由夾具決定;created_at 等

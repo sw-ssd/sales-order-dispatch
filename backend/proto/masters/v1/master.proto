@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package masters.v1;
-option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/proto/masters/v1;mastersv1";
+option go_package = "github.com/salesorder/sales-order-1.0/backend/contracts/proto/masters/v1;mastersv1";
 
 import "google/protobuf/struct.proto";
 import "salesorder/v1/common.proto";

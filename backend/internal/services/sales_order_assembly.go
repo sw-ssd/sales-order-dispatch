@@ -14,8 +14,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/product"
 	"github.com/salesorder/sales-order-1.0/backend/ent/productunit"
 	domainproducts "github.com/salesorder/sales-order-1.0/backend/internal/domain/products"
-	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
-	salesorderv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
+	salesorderv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
 )
 
 // isCustomerIdentity 呼叫者是否為客戶帳號/customer 主帳號(守衛 4.2.3 用)。

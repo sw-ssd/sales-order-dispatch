@@ -12,7 +12,7 @@ import (
 
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
-	"github.com/pressly/goose/v3"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 )
@@ -23,19 +23,7 @@ func itoaFile(n int) string { return strconv.Itoa(n) }
 // migrateBusinessUpFile 以 goose 全量 up(與 services 同路徑同版本表)。
 func migrateBusinessUpFile(t *testing.T, dsn string) {
 	t.Helper()
-	db, err := sql.Open("pgx", dsn)
-	if err != nil {
-		t.Fatalf("sql.Open(pgx): %v", err)
-	}
-	defer func() { _ = db.Close() }()
-	if err := goose.SetDialect("postgres"); err != nil {
-		t.Fatalf("dialect: %v", err)
-	}
-	goose.SetTableName("goose_db_version")
-	goose.SetBaseFS(nil)
-	if err := goose.RunContext(t.Context(), "up", db, "../../../database/migrations"); err != nil {
-		t.Fatalf("goose up: %v", err)
-	}
+	testsupport.MigrateUp(t, dsn)
 }
 
 // openPGEntClientFile 以 goose 建出的庫開 ent client(不重建 schema)。

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
-	productsv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/products/v1"
+	productsv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/products/v1"
 )
 
 // dateOf 組日期(列印 target_date 用)。

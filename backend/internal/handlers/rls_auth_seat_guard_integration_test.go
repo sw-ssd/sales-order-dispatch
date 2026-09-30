@@ -26,10 +26,10 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/handlers"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	postgresstore "github.com/salesorder/sales-order-1.0/backend/internal/platform/store/postgres"
-	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
+	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/internal/services"
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // 本檔驗 auth handler 的兩條**無身分建帳號路徑**（OIDC 首次登入、RegisterComplete 的

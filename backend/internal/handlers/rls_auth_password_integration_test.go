@@ -14,7 +14,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/alexedwards/scs/v2/memstore"
 	_ "github.com/jackc/pgx/v5/stdlib" // pgx 的 database/sql driver
-	"github.com/pressly/goose/v3"
+
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
@@ -23,9 +23,9 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/handlers"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
-	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // 本檔為 A3(改密碼／臨時密碼)在 **RLS 真正生效** 下的探針:
@@ -293,14 +293,7 @@ func callAuthErr(t *testing.T, fn func(ctx context.Context) error) error {
 // migrateAuthBusinessUp 以與 cmd/migrate 相同路徑套用業務遷移(同 dialect、同目錄、同版本表)。
 func migrateAuthBusinessUp(t *testing.T, dsn string) {
 	t.Helper()
-	db := authOpenDB(t, dsn)
-	defer func() { _ = db.Close() }()
-	if err := goose.SetDialect("postgres"); err != nil {
-		t.Fatalf("goose dialect: %v", err)
-	}
-	if err := goose.RunContext(t.Context(), "up", db, "../../database/migrations"); err != nil {
-		t.Fatalf("套用遷移: %v", err)
-	}
+	testsupport.MigrateUp(t, dsn)
 }
 
 // authOpenDB 開一條 database/sql 連線(admin/owner;superuser 不受 RLS 約束,供夾具與真值查詢)。

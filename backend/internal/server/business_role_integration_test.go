@@ -10,7 +10,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/salesorder/sales-order-1.0/backend/config"
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // TestIntegrationBusinessRoleMustNotBypassRLS 釘住「整個 RLS 計畫的前提」:production 的**業務連線**

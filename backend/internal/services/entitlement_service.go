@@ -17,11 +17,11 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
-	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
-	platformv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/platform/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/platform/v1/platformv1connect"
+	platformv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1/platformv1connect"
 )
 
 // TenantEntitlementService 為租戶端權益投影。

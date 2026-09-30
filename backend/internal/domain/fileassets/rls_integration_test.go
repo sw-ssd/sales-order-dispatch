@@ -5,7 +5,7 @@ package fileassets_test
 import (
 	"testing"
 
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // TestIntegrationRLSFileAssetsIsolation 以 app_rw 直連驗證檔案域隔離

@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // TestIntegrationRLSPrintRecordsIsolation 以 app_rw 直連驗證列印域隔離

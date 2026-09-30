@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // TestIntegrationSavedURLIsDownloadable 守住「DB 裡的 url 指得到東西」這個契約:

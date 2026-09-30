@@ -8,7 +8,7 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
+	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
 )
 
 // TestServiceLayerPermissionOnDBRolePermissions 驗證服務層的逐動作授權以 DB

@@ -14,26 +14,20 @@
 package main
 
 import (
-	"context"
+
 	"database/sql"
 	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib" // pgx database/sql driver
-	"github.com/pressly/goose/v3"
 
+
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/database"
 )
-
-// seedTestMigrationsDir 相對套件目錄(go test 以套件目錄為 cwd),與 cmd/migrate 同路徑。
-const seedTestMigrationsDir = "../../database/migrations"
-
-// seedTestGooseTable 為業務遷移版本表(cmd/migrate 未改動 goose 預設值)。
-const seedTestGooseTable = "goose_db_version"
 
 // TestIntegrationSeedUnderRLS 驗「seed 在 RLS 全開後仍能完成」及「不走系統範圍就會壞」。
 func TestIntegrationSeedUnderRLS(t *testing.T) {
@@ -123,22 +117,10 @@ func TestIntegrationSeedUnderRLS(t *testing.T) {
 	})
 }
 
-// migrateForSeed 以 cmd/migrate 相同路徑套用業務遷移(同 dialect、同目錄、同版本表)。
+// migrateForSeed 套用全部遷移(業務 + 平台,同 testsupport.MigrateUp),以取得完整 schema。
 func migrateForSeed(t *testing.T, dsn string) {
 	t.Helper()
-	db, err := sql.Open("pgx", dsn)
-	if err != nil {
-		t.Fatalf("sql.Open(pgx): %v", err)
-	}
-	defer func() { _ = db.Close() }()
-	if err := goose.SetDialect("postgres"); err != nil {
-		t.Fatalf("設定 dialect: %v", err)
-	}
-	goose.SetTableName(seedTestGooseTable)
-	goose.SetBaseFS(nil)
-	if err := goose.RunContext(context.Background(), "up", db, seedTestMigrationsDir); err != nil {
-		t.Fatalf("goose up: %v", err)
-	}
+	testsupport.MigrateUp(t, dsn)
 }
 
 // openSeedAdmin 以 admin(owner／superuser)連線取真值;superuser 不受 RLS 影響。

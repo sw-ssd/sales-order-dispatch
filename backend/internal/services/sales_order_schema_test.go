@@ -5,7 +5,7 @@ package services
 import (
 	"testing"
 
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // TestIntegrationSalesOrdersSchemaUpDown 驗 00031 的表／索引／policy／GRANT 全套存在，

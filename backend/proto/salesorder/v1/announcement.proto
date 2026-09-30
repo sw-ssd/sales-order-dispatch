@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package salesorder.v1;
-option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1;salesorderv1";
+option go_package = "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1;salesorderv1";
 
 // AnnouncementService:公告 CMS(spec announcements)。
 // 三型別(banner/news/article)、三層發佈範圍(company/department 皆空 = 全系統)、

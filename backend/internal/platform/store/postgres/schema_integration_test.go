@@ -21,13 +21,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/pressly/goose/v3"
 
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
-
-// platformMigrationsDir 為業務遷移目錄(與 cmd/migrate 同一份檔案、同一張版本表)。
-const platformMigrationsDir = "../../../../database/migrations"
 
 // platformTables 為 00029 應建出的完整表集(平台域介面,缺一即後續 store 全滅)。
 var platformTables = []string{
@@ -41,17 +37,12 @@ var platformTables = []string{
 func TestIntegrationPlatformSchema(t *testing.T) {
 	testsupport.RequiresContainer(t)
 	dsn := testsupport.Postgres(t)
-	if err := goose.SetDialect("postgres"); err != nil {
-		t.Fatalf("goose dialect: %v", err)
-	}
+	testsupport.MigrateUp(t, dsn)
 	admin, err := sql.Open("pgx", dsn)
 	if err != nil {
 		t.Fatalf("連線: %v", err)
 	}
 	defer func() { _ = admin.Close() }()
-	if err := goose.RunContext(t.Context(), "up", admin, platformMigrationsDir); err != nil {
-		t.Fatalf("goose up: %v", err)
-	}
 
 	assertPlatformTables(t, admin)
 	assertPlatformIndexes(t, admin)
@@ -148,22 +139,15 @@ func TestIntegrationPlatformSchema(t *testing.T) {
 func TestIntegrationPlatformSchemaDown(t *testing.T) {
 	testsupport.RequiresContainer(t)
 	dsn := testsupport.Postgres(t)
-	if err := goose.SetDialect("postgres"); err != nil {
-		t.Fatalf("goose dialect: %v", err)
-	}
 	admin, err := sql.Open("pgx", dsn)
 	if err != nil {
 		t.Fatalf("連線: %v", err)
 	}
 	defer func() { _ = admin.Close() }()
-	if err := goose.RunContext(t.Context(), "up", admin, platformMigrationsDir); err != nil {
-		t.Fatalf("goose up: %v", err)
-	}
+	testsupport.MigrateUp(t, dsn)
 	assertPlatformTables(t, admin)
 
-	if err := goose.RunContext(t.Context(), "down-to", admin, platformMigrationsDir, "0"); err != nil {
-		t.Fatalf("goose down-to 0: %v", err)
-	}
+	testsupport.MigrateUpDown(t, dsn, "down-to", "0")
 	var objects int
 	if err := admin.QueryRow(
 		`SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -183,9 +167,7 @@ func TestIntegrationPlatformSchemaDown(t *testing.T) {
 	}
 
 	// 回滾鏈可重複:回滾後重新 up 必須完整回來。
-	if err := goose.RunContext(t.Context(), "up", admin, platformMigrationsDir); err != nil {
-		t.Fatalf("回滾後重新 up: %v", err)
-	}
+	testsupport.MigrateUp(t, dsn)
 	assertPlatformTables(t, admin)
 }
 

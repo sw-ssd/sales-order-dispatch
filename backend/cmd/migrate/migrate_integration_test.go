@@ -37,7 +37,7 @@ import (
 	"github.com/pressly/goose/v3"
 
 	"github.com/salesorder/sales-order-1.0/backend/config"
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 	ofga "github.com/salesorder/sales-order-1.0/backend/third_party/openfga"
 )
 
@@ -48,6 +48,10 @@ const (
 	businessGooseTable = "goose_db_version"
 	// openfgaTables 為 OpenFGA postgres schema 的核心表(assets/migrations/postgres/)。
 	openfgaTables = "tuple, authorization_model, store, assertion, changelog"
+	// platformMigrationsDir 為平台域遷移目錄(與 cmd/migrate 第二階段同路徑)。
+	testPlatformMigrationsDir = "../../database/platform_migrations"
+	// platformGooseTable 為平台域遷移的獨立版本表(拆分後與業務互不干擾)。
+	platformGooseTable = "platform_goose_db_version"
 )
 
 // TestIntegrationFreshDatabaseMigrateUp F1 迴歸:全新資料庫上 `migrate up` 必須成功。
@@ -538,6 +542,62 @@ func businessUpTo(t *testing.T, dsn string, version int64) error {
 	goose.SetTableName(businessGooseTable)
 	goose.SetBaseFS(nil)
 	return goose.UpToContext(t.Context(), db, migrationsDir, version)
+}
+// platformUp 以 cmd/migrate 相同路徑套用平台域遷移:獨立目錄、獨立版本表。
+func platformUp(t *testing.T, dsn string) error {
+	t.Helper()
+	db := openDB(t, dsn)
+	defer func() { _ = db.Close() }()
+	if err := goose.SetDialect("postgres"); err != nil {
+		t.Fatalf("設定 dialect: %v", err)
+	}
+	goose.SetTableName(platformGooseTable)
+	goose.SetBaseFS(nil)
+	return goose.RunContext(context.Background(), "up", db, testPlatformMigrationsDir)
+}
+// TestIntegrationPlatformMigrateUp 驗收平台域遷移拆分:獨立目錄 + 獨立版本表
+// (platform_goose_db_version) 記錄 00029/00030/00054,且 platform schema 表確實建出。
+func TestIntegrationPlatformMigrateUp(t *testing.T) {
+	testsupport.RequiresContainer(t)
+	dsn := testsupport.Postgres(t)
+
+	// 業務先 up(確認拆分後兩套遷移互不干擾)。
+	if err := businessUp(t, dsn); err != nil {
+		t.Fatalf("業務 migrate up 必須成功: %v", err)
+	}
+	if err := platformUp(t, dsn); err != nil {
+		t.Fatalf("平台 migrate up 必須成功: %v", err)
+	}
+
+	db := openDB(t, dsn)
+	defer func() { _ = db.Close() }()
+
+	// 平台版本表獨立存在,記錄 00029/00030/00054。
+	got := versionRows(t, db, platformGooseTable)
+	for _, want := range []string{"29:true", "30:true", "54:true"} {
+		if !slices.Contains(got, want) {
+			t.Fatalf("平台版本表 %s 應含 %s,got %v", platformGooseTable, want, got)
+		}
+	}
+
+	// 業務版本表不受平台遷移影響(互不干擾)。
+	biz := versionRows(t, db, businessGooseTable)
+	if slices.Contains(biz, "29:true") || slices.Contains(biz, "30:true") || slices.Contains(biz, "54:true") {
+		t.Fatalf("業務版本表 %s 不得含平台遷移版本,got %v", businessGooseTable, biz)
+	}
+
+	// platform schema 的表確實由平台遷移建出。
+	for _, tbl := range []string{"plans", "subscriptions", "events", "operators", "audit_logs"} {
+		var exists string
+		if err := db.QueryRow(
+			`SELECT to_regclass('platform.' || $1)::text`, tbl,
+		).Scan(&exists); err != nil {
+			t.Fatalf("查 platform.%s: %v", tbl, err)
+		}
+		if exists == "" {
+			t.Fatalf("平台遷移應建出 platform.%s", tbl)
+		}
+	}
 }
 
 // businessDownTo 以 cmd/migrate 相同路徑回退業務遷移到指定版本(goose down-to:該版本保留)。

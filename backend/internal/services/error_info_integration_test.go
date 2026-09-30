@@ -8,8 +8,8 @@ import (
 
 	"connectrpc.com/connect"
 
-	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // TestIntegrationErrorInfoReachesClient：以 connect client 發出必然失敗的請求，斷言

@@ -23,10 +23,10 @@ import (
 	"github.com/google/uuid"
 	"connectrpc.com/connect"
 
-	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/billing"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
-	commonv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
+	commonv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
 )
 
 // amountCents 為收款測試的固定期別金額：1950.00 元（月費 1500 ＋ 150 × 3 席），

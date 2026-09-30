@@ -21,8 +21,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
-	platformv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/platform/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/platform/v1/platformv1connect"
+	platformv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1/platformv1connect"
 )
 
 // seatCounter 回傳固定用量（模擬「公司 42 已有 3 席」）。

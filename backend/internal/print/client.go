@@ -12,7 +12,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
 )
 
 // 轉換參數(固定):A4、合理邊距、背景圖形開、等待網路靜止。

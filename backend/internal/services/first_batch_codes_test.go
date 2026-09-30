@@ -7,8 +7,8 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	customersv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1"
-	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
+	customersv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1"
+	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
 )
 
 // errorInfoOf 由 connect error 取 ErrorInfo detail（本套件共用的唯一解析點：碼／訊息／

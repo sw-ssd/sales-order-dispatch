@@ -20,8 +20,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
-	salesorderv1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
+	salesorderv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
 )
 
 // ReviewReturnRequest 審核(approved/rejected + 樂觀鎖;同交易寫稽核)。

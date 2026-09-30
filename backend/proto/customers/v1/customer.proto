@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package customers.v1;
-option go_package = "github.com/salesorder/sales-order-1.0/backend/internal/proto/customers/v1;customersv1";
+option go_package = "github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1;customersv1";
 
 import "salesorder/v1/common.proto";
 

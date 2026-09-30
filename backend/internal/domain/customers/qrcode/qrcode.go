@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
 )
 
 // Purpose 為 token 用途固定值(防與其他簽章 token 混用)。

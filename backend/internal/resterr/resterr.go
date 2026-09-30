@@ -10,7 +10,7 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
 )
 
 // Write 以 Connect 錯誤協定寫出（code/message/details；trace_id 由 requestid.Stamp 補）。

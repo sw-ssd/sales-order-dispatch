@@ -5,7 +5,7 @@ package services
 import (
 	"testing"
 
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // TestIntegrationRLSOrdersIsolation 以 app_rw 直連驗證訂單域隔離（00032 ENABLE + FORCE）：

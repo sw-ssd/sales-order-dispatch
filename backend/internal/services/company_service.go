@@ -27,11 +27,11 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/sales-order-1.0/backend/internal/errcode"
-	"github.com/salesorder/sales-order-1.0/backend/internal/obs/requestid"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
-	v1 "github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1"
-	"github.com/salesorder/sales-order-1.0/backend/internal/proto/salesorder/v1/salesorderv1connect"
+	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
 
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -361,7 +361,7 @@ func (s *CompanyService) RotateCompanyExternalID(ctx context.Context, req *conne
 	}
 	tx, ok := dbtenant.TxFrom(ctx)
 	if !ok {
-		return nil, connect.NewError(connect.CodeInternal, errors.New("缺少租戶交易(context)"))
+		return nil, errcode.SysInternal.Error(nil)
 	}
 	db := tx.Client()
 	exists, err := db.Company.Query().Where(company.ID(id), company.DeletedAtIsNil()).Only(ctx)

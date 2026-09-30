@@ -21,17 +21,17 @@ package billing_test
 import (
 	"context"
 	"database/sql"
+
 	"testing"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/pressly/goose/v3"
 
+	"github.com/salesorder/sales-order-1.0/backend/contracts/cache"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/billing"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store/postgres"
-	"github.com/salesorder/sales-order-1.0/backend/internal/testsupport"
-	"github.com/salesorder/sales-order-1.0/backend/third_party/cache"
 )
 
 // zeroCounter 為計數器替身：本測試只判定 boolean 功能，用量不會被用到。
@@ -47,17 +47,12 @@ const (
 func TestIntegrationSubscriptionStateChangeInvalidatesCache(t *testing.T) {
 	testsupport.RequiresContainer(t)
 	dsn := testsupport.Postgres(t)
-	if err := goose.SetDialect("postgres"); err != nil {
-		t.Fatalf("goose dialect: %v", err)
-	}
+	testsupport.MigrateUp(t, dsn)
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		t.Fatalf("連線: %v", err)
 	}
 	defer func() { _ = db.Close() }()
-	if err := goose.RunContext(t.Context(), "up", db, "../../../database/migrations"); err != nil {
-		t.Fatalf("goose up: %v", err)
-	}
 	valkeyAddr := testsupport.Valkey(t)
 	client := cache.NewClient(valkeyAddr)
 	defer func() { _ = client.Close() }()
