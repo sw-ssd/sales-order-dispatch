@@ -101,6 +101,9 @@ const (
 	// TenantEntitlementServiceGetTenantEntitlementsProcedure is the fully-qualified name of the
 	// TenantEntitlementService's GetTenantEntitlements RPC.
 	TenantEntitlementServiceGetTenantEntitlementsProcedure = "/platform.v1.TenantEntitlementService/GetTenantEntitlements"
+	// TenantEntitlementServiceCheckLimitProcedure is the fully-qualified name of the
+	// TenantEntitlementService's CheckLimit RPC.
+	TenantEntitlementServiceCheckLimitProcedure = "/platform.v1.TenantEntitlementService/CheckLimit"
 )
 
 // PlatformAdminServiceClient is a client for the platform.v1.PlatformAdminService service.
@@ -706,6 +709,10 @@ func (UnimplementedPlatformAdminServiceHandler) ListSubscriptionPeriods(context.
 // TenantEntitlementServiceClient is a client for the platform.v1.TenantEntitlementService service.
 type TenantEntitlementServiceClient interface {
 	GetTenantEntitlements(context.Context, *connect.Request[v1.GetTenantEntitlementsRequest]) (*connect.Response[v1.GetTenantEntitlementsResponse], error)
+	// CheckLimit:寫路徑配額預約。product_id 單產品場景恆為 'sales-order'(由服務端預設)。
+	// company_internal_id 為平台通用 uuid 鍵（三鍵策略）,不洩漏業務 companies.id。
+	// 超額回 PLAT-5001（feature/used/limit）;訂閱 none 回 PLAT-3001。
+	CheckLimit(context.Context, *connect.Request[v1.CheckLimitRequest]) (*connect.Response[v1.CheckLimitResponse], error)
 }
 
 // NewTenantEntitlementServiceClient constructs a client for the
@@ -725,12 +732,19 @@ func NewTenantEntitlementServiceClient(httpClient connect.HTTPClient, baseURL st
 			connect.WithSchema(tenantEntitlementServiceMethods.ByName("GetTenantEntitlements")),
 			connect.WithClientOptions(opts...),
 		),
+		checkLimit: connect.NewClient[v1.CheckLimitRequest, v1.CheckLimitResponse](
+			httpClient,
+			baseURL+TenantEntitlementServiceCheckLimitProcedure,
+			connect.WithSchema(tenantEntitlementServiceMethods.ByName("CheckLimit")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // tenantEntitlementServiceClient implements TenantEntitlementServiceClient.
 type tenantEntitlementServiceClient struct {
 	getTenantEntitlements *connect.Client[v1.GetTenantEntitlementsRequest, v1.GetTenantEntitlementsResponse]
+	checkLimit            *connect.Client[v1.CheckLimitRequest, v1.CheckLimitResponse]
 }
 
 // GetTenantEntitlements calls platform.v1.TenantEntitlementService.GetTenantEntitlements.
@@ -738,10 +752,19 @@ func (c *tenantEntitlementServiceClient) GetTenantEntitlements(ctx context.Conte
 	return c.getTenantEntitlements.CallUnary(ctx, req)
 }
 
+// CheckLimit calls platform.v1.TenantEntitlementService.CheckLimit.
+func (c *tenantEntitlementServiceClient) CheckLimit(ctx context.Context, req *connect.Request[v1.CheckLimitRequest]) (*connect.Response[v1.CheckLimitResponse], error) {
+	return c.checkLimit.CallUnary(ctx, req)
+}
+
 // TenantEntitlementServiceHandler is an implementation of the platform.v1.TenantEntitlementService
 // service.
 type TenantEntitlementServiceHandler interface {
 	GetTenantEntitlements(context.Context, *connect.Request[v1.GetTenantEntitlementsRequest]) (*connect.Response[v1.GetTenantEntitlementsResponse], error)
+	// CheckLimit:寫路徑配額預約。product_id 單產品場景恆為 'sales-order'(由服務端預設)。
+	// company_internal_id 為平台通用 uuid 鍵（三鍵策略）,不洩漏業務 companies.id。
+	// 超額回 PLAT-5001（feature/used/limit）;訂閱 none 回 PLAT-3001。
+	CheckLimit(context.Context, *connect.Request[v1.CheckLimitRequest]) (*connect.Response[v1.CheckLimitResponse], error)
 }
 
 // NewTenantEntitlementServiceHandler builds an HTTP handler from the service implementation. It
@@ -757,10 +780,18 @@ func NewTenantEntitlementServiceHandler(svc TenantEntitlementServiceHandler, opt
 		connect.WithSchema(tenantEntitlementServiceMethods.ByName("GetTenantEntitlements")),
 		connect.WithHandlerOptions(opts...),
 	)
+	tenantEntitlementServiceCheckLimitHandler := connect.NewUnaryHandler(
+		TenantEntitlementServiceCheckLimitProcedure,
+		svc.CheckLimit,
+		connect.WithSchema(tenantEntitlementServiceMethods.ByName("CheckLimit")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/platform.v1.TenantEntitlementService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case TenantEntitlementServiceGetTenantEntitlementsProcedure:
 			tenantEntitlementServiceGetTenantEntitlementsHandler.ServeHTTP(w, r)
+		case TenantEntitlementServiceCheckLimitProcedure:
+			tenantEntitlementServiceCheckLimitHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -772,4 +803,8 @@ type UnimplementedTenantEntitlementServiceHandler struct{}
 
 func (UnimplementedTenantEntitlementServiceHandler) GetTenantEntitlements(context.Context, *connect.Request[v1.GetTenantEntitlementsRequest]) (*connect.Response[v1.GetTenantEntitlementsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("platform.v1.TenantEntitlementService.GetTenantEntitlements is not implemented"))
+}
+
+func (UnimplementedTenantEntitlementServiceHandler) CheckLimit(context.Context, *connect.Request[v1.CheckLimitRequest]) (*connect.Response[v1.CheckLimitResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("platform.v1.TenantEntitlementService.CheckLimit is not implemented"))
 }

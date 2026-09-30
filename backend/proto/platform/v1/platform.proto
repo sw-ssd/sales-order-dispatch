@@ -411,4 +411,16 @@ message Usage {
 // TenantEntitlementService:租戶端權益投影(租戶 session;唯讀)。
 service TenantEntitlementService {
   rpc GetTenantEntitlements(GetTenantEntitlementsRequest) returns (GetTenantEntitlementsResponse);
+  // CheckLimit:寫路徑配額預約。product_id 單產品場景恆為 'sales-order'(由服務端預設)。
+  // company_internal_id 為平台通用 uuid 鍵（三鍵策略）,不洩漏業務 companies.id。
+  // 超額回 PLAT-5001（feature/used/limit）;訂閱 none 回 PLAT-3001。
+  rpc CheckLimit(CheckLimitRequest) returns (CheckLimitResponse);
 }
+message CheckLimitRequest {
+  string product_id = 1;          // 單產品場景可空,服務端預設 'sales-order'
+  string company_internal_id = 2; // uuid,平台通用鍵
+  string feature = 3;             // 如 limit.seats
+  int32  delta = 4;               // 預約增量(通常 +1)
+}
+
+message CheckLimitResponse {}

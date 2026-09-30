@@ -1700,6 +1700,57 @@ export declare type Usage = Message<"platform.v1.Usage"> & {
 export declare const UsageSchema: GenMessage<Usage>;
 
 /**
+ * @generated from message platform.v1.CheckLimitRequest
+ */
+export declare type CheckLimitRequest = Message<"platform.v1.CheckLimitRequest"> & {
+  /**
+   * 單產品場景可空,服務端預設 'sales-order'
+   *
+   * @generated from field: string product_id = 1;
+   */
+  productId: string;
+
+  /**
+   * uuid,平台通用鍵
+   *
+   * @generated from field: string company_internal_id = 2;
+   */
+  companyInternalId: string;
+
+  /**
+   * 如 limit.seats
+   *
+   * @generated from field: string feature = 3;
+   */
+  feature: string;
+
+  /**
+   * 預約增量(通常 +1)
+   *
+   * @generated from field: int32 delta = 4;
+   */
+  delta: number;
+};
+
+/**
+ * Describes the message platform.v1.CheckLimitRequest.
+ * Use `create(CheckLimitRequestSchema)` to create a new message.
+ */
+export declare const CheckLimitRequestSchema: GenMessage<CheckLimitRequest>;
+
+/**
+ * @generated from message platform.v1.CheckLimitResponse
+ */
+export declare type CheckLimitResponse = Message<"platform.v1.CheckLimitResponse"> & {
+};
+
+/**
+ * Describes the message platform.v1.CheckLimitResponse.
+ * Use `create(CheckLimitResponseSchema)` to create a new message.
+ */
+export declare const CheckLimitResponseSchema: GenMessage<CheckLimitResponse>;
+
+/**
  * PlatformAdminService:平台營運(operator session;租戶身分一律拒絕)。
  *
  * @generated from service platform.v1.PlatformAdminService
@@ -1896,6 +1947,18 @@ export declare const TenantEntitlementService: GenService<{
     methodKind: "unary";
     input: typeof GetTenantEntitlementsRequestSchema;
     output: typeof GetTenantEntitlementsResponseSchema;
+  },
+  /**
+   * CheckLimit:寫路徑配額預約。product_id 單產品場景恆為 'sales-order'(由服務端預設)。
+   * company_internal_id 為平台通用 uuid 鍵（三鍵策略）,不洩漏業務 companies.id。
+   * 超額回 PLAT-5001（feature/used/limit）;訂閱 none 回 PLAT-3001。
+   *
+   * @generated from rpc platform.v1.TenantEntitlementService.CheckLimit
+   */
+  checkLimit: {
+    methodKind: "unary";
+    input: typeof CheckLimitRequestSchema;
+    output: typeof CheckLimitResponseSchema;
   },
 }>;
 
