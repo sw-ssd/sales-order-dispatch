@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
 	"github.com/google/uuid"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
 )
 

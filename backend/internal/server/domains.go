@@ -9,13 +9,17 @@ import (
 	"net/http"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
-	"connectrpc.com/connect"
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/salesorder/sales-order-1.0/backend/contracts/cache"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1/platformv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
@@ -24,15 +28,13 @@ import (
 	domainauth "github.com/salesorder/sales-order-1.0/backend/internal/domain/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/domain/fileassets"
 	"github.com/salesorder/sales-order-1.0/backend/internal/handlers"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/billing"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
 	postgresstore "github.com/salesorder/sales-order-1.0/backend/internal/platform/store/postgres"
 	"github.com/salesorder/sales-order-1.0/backend/internal/print"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/internal/services"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/cache"
+	"github.com/salesorder/sales-order-1.0/backend/internal/services/platformquota"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/database"
 	ofga "github.com/salesorder/sales-order-1.0/backend/third_party/openfga"
 )
@@ -142,6 +144,11 @@ func (s *Server) mountAuth() {
 	// 權益守衛（平台域）先建立再掛載業務服務與 auth handler：建構子要求表態，漏掛即編譯失敗；
 	// auth handler 的兩條建帳號路徑（OIDC 首次登入、RegisterComplete）也吃它做席位守衛，
 	// 漏注入會在執行期 fail-closed 擋住註冊（見 handlers.guardSeats），故此處必須先建立。
+	// phase-2 獨立服務:guardQuota 寫路徑經平台 RPC 客戶端(platformquota.Client),不再 in-process
+	// 依賴 entitlements.Service。讀投影(GetTenantEntitlements)暫保留 in-process entSvc,待 platform
+	// 服務補 GetTenantEntitlements RPC 後切換(見 plan Task 1.3 / Task 2.3 註記)。
+	quotaClient := s.mountQuotaClient(entClient)
+
 	entSvc := s.mountEntitlements(entClient)
 
 	h := handlers.NewAuthHandler(handlers.AuthDeps{
@@ -151,7 +158,7 @@ func (s *Server) mountAuth() {
 		Lockout:      lockout,
 		OneTime:      oneTime,
 		Sessions:     sessions,
-		Entitlements: entSvc,
+		Entitlements: quotaClient,
 	})
 
 	// /api/v1 底下所有 Connect-RPC 共用一個 ServeMux:connect 產生的 handler 依
@@ -164,11 +171,11 @@ func (s *Server) mountAuth() {
 	// AbilityService(T9/D30/D32):以 OpenFGA ListObjects 列舉身分能力,供前端權限集合初始化。
 	abilityPath, abilityHandler := salesorderv1connect.NewAbilityServiceHandler(domainauth.NewAbilityHandler(entClient, domainauth.Config{DeveloperAccountEnabled: s.cfg.API.DeveloperAccountEnabled}), connect.WithInterceptors(requestid.Interceptor(), dbtenant.Interceptor(entClient)))
 	apiMux.Handle(abilityPath, abilityHandler)
-	services.RegisterCompanyServices(apiMux, entClient, entSvc)                                   // CompanyService/DepartmentService(T20)
-	services.RegisterUserServices(apiMux, entClient, entSvc)                                      // UserService(02 Task 3)
+	services.RegisterCompanyServices(apiMux, entClient, quotaClient)                              // CompanyService/DepartmentService(T20)
+	services.RegisterUserServices(apiMux, entClient, quotaClient)                                 // UserService(02 Task 3)
 	services.RegisterMetadictServices(apiMux, entClient)                                          // MetadictService(03 Task 2)
 	services.RegisterAuditServices(apiMux, entClient)                                             // AuditService(03 Task 6, A4)
-	services.RegisterCustomerServices(apiMux, entClient, s.cfg.Auth.FrontendURL, entSvc)          // CustomerService(04 Task 1-2 + D22 帳號交付 URL)
+	services.RegisterCustomerServices(apiMux, entClient, s.cfg.Auth.FrontendURL, quotaClient)     // CustomerService(04 Task 1-2 + D22 帳號交付 URL)
 	services.RegisterCustomerAccountService(apiMux, entClient)                                    // 店家自助帳號管理(D22 Task 6.7:主帳號唯一可達面)
 	services.SetQRSecret(s.cfg.Auth.JWTSecret)                                                    // QR 簽章密鑰(JWT 複用;04 Task 3.8.1)
 	services.SetPrintPipeline(print.NewClient(s.cfg.API.GotenbergURL), s.cfg.Storage.StorageRoot) // PDF 產線(09 Task 5.4)
@@ -177,16 +184,16 @@ func (s *Server) mountAuth() {
 	services.RegisterRouteService(apiMux, entClient)
 	services.RegisterProcessingSpecService(apiMux, entClient)
 	services.RegisterProductCategoryService(apiMux, entClient)
-	services.RegisterProductService(apiMux, entClient, entSvc) // 04 Task 3.3 商品主檔
-	services.RegisterCustomerProductService(apiMux, entClient) // CustomerProductService(04 Task 3.5)
-	services.RegisterSalesOrderService(apiMux, entClient)      // SalesOrderService(05 Task 4)
-	services.RegisterPrintService(apiMux, entClient)           // PrintService(09 Task 5.5.2-5.5.4)
-	services.RegisterReturnService(apiMux, entClient)          // ReturnService(06 Task 4.7.2-4.7.4)
-	services.RegisterNotificationService(apiMux, entClient)    // NotificationService(07 Task 4.3.3)
-	services.RegisterDeviceService(apiMux, entClient)          // DeviceService(07 Task 4.3.4)
-	services.RegisterDispatchService(apiMux, entClient)        // DispatchService(08 Task 5.1)
-	services.RegisterLogisticsService(apiMux, entClient)       // LogisticsService(D32 logistics 執行層首批)
-	services.RegisterAnnouncementService(apiMux, entClient)    // AnnouncementService(ANN 公告 CMS)
+	services.RegisterProductService(apiMux, entClient, quotaClient) // 04 Task 3.3 商品主檔
+	services.RegisterCustomerProductService(apiMux, entClient)      // CustomerProductService(04 Task 3.5)
+	services.RegisterSalesOrderService(apiMux, entClient)           // SalesOrderService(05 Task 4)
+	services.RegisterPrintService(apiMux, entClient)                // PrintService(09 Task 5.5.2-5.5.4)
+	services.RegisterReturnService(apiMux, entClient)               // ReturnService(06 Task 4.7.2-4.7.4)
+	services.RegisterNotificationService(apiMux, entClient)         // NotificationService(07 Task 4.3.3)
+	services.RegisterDeviceService(apiMux, entClient)               // DeviceService(07 Task 4.3.4)
+	services.RegisterDispatchService(apiMux, entClient)             // DispatchService(08 Task 5.1)
+	services.RegisterLogisticsService(apiMux, entClient)            // LogisticsService(D32 logistics 執行層首批)
+	services.RegisterAnnouncementService(apiMux, entClient)         // AnnouncementService(ANN 公告 CMS)
 	// 04 Task 3.6 檔案資產(REST:上傳/下載/軟刪除,掛同一 apiMux,與 Connect 路徑不衝突)。
 	fileassets.NewHandler(entClient, s.cfg.Storage.StorageRoot).RegisterRoutes(apiMux)
 	// GET /me:session 身分 + 所屬公司品牌(Web 側邊欄 Logo,規格 §8.1);REST 同一 apiMux。
@@ -233,6 +240,15 @@ func (s *Server) mountEntitlements(db *ent.Client) *entitlements.Service {
 	s.entitlements, s.entitlementCache, s.entitlementCounter = svc, entCache, counters
 	log.Println("platform: 權益守衛已掛載（entitlements.Service → 四個業務服務）")
 	return svc
+}
+
+// mountQuotaClient 建立 phase-2 平台 RPC 配額客戶端(替代 in-process entitlements.Service 的寫路徑)。
+// 客戶端在請求交易內把 companyID 反查為 company_internal_id(本地 companies 表,不跨網路),再帶往
+// platform 服務的 CheckLimit RPC。platform 服務未啟動時 guardQuota 會 fail-closed 回 SysInternal
+// (見 platformquota.fromConnectError);開發環境需一併啟動 cmd/platform-server。
+func (s *Server) mountQuotaClient(entClient *ent.Client) *platformquota.Client {
+	rpcClient := platformv1connect.NewTenantEntitlementServiceClient(http.DefaultClient, s.cfg.Platform.ServiceURL)
+	return platformquota.New(rpcClient, entClient)
 }
 
 // openEntitlementCache 選用權益快取：Valkey 可用即用，否則退回行程內記憶體。

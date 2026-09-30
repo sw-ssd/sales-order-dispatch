@@ -13,7 +13,9 @@ type Platform struct {
 	ConsoleURL string `envconfig:"PLATFORM_CONSOLE_URL"`
 	// CookieDomain 為 operator session cookie 的 Domain（空 = host-only，開發環境用）。
 	CookieDomain string `envconfig:"PLATFORM_COOKIE_DOMAIN"`
-
+	// ServiceURL 為 phase-2 獨立 platform RPC 服務位址(product→platform 寫路徑 CheckLimit 呼叫此處)。
+	// 單產品場景預設同機 localhost:8082;獨立部署時設為真實 URL。
+	ServiceURL string `envconfig:"PLATFORM_SERVICE_URL" default:"http://localhost:8082"`
 	// --- seed 與排程的預設值（上線前請改為真實值；**執行期以 platform.settings 為準**）---
 	// 這些只是「首次建立時寫入 settings」的來源；之後由營運工具調整，重跑 seed 不覆寫。
 	//
