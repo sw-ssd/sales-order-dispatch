@@ -159,4 +159,4 @@ require (
 
 replace github.com/salesorder/sales-order-1.0/backend/contracts => ./contracts
 
-replace github.com/salesorder/sales-order-1.0/backend/internal/platform => ./internal/platform
+replace github.com/salesorder/sales-order-1.0/backend/internal/platform => ../platform

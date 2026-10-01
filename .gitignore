@@ -8,6 +8,10 @@ build
 .DS_Store
 
 # 後端 build 產物與一次性工具（mksession 等）：每次 build 都不同，不入庫。
+# platform 獨立 git repo (手動 split):透過 product 的 replace ../platform 引用,不入 product tree。
+/platform/
+
+# 後端 build 產物與一次性工具（mksession 等）：每次 build 都不同，不入庫。
 backend/tmp/
 
 # Runtime file storage (config.Storage.StorageRoot 預設 ./data/files)：
