@@ -43,22 +43,22 @@ jobs:
       # 產生檔（碼表與三端常數）必須與 registry 同步：跑完 go generate 後不得有 diff。
       # git diff 對 **untracked** 檔無感（產生器新建了檔案卻忘記 commit 時會放行），故另以
       # git status --porcelain 檢查同一組路徑。
-      # platform-console/src/lib/errcode.ts 是 Plan C Task 10 的產物，**已落地並在清單內**：
-      # 產生器只在該目錄存在時輸出該檔（不存在時兩個檢查對它只是 no-op），故路徑不存在不會紅。
+      # platform-console/src/lib/errcode.ts 是 Plan C Task 10 的產物；platform-console 已遷至平台獨立倉、
+      # 由該倉 CI 自管,此處清單不再含它。
       # 現況（2026-09-21 實測）：go generate 會印出它並回報「未變更」。
       # 2026-09-30：errcode 已抽出為 contracts 模組；generator 仍位於 backend 的 cmd/gen-errcodes，
       # 直接以 `go run ./cmd/gen-errcodes` 執行（registry 路徑已指向 contracts/errcode，見 main.go）。
       - name: Error codes up to date
         run: |
-          paths="../docs/error-codes.md ../frontend/src/lib/errcode.ts ../platform-console/src/lib/errcode.ts ../app/lib/gen/errcode.dart"
+          paths="../docs/error-codes.md ../frontend/src/lib/errcode.ts ../app/lib/gen/errcode.dart"
           go run ./cmd/gen-errcodes
           git diff --exit-code -- $paths
           test -z "$(git status --porcelain -- $paths)"
       # proto 產生檔（Go／TS／Dart 三端）必須與 proto 定義同步：跑完 task proto:gen 後不得有 diff。
       # git diff 對 untracked 檔無感（產生器新建了檔案卻忘記 commit 時會放行），故同 errcode 的做法，
       # 另以 git status --porcelain 檢查同一組路徑。
-      # platform-console/src/lib/proto 是 Plan C Task 10 的產物（buf.gen.yaml 追加的第二個 TS 輸出），
-      # **已落地並在清單內**；路徑不存在時兩個檢查對它只是 no-op。
+      # platform-console/src/lib/proto 是 Plan C Task 10 的產物；platform-console 已遷至平台獨立倉、
+      # 由該倉 CI 自管,此處清單不再含它。
       # 現況（2026-09-21 實測）：以等效的 TS-only template 重跑 buf generate 後，該目錄與
       # frontend/src/lib/proto 皆逐位元組相同。
       # 工具鏈必須自備且**釘版**：Go／TS／Dart 的 BSR 遠端 plugin 各自在 `buf.gen.yaml` 以 `:vX.Y.Z` 釘住
@@ -77,7 +77,7 @@ jobs:
           sdk: "3.13.3"
       - name: Proto generated files up to date
         run: |
-          paths="contracts/proto ../frontend/src/lib/proto ../platform-console/src/lib/proto ../app/lib/gen"
+          paths="contracts/proto ../frontend/src/lib/proto ../app/lib/gen"
           dart pub global activate protoc_plugin 25.1.0
           export PATH="$HOME/.pub-cache/bin:$PATH"
           task proto:gen
@@ -129,28 +129,6 @@ jobs:
       # 前端回歸守門：表格/表單/元件庫的契約測試都在這裡（先前 CI 未跑測試）
       - run: pnpm -C frontend test
       - run: pnpm -C frontend build
-
-  platform-console:
-    name: Platform console(SolidJS)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Configure Forgejo registry auth
-        run: pnpm config set //apg-git.sowinsoft.com/api/packages/ssd/npm/:_authToken "${NPM_PACKAGES_TOKEN}"
-        env:
-          NPM_PACKAGES_TOKEN: ${{ secrets.NPM_PACKAGES_TOKEN }}
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      # platform-console 是 pnpm workspace 成員(root pnpm-workspace.yaml),安裝在 root 一次即可。
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm -C platform-console typecheck
-      - run: pnpm -C platform-console lint
-      - run: pnpm -C platform-console test
-      - run: pnpm -C platform-console build
-      # 平台 console 的兩個產生檔(src/lib/proto、src/lib/errcode.ts)已由 go job 的兩個冪等閘門涵蓋
-      # (paths 清單各自列入該目錄),此處不重複跑。
 
   flutter:
     name: App(Flutter)
