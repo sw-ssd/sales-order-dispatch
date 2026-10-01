@@ -86,6 +86,11 @@ tasks:
     desc: buf 產生 Go/TS/Dart 型別(本地 protoc-gen-dart 需於 PATH)
     env:
       PATH: "{{.HOME}}/.pub-cache/bin:{{env \"PATH\" | default \"\"}}"
-    cmd: buf generate
+    cmds:
+      # 主模板:Go(frontend/app 共用 contracts/proto) + frontend TS + app Dart。
+      - buf generate
+      # console 獨立模板:僅 platform.v1 + salesorder 共用型別(types 過濾,排除租戶 dead-weight proto)。
+      - buf generate --template buf.gen.console.yaml
+
     # 附註:protobuf 6.x 起 WKT(struct 等)由 protobuf 套件自帶(well_known_types),
     # 無需以 protoc 另行生成;protoc-gen-dart 需 dart pub global activate protoc_plugin(≥25 對應 protobuf 6)。

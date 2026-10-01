@@ -1,0 +1,19 @@
+version: v2
+# 平台 console 的 TS 訊息:**獨立一份**輸出(不借用租戶 SPA 的 proto 目錄),
+# 兩個 app 各自 commit 自己那份,console 才不會因租戶端改 proto 而意外跟著動。
+# 僅產 console 實際 import 的兩組:platform.v1.** 與 salesorder.v1 的共用型別
+# (common.proto:Pagination/TimestampRange/Money/PrintPaperSize/ErrorInfo)。
+# 其餘租戶 proto(customers/products/audit/masters/metadict/salesorder 其餘訊息)
+# 是 dead weight——console src 零引用,故用 types 過濾從源頭排除,
+# 避免 buf 把整包 proto module dump 進 console 目錄再被 CI 冪等閘門鎖住無法刪除。
+# 同一組 plugin/版本產出的位元組與主模板一致,CI 的 proto 冪等閘門涵蓋此路徑。
+plugins:
+  - remote: buf.build/bufbuild/es:v2.15.0
+    out: ../platform/platform-console/src/lib/proto
+    types:
+      - platform.v1.**
+      - salesorder.v1.Pagination
+      - salesorder.v1.TimestampRange
+      - salesorder.v1.Money
+      - salesorder.v1.PrintPaperSize
+      - salesorder.v1.ErrorInfo
