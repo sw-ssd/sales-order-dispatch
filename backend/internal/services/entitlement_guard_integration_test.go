@@ -27,7 +27,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	"github.com/salesorder/platform/entitlements"
+	"github.com/sw-ssd/platform/entitlements"
 )
 
 // TestIntegrationSeatGuard 席位上限在真 PG ＋ RLS 下端到端生效：公司 10 席（上限 10）→

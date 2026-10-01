@@ -20,7 +20,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	"github.com/salesorder/platform/entitlements"
+	"github.com/sw-ssd/platform/entitlements"
 )
 
 // newCustomerTestServer 建立 CustomerService client 並注入身分 + 稽核來源。

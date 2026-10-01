@@ -18,7 +18,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/platform/entitlements"
+	"github.com/sw-ssd/platform/entitlements"
 )
 
 // productsRLSTables 是商品域三張表(00026 必須 ENABLE + FORCE 者)。

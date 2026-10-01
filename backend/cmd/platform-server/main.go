@@ -18,9 +18,9 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/config"
 	"github.com/salesorder/sales-order-1.0/backend/contracts/cache"
-	"github.com/salesorder/platform/entitlements"
-	"github.com/salesorder/platform/server"
-	"github.com/salesorder/platform/store/postgres"
+	"github.com/sw-ssd/platform/entitlements"
+	"github.com/sw-ssd/platform/server"
+	"github.com/sw-ssd/platform/store/postgres"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/database"
 )
 

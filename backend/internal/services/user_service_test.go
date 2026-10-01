@@ -22,7 +22,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	"github.com/salesorder/platform/entitlements"
+	"github.com/sw-ssd/platform/entitlements"
 )
 
 // newUserTestServer 建立自建 db(empty) 的 UserService server 並注入身分。

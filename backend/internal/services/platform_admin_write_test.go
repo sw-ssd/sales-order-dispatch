@@ -26,10 +26,10 @@ import (
 
 	platformv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1"
 	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
-	"github.com/salesorder/platform/billing"
-	"github.com/salesorder/platform/entitlements"
-	"github.com/salesorder/platform/operatorauth"
-	platformstore "github.com/salesorder/platform/store"
+	"github.com/sw-ssd/platform/billing"
+	"github.com/sw-ssd/platform/entitlements"
+	"github.com/sw-ssd/platform/operatorauth"
+	platformstore "github.com/sw-ssd/platform/store"
 )
 
 // recordingCache 記錄失效呼叫;其餘 Cache 方法為 no-op。

@@ -19,7 +19,7 @@ import (
 	platformv1connect "github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1/platformv1connect"
 	commonv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
-	"github.com/salesorder/platform/operatorauth"
+	"github.com/sw-ssd/platform/operatorauth"
 )
 
 // TestIntegrationPlatformAdminMount 驗平台 RPC 的**掛載契約**：走 InitDomains() 的真 router

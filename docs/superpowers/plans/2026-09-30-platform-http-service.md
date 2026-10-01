@@ -636,7 +636,7 @@ filter-repo 重寫 product 全歷史（不可逆，team clone 失效）。2026-1
 
 - [ ] **Step 4: 推送遠端 + 去 replace（待執行）**
 
-push `platform/` 到 `github.com/salesorder/platform` 後：`backend/go.mod` 移除 `replace …/backend/internal/platform => ../platform`，加 `require github.com/salesorder/platform v0.1.0`，CI 設 `PLATFORM_REPO_URL` secret。單產品下本地 replace 已滿足開發，此步收益為零，待第二產品或獨立發版需求才做。
+push `platform/` 到 `github.com/sw-ssd/platform` 後：`backend/go.mod` 移除 `replace …/backend/internal/platform => ../platform`，加 `require github.com/sw-ssd/platform v0.1.0`，CI 設 `PLATFORM_REPO_URL` secret。單產品下本地 replace 已滿足開發，此步收益為零，待第二產品或獨立發版需求才做。
 
 ```bash
 git commit -m "chore: platform 抽取為獨立 repo（手動 split）"

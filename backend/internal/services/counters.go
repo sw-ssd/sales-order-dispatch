@@ -13,7 +13,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/platform/entitlements"
+	"github.com/sw-ssd/platform/entitlements"
 )
 
 type entitlementCounter struct{ db *ent.Client }

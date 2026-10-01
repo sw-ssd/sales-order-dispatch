@@ -108,7 +108,6 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rogpeppe/go-internal v1.16.0 // indirect
 	github.com/sagikazarmark/locafero v0.9.0 // indirect
-	github.com/salesorder/platform v0.0.0
 	github.com/salesorder/sales-order-1.0/backend/contracts v0.0.0
 	github.com/sethvargo/go-retry v0.4.0 // indirect
 	github.com/shirou/gopsutil/v4 v4.26.6 // indirect
@@ -120,6 +119,7 @@ require (
 	github.com/spf13/viper v1.20.1 // indirect
 	github.com/stretchr/testify v1.12.1 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
+	github.com/sw-ssd/platform v0.1.0
 	github.com/tklauser/go-sysconf v0.4.0 // indirect
 	github.com/tklauser/numcpus v0.12.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
@@ -158,5 +158,3 @@ require (
 )
 
 replace github.com/salesorder/sales-order-1.0/backend/contracts => ./contracts
-
-replace github.com/salesorder/platform => ../platform

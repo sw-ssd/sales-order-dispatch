@@ -9,7 +9,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	"github.com/salesorder/platform/store"
+	"github.com/sw-ssd/platform/store"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platformhost/consumer"
 )
 

@@ -42,8 +42,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	"github.com/salesorder/platform/entitlements"
-	"github.com/salesorder/platform/store"
+	"github.com/sw-ssd/platform/entitlements"
+	"github.com/sw-ssd/platform/store"
 )
 
 // guardCases 為 spec §4.5 的守衛清單：RPC → feature。**已登錄的** case 漏掛／掛錯 feature／

@@ -24,9 +24,9 @@ import (
 
 	platformv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1"
 	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
-	"github.com/salesorder/platform/billing"
-	"github.com/salesorder/platform/operatorauth"
-	platformstore "github.com/salesorder/platform/store/postgres"
+	"github.com/sw-ssd/platform/billing"
+	"github.com/sw-ssd/platform/operatorauth"
+	platformstore "github.com/sw-ssd/platform/store/postgres"
 )
 
 // platformAdminSeed 為夾具的識別碼與關鍵時間。

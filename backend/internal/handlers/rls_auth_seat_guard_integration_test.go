@@ -27,8 +27,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/handlers"
-	"github.com/salesorder/platform/entitlements"
-	postgresstore "github.com/salesorder/platform/store/postgres"
+	"github.com/sw-ssd/platform/entitlements"
+	postgresstore "github.com/sw-ssd/platform/store/postgres"
 	"github.com/salesorder/sales-order-1.0/backend/internal/services"
 )
 
