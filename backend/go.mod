@@ -158,3 +158,5 @@ require (
 )
 
 replace github.com/salesorder/sales-order-1.0/backend/contracts => ./contracts
+
+replace github.com/sw-ssd/platform => ../platform
