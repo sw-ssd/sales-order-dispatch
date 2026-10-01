@@ -23,7 +23,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "~/components/ui";
+} from "@ui";
 import { ListPagination } from "../../users/components/ListPagination";
 import { queryData } from "~/lib/query-data";
 import {

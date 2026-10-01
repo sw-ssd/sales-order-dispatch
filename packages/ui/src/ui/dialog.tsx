@@ -2,7 +2,7 @@ import { Show, splitProps, type Component, type JSX } from "solid-js";
 import { Portal } from "solid-js/web";
 import { Dialog as ArkDialog } from "@ark-ui/solid";
 import { ScrollArea } from "./scroll-area";
-import { cn } from "@/lib/cn";
+import { cn } from "./lib/cn";
 
 /**
  * 對話框根層：行為（開關、Escape、焦點鎖定、外部點擊）一律交給 Ark UI，

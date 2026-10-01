@@ -34,7 +34,7 @@ import {
   TableHeader,
   TableRow,
   useConfirm,
-} from "~/components/ui";
+} from "@ui";
 import { batch, createEffect, createSignal, For, Show, type Component, type JSX } from "solid-js";
 import { type Company, type Department } from "~/lib/proto/salesorder/v1/company_pb";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";

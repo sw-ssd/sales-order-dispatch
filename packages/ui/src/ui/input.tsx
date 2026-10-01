@@ -1,6 +1,6 @@
 import { useFieldContext } from "@ark-ui/solid/field";
 import { splitProps, type Component, type JSX } from "solid-js";
-import { cn } from "@/lib/cn";
+import { cn } from "./lib/cn";
 
 /**
  * Props interface for the Input component extending standard HTML input attributes.

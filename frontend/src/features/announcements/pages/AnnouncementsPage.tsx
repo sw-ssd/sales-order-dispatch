@@ -33,7 +33,7 @@ import {
   TableHeader,
   TableRow,
   useConfirm,
-} from "~/components/ui";
+} from "@ui";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import { toSortOrder } from "../../masters/schemas";
 import { ListPagination } from "../../users/components/ListPagination";

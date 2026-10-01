@@ -2,7 +2,7 @@ import { useRouterState } from "@tanstack/solid-router";
 import { createQuery } from "@tanstack/solid-query";
 import { createMemo, type ParentProps } from "solid-js";
 import AppShell from "~/components/layout/AppShell";
-import { ConfirmProvider } from "~/components/ui";
+import { ConfirmProvider } from "@ui";
 import { abilityQueryOptions } from "~/lib/ability/service";
 import { AbilityProvider } from "~/lib/ability/context";
 import { queryData } from "~/lib/query-data";

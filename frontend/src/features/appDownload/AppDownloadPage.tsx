@@ -1,6 +1,6 @@
 import { For } from "solid-js";
 
-import { buttonVariants } from "~/components/ui";
+import { buttonVariants } from "@ui";
 
 /**
  * App 下載落頁（Universal Link / App Link 的**未安裝**分支）。

@@ -1,4 +1,4 @@
-import { SidebarTrigger, ThemeSwitcher } from "~/components/ui";
+import { SidebarTrigger, ThemeSwitcher } from "@ui";
 import { pageTitleFor } from "./Sidebar";
 
 export interface TopbarProps {

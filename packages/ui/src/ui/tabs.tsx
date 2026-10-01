@@ -1,6 +1,6 @@
 import { splitProps, type Component } from "solid-js";
 import { Tabs as ArkTabs } from "@ark-ui/solid";
-import { cn } from "@/lib/cn";
+import { cn } from "./lib/cn";
 
 /**
  * 分頁根層：選取狀態、鍵盤操作、ARIA 關聯一律交給 Ark UI，

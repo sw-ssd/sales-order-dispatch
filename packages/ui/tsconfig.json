@@ -7,10 +7,8 @@
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
     "paths": {
-      "@ui": ["../packages/ui/src/ui/index.ts"],
-      "@ui/*": ["../packages/ui/src/ui/*"],
-      "@/*": ["../frontend/src/*"],
-      "~/*": ["../frontend/src/*"]
+      "@ui/*": ["./src/*"],
+      "@/*": ["./src/*"]
     },
     "types": ["vite/client"],
     "noEmit": true,
@@ -18,7 +16,5 @@
     "isolatedModules": true,
     "esModuleInterop": true
   },
-  // 只檢 src（與租戶 SPA 的 tsconfig 相同）：vite.config.ts 需要 @types/node 才檢得動，
-  // 而它由 vite／vitest 自己載入，錯了那兩條指令會直接爆。
   "include": ["src"]
 }

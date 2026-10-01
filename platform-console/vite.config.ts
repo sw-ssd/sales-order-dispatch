@@ -7,7 +7,7 @@ import solid from "vite-plugin-solid";
 // 都在那裡。**只共用元件庫，不共用路由與路由守衛**（那兩者被 console 自己的
 // src/router.tsx 與 src/lib/guard.ts 取代；S11：租戶 SPA 不得出現平台能力）。
 const FRONTEND_SRC = path.resolve(import.meta.dirname, "../frontend/src");
-const UI_DIR = path.join(FRONTEND_SRC, "components/ui");
+const UI_DIR = path.resolve(import.meta.dirname, "../packages/ui/src/ui");
 
 export default defineConfig({
   plugins: [tailwindcss(), solid()],

@@ -1,6 +1,6 @@
 import { Field as ArkField, useFieldContext } from "@ark-ui/solid/field";
 import { Show, splitProps, type Component, type JSX } from "solid-js";
-import { cn } from "@/lib/cn";
+import { cn } from "./lib/cn";
 
 export interface FieldProps extends JSX.HTMLAttributes<HTMLDivElement> {
   class?: string;

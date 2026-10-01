@@ -43,7 +43,7 @@ import {
   TableHeader,
   TableRow,
   useConfirm,
-} from "~/components/ui";
+} from "@ui";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import { customerDropdownQueryOptions } from "../../customers/queries";
 import { productDropdownQueryOptions } from "../../products/queries";

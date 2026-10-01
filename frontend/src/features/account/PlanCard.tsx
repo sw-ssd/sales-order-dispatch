@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
   Spinner,
-} from "~/components/ui";
+} from "@ui";
 import { cn } from "~/lib/cn";
 import {
   ALERT_CLASS,

@@ -33,7 +33,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "~/components/ui";
+} from "@ui";
 import BrandLogo from "./BrandLogo";
 
 /** 側邊欄可導向的路由：只列 router 實際註冊的路徑。 */

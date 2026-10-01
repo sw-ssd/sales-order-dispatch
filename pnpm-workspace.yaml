@@ -4,6 +4,7 @@ packages:
   - platform-console
   - app
   - infra
+  - packages/*
 allowBuilds:
   esbuild: true
 minimumReleaseAgeExclude:

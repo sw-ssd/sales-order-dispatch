@@ -37,7 +37,7 @@ import {
   TableHeader,
   TableRow,
   useConfirm,
-} from "~/components/ui";
+} from "@ui";
 import { ListPagination } from "../../users/components/ListPagination";
 import { queryData } from "~/lib/query-data";
 import {

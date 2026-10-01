@@ -9,6 +9,10 @@ export default defineConfig({
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
       "~": path.resolve(import.meta.dirname, "src"),
+      "@ui": path.resolve(import.meta.dirname, "../packages/ui/src/ui"),
+      "@salesorder/ui": path.resolve(import.meta.dirname, "../packages/ui/src/ui"),
+      "~/components/ui": path.resolve(import.meta.dirname, "../packages/ui/src/ui"),
+      "~/components/ui/": path.resolve(import.meta.dirname, "../packages/ui/src/ui/"),
     },
   },
   server: {

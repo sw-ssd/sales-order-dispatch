@@ -17,7 +17,7 @@ import {
   Field,
   FieldLabel,
   Input,
-} from "~/components/ui";
+} from "@ui";
 import { boardOrdersQueryOptions, boardRoutesQueryOptions, dispatchClient } from "../queries";
 import { queryData } from "~/lib/query-data";
 import { errorMessage } from "@/lib/error-message";

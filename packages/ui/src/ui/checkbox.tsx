@@ -1,6 +1,6 @@
 import { splitProps, type Component, type JSX } from "solid-js";
 import { Checkbox as ArkCheckbox } from "@ark-ui/solid";
-import { cn } from "@/lib/cn";
+import { cn } from "./lib/cn";
 
 /**
  * 勾選框：勾選狀態機、鍵盤操作與 ARIA 一律交給 Ark UI

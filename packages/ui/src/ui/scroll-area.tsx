@@ -1,6 +1,6 @@
 import { ScrollArea as ArkScrollArea } from "@ark-ui/solid";
 import { Show, splitProps, type Component, type JSX } from "solid-js";
-import { cn } from "@/lib/cn";
+import { cn } from "./lib/cn";
 
 /**
  * 捲動容器：量測、拖曳、鍵盤與滾輪行為全部交給 Ark UI 的 ScrollArea，

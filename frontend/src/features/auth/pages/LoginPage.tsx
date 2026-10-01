@@ -11,7 +11,7 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "~/components/ui";
+} from "@ui";
 import { createSignal, Show, type JSX } from "solid-js";
 import { AuthService } from "~/lib/proto/salesorder/v1/auth_pb";
 import { transport } from "~/lib/transport";

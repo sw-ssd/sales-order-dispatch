@@ -34,7 +34,7 @@ import {
   TableHeader,
   TableRow,
   useConfirm,
-} from "~/components/ui";
+} from "@ui";
 import { batch, createEffect, createSignal, For, Show, type JSX } from "solid-js";
 import type { Company } from "~/lib/proto/salesorder/v1/company_pb";
 import { meQueryOptions } from "~/lib/me";

@@ -33,7 +33,7 @@ import {
   TableHeader,
   TableRow,
   useConfirm,
-} from "~/components/ui";
+} from "@ui";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import { ListPagination } from "../../users/components/ListPagination";
 import { ROUTES_PAGE_SIZE, routesQueryOptions, routeClient } from "../queries";

@@ -277,7 +277,7 @@ const devRoutes = import.meta.env.DEV
       createRoute({
         getParentRoute: () => rootRoute,
         path: "/ui",
-        component: lazyRouteComponent(() => import("~/components/ui/demo/UiDemoPage")),
+        component: lazyRouteComponent(() => import("@ui/demo/UiDemoPage")),
       }),
     ]
   : [];

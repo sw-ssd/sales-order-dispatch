@@ -12,6 +12,21 @@
       ],
       "@/*": [
         "./src/*"
+      ],
+      "~/components/ui": [
+        "../packages/ui/src/ui/index.ts"
+      ],
+      "@ui": [
+        "../packages/ui/src/ui/index.ts"
+      ],
+      "@ui/*": [
+        "../packages/ui/src/ui/*"
+      ],
+      "@salesorder/ui": [
+        "../packages/ui/src/ui/index.ts"
+      ],
+      "@salesorder/ui/*": [
+        "../packages/ui/src/ui/*"
       ]
     },
     "types": [

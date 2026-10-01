@@ -9,7 +9,7 @@ import {
   SidebarProvider,
   ThemeProvider,
   useSidebar,
-} from "~/components/ui";
+} from "@ui";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 

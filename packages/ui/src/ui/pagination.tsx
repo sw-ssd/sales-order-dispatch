@@ -1,7 +1,7 @@
 import { For, Show, splitProps, type Component, type JSX, type ParentComponent } from "solid-js";
 import { Pagination as ArkPagination } from "@ark-ui/solid";
 import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "@/lib/cn";
+import { cn } from "./lib/cn";
 import {
   ChevronLeft,
   ChevronRight,

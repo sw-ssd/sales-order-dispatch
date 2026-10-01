@@ -1,6 +1,6 @@
 import { splitProps, type Component, type JSX } from "solid-js";
 import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "@/lib/cn";
+import { cn } from "./lib/cn";
 
 /**
  * Class variance authority configuration for badge styling variants.
