@@ -9,7 +9,7 @@ import {
   SidebarProvider,
   ThemeProvider,
   useSidebar,
-} from "@ui";
+} from "@ark-tailkit/ui";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 

@@ -35,7 +35,7 @@ import {
   TableHeader,
   TableRow,
   useConfirm,
-} from "@ui";
+} from "@ark-tailkit/ui";
 import { queryData } from "~/lib/query-data";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import { ListPagination } from "../../users/components/ListPagination";

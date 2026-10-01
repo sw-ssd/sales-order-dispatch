@@ -277,7 +277,7 @@ const devRoutes = import.meta.env.DEV
       createRoute({
         getParentRoute: () => rootRoute,
         path: "/ui",
-        component: lazyRouteComponent(() => import("@ui/demo/UiDemoPage")),
+        component: lazyRouteComponent(() => import("@ark-tailkit/ui/demo/UiDemoPage")),
       }),
     ]
   : [];

@@ -1,6 +1,6 @@
 import { For } from "solid-js";
 
-import { buttonVariants } from "@ui";
+import { buttonVariants } from "@ark-tailkit/ui";
 
 /**
  * App 下載落頁（Universal Link / App Link 的**未安裝**分支）。

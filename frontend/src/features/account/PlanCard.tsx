@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
   Spinner,
-} from "@ui";
+} from "@ark-tailkit/ui";
 import { cn } from "~/lib/cn";
 import {
   ALERT_CLASS,

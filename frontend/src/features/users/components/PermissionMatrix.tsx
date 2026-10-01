@@ -1,4 +1,4 @@
-import { Checkbox } from "@ui";
+import { Checkbox } from "@ark-tailkit/ui";
 import { create } from "@bufbuild/protobuf";
 import { For, Show } from "solid-js";
 import {

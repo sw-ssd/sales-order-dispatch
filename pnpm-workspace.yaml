@@ -3,7 +3,7 @@ packages:
   - frontend
   - app
   - infra
-  - packages/*
+
 allowBuilds:
   esbuild: true
 minimumReleaseAgeExclude:

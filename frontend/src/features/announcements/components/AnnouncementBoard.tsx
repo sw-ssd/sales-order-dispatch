@@ -1,6 +1,6 @@
 import { createSignal, For, Show, type Component } from "solid-js";
 import { createQuery } from "@tanstack/solid-query";
-import { Badge, Card, CardContent, CardHeader, CardTitle } from "@ui";
+import { Badge, Card, CardContent, CardHeader, CardTitle } from "@ark-tailkit/ui";
 import { queryData } from "~/lib/query-data";
 import type { Announcement } from "~/lib/proto/salesorder/v1/announcement_pb";
 import { activeAnnouncementsQueryOptions } from "../queries";

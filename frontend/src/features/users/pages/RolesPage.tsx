@@ -22,7 +22,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@ui";
+} from "@ark-tailkit/ui";
 import { PermissionMatrix } from "../components/PermissionMatrix";
 import { ListPagination } from "../components/ListPagination";
 import { ariaSort, createSortableHeaders } from "../components/SortableHeader";

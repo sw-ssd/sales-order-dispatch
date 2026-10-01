@@ -30,7 +30,7 @@ import {
   TableHeader,
   TableRow,
   buttonVariants,
-} from "@ui";
+} from "@ark-tailkit/ui";
 import { ListPagination } from "../../users/components/ListPagination";
 import { AUDIT_PAGE_SIZE, auditLogsQueryOptions } from "../queries";
 import { queryData } from "~/lib/query-data";

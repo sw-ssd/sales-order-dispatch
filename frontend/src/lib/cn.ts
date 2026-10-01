@@ -1,1 +1,1 @@
-export { cn } from "@ui/lib/cn";
+export { cn } from "@ark-tailkit/ui/lib/cn";

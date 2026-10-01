@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
   Spinner,
-} from "@ui";
+} from "@ark-tailkit/ui";
 import { Can } from "~/lib/ability/Can";
 import { useAbility } from "~/lib/ability/context";
 import { queryData } from "~/lib/query-data";

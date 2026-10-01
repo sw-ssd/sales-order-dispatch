@@ -1,7 +1,7 @@
 import { render } from "@solidjs/testing-library";
 import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 import type { JSX } from "solid-js";
-import { ConfirmProvider } from "@ui";
+import { ConfirmProvider } from "@ark-tailkit/ui";
 
 /**
  * 測試專用的 provider 疊法：`QueryClientProvider` 之外再包 `ConfirmProvider`。

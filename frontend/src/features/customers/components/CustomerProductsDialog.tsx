@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
   useConfirm,
-} from "@ui";
+} from "@ark-tailkit/ui";
 import { appFormOptions, fieldValidators, firstMessage } from "../../form-helpers";
 import {
   customerProductsQueryOptions,

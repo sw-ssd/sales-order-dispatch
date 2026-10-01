@@ -1,4 +1,4 @@
-import { SidebarTrigger, ThemeSwitcher } from "@ui";
+import { SidebarTrigger, ThemeSwitcher } from "@ark-tailkit/ui";
 import { pageTitleFor } from "./Sidebar";
 
 export interface TopbarProps {

@@ -1,4 +1,4 @@
-import { buttonVariants } from "@ui";
+import { buttonVariants } from "@ark-tailkit/ui";
 
 /**
  * 403 頁(/403)：Tailkit Errors 版面(a-p-errors-01)——
