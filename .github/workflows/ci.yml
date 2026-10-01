@@ -50,7 +50,7 @@ jobs:
       # 直接以 `go run ./cmd/gen-errcodes` 執行（registry 路徑已指向 contracts/errcode，見 main.go）。
       - name: Error codes up to date
         run: |
-          paths="../docs/error-codes.md ../frontend/src/lib/errcode.ts ../platform/platform-console/src/lib/errcode.ts ../app/lib/gen/errcode.dart"
+          paths="../docs/error-codes.md ../frontend/src/lib/errcode.ts ../platform-console/src/lib/errcode.ts ../app/lib/gen/errcode.dart"
           go run ./cmd/gen-errcodes
           git diff --exit-code -- $paths
           test -z "$(git status --porcelain -- $paths)"
@@ -77,7 +77,7 @@ jobs:
           sdk: "3.13.3"
       - name: Proto generated files up to date
         run: |
-          paths="contracts/proto ../frontend/src/lib/proto ../platform/platform-console/src/lib/proto ../app/lib/gen"
+          paths="contracts/proto ../frontend/src/lib/proto ../platform-console/src/lib/proto ../app/lib/gen"
           dart pub global activate protoc_plugin 25.1.0
           export PATH="$HOME/.pub-cache/bin:$PATH"
           task proto:gen
