@@ -72,7 +72,7 @@ func (s *ReturnService) ReviewReturnRequest(ctx context.Context, req *connect.Re
 	}
 	// 審核權:主責業務(客戶 default_sales_rep)或 dept_admin 以上。
 	actor, _ := parseID(id.UserID)
-	allowed, err := s.canReview(ctx, db, cid, did, actor, id.Role, rr.CustomerID)
+	allowed, err := s.canReview(ctx, db, cid, did, id, actor, rr.CustomerID)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -112,12 +112,12 @@ func (s *ReturnService) ReviewReturnRequest(ctx context.Context, req *connect.Re
 	}), nil
 }
 
-// canReview 審核權:company_admin/super/dept_admin 可審;staff 僅該客戶主責業務可審。
-func (s *ReturnService) canReview(ctx context.Context, db *ent.Client, cid int, did *int, actor int, role string, custID int) (bool, error) {
+// canReview 審核權:super/developer/company_admin/dept_admin 可審;staff 僅該客戶主責業務可審。
+func (s *ReturnService) canReview(ctx context.Context, db *ent.Client, cid int, did *int, id authz.Identity, actor int, custID int) (bool, error) {
 	switch {
-	case isSuperIdentity(authz.Identity{Role: role}), role == "company_admin", role == "dept_admin":
+	case isSuperIdentity(id), id.Role == "company_admin", id.Role == "dept_admin":
 		return true, nil
-	case role == "staff":
+	case id.Role == "staff":
 		cust, err := db.Customer.Query().
 			Where(customer.ID(custID), customer.DeletedAtIsNil()).Only(ctx)
 		if err != nil {

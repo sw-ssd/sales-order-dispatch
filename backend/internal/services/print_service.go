@@ -129,7 +129,7 @@ func (s *PrintService) Preview(ctx context.Context, req *connect.Request[product
 		}
 	}()
 	actor, _ := parseID(id.UserID)
-	meta := printFileMeta(cid, did, "print_preview", 0, out, actor, in)
+	meta := printFileMeta(cid, did, "print_preview", out, actor, in)
 	faid, faURL, err := createFileAsset(ctx, db, meta)
 	if err != nil {
 		return nil, toConnectError(err)
@@ -148,6 +148,9 @@ func (s *PrintService) Preview(ctx context.Context, req *connect.Request[product
 	}
 	pv, err := b.Save(ctx)
 	if err != nil {
+		return nil, toConnectError(err)
+	}
+	if _, err := db.FileAsset.UpdateOneID(faid).SetOwnerID(pv.ID).Save(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
 	committed = true
@@ -223,7 +226,7 @@ func (s *PrintService) Print(ctx context.Context, req *connect.Request[productsv
 		}
 	}()
 	actor, _ := parseID(id.UserID)
-	faid, faURL, err := createFileAsset(ctx, db, printFileMeta(cid, did, "print_log", 0, out, actor, in))
+	faid, faURL, err := createFileAsset(ctx, db, printFileMeta(cid, did, "print_log", out, actor, in))
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -244,6 +247,9 @@ func (s *PrintService) Print(ctx context.Context, req *connect.Request[productsv
 	}
 	pl, err := lb.Save(ctx)
 	if err != nil {
+		return nil, toConnectError(err)
+	}
+	if _, err := db.FileAsset.UpdateOneID(faid).SetOwnerID(pl.ID).Save(ctx); err != nil {
 		return nil, toConnectError(err)
 	}
 	after := map[string]any{"document_type": string(in.Type), "is_reprint": isReprint}

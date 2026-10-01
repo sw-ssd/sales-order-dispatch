@@ -48,27 +48,30 @@ func RegisterReturnService(mux *http.ServeMux, db *ent.Client) {
 	mux.Handle(path, handler)
 }
 
-// returnCustomerScope 解析客戶子帳號範圍(回 company/department/customer/user)。
+// returnCustomerScope 解析客戶子帳號範圍(回 company/department(可nil)/customer/user)。
 // 主帳號/員工/訪客一律拒絕(Create/List/Get 皆同)。
-func returnCustomerScope(id authz.Identity) (cid, did, custID, actor int, err error) {
+func returnCustomerScope(id authz.Identity) (cid int, did *int, custID int, actor int, err error) {
 	if id.Role != "customer" || strings.TrimSpace(id.CustomerID) == "" {
-		return 0, 0, 0, 0, errcode.SysPermissionDenied.Error(nil)
+		return 0, nil, 0, 0, errcode.SysPermissionDenied.Error(nil)
 	}
 	cid, err = parseID(id.CompanyID)
 	if err != nil {
-		return 0, 0, 0, 0, errcode.SysPermissionDenied.Error(nil)
+		return 0, nil, 0, 0, errcode.SysPermissionDenied.Error(nil)
 	}
-	did, err = parseID(id.DepartmentID)
-	if err != nil {
-		return 0, 0, 0, 0, errcode.SysPermissionDenied.Error(nil)
+	if strings.TrimSpace(id.DepartmentID) != "" {
+		d, err := parseID(id.DepartmentID)
+		if err != nil {
+			return 0, nil, 0, 0, errcode.SysPermissionDenied.Error(nil)
+		}
+		did = &d
 	}
 	custID, err = parseID(id.CustomerID)
 	if err != nil {
-		return 0, 0, 0, 0, errcode.SysPermissionDenied.Error(nil)
+		return 0, nil, 0, 0, errcode.SysPermissionDenied.Error(nil)
 	}
 	actor, err = parseID(id.UserID)
 	if err != nil {
-		return 0, 0, 0, 0, errcode.SysPermissionDenied.Error(nil)
+		return 0, nil, 0, 0, errcode.SysPermissionDenied.Error(nil)
 	}
 	// 主帳號拒絕:users.is_primary 由服務層核實(測試身分無該欄時以 DB 為準)。
 	return cid, did, custID, actor, nil
@@ -117,15 +120,19 @@ func (s *ReturnService) CreateReturnRequest(ctx context.Context, req *connect.Re
 	}
 	var resolved []resolvedItem
 	for _, it := range req.Msg.GetItems() {
-		r, err := s.resolveItem(ctx, db, cid, did, custID, it)
+		r, err := s.resolveItem(ctx, db, cid, custID, it)
 		if err != nil {
 			return nil, err
 		}
 		resolved = append(resolved, r)
 	}
-	rr, err := db.ReturnRequest.Create().
-		SetCompanyID(cid).SetDepartmentID(did).SetCustomerID(custID).
-		SetCreatedByUserID(actor).SetStatus("pending").Save(ctx)
+	rrb := db.ReturnRequest.Create().
+		SetCompanyID(cid).SetCustomerID(custID).
+		SetCreatedByUserID(actor).SetStatus("pending")
+	if did != nil {
+		rrb = rrb.SetDepartmentID(*did)
+	}
+	rr, err := rrb.Save(ctx)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -136,9 +143,12 @@ func (s *ReturnService) CreateReturnRequest(ctx context.Context, req *connect.Re
 	}
 	for _, r := range resolved {
 		b := db.ReturnRequestItem.Create().
-			SetReturnRequestID(rr.ID).SetCompanyID(cid).SetDepartmentID(did).
+			SetReturnRequestID(rr.ID).SetCompanyID(cid).
 			SetSourceType(r.sourceType).SetProductID(r.productID).SetProductName(r.productName).
 			SetUnit(r.unit).SetQuantity(r.qty).SetReason(r.reason)
+		if did != nil {
+			b = b.SetDepartmentID(*did)
+		}
 		if r.salesOrderID != nil {
 			b = b.SetSalesOrderID(*r.salesOrderID)
 		}
@@ -158,7 +168,7 @@ func (s *ReturnService) CreateReturnRequest(ctx context.Context, req *connect.Re
 			return nil, toConnectError(err)
 		}
 	}
-	if err := recordAudit(ctx, tx, "return_request", "create", rr.ID, cid, &did, actor,
+	if err := recordAudit(ctx, tx, "return_request", "create", rr.ID, cid, did, actor,
 		map[string]any{"customer_id": custID, "items": len(resolved)}); err != nil {
 		return nil, toConnectError(err)
 	}
@@ -168,7 +178,7 @@ func (s *ReturnService) CreateReturnRequest(ctx context.Context, req *connect.Re
 }
 
 // resolveItem 核實單品項(來源配對 + 歸屬 + 數量 + 照片)。
-func (s *ReturnService) resolveItem(ctx context.Context, db *ent.Client, cid, did, custID int, it *salesorderv1.ReturnItemInput) (resolvedItem, error) {
+func (s *ReturnService) resolveItem(ctx context.Context, db *ent.Client, cid, custID int, it *salesorderv1.ReturnItemInput) (resolvedItem, error) {
 	var r resolvedItem
 	st := strings.TrimSpace(it.GetSourceType())
 	if st != "order_item" && st != "customer_product" {

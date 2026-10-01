@@ -54,8 +54,7 @@ func SetCompanyStatus(ctx context.Context, db *ent.Client, companyID int,
 		return nil
 	}
 	if strings.TrimSpace(reason) == "" {
-		// 尚無專碼(新增專碼屬 errcode 註冊範疇),故回一般 error:原因文字原樣可見。
-		return errors.New("狀態變更必須提供原因")
+		return errcode.SysInvalidArgument.Error(map[string]string{"field": "reason"})
 	}
 
 	// 條件更新:「已軟刪除的公司不得改狀態」是敘述式條件的一部分,不只是前置查詢 ——

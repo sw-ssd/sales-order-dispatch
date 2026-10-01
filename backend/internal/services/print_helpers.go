@@ -49,15 +49,14 @@ type printFileInput struct {
 	cid   int
 	did   *int
 	owner string
-	oid   int
 	out   *print.Produced
 	actor int
 	in    print.AssembleInput
 }
 
-// printFileMeta 組建檔輸入(owner 初值 0:呼叫端在記錄落筆後回填,此處先以 route 佔位)。
-func printFileMeta(cid int, did *int, owner string, oid int, out *print.Produced, actor int, in print.AssembleInput) printFileInput {
-	return printFileInput{cid: cid, did: did, owner: owner, oid: oid, out: out, actor: actor, in: in}
+// printFileMeta 組建檔輸入(owner_id 由呼叫端在 print_log/print_preview 落筆後回填)。
+func printFileMeta(cid int, did *int, owner string, out *print.Produced, actor int, in print.AssembleInput) printFileInput {
+	return printFileInput{cid: cid, did: did, owner: owner, out: out, actor: actor, in: in}
 }
 
 // createFileAsset 在請求交易內建 file_assets 元資料(PDF 已落檔;DB 失敗由呼叫端補償刪檔)。
@@ -67,7 +66,7 @@ func printFileMeta(cid int, did *int, owner string, oid int, out *print.Produced
 // 形狀，所以分歧不會以錯誤形式出現，只會讓回應的連結指向另一種形狀）。
 func createFileAsset(ctx context.Context, db *ent.Client, m printFileInput) (id int, url string, err error) {
 	b := db.FileAsset.Create().
-		SetCompanyID(m.cid).SetOwnerType(m.owner).SetOwnerID(m.in.RouteID).
+		SetCompanyID(m.cid).SetOwnerType(m.owner).SetOwnerID(0).
 		SetFilename(filepath.Base(m.out.RelPath)).SetOriginalFilename(printDownloadName(m.in)).
 		SetMimeType("application/pdf").SetSizeBytes(int(m.out.Size)).
 		SetStoragePath(m.out.RelPath).

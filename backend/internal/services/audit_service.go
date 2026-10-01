@@ -30,6 +30,7 @@ import (
 var validAuditActions = map[string]bool{
 	"create": true, "update": true, "delete": true, "login": true, "logout": true,
 	"print": true, "force_logout": true, "role_change": true, "dispatch_cancel": true, "void": true,
+	"rotate_external_id": true,
 }
 
 // auditDefaultWindow 為未帶時間篩選時套用的預設保留期限(近 3 個月, D27)。

@@ -120,11 +120,10 @@ func (s *DispatchService) AssignRoute(ctx context.Context, req *connect.Request[
 	}
 	updated, err := upd.Save(ctx)
 	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, errcode.SysInvalidArgument.Error(map[string]string{"reason": "資料已變更，請重新載入"})
+		}
 		return nil, toConnectError(err)
-	}
-	if updated == nil {
-		// 條件更新 0 列 → 樂觀鎖衝突(併發已改)。
-		return nil, errcode.SysInvalidArgument.Error(map[string]string{"reason": "資料已變更，請重新載入"})
 	}
 	// 事件:route_assign(含新舊 route/seq)。
 	if err := writeAssignEvent(ctx, db, actorIDOf(id), o, routeID, seq); err != nil {

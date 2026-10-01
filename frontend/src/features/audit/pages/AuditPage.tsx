@@ -50,8 +50,8 @@ const auditColumnHelper = createColumnHelper<typeof AUDIT_TABLE_FEATURES, AuditL
 const NO_AUDIT_LOGS: AuditLog[] = [];
 
 /**
- * 動作標籤（`audit_logs.action` 的十個合法值，後端 `validAuditActions` 是權威白名單；
- * 下拉只給這十項 → 前端不可能送出白名單外的值）。
+ * 動作標籤（`audit_logs.action` 的十一個合法值，後端 `validAuditActions` 是權威白名單；
+ * 下拉只給這十一項 → 前端不可能送出白名單外的值）。
  */
 const ACTION_LABELS: Record<string, string> = {
   create: "新增",
@@ -64,6 +64,7 @@ const ACTION_LABELS: Record<string, string> = {
   role_change: "角色變更",
   dispatch_cancel: "取消派車",
   void: "作廢",
+  rotate_external_id: "外部鍵輪換",
 };
 
 /** 動作徽章樣式：刪改與強制動作標紅，登入類為中性。 */
@@ -75,6 +76,7 @@ const ACTION_VARIANTS: Record<string, "destructive" | "warning" | "info" | "seco
   dispatch_cancel: "warning",
   update: "info",
   create: "info",
+  rotate_external_id: "info",
   login: "secondary",
   logout: "secondary",
   print: "secondary",
