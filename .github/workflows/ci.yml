@@ -114,8 +114,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: true
+      - name: Configure Forgejo registry auth
+        run: pnpm config set //apg-git.sowinsoft.com/api/packages/ssd/npm/:_authToken "${NPM_PACKAGES_TOKEN}"
+        env:
+          NPM_PACKAGES_TOKEN: ${{ secrets.NPM_PACKAGES_TOKEN }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -132,9 +134,10 @@ jobs:
     name: Platform console(SolidJS)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
+      - name: Configure Forgejo registry auth
+        run: pnpm config set //apg-git.sowinsoft.com/api/packages/ssd/npm/:_authToken "${NPM_PACKAGES_TOKEN}"
+        env:
+          NPM_PACKAGES_TOKEN: ${{ secrets.NPM_PACKAGES_TOKEN }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
