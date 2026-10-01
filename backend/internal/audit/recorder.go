@@ -9,9 +9,9 @@ import (
 	"context"
 	"errors"
 
+	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/auditlog"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
 )
 
 // Entry 為一筆稽核內容（action / resource / 前後快照）。

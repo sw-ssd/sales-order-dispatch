@@ -15,11 +15,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
 )
 
 // Store 為檔案儲存依賴(根目錄由 config.Storage.StorageRoot 注入)。

@@ -8,13 +8,13 @@ import (
 
 	"connectrpc.com/connect"
 
+	productsv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/products/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/products/v1/productsv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
-	productsv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/products/v1"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/products/v1/productsv1connect"
 	"google.golang.org/protobuf/proto"
 )
 

@@ -11,14 +11,14 @@ import (
 
 	"connectrpc.com/connect"
 
+	productsv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/products/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/products/v1/productsv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
-	productsv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/products/v1"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/products/v1/productsv1connect"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // productsRLSTables 是商品域三張表(00026 必須 ENABLE + FORCE 者)。

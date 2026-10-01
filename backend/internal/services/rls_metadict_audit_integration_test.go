@@ -12,11 +12,6 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/salesorder/sales-order-1.0/backend/ent"
-	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
-	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	auditv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/audit/v1"
 	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/audit/v1/auditv1connect"
 	customersv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1"
@@ -24,6 +19,11 @@ import (
 	metadictv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/metadict/v1"
 	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/metadict/v1/metadictv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/ent"
+	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
+	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
+	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 )
 
 // metadictAuditRLSTables 是字典/稽核兩表(00027 必須 ENABLE + FORCE 者)。

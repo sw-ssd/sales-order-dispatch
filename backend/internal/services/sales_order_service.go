@@ -12,6 +12,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
+	salesorderv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customer"
 	"github.com/salesorder/sales-order-1.0/backend/ent/salesorder"
@@ -19,10 +23,6 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/salesorderitem"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
-	salesorderv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
 )
 
 // SalesOrderService 實作 salesorder.v1.SalesOrderService。

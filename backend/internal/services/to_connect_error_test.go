@@ -10,8 +10,8 @@ import (
 	"connectrpc.com/connect"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
+	"github.com/salesorder/sales-order-1.0/backend/ent"
 )
 
 // TestToConnectErrorMapsToRegisteredCodes 釘住 toConnectError 的「輸入錯誤型別 → 註冊碼」映射。

@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/salesorder"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
 )
 
 // 訂單狀態(D13)。

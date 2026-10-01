@@ -9,13 +9,13 @@ import (
 	"connectrpc.com/connect"
 	_ "github.com/mattn/go-sqlite3" // sqlite in-memory 測試驅動
 
+	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
-	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
 	ofga "github.com/salesorder/sales-order-1.0/backend/third_party/openfga"
 )
 

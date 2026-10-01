@@ -7,9 +7,9 @@ import (
 	"connectrpc.com/connect"
 	_ "github.com/mattn/go-sqlite3" // sqlite in-memory 測試驅動
 
+	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
 )
 
 // TestUpdateRolePermissionsCaslValidation T10 驗收:UpdatePermissions 寫入前 CASL 條件驗證

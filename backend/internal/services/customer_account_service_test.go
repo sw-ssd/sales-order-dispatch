@@ -9,13 +9,13 @@ import (
 
 	"connectrpc.com/connect"
 
+	customersv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1/customersv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	customersv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1/customersv1connect"
 )
 
 // accountEnv 為店家自助帳號管理的測試環境。

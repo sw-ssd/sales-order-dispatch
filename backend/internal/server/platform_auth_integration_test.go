@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/salesorder/sales-order-1.0/backend/config"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
 	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
 )
 
 // TestIntegrationPlatformAuthMount 驗平台認證的**掛載契約**（需要真 admin 連線：掛載會開 owner 池）。

@@ -11,13 +11,13 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/salesorder/sales-order-1.0/backend/config"
-	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/cache"
 	platformv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1"
 	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1/platformv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/cache"
+	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
 )
 
 const tenantEntitlementSecret = "t10b-tenant-entitlement-secret"

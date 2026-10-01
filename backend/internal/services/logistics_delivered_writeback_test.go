@@ -7,11 +7,11 @@ import (
 
 	"connectrpc.com/connect"
 
+	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/salesorder"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
 )
 
 // mkOrder 在 fixture 公司/部門下建一筆訂單(status/route 由參數決定;客戶沿用預設佔位)。

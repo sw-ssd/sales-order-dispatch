@@ -8,12 +8,12 @@ import (
 
 	"connectrpc.com/connect"
 
+	salesorderv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/salesorderevent"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	salesorderv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // seedOrderCompany 建公司+部門+操作者+客戶+商品單位,回 coID/deptID/custID/actorID/prodID。

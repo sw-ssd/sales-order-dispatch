@@ -8,12 +8,12 @@ import (
 
 	"connectrpc.com/connect"
 
+	customersv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1/customersv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
-	customersv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1/customersv1connect"
 )
 
 // newAddressContactClient 於同一個 enttest DB 建立公司+部門+rep+客戶,並以該 DB

@@ -20,6 +20,9 @@ import (
 	"github.com/go-chi/cors"
 
 	"github.com/salesorder/sales-order-1.0/backend/config"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/cache"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
+	salesorderv1connect "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/role"
@@ -29,12 +32,9 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	authzopenfga "github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
-	salesorderv1connect "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/internal/resterr"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/cache"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/database"
 )
 

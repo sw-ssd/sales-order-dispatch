@@ -11,11 +11,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
 )
 
 // logo 上傳/更換公司 Logo(細部 2.4.1,權限修訂:見 spec 3.1.1)。契約:

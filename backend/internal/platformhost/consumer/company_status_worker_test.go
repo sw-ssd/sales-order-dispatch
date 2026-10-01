@@ -9,8 +9,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platformhost/consumer"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platformhost/consumer"
 )
 
 // newWorker 建 worker 並注入 fake setStatus(預設 services.SetCompanyStatus,本檔不連真庫)。
@@ -19,6 +19,7 @@ func newWorker(src consumer.EventStore, tx consumer.SystemTx, setter *fakeStatus
 	w.WithSetStatus(setter.setStatus)
 	return w
 }
+
 // fakeStatusCall 記錄一次 setStatus 呼叫。
 type fakeStatusCall struct {
 	companyID int

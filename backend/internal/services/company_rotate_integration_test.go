@@ -12,9 +12,9 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
-	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 )
 
 // TestIntegrationRotateCompanyExternalID 驗證輪換路徑的三個不變式。
@@ -105,4 +105,3 @@ func TestIntegrationRotateCompanyExternalID(t *testing.T) {
 		}
 	})
 }
-

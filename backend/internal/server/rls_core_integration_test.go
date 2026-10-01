@@ -17,8 +17,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
 
-
 	"github.com/salesorder/sales-order-1.0/backend/config"
+	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
@@ -27,10 +29,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/handlers"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
-	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/internal/services"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 	ofga "github.com/salesorder/sales-order-1.0/backend/third_party/openfga"
 )
 
@@ -51,7 +50,6 @@ import (
 
 // coreMigrationsDir 與 cmd/migrate 同路徑(go test 以套件目錄為 cwd)。
 const coreMigrationsDir = "../../database/migrations"
-
 
 // migrateCoreUp 套用全部遷移(業務 + 平台,同 testsupport.MigrateUp)。
 func migrateCoreUp(t *testing.T, dsn string) {

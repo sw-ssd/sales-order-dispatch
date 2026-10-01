@@ -5,11 +5,11 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
 )
 
 // companyStatusReasonManual 為 RPC(管理員手動變更)路徑的原因;平台域的訂閱事件 consumer

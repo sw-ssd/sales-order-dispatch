@@ -18,20 +18,20 @@ import (
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 
+	"github.com/google/uuid"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
+	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/department"
 	"github.com/salesorder/sales-order-1.0/backend/ent/predicate"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
-	"github.com/google/uuid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
-	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
 
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -349,6 +349,7 @@ func (s *CompanyService) UpdateCompany(ctx context.Context, req *connect.Request
 	}
 	return connect.NewResponse(&v1.UpdateCompanyResponse{Company: p}), nil
 }
+
 // RotateCompanyExternalID 輪換公司的 external_id(第三方整合暴露值;不改 id/internal_id)。
 // 權限與 UpdateCompany 同級(super / company_admin)。同筆租戶交易內更新 + 寫業務稽核(D18)。
 func (s *CompanyService) RotateCompanyExternalID(ctx context.Context, req *connect.Request[v1.RotateCompanyExternalIDRequest]) (*connect.Response[v1.RotateCompanyExternalIDResponse], error) {

@@ -543,6 +543,7 @@ func businessUpTo(t *testing.T, dsn string, version int64) error {
 	goose.SetBaseFS(nil)
 	return goose.UpToContext(t.Context(), db, migrationsDir, version)
 }
+
 // platformUp 以 cmd/migrate 相同路徑套用平台域遷移:獨立目錄、獨立版本表。
 func platformUp(t *testing.T, dsn string) error {
 	t.Helper()
@@ -555,6 +556,7 @@ func platformUp(t *testing.T, dsn string) error {
 	goose.SetBaseFS(nil)
 	return goose.RunContext(context.Background(), "up", db, testPlatformMigrationsDir)
 }
+
 // TestIntegrationPlatformMigrateUp 驗收平台域遷移拆分:獨立目錄 + 獨立版本表
 // (platform_goose_db_version) 記錄 00029/00030/00054,且 platform schema 表確實建出。
 func TestIntegrationPlatformMigrateUp(t *testing.T) {

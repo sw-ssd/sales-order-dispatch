@@ -8,9 +8,9 @@ import (
 	"connectrpc.com/connect"
 	_ "github.com/mattn/go-sqlite3" // sqlite in-memory 測試驅動
 
+	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/ent/fileasset"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
-	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
 )
 
 // TestDeliveryTransitionTable 狀態機表:合法/非法轉移一次講清楚(10.6)。

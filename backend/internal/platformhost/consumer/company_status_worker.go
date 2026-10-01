@@ -27,9 +27,9 @@ import (
 
 // CompanyStatusWorker 消費 company.status_changed outbox → services.SetCompanyStatus。
 type CompanyStatusWorker struct {
-	events   EventStore
-	sysTx    SystemTx
-	cache    entitlements.Cache
+	events    EventStore
+	sysTx     SystemTx
+	cache     entitlements.Cache
 	setStatus func(ctx context.Context, db *ent.Client, companyID int, status company.Status, reason string, actor authz.Identity) error
 }
 

@@ -9,11 +9,11 @@ import (
 
 	_ "github.com/mattn/go-sqlite3" // sqlite in-memory 測試驅動
 
+	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/auditlog"
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
 )
 
 // newAuditDB 建立 enttest sqlite client。

@@ -13,14 +13,14 @@ import (
 	"github.com/alexedwards/scs/v2/memstore"
 
 	"github.com/salesorder/sales-order-1.0/backend/config"
+	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/domain/customers/qrcode"
 	"github.com/salesorder/sales-order-1.0/backend/internal/handlers"
-	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1/salesorderv1connect"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // testQRConfig 回測試 config(QR 簽章密鑰 test-qr-secret,與 token 產生同值)。

@@ -11,10 +11,10 @@ import (
 
 	"github.com/alexedwards/scs/v2"
 
+	commonv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	authzopenfga "github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
-	commonv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/openfga"
 	"google.golang.org/protobuf/proto"
 )

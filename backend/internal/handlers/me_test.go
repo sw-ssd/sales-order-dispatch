@@ -11,10 +11,10 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	commonv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	commonv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
 )
 
 // meBody 為 /me 成功回應的形狀(測試只取用到的欄位)。

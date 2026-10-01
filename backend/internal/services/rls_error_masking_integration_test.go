@@ -10,8 +10,8 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/salesorder/sales-order-1.0/backend/ent/customer"
 	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
+	"github.com/salesorder/sales-order-1.0/backend/ent/customer"
 )
 
 // TestIntegrationRLSViolationMaskedForClient 釘住計畫 Global Constraints「錯誤一律經

@@ -26,8 +26,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platformhost/consumer"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platformhost/consumer"
 )
 
 // fakeEvents 假的事件來源:只回還沒被認領的事件(模擬 SQL 的 dispatched_at IS NULL 查詢)。
@@ -170,7 +170,7 @@ func emittedStatusChanged(t *testing.T, src *fakeEvents, idx int) (companyID int
 
 // ① subscription.suspended → 發 company.status_changed outbox(凍結),且認領事件。
 func TestDispatchOnceSuspendsCompany(t *testing.T) {
-	c, src, tx := newConsumer(t, store.Event{ID:1, EventType:"subscription.suspended",
+	c, src, tx := newConsumer(t, store.Event{ID: 1, EventType: "subscription.suspended",
 		Payload: []byte(`{"company_id":42,"reason":"overdue"}`)})
 
 	n, err := c.DispatchOnce(context.Background(), 100)
@@ -195,7 +195,7 @@ func TestDispatchOnceSuspendsCompany(t *testing.T) {
 // ② subscription.expired(G7)→ 發凍結 outbox。漏了它,consumer 會把它當未知型別只認領 ——
 // G7 靜默失效,而帳與事件都看起來正常。
 func TestDispatchOnceSuspendsExpiredCancelledSubscription(t *testing.T) {
-	c, src, tx := newConsumer(t, store.Event{ID:9, EventType:"subscription.expired",
+	c, src, tx := newConsumer(t, store.Event{ID: 9, EventType: "subscription.expired",
 		Payload: []byte(`{"company_id":42,"subscription_id":3,"reason":"cancelled_at_period_end"}`)})
 
 	n, err := c.DispatchOnce(context.Background(), 100)
@@ -219,7 +219,7 @@ func TestDispatchOnceSuspendsExpiredCancelledSubscription(t *testing.T) {
 
 // ③ subscription.reactivated → 發復原 active outbox。
 func TestDispatchOnceReactivatesCompany(t *testing.T) {
-	c, src, tx := newConsumer(t, store.Event{ID:2, EventType:"subscription.reactivated",
+	c, src, tx := newConsumer(t, store.Event{ID: 2, EventType: "subscription.reactivated",
 		Payload: []byte(`{"company_id":42,"from":"suspended"}`)})
 
 	if _, err := c.DispatchOnce(context.Background(), 100); err != nil {
@@ -242,7 +242,7 @@ func TestDispatchOnceReactivatesCompany(t *testing.T) {
 
 // ④ 同一批事件跑第二趟:沒有可派送的事件 → 不再認領、不再發 outbox(排程每日重跑的安全網)。
 func TestDispatchOnceIsIdempotentAcrossRuns(t *testing.T) {
-	c, src, tx := newConsumer(t, store.Event{ID:1, EventType:"subscription.suspended",
+	c, src, tx := newConsumer(t, store.Event{ID: 1, EventType: "subscription.suspended",
 		Payload: []byte(`{"company_id":42}`)})
 
 	first, err := c.DispatchOnce(context.Background(), 100)
@@ -260,6 +260,7 @@ func TestDispatchOnceIsIdempotentAcrossRuns(t *testing.T) {
 		t.Fatalf("第二趟不得再發 outbox,got %d 筆", len(src.emitted))
 	}
 }
+
 // ⑤ 事件已被別的執行搶先認領(條件式 UPDATE 0 列)→ 跳過:不報錯、不算派送、不重複副作用。
 func TestDispatchOnceSkipsEventClaimedByAnotherRun(t *testing.T) {
 	c, src, tx := newConsumer(t, store.Event{ID: 1, EventType: "subscription.suspended",

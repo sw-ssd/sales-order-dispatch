@@ -9,12 +9,12 @@ import (
 
 	"connectrpc.com/connect"
 
+	metadictv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/metadict/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/metadict/v1/metadictv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	metadictv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/metadict/v1"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/metadict/v1/metadictv1connect"
 )
 
 // newMetadictTestServer 建立 MetadictService client 並注入身分 + 稽核來源。

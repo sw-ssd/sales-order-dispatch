@@ -31,8 +31,6 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/platformhost/consumer"
 )
 
-
-
 func TestIntegrationDispatchOutboxEvents(t *testing.T) {
 	testsupport.RequiresContainer(t)
 	ctx := t.Context()
@@ -300,6 +298,7 @@ func (s *staleEvents) UndispatchedEvents(context.Context, int) ([]store.Event, e
 }
 
 func (s *staleEvents) SystemActor(context.Context) (int64, error) { return int64(s.actor), nil }
+
 // UndispatchedCompanyEvents staleEvents 只用於 subscription 事件競態測試,不含 outbox。
 func (s *staleEvents) UndispatchedCompanyEvents(context.Context, int) ([]store.Event, error) {
 	return nil, nil
@@ -378,6 +377,7 @@ func eventState(t *testing.T, ctx context.Context, db *sql.DB, eventID int64) (d
 	}
 	return at.Valid, attempts
 }
+
 // pendingOutboxCount 回 platform.events 中尚未派送的 company.status_changed outbox 數(worker 未消費者)。
 func pendingOutboxCount(t *testing.T, ctx context.Context, db *sql.DB) int {
 	t.Helper()

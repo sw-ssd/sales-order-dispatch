@@ -13,6 +13,8 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
+	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customer"
@@ -20,8 +22,6 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/domain/customers/qrcode"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
-	v1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/salesorder/v1"
 )
 
 // qrOneTime 轉接 OneTimeStore 為 qrcode.JTIStore(Peek 判已用、Put 佔位)。

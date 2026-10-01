@@ -15,6 +15,10 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
+	customersv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1/customersv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customer"
@@ -24,11 +28,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
-	customersv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1/customersv1connect"
 )
 
 // businessRepRoles 為可作為 default_sales_rep 的角色(業務/管理,非客戶主帳號)。

@@ -12,17 +12,17 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
+	productsv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/products/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/products/v1/productsv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/printlog"
 	"github.com/salesorder/sales-order-1.0/backend/ent/printpreview"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/print"
-	productsv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/products/v1"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/products/v1/productsv1connect"
 )
 
 // PrintService 為列印服務(Gotenberg client + 儲存根由建構子注入;測試注入 fake)。

@@ -12,11 +12,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/domain/fileassets"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // newFileMux 以 dept_admin 身分掛檔案路由(走 authzMiddleware 同形的身分注入;

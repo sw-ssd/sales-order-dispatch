@@ -34,14 +34,14 @@ import (
 
 	"connectrpc.com/connect"
 
+	customersv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1/customersv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customercounter"
 	"github.com/salesorder/sales-order-1.0/backend/internal/audit"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
-	customersv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1/customersv1connect"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 )
 
 // TestIntegrationCustomerCountersAlignEntSchema 00021:goose 建出的 customer_counters 必須符合 ent

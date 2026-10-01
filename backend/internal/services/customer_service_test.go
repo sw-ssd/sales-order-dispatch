@@ -12,6 +12,8 @@ import (
 
 	"connectrpc.com/connect"
 
+	customersv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1/customersv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/ent/user"
@@ -19,8 +21,6 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
-	customersv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/customers/v1/customersv1connect"
 )
 
 // newCustomerTestServer 建立 CustomerService client 並注入身分 + 稽核來源。

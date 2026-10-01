@@ -15,14 +15,14 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
+	platformv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1/platformv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/billing"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/money"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
 	platformstore "github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
-	platformv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1/platformv1connect"
 )
 
 // 平台 admin 查詢的資料列型別定義在 platform/store(服務與 SQL 實作共用同一組 DTO):

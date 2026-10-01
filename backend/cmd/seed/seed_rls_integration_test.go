@@ -14,14 +14,12 @@
 package main
 
 import (
-
 	"database/sql"
 	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib" // pgx database/sql driver
-
 
 	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 	"github.com/salesorder/sales-order-1.0/backend/ent"

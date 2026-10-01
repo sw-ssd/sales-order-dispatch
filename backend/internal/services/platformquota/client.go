@@ -6,19 +6,19 @@
 package platformquota
 
 import (
-	"strconv"
 	"context"
 	"errors"
+	"strconv"
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
 
-	"github.com/salesorder/sales-order-1.0/backend/ent"
-	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 	platformv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1"
 	platformv1connect "github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1/platformv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/ent"
+	"github.com/salesorder/sales-order-1.0/backend/ent/company"
+	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
 )
 
 // Client 實作 internal/services.entitlementChecker 介面(CheckLimit + CheckLimitRPC)。

@@ -11,16 +11,16 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
+	productsv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/products/v1"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/products/v1/productsv1connect"
+	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customer"
 	"github.com/salesorder/sales-order-1.0/backend/ent/customerproduct"
 	"github.com/salesorder/sales-order-1.0/backend/ent/product"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	domainproducts "github.com/salesorder/sales-order-1.0/backend/internal/domain/products"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/errcode"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
-	productsv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/products/v1"
-	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/products/v1/productsv1connect"
 )
 
 // CustomerProductService 實作 products.v1.CustomerProductService。

@@ -33,8 +33,6 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/platformhost/consumer"
 )
 
-
-
 func TestIntegrationRunOnceOverdueFreesTenant(t *testing.T) {
 	testsupport.RequiresContainer(t)
 	ctx := t.Context()
