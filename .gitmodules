@@ -1,3 +1,6 @@
 [submodule "platform"]
 	path = platform
 	url = https://github.com/sw-ssd/platform.git
+[submodule "ark-tailkit-ui"]
+	path = ark-tailkit-ui
+	url = https://apg-git.sowinsoft.com/ssd/ark-tailkit-ui.git
