@@ -84,10 +84,11 @@ func TestIntegrationRunOnceOverdueFreesTenant(t *testing.T) {
 	// ＋ advisory lock 單飛鎖。cron 不碰業務連線,故沒有 dbtenant 連線池上限的問題。
 	st := postgres.New(adminDB)
 	deps := cron.Deps{
-		Billing:  billing.NewBilling(st),
-		Consumer: consumer.New(st, consumer.NewDBSystemTx(adminDB), consumer.ProductDomain{}),
-		Store:    st,
-		Lock:     cron.NewAdvisoryLocker(adminDB, cron.LockKey),
+		Billing:      billing.NewBilling(st),
+		Consumer:     consumer.New(st, consumer.NewDBSystemTx(adminDB), consumer.ProductDomain{}),
+		StatusWorker: consumer.NewCompanyStatusWorker(st, consumer.NewDBSystemTx(adminDB)),
+		Store:        st,
+		Lock:         cron.NewAdvisoryLocker(adminDB, cron.LockKey),
 	}
 	params, err := cron.LoadParams(ctx, st)
 	if err != nil {

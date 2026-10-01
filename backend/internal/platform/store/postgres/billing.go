@@ -520,11 +520,38 @@ func (s *Store) EmitEventTx(ctx context.Context, tx *sql.Tx, aggregateType strin
 }
 
 // UndispatchedEvents 取未派送事件(依 id 排序:先寫先派送);limit 由呼叫端給(consumer 的批次大小)。
+// 排除 company.status_changed outbox:該型別由 CompanyStatusWorker 獨佔,主迴圈回頭撿到會與
+// worker 競爭認領(見 plan p3)。
 func (s *Store) UndispatchedEvents(ctx context.Context, limit int) ([]store.Event, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT id, aggregate_type, aggregate_id, event_type, payload
 		  FROM platform.events
 		 WHERE dispatched_at IS NULL
+		   AND event_type <> 'company.status_changed'
+		 ORDER BY id
+		 LIMIT $1`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var out []store.Event
+	for rows.Next() {
+		var e store.Event
+		if err := rows.Scan(&e.ID, &e.AggregateType, &e.AggregateID, &e.EventType, &e.Payload); err != nil {
+			return nil, err
+		}
+		out = append(out, e)
+	}
+	return out, rows.Err()
+}
+
+// UndispatchedCompanyEvents 取未派送的 company.status_changed outbox(worker 用),依 id 排序。
+func (s *Store) UndispatchedCompanyEvents(ctx context.Context, limit int) ([]store.Event, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, aggregate_type, aggregate_id, event_type, payload
+		  FROM platform.events
+		 WHERE dispatched_at IS NULL
+		   AND event_type = 'company.status_changed'
 		 ORDER BY id
 		 LIMIT $1`, limit)
 	if err != nil {

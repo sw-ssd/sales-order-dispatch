@@ -78,8 +78,13 @@ func TestIntegrationDispatchOutboxEvents(t *testing.T) {
 	if n != 2 {
 		t.Fatalf("兩筆事件都應被認領(未對應型別只認領),got %d", n)
 	}
+	// p3 outbox 反轉:consumer 只發 company.status_changed outbox,凍結由 worker 在同進程內消費。
+	w := consumer.NewCompanyStatusWorker(postgres.New(adminDB), consumer.NewDBSystemTx(adminDB))
+	if _, err := w.ProcessOnce(ctx, 100); err != nil {
+		t.Fatalf("worker 消費 outbox: %v", err)
+	}
 
-	// ① 公司在同一交易內被凍結,且稽核的 actor 是系統 actor(租戶 users.id)。
+	// ① 公司在 worker 消費 outbox 後被凍結,且稽核的 actor 是系統 actor(租戶 users.id)。
 	status := companyStatus(t, ctx, adminDB, companyID)
 	if status != string(company.StatusSuspended) {
 		t.Fatalf("expired(G7)應把公司凍結為 suspended,got %q", status)
@@ -224,46 +229,56 @@ func TestIntegrationDispatchContinuesPastPermanentlyFailingEvent(t *testing.T) {
 
 	c := consumer.New(postgres.New(adminDB), consumer.NewDBSystemTx(adminDB), consumer.ProductDomain{})
 	n, err := c.DispatchOnce(ctx, 100)
-	if err == nil {
-		t.Fatal("沒做成的事件必須回報(errors.Join),不得靜默")
+	if err != nil {
+		t.Fatalf("consumer 派送不得報錯(p3 outbox 反轉:consumer 只發 outbox): %v", err)
 	}
-	if n != 1 {
-		t.Fatalf("排在後面的租戶仍必須被派送,got %d", n)
+	if n != 2 {
+		t.Fatalf("兩筆 subscription 事件都應被認領,got %d", n)
 	}
 
-	// ① 失敗的那筆維持未派送:不認領(不吞掉副作用)、下趟重試。
-	if dispatched, attempts := eventState(t, ctx, adminDB, stuckID); dispatched || attempts != 0 {
-		t.Fatalf("失敗的事件應維持未派送(dispatched=%v attempts=%d),否則那家公司的凍結永遠不會發生",
-			dispatched, attempts)
+	// p3 outbox 反轉:consumer 發 company.status_changed outbox,凍結由 worker 執行。
+	// gone 已軟刪除→worker 消費其 outbox 失敗(SetCompanyStatus NotFound);victim 成功。
+	w := consumer.NewCompanyStatusWorker(postgres.New(adminDB), consumer.NewDBSystemTx(adminDB))
+	if _, err := w.ProcessOnce(ctx, 100); err == nil {
+		t.Fatal("worker 消費應回報 gone 軟刪除失敗")
 	}
-	// ② 失敗的事件不得有任何副作用(公司狀態與稽核都不動)。
+
+	// ① 兩筆 subscription 事件都已認領(consumer 層,與後續 worker 成功與否無關)。
+	if d, a := eventState(t, ctx, adminDB, stuckID); !d || a != 1 {
+		t.Fatalf("stuck subscription 事件應被認領(d=%v a=%d)", d, a)
+	}
+	if d, a := eventState(t, ctx, adminDB, victimEventID); !d || a != 1 {
+		t.Fatalf("victim subscription 事件應被認領(d=%v a=%d)", d, a)
+	}
+	// stuck outbox 仍在未派送佇列(worker 消費失敗,留待重試);victim outbox 已認領。
+	if n := pendingOutboxCount(t, ctx, adminDB); n != 1 {
+		t.Fatalf("應剩 1 筆未派送 outbox(stuck),got %d", n)
+	}
+	// ② gone 仍 active、無 audit(stuck outbox 未消費,不改狀態)。
 	if got := companyStatus(t, ctx, adminDB, gone); got != string(company.StatusActive) {
-		t.Fatalf("失敗的事件不得改變任何狀態,got %q", got)
+		t.Fatalf("stuck 公司不得改狀態,got %q", got)
 	}
 	var goneAudits int
-	if err := adminDB.QueryRowContext(ctx,
-		`SELECT count(*) FROM audit_logs WHERE company_id = $1`, gone).Scan(&goneAudits); err != nil {
-		t.Fatalf("查失敗事件的稽核: %v", err)
+	if err := adminDB.QueryRowContext(ctx, `SELECT count(*) FROM audit_logs WHERE company_id = $1`, gone).
+		Scan(&goneAudits); err != nil {
+		t.Fatalf("查 gone 稽核: %v", err)
 	}
 	if goneAudits != 0 {
-		t.Fatalf("失敗的事件不得留稽核,got %d 筆", goneAudits)
+		t.Fatalf("stuck 事件不得留稽核,got %d", goneAudits)
 	}
-	// ③ 排在它後面的事件仍被派送(不是被跳過,也真的落到產品域)。
-	if dispatched, attempts := eventState(t, ctx, adminDB, victimEventID); !dispatched || attempts != 1 {
-		t.Fatalf("後續事件應被認領一次(dispatched=%v attempts=%d)", dispatched, attempts)
-	}
+	// ③ victim outbox 已消費:凍結為 suspended + 1 筆稽核且 actor 為系統 actor。
 	if got := companyStatus(t, ctx, adminDB, victim); got != string(company.StatusSuspended) {
-		t.Fatalf("後續租戶的 G7 凍結必須真的生效,got %q", got)
+		t.Fatalf("victim 應凍結為 suspended,got %q", got)
 	}
 	var victimAudits, auditUser int
-	if err := adminDB.QueryRowContext(ctx, `
-		SELECT count(*) OVER (), user_id FROM audit_logs
+	if err := adminDB.QueryRowContext(ctx,
+		`SELECT count(*) OVER (), user_id FROM audit_logs
 		 WHERE company_id = $1 AND resource_type = 'company'`, victim).
 		Scan(&victimAudits, &auditUser); err != nil {
-		t.Fatalf("查後續租戶的稽核: %v", err)
+		t.Fatalf("查 victim 稽核: %v", err)
 	}
 	if victimAudits != 1 || auditUser != actorID {
-		t.Fatalf("後續租戶應留 1 筆稽核且 actor 為系統 actor(%d): audits=%d user=%d",
+		t.Fatalf("victim 應留 1 筆稽核且 actor 為系統 actor(%d): audits=%d user=%d",
 			actorID, victimAudits, auditUser)
 	}
 }
@@ -285,6 +300,10 @@ func (s *staleEvents) UndispatchedEvents(context.Context, int) ([]store.Event, e
 }
 
 func (s *staleEvents) SystemActor(context.Context) (int64, error) { return int64(s.actor), nil }
+// UndispatchedCompanyEvents staleEvents 只用於 subscription 事件競態測試,不含 outbox。
+func (s *staleEvents) UndispatchedCompanyEvents(context.Context, int) ([]store.Event, error) {
+	return nil, nil
+}
 
 // companyStatus 讀目前狀態(每次都以真值重查,不靠上一段的區域變數)。
 func companyStatus(t *testing.T, ctx context.Context, db *sql.DB, companyID int) string {
@@ -358,4 +377,15 @@ func eventState(t *testing.T, ctx context.Context, db *sql.DB, eventID int64) (d
 		t.Fatalf("查事件 %d: %v", eventID, err)
 	}
 	return at.Valid, attempts
+}
+// pendingOutboxCount 回 platform.events 中尚未派送的 company.status_changed outbox 數(worker 未消費者)。
+func pendingOutboxCount(t *testing.T, ctx context.Context, db *sql.DB) int {
+	t.Helper()
+	var n int
+	if err := db.QueryRowContext(ctx,
+		`SELECT count(*) FROM platform.events WHERE event_type = 'company.status_changed' AND dispatched_at IS NULL`).
+		Scan(&n); err != nil {
+		t.Fatalf("查未派送 outbox: %v", err)
+	}
+	return n
 }

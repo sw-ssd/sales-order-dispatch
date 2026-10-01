@@ -73,6 +73,12 @@ type Dispatcher interface {
 	DispatchOnce(ctx context.Context, limit int) (int, error)
 }
 
+// StatusWorker 消費 company.status_changed outbox → 產品域凍結(p3 outbox 反轉後,
+// consumer 只發 outbox,凍結由本介面執行;同進程部署下由 RunOnce 驅動)。
+type StatusWorker interface {
+	ProcessOnce(ctx context.Context, limit int) (int, error)
+}
+
 // Store 為排程需要的平台讀取(實作:store/postgres 的 admin 連線)。
 //
 // 刻意只列用得到的三個方法:排程只需要營運參數、服務中的訂閱、待收款期別,
@@ -101,9 +107,10 @@ type Locker interface {
 
 // Deps 為排程的外部依賴(C-08:欄位一律是介面,RunOnce 因此不需要容器就能測)。
 type Deps struct {
-	Billing  Billing
-	Consumer Dispatcher
-	Store    Store
+	Billing      Billing
+	Consumer     Dispatcher
+	StatusWorker StatusWorker // 消費 outbox → 凍結(可為 nil:單測不驗證凍結時)
+	Store        Store
 	// Lock 只在 RunGuarded 用到(RunOnce 本身是純編排,不含鎖)。
 	Lock Locker
 }
@@ -278,6 +285,15 @@ func runOnceGuarded(ctx context.Context, deps Deps, now time.Time, p Params) (s 
 		return s, dispatchErr
 	}
 
+	// p3 outbox 反轉:consumer 發 company.status_changed outbox,凍結由 StatusWorker 消費。
+	// 消費失敗不視為本趟 fatal(outbox 留待下趟重試,與 consumer 的失敗事件語意一致)。
+	if deps.StatusWorker != nil {
+		if n, werr := deps.StatusWorker.ProcessOnce(ctx, p.EventBatch); werr != nil {
+			log.Printf("消費 company.status_changed outbox 失敗(留待下趟重試): %v", werr)
+		} else if n > 0 {
+			log.Printf("消費 company.status_changed outbox %d 筆", n)
+		}
+	}
 	// 待收款清單(spec §5.4):已過期未付的 open 期別，且排除 G5 平台自營公司
 	// (console 的 ListReceivables 用同一謂詞，兩處的「租戶」定義必須一致)。
 	// 過期判定用呼叫端的 now（補跑跟著呼叫端走，不跟 DB 時鐘）。

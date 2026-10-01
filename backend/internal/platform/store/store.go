@@ -243,8 +243,11 @@ type BillingStore interface {
 	ActiveOrTrialingSubscriptions(ctx context.Context) ([]Subscription, error)
 	// EmitEventTx 寫入 outbox 事件(與期別／狀態同一個交易)。
 	EmitEventTx(ctx context.Context, tx *sql.Tx, aggregateType string, aggregateID uuid.UUID, eventType string, payload []byte) error
-	// UndispatchedEvents 取未派送事件(依 id 排序,consumer 用)。
+	// UndispatchedEvents 取未派送事件(依 id 排序,consumer 用)。排除 company.status_changed
+	// outbox:該型別由 CompanyStatusWorker 獨佔,主迴圈不得回頭撿到(否則會與 worker 競爭認領)。
 	UndispatchedEvents(ctx context.Context, limit int) ([]Event, error)
+	// UndispatchedCompanyEvents 取未派送的 company.status_changed outbox(worker 用)。
+	UndispatchedCompanyEvents(ctx context.Context, limit int) ([]Event, error)
 	// MarkEventDispatchedTx 標記事件已派送(重試次數記在 attempts)。
 	//
 	// **測試專用**（未結項 #43）：生產認領走 consumer.Tx.Claim（條件式：0 列＝別趟已認領）。

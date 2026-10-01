@@ -551,14 +551,33 @@ func (f *FakeBilling) EmitEventTx(_ context.Context, _ *sql.Tx, aggregateType st
 	return nil
 }
 
-// UndispatchedEvents 取未派送事件(依 id 排序,同 SQL)。
+// UndispatchedEvents 取未派送事件(依 id 排序,同 SQL)。排除 company.status_changed outbox。
 func (f *FakeBilling) UndispatchedEvents(_ context.Context, limit int) ([]Event, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	var out []Event
 	for i := range f.events {
 		e := f.events[i]
-		if f.dispatched[e.ID] {
+		if f.dispatched[e.ID] || e.EventType == "company.status_changed" {
+			continue
+		}
+		e.Payload = slices.Clone(e.Payload)
+		out = append(out, e)
+		if limit > 0 && len(out) == limit {
+			break
+		}
+	}
+	return out, nil
+}
+
+// UndispatchedCompanyEvents 取未派送的 company.status_changed outbox(worker 用)。
+func (f *FakeBilling) UndispatchedCompanyEvents(_ context.Context, limit int) ([]Event, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []Event
+	for i := range f.events {
+		e := f.events[i]
+		if f.dispatched[e.ID] || e.EventType != "company.status_changed" {
 			continue
 		}
 		e.Payload = slices.Clone(e.Payload)

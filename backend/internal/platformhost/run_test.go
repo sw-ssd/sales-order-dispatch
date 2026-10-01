@@ -13,6 +13,7 @@ package cron_test
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"slices"
 	"strings"
@@ -20,9 +21,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
-	"github.com/salesorder/sales-order-1.0/backend/ent/company"
-	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/billing"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platformhost/consumer"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platform/cron"
@@ -129,6 +129,11 @@ type fakeTx struct{ f *store.FakeBilling }
 // Client 在單元測試裡沒有 ent:產品域入口是假的,不會用到它。
 func (fakeTx) Client() *ent.Client { return nil }
 
+// Emit 寫入 company.status_changed outbox(模擬 platform.events 的 INSERT,與認領同一交易)。
+func (t fakeTx) Emit(ctx context.Context, aggregateID uuid.UUID, eventType string, payload []byte) error {
+	return t.f.EmitEventTx(ctx, nil, "company", aggregateID, eventType, payload)
+}
+
 // Claim 條件式認領：已被別趟認領即回 false（與 consumer_test.go 的 fakeTx 同語意）。
 // 未結項 #43：此前經 MarkEventDispatchedTx（無條件標記），並行語意由該方法保證；
 // 改為條件式後，Claim 即唯一認領語意，MarkEventDispatchedTx 只剩「造中間狀態」測試用。
@@ -145,27 +150,24 @@ func (t fakeTx) Claim(_ context.Context, eventID int64) (bool, error) {
 	return false, nil
 }
 
-// recordingSetter 記下產品域收到的狀態變更(凍結有沒有真的走到唯一入口)。
-type recordingSetter struct {
-	mu    sync.Mutex
-	calls []int
-}
-
-func (s *recordingSetter) SetStatus(_ context.Context, _ *ent.Client, companyID int,
-	_ company.Status, reason string, _ authz.Identity) error {
-	if reason == "" {
-		return errors.New("狀態變更必須有原因")
+// outboxCompanies 從 fake store 的事件中過濾 company.status_changed outbox 的 company_id 列表。
+// p3 outbox 反轉後,consumer 不再直接呼叫 SetCompanyStatus,而是發出 outbox;凍結語意改由
+// CompanyStatusWorker 消費(見 consumer 套件測試)。本檔只驗證「凍結請求確實發出」。
+func outboxCompanies(f *store.FakeBilling) []int {
+	var out []int
+	for _, e := range f.Events() {
+		if e.EventType != "company.status_changed" {
+			continue
+		}
+		var p struct {
+			CompanyID int `json:"company_id"`
+		}
+		if err := json.Unmarshal(e.Payload, &p); err != nil {
+			continue
+		}
+		out = append(out, p.CompanyID)
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.calls = append(s.calls, companyID)
-	return nil
-}
-
-func (s *recordingSetter) companies() []int {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return slices.Clone(s.calls)
+	return out
 }
 
 // fakeLocker 為記憶體版單飛鎖:「同一時間只有一個持有者」＋取鎖／解鎖次數(解鎖必須發生,
@@ -248,7 +250,7 @@ func TestRunOnceCountsServiceableButUnbilled(t *testing.T) {
 	f := store.NewFakeBilling()
 	// 沒有價目:EnsureNextPeriod 開不出下一期(只記錯誤、不中斷)。
 	seedSub(f, 42, "active", "monthly", nil, at(2026, time.October, 3, 3))
-	deps, _, _, _ := newDeps(f)
+	deps, _, _ := newDeps(f)
 	now := at(2026, time.October, 1, 3)
 
 	s, err := cron.RunOnce(context.Background(), deps, now, cron.Params{GraceDays: 7, LeadDays: 14, EventBatch: 200})
@@ -274,17 +276,17 @@ func seedSub(f *store.FakeBilling, companyID int, status, cycle string, graceUnt
 	return id
 }
 
-// newDeps 組出真帳務 + 真 consumer 的假 deps,回傳呼叫順序與 setter(看凍結有沒有走到產品域)。
-func newDeps(f *store.FakeBilling) (cron.Deps, *callLog, *spyBilling, *recordingSetter) {
+// newDeps 組出真帳務 + 真 consumer 的假 deps。consumer 用 ProductDomain{} 佔位(其 setter 在 p3
+// outbox 反轉後已不再被 dispatch 使用;凍結改由 CompanyStatusWorker 消費,見 consumer 套件測試)。
+func newDeps(f *store.FakeBilling) (cron.Deps, *callLog, *spyBilling) {
 	log := &callLog{}
 	spy := &spyBilling{inner: billing.NewBilling(f), log: log}
-	setter := &recordingSetter{}
 	return cron.Deps{
 		Billing:  spy,
-		Consumer: &spyDispatcher{inner: consumer.New(f, &fakeSystemTx{f: f}, setter), log: log},
+		Consumer: &spyDispatcher{inner: consumer.New(f, &fakeSystemTx{f: f}, consumer.ProductDomain{}), log: log},
 		Store:    f,
 		Lock:     &fakeLocker{},
-	}, log, spy, setter
+	}, log, spy
 }
 
 // seedTrialingSub 種一筆試用中的訂閱(trial_ends_at = trialEnds)與它的第 1 期(期末 end)。
@@ -326,7 +328,7 @@ func TestRunOnceCountsStuckTrialing(t *testing.T) {
 		PeriodStart: now.AddDate(0, -1, 0), PeriodEnd: now.AddDate(0, 0, 10),
 		PlanID: 1, SeatCount: 3, AmountCents: 195000, Currency: "TWD"})
 
-	deps, _, _, _ := newDeps(f)
+	deps, _, _ := newDeps(f)
 	s, err := cron.RunOnce(ctx, deps, now, p)
 	if err != nil {
 		t.Fatalf("RunOnce: %v", err)
@@ -366,7 +368,7 @@ func TestRunOnceIsIdempotent(t *testing.T) {
 	// 若試用到期沒有先轉走狀態,本趟就會替它開出第 2 期。
 	sub46 := seedTrialingSub(f, 46, now.Add(-time.Hour), now.AddDate(0, 0, 10))
 
-	deps, log, _, setter := newDeps(f)
+	deps, log, _ := newDeps(f)
 
 	first, err := cron.RunOnce(ctx, deps, now, p)
 	if err != nil {
@@ -394,8 +396,9 @@ func TestRunOnceIsIdempotent(t *testing.T) {
 		t.Fatalf("試用已到期的租戶不得被開第 2 期（轉 past_due 之後就不在服務中）: %v", err)
 	}
 	// 凍結真的走到產品域唯一入口:43(suspended)與 44(expired→凍結)。
-	if got := setter.companies(); !slices.Equal(got, []int{43, 44}) {
-		t.Fatalf("凍結應走到產品域入口(43、44),got %v", got)
+	// 凍結真的發出 outbox:43(suspended)與 44(expired→凍結)。
+	if got := outboxCompanies(f); !slices.Equal(got, []int{43, 44}) {
+		t.Fatalf("凍結應發出 outbox(43、44),got %v", got)
 	}
 	// 待收款:42／43／44 的第 1 期仍是 open 且期末已過(45 已開下一期,不是待收款)。
 	if first.Receivables != 3 {
@@ -413,10 +416,12 @@ func TestRunOnceIsIdempotent(t *testing.T) {
 	if second.Receivables != first.Receivables {
 		t.Fatalf("待收款是狀態不是動作,重跑不得歸零: got %d want %d", second.Receivables, first.Receivables)
 	}
-	if got := setter.companies(); !slices.Equal(got, []int{43, 44}) {
-		t.Fatalf("重跑不得再動產品域,got %v", got)
+	// 重跑不得再發 outbox(冪等:認領是條件式 UPDATE)。
+	if got := outboxCompanies(f); !slices.Equal(got, []int{43, 44}) {
+		t.Fatalf("重跑不得再發 outbox,got %v", got)
 	}
-	if events := len(f.Events()); events != 5 {
+	// 重跑不得產生第二個事件:總數仍為第一趟的 5 筆訂閱事件 + 2 筆 company.status_changed outbox = 7。
+	if events := len(f.Events()); events != 7 {
 		t.Fatalf("重跑不得產生第二個事件,got %d 筆", events)
 	}
 }
@@ -430,7 +435,7 @@ func TestRunOnceReportsPartialSummaryOnFailure(t *testing.T) {
 	f.PutSetting("system_actor_user_id", "7")
 	seedSub(f, 42, "active", "monthly", nil, now.Add(-time.Hour))
 
-	deps, log, spy, _ := newDeps(f)
+	deps, log, spy := newDeps(f)
 	spy.failOn = "SuspendOverdue"
 
 	got, err := cron.RunOnce(context.Background(), deps, now, p)
@@ -476,7 +481,7 @@ func TestRunOnceKeepsDispatchingWhenPeriodOpeningFails(t *testing.T) {
 	// 44:服務中、期末在提前窗內且有價目 → 迴圈必須繼續跑完它(不能因 43 而放棄其他租戶)。
 	seedSub(f, 44, "active", "monthly", nil, now.AddDate(0, 0, 10))
 
-	deps, log, _, _ := newDeps(f)
+	deps, log, _ := newDeps(f)
 	got, err := cron.RunOnce(ctx, deps, now, p)
 	if err == nil {
 		t.Fatal("產生期別的失敗必須回報")
@@ -512,7 +517,7 @@ func TestRunGuardedSecondOverlappingRunDoesNothing(t *testing.T) {
 	seedSub(f, 42, "active", "monthly", nil, now.Add(-time.Hour))
 
 	lock := &fakeLocker{}
-	deps, log, _, _ := newDeps(f)
+	deps, log, _ := newDeps(f)
 	deps.Lock = lock
 	deps.Store = &gateStore{inner: f, entered: make(chan struct{}), release: make(chan struct{})}
 
@@ -720,7 +725,7 @@ func TestRunOnceReceivablesExcludesPlatformCompany(t *testing.T) {
 	f.PutPlatformCompany(9001)
 	seedSub(f, 9001, "active", "monthly", nil, now.Add(-time.Hour))
 
-	deps, _, _, _ := newDeps(f)
+	deps, _, _ := newDeps(f)
 	s, err := cron.RunOnce(ctx, deps, now, p)
 	if err != nil {
 		t.Fatalf("RunOnce: %v", err)

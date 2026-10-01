@@ -86,10 +86,11 @@ func main() {
 		entCache = entitlements.NewValkeyCache(valkeyClient)
 	}
 	deps := platformcron.Deps{
-		Billing:  billing.NewBilling(st).WithCache(entCache),
-		Consumer: consumer.New(st, consumer.NewDBSystemTx(db), consumer.ProductDomain{}).WithCache(entCache),
-		Store:    st,
-		Lock:     platformcron.NewAdvisoryLocker(db, platformcron.LockKey),
+		Billing:      billing.NewBilling(st).WithCache(entCache),
+		Consumer:     consumer.New(st, consumer.NewDBSystemTx(db), consumer.ProductDomain{}).WithCache(entCache),
+		StatusWorker: consumer.NewCompanyStatusWorker(st, consumer.NewDBSystemTx(db)),
+		Store:        st,
+		Lock:         platformcron.NewAdvisoryLocker(db, platformcron.LockKey),
 	}
 	// 整趟有界:逾時不是「這一趟失敗」而已,它同時保證鎖一定會被放掉
 	// (RunGuarded 以 context.WithoutCancel 解鎖)。

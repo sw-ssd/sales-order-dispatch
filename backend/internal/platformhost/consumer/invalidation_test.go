@@ -12,7 +12,6 @@ package consumer_test
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
@@ -34,7 +33,7 @@ func (c *recordingCache) Delete(_ context.Context, key string) error {
 
 // subscription.suspended（凍結）→ 交易提交後失效該租戶的快取。
 func TestDispatchInvalidatesCacheForSuspendedEvent(t *testing.T) {
-	c, _, _, _ := newConsumer(t, store.Event{ID: 1, AggregateType: "subscription", AggregateID: uuid.MustParse("00000000-0000-0000-0000-000000000005"),
+	c, src, _ := newConsumer(t, store.Event{ID: 1, AggregateType: "subscription", AggregateID: uuid.MustParse("00000000-0000-0000-0000-000000000005"),
 		EventType: "subscription.suspended", Payload: []byte(`{"company_id":42}`)})
 	cache := &recordingCache{}
 	c.WithCache(cache)
@@ -42,12 +41,15 @@ func TestDispatchInvalidatesCacheForSuspendedEvent(t *testing.T) {
 	if _, err := c.DispatchOnce(context.Background(), 10); err != nil {
 		t.Fatalf("派送: %v", err)
 	}
+	if len(src.emitted) != 1 {
+		t.Fatalf("應發出 1 筆 company.status_changed outbox,got %d", len(src.emitted))
+	}
 	assertInvalidated(t, cache, "ent:42")
 }
 
 // subscription.expired（G7：取消且期末已過 → 凍結）同樣要失效。
 func TestDispatchInvalidatesCacheForExpiredEvent(t *testing.T) {
-	c, _, _, _ := newConsumer(t, store.Event{ID: 1, AggregateType: "subscription", AggregateID: uuid.MustParse("00000000-0000-0000-0000-000000000005"),
+	c, src, _ := newConsumer(t, store.Event{ID: 1, AggregateType: "subscription", AggregateID: uuid.MustParse("00000000-0000-0000-0000-000000000005"),
 		EventType: "subscription.expired", Payload: []byte(`{"company_id":43}`)})
 	cache := &recordingCache{}
 	c.WithCache(cache)
@@ -55,15 +57,15 @@ func TestDispatchInvalidatesCacheForExpiredEvent(t *testing.T) {
 	if _, err := c.DispatchOnce(context.Background(), 10); err != nil {
 		t.Fatalf("派送: %v", err)
 	}
+	if len(src.emitted) != 1 {
+		t.Fatalf("應發出 1 筆 outbox,got %d", len(src.emitted))
+	}
 	assertInvalidated(t, cache, "ent:43")
 }
 
 // 未對應型別（period.opened）：只認領、不動公司狀態 → 不得失效。
-//
-// 為什麼要擋：這類事件每期每租戶都會產生，若也失效，等於每開一期就把該租戶的快取清一次 ——
-// 快取被自己的副作用打穿，而 log 看起來完全正常。
 func TestDispatchDoesNotInvalidateForUnmappedEvent(t *testing.T) {
-	c, _, _, _ := newConsumer(t, store.Event{ID: 1, AggregateType: "subscription", AggregateID: uuid.MustParse("00000000-0000-0000-0000-000000000005"),
+	c, src, _ := newConsumer(t, store.Event{ID: 1, AggregateType: "subscription", AggregateID: uuid.MustParse("00000000-0000-0000-0000-000000000005"),
 		EventType: "period.opened", Payload: []byte(`{"company_id":42}`)})
 	cache := &recordingCache{}
 	c.WithCache(cache)
@@ -71,21 +73,26 @@ func TestDispatchDoesNotInvalidateForUnmappedEvent(t *testing.T) {
 	if _, err := c.DispatchOnce(context.Background(), 10); err != nil {
 		t.Fatalf("派送: %v", err)
 	}
+	if len(src.emitted) != 0 {
+		t.Fatalf("未改公司狀態的事件不得發 outbox,got %+v", src.emitted)
+	}
 	if len(cache.deleted) != 0 {
 		t.Fatalf("未改公司狀態的事件不得失效快取，got %v", cache.deleted)
 	}
 }
 
-// 產品域失敗（整筆回滾、事件未被認領）→ 不得失效；且要能重試。
+// payload 壞掉（缺 company_id）→ 報錯、不發 outbox、不失效；且要能重試。
 func TestDispatchFailureDoesNotInvalidateCache(t *testing.T) {
-	c, _, _, setter := newConsumer(t, store.Event{ID: 1, AggregateType: "subscription",
-		AggregateID: uuid.MustParse("00000000-0000-0000-0000-000000000005"), EventType: "subscription.suspended", Payload: []byte(`{"company_id":42}`)})
-	setter.err = errors.New("模擬產品域失敗")
+	c, src, _ := newConsumer(t, store.Event{ID: 1, AggregateType: "subscription",
+		AggregateID: uuid.MustParse("00000000-0000-0000-0000-000000000005"), EventType: "subscription.suspended", Payload: []byte(`{}`)})
 	cache := &recordingCache{}
 	c.WithCache(cache)
 
 	if _, err := c.DispatchOnce(context.Background(), 10); err == nil {
-		t.Fatal("產品域失敗必須回報（errors.Join），不得靜默")
+		t.Fatal("壞 payload 必須回報（errors.Join），不得靜默")
+	}
+	if len(src.emitted) != 0 {
+		t.Fatalf("失敗的事件不得發 outbox,got %+v", src.emitted)
 	}
 	if len(cache.deleted) != 0 {
 		t.Fatalf("失敗的事件不得失效快取，got %v", cache.deleted)
@@ -94,14 +101,14 @@ func TestDispatchFailureDoesNotInvalidateCache(t *testing.T) {
 
 // 沒接上快取（cache=nil）時照常派送：可選依賴的意義。
 func TestConsumerWorksWithoutCache(t *testing.T) {
-	c, _, _, setter := newConsumer(t, store.Event{ID: 1, AggregateType: "subscription",
+	c, src, _ := newConsumer(t, store.Event{ID: 1, AggregateType: "subscription",
 		AggregateID: uuid.MustParse("00000000-0000-0000-0000-000000000005"), EventType: "subscription.suspended", Payload: []byte(`{"company_id":42}`)})
 
 	if n, err := c.DispatchOnce(context.Background(), 10); err != nil || n != 1 {
 		t.Fatalf("未接快取時派送應照常運作: n=%d err=%v", n, err)
 	}
-	if len(setter.calls) != 1 {
-		t.Fatalf("公司狀態仍應被變更一次，got %v", setter.calls)
+	if len(src.emitted) != 1 {
+		t.Fatalf("公司狀態仍應被發出 outbox 一次，got %d", len(src.emitted))
 	}
 }
 

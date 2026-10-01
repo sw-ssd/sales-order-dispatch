@@ -33,6 +33,7 @@ import (
 	"connectrpc.com/connect"
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
+	"github.com/google/uuid"
 
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
@@ -71,8 +72,11 @@ var actions = map[string]eventAction{
 
 // EventStore 為 consumer 需要的平台讀取(實作:platform/store/postgres 的 admin 連線)。
 type EventStore interface {
-	// UndispatchedEvents 取未派送事件(依 id 排序,先寫先派送)。
+	// UndispatchedEvents 取未派送事件(依 id 排序,先寫先派送)。排除 company.status_changed
+	// outbox:該型別由 CompanyStatusWorker 獨佔,主迴圈回頭撿到會與 worker 競爭認領。
 	UndispatchedEvents(ctx context.Context, limit int) ([]store.Event, error)
+	// UndispatchedCompanyEvents 取未派送的 company.status_changed outbox(worker 用)。
+	UndispatchedCompanyEvents(ctx context.Context, limit int) ([]store.Event, error)
 	// SystemActor 讀 platform.settings.system_actor_user_id:稽核主體是**租戶 users.id**
 	// (audit_logs.user_id 的 FK 指向它),不是平台 operator。
 	SystemActor(ctx context.Context) (int64, error)
@@ -92,6 +96,8 @@ type Tx interface {
 	Claim(ctx context.Context, eventID int64) (bool, error)
 	// Client 回傳交易內的 ent client(產品域寫入一律走它;不得用交易外的 fallback)。
 	Client() *ent.Client
+	// Emit 在交易內寫入 outbox 事件(與認領同一個交易,見 plan p3 outbox 反轉)。
+	Emit(ctx context.Context, aggregateID uuid.UUID, eventType string, payload []byte) error
 }
 
 // CompanyStatusSetter 為產品域**唯一**公司狀態入口的窄介面。
@@ -173,7 +179,7 @@ func (c *Consumer) DispatchOnce(ctx context.Context, limit int) (int, error) {
 				continue
 			}
 			if actor.UserID == "" && actorErr == nil {
-				actor, actorErr = c.systemActor(ctx)
+				actor, actorErr = systemActor(ctx, c.events)
 			}
 			if actorErr != nil {
 				// 未結項 #16:同一趟內平台設定不會自己變好 —— actor 失敗只記一次。
@@ -200,7 +206,9 @@ func (c *Consumer) DispatchOnce(ctx context.Context, limit int) (int, error) {
 	return claimedN, errors.Join(errs...)
 }
 
-// dispatch 在同一交易內認領事件,並(對應型別時)變更公司狀態。回傳本筆是否由這趟認領。
+// dispatch 在同一交易內認領事件,並(對應型別時)發 company.status_changed outbox 事件。
+// 回傳本筆是否由這趟認領。實際的公司狀態變更由 CompanyStatusWorker 消費 outbox 後執行
+// (plan p3 outbox 反轉:平台與產品解耦,凍結最終一致)。
 func (c *Consumer) dispatch(ctx context.Context, ev store.Event, act eventAction,
 	mapped bool, companyID int, actor authz.Identity) (bool, error) {
 	claimed := false
@@ -214,25 +222,35 @@ func (c *Consumer) dispatch(ctx context.Context, ev store.Event, act eventAction
 		if !mapped {
 			return nil
 		}
-		return c.setter.SetStatus(ctx, tx.Client(), companyID, act.status, act.reason, actor)
+		// 發 company.status_changed outbox(與認領同一交易):Worker 消費後呼叫 SetCompanyStatus。
+		payload, err := json.Marshal(struct {
+			CompanyID int    `json:"company_id"`
+			Status    string `json:"status"`
+			Reason    string `json:"reason"`
+		}{CompanyID: companyID, Status: string(act.status), Reason: act.reason})
+		if err != nil {
+			return errcode.SysInternal.Wrap(err)
+		}
+		return tx.Emit(ctx, ev.AggregateID, "company.status_changed", payload)
 	})
-	if err != nil || !claimed || !mapped {
-		// 失敗（整筆回滾）與未對應型別（沒動公司狀態）都不得失效：前者資料沒變，後者根本沒改東西。
+	if err != nil || !claimed {
 		return claimed, err
 	}
-	// 交易提交成功且公司狀態真的變了 → 失效該租戶的權益快取。失敗只記 log（快取的錯誤不該讓
-	// 「事件已派送」這件事變成失敗：事件已經認領、狀態已經生效，回錯誤只會讓排程謊報一趟失敗）。
-	if err := entitlements.Invalidate(ctx, c.cache, companyID); err != nil {
-		log.Printf("platform consumer: 權益快取失效失敗(company=%d): %v（該租戶最長 TTL 內仍讀舊權益）",
-			companyID, err)
+	// 交易提交成功且 outbox 已寫入(mapped 型別)→ 失效該租戶的權益快取(公司狀態即將改變)。
+	// 未對應型別只認領、不發 outbox、不失效(否則每期每租戶都清快取,打穿自己的副作用)。
+	if mapped {
+		if err := entitlements.Invalidate(ctx, c.cache, companyID); err != nil {
+			log.Printf("platform consumer: 權益快取失效失敗(company=%d): %v（該租戶最長 TTL 內仍讀舊權益）",
+				companyID, err)
+		}
 	}
 	return claimed, nil
 }
 
 // systemActor 組出稽核主體。Role 只是標記(seed 的系統 actor 是 super);稽核只取 UserID,
 // 而 UserID 必須是**真實存在的租戶 users.id**(audit_logs.user_id 是 FK)。
-func (c *Consumer) systemActor(ctx context.Context) (authz.Identity, error) {
-	id, err := c.events.SystemActor(ctx)
+func systemActor(ctx context.Context, events EventStore) (authz.Identity, error) {
+	id, err := events.SystemActor(ctx)
 	if err != nil {
 		return authz.Identity{}, errcode.SysInternal.Wrap(err)
 	}
@@ -297,6 +315,20 @@ type dbTx struct {
 }
 
 func (t dbTx) Client() *ent.Client { return t.client }
+
+// emitSQL 寫入 company.status_changed outbox(與認領同一個交易,見 plan p3 outbox 反轉)。
+// 與 store.EmitEventTx 語法一致(不含 product_id:單產品場景預設 'sales-order',由 store 寫死)。
+const emitSQL = `INSERT INTO platform.events (aggregate_type, aggregate_id, event_type, payload, product_id)
+  VALUES ('company', $1, 'company.status_changed', $2::jsonb, 'sales-order')`
+
+// Emit 見 Tx.Emit。
+func (t dbTx) Emit(ctx context.Context, aggregateID uuid.UUID, _ string, payload []byte) error {
+	var res sql.Result
+	if err := t.raw.Exec(ctx, emitSQL, []any{aggregateID, jsonOrEmptyObject(payload)}, &res); err != nil {
+		return errcode.SysInternal.Wrap(fmt.Errorf("發 company.status_changed outbox: %w", err))
+	}
+	return nil
+}
 
 // claimSQL 條件式認領:只有「尚未派送」的那一列會被更新,0 列 = 別的執行已處理。
 // attempts 與 store.MarkEventDispatchedTx 同義(同一張表的可觀測性計數,含重試)。
@@ -374,4 +406,12 @@ func wrapUncoded(err error) error {
 		return err
 	}
 	return errcode.SysInternal.Wrap(err)
+}
+
+// jsonOrEmptyObject 把空的 payload 轉成 '{}'(jsonb 欄位不接受空字串;見 store.EmitEventTx)。
+func jsonOrEmptyObject(b []byte) string {
+	if len(b) == 0 {
+		return "{}"
+	}
+	return string(b)
 }
