@@ -17,6 +17,12 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
+      # p4 手動 split:platform 是獨立 git repo,位於 backend 的 sibling(../platform)。
+      # product 的 replace ../platform 指向它;CI 需先 checkout platform repo。
+      # PLATFORM_REPO_URL 待 platform 推送遠端後於 repo secrets 設定。
+      - name: Checkout platform repo
+        if: ${{ env.PLATFORM_REPO_URL != '' }}
+        run: git clone "${PLATFORM_REPO_URL}" ../platform
       - uses: actions/setup-go@v5
         with:
           go-version: "1.27"
