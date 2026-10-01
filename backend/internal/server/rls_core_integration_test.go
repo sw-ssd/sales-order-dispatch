@@ -28,7 +28,7 @@ import (
 	authzopenfga "github.com/salesorder/sales-order-1.0/backend/internal/authz/openfga"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/handlers"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
+	"github.com/salesorder/platform/entitlements"
 	"github.com/salesorder/sales-order-1.0/backend/internal/services"
 	ofga "github.com/salesorder/sales-order-1.0/backend/third_party/openfga"
 )

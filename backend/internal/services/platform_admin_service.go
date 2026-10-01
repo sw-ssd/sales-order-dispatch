@@ -18,11 +18,11 @@ import (
 	platformv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1"
 	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1/platformv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/contracts/requestid"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/billing"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/money"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
-	platformstore "github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
+	"github.com/salesorder/platform/billing"
+	"github.com/salesorder/platform/entitlements"
+	"github.com/salesorder/platform/money"
+	"github.com/salesorder/platform/operatorauth"
+	platformstore "github.com/salesorder/platform/store"
 )
 
 // 平台 admin 查詢的資料列型別定義在 platform/store(服務與 SQL 實作共用同一組 DTO):

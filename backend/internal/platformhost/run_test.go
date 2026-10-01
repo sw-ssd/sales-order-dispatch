@@ -23,9 +23,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/salesorder/sales-order-1.0/backend/ent"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/billing"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/cron"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
+	"github.com/salesorder/platform/billing"
+	"github.com/salesorder/platform/cron"
+	"github.com/salesorder/platform/store"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platformhost/consumer"
 )
 

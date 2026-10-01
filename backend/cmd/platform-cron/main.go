@@ -22,10 +22,10 @@ import (
 
 	"github.com/salesorder/sales-order-1.0/backend/config"
 	"github.com/salesorder/sales-order-1.0/backend/contracts/cache"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/billing"
-	platformcron "github.com/salesorder/sales-order-1.0/backend/internal/platform/cron"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store/postgres"
+	"github.com/salesorder/platform/billing"
+	platformcron "github.com/salesorder/platform/cron"
+	"github.com/salesorder/platform/entitlements"
+	"github.com/salesorder/platform/store/postgres"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platformhost/consumer"
 	"github.com/salesorder/sales-order-1.0/backend/third_party/database"
 )

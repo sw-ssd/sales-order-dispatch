@@ -16,8 +16,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1/platformv1connect"
 	"github.com/salesorder/sales-order-1.0/backend/contracts/testsupport"
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
+	"github.com/salesorder/platform/entitlements"
+	"github.com/salesorder/platform/operatorauth"
 )
 
 const tenantEntitlementSecret = "t10b-tenant-entitlement-secret"

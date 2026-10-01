@@ -108,8 +108,8 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rogpeppe/go-internal v1.16.0 // indirect
 	github.com/sagikazarmark/locafero v0.9.0 // indirect
+	github.com/salesorder/platform v0.0.0
 	github.com/salesorder/sales-order-1.0/backend/contracts v0.0.0
-	github.com/salesorder/sales-order-1.0/backend/internal/platform v0.0.0
 	github.com/sethvargo/go-retry v0.4.0 // indirect
 	github.com/shirou/gopsutil/v4 v4.26.6 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
@@ -159,4 +159,4 @@ require (
 
 replace github.com/salesorder/sales-order-1.0/backend/contracts => ./contracts
 
-replace github.com/salesorder/sales-order-1.0/backend/internal/platform => ../platform
+replace github.com/salesorder/platform => ../platform

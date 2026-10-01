@@ -11,8 +11,8 @@ import (
 
 	platformv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1"
 	platformv1connect "github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1/platformv1connect"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/server"
+	"github.com/salesorder/platform/entitlements"
+	"github.com/salesorder/platform/server"
 )
 
 // TestPlatformServerSmoke 驗收 phase-2 獨立服務:handler 穿透到 entitlements.Service。

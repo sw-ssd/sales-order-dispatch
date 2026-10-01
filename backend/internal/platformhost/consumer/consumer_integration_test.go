@@ -26,8 +26,8 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent"
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/store/postgres"
+	"github.com/salesorder/platform/store"
+	"github.com/salesorder/platform/store/postgres"
 	"github.com/salesorder/sales-order-1.0/backend/internal/platformhost/consumer"
 )
 

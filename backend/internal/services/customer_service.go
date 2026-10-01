@@ -28,7 +28,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/auth"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
+	"github.com/salesorder/platform/entitlements"
 )
 
 // businessRepRoles 為可作為 default_sales_rep 的角色(業務/管理,非客戶主帳號)。

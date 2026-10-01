@@ -24,7 +24,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
 	"github.com/salesorder/sales-order-1.0/backend/internal/dbtenant"
 	"github.com/salesorder/sales-order-1.0/backend/internal/handlers"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
+	"github.com/salesorder/platform/entitlements"
 )
 
 // 本檔為 A3(改密碼／臨時密碼)在 **RLS 真正生效** 下的探針:

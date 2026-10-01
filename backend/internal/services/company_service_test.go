@@ -17,7 +17,7 @@ import (
 	"github.com/salesorder/sales-order-1.0/backend/ent/company"
 	"github.com/salesorder/sales-order-1.0/backend/ent/enttest"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/entitlements"
+	"github.com/salesorder/platform/entitlements"
 )
 
 // TestUpdateCompanyStatusWritesAudit A2(2.1.3)+D18:公司 status 變更(停用/啟用)與稽核同一交易。

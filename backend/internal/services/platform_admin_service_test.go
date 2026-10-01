@@ -9,8 +9,8 @@ import (
 
 	platformv1 "github.com/salesorder/sales-order-1.0/backend/contracts/proto/platform/v1"
 	"github.com/salesorder/sales-order-1.0/backend/internal/authz"
-	"github.com/salesorder/sales-order-1.0/backend/internal/platform/operatorauth"
-	platformstore "github.com/salesorder/sales-order-1.0/backend/internal/platform/store"
+	"github.com/salesorder/platform/operatorauth"
+	platformstore "github.com/salesorder/platform/store"
 )
 
 // 本檔為 PlatformAdminService 的**服務層**契約(免容器的假 store):五個 RPC 各自的 operator
