@@ -597,56 +597,49 @@ git commit -m "feat(platformhost): company.status_changed worker → services.Se
 
 ## Phase 4: 獨立 repo 抽取（最破壞性，最後做）
 
-### Task 4.1: 安裝 git-filter-repo
+### Task 4.1: 安裝 git-filter-repo（已完成，最終未用）
 
 **Files:**
 - 環境：安裝 `git-filter-repo`（brew 或 pip）
 
-- [ ] **Step 1: 安裝**
+- [x] **Step 1: 安裝**
 
 Run: `brew install git-filter-repo`（或 `pip install git-filter-repo`）
-Expected: `git filter-repo --version` 可執行
+Expected: `git filter-repo --version` 可執行 —— 2026-10-01 已裝（2.47.0）。
 
-- [ ] **Step 2: Commit（無程式變更，環境記錄）**
+- [x] **Step 2: 決策（手動 split 替代 filter-repo）**
 
-（不 commit 環境變更；僅確認工具可用）
+filter-repo 重寫 product 全歷史（不可逆，team clone 失效）。2026-10-01 選**手動 split**（git mv + 獨立 repo init），product 歷史不動，達成相同「獨立 repo」目標。見 Task 4.2。
 
-### Task 4.2: 抽取 platform 為獨立 repo
+### Task 4.2: 抽取 platform 為獨立 repo（手動 split，已完成 2026-10-01）
 
-**Files:**
-- 新 repo: `github.com/salesorder/platform`（remote 建立）
-- 抽取範圍：`internal/platform/`、`contracts/`、`database/platform_migrations/`、`cmd/platform-server/`、`internal/platformhost/`（產品側 adapter，隨產品 repo 留或移）
+**決策（2026-10-01）**：不分 filter-repo 重寫 product 歷史，改為手動 split —— platform 目錄 `git mv` 到 repo 根 `platform/` 並 `git init` 成獨立 repo（module path 保持 `…/backend/internal/platform`，避免改所有 import）；product 歷史不動。
+
+- 新 repo：`platform/`（repo 根，獨立 `.git`，init commit `6580843`）
+- 抽取範圍：`backend/internal/platform` → `platform/`（含 `billing`/`cron`/`entitlements`/`money`/`operatorauth`/`server`/`store`）；`contracts/` 仍留產品 repo（`backend/contracts`），platform 的 `go.mod` 以 `replace …/backend/contracts => ../backend/contracts` 引用；`database/platform_migrations` 已屬 platform 模組（00054 拆分後）；`cmd/platform-server` 在產品 repo（引用 platform 模組，獨立 binary）；`internal/platformhost` 留產品 repo（產品側 adapter）。
 
 **Interfaces:**
 - Consumes: 現有 module 結構（step-1 已就位）
-- Produces: 獨立 `go.mod` 發版，產品 repo `require` 去掉 `replace`
+- Produces: 獨立 `go.mod` 發版，產品 repo `require` 去 `replace`（待 push 遠端後）
 
-- [ ] **Step 1: filter-repo 抽取**
+- [x] **Step 1: 手動 split**
 
-Run（在 bare clone 上）：
+`git mv backend/internal/platform platform`；`platform/go.mod` 的 contracts replace 改 `../backend/contracts`；product `go.mod` 的 platform replace 改 `../platform`；`.gitignore` 排除 `/platform/`（獨立 repo 不入 product tree）。
 
-```bash
-git clone --bare . /tmp/platform-bare.git
-cd /tmp/platform-bare.git
-git filter-repo --path internal/platform --path contracts --path database/platform_migrations --path cmd/platform-server --path backend/internal/platform --path backend/contracts --path backend/database/platform_migrations --path backend/cmd/platform-server
-```
+- [x] **Step 2: 獨立 repo init**
 
-（path 需對應實際 repo 佈局；filter-repo 重寫歷史，不可逆）
+`cd platform && git init && git add -A && git commit`（init commit `6580843`）；product repo `git rm --cached -f platform` + commit（移除 platform 的 index 追蹤，保留工作目錄）。
 
-- [ ] **Step 2: 推送獨立 repo**
+- [x] **Step 3: CI checkout step**
 
-Run: `git remote add origin <platform-repo-url> && git push --mirror origin`
-Expected: 獨立 repo 含 platform 歷史
+`.github/workflows/ci.yml` backend job 加 platform checkout（`git clone "${PLATFORM_REPO_URL}" ../platform`，`if: env.PLATFORM_REPO_URL != ''`）；`PLATFORM_REPO_URL` 待 push 遠端後設 secret。本地開發用 `replace ../platform` 已綠。
 
-- [ ] **Step 3: 產品 repo 改 require（去 replace）**
+- [ ] **Step 4: 推送遠端 + 去 replace（待執行）**
 
-`backend/go.mod`：移除 `replace github.com/salesorder/platform => ./internal/platform`，加 `require github.com/salesorder/platform v0.1.0`。
-Expected: `go build ./...` 綠（remote 模式需 `PLATFORM_MODE=remote` 才連網）
-
-- [ ] **Step 4: Commit（產品 repo）**
+push `platform/` 到 `github.com/salesorder/platform` 後：`backend/go.mod` 移除 `replace …/backend/internal/platform => ../platform`，加 `require github.com/salesorder/platform v0.1.0`，CI 設 `PLATFORM_REPO_URL` secret。單產品下本地 replace 已滿足開發，此步收益為零，待第二產品或獨立發版需求才做。
 
 ```bash
-git commit -m "chore: platform 抽取為獨立 repo github.com/salesorder/platform"
+git commit -m "chore: platform 抽取為獨立 repo（手動 split）"
 ```
 
 ---

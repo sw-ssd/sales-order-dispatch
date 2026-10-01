@@ -41,11 +41,15 @@ tasks:
       - golangci-lint run
       - golangci-lint run --build-tags integration ./...
       - go test -count=1 ./...
-      # 模組邊界閘門（2026-09-30 platform 拆分）：platform 模組不得反向依賴產品模組
-      # （ent／authz／dbtenant／services／auth／platformhost）。編譯器已強制，此處再顯式釘一道。
+      # 模組邊界閘門（2026-09-30 platform 拆分，2026-10-01 手動 split 為獨立 repo）：
+      # platform 模組不得反向依賴產品模組（ent／authz／dbtenant／services／auth／platformhost）。
+      # 編譯器已強制（platform/go.mod 不依賴產品模組），此處再顯式釘一道。
+      # platform 是 sibling 獨立 repo(../platform)；本地開發存在，CI 待 PLATFORM_REPO_URL 設後亦存在。
       - |
-        deps=$(cd internal/platform && go list -deps ./... | grep -E 'sales-order-1.0/backend/(ent|internal/(authz|dbtenant|services|auth|platformhost))')
-        if [ -n "$deps" ]; then echo "platform 反向依賴產品模組:"; echo "$deps"; exit 1; fi
+        if [ -d ../platform ]; then
+          deps=$(cd ../platform && go list -deps ./... | grep -E 'sales-order-1.0/backend/(ent|internal/(authz|dbtenant|services|auth|platformhost))')
+          if [ -n "$deps" ]; then echo "platform 反向依賴產品模組:"; echo "$deps"; exit 1; fi
+        fi
 
   vuln:
     desc: govulncheck 弱點掃描（D31-2）

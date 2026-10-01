@@ -164,9 +164,9 @@ sh ~/.omp/plugins/node_modules/go-modern-guidelines/plugin/skills/use-modern-go/
 
 ## 11. 平台域（SaaS 訂閱與權益，D34–D39；2026-09-20 起）
 
-平台域是獨立 **Go module**（`internal/platform/go.mod`，module path `…/backend/internal/platform`）＋ 獨立 proto（`contracts/proto`）＋ 獨立 PG schema（`platform`）。**模組邊界規則（2026-09-30 拆分）**：
-  - `contracts/` 是另一個 Go module（`…/backend/contracts`）：含 `errcode`、`requestid`、全部產生 proto（`proto/**`）、`testsupport`、`cache`。**雙向共享的葉子與 wire contract 都在此**——`errcode` 同時被平台與產品使用，`proto` 的 `ErrorInfo` 是 wire 契約（前端 TS／Dart 直接消費，不可再拆）。
-  - **platform 模組不得 `import` 產品模組**（`ent`、`internal/authz`、`internal/dbtenant`、`internal/services`、`internal/auth`、`internal/platformhost`）。這由 `go build` 強制（`internal/platform/go.mod` 根本不依賴產品模組）；`task check` 另有 `go list -deps` 閘門再釘一道。
+平台域是獨立 **Git repo**（`platform/`，module path `…/backend/internal/platform` 不變）＋ 獨立 proto（`contracts/proto`）＋ 獨立 PG schema（`platform`）。**模組邊界規則（2026-09-30 拆分，2026-10-01 手動 split 為獨立 repo）**：
+  - `contracts/` 是另一個 Go module（`…/backend/contracts`，仍在產品 repo 內）：含 `errcode`、`requestid`、全部產生 proto（`proto/**`）、`testsupport`、`cache`。**雙向共享的葉子與 wire contract 都在此**——`errcode` 同時被平台與產品使用，`proto` 的 `ErrorInfo` 是 wire 契約（前端 TS／Dart 直接消費，不可再拆）。
+  - **platform 模組不得 `import` 產品模組**（`ent`、`internal/authz`、`internal/dbtenant`、`internal/services`、`internal/auth`、`internal/platformhost`）。這由 `go build` 強制（`platform/go.mod` 根本不依賴產品模組，只 `replace` 本地 `../backend/contracts`）；產品 repo 的 `go.mod` 以 `replace …/backend/internal/platform => ../platform` 引用它。
   - **唯一的產品耦合落在 `internal/platformhost/consumer`**（產品模組內）：它持有 `consumer.Consumer`、`ProductDomain.SetStatus`、`NewDBSystemTx`，因為認領與凍結必須在同一筆租戶交易內（見 §11-12 的 `SET LOCAL` 與 consumer 的 tx 合約）。平台模組經 `cron.Dispatcher` 介面反向呼叫它。
   - `operatorauth` 不再依賴 `internal/auth`：OIDC 的 `OAuthExchanger`／`OIDCVerifier`／`OIDCIdentity`／`NewState`／`StateTTL` 已在平台模組內自建（`operatorauth` 套件），產品側 `internal/server/domains.go` 以 `googleVerifierAdapter` 把 `auth.GoogleVerifier` 轉接過去——**平台不得反向 import auth**，adapter 方向只能是產品 → 平台。
   權威文件：設計 `docs/superpowers/specs/architecture/saas-billing-entitlements.md`。以下每一條都是實測換來的；平台域的失效模式大多是**靜默**的（授權不見了、查詢回 0 列、`trace_id` 空），所以規則寫得比業務域死。
