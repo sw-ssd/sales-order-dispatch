@@ -1,3 +1,43 @@
+<!-- PLATFORM-INTEGRATION-PENDING: 平台整合未完成（platform >= v0.5.0，RPC-only 邊界）。完成後刪掉本段與這個標記。 -->
+
+## 0. ⚠️ 待整合：platform（最低 v0.5.0，RPC-only 邊界）— 維護本 repo 時先讀這段
+
+平台（module `github.com/sw-ssd/platform`）已完成 mizu 化與「僅 RPC/API 串接」的邊界重構；本 repo
+需要的是 **v0.5.0 或更新的已發佈版本**。本 repo 仍是舊結構（`replace ../platform`、`contracts/`、
+自己掛 `/platform/*`、自己跑 `cmd/platform-{server,cron}`），**尚未整合**。
+
+**第一個動作**（不要先改程式碼）：
+
+```sh
+export GOPRIVATE=github.com/sw-ssd/platform   # private repo；沒設會靜默拿到 proxy 上舊架構的 v0.1.0
+task platform:check                            # 或 scripts/platform-check.sh
+```
+
+它會列出「還缺哪幾步」，每一步對應 `docs/platform/MIGRATION.md` 的編號。**照那張清單做**，
+不要憑印象改：舊路徑與新契約的對映、要刪什麼、事件交付的切換順序都寫在裡面。
+
+要點（細節在 MIGRATION.md）：
+
+- `go mod edit -dropreplace=github.com/sw-ssd/platform`；選定版本時：
+  **先用 `go list -m -versions github.com/sw-ssd/platform`（需 `GOPRIVATE`）看目前有哪些**，
+  再把那個版本**明確 pin 進 `go.mod`**（`-require=…@vX.Y.Z`）。
+  **不要用 `@latest`**：① 私有模組一旦沒設 `GOPRIVATE`，proxy 上只有舊架構的 `v0.1.0`，
+  `latest` 會**靜默解析到那份舊 code**；② 未 pin 的版本＝未經 review 的契約變更（RPC 可能已改）；
+  ③ 檢查腳本與整合步驟都以「最低 v0.5.0＋該次實際選定版本」為準，用 `latest` 會讓結果不可重現；
+- import 白名單：只准 `platform/protogen/**`、`platform/package/{errcode,requestid}`（其餘舊路徑全部改）；
+- 平台端已提供原本由本 repo 提供的面 → 刪掉自己的 `/platform/*` 掛載、`cmd/platform-server`、
+  `cmd/platform-cron`、舊的直讀 consumer、重複的 platform admin 服務；
+- 反過來，**本 repo 要提供** `product/v1.PlatformBridgeService`（`ApplyEvent`／`GetUsage`／
+  `ListCompanies`）給平台呼叫（service token 認證，獨立 mux）；
+- 完成後刪掉本段與 `PLATFORM-INTEGRATION-PENDING` 標記，並更新 §11 的平台域敘述（它描述的是舊結構）。
+- 平台若已出到比 v0.5.0 更新的版本：先看該版本 README 的「對外介面」與本包 `MIGRATION.md` 是否有
+  契約差異（本包綁的是最低可用版本，不是最新版本）。
+
+> 為什麼要這樣提示：平台側的失效模式大多是**靜默**的（舊路徑還能編譯成另一份實作、proxy 給舊版本、
+> 事件直讀表繞過 API）。這段的用途就是讓任何一次「維護本 repo」的 session 在動手前先看到它們。
+
+---
+
 # Backend Development Guidelines
 
 > Go 後端:ent + Connect-Go + OpenFGA + RLS + goose + Valkey。所有文件、註解、commit message 一律繁體中文。

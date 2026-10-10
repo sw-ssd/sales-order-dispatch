@@ -109,6 +109,21 @@ jobs:
       - name: Test(integration)
         run: go test -tags integration -count=1 ./...
 
+  platform-integration:
+    name: platform 整合進度（warning）
+    runs-on: ubuntu-latest
+    continue-on-error: true # 未整合階段只提示；完成後刪掉此行，改由 platform:check:strict 當守門員
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - name: 平台整合檢查
+        env:
+          GOPRIVATE: github.com/sw-ssd/platform
+          PLATFORM_CHECK_STRICT: "0" # 只提示（提示段：backend/AGENTS.md 的 PLATFORM-INTEGRATION-PENDING）
+        run: ./scripts/platform-check.sh
+
   frontend:
     name: Frontend(SolidJS)
     runs-on: ubuntu-latest

@@ -51,6 +51,14 @@ tasks:
           if [ -n "$deps" ]; then echo "platform 反向依賴產品模組:"; echo "$deps"; exit 1; fi
         fi
 
+  platform:check:
+    desc: 檢查 platform（最低 v0.5.0）整合進度（輸出編號對應 docs/platform/MIGRATION.md）
+    cmd: ./scripts/platform-check.sh
+
+  platform:check:strict:
+    desc: 同上，但一定回非零（整合完成後給 CI 用）
+    cmd: PLATFORM_CHECK_STRICT=1 ./scripts/platform-check.sh
+
   vuln:
     desc: govulncheck 弱點掃描（D31-2）
     cmd: govulncheck ./...
